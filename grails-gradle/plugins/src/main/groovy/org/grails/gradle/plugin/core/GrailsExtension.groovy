@@ -30,7 +30,6 @@ import grails.util.Environment
 /**
  * A extension to the Gradle plugin to configure Grails settings
  *
- * @author Graeme Rocher
  * @since 3.0
  */
 @CompileStatic
@@ -50,12 +49,47 @@ class GrailsExtension {
         this.pluginDefiner = new PluginDefiner(project)
         this.indy = project.objects.property(Boolean).convention(false)
         this.preserveParameterNames = project.objects.property(Boolean).convention(true)
+        this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
+        this.gorm = project.objects.newInstance(GrailsGormOptions)
+        this.i18n = project.objects.newInstance(GrailsI18nOptions)
+        this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
+            def fromProperty = project.findProperty('grailsCliAutoProvision')
+            fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
+        })
+        this.legacyCommandSupport = project.objects.property(Boolean).convention(project.provider {
+            def fromProperty = project.findProperty('grailsLegacyCommandSupport')
+            fromProperty == null ? Boolean.FALSE : Boolean.parseBoolean(fromProperty as String)
+        })
         this.bom = project.objects.property(String)
         // Use set() rather than convention() so that clearing the value (bom = null,
         // or the deprecated springDependencyManagement = false) results in no BOM being
         // applied, instead of silently falling back to the convention.
         this.bom.set(DEFAULT_BOM)
     }
+
+    /**
+     * Whether the plugin auto-provisions the CLI tier onto the {@code grailsCli} configuration.
+     * When enabled (the default), the plugin adds {@code org.apache.grails:grails-core-cli} (the
+     * command contract) and {@code org.apache.grails:grails-console} (the command runner), and
+     * discovers every companion {@code -cli} artifact advertised by the application's dependency
+     * graph — a plugin advertises its companion through the {@code Grails-Cli-Artifact} manifest
+     * attribute of its runtime jar. Plugin commands (e.g. the {@code dbm-*} or scaffolding
+     * commands) therefore work with no additional build configuration. Opt out with
+     * {@code grails { cliAutoProvision = false }} (or the {@code grailsCliAutoProvision} project
+     * property) and declare `grailsCli` dependencies explicitly.
+     */
+    final Property<Boolean> cliAutoProvision
+
+    /**
+     * Whether the plugin auto-provisions the Grails 7 application-command compatibility bridge
+     * ({@code org.apache.grails:grails-core-cli-legacy}) onto the execution-only
+     * {@code grailsCliLegacy} configuration. Disabled by default. When enabled <strong>and</strong>
+     * {@link #cliAutoProvision} is also enabled, unchanged Grails 7 command plugins keep working
+     * without a re-release. Opt in with {@code grails { legacyCommandSupport = true }} (or the
+     * {@code grailsLegacyCommandSupport} project property) while leaving modern CLI companion
+     * auto-provisioning alone, or disable both with {@code cliAutoProvision = false}.
+     */
+    final Property<Boolean> legacyCommandSupport
 
     /**
      * Whether to invoke native2ascii on resource bundles
@@ -73,25 +107,96 @@ class GrailsExtension {
     boolean packageAssets = true
 
     /**
-     * Whether java.time.* package should be a default import package
-     */
-    boolean importJavaTime = false
-
-    /**
      * Whether grails annotation packages and common validation annotations should be default import packages.
      * When enabled, automatically imports:
      * - jakarta.validation.constraints.*
-     * - grails.gorm.annotation.* (if grails-datamapping-core is in classpath)
-     * - grails.plugin.scaffolding.annotation.* (if grails-scaffolding is in classpath)
+     * - grails.gorm.annotation.*
+     * - grails.plugin.scaffolding.annotation.*
      */
     boolean importGrailsCommonAnnotations = false
 
     /**
      * Custom star imports to add to Groovy compilation configuration.
      * Users can add their own package imports that will be combined with
-     * imports added by importJavaTime and importGrailsCommonAnnotations flags.
+     * imports added by the importGrailsCommonAnnotations flag.
      */
     List<String> starImports = []
+
+    /**
+     * Lazy opt-ins for compiling controllers, services and tag libraries with {@code @GrailsCompileStatic}
+     * automatically, configured through the nested {@code compileStatic} block. Each flag is a lazy
+     * {@link Property} (read at compile time, not configuration time) and defaults to {@code false}:
+     *
+     * <pre>
+     * grails {
+     *     compileStatic {
+     *         controllers = true
+     *         services = true
+     *         tagLibs = true
+     *     }
+     * }
+     * </pre>
+     *
+     * Use {@code compileStatic { all = true }} as a shortcut to enable all three at once. A per-class
+     * {@code @CompileDynamic} (or {@code @CompileStatic}/{@code @GrailsCompileStatic}) annotation always
+     * wins over these defaults.
+     */
+    final GrailsCompileStaticOptions compileStatic
+
+    /**
+     * Configures the nested {@link #compileStatic} opt-ins.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsCompileStaticOptions}
+     */
+    void compileStatic(@DelegatesTo(value = GrailsCompileStaticOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.compileStatic
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * GORM compilation options, configured through the nested {@code gorm} block:
+     *
+     * <pre>
+     * grails {
+     *     gorm {
+     *         defaultIdType = 'native'
+     *     }
+     * }
+     * </pre>
+     *
+     * @since 8.0
+     */
+    final GrailsGormOptions gorm
+
+    /**
+     * Configures the nested {@link #gorm} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsGormOptions}
+     * @since 8.0
+     */
+    void gorm(@DelegatesTo(value = GrailsGormOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.gorm
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * Message-bundle options, configured through the nested {@code i18n} block. Only needed to
+     * disambiguate base names that cannot be inferred from file names alone.
+     */
+    final GrailsI18nOptions i18n
+
+    /**
+     * Configures the nested {@link #i18n} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsI18nOptions}
+     */
+    void i18n(@DelegatesTo(value = GrailsI18nOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.i18n
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
 
     /**
      * @deprecated The Spring Dependency Management plugin has been replaced with Gradle's native

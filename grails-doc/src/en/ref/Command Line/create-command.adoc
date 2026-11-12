@@ -37,7 +37,7 @@ Creates a class called `grails-app/commands/PACKAGE_PATH/MyExampleCommand.groovy
 
 [source,groovy]
 ----
-import grails.dev.commands.*
+import org.apache.grails.core.cli.*
 
 class MyExampleCommand implements ApplicationCommand {
 
@@ -76,19 +76,14 @@ Or as a Gradle task:
 gradle myExample
 ----
 
-The plugin is required be on both the build classpath and the runtime classpath in `build.gradle` in order for the short form to work:
+Declaring the plugin as a regular dependency is all that is required for the short form to work —
+the plugin's companion `-cli` artifact (which carries its commands) is discovered from the
+dependency graph automatically and both the command and its Gradle task are registered:
 
 [source,groovy]
 ----
-buildscript {
-  ...
-  dependencies {
-    classpath "org.grails.plugins:myplugin:0.1-SNAPSHOT"
-  }
-  ...
-  dependencies {
-    runtime "org.grails.plugins:myplugin:0.1-SNAPSHOT"
-  }
+dependencies {
+    implementation "org.grails.plugins:myplugin:0.1-SNAPSHOT"
 }
 ----
 
@@ -96,4 +91,4 @@ buildscript {
 
 In order to separate the code generation and build layer, in Grails 3.x scripts created with `create-script` do not have access to the running application instance.
 
-Instead, Grails 3.x features a new concept called an link:{apiFromRef}grails/dev/commands/ApplicationCommand.html[ApplicationCommand] that is invoked via Gradle to perform tasks such as interact with classes in the runtime.
+Instead, Grails 3.x features a new concept called an link:{apiFromRef}org/apache/grails/core/cli/ApplicationCommand.html[ApplicationCommand] that is invoked via Gradle to perform tasks such as interact with classes in the runtime.

@@ -51,11 +51,24 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
         e.message == 'Argument [file] of render method specified without valid [contentType] argument'
     }
 
-    void 'renders an input stream without setting content disposition by default'() {
+    void 'renders an input stream as an attachment by default'() {
         when: 'the controller renders a file input stream'
         controller.render(
                 file: new ByteArrayInputStream('hello'.bytes),
                 contentType: 'text/plain'
+        )
+
+        then: 'the response contains the stream contents and an attachment header'
+        response.contentAsString == 'hello'
+        response.getHeader(HttpHeaders.CONTENT_DISPOSITION) == 'attachment'
+    }
+
+    void 'renders an input stream inline when requested'() {
+        when: 'the controller renders a file input stream inline'
+        controller.render(
+                file: new ByteArrayInputStream('hello'.bytes),
+                contentType: 'text/plain',
+                inline: true
         )
 
         then: 'the response contains the stream contents and no attachment header'
@@ -74,6 +87,19 @@ class RenderMethodTests extends Specification implements ControllerUnitTest<Rend
         then: 'the response includes the file contents and attachment header'
         response.contentAsString == 'hello'
         response.getHeader(HttpHeaders.CONTENT_DISPOSITION) == 'attachment;filename="hello.txt"'
+    }
+
+    void 'escapes content disposition filenames while rendering file attachments'() {
+        when: 'the controller renders a file input stream with an unsafe filename'
+        controller.render(
+                file: new ByteArrayInputStream('hello'.bytes),
+                contentType: 'text/plain',
+                fileName: 'a"b\\c\r\n.txt'
+        )
+
+        then: 'the response includes an escaped attachment filename'
+        response.contentAsString == 'hello'
+        response.getHeader(HttpHeaders.CONTENT_DISPOSITION) == 'attachment;filename="a\\"b\\\\c__.txt"'
     }
 
     void 'renders text with the configured status code'() {

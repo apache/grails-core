@@ -23,6 +23,8 @@ under the License.
 
 `f:display` renders a property for display. If there is no `_displayWrapper` template in scope the tag will simply render the property value.
 
+Without a `property` attribute, `f:display` renders every property of the bean except those named by the `grails.plugin.fields.exclusions.display` setting, which defaults to `version`, `dateCreated` and `lastUpdated`. Set it to a list in `application.yml`, or to a comma-separated value, to skip other properties.
+
 `f:display` template will look for a `_displayWrapper` for the wrapper itself and a `_displayWidget` for the widget used inside the wrapper template.
 
 If the `f:display` tag has a body its output is used as the value passed as the `value` model to the `_display` template. If there is no body then the 'raw' property value is passed to `g:fieldValue`, `g:formatDate` or `g:formatBoolean` depending on its type and the result is passed as the `value` model to the `_display` template.

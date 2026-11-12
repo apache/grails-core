@@ -38,6 +38,13 @@ import org.grails.datastore.mapping.query.Restrictions;
 
 /**
  *  Method expression used to evaluate a dynamic finder.
+ *
+ * <p>Every concrete subclass below provides both a {@code (Class, String)} and a {@code (String)}
+ * constructor. Neither shape is ever called as a literal {@code new Xxx(...)} expression for every
+ * subclass - {@link DynamicFinder}'s registry invokes the {@code (Class, String)} constructor
+ * reflectively via {@code Constructor.newInstance}, and {@code MethodExpressionSpec} exercises both
+ * shapes reflectively via {@code Class.getConstructor(...).newInstance(...)} - so static usage
+ * analysis can't see either call site even though both are genuinely exercised.
  */
 public abstract class MethodExpression {
 
@@ -52,7 +59,7 @@ public abstract class MethodExpression {
 
     public abstract Query.Criterion createCriterion();
 
-    protected MethodExpression(Class<?> targetClass, String propertyName) {
+    protected MethodExpression(@SuppressWarnings("unused") Class<?> targetClass, String propertyName) {
         this.propertyName = propertyName;
     }
 
@@ -67,13 +74,7 @@ public abstract class MethodExpression {
     public void convertArguments(PersistentEntity persistentEntity) {
         ConversionService conversionService = persistentEntity
                 .getMappingContext().getConversionService();
-        PersistentProperty<?> prop = persistentEntity
-                .getPropertyByName(propertyName);
-        if (prop == null) {
-            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
-                prop = persistentEntity.getIdentity();
-            }
-        }
+        PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName);
         if (prop != null && arguments != null && argumentsRequired > 0) {
             Class<?> type = prop.getType();
             for (int i = 0; i < argumentsRequired; i++) {
@@ -188,10 +189,12 @@ public abstract class MethodExpression {
     }
 
     public static class Ilike extends MethodExpression {
+        @SuppressWarnings("unused")
         public Ilike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
 
+        @SuppressWarnings("unused")
         public Ilike(String propertyName) {
             super(propertyName);
         }
@@ -203,10 +206,12 @@ public abstract class MethodExpression {
     }
 
     public static class Rlike extends MethodExpression {
+        @SuppressWarnings("unused")
         public Rlike(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
 
+        @SuppressWarnings("unused")
         public Rlike(String propertyName) {
             super(propertyName);
         }
@@ -218,6 +223,7 @@ public abstract class MethodExpression {
     }
 
     public static class NotInList extends MethodExpression {
+        @SuppressWarnings("unused")
         public NotInList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -248,16 +254,14 @@ public abstract class MethodExpression {
         public void convertArguments(PersistentEntity persistentEntity) {
             ConversionService conversionService = persistentEntity
                     .getMappingContext().getConversionService();
-            String propertyName = this.propertyName;
-            PersistentProperty<?> prop = persistentEntity
-                    .getPropertyByName(propertyName);
-            Object[] arguments = this.arguments;
-            convertArgumentsForProp(persistentEntity, prop, propertyName, arguments, conversionService);
+            PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName);
+            convertArgumentsForProp(prop, arguments, conversionService);
         }
     }
 
     public static class InList extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public InList(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -286,9 +290,8 @@ public abstract class MethodExpression {
         public void convertArguments(PersistentEntity persistentEntity) {
             ConversionService conversionService = persistentEntity
                     .getMappingContext().getConversionService();
-            PersistentProperty<?> prop = persistentEntity
-                    .getPropertyByName(propertyName);
-            convertArgumentsForProp(persistentEntity, prop, propertyName, arguments, conversionService);
+            PersistentProperty<?> prop = resolveProperty(persistentEntity, propertyName);
+            convertArgumentsForProp(prop, arguments, conversionService);
         }
 
     }
@@ -323,6 +326,7 @@ public abstract class MethodExpression {
 
     public static class InRange extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public InRange(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 1;
@@ -357,11 +361,13 @@ public abstract class MethodExpression {
 
     public static class IsNull extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public IsNull(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
 
+        @SuppressWarnings("unused")
         public IsNull(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -376,11 +382,13 @@ public abstract class MethodExpression {
 
     public static class IsNotNull extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public IsNotNull(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
 
+        @SuppressWarnings("unused")
         public IsNotNull(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -395,11 +403,13 @@ public abstract class MethodExpression {
 
     public static class IsEmpty extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public IsEmpty(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
 
+        @SuppressWarnings("unused")
         public IsEmpty(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -414,11 +424,13 @@ public abstract class MethodExpression {
 
     public static class IsNotEmpty extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public IsNotEmpty(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
             argumentsRequired = 0;
         }
 
+        @SuppressWarnings("unused")
         public IsNotEmpty(String propertyName) {
             super(propertyName);
             argumentsRequired = 0;
@@ -455,6 +467,7 @@ public abstract class MethodExpression {
 
     public static class NotEqual extends MethodExpression {
 
+        @SuppressWarnings("unused")
         public NotEqual(Class<?> targetClass, String propertyName) {
             super(targetClass, propertyName);
         }
@@ -475,12 +488,21 @@ public abstract class MethodExpression {
 
     }
 
-    private static void convertArgumentsForProp(PersistentEntity persistentEntity, PersistentProperty<?> prop, String propertyName, Object[] arguments, ConversionService conversionService) {
-        if (prop == null) {
-            if (propertyName.equals(persistentEntity.getIdentity().getName())) {
-                prop = persistentEntity.getIdentity();
-            }
+    /**
+     * Resolves the given property name against the entity, falling back to the identity property
+     * when there is no regular property by that name (e.g. {@code findByIdInList}). Shared by the
+     * base {@link #convertArguments} and {@link #convertArgumentsForProp} so the fallback exists in
+     * exactly one place.
+     */
+    private static PersistentProperty<?> resolveProperty(PersistentEntity persistentEntity, String propertyName) {
+        PersistentProperty<?> prop = persistentEntity.getPropertyByName(propertyName);
+        if (prop == null && propertyName.equals(persistentEntity.getIdentity().getName())) {
+            return persistentEntity.getIdentity();
         }
+        return prop;
+    }
+
+    private static void convertArgumentsForProp(PersistentProperty<?> prop, Object[] arguments, ConversionService conversionService) {
         if (prop != null) {
             Class<?> type = prop.getType();
             Collection<?> collection = (Collection<?>) arguments[0];

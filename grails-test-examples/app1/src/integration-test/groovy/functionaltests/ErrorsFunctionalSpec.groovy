@@ -45,6 +45,14 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
         pageSource.contains('Message = Something bad')
     }
 
+    void "Test 500 mappings for custom exceptions with a cause of their own"() {
+        when: "An action that throws a custom error with a cause, whose mapping names the custom error"
+        go('/demo/throwCustomErrorWithCause')
+
+        then: "The handler the mapping names is executed, which renders the message of the root cause"
+        pageSource.contains('Message = Its own cause')
+    }
+
     void "Test default 500 mapping"() {
         when: "An excetion that throws a general error handled by the default 500 mapping in UrlMapings.groovy"
         go('/errors/throwGeneralError')
@@ -70,8 +78,8 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
         when: "An action that throws an exception is requested"
         go('/errors/throwException')
 
-        then:
-        System.properties[ErrorsControllerInterceptor.PROPERTY] == 'Oops!'
+        then: "afterView() runs after the error page's forward has sent and closed the response, so the page can load first"
+        waitFor { System.properties[ErrorsControllerInterceptor.PROPERTY] == 'Oops!' }
 
         cleanup:
         System.clearProperty ErrorsControllerInterceptor.PROPERTY

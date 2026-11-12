@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Most applications eventually need work to happen on a schedule rather than in response to a request: sending a nightly digest, expiring stale records, polling an upstream feed, rebuilding a cache.
+
+Grails offers two approaches:
+
+* <<backgroundJobsBasic,Basic Scheduling>> uses Spring's `@Scheduled` annotation. It is built into the framework, needs no dependencies, and is the right default for the large majority of applications.
+* <<backgroundJobsAdvanced,Advanced Scheduling>> uses the Quartz plugin, which adds runtime-modifiable schedules, persistence, operational control, and — once configured for it — clustering across a multi-instance deployment.
+
+*Start with Basic Scheduling.* Spring's scheduler is simpler, has nothing to configure, and covers everything a single-instance application with fixed schedules needs. Reach for Quartz when you have a requirement Spring's scheduler cannot meet.
+
+==== When you need Quartz
+
+Quartz earns its extra moving parts in these situations:
+
+* *Multiple instances.* This is the big one. `@Scheduled` fires on every instance independently, so a nightly job on a three-instance deployment runs three times. Quartz can be <<quartzClustering,configured to cluster>>, so exactly one instance fires each trigger.
+* *Schedules that change at runtime*, driven by user input or data rather than fixed in an annotation.
+* *Schedules that must survive a restart*, rather than being rebuilt from source at every startup.
+* *Operational control* — pausing, resuming, inspecting, or interrupting jobs while the application runs.
+* *Recovery of work lost to a crash*, re-running jobs that were executing when an instance died.
+
+If none of those apply, `@Scheduled` is the better choice; adding Quartz only adds moving parts to get wrong.
+
+[IMPORTANT]
+====
+Adding the Quartz plugin does not by itself make a schedule cluster-safe. Quartz defaults to an in-memory job store, which duplicates work across instances exactly as `@Scheduled` does. Clustering is opt-in and requires a JDBC job store, a shared set of Quartz tables, and explicit configuration — see <<quartzClustering,Clustering>>.
+====
+
+==== Comparison
+
+[cols="1,3,3"]
+|===
+| | <<backgroundJobsBasic,Basic Scheduling>> | <<backgroundJobsAdvanced,Advanced Scheduling>>
+
+| Mechanism
+| Spring `@Scheduled`
+| Quartz plugin
+
+| Setup
+| Built in — nothing to add
+| Add `grails-quartz`; clustering additionally needs a database schema and configuration
+
+| Where the schedule lives
+| An annotation on a bean method
+| A `triggers` block on a job artefact
+
+| Changing the schedule at runtime
+| Not supported
+| Supported
+
+| Persistent across restarts
+| No
+| Optional, with a JDBC job store
+
+| Safe to run on multiple instances
+| *No* — every instance fires independently
+| *Only when clustering is configured*; not by default
+
+| Pausing, resuming, inspecting jobs
+| Not supported
+| Supported
+|===
+
+WARNING: The most common production surprise with background jobs is a schedule written when the application ran on one machine, later deployed to three. Nothing fails loudly; the job simply runs several times over. Rolling restarts and blue/green deployments trigger this too, because two instances are briefly live at once even in a nominally single-instance deployment. See <<quartzClustering,Clustering>>.

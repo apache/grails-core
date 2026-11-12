@@ -29,6 +29,7 @@ import org.codehaus.groovy.ast.ClassCodeVisitorSupport
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.FieldNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ClosureExpression
@@ -52,7 +53,6 @@ import org.codehaus.groovy.transform.TransformWithPriority
 import grails.compiler.traits.TraitInjector
 import grails.views.Views
 import org.apache.grails.common.compiler.GroovyTransformOrder
-import org.grails.compiler.injection.GrailsASTUtils
 import org.grails.core.io.support.GrailsFactoriesLoader
 
 /**
@@ -102,7 +102,7 @@ class ViewsTransform implements ASTTransformation, CompilationUnitAware, Transfo
 
                     def modelTypesVisitor = new ModelTypesVisitor(source)
                     modelTypesVisitor.visitClass(classNode)
-                    def runMethod = classNode.getMethod('run', GrailsASTUtils.ZERO_PARAMETERS)
+                    def runMethod = classNode.getMethod('run', Parameter.EMPTY_ARRAY)
                     def stm = runMethod.code
                     if (stm instanceof BlockStatement) {
                         BlockStatement bs = (BlockStatement) stm

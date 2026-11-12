@@ -224,7 +224,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     }
 
     public ConstrainedPropertyBuilder newConstrainedPropertyBuilder(Class<?> theClass) {
-        return new ConstrainedPropertyBuilder(this.mappingContext, this.constraintRegistry, theClass, defaultConstraints);
+        return new ConstrainedPropertyBuilder(this.mappingContext, this.constraintRegistry, theClass, defaultConstraints, this);
     }
 
     protected void applySharedConstraints(

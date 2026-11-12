@@ -25,7 +25,9 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-cli-library'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
 
@@ -53,9 +55,14 @@ dependencies {
     implementation 'org.apache.groovy:groovy-json'
 
     api project(':grails-bootstrap')
+    // the console and the jline completion handler now ship as grails-bootstrap's cli companion
+    api(project(':grails-bootstrap')) {
+        capabilities {
+            requireCapability('org.apache.grails.bootstrap:grails-bootstrap-cli')
+        }
+    }
     api 'org.apache.grails.gradle:grails-gradle-model'
     api 'org.apache.ant:ant'
-    api 'org.fusesource.jansi:jansi'
     api 'org.jline:jline'
     api("org.gradle:gradle-tooling-api:$gradleToolingApiVersion") {
         exclude group: 'org.slf4j', module: 'slf4j-api'
@@ -64,7 +71,9 @@ dependencies {
     compileOnly 'org.springframework.boot:spring-boot'
     compileOnly 'org.springframework.boot:spring-boot-loader-tools'
     compileOnly 'org.springframework:spring-web'
-    api 'org.springframework.boot:spring-boot-cli'
+    api('org.springframework.boot:spring-boot-cli') {
+        exclude group: 'jline', module: 'jline'
+    }
     // Must be 'implementation' (not 'compileOnly') so the servlet API is included in the shadow JAR.
     // grails-web-common registers HttpServletRequestExtension as a Groovy extension module, which is
     // auto-discovered when GroovyScriptCommandFactory compiles custom scripts in src/main/scripts/.
@@ -73,6 +82,8 @@ dependencies {
     // such as create-controller, generate-all, and scaffolding that parse and generate web-layer code.
     implementation 'jakarta.servlet:jakarta.servlet-api'
     compileOnly "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
+    // compileOnly stays off the test compile classpath. OptionParsingCommand tests call joptsimple directly.
+    testImplementation "net.sf.jopt-simple:jopt-simple:$joptSimpleVersion"
 
     // Maven Resolver API & friends
     implementation "org.apache.maven.resolver:maven-resolver-api:$apacheMavenResolverVersion"
@@ -85,6 +96,10 @@ dependencies {
     implementation "org.apache.maven:maven-resolver-provider:$apacheMavenVersion"
     implementation "org.apache.maven:maven-model-builder:$apacheMavenVersion"
     implementation "org.apache.maven:maven-settings-builder:$apacheMavenVersion"
+    // grails-bom forces plexus-utils 4.x (CVE-2025-67030), which no longer contains the
+    // org.codehaus.plexus.util.xml package the maven-model/maven-settings readers need
+    // (XmlStreamReader, the Xpp3 pull parsers) - it moved to plexus-xml (BOM-managed).
+    implementation 'org.codehaus.plexus:plexus-xml'
     //implementation "org.eclipse.sisu:org.eclipse.sisu.inject:0.9.0.M3" // upstream from the maven resolver examples project
 
     testImplementation "net.sf.expectit:expectit-core:$expectitCoreVersion"
@@ -107,10 +122,20 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
+    // org.slf4j:slf4j-simple is already on the test classpath via the runtimeOnly
+    // dependency above. It coexists here with logback-classic (needed for Logback-appender
+    // assertions in forked-process specs), so both SLF4J providers are present at once -
+    // any new forked-process fixture must explicitly pin one via
+    // -Dslf4j.provider=<FQCN> to avoid SLF4J's ambiguous-binding provider selection.
+    testImplementation 'ch.qos.logback:logback-classic'
     testImplementation 'org.spockframework:spock-core'
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy' // Required by Spock's mocking support
+
+    // Required to load SpringApplicationWebApplicationInitializer (extends SpringBootServletInitializer)
+    // in tests; these are compileOnly for the main source set.
+    testImplementation 'org.springframework.boot:spring-boot'
+    testImplementation 'org.springframework:spring-web'
 
     // any project that should be included in the end distribution should be included here
     // historically these were the included projects so we have trimmed them back down to pre7.0

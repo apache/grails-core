@@ -76,6 +76,7 @@ Attributes
 
 * `action` (optional) - The name of the action to use in the link; if not specified the default action will be linked
 * `controller` (optional) - The name of the controller to use in the link; if not specified the current controller will be linked
+* `namespace` (optional) - The namespace of the controller to use for the form action. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace=""` to target a non-namespaced controller.
 * `id` (optional) - The id to use in the link
 * `fragment` (optional) - The link fragment (often called anchor tag) to use
 * `mapping` (optional) - The link:{guidePath}/theWebLayer.html#namedMappings[named URL mapping] to use to rewrite the link

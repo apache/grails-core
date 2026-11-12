@@ -22,6 +22,12 @@ apply plugin: 'groovy'
 // grails-data-mapping api
 def combinedGroovydoc = tasks.register('aggregateDataMappingGroovydoc', Groovydoc)
 apply from: rootProject.layout.projectDirectory.file('gradle/docs-dependencies.gradle')
+// aggregateDataMappingGroovydoc documents the whole data-mapping stack in one run, so it
+// needs more than a single module does.
+groovydocEnhancer {
+    maxHeapSize = '2g'
+}
+
 combinedGroovydoc.configure { Groovydoc task ->
     task.windowTitle = "Grails Data Mapping API - ${projectVersion}"
     task.docTitle = "Grails Data Mapping API - ${projectVersion}"
@@ -69,7 +75,10 @@ combinedGroovydoc.configure { Groovydoc task ->
     }.unique()
     task.source(allSourceDirs)
     task.ext.groovydocSourceDirs = allSourceDirs
-    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath.filter(File.&isDirectory) }.flatten().unique())
+    // The full compile classpath, not just the sibling projects' class directories: Groovydoc
+    // needs to load the external types referenced by the sources, otherwise it links them to
+    // a page it never generated instead of to the external javadocs configured above.
+    task.classpath = files(sources.collect { SourceSet it -> it.compileClasspath })
     task.destinationDir = project.layout.buildDirectory.dir('data-api/api').get().asFile
 
     task.inputs.files(task.source).withPropertyName("groovyDocSrc").withPathSensitivity(PathSensitivity.RELATIVE)
@@ -115,43 +124,49 @@ tasks.register('copyHibernate7Docs', Sync).configure { Sync it ->
     it.outputs.dir(targetDir)
 }
 
+tasks.register('copyGraphqlDocs', Sync).configure { Sync it ->
+    it.dependsOn(':grails-data-graphql-docs:docs')
+
+    def graphqlSourceDir = project(':grails-data-graphql-docs').layout.buildDirectory.dir('docs')
+    def targetDir = project.layout.buildDirectory.dir('graphql-api/grails-data/graphql')
+
+    it.from(graphqlSourceDir)
+    it.into(targetDir)
+
+    it.inputs.dir(graphqlSourceDir)
+    it.outputs.dir(targetDir)
+}
+
 tasks.register('docs', Sync).configure { Sync it ->
     it.group = 'documentation'
-    it.dependsOn('aggregateDataMappingGroovydoc', 'copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs', 'copyHibernate7Docs')
+    it.dependsOn('aggregateDataMappingGroovydoc', 'copyGuides', 'copyMongodbDocs', 'copyHibernate5Docs', 'copyHibernate7Docs', 'copyGraphqlDocs')
 
     def websiteDir = rootProject.layout.projectDirectory.dir('grails-data-docs/data-mapping-website/src/main/resources')
     def guidesDir = project.layout.buildDirectory.dir('guides/grails-data')
     def mongoApiDir = project.layout.buildDirectory.dir('mongodb-api/grails-data')
     def hibernate5ApiDir = project.layout.buildDirectory.dir('hibernate5-api/grails-data')
     def hibernate7ApiDir = project.layout.buildDirectory.dir('hibernate7-api/grails-data')
+    def graphqlApiDir = project.layout.buildDirectory.dir('graphql-api/grails-data')
     def dataCoreApiDir = project.layout.buildDirectory.dir('data-api')
 
     def combinedDir = project.layout.buildDirectory.dir('docs/grails-data')
 
-    it.from websiteDir, guidesDir, mongoApiDir, hibernate5ApiDir, hibernate7ApiDir, dataCoreApiDir
+    it.from websiteDir, guidesDir, mongoApiDir, hibernate5ApiDir, hibernate7ApiDir, graphqlApiDir, dataCoreApiDir
     it.into combinedDir
 }
 
-tasks.register('copyGuides').configure { Task task ->
+tasks.register('copyGuides', Sync).configure { Sync task ->
     task.group = 'documentation'
 
     Set<Project> dataHeaderGuides = rootProject.subprojects.findAll { it.name.startsWith('grails-data-docs-guide-') }
     task.dependsOn(dataHeaderGuides.tasks*.named('asciidoctor'))
-    def guideDataDirectory = project.layout.buildDirectory.dir('guides/grails-data')
-    doLast {
-        copy {
-            for (Project subproject : dataHeaderGuides) {
-                String guideName = subproject.name.substring('grails-data-docs-guide-'.length())
-                def guideDirectory = subproject.layout.buildDirectory.dir('docs').get().asFile.absolutePath
-
-                from(guideDirectory) {
-                    into("${guideName}-manual")
-                }
-            }
-
-            into(guideDataDirectory)
+    for (Project subproject : dataHeaderGuides) {
+        String guideName = subproject.name.substring('grails-data-docs-guide-'.length())
+        task.from(subproject.layout.buildDirectory.dir('docs')) {
+            into("${guideName}-manual")
         }
     }
+    task.into(project.layout.buildDirectory.dir('guides/grails-data'))
 }
 
 // the groovy plugin is applied to this project, but we do not build a jar file since

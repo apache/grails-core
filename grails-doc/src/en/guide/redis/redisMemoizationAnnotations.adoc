@@ -1,0 +1,163 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+In addition to the concrete `redisService.memoize*` methods, you may annotate a method with the corresponding `@Memoize*` annotation. The annotation performs an AST transformation at compile time that wraps the body of the method with the matching memoization method. Parameters such as `key` and `expire` are passed to the annotation and used in the `redisService` memoize call.
+
+The following annotations are available:
+
+[cols="1,3"]
+|===
+| Annotation | Description
+
+| `@Memoize`             | Memoizes methods that return a String — `redisService.memoize`
+| `@MemoizeObject`       | Memoizes methods that return an object (stored as JSON) — `redisService.memoizeObject`
+| `@MemoizeDomainObject` | Memoizes methods that return a domain object — `redisService.memoizeDomainObject`
+| `@MemoizeDomainList`   | Memoizes methods that return a list of domain objects — `redisService.memoizeDomainList`
+| `@MemoizeHash`         | Memoizes methods that return a hash — `redisService.memoizeHash`
+| `@MemoizeHashField`    | Memoizes methods that return a hash field — `redisService.memoizeHashField`
+| `@MemoizeList`         | Memoizes methods that return a list — `redisService.memoizeList`
+| `@MemoizeSet`          | Memoizes methods that return a set — `redisService.memoizeSet`
+| `@MemoizeScore`        | Memoizes methods that return a score from a hash — `redisService.memoizeScore`
+|===
+
+==== Annotation keys
+
+Because the key value is passed in and also transformed by the AST, you cannot use `$`-style GString values in the keys. Instead, use the `#` sign to represent a GString value, e.g. `@Memoize(key = "#{book.title}:#{book.id}")`. During the AST transformation these are replaced with `$` and evaluate at runtime as `redisService.memoize("${book.title}:${book.id}"){...}`.
+
+Anything not in the format `key='#text'` or `key="${text}"` is treated as a string literal — `key="text"` is equivalent to using the literal string `"text"` as the memoize key. Any variable referenced in the key must be in scope; an out-of-scope reference produces a runtime error. The same rules apply to the `expire` field.
+
+==== Notes
+
+You do not need to import `grails.plugins.redis.RedisService` or declare `def redisService` on objects that use these annotations — the AST transform detects whether the field is present and adds it if needed. The entire annotated method body is wrapped in the Redis service call, so any computation it contains is skipped on a cache hit.
+
+If compilation succeeds but the method fails at runtime, verify that your key or value is configured correctly and that the key uses `#{}` for every variable you want referenced. If compilation does not succeed, check the stack trace — each annotation type validates its AST transform (required properties are provided, `expire` is a valid Integer, `value` is a valid closure, and `key` is a valid String).
+
+==== @Memoize
+
+Used for objects stored in Redis as strings. Parameters:
+
+* `value` — a closure (key OR value required)
+* `key` — a unique cache key (key OR value required)
+* `expire` — expiry in seconds; defaults to never
+
+NOTE: You may specify either a closure OR a key and expire. When using the closure-style key `@Memoize({"#{text}"})` you may not also pass a `key` or `expire`, because the closure is evaluated directly and used as the key. This is a limitation of how Java handles closure annotation parameters.
+
+[source,groovy]
+----
+@Memoize({"#{text}"})
+def getAnnotatedTextUsingClosure(String text, Date date) {
+    return "$text $date"
+}
+
+@Memoize(key = '#{text}')
+def getAnnotatedTextUsingKey(String text, Date date) {
+    return "$text $date"
+}
+
+@Memoize(key = '#{text}', expire = '3600')
+def getAnnotatedTextUsingKeyAndExpire(String text, Date date) {
+    return "$text $date"
+}
+
+@Memoize(key = "#{book.title}:#{book.id}")
+def getAnnotatedBook(Book book) {
+    return book.toString()
+}
+----
+
+==== @MemoizeObject
+
+Used for simple (non-domain) objects whose contents are stored in Redis as JSON. The returned object is converted to JSON, stored, and converted back, so the object class must be convertible to and from JSON. Parameters: `key` (required), `expire`, and `clazz` (the object class, required).
+
+[source,groovy]
+----
+@MemoizeObject(key = "#{title}", expire = "#{grailsApplication.config.cache.ttl}", clazz = Book.class)
+def createObject(String title, Date date) {
+    new Book(title: title, createDate: date)
+}
+----
+
+This is also available directly from the service:
+
+[source,groovy]
+----
+redisService.memoizeObject(Book.class, title, grailsApplication.config.cache.ttl) {
+    new Book(title: title, createDate: date)
+}
+----
+
+==== @MemoizeDomainObject
+
+Used for domain objects whose ids are stored in Redis (see domain object memoization). Parameters: `key` (required), `expire`, and `clazz` (required).
+
+[source,groovy]
+----
+@MemoizeDomainObject(key = "#{title}", clazz = Book.class)
+def createDomainObject(String title, Date date) {
+    Book.build(title: title, createDate: date)
+}
+----
+
+==== @MemoizeDomainList
+
+Used for lists of domain objects whose ids are stored in Redis (see domain list memoization). Parameters: `key` (required), `expire`, and `clazz` (required).
+
+[source,groovy]
+----
+@MemoizeDomainList(key = "getDomainListWithKeyClass:#{title}", clazz = Book.class)
+def getDomainListWithKeyClass(String title, Date date) {
+    Book.findAllByTitle(title)
+}
+----
+
+==== @MemoizeList
+
+Used for list-type objects. Parameters: `value` / `key` (one required) and `expire`.
+
+[source,groovy]
+----
+@MemoizeList(key = "#{list[0]}")
+def getAnnotatedList(List list) {
+    return list
+}
+----
+
+==== @MemoizeScore
+
+Used for scores in hashes. Parameters: `key` (required), `expire`, and `member` (the hash property to store, required).
+
+[source,groovy]
+----
+@MemoizeScore(key = "#{map.key}", member = "foo")
+def getAnnotatedScore(Map map) {
+    return map.foo
+}
+----
+
+==== @MemoizeHash
+
+Used for map/hash-type objects. Parameters: `value` / `key` (one required) and `expire`.
+
+[source,groovy]
+----
+@MemoizeHash(key = "#{map.foo}")
+def getAnnotatedHash(Map map) {
+    return map
+}
+----

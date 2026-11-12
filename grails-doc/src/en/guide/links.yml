@@ -136,8 +136,8 @@ logicAndIteration: 7.2.1.2 Logic and Iteration
 pageDirectives: 7.2.1.3 Page Directives
 expressions: 7.2.1.4 Expressions
 tags: 7.2.2 GSP Tags
-variablesAndScopes: 7.2.2.1 Variables and Scopes
-logicAndIteration: 7.2.2.2 Logic and Iteration
+tagVariablesAndScopes: 7.2.2.1 Variables and Scopes
+tagLogicAndIteration: 7.2.2.2 Logic and Iteration
 searchAndFiltering: 7.2.2.3 Search and Filtering
 linksAndResources: 7.2.2.4 Links and Resources
 formsAndFields: 7.2.2.5 Forms and Fields
@@ -157,7 +157,7 @@ contentBlocks: 7.2.6 Content Blocks
 makingChangesToADeployedApplication: 7.2.7 Making Changes to a Deployed Application
 GSPDebugging: 7.2.8 GSP Debugging
 taglibs: 7.3 Tag Libraries
-variablesAndScopes: 7.3.1 Variables and Scopes
+taglibVariablesAndScopes: 7.3.1 Variables and Scopes
 simpleTags: 7.3.2 Simple Tags
 logicalTags: 7.3.3 Logical Tags
 iterativeTags: 7.3.4 Iterative Tags
@@ -182,7 +182,7 @@ dataBindingAndValidation: 7.5.5 Data Binding and Validation
 filters: 7.6 Filters
 applyingFilters: 6.6.1 Applying Filters
 filterTypes: 6.6.2 Filter Types
-variablesAndScopes: 6.6.3 Variables and Scopes
+filterVariablesAndScopes: 6.6.3 Variables and Scopes
 filterDependencies: 6.6.4 Filter Dependencies
 ajax: 7.7 Ajax
 ajaxSupport: 7.7.1 Ajax Support
@@ -236,7 +236,6 @@ codecs: 14.2 Encoding and Decoding Objects
 authentication: 14.3 Authentication
 securityPlugins: 14.4 Security Plug-ins
 springSecurity: 14.4.1 Spring Security
-shiro: 14.4.2 Shiro
 plugins: 15. Plug-ins
 creatingAndInstallingPlugins: 15.1 Creating and Installing Plug-ins
 repositories: 15.2 Plugin Repositories

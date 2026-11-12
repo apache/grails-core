@@ -22,9 +22,10 @@ package functional.tests
 class ModelInterceptor {
 
     Object latestModel
+    Map<String, Object> modelByAction = [:]
 
     ModelInterceptor() {
-        match(controller: 'modelAndView|respond|return')
+        match(controller: 'modelAndView|respond|return|renderTemplate')
     }
 
     boolean before() {
@@ -33,6 +34,7 @@ class ModelInterceptor {
 
     boolean after() {
         latestModel = model
+        modelByAction[actionName] = model
         true
     }
 }

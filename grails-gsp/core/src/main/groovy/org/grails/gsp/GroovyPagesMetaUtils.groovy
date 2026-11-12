@@ -20,10 +20,8 @@ package org.grails.gsp
 
 import groovy.transform.CompileStatic
 
-import grails.util.Environment
 import grails.util.GrailsMetaClassUtils
 import org.grails.taglib.TagLibraryLookup
-import org.grails.taglib.TagLibraryMetaUtils
 
 @CompileStatic
 class GroovyPagesMetaUtils {
@@ -32,18 +30,19 @@ class GroovyPagesMetaUtils {
         registerMethodMissingForGSP(GrailsMetaClassUtils.getExpandoMetaClass(gspClass), gspTagLibraryLookup)
     }
 
+    /**
+     * Nothing is installed onto a page's metaclass any more.
+     *
+     * <p>A page used to be given methodMissing, a method for each tag and a property for each
+     * namespace as it was compiled. GroovyPage declares methodMissing itself and resolves a namespace
+     * through getProperty, so the tags reachable from a page are the same without any of those writes.
+     *
+     * @param emc the page's metaclass, no longer modified
+     * @param gspTagLibraryLookup the tag libraries, resolved through at dispatch instead
+     * @deprecated Pages resolve tags without their metaclass being written to.
+     */
+    @Deprecated
     static void registerMethodMissingForGSP(final MetaClass emc, final TagLibraryLookup gspTagLibraryLookup) {
-        if (gspTagLibraryLookup == null) return
-        final boolean addMethodsToMetaClass = !Environment.isDevelopmentMode()
-
-        GroovyObject mc = (GroovyObject) emc
-        synchronized(emc) {
-            mc.setProperty('methodMissing', { String name, Object args ->
-                TagLibraryMetaUtils.methodMissingForTagLib(emc, emc.getTheClass(), gspTagLibraryLookup, GroovyPage.DEFAULT_NAMESPACE, name, args, addMethodsToMetaClass)
-            })
-        }
-        TagLibraryMetaUtils.registerTagMetaMethods(emc, gspTagLibraryLookup, GroovyPage.DEFAULT_NAMESPACE)
-        TagLibraryMetaUtils.registerNamespaceMetaProperties(emc, gspTagLibraryLookup)
     }
 
 }

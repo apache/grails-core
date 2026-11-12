@@ -40,7 +40,7 @@ Book.withTransaction {
 ----
 
 
-==== Transactional Write-Behind
+=== Transactional Write-Behind
 
 
 A useful feature of Hibernate over direct JDBC calls and even other frameworks is that when you call link:../api/org/grails/datastore/gorm/GormEntity.html#save()[save()] or link:../api/org/grails/datastore/gorm/GormEntity.html#delete()[delete()] it does not necessarily perform any SQL operations *at that point*. Hibernate batches up SQL statements and executes them as late as possible, often at the end of the request when flushing and closing the session.

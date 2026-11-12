@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.mongo.config;
 
 import java.beans.PropertyDescriptor;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -91,6 +92,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PropertyMapping;
 import org.grails.datastore.mapping.model.types.Custom;
 import org.grails.datastore.mapping.model.types.Identity;
+import org.grails.datastore.mapping.model.types.mapping.IdentityWithMapping;
 import org.grails.datastore.mapping.mongo.MongoConstants;
 import org.grails.datastore.mapping.mongo.MongoDatastore;
 import org.grails.datastore.mapping.mongo.connections.AbstractMongoConnectionSourceSettings;
@@ -139,11 +141,25 @@ public class MongoMappingContext extends DocumentMappingContext {
     private Map<Class, Boolean> hasCodecCache = new HashMap<>();
 
     /**
-     * Global default storage type for {@code String id} fields that don't declare an explicit
-     * {@code id storedAs: ...} in their mapping. Null means "no default — use the declared
-     * Java type" (current GORM behavior). See {@link MongoSettings#SETTING_STRING_IDS_DEFAULT_STORED_AS}.
+     * Storage type applied to {@code String id} domains that declare no explicit
+     * {@code storedAs}. ObjectId keeps {@code _id} a native BSON type -- smaller on disk and
+     * in indexes, and directly usable from every other MongoDB client -- while application
+     * code still sees a {@code String}. Opt back out globally with
+     * {@code grails.mongodb.stringIds.defaultStoredAs: string}, or per domain with
+     * {@code static mapping = { id storedAs: String }}.
      */
-    private Class<?> stringIdDefaultStoredAs;
+    private static final Class<?> DEFAULT_STRING_ID_STORED_AS = ObjectId.class;
+
+    /**
+     * Global default storage type for {@code String id} fields that don't declare an explicit
+     * {@code id storedAs: ...} in their mapping. Initialized to
+     * {@link #DEFAULT_STRING_ID_STORED_AS} so that every constructor -- including the ones
+     * that read no configuration at all -- registers entities with the same default; the
+     * config-reading constructors overwrite it from
+     * {@link MongoSettings#SETTING_STRING_IDS_DEFAULT_STORED_AS}. Null disables coercion.
+     */
+    private Class<?> stringIdDefaultStoredAs = DEFAULT_STRING_ID_STORED_AS;
+    private Class<?> portableIdentityType = Long.class;
 
     public Class<?> getStringIdDefaultStoredAs() {
         return stringIdDefaultStoredAs;
@@ -189,11 +205,13 @@ public class MongoMappingContext extends DocumentMappingContext {
         // (invoked during entity registration) can read the global default.
         String storedAsDefault = configuration.getProperty(MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS, String.class, null);
         this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
+        this.portableIdentityType = resolvePortableIdentityType(
+                configuration.getProperty("grails.gorm.defaultIdType", String.class, "long"));
         initialize(classes);
     }
 
     private static Class<?> parseStoredAs(String value) {
-        if (value == null) return null;
+        if (value == null) return DEFAULT_STRING_ID_STORED_AS;
         switch (value.toLowerCase()) {
             case "objectid":
             case "object_id":
@@ -202,9 +220,9 @@ public class MongoMappingContext extends DocumentMappingContext {
                 return String.class;
             default:
                 log.warn("Unrecognized value '{}' for {}; accepted values are 'objectid' or 'string'. " +
-                        "Falling back to default behavior (no coercion).",
+                        "Falling back to the default ('objectid').",
                         value, MongoSettings.SETTING_STRING_IDS_DEFAULT_STORED_AS);
-                return null;
+                return DEFAULT_STRING_ID_STORED_AS;
         }
     }
 
@@ -220,7 +238,12 @@ public class MongoMappingContext extends DocumentMappingContext {
         // (invoked during entity registration) can read the global default.
         String storedAsDefault = settings.getStringIds() != null ? settings.getStringIds().getDefaultStoredAs() : null;
         this.stringIdDefaultStoredAs = parseStoredAs(storedAsDefault);
+        this.portableIdentityType = resolvePortableIdentityType(settings.getDefaultIdType());
         initialize(classes);
+    }
+
+    private static Class<?> resolvePortableIdentityType(String configuredType) {
+        return "native".equalsIgnoreCase(configuredType) ? String.class : Long.class;
     }
 
     /**
@@ -376,13 +399,21 @@ public class MongoMappingContext extends DocumentMappingContext {
 
         @Override
         public Identity<MongoAttribute> createIdentity(PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-            Identity<MongoAttribute> identity = super.createIdentity(owner, context, pd);
+            Identity<MongoAttribute> identity;
+            if (Serializable.class.equals(pd.getPropertyType())) {
+                IdentityWithMapping<MongoAttribute> portableIdentity =
+                        new IdentityWithMapping<>(owner, context, pd.getName(), portableIdentityType);
+                portableIdentity.setMapping(createPropertyMapping(portableIdentity, owner));
+                identity = portableIdentity;
+            } else {
+                identity = super.createIdentity(owner, context, pd);
+            }
             MongoAttribute mappedForm = identity.getMapping().getMappedForm();
             mappedForm.setTargetName(MongoConstants.MONGO_ID_FIELD);
             // Apply the global default storedAs for String-id domains that don't declare their own.
             if (mappedForm.getStoredAs() == null &&
                     stringIdDefaultStoredAs != null &&
-                    String.class.equals(pd.getPropertyType())) {
+                    String.class.equals(identity.getType())) {
                 mappedForm.setStoredAs(stringIdDefaultStoredAs);
             }
             return identity;

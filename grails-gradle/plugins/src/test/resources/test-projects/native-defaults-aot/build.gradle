@@ -1,0 +1,11 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+    id 'org.springframework.boot.aot'
+}
+
+tasks.register('inspectAot') {
+    def grailsEnv = providers.provider { String.valueOf(tasks.named('processAot').get().systemProperties['grails.env']) }
+    doLast {
+        println "GRAILS_ENV=${grailsEnv.get()}"
+    }
+}

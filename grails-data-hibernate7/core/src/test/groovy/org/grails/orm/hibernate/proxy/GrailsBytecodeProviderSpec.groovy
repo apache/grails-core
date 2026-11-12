@@ -18,11 +18,22 @@
  */
 package org.grails.orm.hibernate.proxy
 
+import grails.gorm.annotation.Entity
+import groovy.transform.CompileStatic
+
+import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.bytecode.enhance.spi.EnhancementContext
+import org.hibernate.engine.spi.SessionFactoryImplementor
+import org.hibernate.engine.spi.SharedSessionContractImplementor
+import org.hibernate.proxy.HibernateProxy
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Subject
 
 class GrailsBytecodeProviderSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(ProviderProxyEntity)
 
     @Subject
     GrailsBytecodeProvider provider = new GrailsBytecodeProvider()
@@ -31,6 +42,32 @@ class GrailsBytecodeProviderSpec extends Specification {
         expect:
         provider != null
         provider.proxyHelper != null
+    }
+
+    def "exposes the ByteBuddyState its proxy helper loads proxy classes through"() {
+        expect:
+        provider.byteBuddyState != null
+    }
+
+    def "two proxy factories built from the same provider share the generated proxy class"() {
+        given: 'a session factory the factories only ask for their properties'
+        def sessionFactory = Mock(SessionFactoryImplementor) {
+            getProperties() >> [:]
+        }
+        def session = datastore.sessionFactory.openSession() as SharedSessionContractImplementor
+
+        when: 'each factory builds and instantiates the proxy class for the same Groovy entity'
+        def first = provider.getProxyFactoryFactory().buildProxyFactory(sessionFactory) as ByteBuddyGroovyProxyFactory
+        def second = provider.getProxyFactoryFactory().buildProxyFactory(sessionFactory) as ByteBuddyGroovyProxyFactory
+        first.postInstantiate(ProviderProxyEntity.name, ProviderProxyEntity, [HibernateProxy] as Set, null, null, null)
+        second.postInstantiate(ProviderProxyEntity.name, ProviderProxyEntity, [HibernateProxy] as Set, null, null, null)
+
+        then: 'the wrapper is cached in the shared ByteBuddyState, so both factories use one class'
+        !first.is(second)
+        classOf(first.getProxy(1L, session)).is(classOf(second.getProxy(1L, session)))
+
+        cleanup:
+        session?.close()
     }
 
     def "getProxyFactoryFactory returns GrailsProxyFactoryFactory"() {
@@ -66,4 +103,14 @@ class GrailsBytecodeProviderSpec extends Specification {
         then:
         basicProxy == null
     }
+
+    @CompileStatic
+    private static Class<?> classOf(HibernateProxy proxy) {
+        proxy.getClass()
+    }
+}
+
+@Entity
+class ProviderProxyEntity {
+    Long id
 }

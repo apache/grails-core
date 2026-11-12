@@ -37,7 +37,14 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
 
     private final ContentProcessor contentProcessor;
     private final DecoratorSelector<SiteMeshContext> decoratorSelector;
-    private final ServletContext servletContext;
+
+    public GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
+                                      ContentProcessor contentProcessor,
+                                      DecoratorSelector<SiteMeshContext> decoratorSelector) {
+        super(innerViewResolver, contentProcessor, decoratorSelector);
+        this.contentProcessor = contentProcessor;
+        this.decoratorSelector = decoratorSelector;
+    }
 
     public GrailsSiteMeshViewResolver(ViewResolver innerViewResolver,
                                       ContentProcessor contentProcessor,
@@ -46,7 +53,6 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
         super(innerViewResolver, contentProcessor, decoratorSelector, servletContext);
         this.contentProcessor = contentProcessor;
         this.decoratorSelector = decoratorSelector;
-        this.servletContext = servletContext;
     }
 
     @Override
@@ -54,7 +60,7 @@ public class GrailsSiteMeshViewResolver extends SiteMeshViewResolver {
         // Forward-based JSP inner views are switched to include dispatch by
         // SiteMeshViewResolver.prepareForBufferedRender (keyed on
         // DispatchMode) before this hook runs.
-        return new GrailsSiteMeshView(innerView, contentProcessor, decoratorSelector, servletContext,
+        return new GrailsSiteMeshView(innerView, contentProcessor, decoratorSelector, getServletContext(),
                 getInnerViewResolver());
     }
 }

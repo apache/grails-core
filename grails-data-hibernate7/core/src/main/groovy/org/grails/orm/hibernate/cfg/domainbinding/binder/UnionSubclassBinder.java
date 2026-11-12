@@ -35,7 +35,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * Binds a union sub-class mapping using table-per-concrete-class
  *
- * @since 7.0
+ * @since 8.0
  */
 public class UnionSubclassBinder {
 

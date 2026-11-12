@@ -32,7 +32,7 @@ Grails artefacts are automatically augmented with certain traits at compile time
 ==== Controller Traits
 
 * link:{api}grails/artefact/gsp/TagLibraryInvoker.html[grails.artefact.gsp.TagLibraryInvoker]
-* link:{api}grails/async/web/AsyncController.html[grails.async.web.AsyncController]
+* link:{api}grails/async/web/AsyncController.html[grails.async.web.AsyncController] (deprecated for removal; return a `Promise` from the action instead of using `startAsync()`)
 * link:{api}grails/artefact/controller/RestResponder.html[grails.artefact.controller.RestResponder]
 * link:{api}grails/artefact/Controller.html[grails.artefact.Controller]
 

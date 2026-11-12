@@ -114,6 +114,11 @@ class CommentIntegrationSpec extends Specification implements GraphQLSpec {
         System.setOut(new StringMessagePrintStream() {
             @Override
             protected void printed(String message) {
+                // Count only emitted SQL, not other framework output on stdout such as
+                // Hibernate's one-off HHH90000022 legacy-criteria deprecation warning.
+                if (!message.startsWith('Hibernate:')) {
+                    return
+                }
                 queries.add(message)
                 outCount++
             }

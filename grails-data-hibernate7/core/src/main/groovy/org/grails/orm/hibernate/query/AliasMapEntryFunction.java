@@ -23,7 +23,7 @@ import java.util.function.Function;
 
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 
-/** TODO: Add description. */
+/** Maps detached association criteria by association path for alias registration. */
 public class AliasMapEntryFunction
         implements Function<DetachedAssociationCriteria<?>, Map.Entry<String, DetachedAssociationCriteria<?>>> {
 

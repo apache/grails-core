@@ -22,14 +22,14 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.context.ConfigurableApplicationContext
 
 import grails.config.Settings
-import grails.dev.commands.ApplicationContextCommandRegistry
-import grails.dev.commands.ExecutionContext
+import org.apache.grails.core.cli.ApplicationContextCommandRegistry
+import org.apache.grails.core.cli.ExecutionContext
+import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
 /**
- * @author Graeme Rocher
  * @since 3.0
  */
 @CompileStatic
@@ -44,11 +44,13 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
 
     @Override
     ConfigurableApplicationContext run(String... args) {
-        def command = ApplicationContextCommandRegistry.instance.findCommand(commandName)
+        ApplicationContextCommandRegistry commandRegistry = ApplicationContextCommandRegistry.instance
+        def command = commandRegistry.findCommand(commandName)
         if (command) {
+            Object autowireTarget = resolveAutowireTarget(command)
 
-            Object skipBootstrap = command.hasProperty('skipBootstrap')?.getProperty(command)
-            if (skipBootstrap instanceof Boolean && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
+            Boolean skipBootstrap = resolveSkipBootstrap(command)
+            if (skipBootstrap != null && !System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP)) {
                 System.setProperty(Settings.SETTING_SKIP_BOOTSTRAP, skipBootstrap.toString())
             }
 
@@ -74,7 +76,7 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             try {
                 // Parse the FULL args (including --options) for the command
                 CommandLine commandLine = new CommandLineParser().parse(args)
-                ctx.autowireCapableBeanFactory.autowireBeanProperties(command, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
+                ctx.autowireCapableBeanFactory.autowireBeanProperties(autowireTarget, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false)
                 command.applicationContext = ctx
                 def result = command.handle(new ExecutionContext(commandLine))
                 result ? System.exit(0) : System.exit(1)
@@ -85,13 +87,12 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
             finally {
                 try {
                     ctx?.close()
-                } catch (Throwable e) {
-                    // ignore
+                } catch (Throwable ignored) {
                 }
             }
         }
         else {
-            System.err.println("Command not found for name: $commandName")
+            System.err.println(unknownCommandMessage(commandName, commandRegistry.missingCommandHint))
             System.exit(1)
         }
         return null
@@ -115,6 +116,42 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
      */
     static String[] filterCommandOptions(String[] args) {
         args.findAll { it != null && !it.startsWith('--') } as String[]
+    }
+
+    static String unknownCommandMessage(String commandName, String missingCommandHint) {
+        String message = "Command not found for name: $commandName"
+        missingCommandHint ? "${message}\n${missingCommandHint}" : message
+    }
+
+    /**
+     * Resolves the object that Spring should autowire and inspect for the {@code skipBootstrap}
+     * property. For a command loaded through the deprecated Grails 7 compatibility layer the
+     * registry returns an {@link ApplicationCommandTargetAware} adapter; the target it wraps - not
+     * the adapter - is what must be autowired and queried, because the adapter forwards
+     * {@code applicationContext} and {@code handle} to that same instance. Any other command is
+     * returned unchanged.
+     *
+     * @param command the command resolved from the registry
+     * @return the adapter target when {@code command} is {@link ApplicationCommandTargetAware}, otherwise {@code command}
+     */
+    static Object resolveAutowireTarget(Object command) {
+        command instanceof ApplicationCommandTargetAware ?
+            ((ApplicationCommandTargetAware) command).target : command
+    }
+
+    /**
+     * Reads the optional {@code skipBootstrap} flag declared by a command. The flag is looked up on
+     * the autowire target rather than on {@code command} itself, so a command reached through the
+     * deprecated Grails 7 compatibility layer keeps its flag: the adapter forwards {@code handle}
+     * but not the arbitrary properties a command declares.
+     *
+     * @param command the command resolved from the registry
+     * @return the declared flag, or {@code null} when the target declares no {@code skipBootstrap} property or declares one that is not a {@link Boolean}
+     */
+    static Boolean resolveSkipBootstrap(Object command) {
+        Object autowireTarget = resolveAutowireTarget(command)
+        Object skipBootstrap = autowireTarget.hasProperty('skipBootstrap')?.getProperty(autowireTarget)
+        skipBootstrap instanceof Boolean ? (Boolean) skipBootstrap : null
     }
 
     /**

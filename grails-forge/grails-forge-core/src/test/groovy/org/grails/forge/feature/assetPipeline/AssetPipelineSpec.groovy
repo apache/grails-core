@@ -55,7 +55,7 @@ assets {
     excludes = [
             'webjars/jquery/**',
             'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
+            'webjars/bootstrap-icons/**',
     ]
     includes = [
             'webjars/jquery/*/dist/jquery.js',
@@ -81,7 +81,7 @@ assets {
     excludes = [
             'webjars/jquery/**',
             'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
+            'webjars/bootstrap-icons/**',
     ]
     includes = [
             'webjars/jquery/*/dist/jquery.js',

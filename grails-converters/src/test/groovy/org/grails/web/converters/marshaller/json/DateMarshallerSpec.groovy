@@ -18,7 +18,10 @@
  */
 package org.grails.web.converters.marshaller.json
 
+import java.sql.Time
+import java.sql.Timestamp
 import java.text.SimpleDateFormat
+import java.time.Instant
 
 import spock.lang.Specification
 
@@ -57,7 +60,7 @@ class DateMarshallerSpec extends Specification {
         result == '["2024-06-15T14:30:45.123Z"]'
     }
 
-    void "default formatter omits fractional seconds when millis are zero (ISO_INSTANT)"() {
+    void "default formatter keeps a zero millisecond fraction, as Spring Boot does"() {
         given:
         def marshaller = new DateMarshaller()
         // 2024-01-01T00:00:00.000 UTC
@@ -66,8 +69,8 @@ class DateMarshallerSpec extends Specification {
         when:
         def result = marshalToString(marshaller, date)
 
-        then: "ISO_INSTANT drops the fraction entirely on whole-second instants"
-        result == '["2024-01-01T00:00:00Z"]'
+        then: "the output is always yyyy-MM-ddTHH:mm:ss.SSSZ"
+        result == '["2024-01-01T00:00:00.000Z"]'
     }
 
     void "default formatter pads sub-100 milliseconds to three digits"() {
@@ -81,6 +84,26 @@ class DateMarshallerSpec extends Specification {
 
         then:
         result == '["2024-01-01T00:00:00.005Z"]'
+    }
+
+    void "default formatter renders a #type.simpleName from its epoch millis"() {
+        given: "java.sql.Date and java.sql.Time throw UnsupportedOperationException from toInstant()"
+        def marshaller = new DateMarshaller()
+
+        when:
+        def result = marshalToString(marshaller, date)
+
+        then: "Timestamp nanos beyond the millisecond are dropped, as Spring Boot does"
+        result == "[\"${expected}\"]"
+
+        where:
+        date                                                         || expected
+        new java.sql.Date(1790305200000L)                            || '2026-09-25T03:00:00.000Z'
+        new Time(1759909726407L)                                     || '2025-10-08T07:48:46.407Z'
+        Timestamp.from(Instant.parse('2025-10-08T07:48:46.407254Z')) || '2025-10-08T07:48:46.407Z'
+        Timestamp.from(Instant.parse('2026-09-25T03:00:00Z'))        || '2026-09-25T03:00:00.000Z'
+
+        type = date.getClass()
     }
 
     void "legacy formatter is used when provided"() {

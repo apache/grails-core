@@ -522,6 +522,15 @@ class HibernateMappingBuilderSpec extends Specification {
 
         then:
         m.userTypes[String] == 'myType'
+        m.getTypeName(String) == 'myType'
+    }
+
+    def "hibernateCustomUserType resolves a Class type to its class name"() {
+        when:
+        Mapping m = evaluate { 'user-type'(type: StringBuilder, 'class': String) }
+
+        then:
+        m.getTypeName(String) == StringBuilder.name
     }
 
     def "hibernateCustomUserType is a no-op when class is not a Class"() {

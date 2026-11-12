@@ -19,6 +19,8 @@
 
 package grails.test.mixin
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Artefact
 import grails.converters.JSON
 import grails.converters.XML
@@ -68,6 +70,12 @@ class ControllerUnitTestMixinTests extends Specification implements ControllerUn
         }
     }
 
+    @CompileStatic
+    void "mockController returns the typed controller"() {
+        expect: "no compilation error"
+        AnnotationOnlyTestController c = mockController(AnnotationOnlyTestController)
+    }
+
     void testRenderText() {
         when:
         controller.renderText()
@@ -100,6 +108,11 @@ class ControllerUnitTestMixinTests extends Specification implements ControllerUn
 
         then:
         "/test/foo" == view
+    }
+
+    void 'view is null before an action is invoked'() {
+        expect:
+        view == null
     }
 
     void testRenderXml() {
@@ -729,6 +742,13 @@ class TestCommand {
 class SubController extends TestController {
     def method1() {
         super.method1()
+    }
+}
+
+@Artefact('Controller')
+class AnnotationOnlyTestController {
+    def hello() {
+        render('Hello')
     }
 }
 

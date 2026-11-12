@@ -436,31 +436,44 @@ class BomManagedVersions {
         // The two-pass diff in resolve() discards versions that are identical with and
         // without overrides, so recording literal versions never produces spurious
         // overrides.
+        // The build's validateBomProperties task walks BOMs the same way in build-logic
+        // (ParentBomVersions), which cannot depend on this plugin: a fix to how either one
+        // reads a BOM belongs in the other too.
         List<Dependency> importedBoms = new ArrayList<>()
         for (Dependency dep : managed) {
-            if (!dep.groupId || !dep.artifactId) {
-                continue
-            }
-
             if ('import' == dep.scope) {
                 importedBoms.add(dep)
                 continue
             }
 
+            def groupId = resolveCoordinate(dep.groupId, bomProperties)
+            def artifactId = resolveCoordinate(dep.artifactId, bomProperties)
             def resolvedVersion = resolveVersion(dep.version, propertyResolver, bomProperties)
-            if (resolvedVersion) {
-                def artifactKey = "${dep.groupId}:${dep.artifactId}" as String
-                artifactVersions.putIfAbsent(artifactKey, resolvedVersion)
+            if (groupId && artifactId && resolvedVersion) {
+                artifactVersions.putIfAbsent("${groupId}:${artifactId}" as String, resolvedVersion)
             }
         }
 
         for (Dependency importedBom : importedBoms) {
+            def groupId = resolveCoordinate(importedBom.groupId, bomProperties)
+            def artifactId = resolveCoordinate(importedBom.artifactId, bomProperties)
             def resolvedVersion = resolveVersion(importedBom.version, propertyResolver, bomProperties)
-            if (resolvedVersion) {
-                processBom(configurations, dependencies, importedBom.groupId, importedBom.artifactId, resolvedVersion,
+            if (groupId && artifactId && resolvedVersion) {
+                processBom(configurations, dependencies, groupId, artifactId, resolvedVersion,
                     propertyResolver, artifactVersions, processed)
             }
         }
+    }
+
+    /**
+     * Interpolates {@code ${property}} references in a group or artifact ID, such
+     * as the {@code ${project.groupId}} the Kotlin, Brave, Zipkin Reporter and
+     * Querydsl BOMs write their own group as. Only the BOM's own properties apply:
+     * a project property overrides versions, never which module an entry manages.
+     * Returns {@code null} when the value cannot be fully resolved.
+     */
+    private static String resolveCoordinate(String value, Map<String, String> bomProperties) {
+        resolveVersion(value, NO_OVERRIDES, bomProperties)
     }
 
     private static String extractPropertyName(String versionStr) {

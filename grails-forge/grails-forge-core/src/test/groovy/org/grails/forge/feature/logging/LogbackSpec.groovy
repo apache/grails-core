@@ -42,12 +42,73 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
     }
 
     @Unroll
-    void "test logback-spring.xml config file is present for #applicationType application"() {
+    void "test no logback-spring.xml config file is generated for #applicationType application"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
+        !output.containsKey("grails-app/conf/logback-spring.xml")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    void "test logback-config feature is visible so it can be searched and selected"() {
+        when:
+        def feature = beanContext.getBean(LogbackConfig)
+
+        then:
+        feature.name == "logback-config"
+        feature.visible
+    }
+
+    @Unroll
+    void "test logback-config feature generates logback-spring.xml composing Spring Boot defaults for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ["logback-config"])
+
+        then: "the file reuses Spring Boot's own defaults and console appender instead of duplicating them"
         output.containsKey("grails-app/conf/logback-spring.xml")
+        def logback = output.get("grails-app/conf/logback-spring.xml")
+        logback.contains('<include resource="org/springframework/boot/logging/logback/defaults.xml"/>')
+        logback.contains('<include resource="org/springframework/boot/logging/logback/console-appender.xml"/>')
+        logback.contains('<root level="INFO">')
+        !logback.contains('<root level="ERROR">')
+
+        and: "environment-specific logging is configured via the development Spring profile"
+        logback.contains('<springProfile name="development">')
+        logback.contains('<logger name="StackTrace" level="ERROR"/>')
+
+        and: "Jansi is not used; its global System.out replacement breaks console logging after a Spring Boot DevTools restart (issue #15663)"
+        !logback.contains("withJansi")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "test logback-config feature keeps the grails-logging dependency exactly once for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ["logback-config"])
+
+        then:
+        output.containsKey("build.gradle")
+        def build = output.get("build.gradle")
+        build.count("implementation \"org.apache.grails:grails-logging\"") == 1
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "test build.gradle does not inline bootRun console color config for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then: "The Grails Gradle plugin configures bootRun console colors instead of generated end-user build.gradle files (issue #15663)"
+        def build = output.get("build.gradle")
+        !build.contains("tasks.matching { it.name == 'bootRun' }.configureEach {")
+        !build.contains("spring.output.ansi.console-available")
 
         where:
         applicationType << ApplicationType.values().toList()

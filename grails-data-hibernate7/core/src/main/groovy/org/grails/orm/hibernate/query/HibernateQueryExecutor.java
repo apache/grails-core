@@ -19,9 +19,12 @@
 package org.grails.orm.hibernate.query;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.Parameter;
+import jakarta.persistence.criteria.ParameterExpression;
 
 import org.hibernate.NonUniqueResultException;
 import org.hibernate.Session;
@@ -42,16 +45,16 @@ public record HibernateQueryExecutor(
         Boolean readOnly,
         ProxyHandler proxyHandler) {
 
-    public List list(Session session, JpaCriteriaQuery jpaCq) {
-        return configureQuery(session, jpaCq).getResultList();
+    public List list(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).getResultList();
     }
 
-    public Object scroll(Session session, JpaCriteriaQuery jpaCq) {
-        return configureQuery(session, jpaCq).scroll();
+    public Object scroll(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        return configureQuery(session, jpaCq, parameterValues).scroll();
     }
 
-    public Object singleResult(Session session, JpaCriteriaQuery jpaCq) {
-        var query = configureQuery(session, jpaCq);
+    public Object singleResult(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
+        var query = configureQuery(session, jpaCq, parameterValues);
         try {
             Object singleResult = query.getSingleResult();
             return proxyHandler.unwrap(singleResult);
@@ -62,8 +65,10 @@ public record HibernateQueryExecutor(
         }
     }
 
-    private Query configureQuery(Session session, JpaCriteriaQuery jpaCq) {
+    @SuppressWarnings("unchecked")
+    private Query configureQuery(Session session, JpaCriteriaQuery jpaCq, Map<ParameterExpression<?>, Object> parameterValues) {
         var query = session.createQuery(jpaCq);
+        parameterValues.forEach((parameter, value) -> query.setParameter((Parameter<Object>) parameter, value));
         if (jakarta.persistence.Tuple.class.equals(jpaCq.getResultType())) {
             query.setTupleTransformer((payload, aliases) -> payload);
         }

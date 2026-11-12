@@ -26,6 +26,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyEntit
 import org.hibernate.mapping.Bag
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Column
+import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.OneToMany
 import org.hibernate.mapping.Property
 import org.hibernate.mapping.RootClass
@@ -133,11 +134,13 @@ class HibernateToManyEntityOrderByBinderSpec extends HibernateGormDatastoreSpec 
         element.getAssociatedClass() == associatedClass
     }
 
-    def "bind sets where clause for table-per-hierarchy subclass"() {
+    def "bind sets where clause for a one-to-many collection of a table-per-hierarchy subclass"() {
         given:
         def property = propertyFor(COBHierarchyOwner)
-        def collection = new Bag(getGrailsDomainBinder().getMetadataBuildingContext(), null)
-        def associatedClass = new RootClass(getGrailsDomainBinder().getMetadataBuildingContext())
+        def metadataContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def collection = new Bag(metadataContext, null)
+        collection.setElement(new OneToMany(metadataContext, collection.getOwner()))
+        def associatedClass = new RootClass(metadataContext)
         associatedClass.setTable(new Table("COB_BASE_ITEM"))
         property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
 
@@ -148,8 +151,27 @@ class HibernateToManyEntityOrderByBinderSpec extends HibernateGormDatastoreSpec 
 
         then:
         collection.getWhere() != null
-        collection.getWhere().contains("DTYPE in (")
+        collection.getWhere().contains("class in (")
         collection.getWhere().contains("COBSubItem")
+    }
+
+    def "bind does not set a where clause for a join table collection of a table-per-hierarchy subclass"() {
+        given:
+        def property = propertyFor(COBHierarchyOwner)
+        def metadataContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def collection = new Bag(metadataContext, null)
+        collection.setElement(new ManyToOne(metadataContext, new Table("COB_HIERARCHY_OWNER_COB_SUB_ITEM")))
+        def associatedClass = new RootClass(metadataContext)
+        associatedClass.setTable(new Table("COB_BASE_ITEM"))
+        property.getHibernateAssociatedEntity().setPersistentClass(associatedClass)
+
+        property.setCollection(collection)
+
+        when:
+        binder.bind(property)
+
+        then: 'the join table has no discriminator column to restrict on'
+        collection.getWhere() == null
     }
 }
 

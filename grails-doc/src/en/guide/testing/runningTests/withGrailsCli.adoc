@@ -59,6 +59,25 @@ open test-report
 You can also run your unit tests from within most IDEs.
 
 
+==== Running Tests Continuously
+
+
+For a local edit-and-test loop in the Grails interactive CLI, start continuous testing:
+
+
+[source,groovy]
+----
+grails
+grails> test-app -continuous
+----
+
+
+Grails starts its `DirectoryWatcher` and reruns the selected tests after a `.groovy` or `.java` file is created or changed in `grails-app`, `src/main/groovy`, `src/test/groovy`, or `src/integration-test/groovy`. It does not run tests immediately. Combine `-continuous` with test name patterns or `-unit` and `-integration` to keep the same test selection for each rerun.
+
+
+The watcher is part of Grails, not Gradle `--continuous`, and Grails doesn't pass Gradle's continuous option to the build. It doesn't watch files outside those directories, including `src/main/java`, and `--watch` isn't an alias. Keep the interactive CLI open while using this mode, then exit the CLI or press Ctrl+C to stop it. A one-off `grails test-app -continuous` invocation exits immediately because `DirectoryWatcher` runs on a daemon thread.
+
+
 ==== Targeting Tests
 
 

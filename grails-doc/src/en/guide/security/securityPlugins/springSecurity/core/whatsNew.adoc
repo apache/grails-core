@@ -1,0 +1,47 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-whatsNew]]
+== What's New in Grails Spring Security Core Plugin 6.0.0
+
+This release is more than just an upgrade; it's a transformative step towards elevating your application's security, compatibility, and development experience. Get ready to embark on a journey of enhancements that will empower you to build robust, modern web applications. Let's dive into the exciting changes that version 6.0.0 brings.
+
+=== Elevated Security and Compatibility
+
+Version 6.0.0 of the Grails Spring Security Core Plugin brings enhanced security features and improved compatibility with Grails 6. With a revamped underlying Spring Security framework powered by version 5.8.6, your application gains access to the latest security enhancements and bug fixes, safeguarding it against evolving threats and vulnerabilities.
+
+=== Streamlined Commands for Grails 6
+
+One of the notable improvements is the seamless transition to Grails 6. The plugin now offers upgraded commands that are fully compatible with Grails 6. This is a vital enhancement as it ensures your existing scripts remain functional without compatibility issues. The familiar commands like `s2-quickstart` have been refined, enabling you to trigger them using Gradle tasks. For example, you can now execute:
+
+[source,shell]
+----
+./grailsw s2-quickstart com.yourapp User Role
+----
+
+This aligns perfectly with Grails 6's development landscape, making your application's migration smoother than ever before.
+
+=== Effortless Documentation Navigation
+
+We understand the importance of hassle-free documentation navigation. With the Internal Docs task now enhanced, generating documentation becomes a breeze. But that's not all – we've introduced a slick select drop-down feature. This feature allows you to effortlessly switch between documentation for different releases. Whether you're exploring the latest version or revisiting older ones, finding the information you need has never been easier.
+
+=== Embracing the Grails 6 Framework
+
+In the ever-evolving world of web development, the Grails Spring Security Core Plugin is keeping pace. Version 6.0.0 ensures seamless integration with Grails 6, enabling you to harness the cutting-edge features and improvements of the Grails framework. This integration ensures that your application can leverage both the power of Grails and the robust security features of the plugin.
+

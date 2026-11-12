@@ -19,10 +19,16 @@
 
 package org.grails.orm.hibernate.cfg.domainbinding.secondpass
 
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeIdentifierToManyToOneBinder
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.GrailsPropertyResolver
 import org.hibernate.mapping.Collection
+import org.hibernate.mapping.Component
+import org.hibernate.mapping.ManyToOne
 import org.hibernate.mapping.Column
 import org.hibernate.mapping.DependantValue
 import org.hibernate.mapping.Property
@@ -34,8 +40,10 @@ import spock.lang.Subject
 
 class BidirectionalOneToManyLinkerSpec extends HibernateGormDatastoreSpec {
 
+    CompositeIdentifierToManyToOneBinder binder = Mock(CompositeIdentifierToManyToOneBinder)
+
     @Subject
-    BidirectionalOneToManyLinker linker = new BidirectionalOneToManyLinker(new GrailsPropertyResolver())
+    BidirectionalOneToManyLinker linker = new BidirectionalOneToManyLinker(new GrailsPropertyResolver(), binder)
 
     void "test link bidirectional one to many"() {
         given:
@@ -75,5 +83,87 @@ class BidirectionalOneToManyLinkerSpec extends HibernateGormDatastoreSpec {
         key.getColumns().first().getLength() == 10
         key.getColumns().first().getSqlType() == "bigint"
         key.getColumns().first().isNullable()
+
+        and: 'the key creates no foreign key of its own, the to-one side creates the one key of the association'
+        !key.isForeignKeyEnabled()
+        !key.isConstrained()
+    }
+
+    void "the copied key is marked sorted so Hibernate does not apply the identifier permutation to it again"() {
+        given:
+        def metadataContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        RootClass rootClass = new RootClass(metadataContext)
+        rootClass.setEntityName("TestEntity")
+        Table table = new Table("test_table")
+        rootClass.setTable(table)
+        Property otherSideProperty = new Property()
+        otherSideProperty.setName("owner")
+        BasicValue value = new BasicValue(metadataContext, table)
+        value.addColumn(new Column("owner_id"))
+        otherSideProperty.setValue(value)
+        rootClass.addProperty(otherSideProperty)
+        Collection collection = new Bag(metadataContext, rootClass)
+        DependantValue key = new DependantValue(metadataContext, new Table("collection_table"), null)
+        HibernateToManyProperty otherSide = Mock(HibernateToManyProperty)
+        otherSide.getName() >> "owner"
+
+        when:
+        linker.link(collection, rootClass, key, otherSide)
+
+        then:
+        key.isSorted()
+        0 * binder._
+    }
+
+    void "the to-one side is aligned with the identifier of the owner before its columns are copied"() {
+        given:
+        def metadataContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        RootClass rootClass = new RootClass(metadataContext)
+        rootClass.setEntityName("TestEntity")
+        Table table = new Table("test_table")
+        rootClass.setTable(table)
+        ManyToOne toOneValue = new ManyToOne(metadataContext, table)
+        toOneValue.addColumn(new Column("owner_alpha"))
+        toOneValue.addColumn(new Column("owner_zeta"))
+        Property otherSideProperty = new Property()
+        otherSideProperty.setName("owner")
+        otherSideProperty.setValue(toOneValue)
+        rootClass.addProperty(otherSideProperty)
+        Collection collection = new Bag(metadataContext, rootClass)
+        Component identifierPrototype = new Component(metadataContext, rootClass)
+        identifierPrototype.setEmbedded(true)
+        Property zetaProperty = new Property()
+        zetaProperty.setName('zeta')
+        zetaProperty.setValue(new BasicValue(metadataContext, table))
+        identifierPrototype.addProperty(zetaProperty)
+        Property alphaProperty = new Property()
+        alphaProperty.setName('alpha')
+        alphaProperty.setValue(new BasicValue(metadataContext, table))
+        identifierPrototype.addProperty(alphaProperty)
+        DependantValue key = new DependantValue(metadataContext, new Table("collection_table"), identifierPrototype)
+        HibernateCompositeIdentity compositeId = Mock(HibernateCompositeIdentity)
+        GrailsHibernatePersistentEntity ownerEntity = Mock(GrailsHibernatePersistentEntity) {
+            getHibernateCompositeIdentity() >> Optional.of(compositeId)
+        }
+        HibernateManyToOneProperty otherSide = Mock(HibernateManyToOneProperty) {
+            getName() >> "owner"
+            getHibernateAssociatedEntity() >> ownerEntity
+        }
+        List<String> columnsWhenAligned = null
+
+        when:
+        linker.link(collection, rootClass, key, otherSide)
+
+        then: 'the to-one side is aligned once, before the key exists'
+        1 * binder.alignWithReferencedIdentifier(otherSide, toOneValue, compositeId, ownerEntity) >> {
+            columnsWhenAligned = key.columns*.name
+        }
+        columnsWhenAligned == []
+
+        and: 'the key copies the aligned columns and Hibernate leaves their order alone'
+        key.columns*.name == ['owner_alpha', 'owner_zeta']
+        key.isSorted()
+        key.sortProperties() == null
+        key.columns*.name == ['owner_alpha', 'owner_zeta']
     }
 }

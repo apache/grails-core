@@ -1,5 +1,9 @@
 package @grails.codegen.defaultPackage@
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.plugins.*
 
 class @grails.codegen.projectClassName@GrailsPlugin extends Plugin {
@@ -40,9 +44,10 @@ Brief summary/description of the plugin.
     // Online location of the plugin's browseable source code.
 //    def scm = [ url: "http://svn.codehaus.org/grails-plugins/" ]
 
-    Closure doWithSpring() { {->
-            // TODO Implement runtime spring config (optional)
-        }
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            // TODO Register runtime Spring beans (optional)
+        } as BeanRegistrar
     }
 
     void doWithDynamicMethods() {

@@ -64,7 +64,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
-        return ClassHelper.VOID_TYPE.equals(returnType) || AstUtils.isSubclassOfOrImplementsInterface(returnType, Number.name)
+        return ClassHelper.VOID_TYPE == returnType || AstUtils.isSubclassOfOrImplementsInterface(returnType, Number.name)
     }
 
     @Override
@@ -79,7 +79,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
 
     @Override
     void implementById(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, Expression byIdLookup) {
-        boolean isVoidReturnType = ClassHelper.VOID_TYPE.equals(newMethodNode.returnType)
+        boolean isVoidReturnType = ClassHelper.VOID_TYPE == newMethodNode.returnType
         VariableExpression obj = varX('$obj')
         Expression connectionId = findConnectionId(abstractMethodNode)
         Statement deleteStatement
@@ -115,7 +115,7 @@ class DeleteImplementer extends AbstractDetachedCriteriaServiceImplementor imple
     void implementWithQuery(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode, BlockStatement body, VariableExpression detachedCriteriaVar, Expression queryArgs) {
 
         MethodCallExpression deleteCall = callX(detachedCriteriaVar, 'deleteAll')
-        boolean isVoidReturnType = ClassHelper.VOID_TYPE.equals(newMethodNode.returnType)
+        boolean isVoidReturnType = ClassHelper.VOID_TYPE == newMethodNode.returnType
 
         body.addStatements([
                 // return query.deleteAll()

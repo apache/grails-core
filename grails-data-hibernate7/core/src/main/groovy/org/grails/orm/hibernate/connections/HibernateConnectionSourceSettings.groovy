@@ -214,8 +214,12 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 return [
 //                    'save': eventTriggeringInterceptor,
 //                    'save-update': eventTriggeringInterceptor,
-//                        "merge": eventTriggeringInterceptor,
-//                        "persist": eventTriggeringInterceptor,
+                    'merge': eventTriggeringInterceptor,
+                    // Hibernate's internal event name for EventType.PERSIST is 'create' (historical naming);
+                    // 'create-onflush' is the persist cascaded during a flush, whose default listener uses
+                    // a different cascade action, so the interceptor supplies a dedicated listener for it.
+                    'create': eventTriggeringInterceptor,
+                    'create-onflush': eventTriggeringInterceptor.persistOnFlushEventListener,
                     'pre-load': eventTriggeringInterceptor,
                     'post-load': eventTriggeringInterceptor,
                     'pre-insert': eventTriggeringInterceptor,
@@ -243,7 +247,12 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
             if (configClass != null) {
                 props.put('hibernate.config_class'.toString(), configClass.name)
             }
-            props.put('hibernate.use_query_cache', String.valueOf(cache.queries))
+            // Hibernate reads hibernate.cache.use_query_cache, so that is the property cache.queries sets. It is written
+            // only when the application set cache.queries: an unset one leaves what a configuration file or Hibernate's
+            // own default decides. A property of that name that the application sets itself comes later and wins.
+            if (cache.queries != null) {
+                props.put('hibernate.cache.use_query_cache', String.valueOf(cache.queries))
+            }
             props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
 
             if (entity_dirtiness_strategy != null && !hibernateDirtyChecking) {
@@ -264,7 +273,7 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
                 def value = current.get(key)
                 if (value instanceof Map) {
                     populateProperties(props, (Map) value, "${prefix}.$key")
-                } else {
+                } else if (value != null) {
                     props.put("$prefix.$key".toString(), value)
                 }
             }
@@ -274,9 +283,9 @@ class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
         @AutoClone
         static class CacheSettings {
             /**
-             * Whether to cache queries
+             * Whether to cache queries. Unset by default, which leaves the decision to the Hibernate configuration.
              */
-            boolean queries = false
+            Boolean queries
         }
 
         @Builder(builderStrategy = SimpleStrategy, prefix = '')

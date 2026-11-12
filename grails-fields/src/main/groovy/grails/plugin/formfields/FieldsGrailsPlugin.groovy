@@ -18,31 +18,50 @@
  */
 package grails.plugin.formfields
 
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
+import grails.core.support.proxy.ProxyHandler
 import grails.plugins.Plugin
+import org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator
+import org.grails.datastore.mapping.model.MappingContext
 import org.grails.scaffolding.model.DomainModelServiceImpl
+import org.grails.scaffolding.model.property.DomainPropertyFactory
 import org.grails.scaffolding.model.property.DomainPropertyFactoryImpl
 
+@CompileStatic
 class FieldsGrailsPlugin extends Plugin {
 
     static final String CONSTRAINTS_EVALULATOR_BEAN_NAME = 'validateableConstraintsEvaluator'
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
 
     def loadAfter = ['domainClass']
 
     @Override
-    Closure doWithSpring() {
-        { ->
-            beanPropertyAccessorFactory(BeanPropertyAccessorFactory) {
-                constraintsEvaluator = ref(CONSTRAINTS_EVALULATOR_BEAN_NAME)
-                proxyHandler = ref('proxyHandler')
-                fieldsDomainPropertyFactory = ref('fieldsDomainPropertyFactory')
-                grailsDomainClassMappingContext = ref('grailsDomainClassMappingContext')
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('beanPropertyAccessorFactory', BeanPropertyAccessorFactory) {
+                it.supplier {
+                    BeanPropertyAccessorFactory factory = new BeanPropertyAccessorFactory()
+                    factory.constraintsEvaluator = it.bean(CONSTRAINTS_EVALULATOR_BEAN_NAME, ConstraintsEvaluator)
+                    factory.proxyHandler = it.bean('proxyHandler', ProxyHandler)
+                    factory.fieldsDomainPropertyFactory = it.bean('fieldsDomainPropertyFactory', DomainPropertyFactory)
+                    factory.grailsDomainClassMappingContext = it.bean('grailsDomainClassMappingContext', MappingContext)
+                    return factory
+                }
             }
-            formFieldsTemplateService(FormFieldsTemplateService)
-            fieldsDomainPropertyFactory(DomainPropertyFactoryImpl)
-            domainModelService(DomainModelServiceImpl) {
-                domainPropertyFactory = ref('fieldsDomainPropertyFactory')
+            registry.registerBean('formFieldsTemplateService', FormFieldsTemplateService)
+            registry.registerBean('fieldsDomainPropertyFactory', DomainPropertyFactoryImpl)
+            registry.registerBean('domainModelService', DomainModelServiceImpl) {
+                it.supplier {
+                    DomainModelServiceImpl domainModelService = new DomainModelServiceImpl()
+                    domainModelService.domainPropertyFactory = it.bean('fieldsDomainPropertyFactory', DomainPropertyFactory)
+                    return domainModelService
+                }
             }
         }
     }

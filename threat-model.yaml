@@ -97,7 +97,6 @@ components:
     out_of_model_reason: "Separate Micronaut-based service deployed independently from any application built with Grails (§3)."
     representative_files:
       - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/zip/ZipCreateController.java
-      - grails-forge/grails-forge-api/src/main/java/org/grails/forge/api/create/github/GitHubCreateController.java
   - name: generated_scaffolding_demo_apps
     in_model: false
     out_of_model_reason: "Separately authored; not shipped in framework distributions (§3)."
@@ -124,17 +123,17 @@ config_knobs:
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: grails.controllers.upload.maxFileSize
-    default: 128000
+  - name: spring.servlet.multipart.maxFileSize
+    default: 1048576
     default_units: bytes
-    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    default_source: Spring Boot MultipartProperties
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
-  - name: grails.controllers.upload.maxRequestSize
-    default: 128000
+  - name: spring.servlet.multipart.maxRequestSize
+    default: 10485760
     default_units: bytes
-    default_source: grails-controllers/.../ControllersAutoConfiguration.java
+    default_source: Spring Boot MultipartProperties
     security_relevant: true
     maintainer_stance: unresolved
     section: "§5a"
@@ -183,7 +182,7 @@ entry_points:
   - surface: Controller.request.XML
     parameter: body
     attacker_controllable: true
-    notes: "XXE hardening is the parser's responsibility (§9 false friend)."
+    notes: "Parsed with XXE hardening: external entities and external DTDs refused, DOCTYPE rejected (§8 P10)."
   - surface: bindData
     parameter: source
     attacker_controllable: true
@@ -298,13 +297,21 @@ properties_provided:
     provenance: inferred
     open_question: "§14 wave 1"
   - id: P9
-    description: "maxFileSize, maxRequestSize, autoGrowCollectionLimit provide bounded data-binding memory."
+    description: "Multipart upload limits and autoGrowCollectionLimit bound request-processing memory."
     cwe: CWE-770
     conditions: "Operator does not raise the limits past application needs."
     violation_symptom: "Memory growth proportional to input regardless of configured limit."
     severity: resource_bug
     provenance: inferred
     open_question: "§14 wave 2"
+  - id: P10
+    description: "XML the framework parses is XXE-hardened: external general and parameter entities, external DTDs and DTD grammars are refused, and a request body declaring a DOCTYPE is rejected."
+    cwe: CWE-611
+    conditions: "Document is parsed by the framework's XML data binding (application/xml, text/xml, application/hal+xml) or by XML.parse; a parser the application constructs itself gets the JDK defaults."
+    violation_symptom: "Content of an external entity appears in bound data, or a body carrying a DOCTYPE is bound."
+    severity: security_critical
+    provenance: documented
+    source: grails-doc/src/en/guide/upgrading.adoc
 
 # §9 - properties the framework does NOT provide.
 properties_disclaimed:
@@ -369,6 +376,9 @@ false_friends:
   - id: grails_config_locations_as_config
     looks_like: "Configuration-file path."
     actually_is: "Groovy code-execution path - .groovy files are evaluated via ConfigSlurper. A file the application can read and an attacker can write is equivalent to classpath compromise."
+  - id: xml_hardening_scope
+    looks_like: "XXE protection for all XML parsing in the application."
+    actually_is: "Hardening of the parsers the framework uses for request bodies and classpath descriptors (§8 P10). An XmlSlurper or XmlParser the application constructs itself gets the JDK defaults."
 
 # §11a - recurring false positives that automated triage should suppress or treat as KNOWN-NON-FINDING.
 known_non_findings:

@@ -1,0 +1,3 @@
+description: Example multi-step command
+steps:
+  - grailsVersion

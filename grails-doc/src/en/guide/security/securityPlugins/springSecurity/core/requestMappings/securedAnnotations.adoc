@@ -1,0 +1,219 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-securedAnnotations]]
+=== Defining Secured Annotations
+
+You can use an `@Secured` annotation (either the standard `org.springframework.security.access.annotation.Secured` or the plugin's `grails.plugin.springsecurity.annotation.Secured` which has the same attributes and features but also supports defining a closure as the config attribute to make authorization decisions) in your controllers to configure which roles are required for which actions. To use annotations, specify `securityConfigType="Annotation"`, or leave it unspecified because it's the default:
+
+[source,groovy]
+.Listing {counter:listing}. Specifying `securityConfigType` as "`Annotation`"
+----
+grails.plugin.springsecurity.securityConfigType = "Annotation"
+----
+
+You can define the annotation at the class level, meaning that the specified roles are required for all actions, or at the action level, or both. If the class and an action are annotated then the action annotation values will be used since they're more specific.
+
+For example, given this controller:
+
+[source,groovy]
+.Listing {counter:listing}. An annotated controller
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+class SecureAnnotatedController {
+
+   @Secured('ROLE_ADMIN')
+   def index() {
+      render 'you have ROLE_ADMIN'
+   }
+
+   @Secured(['ROLE_ADMIN', 'ROLE_SUPERUSER'])
+   def adminEither() {
+      render 'you have ROLE_ADMIN or SUPERUSER'
+   }
+
+   def anybody() {
+      render 'anyone can see this' // assuming you're not using "strict" mode,
+                                   // otherwise the action is not viewable by anyone
+   }
+}
+----
+
+you must be authenticated and have `ROLE_ADMIN` to see `/myapp/secureAnnotated` (or `/myapp/secureAnnotated/index`) and be authenticated and have `ROLE_ADMIN` or `ROLE_SUPERUSER` to see `/myapp/secureAnnotated/adminEither`. Any user can access `/myapp/secureAnnotated/anybody` if you have disabled "`strict`" mode (using `rejectIfNoRule`), and nobody can access the action by default since it has no access rule configured.
+
+In addition, you can define a closure in the annotation which will be called during access checking. The closure must return `true` or `false` and has all of the methods and properties that are available when using SpEL expressions, since the closure's `delegate` is set to a subclass of `WebSecurityExpressionRoot`, and also the Spring `ApplicationContext` as the `ctx` property:
+
+[source,groovy]
+.Listing {counter:listing}. An example of using a Closure in with `@Secured`
+----
+@Secured(closure = {
+   assert request
+   assert ctx
+   authentication.name == 'admin1'
+})
+def someMethod() {
+   ...
+}
+----
+
+Often most actions in a controller require similar access rules, so you can also define annotations at the class level:
+
+[source,groovy]
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+@Secured('ROLE_ADMIN')
+class SecureClassAnnotatedController {
+
+   def index() {
+      render 'index: you have ROLE_ADMIN'
+   }
+
+   def otherAction() {
+      render 'otherAction: you have ROLE_ADMIN'
+   }
+
+   @Secured('ROLE_SUPERUSER')
+   def super() {
+      render 'super: you have ROLE_SUPERUSER'
+   }
+}
+----
+
+Here you need to be authenticated and have `ROLE_ADMIN` to see `/myapp/secureClassAnnotated` (or `/myapp/secureClassAnnotated/index`) or `/myapp/secureClassAnnotated/otherAction`. However, you must have `ROLE_SUPERUSER` to access `/myapp/secureClassAnnotated/super`. The action-scope annotation overrides the class-scope annotation. Note that "`strict`" mode isn't applicable here since all actions have an access rule defined (either explicitly or inherited from the class-level annotation).
+
+Additionally, you can specify the HTTP method that is required in each annotation for the access rule, e.g.
+
+[source,groovy]
+----
+package com.mycompany.myapp
+
+import grails.plugin.springsecurity.annotation.Secured
+
+class SecureAnnotatedController {
+
+   @Secured(value = ['ROLE_ADMIN'], httpMethod = 'GET')
+   def create() {
+      ...
+   }
+
+   @Secured(value = ['ROLE_ADMIN'], httpMethod = 'POST')
+   def save() {
+      ...
+   }
+}
+----
+
+Here you must have ROLE_ADMIN for both the `create` and `save` actions but `create` requires a GET request (since it renders the form to create a new instance) and `save` requires POST (since it's the action that the form posts to).
+
+==== Securing RESTful domain classes
+
+Since Grails 2.3, domain classes can be annotated with the `grails.rest.Resource` AST transformation, which will generate internally a controller with the default CRUD operations.
+
+You can also use the `@Secured` annotation on such domain classes:
+
+[source,groovy]
+----
+@Resource
+@Secured('ROLE_ADMIN')
+class Thing {
+
+   String name
+}
+----
+
+==== controllerAnnotations.staticRules
+
+You can also define "`static`" mappings that cannot be expressed in the controllers, such as '/pass:[**]' or for JavaScript, CSS, or image URLs. Use the `controllerAnnotations.staticRules` property.
+
+In `application.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Static rules in `application.groovy`
+----
+grails.plugin.springsecurity.controllerAnnotations.staticRules = [
+   [pattern: '/js/admin/**',   access: ['ROLE_ADMIN']],
+   [pattern: '/someplugin/**', access: ['ROLE_ADMIN']]
+]
+----
+
+Or equivalently in `application.yml`:
+
+[source,yaml]
+.Listing {counter:listing}. Static rules in `application.yml` (flow mapping)
+----
+grails:
+    plugin:
+        springsecurity:
+            controllerAnnotations:
+                staticRules:
+                    - { pattern: '/js/admin/**',   access: ['ROLE_ADMIN'] }
+                    - { pattern: '/someplugin/**', access: ['ROLE_ADMIN'] }
+----
+
+Block mapping syntax also works:
+
+[source,yaml]
+.Listing {counter:listing}. Static rules in `application.yml` (block mapping)
+----
+grails:
+    plugin:
+        springsecurity:
+            controllerAnnotations:
+                staticRules:
+                    - pattern: '/js/admin/**'
+                      access:
+                          - ROLE_ADMIN
+                    - pattern: '/someplugin/**'
+                      access:
+                          - ROLE_ADMIN
+----
+
+This example maps all URLs associated with `SomePluginController`, which has URLs of the form `/someplugin/...`, to `ROLE_ADMIN`; annotations are not an option here because you would not edit plugin code for a change like this.
+
+[IMPORTANT]
+====
+The `staticRules` value must be a *List* of Maps. A common YAML mistake is omitting the `-` list indicator, which produces a single Map instead:
+
+[source,yaml]
+.Listing {counter:listing}. Incorrect - single Map instead of List of Maps
+----
+# WRONG - this is a Map, not a List of Maps
+grails:
+    plugin:
+        springsecurity:
+            controllerAnnotations:
+                staticRules:
+                    pattern: '/**'
+                    access:
+                        - permitAll
+----
+
+This will fail with: "`Static rules defined as a Map are not supported; must be specified as a List of Maps`". Each rule must be prefixed with `-` to create a list entry.
+====
+
+[NOTE]
+====
+When mapping URLs for controllers that are mapped in `UrlMappings.groovy`, you need to secure the un-url-mapped URLs. For example if you have a FooBarController that you map to `/foo/bar/$action`, you must register that in `controllerAnnotations.staticRules` as `/foobar/pass:[**]`. This is different than the mapping you would use for the other two approaches and is necessary because `controllerAnnotations.staticRules` entries are treated as if they were annotations on the corresponding controller.
+====

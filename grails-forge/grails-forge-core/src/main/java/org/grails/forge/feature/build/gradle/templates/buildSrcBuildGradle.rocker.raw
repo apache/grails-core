@@ -51,7 +51,15 @@ repositories {
 }
 
 dependencies {
+@if (features.contains("gorm-hibernate7") && features.contains("grails-micronaut")) {
+    implementation platform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")
+} else if (features.contains("grails-micronaut")) {
+    implementation platform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
+} else if (features.contains("gorm-hibernate7")) {
+    implementation platform("org.apache.grails:grails-hibernate7-bom:$grailsVersion")
+} else {
     implementation platform("org.apache.grails:grails-bom:$grailsVersion")
+}
 @for (GradleDependency dependency : gradleBuild.getBuildSrcDependencies()) {
     @dependency.toSnippet()
 }

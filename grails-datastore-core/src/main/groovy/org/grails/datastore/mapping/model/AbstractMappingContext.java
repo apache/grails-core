@@ -109,6 +109,7 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
             AbstractGormMappingFactory gormMappingFactory = (AbstractGormMappingFactory) mappingFactory;
             gormMappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
             gormMappingFactory.setDefaultMapping(settings.getDefault().getMapping());
+            gormMappingFactory.setDefaultNullable(settings.getDefault().isNullable());
         }
     }
 

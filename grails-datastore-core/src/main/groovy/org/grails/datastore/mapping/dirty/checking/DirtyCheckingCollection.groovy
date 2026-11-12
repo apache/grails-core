@@ -19,6 +19,8 @@
 
 package org.grails.datastore.mapping.dirty.checking
 
+import java.util.function.Predicate
+
 import groovy.transform.CompileStatic
 
 /**
@@ -34,12 +36,23 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
     final DirtyCheckable parent
     final String property
     final int originalSize
+    final boolean assigned
 
     DirtyCheckingCollection(Collection target, DirtyCheckable parent, String property) {
+        this(target, parent, property, false)
+    }
+
+    DirtyCheckingCollection(Collection target, DirtyCheckable parent, String property, boolean assigned) {
         this.target = target
         this.originalSize = target.size()
         this.parent = parent
         this.property = property
+        this.assigned = assigned
+    }
+
+    @Override
+    boolean isAssigned() {
+        return assigned
     }
 
     @Override
@@ -59,6 +72,24 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
 
     boolean hasChanged() {
         parent.hasChanged(property) || hasChangedElements()
+    }
+
+    // Content equality, like AbstractPersistentCollection: the wrapper is transparent, so it
+    // equals whatever its target equals. Without that, the tracking views handed out by
+    // DirtyCheckingMap (keySet/entrySet/values) broke Groovy's Map == Map, whose extension
+    // method compares self.keySet().equals(other.keySet()). Identity comes first so the
+    // contract stays reflexive for a target that has no content equality of its own —
+    // values() wraps an AbstractCollection, which inherits Object.equals, and without the
+    // short-circuit the wrapper would not equal itself, breaking List.contains and HashSet
+    // membership.
+    @Override
+    boolean equals(Object other) {
+        other.is(this) || target.equals(other)
+    }
+
+    @Override
+    int hashCode() {
+        target.hashCode()
     }
 
     protected boolean hasChangedElements() {
@@ -84,6 +115,18 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
     }
 
     @Override
+    boolean retainAll(Collection c) {
+        parent.markDirty(property)
+        target.retainAll(c)
+    }
+
+    @Override
+    boolean removeIf(Predicate filter) {
+        parent.markDirty(property)
+        target.removeIf(filter)
+    }
+
+    @Override
     void clear() {
         parent.markDirty(property)
         target.clear()
@@ -93,6 +136,29 @@ class DirtyCheckingCollection implements Collection, DirtyCheckableCollection {
     boolean remove(Object o) {
         parent.markDirty(property)
         target.remove(o)
+    }
+
+    /**
+     * Returns an iterator whose {@code remove()} marks the parent dirty. Without this,
+     * every iterator-based removal — including Groovy's {@code removeAll(Closure)} /
+     * {@code retainAll(Closure)} DGM methods — silently bypassed change tracking.
+     */
+    @Override
+    Iterator iterator() {
+        final Iterator underlying = target.iterator()
+        return new Iterator() {
+            @Override
+            boolean hasNext() { underlying.hasNext() }
+
+            @Override
+            Object next() { underlying.next() }
+
+            @Override
+            void remove() {
+                parent.markDirty(property)
+                underlying.remove()
+            }
+        }
     }
 
 }

@@ -20,9 +20,11 @@ package org.grails.config.yaml;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,8 +32,10 @@ import org.springframework.beans.factory.config.YamlProcessor;
 import org.springframework.boot.env.PropertySourceLoader;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Profiles;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 
 import grails.plugins.GrailsPlugin;
 import grails.util.Environment;
@@ -46,6 +50,10 @@ import org.grails.config.NavigableMapPropertySource;
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class YamlPropertySourceLoader extends YamlProcessor implements PropertySourceLoader {
+
+    private static final String PROFILE_SELECTOR = "spring.config.activate.on-profile";
+    private static final String LEGACY_PROFILE_SELECTOR = "spring.profiles";
+
     @Override
     public String[] getFileExtensions() {
         return new String[] { "yml", "yaml" };
@@ -58,9 +66,17 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
 
     public List<PropertySource<?>> load(String name, Resource resource, List<String> filteredKeys) throws IOException {
         setResources(resource);
+        // Select source documents once; merging resolved configuration must not re-evaluate JVM profiles.
+        final List<String> activeProfiles = Arrays.asList(
+                StringUtils.tokenizeToStringArray(System.getProperty("spring.profiles.active", ""), ","));
         setDocumentMatchers((DocumentMatcher) properties -> {
-            final String profile = properties.getProperty("spring.profiles");
-            return profile == null || profile.equalsIgnoreCase(System.getProperty("spring.profiles.active")) ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
+            final String[] profiles = profileSelectors(properties, PROFILE_SELECTOR);
+            final String[] legacyProfiles = profileSelectors(properties, LEGACY_PROFILE_SELECTOR);
+            final boolean matchesProfile = profiles.length == 0 ||
+                    Profiles.of(profiles).matches(activeProfiles::contains);
+            final boolean matchesLegacyProfile = legacyProfiles.length == 0 ||
+                    Profiles.of(legacyProfiles).matches(candidate -> activeProfiles.stream().anyMatch(candidate::equalsIgnoreCase));
+            return matchesProfile && matchesLegacyProfile ? MatchStatus.FOUND : MatchStatus.NOT_FOUND;
         });
         List<Map<String, Object>> loaded = load();
         if (loaded.isEmpty()) {
@@ -86,12 +102,58 @@ public class YamlPropertySourceLoader extends YamlProcessor implements PropertyS
                     map.remove(filteredKey);
                 }
             }
+            // Spring Boot would evaluate these again against its own active profiles and drop the merged source.
+            map.keySet().removeIf(YamlPropertySourceLoader::isProfileSelectorKey);
             propertySource.merge(map, true);
         });
         propertySources.add(
                 new NavigableMapPropertySource(name, propertySource));
 
         return propertySources;
+    }
+
+    /**
+     * Collects the non-blank selector values for the given key. A scalar selector is read from the key itself and
+     * split on commas, while a YAML sequence is flattened to indexed keys ({@code key[0]}, {@code key[1]}, ...).
+     * Either way the values are alternatives, matching how Spring Boot binds {@code spring.config.activate.on-profile}
+     * to a {@code String[]}.
+     */
+    private static String[] profileSelectors(Properties properties, String key) {
+        final List<String> selectors = new ArrayList<>();
+        for (String selector : StringUtils.commaDelimitedListToStringArray(properties.getProperty(key))) {
+            addProfileSelector(selectors, selector);
+        }
+        for (Object name : properties.keySet()) {
+            if (name instanceof String && isIndexedKey((String) name, key)) {
+                addProfileSelector(selectors, properties.getProperty((String) name));
+            }
+        }
+        return selectors.toArray(new String[0]);
+    }
+
+    private static void addProfileSelector(List<String> selectors, String selector) {
+        if (selector != null && !selector.trim().isEmpty()) {
+            selectors.add(selector.trim());
+        }
+    }
+
+    private static boolean isProfileSelectorKey(String name) {
+        return name.equals(PROFILE_SELECTOR) || isIndexedKey(name, PROFILE_SELECTOR) ||
+                name.equals(LEGACY_PROFILE_SELECTOR) || isIndexedKey(name, LEGACY_PROFILE_SELECTOR);
+    }
+
+    private static boolean isIndexedKey(String name, String key) {
+        final int start = key.length() + 1;
+        final int end = name.length() - 1;
+        if (end <= start || !name.startsWith(key + "[") || name.charAt(end) != ']') {
+            return false;
+        }
+        for (int i = start; i < end; i++) {
+            if (!Character.isDigit(name.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public List<Map<String, Object>> load() {

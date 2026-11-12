@@ -21,6 +21,7 @@ package grails.validation
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Generated
+import groovy.transform.Virtual
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
@@ -275,7 +276,12 @@ trait Validateable {
         }
     }
 
+    // @Virtual: GROOVY-11985/GROOVY-12093. Under Groovy 5's declarer-bound trait-static
+    // dispatch, a plain static is invoked as the trait's own copy from the trait body;
+    // @Virtual opts into per-implementer dispatch so an implementing class that overrides
+    // defaultNullable() is seen by this.defaultNullable() calls in the trait body.
     @Generated
+    @Virtual
     static boolean defaultNullable() {
         false
     }

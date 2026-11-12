@@ -20,6 +20,7 @@ package org.grails.gsp;
 
 import java.io.Writer;
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,8 +31,10 @@ import java.util.Set;
 import groovy.lang.Binding;
 import groovy.lang.Closure;
 import groovy.lang.GroovyObject;
+import groovy.lang.MissingMethodException;
 import groovy.lang.Script;
 import org.codehaus.groovy.runtime.InvokerHelper;
+import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +52,7 @@ import org.grails.taglib.GrailsTagException;
 import org.grails.taglib.GroovyPageAttributes;
 import org.grails.taglib.TagBodyClosure;
 import org.grails.taglib.TagLibraryLookup;
+import org.grails.taglib.TagLibraryMetaUtils;
 import org.grails.taglib.TagMethodContext;
 import org.grails.taglib.TagMethodInvoker;
 import org.grails.taglib.TagOutput;
@@ -177,15 +181,51 @@ public abstract class GroovyPage extends Script {
 
     private void applyModelFieldsFromBinding(Iterable<Field> modelFields) {
         for (Field field : modelFields) {
+            Object value = getProperty(field.getName());
+            if (value == null) {
+                continue;
+            }
+            Object converted;
             try {
-                Object value = getProperty(field.getName());
-                if (value != null) {
-                    field.set(this, value);
-                }
+                converted = DefaultTypeTransformation.castToType(value, field.getType());
+            } catch (RuntimeException e) {
+                throw new GroovyPagesException("Model field '" + field.getName() + "' is declared as " +
+                        field.getType().getName() + " but the model supplied an instance of " +
+                        value.getClass().getName() + ", which cannot be converted to it.", e, -1, getGroovyPageFileName());
+            }
+            if (value instanceof Number && converted instanceof Number && !sameNumericValue((Number) value, (Number) converted)) {
+                throw new GroovyPagesException("Model field '" + field.getName() + "' is declared as " +
+                        field.getType().getName() + ", which cannot hold the " + value.getClass().getName() + " " +
+                        value + " the model supplied without changing it.", null, -1, getGroovyPageFileName());
+            }
+            try {
+                field.set(this, converted);
             } catch (IllegalAccessException e) {
                 throw new GroovyPagesException("Error setting model field '" + field.getName() + "'", e, -1, getGroovyPageFileName());
             }
         }
+    }
+
+    private static boolean sameNumericValue(Number original, Number converted) {
+        if (isFloatingPoint(original) && isFloatingPoint(converted)) {
+            // Every float is exactly representable as a double, including NaN and infinities.
+            return Double.compare(original.doubleValue(), converted.doubleValue()) == 0;
+        }
+        // A floating-point value prints as the shortest decimal that reads back to it, which is
+        // also the decimal Groovy converts it to, so comparing the decimal forms accepts exactly
+        // the conversions that convert back to the original: 19.99G for a Double, 19.99d for a
+        // BigDecimal. A decimal with more digits than the type can carry prints differently
+        // once converted and is rejected.
+        try {
+            return new BigDecimal(original.toString()).compareTo(new BigDecimal(converted.toString())) == 0;
+        } catch (NumberFormatException e) {
+            // A non-finite floating-point value cannot equal a finite decimal or integer.
+            return false;
+        }
+    }
+
+    private static boolean isFloatingPoint(Number number) {
+        return number instanceof Float || number instanceof Double;
     }
 
     public Object raw(Object value) {
@@ -256,6 +296,19 @@ public abstract class GroovyPage extends Script {
     }
 
     /**
+     * The tag libraries this page can reach.
+     *
+     * <p>Named as the tag library invoker trait names it, so that a tag call compiled into a direct
+     * invocation reads the same whether it was written in a page, a tag library or a controller.
+     *
+     * @return the lookup, or {@code null} before the page has been initialised
+     * @since 8.0.0
+     */
+    public TagLibraryLookup getTagLibraryLookup() {
+        return this.gspTagLibraryLookup;
+    }
+
+    /**
      * Obtains a reference to the JSP tag library resolver instance
      *
      * @return The JSP TagLibraryResolver instance
@@ -294,6 +347,38 @@ public abstract class GroovyPage extends Script {
         if (BINDING.equals(property)) return getBinding();
 
         return resolveProperty(property);
+    }
+
+    /**
+     * Resolves a tag called without a namespace, as {@code ${message(code: 'x')}} is.
+     *
+     * <p>A real method rather than one installed onto this page's metaclass. Installing it, along with
+     * a method for every tag and a property for every namespace, meant writing to an
+     * ExpandoMetaClass for every page compiled and made every later tag call a read of an initialised
+     * metaclass, which is guarded by a lock.
+     *
+     * @param name the tag name
+     * @param args the arguments the tag was called with
+     * @return whatever the tag produces
+     * @throws MissingMethodException when there is no tag library lookup to resolve the name against
+     */
+    public Object methodMissing(String name, Object args) {
+        if (gspTagLibraryLookup == null) {
+            // Without a lookup there is nothing to resolve the name against, which is a missing
+            // method. Dispatching anyway arrives at the same answer, but only because a dynamic call
+            // on a null receiver happens to yield no tag library rather than because anything says
+            // so; this states the contract for a field documented as null before initialisation.
+            throw new MissingMethodException(name, getClass(), makeArgumentArray(args));
+        }
+        return TagLibraryMetaUtils.methodMissingForTagLib(getMetaClass(), getClass(), gspTagLibraryLookup,
+                DEFAULT_NAMESPACE, name, args, false);
+    }
+
+    private static Object[] makeArgumentArray(Object args) {
+        if (args == null) {
+            return new Object[0];
+        }
+        return args instanceof Object[] ? (Object[]) args : new Object[] { args };
     }
 
     protected Object resolveProperty(String property) {

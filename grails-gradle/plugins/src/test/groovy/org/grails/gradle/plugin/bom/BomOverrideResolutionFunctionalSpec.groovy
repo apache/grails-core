@@ -36,6 +36,9 @@ import org.grails.gradle.plugin.core.GradleSpecification
  *   <li><strong>Imported-BOM property override</strong> - overriding the
  *       property that selects an imported BOM's version must re-import that
  *       BOM and pull in its updated managed versions.</li>
+ *   <li><strong>Coordinates written as a property</strong> - an override must
+ *       reach a module, or an imported BOM, whose group the BOM writes as
+ *       {@code ${project.groupId}}.</li>
  * </ul>
  *
  * @since 8.0
@@ -43,7 +46,7 @@ import org.grails.gradle.plugin.core.GradleSpecification
  */
 class BomOverrideResolutionFunctionalSpec extends GradleSpecification {
 
-    def "property overrides win over platform constraints, including downgrades and imported-BOM version switches"() {
+    def "property overrides win over platform constraints, including downgrades, imported-BOM version switches and property-written coordinates"() {
         given:
         setupTestResourceProject('bom-override-resolution')
 
@@ -57,5 +60,9 @@ class BomOverrideResolutionFunctionalSpec extends GradleSpecification {
         and: 'overriding the imported-BOM selector property re-imports child-bom:2.0.0 and bumps childlib 1.0.0 -> 2.0.0'
         result.output.contains('RESOLVED=org.example:childlib:2.0.0')
         !result.output.contains('RESOLVED=org.example:childlib:1.0.0')
+
+        and: 'an override reaches grouplib, whose group test-bom writes as ${project.groupId}'
+        result.output.contains('RESOLVED=org.example:grouplib:2.0.0')
+        !result.output.contains('RESOLVED=org.example:grouplib:1.0.0')
     }
 }

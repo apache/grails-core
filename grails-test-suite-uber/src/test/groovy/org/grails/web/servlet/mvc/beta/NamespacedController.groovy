@@ -54,6 +54,26 @@ class NamespacedController {
         redirect controller: 'anotherNamespaced', namespace: 'secondary', action: 'demo'
     }
 
+    def chainToSelfWithImplicitNamespace() {
+        chain action: 'demo'
+    }
+
+    def chainToAnotherSecondaryImplicitNamespace() {
+        chain controller: 'anotherNamespaced', action: 'demo'
+    }
+
+    def chainToAnotherSecondaryExplicitNamespace() {
+        chain controller: 'anotherNamespaced', action: 'demo', namespace: 'secondary'
+    }
+
+    def chainToPrimaryExplicitNullNamespace() {
+        chain controller: 'anotherNamespaced', action: 'demo', namespace: null
+    }
+
+    def redirectToAnotherNamespaced() {
+        // redirects to anotherNamespaced without naming a namespace
+        redirect controller: 'anotherNamespaced', action: 'demo'
+    }
     def demo() {
         render 'Rendered by the secondary Namespaced Controller'
     }

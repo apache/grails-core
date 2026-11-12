@@ -299,8 +299,8 @@ class LinkGeneratorSpec extends Specification {
             MockHttpServletRequest request = webRequest.currentRequest
             baseUrl = null
             def cachingGenerator = getGenerator(true)
-            def w1 = new Widget(id: 1, name: 'Some Widget')
-            def w2 = new Widget(id: 2, name: 'Some Widget')
+            def w1 = new Widget(name: 'Some Widget').tap { id = 1 }
+            def w2 = new Widget(name: 'Some Widget').tap { id = 2 }
 
         when:
             def cacheKey = cachingGenerator.makeKey('somePrefix', [resource:w1]);
@@ -320,7 +320,7 @@ class LinkGeneratorSpec extends Specification {
         linkParams.method = 'GET'
 
         when: 'a resource is specified, ident() is used for id'
-        linkParams.resource = new Widget(id: 1, name: 'Some Widget')
+        linkParams.resource = new Widget(name: 'Some Widget').tap { id = 1 }
 
         then:
         link == "/bar/widget/show/1"
@@ -359,14 +359,14 @@ class LinkGeneratorSpec extends Specification {
         then: "it exists in the url"
         link == '/fooBarReq/one/two'
 
-        when: "The namespace is in the request params and the current controller is different"
+        when: "The namespace is in the request params and the target is a controller the application does not define"
         webRequest.setControllerNamespace("fooBarReq")
         webRequest.setControllerName("abc")
         linkParams.controller = 'one'
         linkParams.action = 'two'
 
-        then: "it is not included in the URL"
-        link == '/one/two'
+        then: "nothing is nearer than the request namespace, so the link stays in it"
+        link == '/fooBarReq/one/two'
 
         when: "Params and the request attribute exist"
         webRequest.setControllerNamespace("fooBarReq")

@@ -1,0 +1,30 @@
+package  ${packageName}
+
+import groovy.transform.EqualsAndHashCode
+import groovy.transform.ToString
+
+
+@EqualsAndHashCode(includes='user')
+@ToString(includes='user', includeNames=true, includePackage=false)
+class ${saClassName} implements Serializable {
+
+    private static final long serialVersionUID = 1
+
+     <% for(int i=1; i <= numberOfQuestions.toInteger(); i++) {  %>
+    String myQuestion${i}
+    String myAnswer${i}
+     <%  } %>
+    ${userDomainName} ${userPropName}
+
+     static constraints = {
+         <% for(int i=1; i <= numberOfQuestions.toInteger(); i++) {  %>
+             myQuestion${i} nullable: true, blank: false
+             myAnswer${i} nullable: false, blank: false
+         <%  } %>
+            ${userPropName} nullable: false, blank: false, unique: true
+        }
+
+    static belongsTo = [ ${userPropName}: ${userDomainName}]
+
+
+}

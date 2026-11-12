@@ -1,0 +1,108 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The Spring Security Rest plugin fires events exactly like Spring Security Core does.
+
+[[rest-events]]
+== Event Notification
+
+You can set up event notifications in two ways. The sections that follow describe each approach in more detail.
+
+. Register an event listener, ignoring events that do not interest you. Spring allows only partial event subscription;
+  you use generics to register the class of events that interest you, and you are notified of that class and all subclasses.
+
+. Register one or more callback closures in `grails-app/conf/application.groovy` that take advantage of the plugin's
+  `grails.plugin.springsecurity.rest.RestSecurityEventListener`. The listener does the filtering for you.
+
+=== AuthenticationEventPublisher
+
+Spring Security REST publishes events using an
+http://docs.spring.io/spring-security/site/docs/4.0.x/apidocs/org/springframework/security/authentication/AuthenticationEventPublisher.html[AuthenticationEventPublisher]
+which in turn fire events using the
+http://docs.spring.io/spring/docs/4.0.x/javadoc-api/org/springframework/context/ApplicationEventPublisher.html[ApplicationEventPublisher].
+By default no events are fired since the `AuthenticationEventPublisher` instance registered is a
+`grails.plugin.springsecurity.rest.authentication.NullRestAuthenticationEventPublisher`. But you can enable event
+publishing by setting `grails.plugin.springsecurity.useSecurityEventListener = true` in `grails-app/conf/application.[groovy|yml]`.
+
+You can use the `useSecurityEventListener` setting to temporarily disable and enable the callbacks, or enable them
+per-environment.
+
+=== Token Creation
+
+Currently the Spring Security REST plugin supports a single event in addition to the default spring security events.
+The event is fired whenever a new token is created. See `grails.plugin.springsecurity.rest.RestTokenCreationEvent`
+
+[NOTE]
+====
+Every time a token is successfully submitted, an `AuthenticationSuccessEvent` will be fired.
+====
+
+== Registering an Event Listener
+
+Enable events with `grails.plugin.springsecurity.useSecurityEventListener = true` and create one or more Groovy or Java
+classes, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Custom event listener
+----
+package com.foo.bar
+
+import org.springframework.context.ApplicationListener
+import grails.plugin.springsecurity.rest.RestTokenCreationEvent
+
+class MySecurityEventListener
+      implements ApplicationListener<RestTokenCreationEvent> {
+
+   void onApplicationEvent(RestTokenCreationEvent event) {
+      // The access token is a delegate of the event, so you have access to an instance of `grails.plugin.springsecurity.rest.token.AccessToken`
+   }
+}
+----
+
+Register the class in `grails-app/conf/spring/resources.groovy`:
+
+[source,groovy]
+.Listing {counter:listing}. Event listener registration
+----
+import com.foo.bar.MySecurityEventListener
+
+beans = {
+   mySecurityEventListener(MySecurityEventListener)
+}
+----
+
+== Registering Callback Closures
+
+Alternatively, enable events with `grails.plugin.springsecurity.useSecurityEventListener = true` and register one or
+more callback closure(s) in `grails-app/conf/Config.groovy` and let `SecurityEventListener` do the filtering.
+
+Implement the event handlers that you need, for example:
+
+[source,groovy]
+.Listing {counter:listing}. Callback closures
+----
+grails.plugin.springsecurity.useSecurityEventListener = true
+
+grails.plugin.springsecurity.onRestTokenCreationEvent = { e, appCtx ->
+   // handle RestTokenCreationEvent
+}
+----
+
+None of these closures are required; if none are configured, nothing will be called. Just implement the event handlers
+that you need.

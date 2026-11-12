@@ -58,7 +58,7 @@ class DeleteWhereImplementer extends AbstractWhereImplementer {
 
     @Override
     protected boolean isCompatibleReturnType(ClassNode domainClass, MethodNode methodNode, ClassNode returnType, String prefix) {
-        return ClassHelper.VOID_TYPE.equals(returnType) || AstUtils.isSubclassOfOrImplementsInterface(returnType, Number.name)
+        return ClassHelper.VOID_TYPE == returnType || AstUtils.isSubclassOfOrImplementsInterface(returnType, Number.name)
     }
 
     @Override

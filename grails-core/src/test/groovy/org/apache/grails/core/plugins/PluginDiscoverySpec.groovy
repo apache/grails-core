@@ -18,10 +18,14 @@
  */
 package org.apache.grails.core.plugins
 
+import ch.qos.logback.classic.Level
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import org.springframework.core.env.StandardEnvironment
+
 import org.grails.io.support.SpringIOUtils
+import org.apache.grails.core.testing.support.LogCapture
 
 class PluginDiscoverySpec extends Specification {
 
@@ -68,13 +72,47 @@ class PluginDiscoverySpec extends Specification {
 
          then: 'the descriptor only includes <resource> elements, not <type> elements'
          descriptors.size() == 1
-         descriptors[0].providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
-         descriptors[0].resource != null
-         descriptors[0].resource.exists()
+         with(descriptors[0]) {
+             providedClasses == ['com.example.MyDomainClass', 'com.example.MyService']
+             resource != null
+             resource.exists()
+         }
 
          cleanup:
          tempDir.deleteDir()
      }
+
+    def 'skips a plugin descriptor that declares a doctype'() {
+        given: 'a descriptor that declares a DOCTYPE, which Grails never generates'
+        def doctypeDir = File.createTempDir()
+        def doctypeMetaInf = new File(doctypeDir, 'META-INF').tap { mkdirs() }
+        new File(doctypeMetaInf, 'grails-plugin.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plugin>
+<plugin name='doctype'>
+    <type>com.example.DoctypeGrailsPlugin</type>
+</plugin>
+"""
+
+        and: 'a second descriptor on the same classpath that declares none'
+        def plainDir = File.createTempDir()
+        def plainMetaInf = new File(plainDir, 'META-INF').tap { mkdirs() }
+        new File(plainMetaInf, 'grails-plugin.xml').text = """<plugin name='plain'>
+    <type>com.example.PlainGrailsPlugin</type>
+</plugin>
+"""
+        def classLoader = new URLClassLoader(
+                [doctypeDir.toURI().toURL(), plainDir.toURI().toURL()] as URL[], (ClassLoader) null)
+
+        when: 'plugin descriptor resources are scanned'
+        def descriptors = PluginUtils.scanPluginDescriptorResources(classLoader)
+
+        then: 'the declaration is refused and only the descriptor without one is discovered'
+        descriptors*.providedPlugins == [['com.example.PlainGrailsPlugin']]
+
+        cleanup:
+        doctypeDir.deleteDir()
+        plainDir.deleteDir()
+    }
 
     def 'ignores malformed plugin descriptor XML without failing discovery'() {
         given: 'a classloader that returns a grails-plugin.xml with invalid content'
@@ -137,10 +175,10 @@ class PluginDiscoverySpec extends Specification {
         PluginUtils.getLogicalPluginName(pluginClass) == expectedName
 
         where:
-        pluginClass                        || expectedName
-        DiscoveryTestCoreGrailsPlugin      || 'discoveryTestCore'
-        DiscoveryTestSimpleGrailsPlugin    || 'discoveryTestSimple'
-        DiscoveryTestABCGrailsPlugin       || 'discoveryTestABC'
+        pluginClass                     || expectedName
+        DiscoveryTestCoreGrailsPlugin   || 'discoveryTestCore'
+        DiscoveryTestSimpleGrailsPlugin || 'discoveryTestSimple'
+        DiscoveryTestABCGrailsPlugin    || 'discoveryTestABC'
     }
 
     def 'treats plugin metadata with the same name as equal'() {
@@ -245,30 +283,31 @@ class PluginDiscoverySpec extends Specification {
                 <resource>com.example.AnotherClass</resource>
             </plugin>
         '''
-
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'the handler captures the declared plugin and provided class names'
-        handler.pluginClassNames == ['com.example.TestGrailsPlugin', 'com.example.OtherGrailsPlugin']
-        handler.providedClasses == ['com.example.SomeClass', 'com.example.AnotherClass']
+        with(handler) {
+            pluginClassNames == ['com.example.TestGrailsPlugin', 'com.example.OtherGrailsPlugin']
+            providedClasses == ['com.example.SomeClass', 'com.example.AnotherClass']
+        }
     }
 
     def 'returns no plugin or provided classes when plugin XML has no matching elements'() {
         given: 'plugin XML without type or resource elements'
         def xml = '<plugin name="empty"></plugin>'
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'both collected lists remain empty'
-        handler.pluginClassNames.empty
-        handler.providedClasses.empty
+        with(handler) {
+            pluginClassNames.empty
+            providedClasses.empty
+        }
     }
 
     def 'trims surrounding whitespace from plugin class names in XML elements'() {
@@ -282,10 +321,9 @@ class PluginDiscoverySpec extends Specification {
         '''
 
         def handler = new PluginXmlHandler()
-        def parser = SpringIOUtils.newSAXParser()
 
         when: 'the XML is parsed'
-        parser.parse(new ByteArrayInputStream(xml.bytes), handler)
+        SpringIOUtils.newSAXParser().parse(new ByteArrayInputStream(xml.bytes), handler)
 
         then: 'the extracted plugin class name is trimmed'
         handler.pluginClassNames == ['com.example.TestGrailsPlugin']
@@ -299,6 +337,228 @@ class PluginDiscoverySpec extends Specification {
             PLUGIN_GROOVY_CONFIG == 'plugin.groovy'
             DEFAULT_CONFIG_IGNORE_LIST == ['dataSource', 'hibernate']
         }
+    }
+
+    def 'a plugin class declared in multiple classpath descriptors is registered only once'() {
+        given: 'a plugin class compiled by a Groovy class loader'
+        def gcl = new GroovyClassLoader()
+        gcl.parseClass('''
+            class DuplicateDescriptorProbeGrailsPlugin {
+                def version = "1.0.0"
+            }
+        ''')
+
+        and: 'two classpath roots each declaring the same plugin class in META-INF/grails-plugin.xml'
+        def tempDirs = (1..2).collect { index ->
+            def tempDir = File.createTempDir()
+            def metaInfDir = new File(tempDir, 'META-INF').tap { mkdirs() }
+            new File(metaInfDir, 'grails-plugin.xml').text = """
+                <plugin name='descriptor${index}'>
+                    <type>DuplicateDescriptorProbeGrailsPlugin</type>
+                </plugin>
+            """
+            tempDir
+        }
+        def classLoader = new URLClassLoader(tempDirs*.toURI()*.toURL() as URL[], gcl)
+
+        and: 'the discovery resolves plugins from the thread context class loader'
+        def originalContextClassLoader = Thread.currentThread().contextClassLoader
+        Thread.currentThread().contextClassLoader = classLoader
+        def discovery = new DefaultPluginDiscovery()
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'the plugin is registered under its name'
+        discovery.hasPlugin('duplicateDescriptorProbe')
+
+        and: 'only one registration appears in the load order'
+        discovery.pluginsInLoadOrder.count { it.name == 'duplicateDescriptorProbe' } == 1
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = originalContextClassLoader
+        tempDirs*.deleteDir()
+    }
+
+    def 'a plugin class supplied more than once is registered only once and skipping is logged at WARN'() {
+        given: 'a discovery bean supplied the same plugin class twice'
+        def pluginClass = new GroovyClassLoader().parseClass('''
+            class RepeatedProbeGrailsPlugin {
+                def version = '1.0.0'
+            }
+        ''')
+        def discovery = new DefaultPluginDiscovery([pluginClass, pluginClass] as Class<?>[]).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        and: 'configure a logback appender to capture log messages'
+        def logCapture = new LogCapture(DefaultPluginDiscovery)
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'only one registration appears in the load order'
+        with(discovery) {
+            hasPlugin('repeatedProbe')
+            pluginsInLoadOrder.count { it.name == 'repeatedProbe' } == 1
+        }
+
+        and: 'the skipped duplicate is reported at WARN'
+        def duplicateWarnings = logCapture.events.findAll {
+            it.level == Level.WARN &&
+            it.formattedMessage.contains('repeatedProbe') &&
+            it.formattedMessage.contains('already registered')
+        }
+        duplicateWarnings.size() == 1
+
+        cleanup:
+        logCapture.close()
+    }
+
+    def 'reports every missing or incompatible plugin dependency at ERROR'() {
+        given: 'a discovery bean with one available and one unresolved plugin'
+        def gcl = new GroovyClassLoader()
+        def availableDependencyClass = gcl.parseClass('''
+            class AvailableDependencyGrailsPlugin {
+                def version = "1.0.0"
+            }
+        ''')
+        def unresolvedDependenciesClass = gcl.parseClass('''
+            class UnresolvedDependenciesGrailsPlugin {
+                def version = "4.0.0"
+                def dependsOn = [missingDependency: "1.0.0", availableDependency: "2.0.0"]
+            }
+        ''')
+        def discovery = new DefaultPluginDiscovery(
+                [availableDependencyClass, unresolvedDependenciesClass] as Class<?>[]
+        ).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        and: 'configure a logback appender to capture log messages'
+        def logCapture = new LogCapture(DefaultPluginDiscovery)
+
+        when: 'the public discovery API initializes the plugin set'
+        discovery.init(new StandardEnvironment())
+
+        then: 'the unresolved plugin remains failed and is not loaded'
+        with(discovery) {
+            hasFailedPlugin('unresolvedDependencies')
+            !hasPlugin('unresolvedDependencies')
+            pluginsInLoadOrder*.name == ['availableDependency']
+        }
+
+        and: 'one message at ERROR identifies the failed plugin and every unresolved dependency'
+        def errors = logCapture.events.findAll { it.formattedMessage.contains('unresolvedDependencies') }
+        errors.size() == 1
+        with(errors[0]) {
+            level == Level.ERROR
+            formattedMessage.contains('Grails plug-in [unresolvedDependencies] with version [4.0.0] cannot be loaded')
+            formattedMessage.contains('dependency [missingDependency] with required version [1.0.0] is missing')
+            formattedMessage.contains('dependency [availableDependency] has version [1.0.0] but requires [2.0.0]')
+            throwableProxy == null
+        }
+
+        cleanup:
+        logCapture.close()
+    }
+
+    def 'reports a dependency that failed to load as failed rather than missing'() {
+        given: 'a plugin whose only dependency itself fails to load due to a genuinely missing dependency'
+        def gcl = new GroovyClassLoader()
+        def failingDependencyClass = gcl.parseClass('''
+            class FailingDependencyGrailsPlugin {
+                def version = "1.0.0"
+                def dependsOn = [reallyMissing: "1.0.0"]
+            }
+        ''')
+        def dependentClass = gcl.parseClass('''
+            class DependentOnFailedGrailsPlugin {
+                def version = "1.0.0"
+                def dependsOn = [failingDependency: "1.0.0"]
+            }
+        ''')
+        def discovery = new DefaultPluginDiscovery(
+                [failingDependencyClass, dependentClass] as Class<?>[]
+        ).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        and: 'configure a logback appender to capture log messages'
+        def logCapture = new LogCapture(DefaultPluginDiscovery)
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'both plugins end up failed'
+        with(discovery) {
+            hasFailedPlugin('failingDependency')
+            hasFailedPlugin('dependentOnFailed')
+        }
+
+        and: 'the missing root cause is reported as missing'
+        def rootCause = logCapture.events.find { it.formattedMessage.contains('[failingDependency]') }
+        rootCause.level == Level.ERROR
+        rootCause.formattedMessage.contains('dependency [reallyMissing] with required version [1.0.0] is missing')
+
+        and: 'the plugin depending on the failed plugin reports it as failed, not missing'
+        def dependent = logCapture.events.find { it.formattedMessage.contains('[dependentOnFailed]') }
+        dependent.level == Level.ERROR
+        dependent.formattedMessage.contains(
+                'dependency [failingDependency] with required version [1.0.0] failed to load'
+        )
+        !dependent.formattedMessage.contains('is missing')
+
+        cleanup:
+        logCapture.close()
+    }
+
+    def 'reports a dependency that is still pending load together with the version that was found'() {
+        given: 'a plugin that requires a newer version of a dependency which is itself still waiting on a missing plugin'
+        def gcl = new GroovyClassLoader()
+        def dependentClass = gcl.parseClass('''
+            class NeedsNewerPendingGrailsPlugin {
+                def version = "1.0.0"
+                def dependsOn = [pendingDependency: "2.0.0"]
+            }
+        ''')
+        def pendingDependencyClass = gcl.parseClass('''
+            class PendingDependencyGrailsPlugin {
+                def version = "1.0.0"
+                def dependsOn = [reallyMissing: "1.0.0"]
+            }
+        ''')
+
+        and: 'the dependent plugin is processed before the pending dependency gives up'
+        def discovery = new DefaultPluginDiscovery(
+                [dependentClass, pendingDependencyClass] as Class<?>[]
+        ).tap {
+            loadPluginsFromClasspath = false
+        }
+
+        and: 'configure a logback appender to capture log messages'
+        def logCapture = new LogCapture(DefaultPluginDiscovery)
+
+        when:
+        discovery.init(new StandardEnvironment())
+
+        then: 'both plugins end up failed'
+        with(discovery) {
+            hasFailedPlugin('needsNewerPending')
+            hasFailedPlugin('pendingDependency')
+        }
+
+        and: 'the dependent plugin reports the pending dependency with the version it found'
+        def dependent = logCapture.events.find { it.formattedMessage.contains('[needsNewerPending]') }
+        dependent.level == Level.ERROR
+        dependent.formattedMessage.contains(
+                'dependency [pendingDependency] with required version [2.0.0] is still pending load ' +
+                        'and only version [1.0.0] was found'
+        )
+        !dependent.formattedMessage.contains('is missing')
+
+        cleanup:
+        logCapture.close()
     }
 }
 

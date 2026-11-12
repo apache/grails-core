@@ -18,17 +18,16 @@
  */
 package org.grails.orm.hibernate.cfg
 
+import spock.lang.Specification
+
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
+import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings
-import spock.lang.Specification
 
-/**
- * Created by graemerocher on 07/10/2016.
- */
 class HibernateMappingContextSpec extends Specification {
 
     void "test entity with custom id generator"() {
@@ -38,6 +37,31 @@ class HibernateMappingContextSpec extends Specification {
 
         then:"The mapping is correct"
         entity.mapping.identifier.generator == ValueGenerator.CUSTOM
+    }
+
+    void "an entity mapped with a built-in generator name resolves to that generator whatever its case"() {
+        when:
+        PersistentEntity entity = new HibernateMappingContext().addPersistentEntity(MixedCaseIdGeneratorEntity)
+
+        then:
+        entity.mapping.identifier.generator == ValueGenerator.SEQUENCE
+    }
+
+    void "an entity mapped with a generator name that is neither built in nor a class fails to register"() {
+        when:
+        new HibernateMappingContext().addPersistentEntity(UnresolvableIdGeneratorEntity)
+
+        then:
+        DatastoreConfigurationException e = thrown()
+        e.message == "Invalid id generation strategy for entity [${UnresolvableIdGeneratorEntity.name}]: notAGeneratorOrClassName"
+    }
+
+    void "an entity with a composite identifier resolves to the AUTO generator"() {
+        when:
+        PersistentEntity entity = new HibernateMappingContext().addPersistentEntity(MappingContextCompositeIdEntity)
+
+        then:
+        entity.mapping.identifier.generator == ValueGenerator.AUTO
     }
 
     void "test entity with custom type marshaller is registered correctly"() {
@@ -55,6 +79,51 @@ class HibernateMappingContextSpec extends Specification {
         and:"The type is registered as a custom type with the mapping factory"
         mappingContext.mappingFactory.isCustomType(MyUUIDGenerator)
     }
+
+    void "unconstrained properties are nullable in the Hibernate mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "explicit constraints do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextConstrainedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "wildcard mappings do not prevent the default nullable mapping"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextWildcardMappedEntity)
+
+        then:
+        entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
+
+    void "composite id components are nullable by default"() {
+        when:
+        def entity = new HibernateMappingContext().addPersistentEntity(MappingContextCompositeIdEntity)
+
+        then:
+        entity.getPropertyByName("tenantId").mapping.mappedForm.nullable
+        entity.getPropertyByName("code").mapping.mappedForm.nullable
+    }
+
+    void "default nullable can be disabled"() {
+        given:
+        def settings = new HibernateConnectionSourceSettings()
+        settings.default.nullable = false
+
+        when:
+        def entity = new HibernateMappingContext(settings).addPersistentEntity(MappingContextNullableByDefaultEntity)
+
+        then:
+        !entity.getPropertyByName("name").mapping.mappedForm.nullable
+    }
 }
 
 @Entity
@@ -62,6 +131,55 @@ class CustomIdGeneratorEntity {
     String name
     static mapping = {
         id(generator: "org.grails.orm.hibernate.cfg.MyUUIDGenerator", type: "uuid-binary")
+    }
+}
+
+@Entity
+class MixedCaseIdGeneratorEntity {
+    String name
+    static mapping = {
+        id(generator: "Sequence")
+    }
+}
+
+@Entity
+class UnresolvableIdGeneratorEntity {
+    String name
+    static mapping = {
+        id(generator: "notAGeneratorOrClassName")
+    }
+}
+
+@Entity
+class MappingContextNullableByDefaultEntity {
+    String name
+}
+
+@Entity
+class MappingContextConstrainedEntity {
+    String name
+
+    static constraints = {
+        name maxSize: 100
+    }
+}
+
+@Entity
+class MappingContextWildcardMappedEntity {
+    String name
+
+    static mapping = {
+        '*' cache: true
+    }
+}
+
+@Entity
+class MappingContextCompositeIdEntity {
+    String tenantId
+    String code
+
+    static mapping = {
+        id composite: ['tenantId', 'code']
     }
 }
 

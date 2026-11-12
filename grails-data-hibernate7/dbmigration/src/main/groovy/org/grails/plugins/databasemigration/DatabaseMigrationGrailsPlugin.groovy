@@ -23,7 +23,10 @@ import javax.sql.DataSource
 import liquibase.parser.ChangeLogParser
 import liquibase.parser.ChangeLogParserFactory
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.context.ApplicationContext
+import org.springframework.core.env.Environment
 
 import grails.plugins.Plugin
 import org.grails.plugins.databasemigration.liquibase.GrailsLiquibase
@@ -34,7 +37,7 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
 
     static final String CONFIG_MAIN_PREFIX = 'grails.plugin.databasemigration'
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
     def pluginExcludes = [
             '**/testapp/**',
             'grails-app/views/error.gsp'
@@ -49,10 +52,14 @@ class DatabaseMigrationGrailsPlugin extends Plugin {
     def scm = [url: 'https://github.com/apache/grails-core']
 
     @Override
-    Closure doWithSpring() {
-        configureLiquibase()
-        return { ->
-            grailsLiquibaseFactory(GrailsLiquibaseFactory, applicationContext)
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            configureLiquibase()
+            registry.registerBean('grailsLiquibaseFactory', GrailsLiquibaseFactory) {
+                it.supplier {
+                    new GrailsLiquibaseFactory(applicationContext)
+                }
+            }
         }
     }
 

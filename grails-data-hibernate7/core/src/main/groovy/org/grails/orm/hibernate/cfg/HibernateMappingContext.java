@@ -53,6 +53,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
         initialize(settings);
         this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
         this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
+        this.mappingFactory.setDefaultNullable(settings.getDefault().isNullable());
         this.mappingFactory.setContextObject(contextObject);
         this.syntaxStrategy = new GrailsJpaMappingConfigurationStrategy(mappingFactory);
         this.proxyFactory = new HibernateProxyHandler();

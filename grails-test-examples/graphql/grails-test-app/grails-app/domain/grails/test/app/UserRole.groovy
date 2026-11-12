@@ -65,6 +65,8 @@ class UserRole implements Serializable {
 
 
     static constraints = {
+        user nullable: false
+        role nullable: false
         role validator: { Role r, UserRole ur ->
             if (ur.user?.id) {
                 UserRole.withNewSession {

@@ -37,6 +37,8 @@ import org.springframework.web.servlet.DispatcherServlet
 
 import grails.util.Holders
 import org.grails.web.context.ServletEnvironmentGrailsApplicationDiscoveryStrategy
+import org.grails.web.errors.GrailsExceptionResolver
+import org.grails.web.util.HiddenHttpMethod
 import org.grails.web.util.WebUtils
 
 /**
@@ -73,25 +75,63 @@ class GrailsDispatcherServlet extends DispatcherServlet implements ServletContex
         }
     }
 
+    /**
+     * Records an exception an error handler answered on the observation of the request once the dispatch has returned,
+     * unless the filter that observes the request will read it from there.
+     */
+    @Override
+    protected void doService(HttpServletRequest request, HttpServletResponse response) throws Exception {
+        Runnable recordFailureLeftOnRequest = GrailsExceptionResolver.holdFailureLeftOnRequest(request)
+        try {
+            super.doService(request, response)
+        }
+        finally {
+            recordFailureLeftOnRequest.run()
+        }
+    }
+
     protected GrailsWebRequest buildGrailsWebRequest(HttpServletRequest request, HttpServletResponse response) {
         def webRequest = new GrailsWebRequest(request, response, request.getServletContext())
         webRequest.informParameterCreationListeners()
         return webRequest
     }
 
+    /**
+     * Whether a POST carrying a "_method" parameter should be treated as the method it names. Set when the
+     * hidden HTTP method filter is disabled.
+     */
+    boolean resolveHiddenHttpMethod = false
+
     @Override
     protected HttpServletRequest checkMultipart(HttpServletRequest request) throws MultipartException {
+        HttpServletRequest currentRequest = request
         boolean shouldProcessMultiPart = !WebUtils.isError(request) && !WebUtils.isForwardOrInclude(request)
         if (shouldProcessMultiPart) {
             HttpServletRequest processedRequest = super.checkMultipart(request)
             if (!processedRequest.is(request)) {
-                def webRequest = GrailsWebRequest.lookup(request)
-                if (webRequest != null) {
-                    webRequest.multipartRequest = processedRequest
-                }
+                // GrailsWebRequestFilter bound the request below this wrapper, so it cannot reach the
+                // wrapper by unwrapping. Publish it for params and request.getFile(..) to find.
+                currentRequest = processedRequest
+                request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, processedRequest)
+                GrailsWebRequest.lookup(request)?.multipartRequestResolved()
             }
         }
-        return request
+
+        // Resolved here rather than in a servlet filter: after multipart resolution, so the body is parsed
+        // once by the dispatcher instead of being forced open by a getParameter() ahead of it, and after the
+        // filter chain, so Spring Security still sees the request's real POST method.
+        if (resolveHiddenHttpMethod && shouldProcessMultiPart) {
+            String override = HiddenHttpMethod.resolveOverride(currentRequest)
+            if (override != null) {
+                // Recorded as an attribute rather than by substituting the wrapper, because the request
+                // Grails exposes is the outermost one. HiddenHttpMethod.effectiveMethod reads it, which is
+                // how mapping resolution and allowedMethods see the override; request.method still reports
+                // the POST that arrived.
+                request.setAttribute(HiddenHttpMethod.OVERRIDDEN_METHOD_ATTRIBUTE, override)
+                return HiddenHttpMethod.wrap(override, currentRequest)
+            }
+        }
+        return currentRequest
     }
 
     /**

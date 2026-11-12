@@ -24,6 +24,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
@@ -61,6 +62,8 @@ dependencies {
         exclude module:'grails-testing-support-core'
     }
     testImplementation project(':grails-testing-support-core')
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common'))
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.springframework:spring-test', {
@@ -85,29 +88,6 @@ dependencies {
     testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 }
-
-test {
-    maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 25 : 100
-    if(!isCiBuild) {
-        maxHeapSize = '2048m'
-    }
-    excludes = ['**/GrailsDomainBinderTests.class',
-                '**/ComponentValidationTests.class',
-                '**/HibernateMappingUniqueConstraintTests.class']
-}
-
-task testGrailsDomainBinder(type: Test) { includes = [
-        '**/GrailsDomainBinderTests.class'
-    ] }
-
-
-task testIsolatedPersistentOne(type: Test) {
-    includes = ['**/ComponentValidationTests.class']
-    includes = ['**/HibernateMappingUniqueConstraintTests.class']
-}
-
-test.dependsOn testGrailsDomainBinder, testIsolatedPersistentOne
 
 tasks.withType(Groovydoc).configureEach {
     // tests do not have groovydoc

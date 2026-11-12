@@ -14,13 +14,11 @@ tasks.register('printLauncher', JavaExec) {
 }
 
 tasks.register('checkToolchain') {
-    doLast {
+    def toolchainVersion = providers.provider {
         def launcher = tasks.named('printLauncher', JavaExec).get().javaLauncher
-        if (launcher.isPresent()) {
-            def metadata = launcher.get().metadata
-            println "TOOLCHAIN_VERSION=${metadata.languageVersion.asInt()}"
-        } else {
-            println 'TOOLCHAIN_VERSION=none'
-        }
+        launcher.isPresent() ? String.valueOf(launcher.get().metadata.languageVersion.asInt()) : 'none'
+    }
+    doLast {
+        println "TOOLCHAIN_VERSION=${toolchainVersion.get()}"
     }
 }

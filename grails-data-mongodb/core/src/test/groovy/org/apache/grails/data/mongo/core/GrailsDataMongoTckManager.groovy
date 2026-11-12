@@ -18,8 +18,10 @@
  */
 package org.apache.grails.data.mongo.core
 
+import com.github.dockerjava.api.model.Ulimit
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoDatabase
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
@@ -53,6 +55,8 @@ import org.testcontainers.containers.output.Slf4jLogConsumer
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
 
+    private static final long MONGOD_OPEN_FILES_LIMIT = 65536L
+
     MongoDBContainer mongoDBContainer
 
     MongoDatastore mongoDatastore
@@ -67,7 +71,12 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
+        // Docker's default soft limit of 1024 open files is easily exhausted by WiredTiger, and a crashed
+        // mongod leaves the test worker waiting for server selection indefinitely
         mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
+                .withCreateContainerCmdModifier { cmd ->
+                    cmd.hostConfig.withUlimits([new Ulimit('nofile', MONGOD_OPEN_FILES_LIMIT, MONGOD_OPEN_FILES_LIMIT)])
+                }
         mongoDBContainer.start()
         mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
 
@@ -140,10 +149,10 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                     ?.findAll { !(it in ['admin', 'config', 'local']) }
                     ?.each {
                         try {
-                            mongoDatastore.mongoClient.getDatabase(it as String).drop()
+                            clearDatabase(mongoDatastore.mongoClient.getDatabase(it as String))
                         }
                         catch (ignored) {
-                            log.warn("Could not drop ${it}")
+                            log.warn("Could not clear ${it}")
                         }
                     }
             for (cls in domainClasses) {
@@ -163,6 +172,27 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
         }
 
         super.destroy()
+    }
+
+    /**
+     * Removes the documents but keeps the collections and their indexes. The datastore of the next feature
+     * finds them in place, whereas dropping the database makes it create every collection and index again,
+     * and WiredTiger keeps the files of the dropped ones open until its next checkpoint.
+     */
+    private void clearDatabase(MongoDatabase database) {
+        for (String collectionName in database.listCollectionNames()) {
+            if (collectionName.startsWith('system.')) {
+                continue
+            }
+            try {
+                database.getCollection(collectionName).deleteMany(new Document())
+            }
+            catch (e) {
+                // e.g. views do not support deletes
+                log.warn("Could not clear ${collectionName}, dropping it instead: ${e.message}")
+                database.getCollection(collectionName).drop()
+            }
+        }
     }
 
     @Override

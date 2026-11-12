@@ -69,7 +69,8 @@ class DataTestSetupSpecInterceptor implements IMethodInterceptor {
                 constraintRegistry(DefaultConstraintRegistry, ref('messageSource'))
                 grailsDomainClassMappingContext(grailsDatastore: 'getMappingContext')
 
-                "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext, ConstraintEvalUtils.getDefaultConstraints(application.config))
+                "${BEAN_NAME}"(constraintsEvaluator, constraintRegistry, grailsDomainClassMappingContext,
+                        ConstraintEvalUtils.getDefaultConstraints(application.config), true, ConstraintEvalUtils.getDefaultNullable(application.config))
 
             transactionManager(DatastoreTransactionManager) {
                 datastore = ref('grailsDatastore')

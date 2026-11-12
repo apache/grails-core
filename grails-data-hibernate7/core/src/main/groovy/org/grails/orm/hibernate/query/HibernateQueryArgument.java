@@ -56,20 +56,51 @@ public enum HibernateQueryArgument {
     JOIN("join"),
 
     // ── HQL keywords ──────────────────────────────────────────────────────────
+    // The reader of an HQL query uses HqlKeyword; these entries stay for anything that referenced them.
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_SELECT("select"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_FROM("from"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_WHERE("where"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_JOIN("join"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_LEFT("left"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_RIGHT("right"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_INNER("inner"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_OUTER("outer"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_GROUP("group"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_ORDER("order"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_HAVING("having"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_DISTINCT("distinct"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_ALL("all"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_AS("as"),
+    /** @deprecated since 8.0.1, the HQL keywords live in {@code HqlKeyword}; this entry is unused and goes in 9.0 */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     HQL_NEW("new"),
 
     // ── Hibernate config properties ───────────────────────────────────────────

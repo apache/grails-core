@@ -1,0 +1,206 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+## Extensions
+
+List of known extensions
+
+. https://github.com/grails-plugins/grails-spring-security-oauth2-google[Google]
+. https://github.com/MatrixCrawler/grails-spring-security-oauth2-facebook[Facebook]
+. https://github.com/rpalcolea/grails-spring-security-oauth2-github[Github]
+
+### How to create a new provider plugin?
+
+. Create a new plugin with command `grails create-plugin spring-security-oauth2-myProvider`.
+. Add the following plugins as dependency in the build:
+
+.build.gradle
+[source,groovy]
+----
+dependencies {
+    // ...
+    api 'org.apache.grails:grails-spring-security:{version}'
+    api 'org.apache.grails:grails-spring-security-oauth2:{version}'
+}
+----
+[start=3]
+. Create a Groovy class that extends `OAuth2SpringToken` and implement the abstract methods.
+[source,groovy]
+----
+getProviderName // gets the provider name
+getSocialId // is usually used for the  username
+getScreenName // is usually used for the email address
+----
+[start=4]
+. You may want to check if the scribe library has a default API built-in for your provider or create a Groovy class that
+extends `DefaultApi20` and implement the abstract methods.
+[source,groovy]
+----
+getAccessTokenEndpoint  // I would get this from config which is <providers domain>/oauth2/token
+getAuthorizationBaseUrl // I would get this from get this from config which is <providers domain>/oauth2/authorize
+getAccessTokenExtractor // In some implementations the `OpenIdJsonTokenExtractor` is used.
+----
+[start=5]
+. Create a service in your plugin that extends `OAuth2AbstractProviderService` and implement the abstract methods. You can override the
+other methods for fine-tuning if needed.
+[source,groovy]
+----
+getProviderID // whatever you want to call your provider.
+getApiClass // points to your API implementation
+getProfileScope // comes from config <domain>/oauth2/userInfo
+getScopeSeparator // from the implementation that I've see usually: " " is used.
+createSpringAuthToken // parses the OAuth2AccessToken to get the email and id that could be used
+                      // to look up the user and puts them in a OAuth2SpringToken.
+                      // This is also a good place to validate the token either inline or calling a separate method *
+----
+
+* There maybe some variability between providers based on what is in the claims, but should be similar to this:
+[source,groovy]
+----
+@Value('${grails.plugin.springsecurity.oauth2.providers.your_provider.api_key}')
+String appId
+
+def rawResponse = new JsonSlurper().parseText(accessToken.rawResponse)
+String encodedIdToken = rawResponse.id_token
+List<String> encodedIdTokenSegments = encodedIdToken.split('\\.')
+
+String payloadClaimsStr = new String(Base64Utils.decodeFromUrlSafeString(encodedIdTokenSegments[1]))
+Map payloadClaims = new JsonSlurper().parseText(payloadClaimsStr) as Map
+
+if (payloadClaims.aud != appId) {
+    throw new IllegalStateException("ID Token rejected: token specified incorrect recipient ID ${payloadClaims.aud}")
+}
+
+Integer now = new Date().time / 1000 as Integer // UNIX timestamp
+
+if (now < payloadClaims.nbf) {
+    throw new IllegalStateException("ID Token rejected: token cannot be processed before ${payloadClaims.nbf}; current time is $now")
+}
+
+if (now >= payloadClaims.exp) {
+    throw new IllegalStateException("ID Token rejected: token has expired")
+}
+
+if (now < payloadClaims.iat) {
+    throw new IllegalStateException("ID Token rejected: token cannot be from the future!")
+}
+----
+
+Validating the token is important to security to make sure that the application client id is the same as what you sent to, because
+it prevents people from using tokens from other providers to try to grain access to your system.
+
+[start=6]
+. You can register your implementation of `OAuth2AbstractProviderService` in the plugin groovy file or if you can inline in the registration in BootStrap.groovy
+[source,groovy]
+----
+try {
+    springSecurityOauth2BaseService.registerProvider(yourAuth2Service)
+} catch (OAuth2Exception exception) {
+    log.error("There was an oAuth2Exception Your provider has not been loaded", exception)
+}
+----
+[start=6]
+. In the app that uses any of the extensions you'll want to set up a URL mapping like:
+[source,groovy]
+----
+"/oauth2/$provider/success"(controller: 'login', action: 'oauth2Success')
+----
+Then at that endpoint you can handle the user lookup, setting the authentication and redirecting, something like:
+[source,groovy]
+----
+def oauth2Success(String provider) {
+    log.info "In oauth2Success with $provider"
+
+    if (!provider) {
+        log.warn "The Spring Security OAuth callback URL must include the 'provider' URL parameter"
+        throw new OAuth2Exception("The Spring Security OAuth callback URL must include the 'provider' URL parameter")
+    }
+
+    def sessionKey = springSecurityOauth2BaseService.sessionKeyForAccessToken(provider)
+
+    if (!session[sessionKey]) {
+        log.warn "No OAuth token in the session for provider '${provider}' your provider might require MFA before logging in to this server."
+        throw new OAuth2Exception("Authentication error for provider '${provider}' your provider might require MFA before logging in to this server.")
+    }
+
+    // Create the relevant authentication token and attempt to log in.
+    OAuth2SpringToken oAuthToken = createAuthToken(provider, session[sessionKey])
+
+    if (oAuthToken.principal instanceof GrailsUser) {
+        //provide you're own getDefaultTargetUrl method to replace with a string.
+        authenticateAndRedirect(oAuthToken, getDefaultTargetUrl())
+    } else {
+        // This OAuth account hasn't been registered against an internal
+        // account yet. Give the oAuthID the opportunity to create a new
+        // internal account or link to an existing one.
+        session[SpringSecurityOAuth2Controller.SPRING_SECURITY_OAUTH_TOKEN] = oAuthToken
+
+        def redirectUrl = springSecurityOauth2BaseService.getAskToLinkOrCreateAccountUri()
+
+        if (!redirectUrl) {
+            log.warn "grails.plugin.springsecurity.oauth.registration.askToLinkOrCreateAccountUri configuration option must be set"
+            throw new OAuth2Exception('Internal error')
+        }
+        log.debug "Redirecting to askToLinkOrCreateAccountUri: ${redirectUrl}"
+        redirect(redirectUrl instanceof Map ? redirectUrl : [uri: redirectUrl])
+    }
+}
+
+
+private OAuth2SpringToken createAuthToken(String providerName, OAuth2AccessToken scribeToken) {
+    def providerService = springSecurityOauth2BaseService.getProviderService(providerName)
+    OAuth2SpringToken oAuthToken = providerService.createSpringAuthToken(scribeToken)
+
+
+    def user
+
+    if(loadByUserName){
+        //provide your own security service or do a lookup manually.
+        user = securityService.loadUserByUsername(oAuthToken.getSocialId())
+    }
+
+    if(loadByEmail) {
+        //provide your own security service or do a lookup manually.
+        user = securityService.loadUserByEmailAddress(oAuthToken.getScreenName())
+    }
+
+    if (user) {
+        updateOAuthToken(oAuthToken, user)
+    }
+
+    return oAuthToken
+}
+
+private OAuth2SpringToken updateOAuthToken(OAuth2SpringToken oAuthToken, user) {
+    oAuthToken.principal = user
+    oAuthToken.authorities = user.authorities
+    oAuthToken.authenticated = true
+
+    return oAuthToken
+}
+
+
+protected void authenticateAndRedirect(OAuth2SpringToken oAuthToken, redirectUrl) {
+    session.removeAttribute SpringSecurityOAuth2Controller.SPRING_SECURITY_OAUTH_TOKEN
+    SecurityContextHolder.context.authentication = oAuthToken
+    redirect(redirectUrl instanceof Map ? redirectUrl : [uri: redirectUrl])
+}
+
+----
+

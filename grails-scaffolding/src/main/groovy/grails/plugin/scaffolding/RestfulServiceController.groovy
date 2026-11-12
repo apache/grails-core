@@ -81,7 +81,7 @@ class RestfulServiceController<T extends GormEntity<T>> extends RestfulControlle
     }
 
     @Override
-    protected Integer countResources() {
+    protected Long countResources() {
         getService().count(params)
     }
 

@@ -36,7 +36,6 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.Statement
 import org.codehaus.groovy.ast.tools.GenericsUtils
-import org.codehaus.groovy.classgen.VariableScopeVisitor
 import org.codehaus.groovy.control.ErrorCollector
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.transform.sc.StaticCompileTransformation
@@ -58,7 +57,6 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.stmt
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.paramsForArgs
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.EMPTY_CLASS_ARRAY
 import static org.grails.datastore.mapping.reflect.AstUtils.TYPE_CHECKED_TYPE
 import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
@@ -81,7 +79,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.processVariableScope
 @CompileStatic
 abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTransformation {
 
-    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy'))
+    private static final Set<String> METHOD_NAME_EXCLUDES = new HashSet<String>(Arrays.asList('afterPropertiesSet', 'destroy', 'getTargetDatastore', 'setTargetDatastore', 'getTransactionManager', 'setTransactionManager'))
     private static final Set<String> ANNOTATION_NAME_EXCLUDES = new HashSet<String>(Arrays.asList(PostConstruct.getName(), PreDestroy.getName(), 'grails.web.controllers.ControllerMethod'))
     /**
      * Key used to store within the original method node metadata, all previous decorated methods
@@ -124,6 +122,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
             if (!md.isSynthetic() && Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers) &&
                     !Modifier.isStatic(modifiers) && !hasJunitAnnotation(md)) {
                 if (hasExcludedAnnotation(md)) continue
+                if (hasLocalAnnotation(md, annotationNode)) continue
 
                 def startsWithSpock = methodName.startsWith('$spock')
                 if (methodName.contains('$') && !startsWithSpock) continue
@@ -297,8 +296,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
      */
     protected MethodCallExpression makeDelegatingClosureCall(Expression targetObject, String executeMethodName, ArgumentListExpression arguments, Parameter[] closureParameters, MethodCallExpression originalMethodCall, VariableScope variableScope) {
         final ClosureExpression closureExpression = closureX(closureParameters, createDelegingMethodBody(closureParameters, originalMethodCall))
+        // Groovy 5 ClosureWriter NPEs on a ClosureExpression with a null VariableScope; default
+        // to an empty scope when the caller does not provide one.
         closureExpression.setVariableScope(
-                variableScope
+                variableScope != null ? variableScope : new VariableScope()
         )
         arguments.addExpression(closureExpression)
         final MethodCallExpression executeMethodCallExpression = callX(
@@ -324,7 +325,7 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
                 renamedMethodName,
                 Modifier.PROTECTED, resolveReturnTypeForNewMethod(methodNode),
                 newParameters,
-                EMPTY_CLASS_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 body
         )
 
@@ -353,14 +354,9 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
         methodNode.setCode(null)
         classNode.addMethod(renamedMethodNode)
 
-        // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error
-        VariableScopeVisitor scopeVisitor = new VariableScopeVisitor(new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration())))
-        if (methodNode == null) {
-            scopeVisitor.visitClass(classNode)
-        } else {
-            scopeVisitor.prepareVisit(classNode)
-            scopeVisitor.visitMethod(renamedMethodNode)
-        }
+        // Use a dummy source unit to process the variable scopes to avoid the issue where this is run twice producing an error.
+        SourceUnit dummySource = new SourceUnit('dummy', 'dummy', source.getConfiguration(), source.getClassLoader(), new ErrorCollector(source.getConfiguration()))
+        processVariableScopes(dummySource, classNode, renamedMethodNode)
 
         return renamedMethodNode
     }
@@ -392,6 +388,10 @@ abstract class AbstractMethodDecoratingTransformation extends AbstractGormASTTra
             }
         }
         return excludedAnnotation
+    }
+
+    protected boolean hasLocalAnnotation(MethodNode amd, AnnotationNode classAnnotation) {
+        return hasAnnotation(amd, classAnnotation.classNode)
     }
 
 }

@@ -1,0 +1,16 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+// This project needs no real BOM of its own - only its CLI tier (GrailsCliGradlePlugin,
+// applied regardless of grails.bom) matters here. Resolving consumer's own grailsCliDetect
+// probe requires selecting a variant of the project(':producer') dependency below, which
+// forces :producer to fully configure mid-resolution - landing squarely in the window where
+// :producer's own BOM-override mutation used to race its own CLI probe.
+grails {
+    bom = null
+}
+
+dependencies {
+    implementation project(':producer')
+}

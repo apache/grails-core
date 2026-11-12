@@ -1,0 +1,70 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+}
+
+version = '0.1'
+group = 'openapirest'
+
+apply plugin: 'org.apache.grails.gradle.grails-web'
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+
+    implementation 'org.apache.grails:grails-dependencies-starter-web'
+    implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-views-gson'
+    implementation 'com.h2database:h2'
+    runtimeOnly 'com.zaxxer:HikariCP'
+
+    // The module under test, without springdoc: the description is only generated at build time.
+    implementation project(':grails-openapi')
+
+    integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
+    integrationTestImplementation project(':grails-testing-support-http-client')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}
+
+// The description the generate-open-api command writes, compared by the functional tests with
+// what the application answers. Grails registers a generateOpenApi task only for a command jar
+// already built when the project is configured, which grails-openapi is not in a clean build of
+// this repository, so the command is run through a task of its own.
+def generatedOpenApi = layout.buildDirectory.dir('openapi')
+def generateOpenApi = tasks.register('generateOpenApiDocument', ApplicationContextCommandTask) {
+    classpath = sourceSets.main.runtimeClasspath + configurations.grailsCliClasspath
+    command = 'generate-open-api'
+    args("--output-directory=${generatedOpenApi.get().asFile.absolutePath}", 'openapirest.Application')
+    outputs.dir(generatedOpenApi)
+}
+
+tasks.named('integrationTest', Test) {
+    dependsOn(generateOpenApi)
+    systemProperty('openapi.generated.directory', generatedOpenApi.get().asFile.absolutePath)
+}

@@ -66,7 +66,7 @@ import org.hibernate.type.Type;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 
-import grails.gorm.MultiTenant;
+import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Basic;
@@ -162,8 +162,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     public void setDatastore(AbstractHibernateDatastore datastore) {
         this.datastore = datastore;
-        if (MultiTenant.class.isAssignableFrom(targetClass) && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            datastore.enableMultiTenancyFilter();
+        if (datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+            if (entity != null) {
+                datastore.enableMultiTenancyFilter(entity);
+            }
         }
     }
 
@@ -1764,8 +1767,12 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                             ignoreCase = (Boolean) caseArg;
                         }
                         final String orderParam = (String) argMap.get(HibernateQueryConstants.ARGUMENT_ORDER);
-                        final String order = HibernateQueryConstants.ORDER_DESC.equalsIgnoreCase(orderParam) ?
-                                HibernateQueryConstants.ORDER_DESC : HibernateQueryConstants.ORDER_ASC;
+                        // a sort on an alias is applied here and never reaches
+                        // populateArgumentsForCriteria, which performs the same checks for every other key
+                        PersistentEntity sortEntity = datastore == null ? null :
+                                datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+                        DynamicFinder.validateSortProperty(sortEntity, sort);
+                        final String order = DynamicFinder.normalizeDirection(orderParam);
                         int lastPropertyPos = sort.lastIndexOf('.');
                         String associationForOrdering = lastPropertyPos >= 0 ? sort.substring(0, lastPropertyPos) : null;
                         if (associationForOrdering != null && aliasMap.containsKey(associationForOrdering)) {

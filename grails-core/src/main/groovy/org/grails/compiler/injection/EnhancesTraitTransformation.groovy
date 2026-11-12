@@ -29,6 +29,7 @@ import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.MixinNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.CastExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -87,12 +88,12 @@ class EnhancesTraitTransformation extends AbstractArtefactTypeAstTransformation 
 
             def classNodeRef = ClassHelper.make(traitClassName).getPlainNodeReference()
             MethodNode getTraitMethodNode = transformerNode.addMethod(
-                    'getTrait', PUBLIC, ClassHelper.CLASS_Type.getPlainNodeReference(), GrailsASTUtils.ZERO_PARAMETERS, null, new ReturnStatement(new ClassExpression(classNodeRef)))
+                    'getTrait', PUBLIC, ClassHelper.CLASS_Type.getPlainNodeReference(), Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, new ReturnStatement(new ClassExpression(classNodeRef)))
             AnnotatedNodeUtils.markAsGenerated(transformerNode, getTraitMethodNode)
 
             def strArrayType = ClassHelper.STRING_TYPE.makeArray()
             MethodNode getArtefactTypesMethodNode = transformerNode.addMethod(
-                    'getArtefactTypes', PUBLIC, strArrayType, GrailsASTUtils.ZERO_PARAMETERS, null, new ReturnStatement(CastExpression.asExpression(strArrayType, expr)))
+                    'getArtefactTypes', PUBLIC, strArrayType, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, new ReturnStatement(CastExpression.asExpression(strArrayType, expr)))
             AnnotatedNodeUtils.markAsGenerated(transformerNode, getArtefactTypesMethodNode)
 
             def ast = source.AST

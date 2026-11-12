@@ -49,11 +49,16 @@ abstract class CustomArgument<T> implements Named<T>, Describable<T>, Nullable<T
     GraphQLArgument.Builder getArgument(GraphQLTypeManager typeManager, MappingContext mappingContext) {
         GraphQLInputType type = getType(typeManager, mappingContext)
 
-        newArgument()
+        GraphQLArgument.Builder builder = newArgument()
             .name(name)
             .description(description)
-            .defaultValue(defaultValue)
             .type(type)
+
+        if (defaultValue != null) {
+            builder.defaultValueProgrammatic(defaultValue)
+        }
+
+        builder
     }
 
     void validate() {

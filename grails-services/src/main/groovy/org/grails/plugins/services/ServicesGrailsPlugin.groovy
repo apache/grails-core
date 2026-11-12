@@ -20,10 +20,15 @@ package org.grails.plugins.services
 
 import java.lang.reflect.Modifier
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
 import grails.config.Settings
-import grails.core.GrailsApplication
 import grails.core.GrailsServiceClass
-import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ServiceArtefactHandler
@@ -35,6 +40,7 @@ import org.grails.core.exceptions.GrailsConfigurationException
  * @author Graeme Rocher
  * @since 0.4
  */
+@CompileStatic
 class ServicesGrailsPlugin extends Plugin  {
 
     def version = GrailsUtil.getGrailsVersion()
@@ -43,41 +49,27 @@ class ServicesGrailsPlugin extends Plugin  {
     def watchedResources = ['file:./grails-app/services/**/*Service.groovy',
                             'file:./plugins/*/grails-app/services/**/*Service.groovy']
 
-    Closure doWithSpring() {
-        { ->
-            GrailsApplication application = grailsApplication
-            final boolean springTransactionManagement = config.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean, false)
+    @Override
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            final boolean springTransactionManagement = environment.getProperty(Settings.SPRING_TRANSACTION_MANAGEMENT, Boolean, false)
             if (springTransactionManagement) {
                 throw new GrailsConfigurationException('Spring proxy-based transaction management no longer supported. Yes the @grails.gorm.transactions.Transactional annotation instead')
             }
 
-            for (GrailsServiceClass serviceClass in application.getArtefacts(ServiceArtefactHandler.TYPE)) {
-                GrailsPlugin providingPlugin = manager?.getPluginForClass(serviceClass.clazz)
-
-                String beanName
-                if (providingPlugin && !serviceClass.shortName.toLowerCase().startsWith(providingPlugin.name.toLowerCase())) {
-                    beanName = "${providingPlugin.name}${serviceClass.shortName}"
-                } else {
-                    beanName = serviceClass.propertyName
-                }
-                def scope = serviceClass.getPropertyValue('scope')
-                def lazyInit = serviceClass.hasProperty('lazyInit') ? serviceClass.getPropertyValue('lazyInit') : true
-
-                "${beanName}"(serviceClass.getClazz()) { bean ->
-                    bean.autowire =  true
-                    if (lazyInit instanceof Boolean) {
-                        bean.lazyInit = lazyInit
-                    }
-                    if (scope) {
-                        bean.scope = scope
-                    }
+            // Service beans autowire by name and use per-service scopes, which the BeanRegistry
+            // API cannot express — their definitions are contributed by a dedicated post-processor
+            registry.registerBean('serviceBeanDefinitionsPostProcessor', ServiceBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new ServiceBeanDefinitionsPostProcessor(grailsApplication, manager)
                 }
             }
 
-            serviceBeanAliasPostProcessor(ServiceBeanAliasPostProcessor)
+            registry.registerBean('serviceBeanAliasPostProcessor', ServiceBeanAliasPostProcessor)
         }
     }
 
+    @CompileDynamic
     void onChange(Map<String,Object> event) {
         if (!event.source || !applicationContext) {
             return

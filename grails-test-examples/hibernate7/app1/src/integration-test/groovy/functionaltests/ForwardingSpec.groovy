@@ -102,6 +102,7 @@ class ForwardingSpec extends ContainerGebSpec {
         go('/forwarding/forwardWithRender')
 
         then: 'The view is rendered correctly'
-        $('p', id: 'message').text() == 'Hello from a forwarded view'
+        // waitFor guards against asserting on the outgoing document before the new page has loaded
+        waitFor { $('p', id: 'message').text() == 'Hello from a forwarded view' }
     }
 }

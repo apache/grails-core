@@ -1,0 +1,4 @@
+org.apache.grails.undertow.core.autoconfigure.actuate.web.server.UndertowReactiveManagementContextAutoConfiguration
+org.apache.grails.undertow.core.autoconfigure.actuate.web.server.UndertowServletManagementContextAutoConfiguration
+org.apache.grails.undertow.core.autoconfigure.reactive.UndertowReactiveWebServerAutoConfiguration
+org.apache.grails.undertow.core.autoconfigure.servlet.UndertowServletWebServerAutoConfiguration

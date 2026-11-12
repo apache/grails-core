@@ -54,7 +54,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
         });
         m.put("request", new LazyRequestBasedValue() {
             public Object evaluate(GrailsWebRequest webRequest) {
-                return webRequest.getCurrentRequest();
+                return webRequest.getRequest();
             }
         });
         m.put("response", new LazyRequestBasedValue() {
@@ -68,6 +68,13 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
             }
         });
         m.put("application", new LazyRequestBasedValue() {
+            public Object evaluate(GrailsWebRequest webRequest) {
+                return webRequest.getServletContext();
+            }
+        });
+        // The same object as `application`, under the name the servlet API calls it. A page reading
+        // servletContext got nothing at all before, since nothing bound the name.
+        m.put("servletContext", new LazyRequestBasedValue() {
             public Object evaluate(GrailsWebRequest webRequest) {
                 return webRequest.getServletContext();
             }
@@ -116,7 +123,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
     public Binding findBindingForVariable(String name) {
         Binding binding = super.findBindingForVariable(name);
         if (binding == null) {
-            if (webRequest.getCurrentRequest().getAttribute(name) != null) {
+            if (webRequest.getRequest().getAttribute(name) != null) {
                 requestAttributeVariables.add(name);
                 binding = this;
             }
@@ -139,7 +146,7 @@ public class WebRequestTemplateVariableBinding extends AbstractTemplateVariableB
     public Object getVariable(String name) {
         Object val = getVariablesMap().get(name);
         if (val == null && !getVariablesMap().containsKey(name) && webRequest != null) {
-            val = webRequest.getCurrentRequest().getAttribute(name);
+            val = webRequest.getRequest().getAttribute(name);
             if (val != null) {
                 requestAttributeVariables.add(name);
             } else {

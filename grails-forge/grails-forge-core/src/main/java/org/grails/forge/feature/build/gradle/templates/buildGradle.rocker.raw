@@ -109,17 +109,30 @@ tasks.named('bootRun') {
 @if (features.contains("spock")) {
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    @if (features.contains("geb")) {
-    systemProperty "geb.env", System.getProperty('geb.env')
-    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
-    systemProperty 'webdriver.chrome.driver', "${System.getenv('CHROMEWEBDRIVER')}/chromedriver"
-    systemProperty 'webdriver.gecko.driver', "${System.getenv('GECKOWEBDRIVER')}/geckodriver"
+    @if (features.contains("geb-with-local-browsers")) {
+    def gebEnv = providers.systemProperty('geb.env')
+    if (gebEnv.present) {
+        systemProperty('geb.env', gebEnv.get())
+    }
     }
 }
 }
 
 @gradleBuild.renderExtensions()
 
+@if (features.contains("grails-compile-static")) {
+grails {
+    compileStatic {
+        controllers = true
+        services = true
+        tagLibs = true
+@if (features.contains("gsp")) {
+        gsp = true
+}
+    }
+}
+
+}
 @if(features.contains("asset-pipeline-grails")) {
 assets {
 @if (applicationType == ApplicationType.WEB_PLUGIN) {
@@ -128,7 +141,10 @@ assets {
     excludes = [
             'webjars/jquery/**',
             'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
+            'webjars/bootstrap-icons/**',
+@if (features.contains("openapi")) {
+            'webjars/swagger-ui/**',
+}
     ]
     includes = [
             'webjars/jquery/*/dist/jquery.js',

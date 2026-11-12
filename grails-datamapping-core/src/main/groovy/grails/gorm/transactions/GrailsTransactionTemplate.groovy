@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionException
@@ -29,6 +31,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.interceptor.TransactionAttribute
 import org.springframework.transaction.support.TransactionCallback
 
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 
 /**
@@ -43,7 +46,18 @@ import org.grails.datastore.mapping.transactions.CustomizableRollbackTransaction
 @CompileStatic
 class GrailsTransactionTemplate {
 
+    private static final Logger log = LoggerFactory.getLogger(GrailsTransactionTemplate)
+
     CustomizableRollbackTransactionAttribute transactionAttribute
+
+    /**
+     * The named connection whose transaction manager this template runs, or {@code null}. Given one, the action
+     * routes the unqualified GORM operations of every domain class mapped to that connection to it, as the
+     * connection's own {@code withTransaction} does for its class.
+     *
+     * @since 8.0
+     */
+    String connectionName
 
     private org.springframework.transaction.support.TransactionTemplate transactionTemplate
 
@@ -60,11 +74,33 @@ class GrailsTransactionTemplate {
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute) {
+        this(transactionManager, transactionAttribute, null)
+    }
+
+    /**
+     * A template for the transaction manager of a named connection; see {@link #getConnectionName()}. A method
+     * annotated {@code @Transactional(connection = 'books')} runs through one.
+     *
+     * @param transactionManager The connection's transaction manager
+     * @param transactionAttribute The transaction attribute
+     * @param connectionName The connection, or {@code null} for none
+     * @since 8.0
+     */
+    GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute, String connectionName) {
         this.transactionAttribute = transactionAttribute
         this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager, this.transactionAttribute)
+        this.connectionName = connectionName
+    }
+
+    private <T> T inConnectionScope(Closure<T> callable) {
+        return connectionName == null ? callable.call() : GormRegistry.withConnectionScope(connectionName, callable)
     }
 
     <T> T executeAndRollback(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+        return inConnectionScope { doExecuteAndRollback(action) }
+    }
+
+    private <T> T doExecuteAndRollback(Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {
@@ -72,6 +108,7 @@ class GrailsTransactionTemplate {
                         return action.call(status)
                     }
                     catch (Throwable e) {
+                        log.debug('Rolling back after the action threw', e)
                         return new ThrowableHolder(e)
                     } finally {
                         status.setRollbackOnly()
@@ -91,6 +128,10 @@ class GrailsTransactionTemplate {
     }
 
     <T> T execute(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+        return inConnectionScope { doExecute(action) }
+    }
+
+    private <T> T doExecute(Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {

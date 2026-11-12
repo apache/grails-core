@@ -18,7 +18,6 @@
  */
 package org.grails.datastore.mapping.multitenancy.web
 
-import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
@@ -38,7 +37,6 @@ class SessionTenantResolverSpec extends Specification {
         def e = thrown(TenantNotFoundException)
         e.message == "Tenant could not be resolved outside a web request"
     }
-
 
     void "Test not tenant id found"() {
         setup:

@@ -40,7 +40,7 @@ class MergedConfigSpec extends Specification implements GrailsUnitTest {
     def "when merging multiple configs the expected values are in the final result"() {
         given:
         addToEnvironment('grails.config.locations': [
-                'classpath:/mergeExternalConfig.yml',
+                '${EXAMPLE_CONFIG_LOCATION:classpath:/mergeExternalConfig.yml}',
                 'classpath:/mergeExternalConfig.groovy',
                 'classpath:/mergeExternalConfig.properties'
         ])

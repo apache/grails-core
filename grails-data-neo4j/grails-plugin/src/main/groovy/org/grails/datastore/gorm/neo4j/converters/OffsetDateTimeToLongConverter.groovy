@@ -32,4 +32,5 @@ import java.time.OffsetDateTime
  */
 @CompileStatic
 class OffsetDateTimeToLongConverter implements Converter<OffsetDateTime, Long>, OffsetDateTimeConverter {
+
 }

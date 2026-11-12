@@ -77,7 +77,7 @@ if [ ! -d "${SRC_DIR}" ]; then
 fi
 
 echo "Checking for required files existence..."
-REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "CONTRIBUTING.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE")
+REQUIRED_FILES=("LICENSE" "NOTICE" "README.md" "CONTRIBUTING.md" "PUBLISHED_ARTIFACTS" "CHECKSUMS" "BUILD_DATE" "GIT_TAGS")
 
 for FILE in "${REQUIRED_FILES[@]}"; do
   if [ ! -f "${SRC_DIR}/$FILE" ]; then
@@ -87,5 +87,26 @@ for FILE in "${REQUIRED_FILES[@]}"; do
 
   echo "✅ Found required file: $FILE"
 done
+
+# If LICENSE or NOTICE reference another license file (for example
+# "See licenses/LICENSE-MIT.txt for the full license terms."), that file must exist in the
+# source distribution at the referenced path relative to the distribution root.
+echo "Checking for referenced license files existence..."
+MISSING_REFERENCED_LICENSES=()
+for META_FILE in LICENSE NOTICE; do
+  while IFS= read -r REFERENCED_LICENSE; do
+    [ -z "${REFERENCED_LICENSE}" ] && continue
+    if [ ! -f "${SRC_DIR}/${REFERENCED_LICENSE}" ]; then
+      MISSING_REFERENCED_LICENSES+=("${META_FILE} references '${REFERENCED_LICENSE}' but ${REFERENCED_LICENSE} does not exist")
+    else
+      echo "✅ Found referenced license file: ${REFERENCED_LICENSE} (from ${META_FILE})"
+    fi
+  done < <(grep -oE 'See [^[:space:]]+ for the full license terms' "${SRC_DIR}/${META_FILE}" | awk '{print $2}')
+done
+
+if ((${#MISSING_REFERENCED_LICENSES[@]})); then
+  printf '❌ %s\n' "${MISSING_REFERENCED_LICENSES[@]}"
+  exit 1
+fi
 
 echo "✅ All source distribution checks passed successfully for Apache Grails ${VERSION}."

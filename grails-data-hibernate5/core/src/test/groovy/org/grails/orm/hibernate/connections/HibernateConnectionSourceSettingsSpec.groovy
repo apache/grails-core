@@ -19,7 +19,10 @@
 package org.grails.orm.hibernate.connections
 
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 import org.hibernate.dialect.Oracle8iDialect
+import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.UrlResource
 import spock.lang.Specification
@@ -80,5 +83,38 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         settings.hibernate.getConfigLocations().size() == 1
         settings.hibernate.getConfigLocations()[0] instanceof UrlResource
         settings.hibernate.toProperties() == expectedHibernateProperties
+    }
+
+    void "test hibernate configClass binds a fully-qualified class name to a Class"() {
+        when: "configClass is provided as a fully-qualified class name string"
+        Map config = ['hibernate.configClass': HibernateMappingContextConfiguration.name]
+        HibernateConnectionSourceSettingsBuilder builder = new HibernateConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver(config))
+        HibernateConnectionSourceSettings settings = builder.build()
+
+        then: "it is resolved to the Class"
+        settings.hibernate.configClass == HibernateMappingContextConfiguration
+    }
+
+    void "test hibernate configClass binds without a registered String-to-Class converter"() {
+        given: "a property resolver that does not register a String->Class converter (as in a running application)"
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new MapPropertySource('test', ['hibernate.configClass': HibernateMappingContextConfiguration.name] as Map<String, Object>))
+
+        when: "the settings are built"
+        HibernateConnectionSourceSettingsBuilder builder = new HibernateConnectionSourceSettingsBuilder(environment)
+        HibernateConnectionSourceSettings settings = builder.build()
+
+        then: "ConfigurationBuilder resolves the class name natively via the context class loader"
+        settings.hibernate.configClass == HibernateMappingContextConfiguration
+    }
+
+    void "test hibernate configClass binds when configured as a Class literal"() {
+        when: "configClass is provided as a Class instance (e.g. an application.groovy Class literal)"
+        Map config = ['hibernate.configClass': HibernateMappingContextConfiguration]
+        HibernateConnectionSourceSettingsBuilder builder = new HibernateConnectionSourceSettingsBuilder(DatastoreUtils.createPropertyResolver(config))
+        HibernateConnectionSourceSettings settings = builder.build()
+
+        then: "it is used directly without round-tripping through a String"
+        settings.hibernate.configClass == HibernateMappingContextConfiguration
     }
 }
