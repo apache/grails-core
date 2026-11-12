@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
@@ -137,6 +139,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected List<String> aliasStack = new ArrayList<>();
     protected List<Criteria> aliasInstanceStack = new ArrayList<>();
     protected Map<String, String> aliasMap = new HashMap<>();
+    /** The aliases of association blocks that are branches of an "or", which join the association with a left join. */
+    protected Set<String> leftBlockAliases = new HashSet<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -1863,7 +1867,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         // Property type is a managed entity - treat as association
                         Class oldTargetClass = targetClass;
                         targetClass = propertyType;
-                        if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
+                        if ((targetClass.equals(oldTargetClass) || isInDisjunction()) && !hasMoreThanOneArg) {
                             joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
                         }
                         associationStack.add(name);
@@ -1892,12 +1896,24 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 if (attribute.isAssociation()) {
                     Class oldTargetClass = targetClass;
                     targetClass = getClassForAssociationType(attribute);
-                    if (targetClass.equals(oldTargetClass) && !hasMoreThanOneArg) {
-                        joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue(); // default to left join if joining on the same table
+                    final boolean branchOfOr = isInDisjunction() && !hasMoreThanOneArg;
+                    if ((targetClass.equals(oldTargetClass) || branchOfOr) && !hasMoreThanOneArg) {
+                        // default to left join if joining on the same table, or when the block is a branch of an
+                        // "or": the entities without the association are still found by the other branches
+                        joinType = org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
                     }
                     associationStack.add(name);
                     final String associationPath = getAssociationPath();
+                    final boolean aliasExisted = aliasMap.containsKey(associationPath);
                     createAliasIfNeccessary(name, associationPath, joinType);
+                    final String blockAlias = getLastAlias();
+                    if (branchOfOr && !aliasExisted) {
+                        leftBlockAliases.add(blockAlias);
+                    }
+                    // a block that is a branch of an "or" asks for an associated entity, and so does a block that
+                    // reuses the left join of one, as a block outside an "or" always did
+                    // (a join type the caller named is kept as the caller named it)
+                    final boolean requiresAssociated = branchOfOr || (!hasMoreThanOneArg && leftBlockAliases.contains(blockAlias));
                     // the criteria within an association node are grouped with an implicit AND
                     logicalExpressionStack.add(new LogicalExpression(AND));
                     invokeClosureNode(callable);
@@ -1906,6 +1922,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
                     }
                     LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
+                    if (logicalExpression.args.isEmpty() && requiresAssociated) {
+                        // a block without criteria is not a branch of the "or": it asks for an associated entity of
+                        // the entity as a whole, as the inner join it was always given did
+                        criteria.add(Restrictions.isNotNull(blockAlias + ".id"));
+                    }
+                    else if (requiresAssociated) {
+                        // a missing associated entity is a null that a null test in the block would match
+                        logicalExpression.args.add(0, Restrictions.isNotNull(blockAlias + ".id"));
+                    }
                     if (!logicalExpression.args.isEmpty()) {
                         addToCriteria(logicalExpression.toCriterion());
                     }
@@ -1982,6 +2007,15 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     private boolean isAssociationQueryWithJoinSpecificationMethod(Object[] args) {
         return args.length == 2 && (args[0] instanceof Number) && (args[1] instanceof Closure);
+    }
+
+    private boolean isInDisjunction() {
+        for (LogicalExpression expression : logicalExpressionStack) {
+            if (OR.equals(expression.name)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void createAliasIfNeccessary(String associationName, String associationPath, int joinType) {
