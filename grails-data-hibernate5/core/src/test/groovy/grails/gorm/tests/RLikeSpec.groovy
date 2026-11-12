@@ -35,6 +35,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -43,7 +44,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "test rlike works with #db"() {
         given:
-        useDatabase(container, 'rlikeDB')
+        useDatabase(container, 'rlikeDB', dialect)
         new RlikeFoo(name: "ABC").save(flush: true)
         new RlikeFoo(name: "ABCDEF").save(flush: true)
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
@@ -52,23 +53,25 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'CockroachDB is detected as PostgreSQL, whose operator matches; with its own dialect set there is no operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db         | container
-        'H2'       | null
-        'Postgres' | postgres
-        'MySQL'    | mysql
-        'MariaDB'  | mariadb
-        'Oracle'   | oracle
-        'DB2'      | db2
+        db                          | container | dialect                                                  || expected
+        'H2'                        | null      | null                                                     || 2
+        'Postgres'                  | postgres  | null                                                     || 2
+        'MySQL'                     | mysql     | null                                                     || 2
+        'MariaDB'                   | mariadb   | null                                                     || 2
+        'Oracle'                    | oracle    | null                                                     || 2
+        'DB2'                       | db2       | null                                                     || 2
+        'CockroachDB'               | cockroach | null                                                     || 2
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect'          || 0
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
         given:
-        useDatabase(container, 'rlikeCaseDB')
+        useDatabase(container, 'rlikeCaseDB', dialect)
         ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
 
         when: 'the pattern is matched'
@@ -79,16 +82,18 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         names == expected
 
         where:
-        db         | container || expected
-        'H2'       | null      || ['alice']
-        'Postgres' | postgres  || ['Alice', 'alice']
-        'MySQL'    | mysql     || ['Alice', 'alice']
-        'MariaDB'  | mariadb   || ['Alice', 'alice']
-        'Oracle'   | oracle    || ['alice']
-        'DB2'      | db2       || ['alice']
+        db                          | container | dialect                                         || expected
+        'H2'                        | null      | null                                            || ['alice']
+        'Postgres'                  | postgres  | null                                            || ['Alice', 'alice']
+        'MySQL'                     | mysql     | null                                            || ['Alice', 'alice']
+        'MariaDB'                   | mariadb   | null                                            || ['Alice', 'alice']
+        'Oracle'                    | oracle    | null                                            || ['alice']
+        'DB2'                       | db2       | null                                            || ['alice']
+        'CockroachDB'               | cockroach | null                                            || ['Alice', 'alice']
+        'CockroachDB with its dialect' | cockroach | 'org.hibernate.dialect.CockroachDB192Dialect' || []
     }
 
-    private void useDatabase(container, String h2Name) {
+    private void useDatabase(container, String h2Name, String dialect) {
         if (container != null && !container.isRunning()) {
             container.start()
         }
@@ -99,6 +104,9 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.grailsConfig.dataSource.username = container?.username ?: 'sa'
         manager.grailsConfig.dataSource.password = container?.password ?: ''
         manager.grailsConfig.dataSource.dbCreate = 'create-drop'
+        if (dialect != null) {
+            manager.grailsConfig.dataSource.dialect = dialect
+        }
         manager.setup(this.class)
     }
 }
