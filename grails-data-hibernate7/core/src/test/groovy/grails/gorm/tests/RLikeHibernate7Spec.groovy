@@ -36,6 +36,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
     @Shared sqlServer = DatabaseContainers.SQL_SERVER
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -76,7 +77,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        then: 'SQL Server and CockroachDB have no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
         allFoos.size() == expected
 
         where:
@@ -88,6 +89,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle     || 2
         "DB2"        | db2        || 2
         "SQL Server" | sqlServer  || 0
+        "CockroachDB"| cockroach  || 0
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
@@ -125,6 +127,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle    || ['alice']
         "DB2"        | db2       || ['alice']
         "SQL Server" | sqlServer || []
+        "CockroachDB"| cockroach || []
     }
 }
 

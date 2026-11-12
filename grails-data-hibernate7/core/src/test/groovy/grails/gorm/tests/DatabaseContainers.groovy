@@ -21,6 +21,7 @@ package grails.gorm.tests
 import java.time.Duration
 
 import groovy.transform.CompileStatic
+import org.testcontainers.cockroachdb.CockroachContainer
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
 import org.testcontainers.mssqlserver.MSSQLServerContainer
@@ -68,6 +69,9 @@ final class DatabaseContainers {
     static final MSSQLServerContainer SQL_SERVER = new MSSQLServerContainer('mcr.microsoft.com/mssql/server:2022-latest')
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
+
+    static final CockroachContainer COCKROACH = new CockroachContainer('cockroachdb/cockroach:v24.3.0')
+            .withStartupTimeout(Duration.ofMinutes(3))
 
     private DatabaseContainers() {
     }
