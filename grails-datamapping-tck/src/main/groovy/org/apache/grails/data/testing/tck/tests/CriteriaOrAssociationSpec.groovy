@@ -18,6 +18,8 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import spock.lang.IgnoreIf
+
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
@@ -45,6 +47,9 @@ class CriteriaOrAssociationSpec extends GrailsDataTckSpec {
         found*.name.sort()
     }
 
+    // Hibernate 5 compares the association with an inner join here until its fix, which is on 7.0.x, is merged up; that
+    // change removes this skip
+    @IgnoreIf({ Boolean.getBoolean('hibernate5.gorm.suite') })
     void 'an association compared to an instance in or keeps the entities without the association'() {
         given:
         ChildEntity kid = createEntities()

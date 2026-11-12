@@ -177,7 +177,11 @@ final class JoinPlanner {
         if (configured != null) {
             return configured;
         }
-        return restricts && disjunctions > 0 ? JoinType.LEFT : JoinType.INNER;
+        if (restricts && disjunctions > 0) {
+            target.alternative(path);
+            return JoinType.LEFT;
+        }
+        return JoinType.INNER;
     }
 
     /**

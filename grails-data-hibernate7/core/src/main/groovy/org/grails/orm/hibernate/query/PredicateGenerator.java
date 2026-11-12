@@ -320,8 +320,10 @@ public class PredicateGenerator {
      * that another branch can match an entity without the association, and a missing association is a null that a null
      * test in the block would otherwise match.
      */
-    private Predicate requireAssociated(From<?, ?> joined, PersistentProperty<?> identity, Predicate predicate) {
-        if (alternativesDepth > 0 && identity != null && joined instanceof Join<?, ?> join && join.getJoinType() == JoinType.LEFT) {
+    private Predicate requireAssociated(JpaQueryContext context, String path, From<?, ?> joined, PersistentProperty<?> identity,
+                                       Predicate predicate) {
+        if (alternativesDepth > 0 && identity != null && context.isLeftForAlternatives(path) &&
+                joined instanceof Join<?, ?> join && join.getJoinType() == JoinType.LEFT) {
             return criteriaBuilder.and(criteriaBuilder.isNotNull(joined.get(identity.getName())), predicate);
         }
         return predicate;
@@ -343,7 +345,7 @@ public class PredicateGenerator {
         if (criteriaList.isEmpty()) {
             return null;
         }
-        return requireAssociated(associationRoot, associatedEntity.getIdentity(),
+        return requireAssociated(fromsByProvider, associationName, associationRoot, associatedEntity.getIdentity(),
                 criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity)));
     }
 
@@ -360,7 +362,7 @@ public class PredicateGenerator {
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
         List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
         Predicate block = criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
-        return criteriaList.isEmpty() ? block : requireAssociated(associationRoot, associatedEntity.getIdentity(), block);
+        return criteriaList.isEmpty() ? block : requireAssociated(fromsByProvider, associationName, associationRoot, associatedEntity.getIdentity(), block);
     }
 
     @SuppressWarnings("unchecked")
