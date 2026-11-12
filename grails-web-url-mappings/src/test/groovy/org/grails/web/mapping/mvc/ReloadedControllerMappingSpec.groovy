@@ -259,11 +259,11 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         def info = new UrlMappingsHandlerMapping(mappings).getHandler(request)?.handler
         info instanceof GrailsControllerUrlMappingInfo ? ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz : null
     }
-}
 
-class ReloadUrlMappings {
+    static class ReloadUrlMappings {
 
-    static mappings = {
-        "/$controller/$action?"()
+        static mappings = {
+            "/$controller/$action?"()
+        }
     }
 }
