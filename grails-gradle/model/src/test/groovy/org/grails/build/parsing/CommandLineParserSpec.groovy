@@ -406,4 +406,98 @@ class CommandLineParserSpec extends Specification {
         then:
             thrown ParseException
     }
+
+    void 'translateCommandline returns no tokens for a null or empty string'() {
+        expect:
+        CommandLineParser.translateCommandline(null).length == 0
+        CommandLineParser.translateCommandline('').length == 0
+    }
+
+    void 'translateCommandline keeps empty quoted tokens and collapses repeated spaces'() {
+        expect:
+        CommandLineParser.translateCommandline('a   b') == ['a', 'b'] as String[]
+        CommandLineParser.translateCommandline("a '' b") == ['a', '', 'b'] as String[]
+        CommandLineParser.translateCommandline('a "x y" b') == ['a', 'x y', 'b'] as String[]
+        CommandLineParser.translateCommandline("""a "it's" b""") == ['a', "it's", 'b'] as String[]
+    }
+
+    void 'the most recently created command line is the current one'() {
+        when:
+        CommandLine parsed = new CommandLineParser().parse('run-app')
+
+        then:
+        CommandLineParser.currentCommandLine.is(parsed)
+    }
+
+    void 'parseString with a command name treats every token as an argument'() {
+        when:
+        CommandLine commandLine = new CommandLineParser().parseString('run-app', 'dev --flag value')
+
+        then:
+        commandLine.commandName == 'run-app'
+        commandLine.remainingArgs == ['dev']
+        commandLine.optionValue('flag') == 'value'
+    }
+
+    void 'declared options are recognised with and without a value'() {
+        given:
+        CommandLineParser parser = new CommandLineParser()
+        parser.addOption('verbose', 'Verbose output')
+        parser.addOption('level', 'The level')
+
+        when:
+        CommandLine commandLine = parser.parse('run-app', '--verbose', '-level=3')
+
+        then:
+        commandLine.hasOption('verbose')
+        commandLine.optionValue('verbose') == true
+        commandLine.optionValue('level') == '3'
+        commandLine.undeclaredOptions.isEmpty()
+    }
+
+    void 'a bare dash and null or blank arguments are ignored'() {
+        when:
+        CommandLine commandLine = new CommandLineParser().parse([null, '  ', '-', 'run-app', '', 'arg'] as String[])
+
+        then:
+        commandLine.commandName == 'run-app'
+        commandLine.remainingArgs == ['arg']
+        commandLine.undeclaredOptions.isEmpty()
+    }
+
+    void 'surrounding double quotes are removed from an argument'() {
+        when:
+        CommandLine commandLine = new CommandLineParser().parse('run-app', '"quoted"')
+
+        then:
+        commandLine.remainingArgs == ['quoted']
+    }
+
+    void 'environment shortcuts only apply to the first argument position'() {
+        when:
+        CommandLine commandLine = new CommandLineParser().parse('prod', 'run-app', 'dev')
+
+        then:
+        commandLine.environment == 'production'
+        commandLine.commandName == 'run-app'
+        commandLine.remainingArgs == ['dev']
+    }
+
+    void 'an option name containing a space is rejected whether or not it has a value'() {
+        when:
+        new CommandLineParser().parse('run-app', '-bad name=value')
+
+        then:
+        thrown(ParseException)
+    }
+
+    void 'ParseException keeps its message or cause'() {
+        given:
+        Throwable cause = new IllegalStateException('boom')
+
+        expect:
+        new ParseException('msg').message == 'msg'
+        new ParseException(cause).cause.is(cause)
+    }
+
 }

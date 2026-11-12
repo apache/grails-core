@@ -133,4 +133,13 @@ class UrlResourceSpec extends Specification {
         then:
         thrown(MalformedURLException)
     }
+
+    void 'createRelative drops a leading slash and returns null for an unusable path'() {
+        given:
+        UrlResource base = new UrlResource('http://example.com/a/b.txt')
+
+        expect:
+        base.createRelative('/c.txt').URL.toString() == 'http://example.com/a/c.txt'
+        base.createRelative('foo:bar') == null
+    }
 }
