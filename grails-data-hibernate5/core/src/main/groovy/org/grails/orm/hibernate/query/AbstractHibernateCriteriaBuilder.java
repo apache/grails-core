@@ -1912,7 +1912,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // a block that is a branch of an "or" asks for an associated entity, and so does a block that
                     // reuses the left join of one, as a block outside an "or" always did
-                    final boolean requiresAssociated = branchOfOr || leftBlockAliases.contains(blockAlias);
+                    // (a join type the caller named is kept as the caller named it)
+                    final boolean requiresAssociated = branchOfOr || (!hasMoreThanOneArg && leftBlockAliases.contains(blockAlias));
                     // the criteria within an association node are grouped with an implicit AND
                     logicalExpressionStack.add(new LogicalExpression(AND));
                     invokeClosureNode(callable);
