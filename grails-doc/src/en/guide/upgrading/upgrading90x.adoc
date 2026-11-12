@@ -1282,3 +1282,4 @@ It also accepts local hostnames with multiple labels, such as `http://foo.localh
 This is a behavior change from Grails 8.0.0, which rejected these URLs, and also applies to constraints copied with `importFrom`.
 Applications that relied on `url: true` to reject single-word or other local hosts must add their own host check, for example with a custom `validator` constraint.
 Hostname syntax and port validation still apply; accepting a URL does not mean its hostname resolves or the destination is reachable.
+The string and list forms of the constraint, such as `url: /pattern/`, also accept these hosts, because a URL that does not match the pattern is still validated as a hostname.

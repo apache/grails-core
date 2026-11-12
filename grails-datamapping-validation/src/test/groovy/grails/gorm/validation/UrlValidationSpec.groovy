@@ -89,7 +89,7 @@ class UrlValidationSpec extends Specification {
         'http://example.invalidtld'                                 | false
     }
 
-    void 'custom authority validators retain their behavior for #value'() {
+    void 'regex and list URL constraints validate #value as #valid'() {
         given:
         def target = new UrlValidationEntity(regexAddress: value, listAddress: value)
         def errors = new ValidationErrors(target)
