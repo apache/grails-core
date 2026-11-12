@@ -1410,7 +1410,7 @@ Grails no longer registers a character encoding filter of its own. It used to, a
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
 
-==== 21. A Configuration Key Below a Value That Is Not a Map Is Absent
+==== 23. A Configuration Key Below a Value That Is Not a Map Is Absent
 
 In Grails 8, `getProperty` on `grailsApplication.config` answered a dotted key that runs past a value that is not a map with that value: `server.url.port` when `server.url` is a string, `server.ports.0` when `server.ports` is a list, or `grails.gorm.default.constraints.nullable` when `grails.gorm.default.constraints` is a closure from `application.groovy`. `containsProperty` of such a key was `true`. In Grails 9 the key is absent: `getProperty` returns `null` or the default, `containsProperty` returns `false`, and `navigate` answers `null`.
 
