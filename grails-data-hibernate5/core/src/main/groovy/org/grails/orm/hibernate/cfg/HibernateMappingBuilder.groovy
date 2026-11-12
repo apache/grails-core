@@ -521,7 +521,7 @@ class HibernateMappingBuilder implements MappingConfigurationBuilder<Mapping, Pr
                 if (namedArgs['sqlType']) cc.sqlType = namedArgs['sqlType']
                 if (namedArgs['enumType']) cc.enumType = namedArgs['enumType']
                 if (namedArgs['index']) cc.index = namedArgs['index']
-                if (namedArgs['unique']) cc.unique = namedArgs['unique']
+                if (namedArgs['unique']) cc.unique = namedArgs['unique'] instanceof Map ? true : namedArgs['unique']
                 if (namedArgs['read']) cc.read = namedArgs['read']
                 if (namedArgs['write']) cc.write = namedArgs['write']
                 if (namedArgs.defaultValue) cc.defaultValue = namedArgs.defaultValue

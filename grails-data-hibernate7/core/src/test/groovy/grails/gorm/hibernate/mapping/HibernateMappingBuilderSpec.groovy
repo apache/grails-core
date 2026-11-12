@@ -651,6 +651,16 @@ class HibernateMappingBuilderSpec extends Specification {
 
         then:
         m.getPropertyConfig('myProp').isUniqueWithinGroup()
+        m.getPropertyConfig('myProp').uniquenessGroup == ['a', 'b']
+    }
+
+    def "property unique as Set creates a composite unique constraint"() {
+        when:
+        Mapping m = evaluate { myProp unique: (['a', 'b'] as Set) }
+
+        then:
+        m.getPropertyConfig('myProp').isUniqueWithinGroup()
+        m.getPropertyConfig('myProp').uniquenessGroup == ['a', 'b']
     }
 
     def "property size as IntRange stores minSize and maxSize"() {

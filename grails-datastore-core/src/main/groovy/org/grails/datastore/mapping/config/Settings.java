@@ -55,6 +55,11 @@ public interface Settings {
      */
     String SETTING_DEFAULT_CONSTRAINTS = PREFIX + '.' + "default.constraints";
     /**
+     * How the {@code unique} constraint treats a {@code null} in a composite key: {@code wildcard}, {@code skip},
+     * {@code value} or {@code database}, which is the default. See {@link UniqueNulls}.
+     */
+    String SETTING_UNIQUE_NULLS = PREFIX + '.' + "unique.nulls";
+    /**
      * The custom types
      */
     String SETTING_CUSTOM_TYPES = PREFIX + '.' + "custom.types";

@@ -38,6 +38,8 @@ import jakarta.annotation.PreDestroy;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.dialect.Dialect;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.ApplicationContext;
@@ -53,6 +55,7 @@ import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
 import org.grails.datastore.mapping.config.Settings;
+import org.grails.datastore.mapping.config.UniqueNulls;
 import org.grails.datastore.mapping.core.AbstractDatastore;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.DatastoreAware;
@@ -76,6 +79,7 @@ import org.grails.datastore.mapping.validation.ValidatorRegistry;
 import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
+import org.grails.orm.hibernate.dialect.SupportedDatabase;
 import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
 
 /**
@@ -97,6 +101,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     private static final ThreadLocal<Boolean> RESOLVING_TENANT = new ThreadLocal<>();
 
     protected final SessionFactory sessionFactory;
+    protected volatile SupportedDatabase supportedDatabase;
     protected final ConnectionSources<SessionFactory, HibernateConnectionSourceSettings> connectionSources;
     protected final String defaultFlushModeName;
     protected final MultiTenancySettings.MultiTenancyMode multiTenantMode;
@@ -142,6 +147,10 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         if (multiTenantResolver instanceof DatastoreAware) {
             ((DatastoreAware) multiTenantResolver).setDatastore(this);
         }
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     protected AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config, ApplicationContext applicationContext, String dataSourceName) {
@@ -172,6 +181,10 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
         this.tenantResolver = new FixedTenantResolver();
         this.multiTenantMode = MultiTenancySettings.MultiTenancyMode.NONE;
         this.schemaHandler = new DefaultSchemaHandler();
+        try {
+            getResolvedUniqueNulls();
+        } catch (Exception ignored) {
+        }
     }
 
     public AbstractHibernateDatastore(MappingContext mappingContext, SessionFactory sessionFactory, PropertyResolver config) {
@@ -284,6 +297,41 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
      */
     public SessionFactory getSessionFactory() {
         return sessionFactory;
+    }
+
+    /**
+     * How the unique index Hibernate creates for the database of this datastore treats a {@code null} in a composite
+     * key; see {@link SupportedDatabase}.
+     */
+    @Override
+    public UniqueNulls getDatabaseUniqueNulls() {
+        return getResolvedUniqueNulls().uniqueNulls();
+    }
+
+    @Override
+    public boolean isEntirelyNullKeyExempt() {
+        return getResolvedUniqueNulls().isEntirelyNullKeyExempt();
+    }
+
+    protected SupportedDatabase getResolvedUniqueNulls() {
+        SupportedDatabase cached = this.supportedDatabase;
+        if (cached == null) {
+            synchronized (this) {
+                cached = this.supportedDatabase;
+                if (cached == null) {
+                    Dialect dialect = null;
+                    try {
+                        if (getSessionFactory() instanceof SessionFactoryImplementor) {
+                            dialect = ((SessionFactoryImplementor) getSessionFactory()).getJdbcServices().getDialect();
+                        }
+                    } catch (Exception ignored) {
+                    }
+                    cached = SupportedDatabase.forDialect(dialect);
+                    this.supportedDatabase = cached;
+                }
+            }
+        }
+        return cached;
     }
 
     /**
