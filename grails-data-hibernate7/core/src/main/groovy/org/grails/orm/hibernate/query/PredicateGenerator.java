@@ -153,6 +153,8 @@ public class PredicateGenerator {
 
     private final HibernateCriteriaBuilder criteriaBuilder;
     private final ConversionService conversionService;
+    /** How many {@code or} junctions with more than one branch the criteria being generated are in. */
+    private int alternativesDepth;
 
     public PredicateGenerator(HibernateCriteriaBuilder criteriaBuilder, ConversionService conversionService) {
         this.criteriaBuilder = criteriaBuilder;
@@ -290,9 +292,18 @@ public class PredicateGenerator {
         GrailsHibernatePersistentEntity entity,
         Query.Junction junction) {
         List<Query.Criterion> criteriaList = junction.getCriteria();
-        Predicate[] predicates = junction instanceof Query.Disjunction && criteriaList.size() > 1 ?
-            getBranchPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity) :
-            getPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity);
+        boolean alternatives = junction instanceof Query.Disjunction && criteriaList.size() > 1;
+        Predicate[] predicates;
+        if (alternatives) {
+            alternativesDepth++;
+        }
+        try {
+            predicates = getPredicates(criteriaQuery, root_, criteriaList, fromsByProvider, entity);
+        } finally {
+            if (alternatives) {
+                alternativesDepth--;
+            }
+        }
         if (junction instanceof Query.Conjunction) {
             return criteriaBuilder.and(predicates);
         } else if (junction instanceof Query.Disjunction) {
@@ -304,38 +315,16 @@ public class PredicateGenerator {
     }
 
     /**
-     * The predicates of the branches of an {@code or}. An association block that is a branch asks for an associated
-     * entity that matches, so on a left join the row of the join has to exist: a missing association is a null that a
-     * null test in the block would match.
+     * The block's predicates, with the requirement that the associated entity exists when the block is in an {@code or}
+     * with more than one branch, whether it is a branch or is nested in one: such a block is joined with a left join so
+     * that another branch can match an entity without the association, and a missing association is a null that a null
+     * test in the block would otherwise match.
      */
-    private Predicate[] getBranchPredicates(
-        AbstractQuery<?> criteriaQuery,
-        From<?, ?> root,
-        List<Query.Criterion> branches,
-        JpaQueryContext fromsByProvider,
-        GrailsHibernatePersistentEntity entity) {
-        List<Predicate> predicates = new ArrayList<>();
-        for (Query.Criterion branch : branches) {
-            Predicate predicate = handleCriterion(criteriaQuery, root, fromsByProvider, entity, branch);
-            if (predicate == null) {
-                continue;
-            }
-            String path = branch instanceof DetachedAssociationCriteria<?> block && !block.getCriteria().isEmpty() ?
-                block.getAssociationPath() :
-                branch instanceof HibernateAssociationQuery query && !query.getAssociationCriteria().isEmpty() ?
-                    query.associationPath : null;
-            if (path != null) {
-                From<?, ?> joined = fromsByProvider.resolveAssociation(path);
-                PersistentProperty<?> identity = branch instanceof DetachedAssociationCriteria<?> block ?
-                    block.getAssociation().getAssociatedEntity().getIdentity() :
-                    ((HibernateAssociationQuery) branch).getEntity().getIdentity();
-                if (joined instanceof Join<?, ?> join && join.getJoinType() == JoinType.LEFT && identity != null) {
-                    predicate = criteriaBuilder.and(criteriaBuilder.isNotNull(joined.get(identity.getName())), predicate);
-                }
-            }
-            predicates.add(predicate);
+    private Predicate requireAssociated(From<?, ?> joined, PersistentProperty<?> identity, Predicate predicate) {
+        if (alternativesDepth > 0 && identity != null && joined instanceof Join<?, ?> join && join.getJoinType() == JoinType.LEFT) {
+            return criteriaBuilder.and(criteriaBuilder.isNotNull(joined.get(identity.getName())), predicate);
         }
-        return predicates.toArray(new Predicate[0]);
+        return predicate;
     }
 
     private Predicate handleAssociationCriteria(
@@ -354,7 +343,8 @@ public class PredicateGenerator {
         if (criteriaList.isEmpty()) {
             return null;
         }
-        return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
+        return requireAssociated(associationRoot, associatedEntity.getIdentity(),
+                criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity)));
     }
 
     private Predicate handleHibernateAssociationQuery(
@@ -369,7 +359,8 @@ public class PredicateGenerator {
 
         GrailsHibernatePersistentEntity associatedEntity = associationQuery.getEntity();
         List<Query.Criterion> criteriaList = associationQuery.getAssociationCriteria();
-        return criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
+        Predicate block = criteriaBuilder.and(getPredicates(criteriaQuery, associationRoot, criteriaList, nestedContext, associatedEntity));
+        return criteriaList.isEmpty() ? block : requireAssociated(associationRoot, associatedEntity.getIdentity(), block);
     }
 
     @SuppressWarnings("unchecked")

@@ -30,10 +30,14 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  * The criteria guide documents an association block as one branch of {@code or { }}: "accounts that have either
  * performed transactions in the last 10 days OR have been recently created". An entity without the association is
  * therefore found by the other branch, and a branch that is an association block still asks for an associated
- * entity. MongoDB has no association blocks. Neo4j is skipped until its fix, #16836, is merged; that change removes
- * the skip.
+ * entity. MongoDB has no association blocks. Neo4j is skipped until its fix, #16836, is merged, and Hibernate 5 until
+ * the same fix for it, which is on 7.0.x, is merged up; each change removes its skip.
  */
-@IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('neo4j.gorm.suite') == 'true' })
+@IgnoreIf({
+    System.getProperty('mongodb.gorm.suite') == 'true' ||
+            System.getProperty('neo4j.gorm.suite') == 'true' ||
+            Boolean.getBoolean('hibernate5.gorm.suite')
+})
 class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
 
     @Override
@@ -87,6 +91,57 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         def found = TestEntity.withCriteria {
             or {
                 child { isNull('name') }
+                eq('name', 'nobody')
+            }
+        }
+
+        then:
+        found.isEmpty()
+    }
+
+    void 'an empty association block in or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                child {}
+                eq('name', 'orphan')
+            }
+        }
+
+        then: 'the block adds no branch, and the entity without an associated entity is left out, as it always was'
+        found.isEmpty()
+    }
+
+    void 'a block outside or that follows a block in or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            child { isNull('name') }
+        }
+
+        then:
+        found.isEmpty()
+    }
+
+    void 'a block nested in and inside or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                and {
+                    child { isNull('name') }
+                }
                 eq('name', 'nobody')
             }
         }
