@@ -183,8 +183,19 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             return execute(callable::call);
         }
         finally {
-            cleanupNewSession(newSession);
-            strategy.restore();
+            try {
+                cleanupNewSession(newSession);
+            }
+            finally {
+                // the outer session goes back whether or not the new one could be cleaned up: what the cleanup left
+                // bound for the new session, because it failed before it unbound it, would make binding the outer
+                // one fail
+                txResources.unbindResourceIfPossible(sessionFactory);
+                if (dataSource != null) {
+                    txResources.unbindResourceIfPossible(dataSource);
+                }
+                strategy.restore();
+            }
         }
     }
 

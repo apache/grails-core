@@ -23,6 +23,7 @@ import java.sql.SQLException
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.domains.Book
 import org.grails.orm.hibernate.cfg.Settings
+import org.grails.orm.hibernate.support.DefaultTransactionResources
 import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -124,6 +125,37 @@ class GrailsHibernateTemplateSpec extends Specification {
 
         cleanup:
         TransactionSynchronizationManager.unbindResourceIfPossible(mockFactory)
+        outerSession?.close()
+    }
+
+    void "executeWithNewSession restores the outer session when the cleanup of the new session throws"() {
+        given:
+        SessionFactory factory = datastore.sessionFactory
+        Session outerSession = factory.openSession()
+        SessionHolder outerHolder = new SessionHolder(outerSession)
+        TransactionSynchronizationManager.bindResource(factory, outerHolder)
+        boolean failedOnce = false
+        DefaultTransactionResources failing = Spy(DefaultTransactionResources) {
+            unbindResourceIfPossible(_) >> { args ->
+                if (!failedOnce) {
+                    failedOnce = true
+                    throw new IllegalStateException('Simulated cleanup failure')
+                }
+                callRealMethod()
+            }
+        }
+        template.txResources = failing
+
+        when:
+        template.executeWithNewSession { Session s -> 'done' }
+
+        then: 'the failure of the cleanup is reported, and the outer session is bound again all the same'
+        IllegalStateException e = thrown(IllegalStateException)
+        e.message == 'Simulated cleanup failure'
+        TransactionSynchronizationManager.getResource(factory) == outerHolder
+
+        cleanup:
+        TransactionSynchronizationManager.unbindResourceIfPossible(factory)
         outerSession?.close()
     }
 }
