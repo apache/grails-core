@@ -114,6 +114,16 @@ If you require even more control over how each `<option>` element is presented t
           name="book.title" from="${bookList}" />
 ----
 
+The `dataAttrs` attribute adds `data-*` attributes to each `<option>`. The value of each key is the name of a property of each element, a closure that takes the element and returns the value, or a list with a value for each element:
+
+[source,xml]
+----
+<g:select optionKey="id" optionValue="title" name="book.id" from="${bookList}"
+          dataAttrs="${[author: 'author', label: { it.title + ' (' + it.year + ')' }, stock: stockLevels]}" />
+----
+
+With `stockLevels` holding a number for each book, this renders options such as `<option value="1" data-author="Stephen King" data-label="It (1986)" data-stock="3" >It</option>`. Use a closure to compose a value from the element, since `it` refers to the element only inside a closure: in `[author: it?.author]`, `it` is not the element, so the key gets no value. A key without a value fails with a tag error that names the key, and so does a list with fewer values than `from` has elements.
+
 If you specify an `optionKey` then be aware that you should use that property in the `value` attribute in order to pre-select an item in the drop-down list. For example, let's say we have a `favoriteBook` that we want to pre-select in a list of books:
 
 [source,xml]

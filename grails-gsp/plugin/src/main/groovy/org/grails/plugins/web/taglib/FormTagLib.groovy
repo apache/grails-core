@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.web.taglib
 
+import java.lang.reflect.Array
 import java.text.DateFormat
 import java.text.DateFormatSymbols
 
@@ -1220,7 +1221,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         if (dataAttrsMap) {
             dataAttrsMap.each { key, val ->
-                writer << "data-${key.toString().encodeAsHTML()}=\"${val.toString().encodeAsHTML()}\""
+                writer << "data-${key.toString().encodeAsHTML()}=\"${val.toString().encodeAsHTML()}\" "
             }
         }
         if (selected) {
@@ -1231,22 +1232,58 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         }
     }
 
-    private static Map getDataAttr(el, dataAttrs, index) {
+    private Map getDataAttr(el, dataAttrs, int index) {
         Map ret = [:]
         if (dataAttrs) {
             dataAttrs.each { k, v ->
-                if (v instanceof CharSequence) {
-                    //in case of bean property
+                if (v == null) {
+                    throwDataAttrsError(k, 'no value')
+                }
+                else if (v instanceof CharSequence) {
+                    // the name of a property of each element
                     ret[k] = el[v]
-                } else if (v instanceof Closure) {
+                }
+                else if (v instanceof Closure) {
                     ret[k] = v(el)
-                } else {
-                    //in case of collection
+                }
+                else if (v instanceof List) {
+                    // a value for each element, read before checking the size, since a list made by withDefault grows when read
+                    def value = v[index]
+                    if (value == null && index >= ((List) v).size()) {
+                        throwDataAttrsListTooShort(k, ((List) v).size())
+                    }
+                    ret[k] = value
+                }
+                else if (v instanceof Collection || v.getClass().isArray()) {
+                    // a value for each element
+                    int size = v instanceof Collection ? ((Collection) v).size() : Array.getLength(v)
+                    if (index >= size) {
+                        throwDataAttrsListTooShort(k, size)
+                    }
                     ret[k] = v[index]
+                }
+                else {
+                    // anything else Groovy can index by position, such as a map keyed by position
+                    try {
+                        ret[k] = v[index]
+                    }
+                    catch (MissingMethodException ignored) {
+                        throwDataAttrsError(k, "a value of type [${v.getClass().name}]")
+                    }
                 }
             }
         }
         ret
+    }
+
+    private void throwDataAttrsListTooShort(key, int size) {
+        throwTagError("Tag [select] attribute [dataAttrs] has ${size} ${size == 1 ? 'value' : 'values'} for [${key}], " +
+                'but [from] has more elements, and it must have a value for each of them')
+    }
+
+    private void throwDataAttrsError(key, String given) {
+        throwTagError("Tag [select] attribute [dataAttrs] has ${given} for [${key}]. It must be the name of a property of each " +
+                'element of [from], a closure that takes an element and returns the value, or a list with a value for each element')
     }
 
     /**

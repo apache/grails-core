@@ -20,6 +20,7 @@ package org.grails.web.taglib
 
 import groovy.xml.XmlSlurper
 import org.apache.commons.text.WordUtils
+import org.grails.taglib.GrailsTagException
 import org.junit.jupiter.api.Test
 import org.springframework.context.MessageSourceResolvable
 import org.springframework.web.servlet.support.RequestContextUtils as RCU
@@ -27,6 +28,7 @@ import org.w3c.dom.Document
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertThrows
 import static org.junit.jupiter.api.Assertions.assertTrue
 
 /**
@@ -120,6 +122,118 @@ class SelectTagTests extends AbstractGrailsTagTests {
         printCompiledSource(template,[objList:list])
         assertOutputContains('<option value="2" selected="selected" >BAR</option>', template,[objList:list])
         assertOutputContains('<option value="1" >FOO</option>', template,[objList:list])
+    }
+
+    @Test
+    void testSelectWithDataAttrsFromPropertyNameClosureAndList() {
+        def list = [new SelectTestObject(id: 1L, name: 'Foo'), new SelectTestObject(id: 2L, name: 'Bar')]
+        def template = '''<g:select optionKey="id" optionValue="name" name="foo" from="${objList}" dataAttrs="${[name: 'name', label: { it.name + ' #' + it.id }, position: ['first', 'second']]}" />'''
+
+        assertOutputContains('<option value="1" data-name="Foo" data-label="Foo #1" data-position="first" >Foo</option>', template, [objList: list])
+        assertOutputContains('<option value="2" data-name="Bar" data-label="Bar #2" data-position="second" >Bar</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectWithDataAttrsFromSetAndArray() {
+        def template = '''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[position: ['first', 'second'] as LinkedHashSet, code: ['a', 'b'] as String[]]}" />'''
+
+        assertOutputContains('<option value="1" data-position="first" data-code="a" >1</option>', template)
+        assertOutputContains('<option value="2" data-position="second" data-code="b" >2</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsFromRangePrimitiveArrayAndMapByPosition() {
+        def template = '''<g:select name="foo" from="${['a', 'b']}" dataAttrs="${[position: 1..2, code: [7, 8] as int[], label: [(0): 'first', (1): 'second']]}" />'''
+
+        assertOutputContains('<option value="a" data-position="1" data-code="7" data-label="first" >a</option>', template)
+        assertOutputContains('<option value="b" data-position="2" data-code="8" data-label="second" >b</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsFromAListThatSuppliesItsValuesWhenRead() {
+        def template = '''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[label: [].withDefault { i -> 'label' + i }, code: ['a'].withEagerDefault { i -> 'code' + i }]}" />'''
+
+        assertOutputContains('<option value="1" data-label="label0" data-code="a" >1</option>', template)
+        assertOutputContains('<option value="2" data-label="label1" data-code="code1" >2</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsListWithANullValueForAnElementRendersIt() {
+        def template = '''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[position: ['first', null]]}" />'''
+
+        assertOutputContains('<option value="1" data-position="first" >1</option>', template)
+        assertOutputContains('<option value="2" data-position="null" >2</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsListShorterThanFromWithANullValueNamesTheKey() {
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select name="foo" from="${[1, 2, 3]}" dataAttrs="${[position: ['first', null]]}" />''')
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has 2 values for [position], but [from] has more elements'), e.message
+    }
+
+    @Test
+    void testSelectWithDataAttrsAndKeys() {
+        def template = '''<g:select name="foo" from="${['One', 'Two']}" keys="${[1, 2]}" value="2" dataAttrs="${[label: { it.toLowerCase() }]}" />'''
+
+        assertOutputContains('<option value="1" data-label="one" >One</option>', template)
+        assertOutputContains('<option value="2" data-label="two" selected="selected" >Two</option>', template)
+    }
+
+    @Test
+    void testSelectWithDataAttrsSeparatesThemFromSelectedAndDisabled() {
+        def list = [new SelectTestObject(id: 1L, name: 'Foo'), new SelectTestObject(id: 2L, name: 'Bar')]
+        def template = '''<g:select optionKey="id" optionValue="name" name="foo" from="${objList}" value="2" optionDisabled="${{ it.id == 1L }}" dataAttrs="${[name: 'name', id: 'id']}" />'''
+
+        assertOutputContains('<option value="1" data-name="Foo" data-id="1" disabled="disabled" >Foo</option>', template, [objList: list])
+        assertOutputContains('<option value="2" data-name="Bar" data-id="2" selected="selected" >Bar</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectWithDataAttrsEscapesTheirValues() {
+        def list = [new SelectTestObject(id: 1L, name: '"><script>alert(1)</script>')]
+        def template = '''<g:select optionKey="id" optionValue="id" name="foo" from="${objList}" dataAttrs="${[name: 'name']}" />'''
+
+        assertOutputContains('<option value="1" data-name="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;" >1</option>', template, [objList: list])
+    }
+
+    @Test
+    void testSelectWithDataAttrsWithoutAValueNamesTheKey() {
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[name: null]}" />''')
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has no value for [name]'), e.message
+    }
+
+    @Test
+    void testSelectWithDataAttrsValueThatCannotBeIndexedNamesTheKeyAndType() {
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[name: 5]}" />''')
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has a value of type [java.lang.Integer] for [name]'), e.message
+    }
+
+    @Test
+    void testSelectWithDataAttrsListShorterThanFromNamesTheKey() {
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select name="foo" from="${[1, 2]}" dataAttrs="${[position: ['first']]}" />''')
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has 1 value for [position], but [from] has more elements'), e.message
+    }
+
+    @Test
+    void testSelectWithDataAttrsReferringToItOutsideAClosureNamesTheKey() {
+        def list = [new SelectTestObject(id: 1L, name: 'Foo')]
+        def e = assertThrows(GrailsTagException, {
+            applyTemplate('''<g:select optionKey="id" optionValue="name" name="foo" from="${objList}" dataAttrs="${[name: it?.name]}" />''', [objList: list])
+        })
+
+        assertTrue e.message.contains('Tag [select] attribute [dataAttrs] has no value for [name]'), e.message
     }
 
     /**
