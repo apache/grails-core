@@ -681,7 +681,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param arguments The arguments
          * @param uri The URI
          * @return the UrlMapping
-         * @since 9.1
+         * @since 9.0
          */
         public UrlMapping query(Map<String, Object> arguments, String uri, Closure<?> callable) {
             arguments.put(HTTP_METHOD, HttpMethod.QUERY);
@@ -694,7 +694,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          * @param arguments The arguments
          * @param uri The URI
          * @return the UrlMapping
-         * @since 9.1
+         * @since 9.0
          */
         public UrlMapping query(Map<String, Object> arguments, String uri) {
             return query(arguments, uri, null);
@@ -705,7 +705,7 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
          *
          * @param regexUrlMapping The mapping
          * @return the UrlMapping
-         * @since 9.1
+         * @since 9.0
          */
         public UrlMapping query(RegexUrlMapping regexUrlMapping) {
             regexUrlMapping.httpMethod = HttpMethod.QUERY.toString();

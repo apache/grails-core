@@ -180,7 +180,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     /**
      * Requests to make as they are declared.
      *
-     * @since 9.1
+     * @since 9.0
      */
     @Input
     abstract ListProperty<Map<String, String>> getRequests()

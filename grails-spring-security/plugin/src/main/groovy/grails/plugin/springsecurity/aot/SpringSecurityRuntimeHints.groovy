@@ -30,7 +30,7 @@ import org.springframework.aot.hint.RuntimeHintsRegistrar
  * <p>{@code ConfigSlurper} creates the plugin's default configuration through Groovy's cached constructors, which
  * {@code traceNativeMetadata} does not see, though it records everything the script goes on to call.</p>
  *
- * @since 9.1
+ * @since 9.0
  */
 @CompileStatic
 class SpringSecurityRuntimeHints implements RuntimeHintsRegistrar {

@@ -1202,7 +1202,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
      * The default {@code passwordEncoder}. Its constructors overlap, so ahead-of-time processing cannot choose one for
      * the reference a bean definition holds, and an application cannot build a native image.
      *
-     * @since 9.1
+     * @since 9.0
      */
     static DelegatingPasswordEncoder delegatingPasswordEncoder(String algorithm, Map<String, PasswordEncoder> encoders) {
         new DelegatingPasswordEncoder(algorithm, encoders)
@@ -1212,7 +1212,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
      * The default {@code authenticationManager}. Its constructors overlap, so ahead-of-time processing cannot choose one
      * for the list of references a bean definition holds, and an application cannot build a native image.
      *
-     * @since 9.1
+     * @since 9.0
      */
     static ProviderManager providerManager(List<AuthenticationProvider> providers) {
         new ProviderManager(providers)
@@ -1221,7 +1221,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     /**
      * The default {@code springSecurityFilterChainProxy}, whose constructors overlap as {@code ProviderManager}'s do.
      *
-     * @since 9.1
+     * @since 9.0
      */
     static FilterChainProxy filterChainProxy(List<SecurityFilterChain> filterChains) {
         new FilterChainProxy(filterChains)
@@ -1237,7 +1237,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
      * processing cannot write out a bean definition that holds the encoders themselves, so an application with them in
      * one cannot build a native image.
      *
-     * @since 9.1
+     * @since 9.0
      */
     static Map<String, PasswordEncoder> passwordEncoders(boolean encodeHashAsBase64, int iterations, int bcryptLogRounds) {
 
