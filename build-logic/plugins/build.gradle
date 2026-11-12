@@ -35,9 +35,12 @@ project.layout.projectDirectory.file('../../gradle.properties').asFile.withInput
 }
 
 dependencies {
+    // Gradle plugins are declared by their implementation artifact, not by their plugin marker
+    // (<id>:<id>.gradle.plugin). A marker is a POM-only module, so Gradle also requests a jar for it
+    // that does not exist, and a proxy repository answers that miss from upstream, not from its cache.
     implementation "${gradleBomDependencies['grails-publish-plugin']}"
-    implementation "org.gradle.crypto.checksum:org.gradle.crypto.checksum.gradle.plugin:${gradleProperties.gradleChecksumPluginVersion}"
-    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
+    implementation "gradle.plugin.org.gradle.crypto:checksum:${gradleProperties.gradleChecksumPluginVersion}"
+    implementation "org.cyclonedx:cyclonedx-gradle-plugin:${gradleProperties.gradleCycloneDxPluginVersion}"
     implementation "com.github.spotbugs.snom:spotbugs-gradle-plugin:${gradleProperties.spotbugsPluginVersion}"
     implementation "org.yaml:snakeyaml:${gradleProperties.snakeyamlVersion}"
     // GenerateAutoConfigurationImportsTask reads @AutoConfiguration out of class files rather than

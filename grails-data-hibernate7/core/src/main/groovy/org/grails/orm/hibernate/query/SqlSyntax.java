@@ -25,26 +25,17 @@ import java.util.Set;
 import jakarta.persistence.criteria.CriteriaBuilder;
 
 import org.hibernate.SessionFactory;
-import org.hibernate.dialect.CockroachDialect;
-import org.hibernate.dialect.DB2iDialect;
-import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.H2Dialect;
-import org.hibernate.dialect.MySQLDialect;
-import org.hibernate.dialect.OracleDialect;
-import org.hibernate.dialect.PostgreSQLDialect;
-import org.hibernate.dialect.SQLServerDialect;
-import org.hibernate.dialect.SybaseDialect;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.query.sqm.NodeBuilder;
 
-import org.grails.orm.hibernate.dialect.DialectKeyed;
+import org.grails.orm.hibernate.dialect.SupportedDatabase;
 
 /**
  * How a query text is read: what, besides string literals in single quotes, identifiers in double quotes or
  * backquotes and block comments, it may hold. The syntax of native SQL is the database's, resolved from its Hibernate
- * dialect the way {@link RegexDialectPattern} resolves the regular expression operator, so that every reader of
- * native SQL in this package reads it as the database will. The databases differ in what a character means:
+ * dialect by {@link SupportedDatabase}, which declares the databases, so that every reader of native SQL in this package reads
+ * it as the database will. The databases differ in what a character means:
  * <ul>
  * <li>square brackets quote an identifier on SQL Server and Sybase, and subscript an array elsewhere;</li>
  * <li>a backslash escapes in a MySQL or MariaDB string, and in a PostgreSQL {@code E'...'} string only;</li>
@@ -60,43 +51,40 @@ import org.grails.orm.hibernate.dialect.DialectKeyed;
  *
  * @since 8.0.1
  */
-public enum SqlSyntax implements DialectKeyed<SqlSyntax> {
+public enum SqlSyntax {
 
     /**
      * Transact-SQL, as SQL Server and Sybase read it: {@code [square brackets]} quote an identifier, in which
      * {@code ]]} stands for a bracket, and block comments nest.
      */
     TRANSACT_SQL(EnumSet.of(Feature.LINE_COMMENTS, Feature.BRACKET_IDENTIFIERS, Feature.NESTED_BLOCK_COMMENTS,
-            Feature.STRING_ALIASES),
-            SQLServerDialect.class, SybaseDialect.class),
+            Feature.STRING_ALIASES)),
 
     /**
      * PostgreSQL and CockroachDB: {@code $tag$...$tag$} is a string, an {@code E'...'} string escapes with a
      * backslash, block comments nest, and the driver reads {@code ??} as a literal question mark.
      */
     POSTGRESQL(EnumSet.of(Feature.LINE_COMMENTS, Feature.DOLLAR_QUOTES, Feature.ESCAPE_STRINGS,
-            Feature.NESTED_BLOCK_COMMENTS, Feature.DOUBLE_QUESTION_MARK_ESCAPE),
-            PostgreSQLDialect.class, CockroachDialect.class),
+            Feature.NESTED_BLOCK_COMMENTS, Feature.DOUBLE_QUESTION_MARK_ESCAPE)),
 
     /**
      * MySQL and MariaDB: a backslash escapes in a string in single or double quotes, {@code #} starts a comment, and
      * {@code --} starts one only when whitespace or a control character follows.
      */
     MYSQL(EnumSet.of(Feature.LINE_COMMENTS, Feature.HASH_COMMENTS, Feature.DASH_COMMENT_NEEDS_SPACE,
-            Feature.BACKSLASH_ESCAPES, Feature.STRING_ALIASES), MySQLDialect.class),
+            Feature.BACKSLASH_ESCAPES, Feature.STRING_ALIASES)),
 
     /** Oracle: {@code q'[...]'}, with the delimiter of choice, is a string. */
-    ORACLE(EnumSet.of(Feature.LINE_COMMENTS, Feature.ALTERNATIVE_QUOTES), OracleDialect.class),
+    ORACLE(EnumSet.of(Feature.LINE_COMMENTS, Feature.ALTERNATIVE_QUOTES)),
 
     /** H2: {@code $$...$$} is a string, and {@code //} starts a comment as {@code --} does. */
-    H2(EnumSet.of(Feature.LINE_COMMENTS, Feature.DOUBLE_SLASH_COMMENTS, Feature.UNTAGGED_DOLLAR_QUOTES), H2Dialect.class),
+    H2(EnumSet.of(Feature.LINE_COMMENTS, Feature.DOUBLE_SLASH_COMMENTS, Feature.UNTAGGED_DOLLAR_QUOTES)),
 
     /** Db2 for IBM i and Db2 for z/OS: block comments nest. */
-    DB2_NESTED_COMMENTS(EnumSet.of(Feature.LINE_COMMENTS, Feature.NESTED_BLOCK_COMMENTS),
-            DB2iDialect.class, DB2zDialect.class),
+    DB2_NESTED_COMMENTS(EnumSet.of(Feature.LINE_COMMENTS, Feature.NESTED_BLOCK_COMMENTS)),
 
     /** The SQL standard, for every other database: line comments and block comments that do not nest. */
-    SQL(EnumSet.of(Feature.LINE_COMMENTS), Dialect.class),
+    SQL(EnumSet.of(Feature.LINE_COMMENTS)),
 
     /**
      * HQL, which has block comments only, neither bracket identifiers, dollar-quoted strings nor escapes; square
@@ -135,17 +123,14 @@ public enum SqlSyntax implements DialectKeyed<SqlSyntax> {
     }
 
     private final Set<Feature> features;
-    private final Class<? extends Dialect>[] dialectClasses;
 
-    @SafeVarargs
-    SqlSyntax(Set<Feature> features, Class<? extends Dialect>... dialectClasses) {
+    SqlSyntax(Set<Feature> features) {
         this.features = features;
-        this.dialectClasses = dialectClasses;
     }
 
     /** Returns the syntax of the native SQL of the database the dialect is for: {@link #SQL} unless its dialect is listed. */
     public static SqlSyntax forDialect(Dialect dialect) {
-        return DialectKeyed.forDialect(SqlSyntax.class, dialect);
+        return SupportedDatabase.forDialect(dialect).sqlSyntax();
     }
 
     /** Returns the syntax of the native SQL of the database the session factory connects to. */
@@ -164,10 +149,5 @@ public enum SqlSyntax implements DialectKeyed<SqlSyntax> {
     /** Whether this syntax has the lexical rule. */
     boolean has(Feature feature) {
         return features.contains(feature);
-    }
-
-    @Override
-    public Class<? extends Dialect>[] dialectClasses() {
-        return dialectClasses.clone();
     }
 }
