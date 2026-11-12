@@ -28,6 +28,9 @@ import com.github.spotbugs.snom.Effort
 import com.github.spotbugs.snom.SpotBugsExtension
 import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
+import info.solidsoft.gradle.pitest.PitestPlugin
+import info.solidsoft.gradle.pitest.PitestPluginExtension
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.Directory
@@ -38,11 +41,12 @@ import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
+import org.gradle.api.tasks.SourceSetContainer
 
 /**
- * Convention plugin for Grails byte code analysis (PMD and SpotBugs).
- * Both tools are opt-in: a module calls {@code grailsCodeAnalysis { enablePmd() }} or {@code enableSpotbugs()}, and
- * Gradle properties can enable or disable them for baseline runs.
+ * Convention plugin for Grails byte code analysis (PMD, SpotBugs, and PITest mutation testing).
+ * Tools are opt-in: a module calls {@code grailsCodeAnalysis { enablePmd() }}, {@code enableSpotbugs()}, or
+ * {@code enablePitest()}, and Gradle properties can enable or disable them for baseline or targeted runs.
  */
 @CompileStatic
 class GrailsCodeAnalysisPlugin implements Plugin<Project> {
@@ -56,6 +60,37 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
 
     static String SPOTBUGS_ENABLED_PROPERTY = 'grails.code-analysis.enabled.spotbugs'
     static String SPOTBUGS_ENABLED_PROJECTS_PROPERTY = 'grails.code-analysis.enabled.spotbugs.projects'
+
+    static String PITEST_ENABLED_PROPERTY = 'grails.code-analysis.enabled.pitest'
+    static String PITEST_ENABLED_PROJECTS_PROPERTY = 'grails.code-analysis.enabled.pitest.projects'
+    static String PITEST_TARGET_CLASSES_PROPERTY = 'grails.code-analysis.pitest.targetClasses'
+    static String PITEST_TARGET_TESTS_PROPERTY = 'grails.code-analysis.pitest.targetTests'
+    static String PITEST_THREADS_PROPERTY = 'grails.code-analysis.pitest.threads'
+    static String PITEST_MUTATORS_PROPERTY = 'grails.code-analysis.pitest.mutators'
+    static String PITEST_MUTABLE_PROJECTS_PROPERTY = 'grails.code-analysis.pitest.mutableProjects'
+
+    static final Set<String> GROOVY_EXCLUDED_METHODS = [
+            '$getStaticMetaClass',
+            '$getLookup',
+            'pfget$*',
+            'pfset$*',
+            'super$*',
+            'this$*',
+    ] as Set<String>
+
+    static final Set<String> GROOVY_EXCLUDED_CLASSES = [
+            '*$_closure*',
+            '*$_*',
+    ] as Set<String>
+
+    static final Set<String> GROOVY_AVOID_CALLS_TO = [
+            'org.codehaus.groovy.runtime',
+            'org.apache.groovy.runtime',
+            'groovy.lang.MetaClass',
+            'org.slf4j',
+            'org.apache.commons.logging',
+            'java.util.logging',
+    ] as Set<String>
 
     static String IGNORE_FAILURES_PROPERTY = 'grails.code-analysis.ignoreFailures'
     static String TEST_ANALYSIS_PROPERTY = 'grails.code-analysis.enabled.tests'
@@ -73,6 +108,10 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         }
         if (isEnabledByProperties(project, SPOTBUGS_ENABLED_PROPERTY, SPOTBUGS_ENABLED_PROJECTS_PROPERTY)) {
             configureSpotbugs(project, extension)
+        }
+        if (isEnabledByProperties(project, PITEST_ENABLED_PROPERTY, PITEST_ENABLED_PROJECTS_PROPERTY)
+                || (!isDisabledByProperty(project, PITEST_ENABLED_PROPERTY) && isPitestTaskRequested(project))) {
+            configurePitest(project, extension)
         }
 
         // withType returns a live empty collection when the tool is not enabled,
@@ -138,6 +177,17 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
         if (!isDisabledByProperty(project, SPOTBUGS_ENABLED_PROPERTY)
                 && !project.pluginManager.hasPlugin('com.github.spotbugs')) {
             configureSpotbugs(project, extension)
+        }
+    }
+
+    /**
+     * Enables PITest for a project that opts in, unless the all-project property disables it. Enabling it again,
+     * or after the properties already enabled it, does nothing.
+     */
+    static void enablePitest(Project project, GrailsCodeAnalysisExtension extension) {
+        if (!isDisabledByProperty(project, PITEST_ENABLED_PROPERTY)
+                && !project.pluginManager.hasPlugin('info.solidsoft.pitest')) {
+            configurePitest(project, extension)
         }
     }
 
@@ -216,6 +266,102 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
             if (it.name.contains('Test') || it.name.contains('test')) {
                 it.enabled = testStylingEnabled.get()
             }
+        }
+    }
+
+    private static void configurePitest(Project project, GrailsCodeAnalysisExtension extension) {
+        Runnable applyAndConfigure = {
+            if (project.pluginManager.hasPlugin('info.solidsoft.pitest')) {
+                return
+            }
+            project.pluginManager.apply(PitestPlugin)
+
+            def targetClassesProp = project.providers.gradleProperty(PITEST_TARGET_CLASSES_PROPERTY)
+            def targetTestsProp = project.providers.gradleProperty(PITEST_TARGET_TESTS_PROPERTY)
+            def threadsProp = project.providers.gradleProperty(PITEST_THREADS_PROPERTY)
+            def mutatorsProp = project.providers.gradleProperty(PITEST_MUTATORS_PROPERTY)
+            def mutableProjectsProp = project.providers.gradleProperty(PITEST_MUTABLE_PROJECTS_PROPERTY)
+
+            project.extensions.configure(PitestPluginExtension) { PitestPluginExtension pitest ->
+                String configuredPitestVersion = project.findProperty('pitestVersion') as String
+                if (configuredPitestVersion) {
+                    pitest.pitestVersion.set(configuredPitestVersion)
+                }
+                String configuredJunit5Version = project.findProperty('pitestJunit5PluginVersion') as String
+                if (configuredJunit5Version) {
+                    pitest.junit5PluginVersion.set(configuredJunit5Version)
+                }
+                pitest.useClasspathFile.set(true)
+                pitest.features.set(['-FGROOVY'])
+                pitest.outputFormats.set(['XML', 'HTML'] as Set<String>)
+                pitest.timestampedReports.set(false)
+                pitest.failWhenNoMutations.set(false)
+                pitest.threads.set(threadsProp.map { Integer.parseInt(it.trim()) }.orElse(4))
+                pitest.excludedMethods.set(GROOVY_EXCLUDED_METHODS)
+                pitest.excludedClasses.set(GROOVY_EXCLUDED_CLASSES)
+                pitest.avoidCallsTo.set(GROOVY_AVOID_CALLS_TO)
+                pitest.reportDir.set(extension.reportsDirectory.dir("pitest/${project.name}"))
+
+                pitest.targetClasses.set(
+                        targetClassesProp.map { String val -> val.split(',')*.trim().findAll() as Set<String> }
+                                .orElse(project.provider {
+                                    Set<String> defaults = ['org.apache.grails.*', 'org.grails.*', 'grails.*'] as LinkedHashSet<String>
+                                    String groupName = project.group?.toString()
+                                    if (groupName) {
+                                        defaults.add("${groupName}.*" as String)
+                                    }
+                                    defaults
+                                })
+                )
+                pitest.targetTests.set(
+                        targetTestsProp.map { String val -> val.split(',')*.trim().findAll() as Set<String> }
+                                .orElse(['*'] as Set<String>)
+                )
+                if (mutatorsProp.present) {
+                    pitest.mutators.set(mutatorsProp.map { String val -> val.split(',')*.trim().findAll() as Set<String> })
+                }
+            }
+
+            // PITest mutates the classes of the module it runs in. Naming other projects here also mutates their
+            // compiled main classes, so a class can be tested with the specs of another module.
+            if (mutableProjectsProp.present) {
+                List<String> mutablePaths = mutableProjectsProp.get().split(',')*.trim().findAll() as List<String>
+                mutablePaths.each { String path ->
+                    if (project.rootProject.findProject(path) == null) {
+                        throw new GradleException("${PITEST_MUTABLE_PROJECTS_PROPERTY} names a project that does not exist: ${path}")
+                    }
+                }
+                project.extensions.configure(PitestPluginExtension) { PitestPluginExtension pitest ->
+                    pitest.additionalMutableCodePaths.set(project.provider {
+                        Set<File> classesDirs = new LinkedHashSet<File>()
+                        mutablePaths.each { String path ->
+                            Project other = project.rootProject.project(path)
+                            classesDirs.addAll(other.extensions.getByType(SourceSetContainer).named('main').get().output.classesDirs.files)
+                        }
+                        classesDirs
+                    })
+                }
+                project.tasks.named('pitest').configure { task ->
+                    mutablePaths.each { String path -> task.dependsOn("${path}:classes" as String) }
+                }
+            }
+        }
+
+        if (project.plugins.hasPlugin('java')) {
+            applyAndConfigure.run()
+        } else {
+            project.plugins.withId('java') {
+                applyAndConfigure.run()
+            }
+        }
+    }
+
+    private static boolean isPitestTaskRequested(Project project) {
+        project.gradle.startParameter.taskNames.any { String requested ->
+            requested == 'pitest'
+                    || requested == "${project.path}:pitest"
+                    || requested == "${project.name}:pitest"
+                    || (requested.endsWith(':pitest') && project.path.endsWith(requested.substring(0, requested.length() - ':pitest'.length())))
         }
     }
 

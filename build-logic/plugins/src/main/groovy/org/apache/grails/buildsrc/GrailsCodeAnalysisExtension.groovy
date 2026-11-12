@@ -70,4 +70,13 @@ abstract class GrailsCodeAnalysisExtension {
     void enableSpotbugs() {
         GrailsCodeAnalysisPlugin.enableSpotbugs(project, this)
     }
+
+    /**
+     * Opts this project into PITest mutation testing and configures it immediately, so the build script can customize
+     * the {@code pitest} extension or task directly afterwards. {@code -Pgrails.code-analysis.enabled.pitest=false}
+     * keeps PITest off.
+     */
+    void enablePitest() {
+        GrailsCodeAnalysisPlugin.enablePitest(project, this)
+    }
 }

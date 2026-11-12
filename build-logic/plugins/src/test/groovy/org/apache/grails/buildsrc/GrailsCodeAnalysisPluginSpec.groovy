@@ -73,6 +73,272 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
         false  | ':selected' | true      || false           | false
     }
 
+    def "PITest enablement (global: #global, projects: '#projects', enablePitest() on :selected: #extension)"() {
+        given:
+        writeMultiProjectBuild('pitest', global, projects, extension)
+
+        when:
+        def result = run('tasks', '--all', '--configuration-cache')
+
+        then:
+        result.output.contains('selected:pitest') == selectedEnabled
+        result.output.contains('excluded:pitest') == excludedEnabled
+
+        where:
+        global | projects    | extension || selectedEnabled | excludedEnabled
+        null   | ''          | false     || false           | false
+        null   | ':selected' | false     || true            | false
+        null   | ''          | true      || true            | false
+        true   | ''          | true      || true            | true
+        false  | ':selected' | true      || false           | false
+    }
+
+    def "enablePitest configures Groovy synthetic exclusions and targetClasses/targetTests properties"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = '''
+            grails.code-analysis.pitest.targetClasses=org.grails.example.Foo,org.grails.example.Bar
+            grails.code-analysis.pitest.targetTests=org.grails.example.FooSpec
+        '''
+        testProjectDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-analysis'
+            }
+            grailsCodeAnalysis {
+                enablePitest()
+            }
+            tasks.register('assertPitestConfigured') {
+                Set<String> targetClasses = project.extensions.getByName('pitest').targetClasses.get()
+                Set<String> targetTests = project.extensions.getByName('pitest').targetTests.get()
+                Set<String> excludedMethods = project.extensions.getByName('pitest').excludedMethods.get()
+                Set<String> excludedClasses = project.extensions.getByName('pitest').excludedClasses.get()
+                doLast {
+                    assert targetClasses == ['org.grails.example.Foo', 'org.grails.example.Bar'] as Set
+                    assert targetTests == ['org.grails.example.FooSpec'] as Set
+                    assert excludedMethods.contains('$getStaticMetaClass')
+                    assert !excludedMethods.contains('invokeMethod')
+                    assert !excludedMethods.contains('getProperty')
+                    assert excludedClasses.contains('*$_closure*')
+                }
+            }
+        '''
+
+        when:
+        def result = run('assertPitestConfigured', '--configuration-cache')
+
+        then:
+        result.output.contains('BUILD SUCCESSFUL')
+    }
+
+    def "PITest auto-enables on requested task, evaluates late group in targetClasses, defaults targetTests to *, and kills mutants in Spock with configuration cache"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = '''
+            pitestVersion=1.19.6
+            pitestJunit5PluginVersion=1.2.2
+        '''
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'selected'"
+        def selectedDir = testProjectDir.resolve('selected')
+        selectedDir.toFile().mkdirs()
+        selectedDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-analysis'
+            }
+            group = 'custom.group'
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                implementation localGroovy()
+                testImplementation platform('org.spockframework:spock-bom:2.4-M6-groovy-4.0')
+                testImplementation 'org.spockframework:spock-core'
+                testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+            }
+            tasks.withType(Test).configureEach {
+                useJUnitPlatform()
+            }
+            tasks.register('assertLazyDefaults') {
+                def targetClassesProvider = project.extensions.getByName('pitest').targetClasses
+                def targetTestsProvider = project.extensions.getByName('pitest').targetTests
+                doLast {
+                    Set<String> classes = targetClassesProvider.get()
+                    assert classes.containsAll(['org.apache.grails.*', 'org.grails.*', 'grails.*', 'custom.group.*'])
+                    assert targetTestsProvider.get() == ['*'] as Set
+                }
+            }
+        '''
+        def javaFile = selectedDir.resolve('src/main/java/org/grails/example/Calculator.java').toFile()
+        javaFile.parentFile.mkdirs()
+        javaFile.text = '''
+            package org.grails.example;
+
+            public class Calculator {
+                public static int add(int a, int b) {
+                    return a + b;
+                }
+
+                public Object getProperty(String name) {
+                    return "val:" + name;
+                }
+            }
+        '''
+        def mainFile = selectedDir.resolve('src/main/groovy/org/grails/example/GroovyCalculator.groovy').toFile()
+        mainFile.parentFile.mkdirs()
+        mainFile.text = '''
+            package org.grails.example
+
+            import groovy.transform.CompileStatic
+
+            @CompileStatic
+            class GroovyCalculator {
+                static int multiply(int a, int b) {
+                    return a * b
+                }
+            }
+        '''
+        def specFile = selectedDir.resolve('src/test/groovy/org/grails/example/CalculatorSpec.groovy').toFile()
+        specFile.parentFile.mkdirs()
+        specFile.text = '''
+            package org.grails.example
+
+            import spock.lang.Specification
+
+            class CalculatorSpec extends Specification {
+                def "kills mutants in add, multiply, and handwritten getProperty"() {
+                    expect:
+                    Calculator.add(2, 3) == 5
+                    new Calculator().getProperty('foo') == 'val:foo'
+                    GroovyCalculator.multiply(2, 3) == 6
+                }
+            }
+        '''
+
+        when:
+        def defaultsRun = run(
+                ':selected:assertLazyDefaults',
+                '-Pgrails.code-analysis.enabled.pitest.projects=:selected',
+                '--configuration-cache'
+        )
+        def firstRun = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*',
+                '--configuration-cache'
+        )
+        File mutationsXml = testProjectDir.resolve('build/reports/code-analysis/pitest/selected/mutations.xml').toFile()
+
+        then:
+        defaultsRun.output.contains('BUILD SUCCESSFUL')
+        firstRun.output.contains('BUILD SUCCESSFUL')
+        mutationsXml.exists()
+        mutationsXml.text.contains("status='KILLED'")
+        mutationsXml.text.contains('<mutatedMethod>add</mutatedMethod>')
+        mutationsXml.text.contains('<mutatedMethod>getProperty</mutatedMethod>')
+        mutationsXml.text.contains('<mutatedMethod>multiply</mutatedMethod>')
+
+        when:
+        def secondRun = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*',
+                '--configuration-cache'
+        )
+
+        then:
+        secondRun.output.contains('Configuration cache entry reused')
+    }
+
+    def "PITest mutates classes of the projects named in mutableProjects, and only those, with the specs of the module it runs in"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = '''
+            pitestVersion=1.19.6
+            pitestJunit5PluginVersion=1.2.2
+        '''
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'lib', 'selected'"
+        def libDir = testProjectDir.resolve('lib')
+        libDir.toFile().mkdirs()
+        libDir.resolve('build.gradle').toFile().text = "plugins { id 'java-library' }"
+        def javaFile = libDir.resolve('src/main/java/org/grails/example/Calculator.java').toFile()
+        javaFile.parentFile.mkdirs()
+        javaFile.text = '''
+            package org.grails.example;
+
+            public class Calculator {
+                public static int add(int a, int b) {
+                    return a + b;
+                }
+            }
+        '''
+        def selectedDir = testProjectDir.resolve('selected')
+        selectedDir.toFile().mkdirs()
+        selectedDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-analysis'
+            }
+            repositories {
+                mavenCentral()
+            }
+            dependencies {
+                implementation project(':lib')
+                implementation localGroovy()
+                testImplementation platform('org.spockframework:spock-bom:2.4-M6-groovy-4.0')
+                testImplementation 'org.spockframework:spock-core'
+                testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+            }
+            tasks.withType(Test).configureEach {
+                useJUnitPlatform()
+            }
+        '''
+        def specFile = selectedDir.resolve('src/test/groovy/org/grails/example/CalculatorSpec.groovy').toFile()
+        specFile.parentFile.mkdirs()
+        specFile.text = '''
+            package org.grails.example
+
+            import spock.lang.Specification
+
+            class CalculatorSpec extends Specification {
+                def "adds"() {
+                    expect:
+                    Calculator.add(2, 3) == 5
+                }
+            }
+        '''
+        File mutationsXml = testProjectDir.resolve('build/reports/code-analysis/pitest/selected/mutations.xml').toFile()
+
+        when: "the other project is not named"
+        def withoutProperty = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*'
+        )
+
+        then: "its classes are not mutated"
+        withoutProperty.output.contains('BUILD SUCCESSFUL')
+        !mutationsXml.exists() || !mutationsXml.text.contains('<mutatedMethod>add</mutatedMethod>')
+
+        when: "the other project is named"
+        def withProperty = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*',
+                '-Pgrails.code-analysis.pitest.mutableProjects=:lib',
+                '--configuration-cache'
+        )
+
+        then: "its classes are mutated and the specs of this module kill the mutants"
+        withProperty.output.contains('BUILD SUCCESSFUL')
+        mutationsXml.exists()
+        mutationsXml.text.contains('<mutatedClass>org.grails.example.Calculator</mutatedClass>')
+        mutationsXml.text.contains("status='KILLED'")
+        mutationsXml.text.contains('<mutatedMethod>add</mutatedMethod>')
+
+        when: "the named project does not exist"
+        def missing = runAndFail(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.mutableProjects=:nowhere'
+        )
+
+        then:
+        missing.output.contains('names a project that does not exist: :nowhere')
+    }
+
     def "enablePmd configures PMD immediately, so the build script customizes pmdMain and the reports directory afterwards"() {
         given:
         testProjectDir.resolve('build.gradle').toFile().text = '''
@@ -188,7 +454,7 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
     }
 
     private void writeMultiProjectBuild(String tool, Boolean global, String projects, boolean extension) {
-        String optIn = tool == 'pmd' ? 'enablePmd()' : 'enableSpotbugs()'
+        String optIn = tool == 'pmd' ? 'enablePmd()' : (tool == 'spotbugs' ? 'enableSpotbugs()' : 'enablePitest()')
         testProjectDir.resolve('gradle.properties').toFile().text = """${global == null ? '' : "grails.code-analysis.enabled.${tool}=${global}"}
 ${projects ? "grails.code-analysis.enabled.${tool}.projects=${projects}" : ''}
 """
@@ -208,6 +474,14 @@ ${projects ? "grails.code-analysis.enabled.${tool}.projects=${projects}" : ''}
 
     private def run(String... arguments) {
         run(testProjectDir, arguments)
+    }
+
+    private def runAndFail(String... arguments) {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(arguments + ['--stacktrace'])
+                .withPluginClasspath()
+                .buildAndFail()
     }
 
     private def run(Path projectDirectory, String... arguments) {
