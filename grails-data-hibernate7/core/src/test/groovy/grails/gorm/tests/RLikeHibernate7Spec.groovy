@@ -35,6 +35,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -75,17 +76,55 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db           | container
-        "H2"         | null
-        "Postgres"   | postgres
-        "MySQL"      | mysql
-        "MariaDB"    | mariadb
-        "Oracle"     | oracle
-        "DB2"        | db2
+        db           | container  || expected
+        "H2"         | null       || 2
+        "Postgres"   | postgres   || 2
+        "MySQL"      | mysql      || 2
+        "MariaDB"    | mariadb    || 2
+        "Oracle"     | oracle     || 2
+        "DB2"        | db2        || 2
+        "SQL Server" | sqlServer  || 0
+    }
+
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
+        given:
+        if (container != null && !container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : container?.jdbcUrl ?: "jdbc:h2:mem:rlikeCaseDB;LOCK_TIMEOUT=10000",
+                'dataSource.driverClassName'         : container?.driverClassName ?: "org.h2.Driver",
+                'dataSource.username'                : container?.username ?: "sa",
+                'dataSource.password'                : container?.password ?: "",
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'the pattern is matched'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
+
+        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        names == expected
+
+        where:
+        db           | container || expected
+        "H2"         | null      || ['alice']
+        "Postgres"   | postgres  || ['alice']
+        "MySQL"      | mysql     || ['Alice', 'alice']
+        "MariaDB"    | mariadb   || ['Alice', 'alice']
+        "Oracle"     | oracle    || ['alice']
+        "DB2"        | db2       || ['alice']
+        "SQL Server" | sqlServer || []
     }
 }
 
