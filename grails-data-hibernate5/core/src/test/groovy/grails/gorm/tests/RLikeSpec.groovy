@@ -35,6 +35,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -52,17 +53,18 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db         | container
-        'H2'       | null
-        'Postgres' | postgres
-        'MySQL'    | mysql
-        'MariaDB'  | mariadb
-        'Oracle'   | oracle
-        'DB2'      | db2
+        db           | container || expected
+        'H2'         | null      || 2
+        'Postgres'   | postgres  || 2
+        'MySQL'      | mysql     || 2
+        'MariaDB'    | mariadb   || 2
+        'Oracle'     | oracle    || 2
+        'DB2'        | db2       || 2
+        'SQL Server' | sqlServer || 0
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
@@ -86,6 +88,7 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         'MariaDB'  | mariadb   || ['Alice', 'alice']
         'Oracle'   | oracle    || ['alice']
         'DB2'      | db2       || ['alice']
+        'SQL Server' | sqlServer || []
     }
 
     private void useDatabase(container, String h2Name) {
