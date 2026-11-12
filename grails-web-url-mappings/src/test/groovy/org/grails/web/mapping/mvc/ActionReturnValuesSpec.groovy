@@ -21,6 +21,8 @@ package org.grails.web.mapping.mvc
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 
+import jakarta.servlet.DispatcherType
+
 import com.fasterxml.jackson.annotation.JsonView
 import groovy.json.JsonSlurper
 import jakarta.servlet.DispatcherType

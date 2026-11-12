@@ -79,6 +79,32 @@ The Grails 8 upgrade guide calls out the major application-impacting changes and
 For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
 The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
 
+Spring Boot 4.2 can switch metrics and spans to OpenTelemetry's semantic conventions:
+
+[source,yaml]
+----
+management:
+    observations:
+        conventions: open-telemetry
+----
+
+`http.server.requests` then becomes `http.server.request.duration`, tagged with `http.route` and `error.type` in place of `uri` and `exception`.
+In a Grails application `http.route` is `/controller/action`, not the pattern of the URL mapping, which keeps it low in cardinality.
+Spring Boot's https://docs.spring.io/spring-boot/reference/actuator/observability.html#actuator.observability.semantic-conventions[documentation] lists what else changes, such as the properties that customize meter names no longer taking effect.
+
+==== The HTTP QUERY Method
+
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:
+
+[source,groovy]
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+See xref:theWebLayer#mappingHTTP[Mapping to HTTP methods].
+
 ==== JSON Dates and Times Render as Spring Boot Renders Them
 
 `render ... as JSON`, `respond` and JSON views now write `Date`, `Calendar`, `TimeZone`, the `java.sql` date types,
@@ -127,6 +153,11 @@ action throws is resolved first as Spring MVC resolves one a handler method thro
 of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's handler of
 `spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
 xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
+
+With `grails.exceptionresolver.problemDetails: true`, an exception no such method handles is written as a problem to a
+client that does not prefer HTML, with the translation Spring Framework 7.1 adds, which keeps the status and detail of an
+`ErrorResponse` or a `@ResponseStatus` exception and does not expose the message of an unexpected one. The application's
+error page stays for browsers, and for an exception a URL mapping names.
 
 An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
 `ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
@@ -602,6 +633,14 @@ A view renders the request's nonce with the new `<g:cspNonce/>` tag, as in `<scr
 `grails.web.http.ContentSecurityPolicyNonce.nonceOf(request)`. The nonce is carried in the `_csp` request attribute,
 which Spring Security's nonce filter uses as well, so the header and the page carry the same nonce whichever
 generated it. See the xref:security[Security] section of the user guide.
+
+==== Logins Redirect to the Page the User Asked For
+
+Browsers and their tools request paths such as `/apple-touch-icon.png`, `/manifest.json` and
+`/.well-known/appspecific/com.chrome.devtools.json` on their own. With the Spring Security plugin, a denied request for
+one of them was saved like any other, so a login could redirect there instead of to the page the user asked for. As
+Spring Security 7.2's configuration DSL does, the plugin now leaves these requests out of the request cache. The list is
+the `grails.plugin.springsecurity.requestCache.ignoredPatterns` setting.
 
 ==== Agent Skills Published with Grails
 

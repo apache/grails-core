@@ -206,8 +206,9 @@ Explicitly selecting `bootJar` matters when the `war` plugin is also applied: Sp
 ./gradlew clean check bootBuildImage --imageName=myapp:0.1
 ----
 
+By default, Spring Boot {springBootVersion} uses the `paketobuildpacks/ubuntu-resolute-builder` builder, and the `paketobuildpacks/ubuntu-resolute-run-tiny:latest` run image, which has no shell.
 Use the builder supported by the Spring Boot plugin version in your application, or select a maintained builder and its compatible run image explicitly.
-For repeatable release builds, pin both images to tested digests and schedule rebuilds when they change.
+The builder does not pin the version of its run image, so for repeatable release builds, set both images, pinned to tested digests, and schedule rebuilds when they change.
 Check that the builder, run image, and buildpacks support your target CPU architecture and any required native libraries.
 
 Paketo's Java buildpack calculates JVM memory settings from the container memory limit and non-heap requirements.
@@ -215,6 +216,18 @@ Set a container limit and tune its documented `BPL_JVM_*` runtime options for yo
 Keep the buildpack launcher as the entry point so its memory calculation, bindings, and runtime configuration execute.
 `BP_*` settings configure the image build; deployment-specific configuration and secrets belong at runtime.
 When image tags change on every release, use stable, application-specific `buildCache` and `launchCache` volume names if you want to retain buildpack caches across versions.
+To share the build cache between hosts, such as CI runners, keep it in an image in a registry instead of a volume; `launchCache` stays local:
+
+[source,groovy]
+----
+tasks.named('bootBuildImage') {
+    buildCache {
+        image {
+            name = 'registry.example.com/myapp-build-cache:latest'
+        }
+    }
+}
+----
 
 For a local smoke test, supply the application's required external configuration and run the image with a memory limit:
 
