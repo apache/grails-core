@@ -42,4 +42,14 @@ homePage url: true
 
 Set to `true` if a string value must be a URL.
 
+URLs with valid single-label hostnames, such as `http://localhost`,
+`http://intranet`, and `https://my-server:9443/path`, are accepted alongside
+public domain names and IP addresses. Hostname syntax and port validation still
+apply; for example, `http://bad_host` and `http://localhost:65536` are invalid.
+Local hostnames with multiple labels, such as `http://foo.localhost` and `http://foo.localdomain`, are also accepted.
+
+The constraint does not check whether a hostname resolves or a URL is reachable.
+It is not a destination allowlist: applications must separately enforce any
+restrictions on schemes, hosts, or redirect destinations.
+
 Error Code: `className.propertyName.url.invalid`

@@ -76,7 +76,7 @@ public class UrlConstraint extends AbstractConstraint {
         }
 
         UrlValidator validator = new UrlValidator(domainValidator,
-                UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.ALLOW_2_SLASHES);
+                UrlValidator.ALLOW_ALL_SCHEMES | UrlValidator.ALLOW_2_SLASHES | UrlValidator.ALLOW_LOCAL_URLS);
 
         return validator;
     }
