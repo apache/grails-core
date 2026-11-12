@@ -91,3 +91,25 @@ A filter registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterReg
 ===== Required Actions
 
 For most applications **no changes are required**. Check that packaged stylesheets and scripts with non-ASCII characters are in the charset their responses now declare: UTF-8, or the encoding `grails.filter.encoding` names. When `grails.filter.encoding` is not UTF-8, check that clients sending a PUT, PATCH or DELETE form without a charset encode it in that encoding, as a POST form already had to be. A filter that has to run before the encoding filter can be registered at `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean`; a filter that reads request parameters needs a later order than that. Check filters ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1`, which now run ahead of `FormContentFilter` and the security headers filter.
+
+==== 6. Hibernate 5 Joins a Hierarchy Below an Abstract Root and Places Joined Subclass Tables by Their Mapping
+
+Two changes to how the Hibernate 5 binder lays out a hierarchy that uses `tablePerHierarchy false`.
+
+* An abstract base class that does not declare `tablePerHierarchy` now follows a direct subclass that sets `tablePerHierarchy false`, so the whole hierarchy is joined. In Grails 8.0 the base class kept a single table with a `class` discriminator column, and a subclass below the joined one could not be loaded through an association.
+* A joined subclass is now created in the schema and catalog of its `table` mapping. The mapping of its base class is inherited, so a `table schema:` declared only on the base class now also places the table of the subclass, which Grails 8.0 created in the default schema.
+
+===== Required Actions
+
+For most applications **no changes are required**. An application with a managed schema that has an abstract base class with a subclass that sets `tablePerHierarchy false` needs a table for that subclass, without the columns it kept on the base class table, and has to move its rows. To keep the Grails 8.0 layout, declare the strategy on the base class:
+
+[source,groovy]
+----
+abstract class Person {
+    static mapping = {
+        tablePerHierarchy true
+    }
+}
+----
+
+A base class that declares its strategy keeps it. Check joined subclasses whose base class declares a `table schema:` or `catalog:` and that declare none of their own: their tables are now created there.
