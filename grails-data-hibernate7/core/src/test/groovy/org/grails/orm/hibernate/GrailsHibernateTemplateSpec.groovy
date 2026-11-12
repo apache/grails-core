@@ -25,6 +25,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.PersistenceException
+import org.grails.orm.hibernate.support.hibernate7.DefaultTransactionResources
 import org.grails.orm.hibernate.support.hibernate7.HibernateJdbcException
 import org.grails.orm.hibernate.support.hibernate7.SessionHolder
 import org.grails.orm.hibernate.support.hibernate7.TransactionResources
@@ -187,6 +188,30 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(DataIntegrityViolationException)
+    }
+
+    void "executeWithNewSession restores the outer session when the cleanup of the new session throws"() {
+        given:
+        SessionHolder outerHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)
+        boolean failedOnce = false
+        DefaultTransactionResources failing = Spy(DefaultTransactionResources) {
+            unbindResourceIfPossible(_) >> { args ->
+                if (!failedOnce) {
+                    failedOnce = true
+                    throw new IllegalStateException('Simulated cleanup failure')
+                }
+                callRealMethod()
+            }
+        }
+        template.txResources = failing
+
+        when:
+        template.executeWithNewSession { Session s -> 'done' }
+
+        then: 'the failure of the cleanup is reported, and the outer session is bound again all the same'
+        IllegalStateException e = thrown(IllegalStateException)
+        e.message == 'Simulated cleanup failure'
+        TransactionSynchronizationManager.getResource(sessionFactory) == outerHolder
     }
 
     void "executeWithNewSession restores outer session and propagates exception when openSession fails"() {
