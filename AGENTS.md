@@ -76,6 +76,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - Writing Hibernate code → Read `.agents/skills/hibernate-developer/SKILL.md`
 > - Fixing style/analysis violations → Read `.agents/skills/violation-fixer/SKILL.md`
 > - Fixing broken test → Read `.agents/skills/test-fixer/SKILL.md`
+> - Working in GORM for MongoDB → Read `.agents/skills/mongodb-developer/SKILL.md`
 > - Integrating a standalone repository -> Read `.agents/skills/mono-repo-integration/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
@@ -90,6 +91,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **hibernate-developer** | `.agents/skills/hibernate-developer/SKILL.md` | Hibernate 7 mapping, binders, generators |
 | **violation-fixer** | `.agents/skills/violation-fixer/SKILL.md` | Fix style/analysis violations (CodeNarc, Checkstyle, PMD, SpotBugs) |
 | **test-fixer** | `.agents/skills/test-fixer/SKILL.md` | Aggregate and fix test failures |
+| **mongodb-developer** | `.agents/skills/mongodb-developer/SKILL.md` | GORM for MongoDB: codec-based mapping, GeoJSON, indexes, multi-tenancy, Testcontainers tests |
 | **mono-repo-integration** | `.agents/skills/mono-repo-integration/SKILL.md` | Merge a standalone Grails plugin repository into this monorepo |
 
 ## Repository Conventions
@@ -131,8 +133,8 @@ This repository contains multiple independent Gradle projects:
 | Project | Description | Build Command |
 |---------|-------------|---------------|
 | **grails-core** (root) | Main framework with 60+ modules | `./gradlew build` |
-| **build-logic/** | Gradle convention plugins for the build | `cd build-logic && ./gradlew build` |
-| **grails-gradle/** | Grails Gradle plugins | `cd grails-gradle && ./gradlew build` |
+| **build-logic/** | Gradle convention plugins for the build; see [`build-logic/AGENTS.md`](build-logic/AGENTS.md) | `cd build-logic && ./gradlew build` |
+| **grails-gradle/** | Grails Gradle plugins; see [`grails-gradle/AGENTS.md`](grails-gradle/AGENTS.md) | `cd grails-gradle && ./gradlew build` |
 | **grails-forge/** | Application generator (like Spring Initializr) | `cd grails-forge && ./gradlew build` |
 | **end-to-end/** | End-to-end tests consuming published Grails artifacts (see `end-to-end/README.md` for required setup) | `cd end-to-end && ./gradlew check` |
 
