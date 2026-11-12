@@ -61,7 +61,9 @@ Hotswap Agent is an open-source tool that provides advanced hot swapping capabil
 
 NOTE: In development mode, Grails compiles a changed source file itself and tells its plugins of the class straight away, before an agent that redefines classes in place, such as Hotswap Agent or the JetBrains Runtime with `-XX:+AllowEnhancedClassRedefinition`, has replaced the class. When the class then gains or loses a method or a field, Grails tells the plugins of it again, so a controller action added or removed while the application runs answers, or stops answering, after a single save.
 
-With Hotswap Agent 2.0.4 or earlier on macOS, also set `-Dwatch.service.polling=true`, or the agent may not see the new class file. On the JetBrains Runtime 21, a request for an action that was just removed can crash the JVM in the second or so before Grails has told the plugins again. The JetBrains Runtime 25 throws an exception instead.
+WARNING: On the JetBrains Runtime 21, a request for a controller action that was just removed can crash the JVM. Grails looks for redefined classes once a second, so the request has to arrive within about a second of the agent removing the action. The JetBrains Runtime 25 throws an exception for that request instead, so use the JetBrains Runtime 25 to remove actions while the application runs.
+
+NOTE: On macOS, Hotswap Agent 2.0.4 or earlier may not see a new class file. Use Hotswap Agent 2.0.5 or later, or set `-Dwatch.service.polling=true`.
 
 === Running the Grails Application in Debug Mode
 
