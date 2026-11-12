@@ -1302,3 +1302,8 @@ jobs:
           TARGET_REPOSITORY: 'apache/grails-website'
           TARGET_FOLDER: 'docs'
           DOCUMENTATION_BRANCH: 'asf-site-production'
+          # Only the default branch publishes docs/snapshot. Each publish
+          # replaces the whole folder, so the branches would overwrite each
+          # other, and a publish that overlaps another fails on the rebase.
+          # Like the CI and cache policies, this follows the default branch.
+          SKIP_SNAPSHOT_FOLDER: ${{ github.ref_name != github.event.repository.default_branch }}

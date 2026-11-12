@@ -25,6 +25,7 @@ import jakarta.servlet.DispatcherType
 
 import com.fasterxml.jackson.annotation.JsonView
 import groovy.json.JsonSlurper
+import jakarta.servlet.DispatcherType
 
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.core.MethodParameter
