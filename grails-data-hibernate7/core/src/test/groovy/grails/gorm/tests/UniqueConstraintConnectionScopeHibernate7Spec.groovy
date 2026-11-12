@@ -42,12 +42,14 @@ class UniqueConstraintConnectionScopeHibernate7Spec extends Specification {
             'dataSource.url'      : 'jdbc:h2:mem:uniqueScopeDefault;LOCK_TIMEOUT=10000',
             'dataSource.dbCreate' : 'create-drop',
             'dataSource.dialect'  : H2Dialect.name,
-            'dataSources.second'  : [url: 'jdbc:h2:mem:uniqueScopeSecond;LOCK_TIMEOUT=10000']
+            'dataSources.second'  : [url: 'jdbc:h2:mem:uniqueScopeSecond;LOCK_TIMEOUT=10000'],
+            'dataSources.third'   : [url: 'jdbc:h2:mem:uniqueScopeThird;LOCK_TIMEOUT=10000']
     ]), UnqScopeEntity)
 
     void cleanup() {
         UnqScopeEntity.withNewTransaction { UnqScopeEntity.executeUpdate('delete from UnqScopeEntity') }
         UnqScopeEntity.second.withNewTransaction { UnqScopeEntity.second.executeUpdate('delete from UnqScopeEntity') }
+        UnqScopeEntity.third.withNewTransaction { UnqScopeEntity.third.executeUpdate('delete from UnqScopeEntity') }
     }
 
     void 'a duplicate that exists only on the connection of the block is rejected inside the block'() {
@@ -65,6 +67,25 @@ class UniqueConstraintConnectionScopeHibernate7Spec extends Specification {
         UnqScopeEntity.withNewSession {
             new UnqScopeEntity(name: 'taken').validate()
         }
+    }
+
+    void 'the check runs on the connection the save names, not on the block around it'() {
+        given: 'a row on the second connection only'
+        UnqScopeEntity.second.withNewTransaction {
+            new UnqScopeEntity(name: 'taken').second.save(validate: false, flush: true)
+        }
+
+        when: 'the save names the third connection inside a block of the second, with a session open for the third'
+        UnqScopeEntity book = new UnqScopeEntity(name: 'taken')
+        UnqScopeEntity saved = UnqScopeEntity.third.withNewSession {
+            UnqScopeEntity.second.withNewSession {
+                book.third.save()
+            }
+        }
+
+        then: 'the third has no such row, so the save goes through'
+        book.errors.allErrors.toString() == '[]'
+        saved != null
     }
 
     void 'a duplicate that exists only on the default connection is accepted inside the block of the second'() {

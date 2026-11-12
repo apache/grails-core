@@ -4980,4 +4980,4 @@ For a domain class mapped to several data sources, `validate()` and `save()` ins
 * A value that existed only on the default data source was reported as a duplicate while saving to the second, and one that existed only on the second was not found.
 * With a session bound for the second data source and none for the default, the check failed with `No Session found for current thread`.
 
-The check now runs on the connection of the block, as the other calls in the block do, and on the default connection outside any block. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.
+The check now runs on the connection of the block, as the other calls in the block do, on the connection a `save()` or `validate()` names, such as `book.third.save()`, even inside a block for another, and on the default connection outside any block. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.
