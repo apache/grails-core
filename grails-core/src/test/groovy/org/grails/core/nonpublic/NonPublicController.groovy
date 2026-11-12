@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.core.nonpublic
 
 import groovy.transform.PackageScope
@@ -24,11 +23,16 @@ import groovy.transform.PackageScope
 import grails.web.Action
 
 /**
- * A class in another package than {@code DefaultGrailsControllerClass} and not public, so it cannot look up a method
- * handle for the action and invokes it by reflection, which is how it invokes every action in development mode.
+ * A controller that is not public, in another package than {@code DefaultGrailsControllerClass}, so its actions cannot
+ * be looked up as method handles without being made accessible first.
  */
 @PackageScope
-class ReflectivelyInvokedController {
+class NonPublicController {
+
+    @Action
+    String index() {
+        'answered by a controller that is not public'
+    }
 
     @Action
     void failing() {
