@@ -4972,3 +4972,11 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 * Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
+
+==== 95. `list()` With the Fetch Mode `join` Returns the Rows Without the Association (Hibernate 7)
+
+As of Grails 8.0.1, with Hibernate 7, a fetch mode of `join` on `list()` and on a paged list fetches the association and never filters the result.
+
+* In 8.0.0, `Team.list(fetch: [club: 'join'])` built an inner `join fetch`, so the teams without a club were left out, and `Team.list(fetch: [players: 'join'])` left out the teams without players.
+* Now both return every team, as a where query, a dynamic finder and a criteria query with the same fetch always did. The association of a team without one is `null`, or an empty collection.
+* To get the earlier rows back, ask for the filter with an inner join type (`JoinType.INNER`), or query with a where query or a criteria query that restricts the association, for example `isNotNull('club')`.
