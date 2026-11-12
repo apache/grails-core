@@ -79,6 +79,17 @@ class RedefinedClassWatchSpec extends Specification {
         watch.redefined().empty
     }
 
+    void 'a class whose action changes its parameters is reported'() {
+        given:
+        watch.tell(controllerSource) {}
+
+        when:
+        classLoader.classes[CONTROLLER] = parametersChanged()
+
+        then:
+        watch.redefined() == [controllerSource]
+    }
+
     void 'a class that loses a field after the plugins were told of it is reported'() {
         given:
         classLoader.classes[CONTROLLER] = actionAdded()
@@ -169,6 +180,17 @@ class RedefinedClassWatchSpec extends Specification {
             @grails.web.Action
             Object index() {
                 message.toUpperCase()
+            }
+        ''')
+    }
+
+    private static Class<?> parametersChanged() {
+        controller('''
+            String message = 'before the edit'
+
+            @grails.web.Action
+            Object index(String id) {
+                message
             }
         ''')
     }
