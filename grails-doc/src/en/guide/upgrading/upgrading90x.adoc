@@ -1274,3 +1274,11 @@ A property source of lower precedence that sets the deeper key now answers it. W
 * Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
 * Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; it reads the list as `server.ports`.
 * A typed read with a default below such a value, such as `getProperty('x.y.enabled', Boolean, true)` when `x.y` is `false`, reads the parent, or the configuration sets the deeper key.
+
+==== 22. URL Validation Accepts Single-Word Hosts
+
+The `url: true` constraint now accepts URLs with valid single-word (single-label) hostnames, such as `http://foo`, `http://localhost`, and `http://intranet`.
+It also accepts local hostnames with multiple labels, such as `http://foo.localhost` and `http://foo.localdomain`.
+This is a behavior change from Grails 8.0.0, which rejected these URLs, and also applies to constraints copied with `importFrom`.
+Applications that relied on `url: true` to reject single-word or other local hosts must add their own host check, for example with a custom `validator` constraint.
+Hostname syntax and port validation still apply; accepting a URL does not mean its hostname resolves or the destination is reachable.
