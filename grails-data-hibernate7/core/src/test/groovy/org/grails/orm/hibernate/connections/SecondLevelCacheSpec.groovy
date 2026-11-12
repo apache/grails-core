@@ -56,9 +56,10 @@ class SecondLevelCacheSpec extends Specification {
         String[] regionNames = datastore.sessionFactory.getStatistics().getSecondLevelCacheRegionNames()
 
         then:
-        regionNames.size() == 1
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getMissCount() == 0
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getHitCount() == 0
+        'hibernate.cache.queries is on, so the query cache has its region next to the one of the entity'
+        regionNames.toList().toSet() == [CachingEntity.name, 'default-query-results-region'].toSet()
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getMissCount() == 0
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getHitCount() == 0
 
         when:
         CachingEntity entity1 = CachingEntity.withNewTransaction {
@@ -66,8 +67,8 @@ class SecondLevelCacheSpec extends Specification {
         }
 
         then:
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getMissCount() == 1
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getHitCount() == 0
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getMissCount() == 1
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getHitCount() == 0
         entity1 != null
 
         when:
@@ -76,8 +77,8 @@ class SecondLevelCacheSpec extends Specification {
         }
 
         then:
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getMissCount() == 1
-        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(regionNames[0]).getHitCount() == 1
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getMissCount() == 1
+        datastore.sessionFactory.getStatistics().getCacheRegionStatistics(CachingEntity.name).getHitCount() == 1
         entity1 == entity2
     }
 }

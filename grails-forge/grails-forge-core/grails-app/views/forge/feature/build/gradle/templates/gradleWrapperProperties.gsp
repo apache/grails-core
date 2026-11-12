@@ -31,7 +31,7 @@ under the License.
 %{-- Keep gradle version synced with .sdkmanrc, gradle.properties (gradleToolingApiVersion), all gradle-wrapper.properties files --}%
 distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionUrl=https\://services.gradle.org/distributions/gradle-9.8.2-bin.zip
+distributionUrl=https\://services.gradle.org/distributions/gradle-9.9.1-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME

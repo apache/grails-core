@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture
 
 import com.fasterxml.jackson.annotation.JsonView
 import groovy.json.JsonSlurper
+import jakarta.servlet.DispatcherType
 
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.core.MethodParameter
@@ -323,6 +324,7 @@ class ActionReturnValuesSpec extends AbstractUrlMappingsSpec {
         new PollingConditions(timeout: 5).eventually {
             assert WebAsyncUtils.getAsyncManager(request).hasConcurrentResult()
         }
+        request.dispatcherType = DispatcherType.ASYNC
         request.setAttribute(WebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/returnValues/later')
         modelAndView = handle('later')
 
@@ -345,6 +347,7 @@ class ActionReturnValuesSpec extends AbstractUrlMappingsSpec {
         new PollingConditions(timeout: 5).eventually {
             assert WebAsyncUtils.getAsyncManager(request).hasConcurrentResult()
         }
+        request.dispatcherType = DispatcherType.ASYNC
         request.setAttribute(WebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/returnValues/later')
         handle('later')
 

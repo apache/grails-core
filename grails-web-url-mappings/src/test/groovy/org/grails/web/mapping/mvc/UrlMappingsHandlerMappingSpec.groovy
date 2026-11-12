@@ -18,20 +18,31 @@
  */
 package org.grails.web.mapping.mvc
 
+import java.sql.SQLException
+
+import jakarta.servlet.DispatcherType
+
 import grails.artefact.Artefact
 import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
+import org.grails.web.errors.GrailsWrappedRuntimeException
 import org.grails.web.mapping.DefaultUrlMappingData
 import org.grails.web.mapping.DefaultUrlMappingInfo
+import org.grails.web.mapping.ForwardUrlMappingInfo
+import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
+import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.ui.ModelMap
+import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.WebRequest
 import org.springframework.web.context.request.WebRequestInterceptor
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.ServerHttpObservationFilter
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.handler.WebRequestHandlerInterceptorAdapter
 import org.springframework.web.servlet.view.InternalResourceView
@@ -102,6 +113,82 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
 
         then:"The controller action that is mapped to the 404 handler is executed"
         webRequest.response.contentAsString == 'Not Found'
+    }
+
+    void "a mapping for an exception is found for #what"() {
+        given:
+        def holder = getUrlMappingsHolder {
+            "500"(controller: 'errors', action: 'ioFailure', exception: IOException)
+            "500"(controller: 'errors', action: 'illegalArgument', exception: IllegalArgumentException)
+            "500"(controller: 'errors', action: 'anyFailure')
+        }
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        webContext.refresh()
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        request.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, '500')
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE,
+                wrapped ? new GrailsWrappedRuntimeException(request.servletContext, thrown) : thrown)
+
+        when:
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == action
+
+        cleanup:
+        webContext.close()
+
+        where:
+        what                                                     | wrapped | thrown                                                                           | action
+        'the exception an error handler is forwarded for'        | true    | new IOException('thrown', new IllegalStateException('its own cause'))            | 'ioFailure'
+        'the exception the container reports'                    | false   | new IOException('thrown', new IllegalStateException('its own cause'))            | 'ioFailure'
+        'the root cause an error handler is forwarded for'       | true    | new IllegalStateException('thrown', new IOException('the root cause'))           | 'ioFailure'
+        'the root cause the container reports'                   | false   | new IllegalStateException('thrown', new IOException('the root cause'))           | 'ioFailure'
+        'the exception first, where its root cause has one'      | true    | new IllegalArgumentException('thrown', new IOException('the root cause'))        | 'illegalArgument'
+        'neither, which leaves the mapping without an exception' | true    | new IllegalStateException('thrown', new UnsupportedOperationException('no map')) | 'anyFailure'
+    }
+
+    void "where several mappings match the exception, the one declared last answers, which keeps #how"() {
+        given:
+        def holder = getUrlMappingsHolder(mappings)
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webContext = new StaticWebApplicationContext()
+        webContext.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        webContext.refresh()
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        request.servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, webContext)
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, '500')
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, new GrailsWrappedRuntimeException(request.servletContext,
+                new DataLayerException(new SQLException('the root cause'))))
+
+        when:
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == action
+
+        cleanup:
+        webContext.close()
+
+        where:
+        how                                                         | action     | mappings
+        'the mapping for the exception ahead of its root cause'     | 'runtime'  | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+        }
+        'a mapping declared before a broader one from answering'    | 'runtime'  | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'database', exception: DataLayerException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+        }
+        'the workaround the upgrade guide gives working'            | 'database' | {
+            "500"(controller: 'errors', action: 'database', exception: SQLException)
+            "500"(controller: 'errors', action: 'runtime', exception: RuntimeException)
+            "500"(controller: 'errors', action: 'database', exception: DataLayerException)
+        }
     }
 
     @Issue('https://github.com/apache/grails-core/issues/10149')
@@ -265,7 +352,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         result.view.getUrl() == "/index.html"
     }
 
-    void "the handler chain keeps WebRequestInterceptors first and appends the Grails interceptors last"() {
+    void "the handler chain keeps WebRequestInterceptors first, then the route, and appends the error handling last"() {
         given: "a handler mapping with both a WebRequestInterceptor and an ordinary HandlerInterceptor"
         def handlerMapping = handlerMapping()
         def plainInterceptor = new HandlerInterceptor() {}
@@ -287,8 +374,9 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         interceptors[0] instanceof WebRequestHandlerInterceptorAdapter
         interceptors.contains(plainInterceptor)
 
-        and: "the Grails interceptors are appended last, in order"
-        interceptors[-2].class.simpleName == 'ObservationRouteHandler'
+        and: "the route is set ahead of the ordinary interceptors, which can fail, and the error handling is last"
+        interceptors[1].class.simpleName == 'ObservationRouteHandler'
+        interceptors.indexOf(plainInterceptor) > 1
         interceptors[-1].class.simpleName == 'ErrorHandlingHandler'
     }
 
@@ -320,6 +408,245 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         new UrlMappingsHandlerMapping(holder)
     }
 
+    void "a request routed to an error handler keeps the route that failed on its observation"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/handled"(controller: 'foo', action: 'fooBar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def context = new ServerRequestObservationContext(request, webRequest.response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
+
+        when: 'the action is routed'
+        def chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
+        context.pathPattern == '/foo/bar'
+
+        when: 'it failed, and its error handler is routed, as a forward to it is'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        chain = handler.getHandler(request)
+        chain.handler.configure(webRequest)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then: 'the error handler answers, and the route is still the one that failed'
+        webRequest.actionName == 'fooBar'
+        context.pathPattern == '/foo/bar'
+
+        when: 'the error handler forwards, which takes the status code off the request and leaves the exception'
+        request.removeAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE)
+        request.setAttribute(WebUtils.ERROR_EXCEPTION_ATTRIBUTE, new IllegalStateException('failed'))
+        request.requestURI = '/handled'
+        chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
+        context.pathPattern == '/foo/bar'
+    }
+
+    void "the match of a dispatch answers for the async dispatch that follows it, and not for a #dispatch to another action"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/other"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def started = handler.getHandler(request).handler
+
+        when: 'the action started async processing, and its result comes back on an async dispatch'
+        request.dispatcherType = DispatcherType.ASYNC
+
+        then:
+        handler.getHandler(request).handler.is(started)
+
+        when: 'the view of that result sends the request to another action'
+        request.dispatcherType = dispatch
+        request.requestURI = '/other'
+        def info = handler.getHandler(request).handler
+
+        then:
+        info.actionName == 'fooBar'
+
+        where:
+        dispatch << [DispatcherType.FORWARD, DispatcherType.INCLUDE]
+    }
+
+    void "an include made for the error handler answers with it as a forward does, when the include was made for #made"() {
+        given: 'an error handler with no URL of its own, as a status code mapping has'
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        def errorHandler = holder.matchStatusCode(500)
+        if (pageParameters) {
+            // as the exception resolver passes it when the URL of the page carries parameters
+            errorHandler = new DefaultUrlMappingInfo(errorHandler, pageParameters, grailsApplication)
+        }
+
+        when: 'it is included while the exception is resolved, under the URI built for it'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/fooBar')
+        request.requestURI = '/foo/fooBar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, errorHandler)
+        def info = handler.getHandler(request).handler
+
+        then: 'it answers with the controller of the error handler, and only that include does'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        info.actionName == 'fooBar'
+        request.getAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO) == null
+        handler.getHandler(request) == null
+
+        where:
+        made                                                | pageParameters
+        'its mapping'                                       | [:]
+        'its mapping with the parameters of the page\'s URL' | [slug: 'example']
+    }
+
+    void "an action an include runs sees the id of its mapping rather than the id of the page"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.currentRequest
+        request.addParameter('id', '7')
+
+        when: 'a page whose request has id 7 includes the action with id 9'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, new ForwardUrlMappingInfo(controller: 'foo', action: 'bar', id: '9'))
+        handler.getHandler(request)
+
+        then:
+        webRequest.params.id == '9'
+    }
+
+    void "an include an error handler makes answers with the action it names rather than with the error handler"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "500"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+
+        when: 'the error handler includes another action while the request still carries the error'
+        request.setAttribute(WebUtils.ERROR_STATUS_CODE_ATTRIBUTE, 500)
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, new ForwardUrlMappingInfo(controller: 'foo', action: 'bar'))
+        def info = handler.getHandler(request).handler
+
+        then: 'the include runs that action, not the error handler, which would include it again'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        ((GrailsControllerUrlMappingInfo) info).info.actionName == 'bar'
+    }
+
+    void "an include made for #made answers with the action of its controller when no error is being handled"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/foo/other"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        def mapping = matched ? holder.match('/foo/other') : new ForwardUrlMappingInfo(controller: 'foo', action: action)
+
+        when: 'it is included under a URI that maps to another action'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, mapping)
+        def info = handler.getHandler(request).handler
+
+        then: 'it answers with the action it was made for, on the controller that action belongs to'
+        info instanceof GrailsControllerUrlMappingInfo
+        ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz == FooController
+        ((GrailsControllerUrlMappingInfo) info).info.actionName == action
+        request.getAttribute(UrlMappingsHandlerMapping.MATCHED_REQUEST).is(info)
+        request.getAttribute(GrailsApplicationAttributes.GRAILS_CONTROLLER_CLASS).is(((GrailsControllerUrlMappingInfo) info).controllerClass)
+
+        where:
+        made                                           | matched | action
+        'a mapping matched by its URI'                 | true    | 'fooBar'
+        'a mapping built from a controller and action' | false   | 'fooBar'
+        'a mapping built from a controller alone'      | false   | null
+    }
+
+    void "an include made for a view answers with that view when no error is being handled"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        def mapping = new ForwardUrlMappingInfo(view: '/foo/page')
+
+        when:
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/foo/bar'
+        request.setAttribute(UrlMappingsHandlerMapping.INCLUDED_MAPPING_INFO, mapping)
+
+        then:
+        handler.getHandler(request).handler.is(mapping)
+    }
+
+    void "an action a page includes leaves the route of the page on its observation"() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def holder = new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            "/foo/bar"(controller: 'foo', action: 'bar')
+            "/included"(controller: 'foo', action: 'fooBar')
+        })
+        def handler = new UrlMappingsHandlerMapping(holder)
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+        def context = new ServerRequestObservationContext(request, webRequest.response)
+        request.setAttribute(ServerHttpObservationFilter.CURRENT_OBSERVATION_CONTEXT_ATTRIBUTE, context)
+        def chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        when: 'the page includes another action'
+        request.setAttribute(WebUtils.INCLUDE_REQUEST_URI_ATTRIBUTE, '/included')
+        request.requestURI = '/included'
+        chain = handler.getHandler(request)
+        chain.interceptorList.each { it.preHandle(request, webRequest.response, chain.handler) }
+
+        then:
+        context.pathPattern == '/foo/bar'
+    }
+
     void cleanup() {
         RequestContextHolder.resetRequestAttributes()
     }
@@ -348,5 +675,13 @@ class FooController  {
     @Action
     def notFound() {
         RequestContextHolder.currentRequestAttributes().response.writer << "Not Found"
+    }
+}
+
+/** Stands in for a data access exception, such as Spring's {@code DataAccessException}, that wraps a {@code SQLException}. */
+class DataLayerException extends RuntimeException {
+
+    DataLayerException(Throwable cause) {
+        super('a data layer failure', cause)
     }
 }

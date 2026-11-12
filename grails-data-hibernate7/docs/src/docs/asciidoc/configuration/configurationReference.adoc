@@ -56,7 +56,7 @@ name,description,default value
 `hibernate.configClass`, The configuration class to use, `HibernateMappingContextConfiguration`
 `hibernate.hbm2ddl.auto`, Whether to create the tables on startup, `none`
 `hibernate.use_second_level_cache`, Whether to use the second level cache, `true`
-`hibernate.cache.queries`, Whether to cache queries (see Caching Queries), `false`
+`hibernate.cache.queries`, Whether to cache queries (see Caching Queries); this enables the query cache as `hibernate.cache.use_query_cache` does and needs a second level cache region factory, `false`
 `hibernate.cache.use_query_cache`, Enables the query cache, `false`
 `hibernate.configLocations`, Location of additional Hibernate XML configuration files
 `hibernate.packagesToScan`, Specify packages to search for autodetection of your entity classes in the classpath
