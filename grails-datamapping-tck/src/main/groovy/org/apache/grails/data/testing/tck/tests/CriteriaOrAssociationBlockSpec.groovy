@@ -90,6 +90,57 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         found.isEmpty()
     }
 
+    void 'an empty association block in or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                child {}
+                eq('name', 'orphan')
+            }
+        }
+
+        then: 'the block adds no branch, and the entity without an associated entity is left out, as it always was'
+        found.isEmpty()
+    }
+
+    void 'a block outside or that follows a block in or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            child { isNull('name') }
+        }
+
+        then:
+        found.isEmpty()
+    }
+
+    void 'a block nested in and inside or still requires an associated entity'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.withCriteria {
+            or {
+                and {
+                    child { isNull('name') }
+                }
+                eq('name', 'nobody')
+            }
+        }
+
+        then:
+        found.isEmpty()
+    }
+
     void 'an association block outside or still excludes the entities without the association'() {
         given:
         createEntities()
