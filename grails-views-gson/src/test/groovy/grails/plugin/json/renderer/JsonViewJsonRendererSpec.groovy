@@ -93,7 +93,7 @@ class JsonViewJsonRendererSpec extends Specification {
         0 * defaultRenderer.render(_, _)
         modelAndView.view.is(problemView)
         context.webRequest.currentResponse.status == 422
-        problem.instance == URI.create('/books/1')
+        problem.instance == null
     }
 
     void 'a ProblemDetail rendered with the view respond names, for a client that accepts no JSON type, is sent as JSON'() {

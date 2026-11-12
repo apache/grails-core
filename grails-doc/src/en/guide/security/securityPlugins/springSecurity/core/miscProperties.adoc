@@ -73,6 +73,10 @@ under the License.
 |`true`
 |Whether caching `SavedRequest` can trigger the creation of a session
 
+|requestCache.ignoredPatterns
+|`['/favicon.*', '/apple-touch-icon*.png', '/manifest.json', '/manifest.webmanifest', '/browserconfig.xml', '/.well-known/appspecific/com.chrome.devtools.json']`
+|Path patterns, relative to the context path, of requests that are never saved as the page to redirect to after a login. Browsers and their tools request these on their own, so a denied one would otherwise replace the page the user asked for. Set to `[]` to save every request
+
 |roleHierarchy
 |_none_
 |Hierarchical role definition. See <<core-hierarchicalRoles>>

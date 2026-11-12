@@ -22,6 +22,10 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.time.temporal.IsoFields
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -85,6 +89,19 @@ import org.gradle.work.DisableCachingByDefault
  * -- the one declaring the most fields is submitted, and which it was is reported. A page whose
  * wanted form is not the fullest names it: {@code '/book/create#bookForm'}.</p>
  *
+ * <p>A request neither of those can make, with another method or with a body that is not a form, is
+ * declared whole. An action restricted to QUERY answers nothing else, and what writes a JSON response
+ * runs only for a client that asks for one:</p>
+ *
+ * <pre>
+ * grails {
+ *     nativeMetadata {
+ *         requests = [[method: 'QUERY', path: '/book/search', contentType: 'application/json',
+ *                      body: '{"title": "Grails"}', accept: 'application/json']]
+ *     }
+ * }
+ * </pre>
+ *
  * <p>Written to the application's sources rather than to the build directory: what an image was
  * built from should be reviewable, and a trace is only as good as the paths someone thought of.</p>
  *
@@ -93,6 +110,9 @@ import org.gradle.work.DisableCachingByDefault
 @CompileStatic
 @DisableCachingByDefault(because = 'Records what a run of the application did, which is not an output of its inputs')
 abstract class TraceNativeMetadataTask extends DefaultTask {
+
+    /** What a request in {@link #getRequests()} may name, so that a misspelt one is not silently left out. */
+    private static final Set<String> REQUEST_KEYS = ['method', 'path', 'contentType', 'body', 'accept'] as Set
 
     /** How the agent is asked for, and the only way its output can be merged with what is there. */
     private static final String AGENT = 'native-image-agent'
@@ -105,10 +125,20 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private static final Pattern FORM = Pattern.compile(/(?is)<form\b[^>]*>.*?<\/form>/)
     private static final Pattern ACTION = Pattern.compile(/(?i)\baction\s*=\s*"([^"]*)"/)
     private static final Pattern ID = Pattern.compile(/(?i)\bid\s*=\s*"([^"]+)"/)
-    private static final Pattern FIELD = Pattern.compile(/(?is)<(?:input|select|textarea)\b[^>]*>/)
+    private static final Pattern FIELD = Pattern.compile(/(?is)<(input|select|textarea)\b[^>]*>/)
+    private static final Pattern SELECT_END = Pattern.compile(/(?i)<\/select\s*>/)
+    private static final Pattern OPTION = Pattern.compile(/(?is)<option\b([^>]*)>([^<]*)/)
+    private static final Pattern SELECTED = Pattern.compile(/(?i)(?<![\w-])selected(?![\w-])/)
+    private static final Pattern DISABLED = Pattern.compile(/(?i)(?<![\w-])disabled(?![\w-])/)
     private static final Pattern NAME = Pattern.compile(/(?i)\bname\s*=\s*"([^"]+)"/)
     private static final Pattern VALUE = Pattern.compile(/(?i)\bvalue\s*=\s*"([^"]*)"/)
     private static final Pattern TYPE = Pattern.compile(/(?i)\btype\s*=\s*"([^"]+)"/)
+    private static final Pattern MAXLENGTH = Pattern.compile(/(?i)\bmaxlength\s*=\s*"\s*(\d{1,9})\s*"/)
+    private static final Pattern MIN = Pattern.compile(/(?i)\bmin\s*=\s*"([^"]*)"/)
+    private static final Pattern MAX = Pattern.compile(/(?i)\bmax\s*=\s*"([^"]*)"/)
+
+    private static final String EMAIL_DOMAIN = '@example.com'
+    private static final String URL_BASE = 'https://example.com/'
 
     /**
      * Carries the session from one request to the next, which is what makes a form that
@@ -147,6 +177,14 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     @Input
     abstract ListProperty<String> getForms()
 
+    /**
+     * Requests to make as they are declared.
+     *
+     * @since 9.1
+     */
+    @Input
+    abstract ListProperty<Map<String, String>> getRequests()
+
     @Input
     abstract Property<Integer> getPort()
 
@@ -162,6 +200,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
 
     @TaskAction
     void trace() {
+        refuseRequestsThatCannotBeMade()
         File java = new File(javaExecutable.get())
         File metadata = outputDirectory.get().asFile
         metadata.mkdirs()
@@ -196,6 +235,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             // the login form, and what the agent records is the login page under the name of the
             // page that was wanted. The session the form establishes is carried by this client.
             forms.get().each { String path -> answered << submit(path) }
+            requests.get().each { Map<String, String> request -> answered << send(request) }
             paths.get().each { String path -> answered << ask(path) }
         }
         finally {
@@ -220,8 +260,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                     'traced, so what was recorded is not what was asked for:\n  ' +
                     "${failed*.line.join('\n  ')}\nWhat it printed is in ${output}")
         }
-        logger.lifecycle('Traced {} forms and {} paths into {}',
-                forms.get().size(), paths.get().size(), metadata)
+        logger.lifecycle('Traced {} forms, {} requests and {} paths into {}',
+                forms.get().size(), requests.get().size(), paths.get().size(), metadata)
     }
 
     /** What one request recorded, and whether it recorded the thing it was asked for. */
@@ -239,6 +279,24 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             this.line = line
             this.recorded = recorded
             this.elsewhere = elsewhere
+        }
+    }
+
+    /**
+     * Refuses a request that does not name its method and path, or names what a request cannot have, before
+     * anything is started. Found as the request was made, it failed the build only after the application had been
+     * started and the rest traced, which for a misspelt key is the whole wait for an answer known before it began.
+     */
+    private void refuseRequestsThatCannotBeMade() {
+        List<String> refused = requests.get().findAll { Map<String, String> request ->
+            Map declared = request
+            (declared.keySet() - REQUEST_KEYS) || !declared.method || !declared.path
+        }.collect { Map<String, String> request ->
+            "REQUEST ${request} -> a request names its method and path, and may name ${REQUEST_KEYS - ['method', 'path']}".toString()
+        }
+        if (refused) {
+            throw new GradleException('grails.nativeMetadata.requests names a request that cannot be made, so the ' +
+                    "application was not started:\n  ${refused.join('\n  ')}")
         }
     }
 
@@ -275,6 +333,31 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         String where = elsewhere ? "  (landed on ${landed})" : ''
         new Answer("GET  ${path} -> ${response.statusCode()}${where}".toString(),
                 response.statusCode() < 400, elsewhere)
+    }
+
+    /**
+     * Makes a request as it is declared, with the Accept header {@link #requestTo} gives one that names none, and
+     * reports where it was answered from as {@link #ask} does: a request that needs a login and has not got one is
+     * sent on to the login page, which records that page under the name of this one.
+     */
+    private Answer send(Map<String, String> request) {
+        Map declared = request
+        String method = declared.method.toString().toUpperCase(Locale.ROOT)
+        String path = declared.path.toString()
+        HttpRequest.Builder builder = requestTo(path)
+        if (declared.accept) {
+            builder.setHeader('Accept', declared.accept.toString())
+        }
+        if (declared.contentType) {
+            builder.header('Content-Type', declared.contentType.toString())
+        }
+        builder.method(method, declared.body == null ? HttpRequest.BodyPublishers.noBody() :
+                HttpRequest.BodyPublishers.ofString(declared.body.toString()))
+        HttpResponse<String> response = client.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+        String landed = response.uri().path
+        boolean elsewhere = landed != uriOf(path).path
+        String where = elsewhere ? "  (landed on ${landed})" : ''
+        new Answer("${method} ${path} -> ${response.statusCode()}${where}".toString(), response.statusCode() < 400, elsewhere)
     }
 
     /**
@@ -410,8 +493,11 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
 
     /**
      * What the form would send. A field that carries a value sends it, which is how the token a
-     * security filter demands is carried; a checkbox sends what a ticked one sends; anything else
-     * sends something recognisable, so a row in a database says where it came from.
+     * security filter demands is carried, and a hidden field is the page's own, so it is sent as it
+     * is even when that is nothing. Any other field without a value is filled in, as the fields
+     * plugin renders every field of a new instance: sent blank it fails validation, the page answers
+     * with the form again, and what a save does when it succeeds is never recorded. A select sends
+     * one of its options.
      */
     private static Map<String, String> fieldsOf(String markup) {
         Map<String, String> fields = [:]
@@ -422,18 +508,170 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             if (!name.find()) {
                 continue
             }
+            if (field.group(1).equalsIgnoreCase('select')) {
+                Matcher end = SELECT_END.matcher(markup)
+                fields[name.group(1)] = optionOf(end.find(field.end())
+                        ? markup.substring(field.end(), end.start())
+                        : markup.substring(field.end()))
+                continue
+            }
             Matcher value = VALUE.matcher(tag)
             Matcher type = TYPE.matcher(tag)
-            String kind = type.find() ? type.group(1).toLowerCase(Locale.ROOT) : 'text'
+            // The first word only: the fields plugin renders a decimal property as type="number decimal".
+            String kind = type.find() ? type.group(1).trim().toLowerCase(Locale.ROOT).split(/\s+/)[0] : 'text'
             if (kind in ['submit', 'button', 'reset', 'image', 'file']) {
                 continue
             }
-            fields[name.group(1)] = value.find() ? value.group(1)
-                    : kind == 'checkbox' || kind == 'radio' ? 'on'
-                    : kind == 'password' ? 'traced-secret'
-                    : "traced-${System.nanoTime()}".toString()
+            String carried = value.find() ? value.group(1) : null
+            fields[name.group(1)] = carried || kind == 'hidden' ? (carried ?: '') : fill(kind, tag)
         }
         fields
+    }
+
+    /**
+     * What a browser sends for a select: the option selected, or the first that can be chosen where
+     * none is, and an option without a value sends its text.
+     *
+     * <p>The select's options rather than made-up text, because only one of them binds. An enum, an
+     * association and each part of a date picker are rendered as a select, and text sent for any of
+     * them fails to convert -- so the page answers with the form again, and a 200, and the save the
+     * form was listed for is never recorded.</p>
+     */
+    private static String optionOf(String options) {
+        String first = null
+        Matcher option = OPTION.matcher(options)
+        while (option.find()) {
+            String attributes = option.group(1)
+            // Without what the attributes say, so that an option whose value is "selected" is not taken for one that is.
+            String flags = attributes.replaceAll(/"[^"]*"/, '""')
+            if (DISABLED.matcher(flags).find()) {
+                continue
+            }
+            Matcher value = VALUE.matcher(attributes)
+            String sent = value.find() ? value.group(1) : option.group(2).trim()
+            if (SELECTED.matcher(flags).find()) {
+                return sent
+            }
+            if (first == null) {
+                first = sent
+            }
+        }
+        first != null ? first : ''
+    }
+
+    /**
+     * Something a field of this type accepts, so that what fails is never the value the trace made up.
+     *
+     * <p>A number field sent text, or an email field sent something that is not an address, fails to
+     * bind or fails its constraint, and the page answers with the form again -- with a 200, which is
+     * what a save that succeeded answers with too. So the trace would report the form as covered
+     * while what a save does went unrecorded, which is the gap filling the field in was meant to
+     * close. A checkbox sends what a ticked one sends, and text sends something recognisable, so a
+     * row in a database says where it came from.</p>
+     *
+     * <p>What the field says about itself is kept to: a number lies within its {@code min} and
+     * {@code max}, as a date does, and nothing is longer than its {@code maxlength}, which is how the
+     * fields plugin renders the constraints of the property behind it.</p>
+     */
+    private static String fill(String kind, String tag) {
+        String declaredLength = attribute(MAXLENGTH, tag)
+        Integer maxLength = declaredLength ? Integer.valueOf(declaredLength) : null
+        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)
+        switch (kind) {
+            case 'checkbox':
+            case 'radio':
+                return 'on'
+            case 'number':
+            case 'range':
+                return numberWithin(tag)
+            case 'date':
+                return within(now.toLocalDate().toString(), tag)
+            case 'datetime-local':
+                return within(now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm", Locale.ROOT)), tag)
+            case 'time':
+                return within(now.format(DateTimeFormatter.ofPattern('HH:mm', Locale.ROOT)), tag)
+            case 'month':
+                return within(now.format(DateTimeFormatter.ofPattern('yyyy-MM', Locale.ROOT)), tag)
+            case 'week':
+                return within(String.format(Locale.ROOT, '%d-W%02d',
+                        now.get(IsoFields.WEEK_BASED_YEAR), now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)), tag)
+            case 'email':
+                return traced(maxLength == null ? null : Math.max(maxLength - EMAIL_DOMAIN.length(), 1)) + EMAIL_DOMAIN
+            case 'url':
+                return URL_BASE + traced(maxLength == null ? null : Math.max(maxLength - URL_BASE.length(), 0))
+            case 'tel':
+                return cut('5550100', maxLength)
+            case 'color':
+                return '#000000'
+            case 'password':
+                return cut('traced-secret', maxLength)
+            default:
+                return traced(maxLength)
+        }
+    }
+
+    /** One, or the nearest number to it the field's {@code min} and {@code max} allow. */
+    private static String numberWithin(String tag) {
+        BigDecimal number = BigDecimal.ONE
+        BigDecimal min = decimal(attribute(MIN, tag))
+        BigDecimal max = decimal(attribute(MAX, tag))
+        if (min != null && number < min) {
+            number = min
+        }
+        if (max != null && number > max) {
+            number = max
+        }
+        number.toPlainString()
+    }
+
+    /**
+     * The value, or the nearest end of the field's {@code min} and {@code max}. A date, a time, a month and a week
+     * are each written so that the earlier of two sorts first, which is what lets them be compared as they are.
+     */
+    private static String within(String value, String tag) {
+        String min = attribute(MIN, tag)
+        String max = attribute(MAX, tag)
+        if (min && value < min) {
+            return min
+        }
+        if (max && value > max) {
+            return max
+        }
+        value
+    }
+
+    /**
+     * Something recognisable, and different from one trace to the next, so that a field the application keeps
+     * unique is given a value it has not seen. Where it does not fit, the name is given up before the digits that
+     * change are.
+     */
+    private static String traced(Integer maxLength) {
+        String unique = String.valueOf(System.nanoTime() & Long.MAX_VALUE)
+        String value = "traced-${unique}".toString()
+        if (maxLength == null || value.length() <= maxLength) {
+            return value
+        }
+        int room = maxLength - 'traced-'.length()
+        room > 0 ? "traced-${unique.substring(unique.length() - room)}".toString()
+                : unique.substring(Math.max(unique.length() - maxLength, 0))
+    }
+
+    private static String cut(String value, Integer maxLength) {
+        maxLength == null || value.length() <= maxLength ? value : value.substring(0, maxLength)
+    }
+
+    private static String attribute(Pattern pattern, String tag) {
+        Matcher matcher = pattern.matcher(tag)
+        matcher.find() ? matcher.group(1).trim() : null
+    }
+
+    private static BigDecimal decimal(String text) {
+        try {
+            text ? new BigDecimal(text) : null
+        }
+        catch (NumberFormatException ignored) {
+            null
+        }
     }
 
     private HttpRequest.Builder requestTo(String path) {
@@ -446,21 +684,30 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         URI.create("http://localhost:${port.get()}${path.startsWith('/') ? path : '/' + path}")
     }
 
+    /**
+     * Waits for the application to serve and, where it answers 503 with {@code Retry-After} as the Spring Security
+     * plugin does until the application has started, for that answer to change, up to the timeout. A 503 without
+     * {@code Retry-After} is the application's own answer, and is not waited for.
+     */
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
         StartupLog log = new StartupLog(output)
+        boolean started = false
         while (System.currentTimeMillis() < deadline) {
             if (!process.isAlive()) {
                 throw new GradleException('The application ended before it started serving. ' +
                         "What it printed is in ${output}")
             }
-            if (log.saysItStarted()) {
-                return
-            }
-            if (serving()) {
+            started = log.saysItStarted() || serving()
+            if (started && !RunPort.answersNotReady(port.get())) {
                 return
             }
             Thread.sleep(250L)
+        }
+        if (started) {
+            // Its home page still says to come back after the whole of the timeout, which is longer than a start
+            // takes to finish, so the requests are its to answer.
+            return
         }
         throw new GradleException("The application did not start within ${startTimeoutSeconds.get()}s. " +
                 "What it printed is in ${output}")

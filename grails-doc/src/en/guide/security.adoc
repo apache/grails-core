@@ -152,3 +152,50 @@ Set `grails.security.headers.<header>.enabled` to `false` to omit a single heade
 For example, `grails.security.headers.xss-protection.enabled: false` omits `X-XSS-Protection`.
 A header that is enabled but has a blank `value` is not sent; Grails logs a warning naming the property the first time that happens, since it usually means `content-security-policy.enabled` was set without a policy.
 If an application, another filter, or Spring Security has already set one of these headers on the response by the time it commits, Grails leaves that value unchanged.
+
+===== Nonce-based Content Security Policy
+
+A policy can allow an inline script or style by a nonce rather than with `'unsafe-inline'`.
+Name the nonce in the policy with the `+{nonce}+` placeholder, which is the placeholder Spring Security 7.2 introduced:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            content-security-policy:
+                enabled: true
+                value: "script-src 'self' 'nonce-{nonce}'; style-src 'self' 'nonce-{nonce}'; object-src 'none'"
+----
+
+Each request then carries a nonce of its own, 128 random bits encoded in Base64, under the `_csp` request attribute.
+Every `+{nonce}+` in the policy is replaced with that nonce when the header is written.
+A view gives the nonce to each inline script and style with the link:{gspTagsRef}cspNonce.html[cspNonce] tag, which works in a statically compiled page as well as a dynamic one:
+
+[source,xml]
+----
+<script nonce="${g.cspNonce()}">
+    document.getElementById('greeting').textContent = 'Hello'
+</script>
+<style nonce="${g.cspNonce()}">
+    #greeting { font-weight: bold }
+</style>
+----
+
+The link:{gspTagsRef}javascript.html[javascript] tag adds the nonce to the inline script it writes.
+Code outside a view, such as a controller or a service, reads the nonce with `ContentSecurityPolicyNonce.nonceOf(request)` from the `grails.web.http` package, which returns `null` when the request carries none.
+It compiles under `@GrailsCompileStatic` as well as in dynamic code, and it reads the nonce whichever of Grails or Spring Security generated it.
+A script or stylesheet loaded from the application's own origin, such as an asset, is allowed by `'self'` and needs no nonce.
+
+`_csp` is also the attribute Spring Security's `ContentSecurityPolicyNonceGeneratingFilter` sets by default, so a view renders the right nonce whichever of the two generated it, and the header carries the same nonce:
+
+* When Spring Security's header configuration also writes a nonce-based policy, at Spring Boot's default filter order, Spring Security's nonce replaces the Grails one on the request.
+Spring Security's header is written first, and the Grails policy is not sent.
+* When the Spring Security filter chain is ordered ahead of `GrailsFilters.FIRST`, Grails keeps the nonce Spring Security put on the request and writes the Grails policy with it.
+
+The `cspNonce` and `javascript` tags read the nonce from `_csp`.
+If Spring Security's header configuration names another attribute with `nonceAttributeName`, render the nonce from that attribute instead.
+
+If the `_csp` attribute holds anything other than a Grails or Spring Security nonce, the policy is not sent, since a policy without the nonce would block every inline script the view gave one.
+Grails logs a warning the first time that happens.

@@ -22,6 +22,7 @@ import grails.plugin.springsecurity.access.NullAfterInvocationProvider
 import grails.plugin.springsecurity.access.intercept.NullAfterInvocationManager
 import grails.plugin.springsecurity.access.vote.AuthenticatedVetoableDecisionManager
 import grails.plugin.springsecurity.access.vote.ClosureVoter
+import grails.plugin.springsecurity.authentication.DigestDaoAuthenticationProvider
 import grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationProvider
 import grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher
 import grails.plugin.springsecurity.cache.SpringUserCacheFactoryBean
@@ -32,6 +33,7 @@ import grails.plugin.springsecurity.userdetails.GormUserDetailsService
 import grails.plugin.springsecurity.userdetails.NoStackUsernameNotFoundException
 import grails.plugin.springsecurity.web.GrailsRedirectStrategy
 import grails.plugin.springsecurity.web.NullFilterChainValidator
+import grails.plugin.springsecurity.web.SavedRequestMatcher
 import grails.plugin.springsecurity.web.SecurityRequestHolderFilter
 import grails.plugin.springsecurity.web.UpdateRequestContextHolderExceptionTranslationFilter
 import grails.plugin.springsecurity.web.access.AjaxAwareAccessDeniedHandler
@@ -78,6 +80,7 @@ import org.springframework.security.access.intercept.NullRunAsManager
 import org.springframework.security.access.vote.AuthenticatedVoter
 import org.springframework.security.access.vote.RoleHierarchyVoter
 import org.springframework.security.authentication.AccountStatusUserDetailsChecker
+import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.AuthenticationTrustResolverImpl
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher
 import org.springframework.security.authentication.ProviderManager
@@ -102,6 +105,7 @@ import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder
 import org.springframework.security.web.FilterChainProxy
 import org.springframework.security.web.PortMapperImpl
 import org.springframework.security.web.PortResolverImpl
+import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.AccessDeniedHandlerImpl
 import org.springframework.security.web.access.channel.ChannelDecisionManagerImpl
 import org.springframework.security.web.access.channel.ChannelProcessingFilter
@@ -135,7 +139,6 @@ import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter
 import org.springframework.security.web.session.HttpSessionEventPublisher
-import org.springframework.security.web.util.matcher.AnyRequestMatcher
 
 import jakarta.servlet.DispatcherType
 
@@ -253,7 +256,9 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
             if (conf.useHttpSessionEventPublisher) {
                 log.trace 'Configuring HttpSessionEventPublisher'
-                httpSessionEventPublisher(classFor('httpSessionEventPublisher', ServletListenerRegistrationBean), new HttpSessionEventPublisher())
+                httpSessionEventPublisher(classFor('httpSessionEventPublisher', ServletListenerRegistrationBean)) {
+                    listener = { HttpSessionEventPublisher publisher -> }
+                }
             }
 
             createRefList.delegate = delegate
@@ -404,8 +409,9 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             // TODO doc new
             if (conf.afterInvocationManagerProviderNames) {
                 log.trace 'Configuring AfterInvocationProviderManager'
+                nullAfterInvocationProvider(NullAfterInvocationProvider)
                 afterInvocationManager(classFor('afterInvocationManager', AfterInvocationProviderManager)) {
-                    providers = [new NullAfterInvocationProvider()] // will be replaced in doWithApplicationContext
+                    providers = [ref('nullAfterInvocationProvider')] // will be replaced in doWithApplicationContext
                 }
             }
             else {
@@ -447,7 +453,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
             if (securityConfigType == 'Annotation') {
                 objectDefinitionSource(classFor('objectDefinitionSource', AnnotationFilterInvocationDefinition)) {
-                    application = grailsApplication
+                    application = ref('grailsApplication')
                     grailsUrlConverter = ref('grailsUrlConverter')
                     httpServletResponseExtension = ref('httpServletResponseExtension')
                     if (conf.rejectIfNoRule instanceof Boolean) {
@@ -490,8 +496,25 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             preAuthenticationChecks(classFor('preAuthenticationChecks', DefaultPreAuthenticationChecks))
             postAuthenticationChecks(classFor('postAuthenticationChecks', DefaultPostAuthenticationChecks))
 
-            daoAuthenticationProvider(classFor('daoAuthenticationProvider', DaoAuthenticationProvider), ref('userDetailsService')) {
-                passwordEncoder = ref('passwordEncoder')
+            if (conf.useDigestAuth && !conf.digest.useCleartextPasswords) {
+                // what is stored is the hash a browser computes, which no PasswordEncoder can make since it is not given
+                // the username, so the application makes it
+                conf.digest.passwordAlreadyEncoded = true
+            }
+
+            // with Digest authentication what is stored is what the filter needs, which passwordEncoder cannot compare
+            // with a password, so the provider compares it itself and passwordEncoder stays as configured
+            Class daoAuthenticationProviderClass = classFor('daoAuthenticationProvider',
+                    conf.useDigestAuth ? DigestDaoAuthenticationProvider : DaoAuthenticationProvider)
+            boolean digestProvider = DigestDaoAuthenticationProvider.isAssignableFrom(daoAuthenticationProviderClass)
+            daoAuthenticationProvider(daoAuthenticationProviderClass, ref('userDetailsService')) {
+                if (digestProvider) {
+                    realmName = conf.digest.realmName // 'Grails Realm'
+                    passwordAlreadyEncoded = conf.digest.passwordAlreadyEncoded
+                }
+                else {
+                    passwordEncoder = ref('passwordEncoder')
+                }
                 userCache = ref('userCache')
                 preAuthenticationChecks = ref('preAuthenticationChecks')
                 postAuthenticationChecks = ref('postAuthenticationChecks')
@@ -503,11 +526,21 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             String algorithm = conf.password.algorithm
 
             log.trace 'Using {} algorithm', algorithm
-            passwordEncoder(classFor('passwordEncoder', DelegatingPasswordEncoder), algorithm, idToPasswordEncoder(conf))
+            passwordEncoders(SpringSecurityCoreGrailsPlugin, conf.password.encodeHashAsBase64,
+                    conf.password.hash.iterations, conf.password.bcrypt.logrounds) { bean ->
+                bean.factoryMethod = 'passwordEncoders'
+            }
+            Class passwordEncoderClass = classFor('passwordEncoder', DelegatingPasswordEncoder)
+            boolean defaultEncoder = passwordEncoderClass == DelegatingPasswordEncoder
+            passwordEncoder(defaultEncoder ? SpringSecurityCoreGrailsPlugin : passwordEncoderClass, algorithm, ref('passwordEncoders')) { bean ->
+                if (defaultEncoder) {
+                    bean.factoryMethod = 'delegatingPasswordEncoder'
+                }
+            }
 
             /** userDetailsService */
             userDetailsService(classFor('userDetailsService', GormUserDetailsService)) {
-                grailsApplication = grailsApplication
+                grailsApplication = ref('grailsApplication')
             }
 
             /** authenticationUserDetailsService */
@@ -733,13 +766,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             applicationContext.registerAlias 'securityDebugFilter', 'springSecurityFilterChain'
         }
 
-        if (conf.useDigestAuth) {
-            def passwordEncoder = applicationContext.passwordEncoder
-// TODO            if (passwordEncoder instanceof DigestAuthPasswordEncoder) {
-//                passwordEncoder.resetInitializing()
-//            }
-        }
-
         if (conf.rejectRequestsDuringStartup) {
             // the startup gate opens once this has run and the application has started
             applicationContext.springSecurityStartupGateFilter.markInitialized()
@@ -895,17 +921,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
     private configureDigestAuth = { conf ->
 
-        if (conf.digest.useCleartextPasswords) {
-            passwordEncoder(classFor('passwordEncoder', DelegatingPasswordEncoder), ENCODING_ID_NOOP, idToPasswordEncoder(conf))
-        }
-        else {
-            conf.digest.passwordAlreadyEncoded = true
-            conf.dao.reflectionSaltSourceProperty = conf.userLookup.usernamePropertyName
-            passwordEncoder(classFor('passwordEncoder', DigestAuthPasswordEncoder)) {
-                realm = conf.digest.realmName
-            }
-        }
-
         digestAuthenticationEntryPoint(classFor('digestAuthenticationEntryPoint', DigestAuthenticationEntryPoint)) {
             realmName = conf.digest.realmName // 'Grails Realm'
             key = conf.digest.key // 'changeme'
@@ -973,7 +988,12 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
         def providerRefs = createRefList(SpringSecurityUtils.providerNames)
 
         /** authenticationManager */
-        authenticationManager(classFor('authenticationManager', ProviderManager), providerRefs) {
+        Class authenticationManagerClass = classFor('authenticationManager', ProviderManager)
+        boolean defaultManager = authenticationManagerClass == ProviderManager
+        authenticationManager(defaultManager ? SpringSecurityCoreGrailsPlugin : authenticationManagerClass, providerRefs) { bean ->
+            if (defaultManager) {
+                bean.factoryMethod = 'providerManager'
+            }
             authenticationEventPublisher = ref('authenticationEventPublisher')
             eraseCredentialsAfterAuthentication = conf.providerManager.eraseCredentialsAfterAuthentication // true
         }
@@ -987,7 +1007,12 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
         securityFilterChains(classFor('securityFilterChains', ArrayList))
 
-        springSecurityFilterChainProxy(classFor('springSecurityFilterChainProxy', FilterChainProxy), ref('securityFilterChains')) {
+        Class filterChainProxyClass = classFor('springSecurityFilterChainProxy', FilterChainProxy)
+        boolean defaultProxy = filterChainProxyClass == FilterChainProxy
+        springSecurityFilterChainProxy(defaultProxy ? SpringSecurityCoreGrailsPlugin : filterChainProxyClass, ref('securityFilterChains')) { bean ->
+            if (defaultProxy) {
+                bean.factoryMethod = 'filterChainProxy'
+            }
             filterChainValidator = ref('filterChainValidator')
             firewall = ref('httpFirewall')
         }
@@ -1106,7 +1131,13 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 
         authenticationDetailsSource(classFor('authenticationDetailsSource', WebAuthenticationDetailsSource))
 
-        requestMatcher(classFor('requestMatcher', AnyRequestMatcher))
+        Class requestMatcherClass = classFor('requestMatcher', SavedRequestMatcher)
+        requestMatcher(requestMatcherClass) {
+            // a class the application configures in its place need not have this property
+            if (SavedRequestMatcher.isAssignableFrom(requestMatcherClass)) {
+                ignoredPatterns = conf.requestCache.ignoredPatterns ?: []
+            }
+        }
 
         requestCache(classFor('requestCache', HttpSessionRequestCache)) {
             createSessionAllowed = conf.requestCache.createSession // true
@@ -1167,22 +1198,62 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
         beanTypeResolver.resolveType beanName, defaultType
     }
 
+    /**
+     * The default {@code passwordEncoder}. Its constructors overlap, so ahead-of-time processing cannot choose one for
+     * the reference a bean definition holds, and an application cannot build a native image.
+     *
+     * @since 9.1
+     */
+    static DelegatingPasswordEncoder delegatingPasswordEncoder(String algorithm, Map<String, PasswordEncoder> encoders) {
+        new DelegatingPasswordEncoder(algorithm, encoders)
+    }
+
+    /**
+     * The default {@code authenticationManager}. Its constructors overlap, so ahead-of-time processing cannot choose one
+     * for the list of references a bean definition holds, and an application cannot build a native image.
+     *
+     * @since 9.1
+     */
+    static ProviderManager providerManager(List<AuthenticationProvider> providers) {
+        new ProviderManager(providers)
+    }
+
+    /**
+     * The default {@code springSecurityFilterChainProxy}, whose constructors overlap as {@code ProviderManager}'s do.
+     *
+     * @since 9.1
+     */
+    static FilterChainProxy filterChainProxy(List<SecurityFilterChain> filterChains) {
+        new FilterChainProxy(filterChains)
+    }
+
     static Map<String, PasswordEncoder> idToPasswordEncoder(ConfigObject conf) {
+        passwordEncoders((boolean) conf.password.encodeHashAsBase64, (int) conf.password.hash.iterations,
+                (int) conf.password.bcrypt.logrounds)
+    }
+
+    /**
+     * The encoders {@code passwordEncoder} chooses between by id, as a bean created from plain values. Ahead-of-time
+     * processing cannot write out a bean definition that holds the encoders themselves, so an application with them in
+     * one cannot build a native image.
+     *
+     * @since 9.1
+     */
+    static Map<String, PasswordEncoder> passwordEncoders(boolean encodeHashAsBase64, int iterations, int bcryptLogRounds) {
 
         MessageDigestPasswordEncoder messageDigestPasswordEncoderMD5 = new MessageDigestPasswordEncoder(ENCODING_ID_MD5)
-        messageDigestPasswordEncoderMD5.encodeHashAsBase64 = conf.password.encodeHashAsBase64 // false
-        messageDigestPasswordEncoderMD5.iterations = conf.password.hash.iterations // 10000
+        messageDigestPasswordEncoderMD5.encodeHashAsBase64 = encodeHashAsBase64
+        messageDigestPasswordEncoderMD5.iterations = iterations
 
         MessageDigestPasswordEncoder messageDigestPasswordEncoderSHA1 = new MessageDigestPasswordEncoder(ENCODING_ID_SHA1)
-        messageDigestPasswordEncoderSHA1.encodeHashAsBase64 = conf.password.encodeHashAsBase64 // false
-        messageDigestPasswordEncoderSHA1.iterations = conf.password.hash.iterations // 10000
+        messageDigestPasswordEncoderSHA1.encodeHashAsBase64 = encodeHashAsBase64
+        messageDigestPasswordEncoderSHA1.iterations = iterations
 
         MessageDigestPasswordEncoder messageDigestPasswordEncoderSHA256 = new MessageDigestPasswordEncoder(ENCODING_IDSHA256)
-        messageDigestPasswordEncoderSHA256.encodeHashAsBase64 = conf.password.encodeHashAsBase64 // false
-        messageDigestPasswordEncoderSHA256.iterations = conf.password.hash.iterations // 10000
+        messageDigestPasswordEncoderSHA256.encodeHashAsBase64 = encodeHashAsBase64
+        messageDigestPasswordEncoderSHA256.iterations = iterations
 
-        int strength = conf.password.bcrypt.logrounds
-        [(ENCODING_ID_BCRYPT): new BCryptPasswordEncoder(strength),
+        [(ENCODING_ID_BCRYPT): new BCryptPasswordEncoder(bcryptLogRounds),
          (ENCODING_ID_LDAP): new LdapShaPasswordEncoder(),
          (ENCODING_ID_MD4): new Md4PasswordEncoder(),
          (ENCODING_ID_MD5): messageDigestPasswordEncoderMD5,

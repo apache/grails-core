@@ -23,13 +23,13 @@ import grails.plugin.springsecurity.annotation.Secured
 import grails.validation.Validateable
 
 /**
- * This controller is used to verify that form parameters on PUT and PATCH requests are available
+ * This controller is used to verify that form parameters on PUT, PATCH and QUERY requests are available
  */
 class TestFormParamsController {
 
     static allowedMethods = [
-            permitAll  : ["PUT", "PATCH"],
-            permitAdmin: ["PUT", "PATCH"]
+            permitAll  : ["PUT", "PATCH", "QUERY"],
+            permitAdmin: ["PUT", "PATCH", "QUERY"]
     ]
 
     @Secured(['permitAll'])

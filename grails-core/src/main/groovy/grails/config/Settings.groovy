@@ -412,6 +412,18 @@ interface Settings {
      * @since 9.0
      */
     String SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT = 'false'
+
+    /**
+     * Whether an exception a controller action throws, that no {@code @ExceptionHandler} method handles, is written as an
+     * RFC 9457 problem, as Spring MVC writes one with {@code ProblemDetailsConfigurer.renderUnhandledExceptions}, except
+     * to a client that prefers HTML or where a URL mapping names the exception, which the Grails exception resolver
+     * resolves as without it. It turns on {@link #SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS} unless the application sets
+     * that, since a problem is the last resort after those methods. Defaults to {@code false}.
+     *
+     * @since 9.1
+     */
+    String SETTING_EXCEPTION_RESOLVER_PROBLEM_DETAILS = 'grails.exceptionresolver.problemDetails'
+
     /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */

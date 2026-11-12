@@ -315,7 +315,7 @@ class ControllerJsonSerializationSpec extends Specification implements Controlle
         response.status == 422
         response.contentType == 'application/problem+json'
         response.json.status == 422
-        response.json.instance == '/books'
+        !response.json.containsKey('instance')
     }
 
     void 'a status respond is given decides the status of a problem response, and the problem keeps its own'() {
@@ -369,7 +369,7 @@ class ControllerJsonSerializationSpec extends Specification implements Controlle
         response.status == 409
         response.contentType == 'application/problem+json'
         response.json.status == 409
-        response.json.instance == '/books'
+        !response.json.containsKey('instance')
 
         where:
         format << ['html', 'csv']
@@ -786,7 +786,7 @@ class ControllerProblemDefaultsSpec extends Specification implements ControllerU
         response.status == 409
         response.contentType == 'application/problem+json'
         response.json.status == 409
-        response.json.instance == '/books'
+        !response.json.containsKey('instance')
 
         where:
         format << ['json', 'html', 'csv']
@@ -973,7 +973,7 @@ class ControllerProblemPageSpec extends Specification implements ControllerUnitT
         view == '/errors/problem'
         model.problem.is(problem)
         response.status == 409
-        problem.instance == URI.create('/books')
+        problem.instance == null
     }
 }
 

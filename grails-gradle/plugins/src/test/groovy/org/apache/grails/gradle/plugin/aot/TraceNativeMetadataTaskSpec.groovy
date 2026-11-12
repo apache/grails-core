@@ -20,6 +20,11 @@ package org.apache.grails.gradle.plugin.aot
 
 import java.net.CookieHandler
 import java.net.CookieManager
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.YearMonth
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -159,6 +164,88 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             !posted.contains('nosuchfield')
     }
 
+    void 'a field rendered with an empty value is filled in, so that the form can succeed'() {
+        given: 'blank fields fail validation, the page answers with the form again, and the save is never recorded'
+            TraceNativeMetadataTask task = task([], ['/scaffolded'])
+
+        when:
+            task.trace()
+
+        then:
+            String submitted = requested.find { String line -> line.startsWith('POST /scaffolded-save') }
+            submitted =~ /username=traced-\d+/
+            submitted.contains('password=traced-secret')
+
+        and: 'what a field does say is sent, and a hidden field is the page\'s own, whatever it says'
+            submitted.contains('nickname=kept')
+            submitted.contains('_csrf=token')
+            submitted =~ /version=(&|$)/
+    }
+
+    void 'a field rendered empty is filled in with something its type accepts'() {
+        given: 'a number or a date sent text fails to bind, and the form answering again with a 200 reads as a save'
+            TraceNativeMetadataTask task = task([], ['/typed'])
+
+        when:
+            task.trace()
+
+        then:
+            Map<String, String> sent = postedTo('/typed-save')
+            with(sent) {
+                available == 'on'
+                (title =~ /^traced-\d+$/) && title.size() <= 12
+                (notes =~ /^\d+$/) && notes.size() <= 5
+                query =~ /^traced-\d+$/
+                secret == 'traced-secret'
+                new BigDecimal(pages) >= 0
+                new BigDecimal(rating) >= 3 && new BigDecimal(rating) <= 5
+                new BigDecimal(price) <= 0.5
+                new BigDecimal(volume) >= 10 && new BigDecimal(volume) <= 20
+                LocalDate.parse(released)
+                launched == '2999-01-01'
+                LocalDateTime.parse(startsAt)
+                LocalTime.parse(opensAt)
+                YearMonth.parse(issue)
+                sprint ==~ /\d{4}-W\d{2}/
+                contact ==~ /traced-\d+@example\.com/
+                (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
+                new URI(homepage).scheme == 'https' && new URI(homepage).host
+                phone ==~ /\d+/
+                colour ==~ /#[0-9a-f]{6}/
+            }
+
+        and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
+            sent._available == ''
+    }
+
+    void 'a select sends one of its options'() {
+        given: 'an enum, an association and a date picker are rendered as selects, and only an option binds'
+            TraceNativeMetadataTask task = task([], ['/select'])
+
+        when:
+            task.trace()
+
+        then: 'the first option where none is selected, as a browser sends'
+            Map<String, String> sent = postedTo('/select-save')
+            sent.status == 'DRAFT'
+            sent.author == 'null'
+
+        and: 'the selected one where one is'
+            sent.released_day == '9'
+            sent.tags == '2'
+            sent.released == 'date.struct'
+
+        and: 'never one that cannot be chosen, nor one whose value only reads like the attribute'
+            sent.format == 'HARDBACK'
+
+        and: 'the text of an option that has no value, inside a group as much as outside one'
+            sent.genre == 'Crime'
+
+        and: 'and nothing for a select with no options, while the fields after it are still read'
+            sent.nothing == ''
+            sent.title =~ /^traced-\d+$/
+    }
+
     void 'the form with the most fields is the one submitted'() {
         given: 'a page carrying a layout search form ahead of its own'
             TraceNativeMetadataTask task = task([], ['/create'])
@@ -264,6 +351,46 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             e.message.contains('no form on the page')
     }
 
+    void 'a path is not asked for while the application still answers that it is not ready'() {
+        given: 'the Spring Security plugin answers every request with 503 and Retry-After until the application has started'
+            TraceNativeMetadataTask task = task(['/'], [], 'gated')
+
+        when:
+            task.trace()
+
+        then: 'where it would otherwise record the refusal and fail'
+            notThrown(GradleException)
+            requested.contains('GET /')
+    }
+
+    void 'an application whose home page answers 503 of its own accord is traced without waiting'() {
+        given: 'a 503 without Retry-After, which does not say it will change'
+            TraceNativeMetadataTask task = task(['/page'], [], 'homePageDown')
+            task.startTimeoutSeconds.set(60)
+            long began = System.nanoTime()
+
+        when:
+            task.trace()
+
+        then: 'rather than after sitting out the whole of the start timeout'
+            notThrown(GradleException)
+            requested.contains('GET /page')
+            Duration.ofNanos(System.nanoTime() - began) < Duration.ofSeconds(30)
+    }
+
+    void 'an application whose home page always says to come back is still traced once the timeout has passed'() {
+        given: 'waited for no longer than the timeout'
+            TraceNativeMetadataTask task = task(['/page'], [], 'homePageRetrying')
+            task.startTimeoutSeconds.set(5)
+
+        when:
+            task.trace()
+
+        then:
+            notThrown(GradleException)
+            requested.contains('GET /page')
+    }
+
     void 'a path that answers with an error fails the trace'() {
         given: 'because what would be recorded is the error page rather than the page'
             TraceNativeMetadataTask task = task(['/broken'], [])
@@ -287,6 +414,83 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
         then: 'a save that 500s during tracing records the failure and nothing of the save'
             GradleException e = thrown()
             e.message.contains('did not answer with the page')
+    }
+
+    void 'a request is made with the method, type, body and accept it names'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'query', path: '/book/search', contentType: 'application/json',
+                                body: '{"title":"Grails"}', accept: 'application/json']])
+
+        when:
+            task.trace()
+
+        then: 'an action restricted to QUERY answers nothing else, so nothing else records what it reaches'
+            requested.contains('QUERY /book/search {"title":"Grails"}')
+            requested.contains('HEADERS application/json application/json')
+    }
+
+    void 'a request that names only its method and path sends no body, and accepts what a path does'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'DELETE', path: '/book/1']])
+
+        when:
+            task.trace()
+
+        then:
+            requested.contains('DELETE /book/1')
+            requested.contains('HEADERS null text/html,*/*')
+    }
+
+    void 'requests are made after the forms, whose session they are in'() {
+        given: 'a request of a signed-in client is only worth making once the login form has been submitted'
+            TraceNativeMetadataTask task = task(['/after'], ['/login'])
+            task.requests.set([[method: 'QUERY', path: '/protected']])
+
+        when:
+            task.trace()
+
+        then:
+            requested.findIndexOf { it.startsWith('POST /authenticate') } < requested.indexOf('QUERY /protected')
+            requested.indexOf('QUERY /protected') < requested.indexOf('GET /after')
+
+        and: 'and it was not sent on to the login page'
+            requested.count('GET /login') == 1
+    }
+
+    void 'a request that answers with an error fails the trace'() {
+        given:
+            TraceNativeMetadataTask task = task([], [])
+            task.requests.set([[method: 'QUERY', path: '/broken']])
+
+        when:
+            task.trace()
+
+        then:
+            GradleException e = thrown()
+            e.message.contains('QUERY /broken -> 500')
+    }
+
+    void 'a request that does not say what to send, or misspells it, fails the trace rather than sending something else'() {
+        given: 'listed after one that can be made, and alongside a path'
+            TraceNativeMetadataTask task = task(['/'], [])
+            task.requests.set([[method: 'QUERY', path: '/book/valid'], request])
+
+        when:
+            task.trace()
+
+        then: 'the one that cannot be made is named'
+            GradleException e = thrown()
+            e.message.contains('a request names its method and path')
+            !e.message.contains('/book/valid')
+
+        and: 'before the application is started, rather than once it has been started and traced'
+            requested.isEmpty()
+            !new File(task.temporaryDir, 'trace.log').exists()
+
+        where:
+            request << [[path: '/book/search'], [method: 'QUERY'], [method: 'QUERY', path: '/book/search', bodyy: '{}']]
     }
 
     void 'the cookie handler the build had is put back after a trace'() {
@@ -320,6 +524,16 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
         cleanup:
             CookieHandler.default = null
+    }
+
+    /** The fields a form was submitted with, by name, from what the application was sent. */
+    private Map<String, String> postedTo(String action) {
+        String line = requested.find { String request -> request.startsWith("POST ${action} ") }
+        assert line, "nothing was posted to ${action}: ${requested}"
+        line.substring("POST ${action} ".length()).split('&').collectEntries { String pair ->
+            List<String> parts = pair.split('=', 2) as List<String>
+            [(URLDecoder.decode(parts[0], 'UTF-8')): URLDecoder.decode(parts.size() > 1 ? parts[1] : '', 'UTF-8')]
+        } as Map<String, String>
     }
 
     void 'a java without the agent is refused before the application is started'() {

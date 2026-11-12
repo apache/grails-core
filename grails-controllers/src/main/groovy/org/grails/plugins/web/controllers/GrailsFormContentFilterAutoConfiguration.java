@@ -35,8 +35,8 @@ import org.grails.web.config.http.GrailsFilters;
 
 /**
  * Guarantees a {@link FormContentFilter} for every Grails servlet web application, so
- * {@code application/x-www-form-urlencoded} bodies of {@code PUT}, {@code PATCH} and {@code DELETE}
- * requests are parsed into request parameters and are visible through the standard
+ * {@code application/x-www-form-urlencoded} bodies of {@code PUT}, {@code PATCH}, {@code DELETE} and
+ * {@code QUERY} requests are parsed into request parameters and are visible through the standard
  * {@code request.getParameter(...)} API. Only that content type is affected — other request bodies
  * (JSON, multipart, etc.) are untouched and remain available to data binding.
  *
@@ -69,7 +69,7 @@ public class GrailsFormContentFilterAutoConfiguration {
     /**
      * Warns, once at startup, that form-content parsing has been switched off. Registered only when
      * {@code spring.mvc.formcontent.filter.enabled=false} is set and no {@link FormContentFilter} is
-     * present, so a deliberate opt-out is visible rather than silently leaving PUT/PATCH/DELETE form
+     * present, so a deliberate opt-out is visible rather than silently leaving PUT/PATCH/DELETE/QUERY form
      * bodies unparsed — for controllers or for a plugin such as Spring Security.
      */
     @Bean
@@ -77,7 +77,7 @@ public class GrailsFormContentFilterAutoConfiguration {
     @ConditionalOnProperty(name = "spring.mvc.formcontent.filter.enabled", havingValue = "false")
     public FormContentParsingDisabledWarning formContentParsingDisabledWarning() {
         logger.warn("Form-content parsing is disabled (spring.mvc.formcontent.filter.enabled=false): " +
-                "form-encoded PUT, PATCH and DELETE request bodies will not be parsed into request " +
+                "form-encoded PUT, PATCH, DELETE and QUERY request bodies will not be parsed into request " +
                 "parameters, for controllers or for the Spring Security filter chain.");
         return new FormContentParsingDisabledWarning();
     }

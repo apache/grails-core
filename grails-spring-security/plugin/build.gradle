@@ -130,6 +130,10 @@ apply {
     from rootProject.layout.projectDirectory.file('gradle/spring-security-test-config.gradle')
 }
 
+// DefaultSecurityConfig is compiled, so that loading it finds the class rather than compiling the script at every
+// startup, which a native image cannot do.
+sourceSets.main.groovy.srcDir('grails-app/conf')
+
 tasks.named('generateConfigurationMetadata') {
     dslConfigurationFiles.from(file('grails-app/conf/DefaultSecurityConfig.groovy'))
     dslRootPrefixes.put('security', 'grails.plugin.springsecurity')

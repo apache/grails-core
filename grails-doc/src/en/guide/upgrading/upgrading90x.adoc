@@ -17,10 +17,9 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-=== Upgrade Instructions for Grails and Related Dependencies
+=== Upgrade Instructions for Grails 8 to Grails 9
 
-To ensure compatibility with Grails {version}, please review the following upgrade instructions carefully.
-This guide outlines the necessary steps and warnings to upgrade your Grails project from Grails 8.x to Grails 9.
+This guide outlines the changes introduced in Grails 9 and the steps required to upgrade your application.
 
 [TIP]
 ====
@@ -38,10 +37,171 @@ skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
 
 ==== 1. Groovy 6
 
-Grails 9 builds on Groovy {groovyVersion} and the matching Spock {spockVersion}; Java 21, Spring Boot {springBootVersion} and Spring Framework are unchanged from Grails 8.
+Grails 9 builds on Groovy {groovyVersion} and the matching Spock {spockVersion}; Java 21 is unchanged from Grails 8.
 The Grails BOM manages Groovy and Spock, so remove any version an application pins for them and review the https://groovy-lang.org/releasenotes/groovy-6.0.html[Groovy 6 release notes] for language changes that affect application code.
 
-==== 2. GPars Integration Deprecated in Favour of Groovy Concurrency
+==== 2. Spring Boot 4.2 and Spring Framework 7.1
+
+Grails 9 moves from Spring Boot 4.1 and Spring Framework 7.0, which Grails 8 uses, to Spring Boot {springBootVersion} and Spring Framework {springVersion}.
+The managed versions that change include Spring Security 7.2, Spring Data 2026.1, Micrometer 1.18 and Reactor 2026.0.
+Review the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes] for the changes that affect your application.
+The ones most likely to affect a Grails application are:
+
+* *`server.forward-headers-strategy: framework` reads only the `+X-Forwarded-*+` headers by default.*
+Spring Framework 7.1's `ForwardedHeaderFilter` reads either the RFC 7239 `Forwarded` header or the `+X-Forwarded-*+` headers, and Spring Boot 4.2 configures it for `+X-Forwarded-*+`.
+Before, it read `Forwarded` when the request carried one and `+X-Forwarded-*+` otherwise.
+If your reverse proxy sends `Forwarded`, set `spring.mvc.forwarded-headers.header-format: standard`.
+The filter also ignores `X-Forwarded-Prefix` now, where it used to add it to the context path, so if your proxy strips a path prefix and sends that header, absolute links and redirects lose the prefix until you set `spring.mvc.forwarded-headers.use-forwarded-prefix: true`.
+Spring Boot 4.2 also registers the filter from its Spring MVC auto-configuration, which backs off when the application declares `@EnableWebMvc`; such an application must now register a `ForwardedHeaderFilter` itself.
+
+* *Embedded Tomcat keeps relative redirect locations relative.*
+`server.tomcat.servlet.use-relative-redirects`, renamed from `server.tomcat.use-relative-redirects`, now defaults to `true`, Tomcat's own default.
+A redirect sent through `HttpServletResponse.sendRedirect` with a path, such as a controller `chain` call, a Spring Security redirect or a `redirect:` view name, now has a relative `Location` header instead of an absolute URL.
+A controller `redirect` sets the `Location` header itself and still sends an absolute URL unless you pass `absolute: false`.
+Browsers resolve relative locations; set the property to `false` if a client or test expects an absolute URL.
+
+* *`TestRestTemplate` is deprecated for removal.*
+Spring Framework 7.1 deprecates `RestTemplate`, and Spring Boot 4.2 deprecates `TestRestTemplate` and `@AutoConfigureTestRestTemplate` with it.
+Move `@SpringBootTest` tests to `RestTestClient`, which `@AutoConfigureRestTestClient` injects:
++
+[source,groovy]
+----
+// Before
+import org.springframework.boot.resttestclient.TestRestTemplate
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
+class BookApiSpec extends Specification {
+    @Autowired TestRestTemplate rest
+}
+
+// After
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient
+import org.springframework.test.web.servlet.client.RestTestClient
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureRestTestClient
+class BookApiSpec extends Specification {
+    @Autowired RestTestClient client
+}
+----
+
+* *A problem detail no longer gets the request path as its `instance`.*
+RFC 9457 defines `instance` as a URI that identifies the specific occurrence of a problem, so Spring Framework 7.1 no longer sets it to the request path when a handler method returns a `ProblemDetail` or an `ErrorResponse`.
+`respond` follows it: a `ProblemDetail` or `ErrorResponse` it writes, and the problem it writes for validation errors, no longer get one either.
+A client that reads `instance` gets it only where the application sets it: in a `ResponseEntityExceptionHandler` for Spring MVC controllers, and on the problem an action responds with, including one `validationProblemDetailFactory.create(errors)` makes for validation errors:
++
+[source,groovy]
+----
+ProblemDetail problem = validationProblemDetailFactory.create(book.errors)
+problem.instance = URI.create("urn:uuid:${UUID.randomUUID()}")
+respond problem
+----
+
+* *Spring MVC no longer detects the JAXB XML converter.*
+Spring Framework 7.1 stops auto-detecting the JAXB message converter for server applications.
+Grails `render` and `respond` write XML through Grails' own converters and are unaffected.
+A Spring MVC `@RestController` that returns JAXB-annotated objects needs the converter registered explicitly, as the Spring Framework 7.1 release notes show.
+
+* *Tests load static nested `@Configuration` classes from their superclasses and enclosing classes.*
+The Spring TestContext Framework used to ignore such a class unless its class hierarchy declared `@ContextConfiguration`, and now adds it to the test's application context.
+Grails 8 already logs a warning for each one it ignores, so a test run on Grails 8 shows the affected tests.
+Remove the `@Configuration` annotation, or move the class to a top-level class, if the test should not load it.
+
+* *`bootBuildImage` builds on Ubuntu 26.04.*
+The default builder is `paketobuildpacks/ubuntu-resolute-builder`, in place of `paketobuildpacks/builder-noble-java-tiny`, and images are based on Ubuntu 26.04 instead of 24.04.
+With no `builder` configured, the run image is `paketobuildpacks/ubuntu-resolute-run-tiny:latest`, which still has no shell; with one configured, it is the run image of the builder, which for `ubuntu-resolute-builder` has a shell.
+The builder no longer pins the version of the run image, so set both `builder` and `runImage` to specific versions for repeatable images, or set `builder` to `paketobuildpacks/builder-noble-java-tiny` to keep the previous one.
+
+* *An exception an action throws is now recorded as an error on the HTTP server observation.*
+When an error view answered, as the `"500"(view: '/error')` mapping of a generated application does, `http.server.requests` tagged the 500 with `error` and `exception` values of `none`, and tracing did not see a failure.
+A `500` mapping to a controller tagged it with `GrailsWrappedRuntimeException` and with the `uri` of that controller, so every failure it answered looked like the same route.
+Both now report the exception the action threw and the route of the action, and the span of the request is marked as failed.
+That includes an `Error`, such as a failed `assert`, rather than the `ServletException` Spring MVC wraps it in.
+These requests were already counted with `outcome=SERVER_ERROR`, but an alert that counts a non-`none` `error` value will see more server errors than before, and a dashboard that reads the `uri` of an error controller will find those failures under the routes of the actions.
+After a forward to an error controller, the `jakarta.servlet.error.exception` request attribute holds the exception the action threw rather than a `GrailsWrappedRuntimeException`, for a filter that reads it once the chain has returned. Inside the error controller it still holds the wrapper.
+A client error is not recorded, and neither is a failure inside `g:include`, whose error page is rendered inside a page that goes on to answer the request.
+The route is now set before the Grails interceptors run, so that a failure in one is reported under the route of the action.
+An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect.
+It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
+
+* *`http.server.requests.active` is no longer registered by default.*
+Spring Boot 4.2 makes this long task timer opt-in.
+A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
+
+* *`spring-boot-starter-amqp` no longer means RabbitMQ.*
+It is now the starter for generic AMQP 1.0, and RabbitMQ has starters of its own.
+An application that uses RabbitMQ through `spring-boot-starter-amqp` or `spring-boot-starter-amqp-test` changes to `spring-boot-starter-rabbitmq` or `spring-boot-starter-rabbitmq-test`, and any import of `org.springframework.boot.amqp.autoconfigure` to `org.springframework.boot.rabbitmq.autoconfigure`.
+RabbitMQ over AMQP 1.0 has `spring-boot-starter-amqp-rabbitmq`.
+
+* *The Spring Security plugin no longer saves the requests browsers send on their own.*
+A denied request for `/apple-touch-icon.png`, `/manifest.json` or the `/.well-known/appspecific/com.chrome.devtools.json` that Chrome DevTools sends used to be saved, so a login redirected to it instead of to the page the user asked for.
+Spring Security 7.2's configuration DSL ignores these paths, which the plugin does not use, so the plugin now ignores them too, with `grails.plugin.springsecurity.requestCache.ignoredPatterns`.
+An application that secures a page at one of these paths and wants a login to return to it can leave the path out of that list.
+
+* *Digest authentication in the Spring Security plugin starts and signs users in.*
+`useDigestAuth` with its default of hashed passwords used to fail at startup, naming an encoder that no longer exists.
+What a user has stored is now the hash a browser computes, which the application computes, as the link:security.html#core-basicAndDigestAuth[guide] shows.
+With `digest.useCleartextPasswords`, nobody could sign in with Digest authentication, because the plugin replaced `passwordEncoder` with one that stored `{noop}secret`.
+`passwordEncoder` now stays as configured, and the application stores the password as it was typed, so an application with stored values such as `{noop}secret` removes the `{noop}` prefix from them and no longer stores them with `springSecurityService.encodePassword`.
+A form or Basic authentication signs a user in with their password in either mode.
+
+* *`fii.alwaysReauthenticate` in the Spring Security plugin takes effect.*
+The setting did nothing, because the plugin's security interceptor went straight to the access decision.
+An application that sets it now has the `Authentication` of a request to a secured URL authenticated again, while it still holds its credentials, as it does with `providerManager.eraseCredentialsAfterAuthentication` set to `false`.
+By default the credentials are erased at sign-in, so a user signed in through a form is not authenticated again.
+
+[TIP]
+====
+The Spring Boot properties migrator, described in the link:upgrading.html#upgrading80x[Grails 8 upgrade guide], finds the configuration properties Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects`.
+Spring Boot 4.2 can also make the application fail to start while such a property is left: set `spring.properties.migrator.fail` to `on-warning` to fail on renamed and removed properties, or to `on-error` to fail on removed ones only.
+The default, `never`, only logs them.
+====
+
+==== 3. graphql-java 26 for GraphQL Applications
+
+Spring Boot 4.2 manages graphql-java 26, so applications using the GraphQL plugin (`grails-data-graphql`) move from graphql-java 25 to graphql-java 26.1.
+graphql-java 26.0 contains breaking changes, listed in its https://github.com/graphql-java/graphql-java/releases/tag/v26.0[release notes].
+The ones that can affect a Grails application are:
+
+* *Query complexity limits are enforced by default.*
+A query nested more than 100 levels deep, or selecting more than 100,000 fields, now fails validation with a `MaxQueryDepthExceeded` or `MaxQueryFieldsExceeded` error.
+To raise the limits, or to turn them off, set new defaults when the application starts, for example in `BootStrap.groovy`:
++
+[source,groovy]
+----
+import graphql.validation.QueryComplexityLimits
+
+class BootStrap {
+
+    def init = {
+        QueryComplexityLimits.setDefaultLimits(QueryComplexityLimits.newLimits()
+                .maxDepth(150)
+                .maxFieldsCount(200_000)
+                .build())
+        // or, to turn the limits off:
+        // QueryComplexityLimits.setDefaultLimits(QueryComplexityLimits.NONE)
+    }
+}
+----
++
+graphql-java's parser separately rejects a query nested more than about 165 levels deep, so a `maxDepth` above that has no effect.
+
+* *Schemas built in code are validated like schemas built from SDL.*
+A required argument or input field (non-null with no default value) can no longer be deprecated.
+The schema the plugin generates never deprecates an argument or an input field, but arguments and input types an application adds through a `GraphQLSchemaInterceptor` must follow the rule.
+
+* *Additional schema types must be named types.*
+`GraphQLSchemaInterceptor.interceptSchema` still receives the additional types as a `Set<GraphQLType>`, and the plugin unwraps list and non-null wrappers before it builds the schema, so existing interceptors need no change.
+Code that builds a `GraphQLSchema` directly must pass `GraphQLNamedType` instances to `GraphQLSchema.Builder.additionalTypes`.
+
+The other breaking changes (the validation rule filter, the removal of `DirectiveInfo`, and the JSpecify nullability annotations) only affect code that uses graphql-java directly.
+The nullability annotations document existing behavior and do not change what graphql-java returns at runtime.
+
+The plugin continues to use graphql-java-extended-scalars 24.0, its latest release, which works with graphql-java 26.1.
+
+==== 4. GPars Integration Deprecated in Favour of Groovy Concurrency
 
 Groovy 6 brings a unified concurrency and parallel-processing toolkit into core under https://groovy-lang.org/releasenotes/groovy-6.0.html#concurrency-toolkit[GEP-18: Integrated Concurrency and Parallel Processing]. The `groovy.concurrent` package provides `Awaitable`, `DataflowVariable`, `Actor`, `Agent`, `Pool`, `ParallelScope` and the parallel collection methods such as `eachParallel` and `collectParallel`. The Groovy release notes describe the toolkit as modernising the patterns from GPars around virtual threads, structured concurrency and Groovy 6's `async`/`await`, and state that previous users of GPars will find much of its functionality there.
 
@@ -66,7 +226,7 @@ Applications that use GPars directly, for example `GParsPool.withPool { list.eac
 
 NOTE: Groovy 6 marks the concurrency toolkit as incubating. The Grails modules that build on it expose only the Grails `Promise` and `EventBus` contracts, so changes to the Groovy API in later Groovy releases are absorbed by Grails rather than by application code.
 
-==== 3. Groovy Code Is Compiled with invokedynamic
+==== 5. Groovy Code Is Compiled with invokedynamic
 
 Grails 8 compiles every Groovy source set of an application without invokedynamic (`grails { indy = false }` was the default). Grails 9 leaves the setting unset, so the Groovy compiler's own default applies, and on Groovy 6 that is invokedynamic. An application that set `grails { indy = true }` can remove the line. Build logic that read the property, for example `grails.indy.get()`, must allow for it having no value now: use `grails.indy.getOrElse(true)` or check `grails.indy.present`.
 
@@ -86,7 +246,7 @@ Classic call sites on Groovy 6 need `org.apache.groovy:groovy-callsite` on the c
 
 A library compiled with classic call sites needs the module too, whatever the application's own setting, because Groovy 6 loads such a class only with it; the failure is a `NoClassDefFoundError` naming `org.codehaus.groovy.runtime.callsite.CallSiteArray`. Spock 2.5, Geb 8 and the Asset Pipeline 5.2 are compiled with invokedynamic, but `org.testcontainers:testcontainers-spock` is not, so an application that uses it declares `testRuntimeOnly 'org.apache.groovy:groovy-callsite'` next to it.
 
-==== 4. XML Web Support Moves to a Separate Module
+==== 6. XML Web Support Moves to a Separate Module
 
 XML conversion, request-body binding, and REST renderers now live in the optional
 `grails-xml` module. In Grails 9 the web starter still brings it, and so does `grails-web-boot`, which the
@@ -142,14 +302,14 @@ several, so their `groovyPageLocator` and `rendererRegistry` properties are no l
 application sets them.
 
 Without the module, nothing renders XML except what the application provides, such as markup views, and `respond`
-treats XML as any format nothing renders (see section 13): it answers in the next type the client accepts that the
+treats XML as any format nothing renders (see section 15): it answers in the next type the client accepts that the
 action responds in, and a client that accepts any type, by sending `*/*` or no `Accept` header, or a browser, in the
 first format the action lists that it can render the value in, so an action that lists `['xml', 'json']` answers those
 clients in JSON. A markup view renders XML for an action that has one; for an action without one, the client's next
 type is tried. Where no type the client accepts can be rendered, `respond` sends a `406 Not Acceptable` error, or a
 `404` one for validation errors where the client accepts one of the action's formats, so that the application's error
 pages apply, and writes a `ProblemDetail` as
-`application/problem+json` (see section 11). An XML request body is not read and raises no error, while the
+`application/problem+json` (see section 13). An XML request body is not read and raises no error, while the
 request parameters bind as they do for a request without a body, except that binding it to a collection with `bindData`
 fails, as for any body of a type nothing binds; and `request.XML` throws an
 `IllegalStateException` that names the module, while a class compiled with `@CompileStatic` or `@GrailsCompileStatic`
@@ -193,11 +353,11 @@ APIs.
 This change does not affect Grails plugin descriptors. Plugin metadata continues to be generated and
 published in its existing descriptor format; `grails-xml` concerns application HTTP payloads only.
 
-==== 5. Opt Into Spring JSON Conversion
+==== 7. Opt Into Spring JSON Conversion
 
 Each JSON and XML path keeps its Grails 8 output by default in Grails 9, and has a setting that opts into the
 Jackson-based one. A `ProblemDetail` is the exception: `respond` writes it as Spring MVC writes it, whatever the
-settings, with the exceptions section 11 lists. The smaller changes that apply whatever the settings, such as `Accept`
+settings, with the exceptions section 13 lists. The smaller changes that apply whatever the settings, such as `Accept`
 headers matched whatever their case, are in sections 4, 7, 9, 11, 13, 14 and 16, and in this section, where `grails-converters`
 now brings Boot's `JsonMapper`, which Spring MVC's JSON converter then writes with.
 
@@ -235,12 +395,12 @@ now brings Boot's `JsonMapper`, which Spring MVC's JSON converter then writes wi
 | unchanged until legacy XML conversion is removed in Grails 11
 
 | `grails.exceptionresolver.springHandlers`
-| Exceptions actions throw, resolved by Spring MVC's `@ExceptionHandler` methods (see section 15)
+| Exceptions actions throw, resolved by Spring MVC's `@ExceptionHandler` methods (see section 17)
 | `false`
 | `true` in Grails 10
 
 | `grails.controllers.responseBody`
-| Values of actions annotated `@ResponseBody`, written by Spring MVC as the body (see section 16)
+| Values of actions annotated `@ResponseBody`, written by Spring MVC as the body (see section 18)
 | `false`
 | `true` in Grails 10
 |===
@@ -310,7 +470,7 @@ for the type, or a converter of another library, it is labelled with a JSON type
 `JsonMapper` too, and Spring MVC's JSON converter writes with it rather than with a mapper of its own.
 
 The standard Jackson converter uses an isolated mapper derived from Boot's configured `JsonMapper` for every value but
-a `ProblemDetail`, which Spring's converter writes with Boot's mapper itself (see section 11).
+a `ProblemDetail`, which Spring's converter writes with Boot's mapper itself (see section 13).
 It renders domain classes with the same Jackson serializer as the `JsonMapper` itself does when
 `grails.converters.json.domain.jackson.enabled` is set, and as `render ... as JSON` does with
 `grails.converters.json.legacy` set to `false` (see the section on domain classes below): the
@@ -361,10 +521,10 @@ Controller unit tests use Boot's Jackson configuration and the same setting. Sup
 `JsonMapperBuilderCustomizer` from a nested Spring `@Configuration` class, so Boot can see it before
 evaluating its conditional beans. A mapper registered by the deprecated `doWithSpring` callback or by
 `beanRegistrar()` is too late to make Boot back off. Named JSON
-configurations work through `render` and `respond` in `ControllerUnitTest`. Section 14 covers the
+configurations work through `render` and `respond` in `ControllerUnitTest`. Section 16 covers the
 other changes to web unit tests.
 
-==== 6. JSON Converter Customization Moves to Jackson
+==== 8. JSON Converter Customization Moves to Jackson
 
 The `grails.converters.JSON.registerObjectMarshaller(...)` API remains supported for
 `render ... as JSON` and converter-based rendering. Registering a marshaller does not change the
@@ -453,7 +613,7 @@ property of `JsonRenderer` and `JsonCollectionRenderer` beans, which selects one
 the `renderJson(JSON, RenderContext)` method their subclasses override to render with the legacy converter. This
 timetable does not deprecate `JSON.registerObjectMarshaller(...)`.
 
-==== 7. `grails.converters.JSON` Can Write JSON With Spring Boot's JsonMapper
+==== 9. `grails.converters.JSON` Can Write JSON With Spring Boot's JsonMapper
 
 In Grails 9, `render ... as JSON`, `respond` for a JSON request and every other use of `grails.converters.JSON` still
 render JSON as Grails 8 did, by default (see <<renderingJsonAsGrails8,Rendering JSON As Grails 8 Did>>). Setting
@@ -730,7 +890,7 @@ JSON.registerObjectMarshaller(Locale) { Locale locale -> locale.toString() }
 JSON.registerObjectMarshaller(byte[]) { byte[] bytes -> bytes as List }
 ----
 
-==== 8. Domain Classes Render as Jackson Beans of Their Persistent Properties
+==== 10. Domain Classes Render as Jackson Beans of Their Persistent Properties
 
 With `grails.converters.json.legacy` set to `false`, the JSON converter renders a domain class instance with Jackson's own
 bean serializer, which Grails shapes to the domain class, as `DomainClassMarshaller` rendered it in Grails 8, with these
@@ -788,7 +948,7 @@ The mapper renders associated instances as references of their id, such as `{"id
 or in full with `grails.converters.json.default.deep`, and proxies as the instances they proxy, and names the id of a
 reference as the referenced class names it.
 
-==== 9. Rendering Single Values as JSON
+==== 11. Rendering Single Values as JSON
 
 In Grails 8, rendering a single enum value with `render(Role.HEAD as JSON)` threw a `ConverterException`.
 It now produces the JSON string `"HEAD"`. The default enum marshaller uses the enum name, including when the
@@ -803,7 +963,7 @@ no longer throws a `ConverterException` merely because the root is a scalar.
 `JSONWriter` accepts a single value outside any object or array whatever the `grails.converters.json.legacy`
 setting, as the section on writing JSON with Spring Boot's `JsonMapper` describes.
 
-==== 10. Opt Into Jackson JSON Request Binding
+==== 12. Opt Into Jackson JSON Request Binding
 
 Grails 9 retains `JsonSlurper` request binding by default and logs a startup deprecation notice. As
 in Grails 8, an application `JsonSlurper` bean, for example one using `JsonParserType.LAX`, replaces
@@ -848,7 +1008,7 @@ as `BigDecimal` rather than `Double`, so binding a request value such as `1.15` 
 retains exactly the digits the request sent. Whole numbers bind as `Integer`, `Long`, or `BigInteger`
 when too large for a `Long`, as with the legacy parser.
 
-==== 11. REST Validation Errors Use RFC 9457 Problems
+==== 13. REST Validation Errors Use RFC 9457 Problems
 
 With `grails.web.rendering.json.spring: true`, `respond()` renders Spring `Errors` as
 `application/problem+json` instead of the legacy `{"errors": [...]}` body. Grails 9 retains the legacy
@@ -894,9 +1054,10 @@ Applications can also inject the factory when they need to create or customize t
 When `respond` receives a `ProblemDetail`, it hands it to the handler Spring MVC's handler adapter writes a
 `ResponseEntity` with, so the problem is written as a Spring MVC controller method that returns it is written: the
 application's `ResponseBodyAdvice` beans apply to it as to a method of the controller, and its
-`ErrorResponse.Interceptor` beans see it. The response has the status the problem carries, and an absent `instance` is
-set to the current resource path. A `status` argument decides the status instead, as the status of a `ResponseEntity`
-does in Spring MVC: a problem that carries another keeps its own, and Spring MVC logs a warning. A Spring
+`ErrorResponse.Interceptor` beans see it. The response has the status the problem carries, and a problem without an
+`instance` is written without one, as Spring MVC writes it. A `status` argument decides the status instead, as the
+status of a `ResponseEntity` does in Spring MVC: a problem that carries another keeps its own, and Spring MVC logs a
+warning. A Spring
 `ErrorResponse`, such as an `ErrorResponseException`, is answered with its problem, whose message codes are resolved with
 the application's messages as Spring MVC's `ResponseEntityExceptionHandler` resolves them, and with its status and
 headers, where Grails 8 wrote it as a bean with a 200. Spring MVC's content
@@ -951,14 +1112,14 @@ ValidationProblemDetailFactory includingRejectedValues(MessageSource messageSour
 }
 ----
 
-==== 12. HAL Rendering
+==== 14. HAL Rendering
 
 Existing Grails HAL JSON renderers remain available through explicit renderer registration.
 Adding `spring-boot-starter-hateoas` alone does not register a Grails renderer for Spring HATEOAS
 `EntityModel` values. Return those models from a Spring MVC controller or provide an explicit Grails
 renderer for the desired media type.
 
-==== 13. Grails Format Resolution and Spring MVC Content Negotiation
+==== 15. Grails Format Resolution and Spring MVC Content Negotiation
 
 Grails format resolution -- `withFormat`, `respond`, and `response.format` -- applies the `grails.mime.*`
 rules. Spring MVC keeps its own content negotiation: an `@RestController`, an actuator endpoint or any other
@@ -982,7 +1143,7 @@ target implements now handles its bodies in a content type no creator for `Objec
 interface of `java.lang.Class`, such as `Serializable`, no longer matches every class, nor does a renderer registered for
 one stand in as the fallback renderer of JSON and markup views. A value Spring
 rejects, such as a quality value above 1, is still read as Grails 8 read it, except where `respond` writes a
-`ProblemDetail` as without a view, which is answered as Spring MVC answers such a client (see section 11). Parameter names are read ignoring case,
+`ProblemDetail` as without a view, which is answered as Spring MVC answers such a client (see section 13). Parameter names are read ignoring case,
 as Spring reads them, so `text/html;Q=0.1` has the quality 0.1, where Grails 8 read only a lower-case `q`. The problem types of RFC 9457,
 `application/problem+json` and `application/problem+xml`, are the `json` and `xml` formats unless `grails.mime.types`,
 or a `MimeTypeProvider` bean, such as a renderer or binding source creator, provides a type of that name. A binding
@@ -1000,7 +1161,7 @@ to `all`, so an action answered with its first format;
 action responds in XML. A client that sends only a problem type is therefore answered as one that asks for that format:
 `respond` sends `406 Not Acceptable` for an action that does not respond in it, where Grails 8 answered in the action's
 first format, and `withFormat` runs no block where it has neither one for that format nor a `*` one, where Grails 8 ran
-its first block. `respond` writes a `ProblemDetail` in the type section 11 describes, whatever format this selects,
+its first block. `respond` writes a `ProblemDetail` in the type section 13 describes, whatever format this selects,
 in XML only where the action responds in XML, and any other value as the format's own type, such as `application/xml`. In `Content-Type`, Grails 8 gave `null`: a body a client
 sends as `application/problem+json` is now the `json` format, which `withFormat` selects and the JSON binding source
 binds, and one sent as `application/problem+xml` the `xml` format, which the XML binding source of `grails-xml` binds.
@@ -1038,7 +1199,7 @@ Spring MVC asks for its formats while it starts. Spring MVC negotiates
 with them only when the application enables parameter negotiation with
 `spring.mvc.contentnegotiation.favor-parameter: true`. Spring Boot leaves it disabled, so after the
 upgrade `?format=json` still does not change what a Spring MVC endpoint returns. Where it is enabled, it also decides the type `respond`
-writes a `ProblemDetail` in, as for a Spring MVC controller (see section 11). Browser formats such
+writes a `ProblemDetail` in, as for a Spring MVC controller (see section 13). Browser formats such
 as `html` and `js` are not registered, preserving Spring's reflected-file-download protection.
 Where a format has several media types, an `application/*` one is preferred over a `text/*` one, and Boot's
 `spring.mvc.contentnegotiation.media-types.*` overrides these defaults. Invalid names are skipped.
@@ -1052,7 +1213,7 @@ method of `DefaultAcceptHeaderParser` takes the requested `MimeType`, where it t
 that overrode the Grails 8 method no longer overrides it. The settings are read once for each application context, which a unit test keeps for all the features of
 its spec, so a spec sets them in `doWithConfig` rather than in a feature.
 
-==== 14. Web Unit Tests Set Up More of the Web Layer
+==== 16. Web Unit Tests Set Up More of the Web Layer
 
 Web test traits such as `ControllerUnitTest` and `TagLibUnitTest` now always include the
 `restResponder` plugin, even when a spec overrides `getIncludePlugins()`. They also provide JSON
@@ -1067,7 +1228,7 @@ on the test classpath, without loading the XML plugin's dependency graph. A spec
 asserts on the beans in its application context sees these additions. The manager is built as Spring MVC builds it, from
 `spring.mvc.contentnegotiation.*`, which a spec sets in `application.yml` or `doWithConfig`, and the spec's
 `WebMvcConfigurer` beans, so `respond` writes a `ProblemDetail` in a unit test in the type it writes it in for the
-application (see section 11). The `format` parameter that `favor-parameter` reads is one the spec adds to the request,
+application (see section 13). The `format` parameter that `favor-parameter` reads is one the spec adds to the request,
 with `request.addParameter`, as a query parameter is added, not `params.format`, which stands for the format a URL
 mapping gives and which Spring MVC does not read either. A spec for an application that declares `@EnableWebMvc`, which
 turns off Spring Boot's Spring MVC auto-configuration and with it those properties, declares the manager the
@@ -1102,7 +1263,7 @@ own, a session locale resolver among them. Without `grails-xml` on the test clas
 rather than to a `String` of XML, or reading `request.XML` fails with an `IllegalStateException` that names the module. `GrailsUnitTest` and `ServiceUnitTest` do
 not load XML or the web plugins just because those modules are on the classpath. See <<unitTesting,Unit Testing>>.
 
-==== 15. Opt Into Spring MVC Exception Handlers
+==== 17. Opt Into Spring MVC Exception Handlers
 
 Spring MVC resolves an exception with the `@ExceptionHandler` methods of the controller and of the `@ControllerAdvice`
 beans only for a handler method, which a Grails action is not, so such methods, and Spring Boot's handler of
@@ -1121,7 +1282,14 @@ grails:
         springHandlers: true
 ----
 
-==== 16. Actions Can Return Spring MVC Responses
+Spring Framework 7.1 adds `ProblemDetailsConfigurer.renderUnhandledExceptions`, which renders any exception no exception
+handler method handles as a problem. Turned on in a `WebMvcConfigurer`, it applies to Grails actions whatever
+`grails.exceptionresolver.springHandlers` says, and answers every exception, a browser's included, ahead of the Grails
+exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead,
+which writes the same problems and leaves the error page to the clients that prefer HTML. See
+<<controllerExceptionHandling,Declarative Controller Exception Handling>>.
+
+==== 18. Actions Can Return Spring MVC Responses
 
 An action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`,
 `HttpHeaders`, a `StreamingResponseBody` or a `ResponseBodyEmitter` has it written as Spring MVC writes what a handler
@@ -1144,7 +1312,7 @@ grails:
         responseBody: true
 ----
 
-==== 17. Generated GORM Identity and Version Properties Stay Within Domain Classes
+==== 19. Generated GORM Identity and Version Properties Stay Within Domain Classes
 
 Grails 9 no longer adds generated `id` and `version` properties to a non-domain superclass of a domain class.
 Previously, these properties could be added to a shared abstract base class, causing command objects extending that same base class to inherit persistence properties and fail validation for `id` and `version`.
@@ -1171,7 +1339,7 @@ When upgrading an affected application:
 
 See xref:theWebLayer#commandObjects[Command Objects] for a trait-based alternative to sharing a non-domain superclass with a domain class.
 
-==== 18. RxGORM Runs on RxJava 3
+==== 20. RxGORM Runs on RxJava 3
 
 RxGORM, the reactive variant of GORM in `org.apache.grails.data:grails-datamapping-rx`, is built on RxJava 3 instead of RxJava 1.
 Its dependency is now `io.reactivex.rxjava3:rxjava`, and the RxJava 1 artifact `io.reactivex:rxjava` is no longer on the classpath of an application that only uses RxGORM.
@@ -1220,7 +1388,7 @@ A datastore implementation of RxGORM built for Grails 8 or earlier, such as the 
 The `RxEntity` domain model has had no datastore implementation for several releases and its removal is under discussion for Grails 9, so an application that implements `RxEntity` should plan to move to `GormEntity` with the RxJava data services, which work on every GORM datastore. The import and blocking-call changes above apply to both.
 The `rx-mongodb` profile feature is removed, because the `org.grails.plugins:rx-mongodb` plugin it added has had no release since GORM 6.1 and has never been published to Maven Central, so an application generated with it could not resolve its dependencies.
 
-==== 19. RxJava 1 and RxJava 2 Async and Events Modules Are Deprecated
+==== 21. RxJava 1 and RxJava 2 Async and Events Modules Are Deprecated
 
 The RxJava 1 and RxJava 2 implementations of the Grails promise and event bus APIs, `grails-async-rxjava`, `grails-async-rxjava2`, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated for removal.
 They keep working in Grails 9 and log a warning when their promise factory or event bus is created.
@@ -1230,14 +1398,14 @@ See <<asyncPromises,Promises>> and <<events,Events>>.
 `grails-async-rxjava3` carries a `null` value as the RxJava 1 factory and every other promise factory do: `createPromise()` and `createPromise(Class)` give a promise whose `get()` returns `null`, a task that returns `null` resolves to `null`, and a `null` value keeps its place in the list that `onComplete`, `onError` and `waitAll` deliver.
 `grails-async-rxjava2` does not: there `createPromise()` and `onComplete` over a list holding a bound promise of `null` fail with a `NullPointerException`, and a task that returns `null` resolves to the `java.lang.Void` class.
 
-==== 20. Spring Boot Registers the Character Encoding Filter
+==== 22. Spring Boot Registers the Character Encoding Filter
 
 Grails no longer registers a character encoding filter of its own. It used to, and Spring Boot's backed off, so `spring.servlet.encoding` had no effect in a Grails application. Spring Boot's filter now decodes requests: it runs at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter, and `spring.servlet.encoding` configures it.
 
-* The request encoding is now overridden by default, as in any Spring Boot application, so a request that declares a charset of its own is still decoded as UTF-8: its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. The parameters of a PUT, PATCH or DELETE form are the exception, as in Grails 8: the `FormContentFilter` that parses them decodes them with the declared charset, forced or not. To keep the charset a request declares, as Grails 8 did, set `spring.servlet.encoding.force-request: false`.
+* The request encoding is now overridden by default, as in any Spring Boot application, so a request that declares a charset of its own is still decoded as UTF-8: its parameters, a body read through `getReader()`, `request.JSON` and `request.XML`, and a JSON or XML body bound to a command object or domain class. The parameters of a PUT, PATCH, DELETE or QUERY form are the exception, as in Grails 8: the `FormContentFilter` that parses them decodes them with the declared charset, forced or not. To keep the charset a request declares, as Grails 8 did, set `spring.servlet.encoding.force-request: false`.
 * Grails 8.1 already registers its encoding filter at `Ordered.HIGHEST_PRECEDENCE`, so an application coming from 8.1 sees no change in where the encoding filter runs. In an application coming from 8.0, filters ordered between `Ordered.HIGHEST_PRECEDENCE + 1` and -181, which used to run before Grails' encoding filter, now run after Spring Boot's, with the request encoding set, as section 5 of <<upgrading81x,Upgrading from Grails 8.0 to Grails 8.1>> describes. asset-pipeline's filter at -190 is one: in a packaged application (a WAR or an executable jar) it copies the request's encoding to the precompiled assets it serves, so every asset response now declares a charset, for example `text/css;charset=UTF-8`, and browsers use it for stylesheets and scripts instead of detecting their encoding. A filter among them that reads a request body sent without a charset through `getReader()` now decodes it as UTF-8 instead of ISO-8859-1.
 * `grails.filter.encoding` and `grails.filter.forceEncoding` are deprecated. Grails 9 translates them into `spring.servlet.encoding.charset` and `spring.servlet.encoding.force` and logs a warning, and a `spring.servlet.encoding` setting of the application wins over them. Use the Spring Boot properties instead.
-* `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180. A filter ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1` therefore runs right after the encoding filter, and now also ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH or DELETE form, and a response it sends without continuing the chain gets no security headers. Order it at `Ordered.HIGHEST_PRECEDENCE + 1` instead, or at `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
+* `GrailsFilters.CHARACTER_ENCODING_FILTER` is deprecated, and its order is now `Ordered.HIGHEST_PRECEDENCE`, the order of Spring Boot's encoding filter, where Grails 8.0 had -180. A filter ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1` therefore runs right after the encoding filter, and now also ahead of `FormContentFilter` and of Grails' security headers filter at `GrailsFilters.FIRST`: it no longer sees the parameters of a PUT, PATCH, DELETE or QUERY form, and a response it sends without continuing the chain gets no security headers. Order it at `Ordered.HIGHEST_PRECEDENCE + 1` instead, or at `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to keep the place it had in Grails 8.0.
 * `spring.servlet.encoding.enabled: false` turns the encoding filter off.
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.

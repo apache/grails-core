@@ -18,8 +18,19 @@
  */
 package org.grails.datastore.gorm.mongodb.embedded;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
+import io.netty.buffer.ByteBufAllocator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.util.ClassUtils;
 
@@ -40,6 +51,19 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
     public static final String NAME = "in-memory";
 
     private static final String SERVER_CLASS = "de.bwaldvogel.mongo.MongoServer";
+
+    private static final int SERVE_ONE_REQUEST_TIMEOUT_MILLIS = 5000;
+
+    /** Netty tracks about one buffer in 128, so this many allocations reach that all but certainly. */
+    private static final int ALLOCATIONS_TO_TRACK_ONE_BUFFER = 2048;
+
+    private static final int OP_MSG = 2013;
+
+    private static final byte BSON_STRING = 0x02;
+
+    private static final byte BSON_INT32 = 0x10;
+
+    private static final Logger log = LoggerFactory.getLogger(InMemoryMongoBackend.class);
 
     @Override
     public String getName() {
@@ -70,7 +94,80 @@ public class InMemoryMongoBackend implements EmbeddedMongoBackend {
         MemoryBackend backend = new RetainingMemoryBackend();
         MongoServer server = new MongoServer(backend);
         server.bind("localhost", settings.getPort());
+        serveOneRequest(addressOf(server));
+        allocateUntilOneBufferIsTracked();
         return new RunningInMemoryMongo(backend, server);
+    }
+
+    /**
+     * Where {@link #serveOneRequest(InetSocketAddress)} sends its request: the address the server has
+     * just bound, which is not the port asked for when that was 0.
+     *
+     * <p>Not private, so that the specification can put a peer there that answers as no server would,
+     * and see that the server this started is handed back all the same.
+     */
+    InetSocketAddress addressOf(MongoServer server) {
+        return server.getLocalAddress();
+    }
+
+    /**
+     * Allocates buffers until Netty's leak detection has tracked one, so that what only a tracked
+     * buffer needs is loaded as well. Netty picks the buffers it tracks at random, so the request
+     * {@link #serveOneRequest(InetSocketAddress)} sends rarely gets that far, and a buffer picked while
+     * the jars are closed fails as the first one would.
+     */
+    private static void allocateUntilOneBufferIsTracked() {
+        for (int i = 0; i < ALLOCATIONS_TO_TRACK_ONE_BUFFER; i++) {
+            ByteBufAllocator.DEFAULT.ioBuffer(1).release();
+        }
+    }
+
+    /**
+     * Has the server answer one request, so that what its event loops need is loaded while the
+     * application is starting rather than when its first client connects.
+     *
+     * <p>That client is the MongoDB driver, which connects as the application context finishes
+     * refreshing, the moment Spring Boot closes the jars of an executable jar to clear its class
+     * loader's caches. A class loaded right then fails with {@code IllegalStateException}. Reading
+     * the driver's first bytes allocates the event loop's first buffer, and an event loop that fails
+     * to load the class of it ends its thread. The driver's connections on it then never answer, and
+     * stopping the server waits forever for them to close.
+     *
+     * <p>Whatever goes wrong here goes wrong again for the first real client, where it says more, so
+     * it is only logged, and the server is handed back all the same. That includes a reply that is
+     * cut short or gives a length it cannot have: the reply is read with what reports the end of the
+     * stream as an {@link IOException}, and a length shorter than the one already read skips nothing.
+     */
+    private static void serveOneRequest(InetSocketAddress address) {
+        try (Socket client = new Socket()) {
+            client.connect(address, SERVE_ONE_REQUEST_TIMEOUT_MILLIS);
+            client.setSoTimeout(SERVE_ONE_REQUEST_TIMEOUT_MILLIS);
+            client.getOutputStream().write(isMaster());
+            // the whole reply, since closing with some of it unread resets the connection, which the server logs as an error
+            DataInputStream reply = new DataInputStream(client.getInputStream());
+            int length = Integer.reverseBytes(reply.readInt());
+            reply.skipNBytes(length - (long) Integer.BYTES);
+        }
+        catch (IOException ex) {
+            log.debug("The embedded MongoDB at {} did not answer the request it serves as it starts", address, ex);
+        }
+    }
+
+    /** The {@code isMaster} command the driver starts with, in the wire protocol's {@code OP_MSG}. */
+    private static byte[] isMaster() {
+        byte[] command = "isMaster".getBytes(StandardCharsets.UTF_8);
+        byte[] databaseField = "$db".getBytes(StandardCharsets.UTF_8);
+        byte[] database = "admin".getBytes(StandardCharsets.UTF_8);
+        int documentLength = 4 + 1 + command.length + 1 + 4 + 1 + databaseField.length + 1 + 4 + database.length + 1 + 1;
+        int messageLength = 16 + 4 + 1 + documentLength;
+        ByteBuffer message = ByteBuffer.allocate(messageLength).order(ByteOrder.LITTLE_ENDIAN);
+        message.putInt(messageLength).putInt(1).putInt(0).putInt(OP_MSG);
+        message.putInt(0).put((byte) 0);
+        message.putInt(documentLength);
+        message.put(BSON_INT32).put(command).put((byte) 0).putInt(1);
+        message.put(BSON_STRING).put(databaseField).put((byte) 0).putInt(database.length + 1).put(database).put((byte) 0);
+        message.put((byte) 0);
+        return message.array();
     }
 
     /**
