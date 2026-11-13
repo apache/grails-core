@@ -80,8 +80,19 @@ class SpringUserCacheFactoryBean implements FactoryBean<SpringCacheBasedUserCach
     @CompileStatic
     private static class CopyingUserCache extends SpringCacheBasedUserCache {
 
+        private final JCacheCache cache
+
         CopyingUserCache(JCacheCache cache) {
             super(cache)
+            this.cache = cache
+        }
+
+        /**
+         * The cache the users are stored in, which the Spring Security UI plugin shows the contents of. The superclass
+         * keeps it in a private field, which Groovy reached as {@code userCache.cache} only on that class itself.
+         */
+        JCacheCache getCache() {
+            cache
         }
 
         @Override

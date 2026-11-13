@@ -18,6 +18,7 @@
  */
 package grails.plugin.springsecurity.cache
 
+import javax.cache.Cache
 import javax.cache.CacheManager
 import javax.cache.Caching
 
@@ -79,6 +80,16 @@ class SpringUserCacheFactoryBeanSpec extends Specification {
         then:
             noExceptionThrown()
             cache.getUserFromCache('user') == null
+    }
+
+    void 'what the users are stored in can be read, as the Spring Security UI plugin shows its contents'() {
+        given:
+            cache.putUserInCache(new User('user', 'stored', []))
+
+        expect: 'read as a property, as the UI plugin\'s controller reads it'
+            def nativeCache = cache.cache.nativeCache
+            nativeCache instanceof Cache
+            ((Cache) nativeCache).iterator()*.key == ['user']
     }
 
     void 'a user that is removed is no longer cached'() {
