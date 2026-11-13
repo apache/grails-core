@@ -35,6 +35,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
+    @Shared sqlServer = DatabaseContainers.SQL_SERVER
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -75,17 +76,18 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then:
-        allFoos.size() == 2
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        allFoos.size() == expected
 
         where:
-        db           | container
-        "H2"         | null
-        "Postgres"   | postgres
-        "MySQL"      | mysql
-        "MariaDB"    | mariadb
-        "Oracle"     | oracle
-        "DB2"        | db2
+        db           | container  || expected
+        "H2"         | null       || 2
+        "Postgres"   | postgres   || 2
+        "MySQL"      | mysql      || 2
+        "MariaDB"    | mariadb    || 2
+        "Oracle"     | oracle     || 2
+        "DB2"        | db2        || 2
+        "SQL Server" | sqlServer  || 0
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
@@ -122,6 +124,37 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "MariaDB"    | mariadb   || ['Alice', 'alice']
         "Oracle"     | oracle    || ['alice']
         "DB2"        | db2       || ['alice']
+        "SQL Server" | sqlServer || []
+    }
+
+    void "rlike on #db falls back to like, so the wildcard % selects rows"() {
+        given:
+        if (!container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : container.jdbcUrl,
+                'dataSource.driverClassName'         : container.driverClassName,
+                'dataSource.username'                : container.username,
+                'dataSource.password'                : container.password,
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'a pattern that a like matches is used, as the fallback is a like'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('al%')*.name.sort()
+
+        then: 'the CASE of the fallback selects the rows, and the default collation of the image ignores case'
+        names == ['Alice', 'alice']
+
+        where:
+        db           | container
+        "SQL Server" | sqlServer
     }
 }
 
