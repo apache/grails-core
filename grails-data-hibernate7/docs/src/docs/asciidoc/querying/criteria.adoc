@@ -148,6 +148,8 @@ def results = c.list {
 
 Here we find all accounts that have either performed transactions in the last 10 days OR have been recently created in the last 10 days.
 
+An account that was recently created and has no transactions is found: an association block that restricts the association is a branch of the `or`, so it does not remove the entities without the association. A block outside an `or`, a block without criteria, and the only branch of an `or` still require the association.
+
 
 [[criteriaAssociationAliases]]
 ==== Association Aliases

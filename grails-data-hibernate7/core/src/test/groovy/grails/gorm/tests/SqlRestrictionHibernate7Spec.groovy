@@ -111,7 +111,7 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
                 }
                 eq('name', 'ABC')
             }
-        }*.name == ['ABCDEF']
+        }*.name.sort() == ['ABC', 'ABCDEF']
 
         and: 'where the database has arrays, the placeholders in an array literal are bound'
         if (db in ['H2', 'Postgres']) {
