@@ -436,12 +436,15 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                 logger.warn('{} has no field named {}, so that value was not sent', path, name)
             }
         }
-        // A field too short for any address or link on example.com is sent text it rejects, so the page answers
-        // with the form again, which reads as a save that succeeded. Said here, as nothing after this can tell.
-        (tooShortFields(markup) - given.keySet()).each { String name ->
-            logger.warn('{} has a field {} too short for an address or link on example.com, so it was sent text ' +
-                    'it rejects and the save is not traced. Give it a value in nativeMetadata.forms, as in ' +
-                    '{}?{}=...', path, name, path, name)
+        // Not submitted with a field too short for any address or link on example.com. Whatever fits it is either
+        // text it rejects, so the page answers with the form again and a 200 that reads as a save, or a value on
+        // someone else's domain. The form is given a value for it, or it is not traced.
+        List<String> tooShort = tooShortFields(markup) - given.keySet()
+        if (tooShort) {
+            String first = tooShort.first()
+            return new Answer("FORM ${path} -> not submitted: ${tooShort.join(', ')} too short for an address or " +
+                    "link on example.com. Give each a value in nativeMetadata.forms, as in ${path}?${first}=...".toString(),
+                    false)
         }
 
         String encoded = fields.collect { String name, String value ->

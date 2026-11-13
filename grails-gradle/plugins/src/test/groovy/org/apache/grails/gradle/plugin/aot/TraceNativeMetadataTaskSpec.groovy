@@ -31,13 +31,7 @@ import org.apache.commons.validator.routines.RegexValidator
 import org.apache.commons.validator.routines.UrlValidator
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.logging.LogLevel
-import org.gradle.internal.logging.events.LogEvent
-import org.gradle.internal.logging.events.OutputEvent
-import org.gradle.internal.logging.events.OutputEventListener
-import org.gradle.internal.logging.slf4j.OutputEventListenerBackedLoggerContext
 import org.gradle.testfixtures.ProjectBuilder
-import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -197,26 +191,10 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
     void 'a field rendered empty is filled in with something its type accepts'() {
         given: 'a number or a date sent text fails to bind, and the form answering again with a 200 reads as a save'
-            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=kept'])
-            StringBuilder said = new StringBuilder()
-            // A task run outside a build logs through Gradle's own logger context, which no public listener reaches
-            OutputEventListenerBackedLoggerContext logging = (OutputEventListenerBackedLoggerContext) LoggerFactory.ILoggerFactory
-            OutputEventListener console = logging.outputEventListener
-            logging.outputEventListener = { OutputEvent event ->
-                if (event instanceof LogEvent && event.logLevel == LogLevel.WARN) {
-                    said.append(((LogEvent) event).message).append('\n')
-                }
-                console.onOutput(event)
-            } as OutputEventListener
+            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=a@b.example&tinyHomepage=ftp://e.example'])
 
         when:
-            try {
-                task.trace()
-            }
-            finally {
-                logging.outputEventListener = console
-            }
-            String warned = said.toString()
+            task.trace()
 
         then:
             Map<String, String> sent = postedTo('/typed-save')
@@ -239,13 +217,13 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
                 contact ==~ /traced-\d+@example\.com/
                 (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
                 edgeContact ==~ /\d@example\.com/
-                tinyContact == 'kept'
+                tinyContact == 'a@b.example'
                 new URI(homepage).scheme == 'https' && new URI(homepage).host
                 (shortHomepage ==~ /https:\/\/example\.com\/\d+/) && shortHomepage.size() <= 24
                 siteHomepage == 'https://example.com'
                 plainHomepage == 'http://example.com'
                 ftpHomepage == 'ftp://example.com'
-                (tinyHomepage ==~ /traced-\d+/) && tinyHomepage.size() <= 16
+                tinyHomepage == 'ftp://e.example'
                 phone ==~ /\d+/
                 colour ==~ /#[0-9a-f]{6}/
             }
@@ -257,13 +235,6 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             [sent.homepage, sent.shortHomepage, sent.siteHomepage, sent.plainHomepage, sent.ftpHomepage].every { String url ->
                 URL_CONSTRAINT.isValid(url) && new UrlValidator().isValid(url) && new URI(url).host == 'example.com'
             }
-
-        and: 'where no address or link to example.com fits, the field fails rather than naming another host'
-            !URL_CONSTRAINT.isValid(sent.tinyHomepage)
-
-        and: 'which is said, naming the field, unless the form was given a value for it'
-            warned.contains('/typed has a field tinyHomepage too short')
-            !warned.contains('field tinyContact')
 
         and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
             sent._available == ''
@@ -388,6 +359,23 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
         then: 'the form on the page that was asked for, rather than the one on the way to it'
             requested.any { it.startsWith('POST /protected-save') && it.contains('secretTitle=') }
+    }
+
+    void 'a form with a field too short for an address or link on example.com is not submitted, and fails the trace'() {
+        given: 'whatever fits is text the field rejects, answered with the form again and a 200, or another host'
+            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=a@b.example'])
+
+        when:
+            task.trace()
+
+        then: 'the field without a value is named, with how to give it one'
+            GradleException e = thrown()
+            e.message.contains('FORM /typed -> not submitted: tinyHomepage too short')
+            e.message.contains('/typed?tinyHomepage=...')
+            !e.message.contains('tinyContact')
+
+        and:
+            !requested.any { it.startsWith('POST /typed-save') }
     }
 
     void 'a form on a page that has none fails the trace'() {
