@@ -95,7 +95,13 @@ class TracedRunFixture {
             <input type="week" name="sprint" value=""/>
             <input type="email" name="contact" value=""/>
             <input type="email" name="shortContact" value="" maxlength="16"/>
+            <input type="email" name="tinyContact" value="" maxlength="10"/>
+            <input type="email" name="narrowContact" value="" maxlength="4"/>
             <input type="url" name="homepage" value=""/>
+            <input type="url" name="shortHomepage" value="" maxlength="24"/>
+            <input type="url" name="siteHomepage" value="" maxlength="19"/>
+            <input type="url" name="tinyHomepage" value="" maxlength="12"/>
+            <input type="url" name="narrowHomepage" value="" maxlength="5"/>
             <input type="tel" name="phone" value=""/>
             <input type="color" name="colour" value=""/>
         </form></body></html>'''

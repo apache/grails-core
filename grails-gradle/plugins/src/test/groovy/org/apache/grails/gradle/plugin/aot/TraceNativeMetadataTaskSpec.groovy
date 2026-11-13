@@ -209,7 +209,13 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
                 sprint ==~ /\d{4}-W\d{2}/
                 contact ==~ /traced-\d+@example\.com/
                 (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
+                (tinyContact ==~ /\d+@x\.io/) && tinyContact.size() <= 10
+                narrowContact.size() <= 4
                 new URI(homepage).scheme == 'https' && new URI(homepage).host
+                (shortHomepage ==~ /https:\/\/example\.com\/\d+/) && shortHomepage.size() <= 24
+                siteHomepage == 'https://example.com'
+                tinyHomepage == 'http://x.io'
+                narrowHomepage.size() <= 5
                 phone ==~ /\d+/
                 colour ==~ /#[0-9a-f]{6}/
             }

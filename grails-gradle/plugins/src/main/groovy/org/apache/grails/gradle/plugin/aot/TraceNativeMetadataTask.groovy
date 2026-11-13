@@ -138,7 +138,9 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private static final Pattern MAX = Pattern.compile(/(?i)\bmax\s*=\s*"([^"]*)"/)
 
     private static final String EMAIL_DOMAIN = '@example.com'
+    private static final String SHORT_EMAIL_DOMAIN = '@x.io'
     private static final String URL_BASE = 'https://example.com/'
+    private static final List<String> SHORT_URLS = ['https://example.com/', 'https://example.com', 'http://x.io']
 
     /**
      * Carries the session from one request to the next, which is what makes a form that
@@ -596,9 +598,9 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                 return within(String.format(Locale.ROOT, '%d-W%02d',
                         now.get(IsoFields.WEEK_BASED_YEAR), now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)), tag)
             case 'email':
-                return traced(maxLength == null ? null : Math.max(maxLength - EMAIL_DOMAIN.length(), 1)) + EMAIL_DOMAIN
+                return address(maxLength)
             case 'url':
-                return URL_BASE + traced(maxLength == null ? null : Math.max(maxLength - URL_BASE.length(), 0))
+                return link(maxLength)
             case 'tel':
                 return cut('5550100', maxLength)
             case 'color':
@@ -654,6 +656,30 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         int room = maxLength - 'traced-'.length()
         room > 0 ? "traced-${unique.substring(unique.length() - room)}".toString()
                 : unique.substring(Math.max(unique.length() - maxLength, 0))
+    }
+
+    /**
+     * An address within the field's {@code maxlength}: on a domain kept for examples where that leaves room for a
+     * name, and on a shorter one where it does not, as the domain is what makes it an address. Where not even the
+     * shortest address fits, what is sent is cut to the length, so that the field fails as it would for anyone.
+     */
+    private static String address(Integer maxLength) {
+        if (maxLength == null || maxLength > EMAIL_DOMAIN.length()) {
+            return traced(maxLength == null ? null : maxLength - EMAIL_DOMAIN.length()) + EMAIL_DOMAIN
+        }
+        cut(traced(Math.max(maxLength - SHORT_EMAIL_DOMAIN.length(), 1)) + SHORT_EMAIL_DOMAIN, maxLength)
+    }
+
+    /**
+     * A link within the field's {@code maxlength}: a path under a site kept for examples where there is room for
+     * one, and otherwise the longest of the shorter links that fits. Where none does, the shortest is cut to the
+     * length.
+     */
+    private static String link(Integer maxLength) {
+        if (maxLength == null || maxLength > URL_BASE.length()) {
+            return URL_BASE + traced(maxLength == null ? null : maxLength - URL_BASE.length())
+        }
+        SHORT_URLS.find { String url -> url.length() <= maxLength } ?: cut(SHORT_URLS.last(), maxLength)
     }
 
     private static String cut(String value, Integer maxLength) {
