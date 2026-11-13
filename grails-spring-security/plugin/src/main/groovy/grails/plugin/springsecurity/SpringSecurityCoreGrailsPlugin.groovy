@@ -1101,7 +1101,11 @@ to default to 'Annotation'; setting value to 'Annotation'
             throwExceptionWhenTokenRejected = conf.x509.throwExceptionWhenTokenRejected // false
         }
 
-        authenticationEntryPoint(classFor('authenticationEntryPoint', Http403ForbiddenEntryPoint))
+        if (!conf.x509.continueFilterChainOnUnsuccessfulAuthentication) {
+            // certificates are the only way in, so a request without a usable one is simply forbidden; otherwise the
+            // default entry point stays, which sends the request to the login form (or the Ajax equivalent)
+            authenticationEntryPoint(classFor('authenticationEntryPoint', Http403ForbiddenEntryPoint))
+        }
     }
 
     private Class classFor(String beanName, Class defaultType) {
