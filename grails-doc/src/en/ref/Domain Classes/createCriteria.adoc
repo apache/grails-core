@@ -73,6 +73,22 @@ println "Rendering ${results.size()} Accounts of ${results.totalCount}"
 The `sort` and `order` arguments accepted alongside the pagination values are checked the same way as for link:list.html[list()]: `sort` must be a property path made up of identifiers separated by dots that resolves through the domain class mapping, and `order` must be `"asc"` or `"desc"` (case-insensitive, surrounding whitespace ignored). Any other value is rejected with an `IllegalArgumentException` before the query is built, so request parameters can be passed through without further checks. A dotted `sort` key whose first segment is an alias created with `createAlias` is left for the query to resolve; a bare name must be a property of the domain class.
 
 
+A collection of basic values, such as an enum collection declared with `hasMany`, is queried with a nested block whose criteria address the values through the `elements` property:
+
+[source,groovy]
+----
+def contacts = Contact.createCriteria().list {
+    kinds {
+        eq('elements', ContactKind.EMAIL)
+    }
+}
+----
+
+Inside such a block `eq` and `in` are available. The query returns every `Contact` that has at least one matching value.
+
+A domain property mapped with `fetch: 'join'` on a to-one association, for example `destination fetch: 'join'`, is also loaded in the same select by `findAll()`, `list()` and criteria queries, so reading it for each row does not run one extra query per row.
+
+
 === Description
 
 Criteria queries are a type-safe, advanced way to query that uses a Groovy builder to construct potentially complex queries. It is a much better alternative to using a StringBuilder to dynamically construct an HQL query. Refer to the criteria sections in the GORM for link:{hibernate7GuideFromRef}index.html#criteria[Hibernate 7] or link:{hibernate5GuideFromRef}index.html#criteria[Hibernate 5] guide for usage instructions.
