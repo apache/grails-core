@@ -258,7 +258,7 @@ jobs:
           fi
       - name: "📤 Upload JMH artifacts"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: jmh-results-${{ matrix.shard }}
           path: |

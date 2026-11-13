@@ -155,7 +155,7 @@ jobs:
         run: ./gradlew check --continue --stacktrace
       - name: "📤 Upload test reports"
         if: failure()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: end-to-end-test-reports
           path: end-to-end/**/build/reports/tests/**
