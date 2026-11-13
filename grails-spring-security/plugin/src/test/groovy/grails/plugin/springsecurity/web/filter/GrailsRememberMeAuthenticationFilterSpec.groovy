@@ -97,6 +97,27 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
         request.session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY).authentication == rememberMe
     }
 
+    @Issue('#15877')
+    void 'the request for the login form goes on down the filter chain, so the controller can send a remembered user to the full login page'() {
+        given:
+        AuthenticationSuccessHandler handler = Mock(AuthenticationSuccessHandler)
+        MockHttpServletRequest request = new MockHttpServletRequest('GET', '/app/login/auth')
+        request.contextPath = '/app'
+        MockHttpServletResponse response = new MockHttpServletResponse()
+        MockFilterChain chain = new MockFilterChain()
+        GrailsRememberMeAuthenticationFilter filter = filterWith(handler)
+        filter.loginFormUrl = '/login/auth'
+
+        when:
+        filter.doFilter(request, response, chain)
+
+        then:
+        0 * handler._
+        chain.request != null
+        SecurityContextHolder.context.authentication == rememberMe
+        !requestCache.getRequest(request, response)
+    }
+
     @Unroll
     void 'a #method request goes on down the filter chain as the remembered user, with no redirect'() {
         given:
