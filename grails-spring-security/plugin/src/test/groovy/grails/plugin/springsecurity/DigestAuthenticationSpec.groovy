@@ -31,6 +31,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserCache
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -202,12 +203,14 @@ abstract class AbstractDigestAuthenticationSpec extends Specification implements
         GrailsApplication grailsApplication
         String password
         boolean enabled = true
+        int loads
 
         @Override
         UserDetails loadUserByUsername(String username) {
             if (username != 'user') {
                 throw new UsernameNotFoundException(username)
             }
+            loads++
             new User(username, password, enabled, true, true, true, [new SimpleGrantedAuthority('ROLE_USER')])
         }
     }
@@ -221,6 +224,19 @@ class EncodedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
 
     protected String storedFor(String password) {
         "user:${REALM}:${password}".md5()
+    }
+
+    void 'the user signed in is erased of its password, as the authentication manager erases it by default'() {
+        given:
+            store(storedFor('secret'))
+
+        when:
+            Authentication signedIn = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+
+        then: 'without cacheUsers nothing else holds the user'
+            signedIn.credentials == null
+            ((UserDetails) signedIn.principal).password == null
     }
 
     void 'a password stored as it was typed does not sign anyone in'() {
@@ -269,5 +285,59 @@ class CleartextDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec
 
         expect:
             signedInWith('secret') == null
+    }
+}
+
+class CachedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
+
+    protected Map digestConfig() {
+        [realmName: REALM]
+    }
+
+    protected String storedFor(String password) {
+        "user:${REALM}:${password}".md5()
+    }
+
+    Closure doWithConfig() {
+        Closure digest = super.doWithConfig()
+        return { config ->
+            digest.call(config)
+            config.grails.plugin.springsecurity.cacheUsers = true
+        }
+    }
+
+    /** What the cache holds was loaded before this, so it is emptied, as a change to the user empties it. */
+    @Override
+    protected void store(String password, boolean enabled = true) {
+        super.store(password, enabled)
+        applicationContext.getBean('userCache', UserCache).removeUserFromCache('user')
+        applicationContext.getBean('userDetailsService', StoredPasswordUserDetailsService).loads = 0
+    }
+
+    void 'a cached user keeps its password, so a browser signing in again is answered from the cache'() {
+        given:
+            store(storedFor('secret'))
+            def users = applicationContext.getBean('userDetailsService', StoredPasswordUserDetailsService)
+            UserCache cache = applicationContext.getBean('userCache', UserCache)
+
+        expect:
+            signedInWith('secret') == 'user'
+            cache.getUserFromCache('user').password == storedFor('secret')
+            signedInWith('secret') == 'user'
+            users.loads == 1
+    }
+
+    void 'what is signed in still has its credentials erased'() {
+        given:
+            store(storedFor('secret'))
+
+        when:
+            Authentication signedIn = authenticationManager.authenticate(
+                    UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+
+        then:
+            signedIn.authenticated
+            signedIn.credentials == null
+            ((UserDetails) signedIn.principal).password == storedFor('secret')
     }
 }

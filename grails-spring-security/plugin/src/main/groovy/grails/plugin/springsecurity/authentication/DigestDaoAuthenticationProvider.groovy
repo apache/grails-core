@@ -26,7 +26,11 @@ import groovy.transform.CompileStatic
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
+import org.springframework.security.core.Authentication
 import org.springframework.security.core.AuthenticationException
+import org.springframework.security.core.CredentialsContainer
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.userdetails.UserCache
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.password.NoOpPasswordEncoder
@@ -44,6 +48,11 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder
  * there.</p>
  *
  * <p>The {@code passwordEncoder} bean is not used to compare, so it stays as configured for everything else.</p>
+ *
+ * <p>With {@code cacheUsers}, the user this returns as the principal is the one the user cache holds, which
+ * {@code DigestAuthenticationFilter} reads what is stored from on every request. Erasing the credentials of what this
+ * returns, as the authentication manager does by default, erases them from that user only where it is not the one the
+ * cache holds, so that the next request is answered from the cache rather than by loading the user again.</p>
  *
  * @since 9.0
  */
@@ -96,6 +105,54 @@ class DigestDaoAuthenticationProvider extends DaoAuthenticationProvider {
         }
         // what the filter left, or a token authenticated before that still holds what it was authenticated with
         principal instanceof UserDetails && isEqual(presented, stored)
+    }
+
+    @Override
+    protected Authentication createSuccessAuthentication(Object principal, Authentication authentication, UserDetails user) {
+        Authentication authenticated = super.createSuccessAuthentication(principal, authentication, user)
+        KeepsCachedUserToken result = new KeepsCachedUserToken(authenticated.principal, authenticated.credentials,
+                authenticated.authorities, userCache)
+        result.details = authenticated.details
+        result
+    }
+
+    /**
+     * An authenticated token whose erased credentials leave alone a principal the user cache holds, as that instance
+     * is the one every later request is checked against.
+     */
+    private static class KeepsCachedUserToken extends UsernamePasswordAuthenticationToken {
+
+        private final transient UserCache userCache
+        private Object presented
+
+        KeepsCachedUserToken(Object principal, Object credentials, Collection<? extends GrantedAuthority> authorities,
+                UserCache userCache) {
+            super(principal, null, authorities)
+            this.presented = credentials
+            this.userCache = userCache
+        }
+
+        @Override
+        Object getCredentials() {
+            presented
+        }
+
+        @Override
+        void eraseCredentials() {
+            presented = null
+            Object principal = getPrincipal()
+            if (principal instanceof CredentialsContainer && !cached(principal)) {
+                ((CredentialsContainer) principal).eraseCredentials()
+            }
+            if (details instanceof CredentialsContainer) {
+                ((CredentialsContainer) details).eraseCredentials()
+            }
+        }
+
+        private boolean cached(Object principal) {
+            principal instanceof UserDetails && userCache != null &&
+                    userCache.getUserFromCache(((UserDetails) principal).username).is(principal)
+        }
     }
 
     private static String md5Hex(String value) {
