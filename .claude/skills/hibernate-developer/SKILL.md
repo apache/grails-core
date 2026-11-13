@@ -1,0 +1,1 @@
+../../../.agents/skills/hibernate-developer/SKILL.md
