@@ -31,7 +31,13 @@ import org.apache.commons.validator.routines.RegexValidator
 import org.apache.commons.validator.routines.UrlValidator
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.logging.LogLevel
+import org.gradle.internal.logging.events.LogEvent
+import org.gradle.internal.logging.events.OutputEvent
+import org.gradle.internal.logging.events.OutputEventListener
+import org.gradle.internal.logging.slf4j.OutputEventListenerBackedLoggerContext
 import org.gradle.testfixtures.ProjectBuilder
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -191,10 +197,26 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
     void 'a field rendered empty is filled in with something its type accepts'() {
         given: 'a number or a date sent text fails to bind, and the form answering again with a 200 reads as a save'
-            TraceNativeMetadataTask task = task([], ['/typed'])
+            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=kept'])
+            StringBuilder said = new StringBuilder()
+            // A task run outside a build logs through Gradle's own logger context, which no public listener reaches
+            OutputEventListenerBackedLoggerContext logging = (OutputEventListenerBackedLoggerContext) LoggerFactory.ILoggerFactory
+            OutputEventListener console = logging.outputEventListener
+            logging.outputEventListener = { OutputEvent event ->
+                if (event instanceof LogEvent && event.logLevel == LogLevel.WARN) {
+                    said.append(((LogEvent) event).message).append('\n')
+                }
+                console.onOutput(event)
+            } as OutputEventListener
 
         when:
-            task.trace()
+            try {
+                task.trace()
+            }
+            finally {
+                logging.outputEventListener = console
+            }
+            String warned = said.toString()
 
         then:
             Map<String, String> sent = postedTo('/typed-save')
@@ -217,7 +239,7 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
                 contact ==~ /traced-\d+@example\.com/
                 (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
                 edgeContact ==~ /\d@example\.com/
-                (tinyContact ==~ /traced-\d+/) && tinyContact.size() <= 12
+                tinyContact == 'kept'
                 new URI(homepage).scheme == 'https' && new URI(homepage).host
                 (shortHomepage ==~ /https:\/\/example\.com\/\d+/) && shortHomepage.size() <= 24
                 siteHomepage == 'https://example.com'
@@ -237,8 +259,11 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
             }
 
         and: 'where no address or link to example.com fits, the field fails rather than naming another host'
-            !EmailValidator.instance.isValid(sent.tinyContact)
             !URL_CONSTRAINT.isValid(sent.tinyHomepage)
+
+        and: 'which is said, naming the field, unless the form was given a value for it'
+            warned.contains('/typed has a field tinyHomepage too short')
+            !warned.contains('field tinyContact')
 
         and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
             sent._available == ''

@@ -38,9 +38,6 @@ ext {
     pomMavenPublicationName = 'pluginMaven'
 }
 
-Properties rootVersions = new Properties()
-rootProject.layout.projectDirectory.file('../gradle.properties').asFile.withInputStream { rootVersions.load(it) }
-
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
@@ -83,9 +80,8 @@ dependencies {
     testImplementation('org.spockframework:spock-core') { transitive = false }
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     // The validators behind Grails' email and url constraints, so what traceNativeMetadata fills an email or URL
-    // field with is checked the way an application's save checks it. Its version is the one the root build gives
-    // grails-datamapping-validation, read from the root gradle.properties as this build does not see it.
-    testImplementation("commons-validator:commons-validator:${rootVersions.getProperty('commonsValidatorVersion')}") {
+    // field with is checked the way an application's save checks it, at the version grails-datamapping-validation uses.
+    testImplementation("commons-validator:commons-validator:$commonsValidatorVersion") {
         transitive = false
     }
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'

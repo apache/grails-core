@@ -436,6 +436,13 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                 logger.warn('{} has no field named {}, so that value was not sent', path, name)
             }
         }
+        // A field too short for any address or link on example.com is sent text it rejects, so the page answers
+        // with the form again, which reads as a save that succeeded. Said here, as nothing after this can tell.
+        (tooShortFields(markup) - given.keySet()).each { String name ->
+            logger.warn('{} has a field {} too short for an address or link on example.com, so it was sent text ' +
+                    'it rejects and the save is not traced. Give it a value in nativeMetadata.forms, as in ' +
+                    '{}?{}=...', path, name, path, name)
+        }
 
         String encoded = fields.collect { String name, String value ->
             "${URLEncoder.encode(name, 'UTF-8')}=${URLEncoder.encode(value, 'UTF-8')}"
@@ -528,6 +535,35 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
             fields[name.group(1)] = carried || kind == 'hidden' ? (carried ?: '') : fill(kind, tag)
         }
         fields
+    }
+
+    /**
+     * The email and URL fields rendered empty with a {@code maxlength} too short for any address or link on
+     * {@code example.com}, which are filled with text they reject.
+     */
+    private static List<String> tooShortFields(String markup) {
+        List<String> names = []
+        Matcher field = FIELD.matcher(markup)
+        while (field.find()) {
+            String tag = field.group()
+            Matcher name = NAME.matcher(tag)
+            Matcher type = TYPE.matcher(tag)
+            Matcher value = VALUE.matcher(tag)
+            if (field.group(1).equalsIgnoreCase('select') || !name.find() || !type.find() || (value.find() && value.group(1))) {
+                continue
+            }
+            String kind = type.group(1).trim().toLowerCase(Locale.ROOT).split(/\s+/)[0]
+            String declaredLength = attribute(MAXLENGTH, tag)
+            if (declaredLength && fitsNothing(kind, Integer.valueOf(declaredLength))) {
+                names << name.group(1)
+            }
+        }
+        names
+    }
+
+    /** Whether no address or link on {@code example.com} fits a field of this type and length. */
+    private static boolean fitsNothing(String kind, int maxLength) {
+        (kind == 'email' && maxLength <= EMAIL_DOMAIN.length()) || (kind == 'url' && maxLength < SHORT_URLS.last().length())
     }
 
     /**
