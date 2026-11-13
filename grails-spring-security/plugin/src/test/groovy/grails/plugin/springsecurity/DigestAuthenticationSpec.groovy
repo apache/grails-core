@@ -327,7 +327,7 @@ class CachedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
             users.loads == 1
     }
 
-    void 'what is signed in still has its credentials erased'() {
+    void 'what is signed in is erased of its password, and what is cached is not'() {
         given:
             store(storedFor('secret'))
 
@@ -335,9 +335,10 @@ class CachedDigestAuthenticationSpec extends AbstractDigestAuthenticationSpec {
             Authentication signedIn = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
 
-        then:
+        then: 'the cache gives each lookup a copy, so nothing a session keeps holds the stored password'
             signedIn.authenticated
             signedIn.credentials == null
-            ((UserDetails) signedIn.principal).password == storedFor('secret')
+            ((UserDetails) signedIn.principal).password == null
+            applicationContext.getBean('userCache', UserCache).getUserFromCache('user').password == storedFor('secret')
     }
 }

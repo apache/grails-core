@@ -1442,3 +1442,14 @@ A property source of lower precedence that sets the deeper key now answers it. W
 * Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
 * Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; it reads the list as `server.ports`.
 * A typed read with a default below such a value, such as `getProperty('x.y.enabled', Boolean, true)` when `x.y` is `false`, reads the parent, or the configuration sets the deeper key.
+
+==== 24. The Spring Security User Cache Stores Copies
+
+With `cacheUsers` enabled, the Spring Security plugin's user cache now stores users by value, so each lookup gets its own copy, made by serializing the user. Grails 8 stored the instance itself. The authentication manager erases the password of the user it signs in, and it erased the cached instance too: the next sign-in missed the cache and loaded the user again. A copy is erased instead, so the cached user keeps its password and the user kept in the session holds none.
+
+===== Required Actions
+
+* A user class of your own is serialized, as `UserDetails` is `Serializable`. A field that cannot be serialized, such as a reference to a domain instance, makes the user uncached: it is loaded on every sign-in, and a warning is logged. Mark such a field `transient`, or hold its id instead.
+* Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
+* To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
+

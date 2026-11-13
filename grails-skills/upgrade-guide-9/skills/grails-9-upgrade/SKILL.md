@@ -449,6 +449,14 @@ Grails no longer registers a character encoding filter of its own. Spring Boot's
 - Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
 - Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; read the list as `server.ports`.
 
+## The Spring Security User Cache Stores Copies
+
+With `cacheUsers`, the Spring Security plugin's user cache stores users by value: each lookup gets a serialized copy, where Grails 8 handed out the cached instance. Erasing the password of a signed-in user no longer erases the cached one, so the cache is used on the next sign-in, and the session's user holds no password.
+
+- A custom `UserDetails` with a field that cannot be serialized is not cached: it is loaded on every sign-in, with a warning. Make the field `transient` or hold an id.
+- Code that changed a user read from `userCache` puts it back with `userCache.putUserInCache`.
+- `cacheConfig` on the `userCache` bean, a `MutableConfiguration` with `setStoreByValue(false)`, restores storing by reference.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
