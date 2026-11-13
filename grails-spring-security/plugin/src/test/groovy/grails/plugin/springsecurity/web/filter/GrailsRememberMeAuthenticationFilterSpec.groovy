@@ -28,6 +28,7 @@ import org.springframework.security.core.authority.AuthorityUtils
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.security.web.authentication.RememberMeServices
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -47,7 +48,7 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
 
     private final HttpSessionRequestCache requestCache = new HttpSessionRequestCache()
 
-    private GrailsRememberMeAuthenticationFilter filterWith(AuthenticationSuccessHandler handler) {
+    private GrailsRememberMeAuthenticationFilter filterWith(AuthenticationSuccessHandler handler, HttpSessionSecurityContextRepository repository = null) {
         RememberMeServices rememberMeServices = Stub(RememberMeServices) {
             autoLogin(_, _) >> rememberMe
         }
@@ -57,6 +58,9 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
         GrailsRememberMeAuthenticationFilter filter = new GrailsRememberMeAuthenticationFilter(authenticationManager, rememberMeServices, requestCache)
         if (handler) {
             filter.authenticationSuccessHandler = handler
+        }
+        if (repository) {
+            filter.securityContextRepository = repository
         }
         filter.afterPropertiesSet()
         filter
@@ -78,6 +82,19 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
 
         and: 'the request is saved so that the handler can redirect to it'
         requestCache.getRequest(request, response)?.redirectUrl?.contains('/secure/page')
+    }
+
+    @Issue('#15877')
+    void 'the remembered login is kept in the session, so the page redirected to does not log in again and loop'() {
+        given:
+        MockHttpServletRequest request = new MockHttpServletRequest('GET', '/secure/page')
+        MockHttpServletResponse response = new MockHttpServletResponse()
+
+        when:
+        filterWith(Mock(AuthenticationSuccessHandler), new HttpSessionSecurityContextRepository()).doFilter(request, response, new MockFilterChain())
+
+        then: 'the next request of that session finds the remembered authentication and the filter has nothing to do'
+        request.session.getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY).authentication == rememberMe
     }
 
     @Unroll
