@@ -40,7 +40,7 @@ class X509EntryPointSpec extends Specification implements GrailsWebUnitTest {
         SpringSecurityUtils.application = null
     }
 
-    private Object entryPoint(boolean continueFilterChain) {
+    private Object entryPoint(Object continueFilterChain) {
         ConfigObject conf = new ConfigObject()
         conf.active = true
         conf.useX509 = true
@@ -51,13 +51,29 @@ class X509EntryPointSpec extends Specification implements GrailsWebUnitTest {
         applicationContext.getBean('authenticationEntryPoint')
     }
 
-    void 'a request without a usable certificate goes to the login form when other mechanisms may handle it'() {
-        expect: 'with x509.continueFilterChainOnUnsuccessfulAuthentication true, the default, the entry point is the one that redirects to the login form, not a bare 403'
-        entryPoint(true) instanceof AjaxAwareAuthenticationEntryPoint
+    void 'a request without a usable certificate goes to the form or gets a 403 by the setting #value'() {
+        expect: 'true, the default, keeps the entry point that redirects to the login form; false makes it a bare 403'
+        entryPoint(value).class == type
+
+        where:
+        value   || type
+        true    || AjaxAwareAuthenticationEntryPoint
+        'true'  || AjaxAwareAuthenticationEntryPoint
+        false   || Http403ForbiddenEntryPoint
+        'false' || Http403ForbiddenEntryPoint
     }
 
-    void 'a request without a usable certificate gets a 403 when certificates are the only mechanism'() {
-        expect:
-        entryPoint(false) instanceof Http403ForbiddenEntryPoint
+    void 'the filter is told the setting as one boolean, also when it is the string #value'() {
+        when:
+        entryPoint(value)
+
+        then: 'a request without a certificate is refused rather than passed down the chain when it is false'
+        applicationContext.getBeanDefinition('x509ProcessingFilter').propertyValues
+                .get('continueFilterChainOnUnsuccessfulAuthentication') == expected
+
+        where:
+        value   || expected
+        'true'  || true
+        'false' || false
     }
 }
