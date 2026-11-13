@@ -129,6 +129,36 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "SQL Server" | sqlServer || []
         "CockroachDB"| cockroach || []
     }
+
+    void "rlike on #db falls back to like, so the wildcard % selects rows"() {
+        given:
+        if (!container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : container.jdbcUrl,
+                'dataSource.driverClassName'         : container.driverClassName,
+                'dataSource.username'                : container.username,
+                'dataSource.password'                : container.password,
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'a pattern that a like matches is used, as the fallback is a like'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('al%')*.name.sort()
+
+        then: 'the CASE of the fallback selects the rows, and the default collation of the image ignores case'
+        names == ['Alice', 'alice']
+
+        where:
+        db           | container
+        "SQL Server" | sqlServer
+    }
 }
 
 @Entity
