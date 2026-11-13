@@ -21,14 +21,29 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.testcontainers.spock.Testcontainers
+import spock.lang.IgnoreIf
+import spock.lang.Requires
+import spock.lang.Shared
 
+@Testcontainers
+@Requires({ DatabaseContainers.isDockerAvailable() })
 class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
+    @Shared db2 = DatabaseContainers.DB2
+
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
     }
 
-    void "test rlike works with H2"() {
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "test rlike works with #db"() {
         given:
+        useDatabase(container, 'rlikeDB')
         new RlikeFoo(name: "ABC").save(flush: true)
         new RlikeFoo(name: "ABCDEF").save(flush: true)
         new RlikeFoo(name: "ABCDEFGHI").save(flush: true)
@@ -39,6 +54,52 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
         then:
         allFoos.size() == 2
+
+        where:
+        db         | container
+        'H2'       | null
+        'Postgres' | postgres
+        'MySQL'    | mysql
+        'MariaDB'  | mariadb
+        'Oracle'   | oracle
+        'DB2'      | db2
+    }
+
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
+        given:
+        useDatabase(container, 'rlikeCaseDB')
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
+
+        when: 'the pattern is matched'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
+
+        then: 'whether case matters follows the database: PostgreSQL matches with ~*, which is case-insensitive (Hibernate 7 renders ~, see #16882), and MySQL and MariaDB follow the collation of the column'
+        names == expected
+
+        where:
+        db         | container || expected
+        'H2'       | null      || ['alice']
+        'Postgres' | postgres  || ['Alice', 'alice']
+        'MySQL'    | mysql     || ['Alice', 'alice']
+        'MariaDB'  | mariadb   || ['Alice', 'alice']
+        'Oracle'   | oracle    || ['alice']
+        'DB2'      | db2       || ['alice']
+    }
+
+    private void useDatabase(container, String h2Name) {
+        if (container != null && !container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = new ConfigObject()
+        manager.grailsConfig.dataSource.url = container?.jdbcUrl ?: "jdbc:h2:mem:${h2Name};LOCK_TIMEOUT=10000".toString()
+        manager.grailsConfig.dataSource.driverClassName = container?.driverClassName ?: 'org.h2.Driver'
+        manager.grailsConfig.dataSource.username = container?.username ?: 'sa'
+        manager.grailsConfig.dataSource.password = container?.password ?: ''
+        manager.grailsConfig.dataSource.dbCreate = 'create-drop'
+        manager.setup(this.class)
     }
 }
 
