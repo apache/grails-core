@@ -472,6 +472,7 @@ include(
         'grails-test-examples-gsp-layout',
         'grails-test-examples-gsp-sitemesh3',
         'grails-test-examples-gsp-spring-boot',
+        'grails-test-examples-issue-15819',
         'grails-test-examples-issue-698-domain-save-npe',
         'grails-test-examples-hyphenated',
         'grails-test-examples-issue-views-182',
@@ -528,6 +529,7 @@ project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-tes
 project(':grails-test-examples-plugins-issue11005').projectDir = file('grails-test-examples/plugins/issue11005')
 project(':grails-test-examples-issue-11767').projectDir = file('grails-test-examples/issue-11767')
 project(':grails-test-examples-issue-15228').projectDir = file('grails-test-examples/issue-15228')
+project(':grails-test-examples-issue-15819').projectDir = file('grails-test-examples/issue-15819')
 project(':grails-test-examples-issue-10279').projectDir = file('grails-test-examples/issue-10279')
 project(':grails-test-examples-plugins-exploded').projectDir = file('grails-test-examples/plugins/exploded')
 project(':grails-test-examples-plugins-issue-11767').projectDir = file('grails-test-examples/plugins/issue-11767')
