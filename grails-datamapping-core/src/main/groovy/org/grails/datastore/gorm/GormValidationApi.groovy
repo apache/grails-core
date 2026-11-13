@@ -153,6 +153,10 @@ class GormValidationApi<D> extends AbstractGormApi<D> {
     }
 
     private boolean doValidate(D instance, Map arguments, List fields) {
+        return inConnection { doValidateInConnection(instance, arguments, fields) }
+    }
+
+    private boolean doValidateInConnection(D instance, Map arguments, List fields) {
         FlushModeType previousFlushMode = null
         Session currentSession = null
         boolean deepValidate = true

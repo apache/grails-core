@@ -141,12 +141,15 @@ class HibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             if (validator) {
                 datastore.applicationEventPublisher?.publishEvent new ValidationEvent(datastore, target)
 
-                if (validator instanceof CascadingValidator) {
-                    ((CascadingValidator) validator).validate target, errors, deepValidate
-                } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
-                    ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
-                } else {
-                    validator.validate target, errors
+                // on the connection this API names, which a connection block around the save does not decide
+                inConnection {
+                    if (validator instanceof CascadingValidator) {
+                        ((CascadingValidator) validator).validate target, errors, deepValidate
+                    } else if (validator instanceof org.grails.datastore.gorm.validation.CascadingValidator) {
+                        ((org.grails.datastore.gorm.validation.CascadingValidator) validator).validate target, errors, deepValidate
+                    } else {
+                        validator.validate target, errors
+                    }
                 }
 
                 if (errors.hasErrors()) {

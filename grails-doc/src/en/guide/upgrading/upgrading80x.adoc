@@ -4972,3 +4972,12 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 * Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
+
+==== 94. A `unique` Constraint Checks the Connection It Runs On
+
+For a domain class mapped to several data sources, `validate()` and `save()` inside a connection block, such as `Book.second.withTransaction { }` or a method annotated `@Transactional(connection = 'second')`, checked the `unique` constraint against the *default* data source, whichever connection the block named.
+
+* A value that existed only on the default data source was reported as a duplicate while saving to the second, and one that existed only on the second was not found.
+* With a session bound for the second data source and none for the default, the check failed with `No Session found for current thread`.
+
+The check now runs on the connection of the block, as the other calls in the block do, on the connection a `save()` or `validate()` names, such as `book.third.save()`, even inside a block for another, and on the default connection outside any block. If you relied on one value being unique across every data source, enforce that yourself, for example with a check in a service that queries each connection.
