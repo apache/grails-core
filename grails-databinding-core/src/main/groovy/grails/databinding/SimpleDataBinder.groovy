@@ -94,6 +94,9 @@ class SimpleDataBinder implements DataBinder {
 
     static final INDEXED_PROPERTY_REGEX = /(.*)\[\s*([^\s]*)\s*\]\s*$/
 
+    /** A name with more than one indexer, split after the first one: {@code columns[0]} and {@code [data]}. */
+    static final MULTIPLE_INDEXERS_REGEX = /^([^\[\]]+\[[^\[\]]*\])(\[[^\[\]]*\].*)$/
+
     int autoGrowCollectionLimit = 256
 
     SimpleDataBinder() {
@@ -221,6 +224,7 @@ class SimpleDataBinder implements DataBinder {
 
     protected void doBind(obj, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
 
+        source = groupMultipleIndexers(source)
         def keys = source.getPropertyNames()
         for (String key in keys) {
             if (!filter || key.startsWith(filter + '.')) {
@@ -266,6 +270,44 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         }
+    }
+
+    /**
+     * Binds the first indexer of a name that has several, so {@code columns[0][data]} sets the
+     * {@code data} entry of the element at {@code columns[0]}, the same as {@code columns[0].data}
+     * does. The entries of one element are gathered into a map under {@code columns[0]}.
+     *
+     * @return the source itself when no name has more than one indexer, else a copy where those names are grouped
+     */
+    protected DataBindingSource groupMultipleIndexers(DataBindingSource source) {
+        Set<String> names = source.getPropertyNames()
+        if (!names.any { String name -> name =~ MULTIPLE_INDEXERS_REGEX }) {
+            return source
+        }
+        Map<String, Object> grouped = new LinkedHashMap<String, Object>()
+        Map<String, Map<String, Object>> elements = new LinkedHashMap<String, Map<String, Object>>()
+        for (String name in names) {
+            def matcher = name =~ MULTIPLE_INDEXERS_REGEX
+            if (matcher) {
+                def rest = matcher.group(2) =~ /^\[\s*([^\s\]]*)\s*\](.*)$/
+                rest.matches()
+                String key = rest.group(1)
+                if (key.size() > 2 && ((key.startsWith("'") && key.endsWith("'")) || (key.startsWith('"') && key.endsWith('"')))) {
+                    key = key[1..-2]
+                }
+                elements.computeIfAbsent(matcher.group(1)) { new LinkedHashMap<String, Object>() }.put(key + rest.group(2), source.getPropertyValue(name))
+            } else {
+                grouped.put(name, source.getPropertyValue(name))
+            }
+        }
+        elements.each { String element, Map<String, Object> entries ->
+            def existing = grouped.get(element)
+            if (existing instanceof Map) {
+                entries.putAll((Map) existing)
+            }
+            grouped.put(element, entries)
+        }
+        new SimpleMapDataBindingSource(grouped)
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
