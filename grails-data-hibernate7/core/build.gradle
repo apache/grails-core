@@ -107,6 +107,7 @@ dependencies {
 
     testImplementation 'com.h2database:h2'
     testImplementation 'org.junit.platform:junit-platform-suite'
+    testImplementation "org.opentest4j:opentest4j:$openTest4jVersion" // TestAbortedException, which skips a Db2 row
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.apache.groovy:groovy-sql'

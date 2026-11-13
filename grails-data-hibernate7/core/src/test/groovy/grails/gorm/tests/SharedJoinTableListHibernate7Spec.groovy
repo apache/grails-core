@@ -262,9 +262,7 @@ class SharedJoinTableListHibernate7Spec extends HibernateGormDatastoreSpec {
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "on #db two lists sharing a join table are written, read and kept unique by position"() {
         given: 'the datastore on this database'
-        if (container != null && !container.isRunning()) {
-            container.start()
-        }
+        DatabaseContainers.start(container)
         manager.destroy()
         manager.grailsConfig = [
                 'dataSource.url'            : container?.jdbcUrl ?: 'jdbc:h2:mem:sharedJoinTableListDB;LOCK_TIMEOUT=10000',
