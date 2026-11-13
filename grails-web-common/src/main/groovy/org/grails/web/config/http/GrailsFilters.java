@@ -73,7 +73,7 @@ public enum GrailsFilters {
     CAS_SINGLE_SIGN_OUT_FILTER(Ordered.HIGHEST_PRECEDENCE + 1),
 
     /**
-     * Spring's {@code FormContentFilter}, which parses the form of a PUT, PATCH or DELETE request into request
+     * Spring's {@code FormContentFilter}, which parses the form of a PUT, PATCH, DELETE or QUERY request into request
      * parameters: Spring Boot's, at its default order, or Grails' at the same order when Spring Boot registers none.
      */
     FORM_CONTENT_FILTER(-9900),

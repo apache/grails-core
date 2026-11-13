@@ -45,6 +45,15 @@ class StartupGateFilterSpec extends Specification {
         chain.request == null
     }
 
+    void 'says the rejection is temporary, so it can be told from a 503 the application gives itself'() {
+        when:
+        filter.doFilter(request, response, chain)
+
+        then:
+        response.status == 503
+        response.getHeader('Retry-After') == '1'
+    }
+
     void 'sets the status instead of sending an error'() {
         when:
         filter.doFilter(request, response, chain)
@@ -85,6 +94,7 @@ class StartupGateFilterSpec extends Specification {
         then:
         filter.open
         response.status == 200
+        !response.containsHeader('Retry-After')
         chain.request.is(request)
         chain.response.is(response)
     }

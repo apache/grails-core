@@ -24,7 +24,7 @@ There are a few different approaches to configuring filter chains.
 
 === Requests that arrive before startup
 
-While the application is starting, the plugin responds to every request with `503 Service Unavailable`. That includes a request for a static resource. Requests are allowed through only after both of these have happened, in either order: the plugin has finished `doWithApplicationContext()`, and Spring Boot has published `ApplicationStartedEvent`.
+While the application is starting, the plugin responds to every request with `503 Service Unavailable` and a `Retry-After` header of one second, which says the unavailability is temporary. That includes a request for a static resource. Requests are allowed through only after both of these have happened, in either order: the plugin has finished `doWithApplicationContext()`, and Spring Boot has published `ApplicationStartedEvent`.
 
 The property is `grails.plugin.springsecurity.rejectRequestsDuringStartup`. It defaults to `true`. Set it to `false` to let requests through during startup:
 

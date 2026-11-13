@@ -208,7 +208,7 @@ class ErrorsViewSpec extends Specification {
     }
 
     void 'the problem schema describes the problem respond writes for validation errors, as Spring writes it'() {
-        given: 'validation errors as respond writes them, with the instance it gives them'
+        given: 'validation errors as respond writes them, with an instance the application gives them'
         def errors = new BeanPropertyBindingResult(new Kettle(name: ''), 'kettle')
         errors.rejectValue('name', 'blank', 'Name cannot be blank')
         def problem = new ValidationProblemDetailFactory().create(errors)

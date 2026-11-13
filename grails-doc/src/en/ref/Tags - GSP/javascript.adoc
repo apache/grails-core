@@ -44,6 +44,7 @@ Includes JavaScript libraries and scripts as well as providing a shorthand for i
 
 
 If you do not include a "src" attribute but instead provide a body, the result is an inline script.
+When the request carries the nonce of a nonce-based Content Security Policy, the inline script carries it in its `nonce` attribute, so the policy allows it to run.
 
 If you are doing more advanced JavaScript and asset management we recommend checking out the Asset Pipeline plugin.
 

@@ -23,14 +23,23 @@ import jakarta.servlet.Servlet
 
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockFilterChain
+import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.security.access.AccessDecisionManager
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.SecurityConfig
 import org.springframework.security.access.vote.RoleVoter
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException
+import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authentication.BadCredentialsException
+import org.springframework.security.authentication.ProviderManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider
+import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.AuthorityUtils
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetails
+import org.springframework.security.provisioning.InMemoryUserDetailsManager
 import org.springframework.security.web.FilterInvocation
 import org.springframework.security.web.access.ExceptionTranslationFilter
 import org.springframework.security.web.access.intercept.FilterInvocationSecurityMetadataSource
@@ -103,6 +112,202 @@ class FilterSecurityInterceptorSpec extends AbstractUnitSpec {
         exception.message == 'An Authentication object was not found in the SecurityContext'
         0 * interceptor.accessDecisionManager._
         0 * chain._
+    }
+
+    void 'what a filter left unauthenticated is authenticated before the access decision'() {
+        given:
+        def left = UsernamePasswordAuthenticationToken.unauthenticated('user', 'stored')
+        def authenticated = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'stored', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = left
+        def interceptor = interceptorFor(Mock(AuthenticationManager), Mock(AccessDecisionManager))
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * interceptor.authenticationManager.authenticate(left) >> authenticated
+
+        then:
+        1 * interceptor.accessDecisionManager.decide(authenticated, _ as FilterInvocation, _)
+
+        then:
+        1 * chain.doFilter(request, response)
+        SecurityContextHolder.context.authentication.is(authenticated)
+    }
+
+    void 'what the authentication manager refuses never reaches the access decision'() {
+        given:
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.unauthenticated('user', 'stored')
+        def interceptor = interceptorFor(
+            Stub(AuthenticationManager) { authenticate(_) >> { throw new BadCredentialsException('refused') } },
+            Mock(AccessDecisionManager))
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        thrown(BadCredentialsException)
+        0 * interceptor.accessDecisionManager._
+        0 * chain._
+    }
+
+    void 'what is authenticated already is left alone unless alwaysReauthenticate is set'() {
+        given:
+        def authentication = UsernamePasswordAuthenticationToken.authenticated(
+            'user', 'password', AuthorityUtils.createAuthorityList('ROLE_USER'))
+        SecurityContextHolder.context.authentication = authentication
+        def interceptor = interceptorFor(Mock(AuthenticationManager), Mock(AccessDecisionManager))
+        interceptor.alwaysReauthenticate = always
+
+        when:
+        interceptor.doFilter(request, response, Stub(FilterChain))
+
+        then:
+        times * interceptor.authenticationManager.authenticate(authentication) >> authentication
+
+        where:
+        always | times
+        false  | 0
+        true   | 1
+    }
+
+    void 'with alwaysReauthenticate a user whose credentials were erased once signed in reaches a secured page'() {
+        given: 'a user signed in through an authentication manager that erases the credentials, as it does by default'
+        def provider = new DaoAuthenticationProvider(new InMemoryUserDetailsManager(user('secret')))
+        ProviderManager manager = Spy(constructorArgs: [[provider]])
+        Authentication signedIn = manager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+        SecurityContextHolder.context.authentication = signedIn
+        def interceptor = securedBy(manager)
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then: 'what was signed in is used as it is, since it has nothing left to be authenticated with'
+        0 * manager.authenticate(_)
+        1 * chain.doFilter(request, response)
+        signedIn.credentials == null
+        SecurityContextHolder.context.authentication.is(signedIn)
+    }
+
+    void 'with alwaysReauthenticate a user who still holds their password is authenticated again on every request'() {
+        given: 'a user signed in through an authentication manager that keeps the credentials'
+        def users = new InMemoryUserDetailsManager(user('secret'))
+        def manager = new ProviderManager([new DaoAuthenticationProvider(users)])
+        manager.eraseCredentialsAfterAuthentication = false
+        Authentication signedIn = manager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret'))
+        SecurityContextHolder.context.authentication = signedIn
+        def interceptor = securedBy(manager)
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * chain.doFilter(request, response)
+        !SecurityContextHolder.context.authentication.is(signedIn)
+        SecurityContextHolder.context.authentication.authenticated
+
+        when: 'the password is changed before the next request'
+        users.updateUser(user('changed'))
+        def next = new MockHttpServletRequest('GET', '/secure')
+        interceptor.doFilter(next, response, chain)
+
+        then:
+        thrown(BadCredentialsException)
+        0 * chain._
+    }
+
+    void 'what a filter left unauthenticated is authenticated when alwaysReauthenticate is #always'() {
+        given:
+        def manager = new ProviderManager([new DaoAuthenticationProvider(new InMemoryUserDetailsManager(user('secret')))])
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret')
+        def interceptor = securedBy(manager)
+        interceptor.alwaysReauthenticate = always
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        1 * chain.doFilter(request, response)
+        SecurityContextHolder.context.authentication.authenticated
+        SecurityContextHolder.context.authentication.name == 'user'
+
+        where:
+        always << [false, true]
+    }
+
+    void 'what a filter left unauthenticated without credentials is refused when alwaysReauthenticate is #always'() {
+        given:
+        def manager = new ProviderManager([new DaoAuthenticationProvider(new InMemoryUserDetailsManager(user('secret')))])
+        SecurityContextHolder.context.authentication = UsernamePasswordAuthenticationToken.unauthenticated('user', null)
+        def interceptor = securedBy(manager)
+        interceptor.alwaysReauthenticate = always
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        thrown(BadCredentialsException)
+        0 * chain._
+
+        where:
+        always << [false, true]
+    }
+
+    void 'a request without security attributes authenticates nothing, even with alwaysReauthenticate'() {
+        given:
+        def left = UsernamePasswordAuthenticationToken.unauthenticated('user', 'secret')
+        SecurityContextHolder.context.authentication = left
+        AuthenticationManager manager = Mock()
+        def interceptor = new FilterSecurityInterceptor(
+            authenticationManager: manager,
+            alwaysReauthenticate: true,
+            rejectPublicInvocations: false,
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> null
+            }
+        )
+        FilterChain chain = Mock()
+
+        when:
+        interceptor.doFilter(request, response, chain)
+
+        then:
+        0 * manager._
+        1 * chain.doFilter(request, response)
+        SecurityContextHolder.context.authentication.is(left)
+    }
+
+    private FilterSecurityInterceptor interceptorFor(AuthenticationManager manager, AccessDecisionManager decisions) {
+        new FilterSecurityInterceptor(
+            authenticationManager: manager,
+            accessDecisionManager: decisions,
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> [new SecurityConfig('ROLE_USER')]
+            }
+        )
+    }
+
+    /** An interceptor that re-authenticates, in front of a URL a user with {@code ROLE_USER} may reach. */
+    private FilterSecurityInterceptor securedBy(AuthenticationManager manager) {
+        new FilterSecurityInterceptor(
+            authenticationManager: manager,
+            alwaysReauthenticate: true,
+            accessDecisionManager: new AuthenticatedVetoableDecisionManager([new WebExpressionVoter(), new RoleVoter()]),
+            securityMetadataSource: Stub(FilterInvocationSecurityMetadataSource) {
+                getAttributes(_ as FilterInvocation) >> [new SecurityConfig('ROLE_USER')]
+            }
+        )
+    }
+
+    private static UserDetails user(String password) {
+        User.withUsername('user').password("{noop}${password}").roles('USER').build()
     }
 
     void 'secured filter chain responds with #status for #scenario'() {

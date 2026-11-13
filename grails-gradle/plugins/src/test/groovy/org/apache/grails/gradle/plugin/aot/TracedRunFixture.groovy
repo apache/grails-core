@@ -61,17 +61,117 @@ class TracedRunFixture {
             <input type="text" name="secretTitle"/>
         </form></body></html>'''
 
+    /** What the fields plugin renders for a new instance: a value that is there and says nothing. */
+    private static final String SCAFFOLDED_FORM = '''<html><body>
+        <form action="/scaffolded-save" method="post">
+            <input type="hidden" name="_csrf" value="token"/>
+            <input type="hidden" name="version" value=""/>
+            <input type="text" name="username" value=""/>
+            <input type="password" name="password" value=""/>
+            <input type="text" name="nickname" value="kept"/>
+        </form></body></html>'''
+
+    /**
+     * A field of every type rendered with nothing in it, as the fields plugin renders a new instance's: a number
+     * or a date sent text fails to bind, and the page answers with the form again and a 200.
+     */
+    private static final String TYPED_FORM = '''<html><body>
+        <form action="/typed-save" method="post">
+            <input type="hidden" name="_available"/>
+            <input type="checkbox" name="available" value=""/>
+            <input type="text" name="title" value="" maxlength="12"/>
+            <textarea name="notes" maxlength="5"></textarea>
+            <input type="search" name="query" value=""/>
+            <input type="password" name="secret" value=""/>
+            <input type="number" name="pages" value=""/>
+            <input type="number" name="rating" value="" min="3" max="5"/>
+            <input type="number decimal" name="price" value="" step="any" max="0.5"/>
+            <input type="range" name="volume" value="" min="10" max="20"/>
+            <input type="date" name="released" value=""/>
+            <input type="date" name="launched" value="" min="2999-01-01"/>
+            <input type="datetime-local" name="startsAt" value=""/>
+            <input type="time" name="opensAt" value=""/>
+            <input type="month" name="issue" value=""/>
+            <input type="week" name="sprint" value=""/>
+            <input type="email" name="contact" value=""/>
+            <input type="email" name="shortContact" value="" maxlength="16"/>
+            <input type="email" name="edgeContact" value="" maxlength="13"/>
+            <input type="email" name="tinyContact" value="" maxlength="12"/>
+            <input type="url" name="homepage" value=""/>
+            <input type="url" name="shortHomepage" value="" maxlength="24"/>
+            <input type="url" name="siteHomepage" value="" maxlength="19"/>
+            <input type="url" name="plainHomepage" value="" maxlength="18"/>
+            <input type="url" name="ftpHomepage" value="" maxlength="17"/>
+            <input type="url" name="tinyHomepage" value="" maxlength="16"/>
+            <input type="tel" name="phone" value=""/>
+            <input type="color" name="colour" value=""/>
+        </form></body></html>'''
+
+    /**
+     * What the fields plugin renders as a select: an enum, an association, and a date picker's parts. Each binds
+     * only one of its options, so text sent for any of them fails to convert.
+     */
+    private static final String SELECT_FORM = '''<html><body>
+        <form action="/select-save" method="post">
+            <select name="status" required="" id="status">
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+            </select>
+            <select name="author" id="author">
+                <option value="null"></option>
+                <option value="1">An author</option>
+            </select>
+            <input type="hidden" name="released" value="date.struct"/>
+            <select name="released_day" id="released_day">
+                <option value="1">1</option>
+                <option value="9" selected="selected">9</option>
+                <option value="10">10</option>
+            </select>
+            <select name="format">
+                <option value="PAPER" disabled>Paper</option>
+                <option value="HARDBACK">Hardback</option>
+                <option value="selected">Odd</option>
+            </select>
+            <select name="genre">
+                <optgroup label="Fiction"><option>Crime</option><option>Romance</option></optgroup>
+            </select>
+            <select name="tags" multiple="multiple">
+                <option value="1">first</option>
+                <option value="2" selected>second</option>
+            </select>
+            <select name="nothing"></select>
+            <input type="text" name="title"/>
+        </form></body></html>'''
+
     static void main(String[] args) {
         int port = Integer.parseInt(args[0])
         File requested = new File(args[1])
         String behaviour = args.length > 2 ? args[2] : 'ok'
 
+        long openAt = System.currentTimeMillis() + 1500
+
         HttpServer server = HttpServer.create(new InetSocketAddress('localhost', port), 0)
         server.createContext('/') { HttpExchange exchange ->
             String path = exchange.requestURI.path
             String method = exchange.requestMethod
-            String body = method == 'POST' ? exchange.requestBody.getText('UTF-8') : ''
+            // Held as the Spring Security plugin holds a request until the application has started: a 503 that says
+            // to come back. A home page that is down answers 503 for reasons of its own, which says nothing of the kind.
+            boolean holding = behaviour == 'gated' && System.currentTimeMillis() < openAt
+            boolean homePageRetrying = behaviour == 'homePageRetrying' && path == '/'
+            boolean homePageDown = behaviour == 'homePageDown' && path == '/'
+            if (holding || homePageRetrying || homePageDown) {
+                if (!homePageDown) {
+                    exchange.responseHeaders.add('Retry-After', '1')
+                }
+                exchange.sendResponseHeaders(503, -1)
+                exchange.close()
+                return
+            }
+            String body = exchange.requestBody.getText('UTF-8')
             requested << "${method} ${path}${body ? ' ' + body : ''}\n"
+            if (!(method in ['GET', 'POST'])) {
+                requested << "HEADERS ${exchange.requestHeaders.getFirst('Content-Type')} ${exchange.requestHeaders.getFirst('Accept')}\n"
+            }
             boolean signedIn = exchange.requestHeaders.getFirst('Cookie')?.contains('session=in')
 
             int status = 200
@@ -85,6 +185,15 @@ class TracedRunFixture {
             }
             else if (path == '/login') {
                 response = LOGIN_FORM
+            }
+            else if (path == '/scaffolded') {
+                response = SCAFFOLDED_FORM
+            }
+            else if (path == '/typed') {
+                response = TYPED_FORM
+            }
+            else if (path == '/select') {
+                response = SELECT_FORM
             }
             else if (path == '/authenticate') {
                 exchange.responseHeaders.add('Set-Cookie', 'session=in; Path=/')

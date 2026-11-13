@@ -25,7 +25,7 @@ ext {
             'ant.version'                   : '1.10.18',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.1',
-            'asm.version'                   : '9.10.1',
+            'asm.version'                   : '9.11.1',
             'asset-pipeline-gradle.version' : '5.2.3',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
@@ -39,7 +39,7 @@ ext {
             'jna.version'                   : '5.19.1',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.6',
-            'spring-boot.version'           : '4.1.2',
+            'spring-boot.version'           : '4.2.0-RC2',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -75,46 +75,31 @@ ext {
             'bootstrap-icons.version'       : '1.13.2',
             'bootstrap.version'             : '5.3.8',
             'checker-qual.version'          : '3.55.1',
-            'commons-codec.version'         : '1.22.1',
             'geb-spock.version'             : '8.0.1',
-            // Pinned as a drift tripwire even though 25.1 matches Spring Boot 4.1.2: graphql-java-
-            // extended-scalars is not managed by Spring Boot. Keeping this pin makes a later Boot
-            // graphql-java bump force a compatibility check of extended-scalars, not an equal-version
-            // upgrade. See https://github.com/apache/grails-core/issues/15674
-            'graphql-java.version'          : '25.1',
+            // Pinned deliberately as a drift tripwire even though it matches Spring Boot's
+            // managed version: graphql-java-extended-scalars (below) is NOT managed by Spring
+            // Boot and must be upgraded in lockstep with graphql-java. Keeping this pin makes
+            // the dependency validator flag any Spring Boot graphql-java bump so we re-check
+            // extended-scalars compatibility. See https://github.com/apache/grails-core/issues/15674
+            'graphql-java.version'          : '26.1',
             'graphql-java-extended-scalars.version': '24.0',
             'groovy.version'                : '6.0.0',
             // Security: 33.7.2 addresses CVE-2026-102554 (uncontrolled resource consumption).
             'guava.version'                 : '33.7.2-jre',
-            // Groovy YAML 6.0.0 requires Jackson 2.22.x, and 2.22.4 also overrides the
-            // 2.21.7 Spring Boot 4.1.2 manages: it adds the StreamReadConstraints length limit to
-            // GregorianCalendar/Duration (CVE-2026-68497) and restricts the URI schemes
-            // java.nio.file.Path deserialization accepts (CVE-2026-19032). Jackson 2 only releases
-            // jackson-annotations on the minor, hence the separate 2.22 below. 2.22.3 also fixes
-            // CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776, and 2.22.4 fixes
-            // CVE-2026-110879 (type id validation in jackson-databind), which 2.21.7 does not carry.
+            // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.8 Spring Boot 4.2
+            // manages, so the BOM must manage at least that. Jackson 2 only releases
+            // jackson-annotations on the minor, hence the separate 2.22 below. 2.22.4 also fixes
+            // CVE-2026-110879 (type id validation in jackson-databind).
             'jackson-2-bom.version'         : '2.22.4',
             'jackson2-annotations.version'  : '2.22',
-            // Security: overrides Jackson 3.1.7 from Spring Boot 4.1.2. The 3.2.4 BOM aligns the family
-            // and fixes CVE-2026-89425, CVE-2026-89407, CVE-2026-91777, CVE-2026-91776 and
-            // CVE-2026-110879, which 3.1.7 does not carry, and CVE-2026-110729, which affects only
-            // jackson-core 3.2.0 to 3.2.3.
+            // Overrides the 3.1.8 Spring Boot 4.2 manages. Pinned first as a security override of
+            // 3.1.6 (CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776), which 3.1.7
+            // and later also fix; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from
+            // the 3.2 line Grails 8 and 9.0 manage back to 3.1. 3.2.4 also fixes CVE-2026-110879, and
+            // CVE-2026-110729, which affects only jackson-core 3.2.0 to 3.2.3.
             'jackson-bom.version'           : '3.2.4',
             'jquery.version'                : '4.0.0',
-            // Security: overrides the 1.5.38 Spring Boot 4.1.2 manages. 1.6.3 strips slashes from MDC
-            // values before SiftingAppender uses them as discriminating keys (CVE-2026-19880), and
-            // 1.6.5 completes that fix (CVE-2026-104721). The 1.6.x line keeps SLF4J 2.0.x and JDK 11.
-            // Spring Boot 4.1.2 manages SLF4J 2.0.20, so SLF4J is not pinned.
-            'logback.version'               : '1.6.5',
-            // Security: overrides the 5.8.1 Spring Boot 4.1 manages. 5.9.2 stopped ProxySettings
-            // .toString() writing the SOCKS5 proxy credentials into the application log
-            // (CVE-2026-18710); 5.12.0 is the current release of that line.
-            'mongodb.version'               : '5.12.0',
             'nimbus-jose-jwt.version'       : '10.10',
-            // Overrides the 1.62.0 Spring Boot 4.1 manages, on every classpath, so the BOM manages the
-            // version Selenium 4.49.0 pulls in transitively - see selenium.version. Can return to Boot's
-            // version when the Selenium pin is dropped.
-            'opentelemetry.version'         : '1.65.0',
             // Includes the follow-up logout redirect and direct-client CSRF fixes on the 6.5.x line.
             'pac4j.version'                 : '6.5.9',
             // Security: overrides the transitive 3.5.1. 4.0.3 fixes CVE-2025-67030 flagged against plexus-utils.
@@ -128,13 +113,6 @@ ext {
             'rxjava2.version'               : '2.2.21',
             'sitemesh.version'              : '2.6.0',
             'scribejava.version'            : '8.3.3',
-            // Overrides the 4.43.0 Spring Boot 4.1 manages. selenium/standalone-chrome, the image
-            // ContainerGebSpec starts, is only published for linux/arm64 from 4.47.0, so the default
-            // Geb functional test runs natively on Apple silicon. The image tag must match the
-            // Selenium version on the test classpath, so stay on a version with a published image.
-            // Boot's selenium-htmlunit.version (htmlunit3-driver) stays at 4.43.0: the newest
-            // htmlunit3-driver needs a HtmlUnit newer than Boot manages, and nothing here uses it.
-            'selenium.version'              : '4.49.0',
             'spock.version'                 : '2.5-groovy-6.0',
             // Not managed by spring-boot-dependencies. Spring AI 2.0.x is the Spring Boot 4.0 / 4.1
             // line; grails-bom imports its BOM so applications and grails-spring-ai share one Spring AI version.
@@ -166,8 +144,6 @@ ext {
             'asset-pipeline-bom': "cloud.wondrify:asset-pipeline-bom:${bomDependencyVersions['asset-pipeline-bom.version']}",
             'groovy-bom'        : "org.apache.groovy:groovy-bom:${bomDependencyVersions['groovy.version']}",
             'jackson-bom'       : "tools.jackson:jackson-bom:${bomDependencyVersions['jackson-bom.version']}",
-            'opentelemetry-bom' : "io.opentelemetry:opentelemetry-bom:${bomDependencyVersions['opentelemetry.version']}",
-            'selenium-bom'      : "org.seleniumhq.selenium:selenium-bom:${bomDependencyVersions['selenium.version']}",
             'spock-bom'         : "org.spockframework:spock-bom:${bomDependencyVersions['spock.version']}",
             'spring-ai-bom'     : "org.springframework.ai:spring-ai-bom:${bomDependencyVersions['spring-ai-bom.version']}",
     ]
@@ -178,7 +154,6 @@ ext {
             'bootstrap-icons'          : "org.webjars.npm:bootstrap-icons:${bomDependencyVersions['bootstrap-icons.version']}",
             'cas-client-core'          : "org.apereo.cas.client:cas-client-core:${bomDependencyVersions['cas-client-core.version']}",
             'checker-qual'             : "org.checkerframework:checker-qual:${bomDependencyVersions['checker-qual.version']}",
-            'commons-codec'            : "commons-codec:commons-codec:${bomDependencyVersions['commons-codec.version']}",
             'geb-spock'                : "org.apache.groovy.geb:geb-spock:${bomDependencyVersions['geb-spock.version']}",
             'graphql-java'             : "com.graphql-java:graphql-java:${bomDependencyVersions['graphql-java.version']}",
             'graphql-java-extended-scalars': "com.graphql-java:graphql-java-extended-scalars:${bomDependencyVersions['graphql-java-extended-scalars.version']}",
@@ -214,7 +189,7 @@ ext {
             'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             'guava'                       : "com.google.guava:guava:${bomDependencyVersions['guava.version']}",
-            // Security override of the 2.21.7 spring-boot-dependencies imports through
+            // Overrides the 2.21.8 spring-boot-dependencies imports through
             // com.fasterxml.jackson:jackson-bom - see jackson-2-bom.version. groovy-yaml 6.0.0
             // also pulls jackson-dataformat-yaml, so the BOM must manage it at >= the resolved version.
             'jackson2-annotations'     : "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson2-annotations.version']}",
@@ -222,22 +197,11 @@ ext {
             'jackson-2-bom-databind'   : "com.fasterxml.jackson.core:jackson-databind:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-dataformat-yaml': "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-datatype-jsr310': "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${bomDependencyVersions['jackson-2-bom.version']}",
-            // Security override of the 3.1.7 spring-boot-dependencies imports through
+            // Override of the 3.1.8 spring-boot-dependencies imports through
             // tools.jackson:jackson-bom - see jackson-bom.version
             'jackson-bom-core'         : "tools.jackson.core:jackson-core:${bomDependencyVersions['jackson-bom.version']}",
             'jackson-bom-databind'     : "tools.jackson.core:jackson-databind:${bomDependencyVersions['jackson-bom.version']}",
             'jquery'                   : "org.webjars.npm:jquery:${bomDependencyVersions['jquery.version']}",
-            // Security override of the transitive 1.5.38 - see logback.version
-            'logback-classic'          : "ch.qos.logback:logback-classic:${bomDependencyVersions['logback.version']}",
-            'logback-core'             : "ch.qos.logback:logback-core:${bomDependencyVersions['logback.version']}",
-            // Security override of the 5.8.1 spring-boot-dependencies imports through
-            // org.mongodb:mongodb-driver-bom - see mongodb.version. The whole driver family is
-            // pinned so a classpath cannot end up mixing driver versions.
-            'mongodb-bson'             : "org.mongodb:bson:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-bson-record-codec': "org.mongodb:bson-record-codec:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-core'      : "org.mongodb:mongodb-driver-core:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-reactivestreams': "org.mongodb:mongodb-driver-reactivestreams:${bomDependencyVersions['mongodb.version']}",
-            'mongodb-driver-sync'      : "org.mongodb:mongodb-driver-sync:${bomDependencyVersions['mongodb.version']}",
             // Security override of the transitive 3.5.1 - see plexus-utils.version
             'plexus-utils'                : "org.codehaus.plexus:plexus-utils:${bomDependencyVersions['plexus-utils.version']}",
             // Required alongside plexus-utils 4.x - see plexus-xml.version
@@ -300,8 +264,8 @@ ext {
             // Drift tripwire for extended-scalars compatibility on later Boot graphql-java bumps,
             // not an equal-version upgrade of extended-scalars - see graphql-java.version.
             'graphql-java.version',
-            // The Hibernate 7 BOM strictly re-declares Boot's version so enforcedPlatform consumers
-            // are forced to it; the pin matches Spring Boot 4.1.2 on purpose.
+            // The Hibernate 7 BOM strictly re-declares the version Spring Boot manages, so that
+            // enforcedPlatform consumers are forced to it - see hibernate7VersionOverride.
             'hibernate.version',
     ]
 
@@ -316,7 +280,7 @@ ext {
     if (project.name in ['grails-bom', 'grails-hibernate5-bom'] || project.name.startsWith('grails-data-hibernate5')) {
         customBomVersions = [
                 'liquibase-hibernate.version': '4.27.0',
-                'liquibase.version'          : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Boot 4.1.2's Liquibase 5.0.4 is a new major.
+                'liquibase.version'          : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Spring Boot's Liquibase 5.0.4 is a new major.
                 'hibernate.version'          : '5.6.15.Final',
         ]
         combinedVersions += customBomVersions
@@ -355,18 +319,29 @@ ext {
         ]
         combinedDependencies += customBomDependencies
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
+        // Hibernate ORM follows the version spring-boot-dependencies manages. grails-hibernate7-bom reads it
+        // from that POM's own entries and re-declares these modules at it, strictly, under Spring Boot's
+        // hibernate.version.
+        hibernateOrmModules = ['hibernate-core', 'hibernate-envers', 'hibernate-jcache']
+        // A Hibernate ORM 7 release to manage instead, for when Spring Boot lags behind one Grails needs.
+        // It must be newer than the version Spring Boot manages, so validateHibernateVersion, which
+        // check and the BOM's POM generation run, fails once Spring Boot catches up with it: remove it then.
+        // Set, it moves every org.hibernate.orm module spring-boot-dependencies manages in its own POM,
+        // not only the ones above, as setting hibernate.version moves them all for a Maven consumer.
+        hibernate7VersionOverride = null
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'derby.version'                 : '10.17.1.0',
-                // Spring Boot 4.1.2 selects Hibernate ORM 7.4.13.Final. This BOM strictly re-declares
-                // that version so enforcedPlatform consumers are forced to it; a platform() import
-                // is not enforced. 7.4.13.Final still requires hibernate-models 1.1.2.
+                // Spring Boot 4.2 can select Hibernate ORM 7.4.x through Spring Dependency
+                // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x. This BOM
+                // strictly re-declares the version so enforcedPlatform consumers are forced to it; a
+                // platform() import is not enforced. validateHibernateVersion fails when it differs
+                // from the version the managed Hibernate ORM release depends on.
                 'hibernate-models.version'      : '1.1.2',
                 'hibernate-tools.version'       : '7.3.13.Final',
-                'hibernate.version'             : '7.4.13.Final',
                 'jandex.version'                : '3.6.0',
                 'liquibase-test-harness.version': '1.0.11',
-                'liquibase.version'             : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Boot 4.1.2's Liquibase 5.0.4 is a new major.
+                'liquibase.version'             : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Spring Boot's Liquibase 5.0.4 is a new major.
                 'mockito-inline.version'        : '5.2.0',
         ]
         combinedVersions += customBomVersions
@@ -376,9 +351,6 @@ ext {
                 'derbyclient'           : "org.apache.derby:derbyclient:${combinedVersions['derby.version']}",
                 'derbyshared'           : "org.apache.derby:derbyshared:${combinedVersions['derby.version']}",
                 'derbytools'            : "org.apache.derby:derbytools:${combinedVersions['derby.version']}",
-                'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
-                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
-                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate-tools.version']}",
                 'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate-tools.version']}",

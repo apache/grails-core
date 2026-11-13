@@ -65,6 +65,9 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
      *
      * &lt;g:javascript src="myscript.js" /&gt; // actually imports '/app/js/myscript.js'
      *
+     * An inline script carries the nonce of the request's Content-Security-Policy when the request has one,
+     * so a policy that allows scripts by nonce runs it.
+     *
      * @attr src The name of the javascript file to import. Will look in web-app/js dir
      * @attr library The name of the library to include. e.g. "jquery", "prototype", "scriptaculous", "yahoo" or "dojo"
      * @attr plugin The plugin to look for the javascript in
@@ -78,7 +81,9 @@ class JavascriptTagLib implements ApplicationContextAware, TagLibrary {
             if (hasResourceProcessor) {
                 out << r.script(Collections.EMPTY_MAP, body)
             } else {
-                out.println('<script type="text/javascript">')
+                Object nonce = g.cspNonce()
+                out.println(nonce ? "<script type=\"text/javascript\" nonce=\"${nonce.toString().encodeAsHTML()}\">" :
+                        '<script type="text/javascript">')
                 out << body()
                 out.println()
                 out.println('</script>')

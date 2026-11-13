@@ -20,7 +20,6 @@ package org.apache.grails.core.aot
 
 import java.nio.file.Path
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.GeneratedFiles.Kind
 import org.springframework.aot.generate.InMemoryGeneratedFiles
@@ -35,6 +34,7 @@ import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import org.apache.grails.core.plugins.PluginClassFixtures
 import org.apache.grails.core.plugins.PluginUtils
+import org.springframework.aot.generate.NameGenerator
 
 /**
  * Covers each plugin's configuration reaching an application running on generated code, where every class is
@@ -81,7 +81,7 @@ class PluginConfigurationBeanFactoryInitializationAotProcessorSpec extends Speci
 
     private DefaultGenerationContext generate() {
         def generation = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Configuration')), new InMemoryGeneratedFiles())
+                new NameGenerator(ClassName.get('com.example', 'Configuration')), new InMemoryGeneratedFiles())
         new PluginConfigurationBeanFactoryInitializationAotProcessor().processAheadOfTime(context.beanFactory)
                 .applyTo(generation, Mock(BeanFactoryInitializationCode))
         generation
