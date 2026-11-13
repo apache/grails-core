@@ -443,11 +443,11 @@ jobs:
     name: "Functional Tests (${{ matrix.job_name }})"
     needs: [ policy ]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
-    # 8.0.x history: shard 1 is 22-34 min, indy=true shard 0 is 48-55.
-    # On Groovy 6, shard 1 tests finish around 31 min then Gradle hangs in
-    # worker teardown. The init script exits after buildFinished so that hang
-    # cannot occupy a runner. This job cap is a last-resort backstop.
-    timeout-minutes: 80
+    # Shard 0 builds every module and runs the checks as well as its half of the tests, so it is the
+    # slowest cell: its slowest run took 70 min, on 9.0.x in 2026-11, while shard 1 takes 23-41 min.
+    # On Groovy 6, the tests of the Java 21, indy=true shard 1 finish around 31 min, then Gradle hangs
+    # in worker teardown. The init script exits after buildFinished so that hang cannot occupy a runner.
+    timeout-minutes: 150 # slowest run: 70 min
     strategy:
       fail-fast: false
       matrix:
@@ -516,13 +516,15 @@ jobs:
         # that end-of-walk log and green XML is treated as success.
         # The sentinel init script registers build listeners, which the
         # configuration cache rejects, so this invocation runs without it.
+        # Every other cell is stopped 10 minutes before the job's limit, so
+        # that a cell that times out still uploads its Geb reports.
         run: |
           hanging=0
           if [ "${{ matrix.java }}" = "21" ] && [ "${{ matrix.indy }}" = "true" ] && [ "${{ matrix.gradle_task }}" = "testShard" ]; then
             hanging=1
             limit=45m
           else
-            limit=70m
+            limit=140m
           fi
           rm -f build/ci-build-finished.txt build/ci-build-finished.txt.tmp
           set +e
