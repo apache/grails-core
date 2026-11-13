@@ -51,8 +51,10 @@ abstract class RepositoryConventionsTask extends DefaultTask {
     private static final Pattern DOCKER_IMAGE_DIGEST = Pattern.compile(/^docker:\/\/[^@\s]+@sha256:[0-9a-f]{64}$/)
     private static final Pattern CONTAINER_IMAGE_DIGEST = Pattern.compile(/^[^@\s]+@sha256:[0-9a-f]{64}$/)
     // GitHub-official and first-party ASF actions track upstream ASF approvals, so they use version or
-    // branch references and are never pinned to a commit SHA.
+    // branch references and are never pinned to a commit SHA. apache/tooling-actions is the exception:
+    // those actions publish no release tag, and ATR Trusted Publishing requires a full commit hash.
     private static final Set<String> VERSION_REFERENCED_ACTION_OWNERS = ['actions', 'apache'] as Set<String>
+    private static final String SHA_PINNED_ACTION_PREFIX = 'apache/tooling-actions/'
     // The ASF approves every actions/* release, so those actions name the exact release they run rather
     // than a floating major tag such as v7.
     private static final String RELEASE_TAGGED_ACTION_OWNER = 'actions'
@@ -364,8 +366,8 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         String action = separator > 0 ? use.substring(0, separator) : use
         int ownerSeparator = action.indexOf('/')
         String owner = ownerSeparator > 0 ? action.substring(0, ownerSeparator) : ''
-        boolean versionReferenced = VERSION_REFERENCED_ACTION_OWNERS.contains(owner)
-        String requirement = actionReferenceRequirement(owner)
+        boolean versionReferenced = VERSION_REFERENCED_ACTION_OWNERS.contains(owner) && !shaPinnedAction(action)
+        String requirement = actionReferenceRequirement(owner, action)
         if (separator <= 0 || separator == use.length() - 1) {
             violations.add("${path}:${location}: action '${use}' must use ${requirement}".toString())
             return
@@ -389,7 +391,14 @@ abstract class RepositoryConventionsTask extends DefaultTask {
         }
     }
 
-    private static String actionReferenceRequirement(String owner) {
+    private static boolean shaPinnedAction(String action) {
+        action.startsWith(SHA_PINNED_ACTION_PREFIX)
+    }
+
+    private static String actionReferenceRequirement(String owner, String action) {
+        if (shaPinnedAction(action)) {
+            return 'a lowercase 40-hex commit SHA'
+        }
         if (owner == RELEASE_TAGGED_ACTION_OWNER) {
             return 'the full tag of a release (vX.Y.Z)'
         }
