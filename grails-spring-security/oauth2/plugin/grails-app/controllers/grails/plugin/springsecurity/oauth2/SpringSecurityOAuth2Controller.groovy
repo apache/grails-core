@@ -18,11 +18,9 @@
  */
 package grails.plugin.springsecurity.oauth2
 
-import java.io.Serializable
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.Base64
 
 import groovy.util.logging.Slf4j
 
