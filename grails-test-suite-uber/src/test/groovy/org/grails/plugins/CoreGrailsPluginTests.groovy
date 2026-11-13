@@ -19,6 +19,8 @@
 
 package org.grails.plugins
 
+import org.junit.jupiter.api.Test
+import static org.junit.jupiter.api.Assertions.assertEquals
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.web.servlet.plugins.GrailsWebPluginManager
@@ -34,6 +36,7 @@ import org.springframework.beans.factory.config.RuntimeBeanReference
 
 class CoreGrailsPluginTests extends AbstractGrailsMockTests {
 
+    @Test
     void testComponentScan() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
@@ -50,6 +53,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         def appCtx = springConfig.getApplicationContext()
 
     }
+    @Test
     void testCorePlugin() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
@@ -67,6 +71,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareAspectJAwareAdvisorAutoProxyCreator
     }
 
+    @Test
     void testDisableAspectj() {
         def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
 
@@ -105,6 +110,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
      *
      * @author Luke Daley
      */
+    @Test
     void testBeanPropertyOverride() {
         def co = new ConfigSlurper().parse('''
             dataSource {
