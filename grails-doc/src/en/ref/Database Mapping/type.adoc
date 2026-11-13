@@ -79,6 +79,24 @@ static mapping = {
 
 NOTE: `type: "text"` does not map to a literal SQL type named `text`. GORM asks Hibernate to resolve the dialect's own unbounded large-character type, which is `text` on PostgreSQL and H2, `longtext` on MySQL and MariaDB, and `CLOB` on Oracle. Every `Dialect` shipped with Hibernate defines this mapping, so the resolved column is always unbounded regardless of which of these databases you use — you don't need to (and can't) choose the literal SQL type name yourself.
 
+With Hibernate 7 the same applies to the values of a `Map` and to the elements of a collection of basic values. `type: "text"` makes their column unbounded, and a `maxSize` constraint sets its length. The key column of a `Map` is not affected:
+
+[source,groovy]
+----
+class CmsPage {
+    Map<String, String> bodyContent
+    Map<String, String> summary
+
+    static constraints = {
+        summary maxSize: 2000
+    }
+
+    static mapping = {
+        bodyContent type: "text"
+    }
+}
+----
+
 Hibernate also has the concept of custom `UserType` implementations. In this case you specify the `UserType` class. A type that maps to multiple columns takes one column per attribute of the type, listed in the order the type defines them. For a Hibernate 7 `CompositeUserType` that is the alphabetical order of the attributes of its `embeddable()` class, and a column that is not listed is named after the property and the attribute, for example `amount_value`:
 
 [source,groovy]

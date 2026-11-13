@@ -178,7 +178,9 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
             org.apache.grails.data.testing.tck.domains.PetType,
             MapSPBAuthor,
             MapSPBBook,
-            MapSPBOwner
+            MapSPBOwner,
+            MapSPBSized,
+            MapSPBText
         )
     }
 
@@ -322,6 +324,42 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         !map.inverse
     }
 
+    void "Test bind map sizes the element column from the maxSize constraint and the text type"() {
+        given:
+        def binder = getGrailsDomainBinder()
+        def collector = getCollector()
+        def metadataBuildingContext = binder.getMetadataBuildingContext()
+        def mapBinder = getBinders(binder).collectionBinder.mapSecondPassBinder
+
+        def ownerEntity = getPersistentEntity(owner) as GrailsHibernatePersistentEntity
+        def attrsProp = ownerEntity.getPropertyByName("attributes") as HibernateToManyProperty
+
+        def rootClass = new RootClass(metadataBuildingContext)
+        rootClass.setEntityName(ownerEntity.name)
+        rootClass.setClassName(ownerEntity.name)
+        rootClass.setJpaEntityName(ownerEntity.name)
+        rootClass.setTable(collector.addTable(null, null, tableName, null, false, metadataBuildingContext, false))
+        collector.addEntityBinding(rootClass)
+
+        def map = new org.hibernate.mapping.Map(metadataBuildingContext, rootClass)
+        map.setRole("${ownerEntity.name}.attributes".toString())
+        map.setCollectionTable(rootClass.getTable())
+        attrsProp.setCollection(map)
+
+        when:
+        mapBinder.bindMapSecondPass(attrsProp)
+
+        then:
+        (map.element as org.hibernate.mapping.BasicValue).getColumn().getLength() == expected
+        (map.index as org.hibernate.mapping.BasicValue).getColumn().getLength() == null
+
+        where:
+        owner          | tableName          | expected
+        MapSPBSized    | 'MAPSPB_SIZED'     | 400L
+        MapSPBText     | 'MAPSPB_TEXT'      | org.hibernate.Length.LONG32 as Long
+        MapSPBOwner    | 'MAPSPB_PLAIN'     | null
+    }
+
     void "Test bind map with basic collection element uses correct column names"() {
         given:
         def binder = getGrailsDomainBinder()
@@ -461,4 +499,24 @@ class MapSPBOwner {
     Long id
     Map<String, String> attributes
     static hasMany = [attributes: String]
+}
+
+@grails.gorm.annotation.Entity
+class MapSPBSized {
+    Long id
+    Map<String, String> attributes
+    static hasMany = [attributes: String]
+    static constraints = {
+        attributes maxSize: 400
+    }
+}
+
+@grails.gorm.annotation.Entity
+class MapSPBText {
+    Long id
+    Map<String, String> attributes
+    static hasMany = [attributes: String]
+    static mapping = {
+        attributes type: 'text'
+    }
 }

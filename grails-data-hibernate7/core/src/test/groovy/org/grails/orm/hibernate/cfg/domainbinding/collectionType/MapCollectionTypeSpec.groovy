@@ -22,6 +22,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.collectionType
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyCollectionProperty
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.hibernate.boot.spi.InFlightMetadataCollector
 import org.hibernate.mapping.Map as HibernateMap
@@ -59,5 +60,29 @@ class MapCollectionTypeSpec extends HibernateGormDatastoreSpec {
         then:
         result instanceof HibernateMap
         result.getCollectionTable() == table
+    }
+
+    def "the mapped type of a map of basic values names the values, not a collection type"() {
+        given:
+        def collectionType = new MapCollectionType(getGrailsDomainBinder().metadataBuildingContext)
+        def property = Mock(HibernateToManyCollectionProperty) { getTypeName() >> 'text' }
+
+        expect:
+        collectionType.getTypeName(property) == null
+    }
+
+    def "create does not give a map of basic values a collection type from its mapped type"() {
+        given:
+        def metadataBuildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        def collectionType = new MapCollectionType(metadataBuildingContext)
+        def property = Mock(HibernateToManyCollectionProperty) { getTypeName() >> 'text' }
+        def owner = new RootClass(metadataBuildingContext)
+        owner.setTable(new Table("test_table"))
+
+        when:
+        def result = collectionType.create(property, owner)
+
+        then:
+        result.getTypeName() == null
     }
 }

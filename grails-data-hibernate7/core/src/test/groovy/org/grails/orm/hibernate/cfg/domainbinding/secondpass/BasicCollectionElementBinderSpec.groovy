@@ -25,6 +25,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher
+import org.hibernate.Length
 import org.hibernate.mapping.BasicValue
 import org.hibernate.mapping.Collection
 import org.hibernate.mapping.RootClass
@@ -201,7 +202,50 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
     }
 }
 
-enum BCEBStatus { ACTIVE, INACTIVE }
+enum BCEBStatus { ACTIVE, INACTIVE 
+
+    void "bind gives the element column the length of the maxSize constraint"() {
+        given:
+        def entity = createPersistentEntity(BCEBSized)
+        HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
+        Collection collection = collectionWithTable("bceb_sized_tags")
+        property.setCollection(collection)
+
+        when:
+        BasicValue element = binder.bind(property)
+
+        then:
+        element.getColumn().getLength() == 300L
+    }
+
+    void "bind leaves the element column unbounded for a mapped type of text"() {
+        given:
+        def entity = createPersistentEntity(BCEBText)
+        HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
+        Collection collection = collectionWithTable("bceb_text_tags")
+        property.setCollection(collection)
+
+        when:
+        BasicValue element = binder.bind(property)
+
+        then:
+        element.getColumn().getLength() == Length.LONG32 as Long
+    }
+
+    void "bind leaves the length of the element column alone without a constraint or a text type"() {
+        given:
+        def entity = createPersistentEntity(BCEBDefault)
+        HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
+        Collection collection = collectionWithTable("bceb_default_tags_len")
+        property.setCollection(collection)
+
+        when:
+        BasicValue element = binder.bind(property)
+
+        then:
+        element.getColumn().getLength() == null
+    }
+}
 
 @Entity
 class BCEBAuthor {
@@ -268,4 +312,24 @@ class BCEBPath3 { // Default Scalar
     Long id
     java.util.Set<String> tags
     static hasMany = [tags: String]
+}
+
+@Entity
+class BCEBSized {
+    Long id
+    java.util.Set<String> tags
+    static hasMany = [tags: String]
+    static constraints = {
+        tags maxSize: 300
+    }
+}
+
+@Entity
+class BCEBText {
+    Long id
+    java.util.Set<String> tags
+    static hasMany = [tags: String]
+    static mapping = {
+        tags type: 'text'
+    }
 }

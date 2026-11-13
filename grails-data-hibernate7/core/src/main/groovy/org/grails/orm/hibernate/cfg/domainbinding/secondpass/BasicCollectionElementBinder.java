@@ -30,6 +30,7 @@ import org.grails.orm.hibernate.cfg.PropertyConfig;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
+import org.grails.orm.hibernate.cfg.domainbinding.binder.StringColumnConstraintsBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
@@ -45,6 +46,7 @@ public class BasicCollectionElementBinder {
     private final SimpleValueColumnBinder simpleValueColumnBinder;
     private final SimpleValueColumnFetcher simpleValueColumnFetcher;
     private final ColumnConfigToColumnBinder columnConfigToColumnBinder;
+    private final StringColumnConstraintsBinder stringColumnConstraintsBinder = new StringColumnConstraintsBinder();
 
     /** Creates a new {@link BasicCollectionElementBinder} instance. */
     public BasicCollectionElementBinder(
@@ -73,6 +75,13 @@ public class BasicCollectionElementBinder {
             Collection collection = property.getCollection();
             BasicValue element = simpleValueColumnBinder.bindSimpleValue(
                     metadataBuildingContext, collection.getCollectionTable(), typeName, columnName, true);
+            PropertyConfig elementConfig = property.getHibernateMappedForm();
+            if (elementConfig != null) {
+                Column elementColumn = simpleValueColumnFetcher.getColumnForSimpleValue(element);
+                if (elementColumn != null) {
+                    stringColumnConstraintsBinder.bindStringColumnConstraints(elementColumn, elementConfig, typeName);
+                }
+            }
             property.getColumnConfigOptional().ifPresent(columnConfig -> {
                 Column column = simpleValueColumnFetcher.getColumnForSimpleValue(element);
                 final PropertyConfig mappedForm = property.getHibernateMappedForm();
