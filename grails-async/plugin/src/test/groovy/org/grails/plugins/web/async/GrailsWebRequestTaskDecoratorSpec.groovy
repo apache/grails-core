@@ -44,6 +44,8 @@ import grails.async.web.AsyncController
 import grails.util.GrailsWebMockUtil
 import grails.web.mime.MimeType
 import grails.web.mime.MimeTypeUtils
+import org.grails.async.factory.future.CompletableFuturePromise
+import org.grails.plugins.web.async.mvc.AsyncActionResultTransformer
 import org.grails.web.mime.DefaultMimeTypeResolver
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.GrailsApplicationAttributes
@@ -892,6 +894,177 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         !completing.alive
         seen.during == 'slow value'
         seen.after.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a call a task started before asynchronous processing was started through the servlet API is making finishes before the container is done with the request, when that processing completes before the dispatch ends'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingRequest live = new BlockingRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        Map seen = [:]
+        HttpServletRequest taskRequest
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            taskRequest = GrailsWebRequest.lookup().currentRequest
+            seen.during = taskRequest.getAttribute('slow')
+        }
+
+        when: 'the task is inside a call to the request when asynchronous processing is started through the servlet API'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        AsyncContext asyncContext = live.startAsync()
+
+        and: 'completed before the dispatch ends, and the container tells the listener afterwards while still reporting it as started, as Tomcat does'
+        Thread completing = Thread.start {
+            asyncContext.complete()
+            live.asyncStarted = true
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        waitUntilBlocked(completing)
+
+        then: 'the container is not told it can go on while the call is in progress'
+        completing.alive
+
+        when:
+        live.release.countDown()
+        completing.join(10000)
+        task.join(10000)
+
+        then:
+        !completing.alive
+        seen.during == 'slow value'
+
+        when: 'the container recycles the request'
+        live.clearAttributes()
+
+        then:
+        failureOf { taskRequest.getAttribute('anything') }.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'the container is done with a request whose asynchronous processing was started through the servlet API once a call in progress finishes or the wait for it ends'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingRequest live = new BlockingRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener(Duration.ofMillis(500))
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            GrailsWebRequest.lookup().currentRequest.getAttribute('slow')
+        }
+
+        when: 'a call the task is making does not finish'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        live.startAsync().complete()
+        live.asyncStarted = true
+        long waited = System.nanoTime()
+        Thread completing = Thread.start {
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        // Well before the call would give up waiting on its own
+        completing.join(5000)
+        waited = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - waited)
+
+        then: 'the container goes on after the wait, not before'
+        !completing.alive
+        waited >= 400
+        task.alive
+
+        cleanup:
+        live.release.countDown()
+        task?.join(10000)
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a request whose asynchronous processing the lifecycle listens to is not held at the end of the dispatch by a call in progress'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingRequest live = new BlockingRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        live.startAsync()
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            HttpServletRequest request = GrailsWebRequest.lookup().currentRequest
+            seen.during = request.getAttribute('slow')
+            seen.after = failureOf { request.getAttribute('slow') }
+        }
+
+        when: 'a task started once asynchronous processing has begun is inside a call when the dispatch ends, as Jetty tells'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start {
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        // Well before the call would give up waiting on its own
+        completing.join(5000)
+
+        then: 'the dispatch ends without waiting, as the processing goes on'
+        !completing.alive
+        task.alive
+
+        when: 'the call finishes and the processing completes'
+        live.release.countDown()
+        task.join(10000)
+        live.asyncContext.complete()
+
+        then:
+        seen.during == 'slow value'
+        seen.after == null
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'a task started before an action returned a promise is not held at the end of the dispatch, and is detached once the asynchronous processing completes'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingRequest live = new BlockingRequest()
+        live.asyncSupported = true
+        TaskRequestListener listener = new TaskRequestListener()
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebRequest webRequest = GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new MockHttpServletResponse())
+        Map seen = [:]
+        HttpServletRequest taskRequest
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            taskRequest = GrailsWebRequest.lookup().currentRequest
+            seen.during = taskRequest.getAttribute('slow')
+        }
+
+        when: 'the task is inside a call to the request when the action returns a promise'
+        Thread task = Thread.start { decorated.run() }
+        assert live.entered.await(10, TimeUnit.SECONDS)
+        new AsyncActionResultTransformer().transformActionResult(webRequest, '/book/index', new CompletableFuturePromise<Object>())
+
+        and: 'the dispatch ends while the processing goes on, as Jetty tells'
+        Thread completing = Thread.start {
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        // Well before the call would give up waiting on its own
+        completing.join(5000)
+
+        then:
+        !completing.alive
+        task.alive
+
+        when: 'the call finishes'
+        live.release.countDown()
+        task.join(10000)
+
+        then: 'the task still reaches the request while the processing goes on'
+        seen.during == 'slow value'
+        failureOf { taskRequest.getAttribute('anything') } == null
+
+        when: 'the processing completes'
+        live.asyncContext.complete()
+
+        then:
+        failureOf { taskRequest.getAttribute('anything') }.message == "$COMPLETED request"
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')

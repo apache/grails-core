@@ -54,12 +54,14 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * started asynchronous processing, which then completes later, so the lifecycle listens for that processing to
  * complete, from the first task started once it has begun. A container can also tell it once the asynchronous
  * processing has already completed while the request still reports it as started, as Tomcat does when it was
- * completed before the dispatch ended. Asynchronous processing started through a controller's {@code startAsync()}
- * tells the lifecycle as it starts, so it is told then too. If the processing was started some other way and no
- * task was started once it had begun, the lifecycle is not told: every call checks that the request still holds
- * the lifecycle, which the container clears as it recycles the request, but a call in progress then is not waited
- * for. Without the listener, such as in a unit test, it completes with the web request the first of its tasks was
- * started during.</p>
+ * completed before the dispatch ended. Asynchronous processing started through a controller's {@code startAsync()},
+ * or for a promise an action returns, tells the lifecycle as it starts, so it is told then too. If the processing
+ * was started some other way and no task was started once it had begun, the lifecycle is not told, so when the
+ * container is done with a dispatch of the request while the processing reports as started, a call a task is making
+ * finishes first, for as long as completing would wait for one, which on a container that tells at the end of every
+ * dispatch, as Jetty does, delays the end of that dispatch. Every later call checks that the request still holds the
+ * lifecycle, which the container clears as it recycles the request. Without the listener, such as in a unit test,
+ * it completes with the web request the first of its tasks was started during.</p>
  */
 @PackageScope
 @CompileStatic
@@ -237,13 +239,35 @@ final class TaskRequestLifecycle implements AsyncListener {
     }
 
     private void await(ServletRequest request) {
+        boolean told
         synchronized (monitor) {
             if (completed) {
                 return
             }
             awaiting = request
+            told = listening
+        }
+        if (!told) {
+            // Not listening yet, so the processing may have been completed before the dispatch ended, as Tomcat
+            // tells only after that, and the container may recycle the request once this returns
+            awaitCallsInProgress()
         }
         listenToAsync(request)
+    }
+
+    // Lets the calls tasks are making finish, for as long as completing would wait for them, without completing
+    private void awaitCallsInProgress() {
+        synchronized (monitor) {
+            if (attached == null) {
+                // No task was given the request, so there is no call to wait for
+                return
+            }
+        }
+        // A thread told from within a call into the request cannot take the write lock
+        if (lock.readHoldCount == 0 && awaitCalls('a dispatch of the request ended while asynchronous ' +
+                'processing was started, so the dispatch ended without waiting for it any longer')) {
+            lock.writeLock().unlock()
+        }
     }
 
     private static ServletRequest underlying(ServletRequest request) {
@@ -455,7 +479,8 @@ final class TaskRequestLifecycle implements AsyncListener {
             return
         }
         // A thread completing the request from within a call into it cannot take the write lock
-        boolean exclusive = waitForCalls && lock.readHoldCount == 0 && awaitCalls()
+        boolean exclusive = waitForCalls && lock.readHoldCount == 0 &&
+                awaitCalls('the request completed, so the request completed without waiting for it any longer')
         if (!exclusive) {
             abandoned = true
         }
@@ -474,13 +499,12 @@ final class TaskRequestLifecycle implements AsyncListener {
     // Takes the write lock once the calls tasks are making have finished, or gives up after a while: a call may wait
     // for a lock of the container that the thread completing the request holds, such as the asynchronous state a
     // failing write reports its error to
-    private boolean awaitCalls() {
+    private boolean awaitCalls(String gaveUp) {
         try {
             if (lock.writeLock().tryLock(callWait.toNanos(), TimeUnit.NANOSECONDS)) {
                 return true
             }
-            log.warn('A task was still calling the request {} after the request completed, so the request completed ' +
-                    'without waiting for it any longer', callWait)
+            log.warn('A task was still calling the request {} after {}', callWait, gaveUp)
         }
         catch (InterruptedException ignored) {
             Thread.currentThread().interrupt()
