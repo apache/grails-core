@@ -17,6 +17,9 @@
  *  under the License.
  */
 package grails.web.mapping
+
+import java.net.URI
+
 /**
  */
 class UrlMappingsWithOptionalExtensionSpec extends AbstractUrlMappingsSpec {
@@ -93,6 +96,78 @@ class UrlMappingsWithOptionalExtensionSpec extends AbstractUrlMappingsSpec {
 
 
 
+    }
+
+    void "Test that optional extension values stay encoded in the path"() {
+        given:
+        def linkGenerator = getLinkGenerator {
+            "/$controller/$action?(.$format)?"()
+        }
+
+        when:
+        def link = linkGenerator.link(controller: 'book', action: 'list', params: [format: formatValue])
+        def uri = new URI(link)
+
+        then:
+        link == "http://localhost/book/list.${encodedFormat}"
+        uri.rawQuery == null
+        uri.rawFragment == null
+
+        where:
+        formatValue             | encodedFormat
+        'xml'                   | 'xml'
+        'xml?next=/admin#probe'  | 'xml%3Fnext%3D%2Fadmin%23probe'
+        'xml a+b%3F'            | 'xml%20a%2Bb%253F'
+    }
+
+    void "Test that path captures with optional extensions stay encoded in the path"() {
+        given:
+        def linkGenerator = getLinkGenerator {
+            "/book/$id(.$format)?"(controller: 'book', action: 'show')
+        }
+
+        when:
+        def link = linkGenerator.link(controller: 'book', action: 'show',
+                id: 'list?next=/admin#probe', params: [format: formatValue])
+        def uri = new URI(link)
+
+        then:
+        link == "http://localhost/book/list%3Fnext%3D%2Fadmin%23probe${extension}"
+        uri.rawQuery == null
+        uri.rawFragment == null
+
+        where:
+        formatValue | extension
+        null        | ''
+        'xml'       | '.xml'
+    }
+
+    void "Test that dollar signs in optional path captures stay encoded"() {
+        given:
+        def linkGenerator = getLinkGenerator {
+            "/$controller/$action?/$id?(.$format)?"()
+        }
+
+        expect:
+        linkGenerator.link(controller: 'someController', action: 'save', id: 'AST$RING') ==
+                'http://localhost/someController/save/AST%24RING'
+    }
+
+    void "Test that extra query parameters remain separate from encoded optional extensions"() {
+        given:
+        def linkGenerator = getLinkGenerator {
+            "/$controller/$action?(.$format)?"()
+        }
+
+        when:
+        def link = linkGenerator.link(controller: 'book', action: 'list',
+                params: [format: 'xml?next=/admin#probe', next: '/search?term=book#result'])
+        def uri = new URI(link)
+
+        then:
+        uri.rawPath == '/book/list.xml%3Fnext%3D%2Fadmin%23probe'
+        uri.rawQuery == 'next=%2Fsearch%3Fterm%3Dbook%23result'
+        uri.rawFragment == null
     }
 
     void "Test that URL mappings with optional extensions generate the correct links"() {
