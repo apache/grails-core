@@ -28,4 +28,10 @@ class Profile {
     String firstName
     String lastName
 
+    static constraints = {
+        email nullable: false
+        firstName nullable: false
+        lastName nullable: false
+    }
+
 }

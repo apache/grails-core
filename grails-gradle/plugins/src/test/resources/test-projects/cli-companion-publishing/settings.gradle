@@ -1,0 +1,3 @@
+rootProject.name = 'cli-companion-publishing'
+
+include 'owner', 'plugin-a', 'custom-owner', 'plugin-b', 'console-lib', 'resolver'

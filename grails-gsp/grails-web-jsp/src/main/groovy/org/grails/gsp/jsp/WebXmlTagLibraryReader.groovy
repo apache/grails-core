@@ -44,7 +44,8 @@ class WebXmlTagLibraryReader {
 
     @CompileStatic(TypeCheckingMode.SKIP)
     private init(InputStream inputStream) {
-        def rootNode = SpringIOUtils.createXmlSlurper().parse(inputStream)
+        // web.xml is trusted input and may declare a DOCTYPE
+        def rootNode = SpringIOUtils.createXmlSlurper(true).parse(inputStream)
         rootNode.taglib.each { taglib ->
             String uri = taglib.'taglib-uri'.text()
             String location =  taglib.'taglib-location'.text()

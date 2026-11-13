@@ -32,4 +32,5 @@ import java.time.Instant
  */
 @CompileStatic
 class LongToInstantConverter implements Converter<Long, Instant>, InstantConverter {
+
 }

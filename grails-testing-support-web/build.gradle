@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -52,6 +53,9 @@ dependencies {
     implementation project(':grails-web-jsp'), {
         // impl: TagLibraryResolverImpl
     }
+    implementation testFixtures(project(':grails-web-common'))
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

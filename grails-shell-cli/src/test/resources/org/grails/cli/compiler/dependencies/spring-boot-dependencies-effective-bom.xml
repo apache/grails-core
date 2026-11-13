@@ -1,0 +1,9 @@
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>test</groupId>
+    <artifactId>spring-boot-dependencies</artifactId>
+    <version>1.0.0</version>
+    <dependencyManagement>
+        <dependencies/>
+    </dependencyManagement>
+</project>

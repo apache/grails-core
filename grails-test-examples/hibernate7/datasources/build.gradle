@@ -50,7 +50,6 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console 'org.apache.grails:grails-console'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
 }

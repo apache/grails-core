@@ -19,9 +19,17 @@
 
 package app2
 
+import grails.util.GrailsUtil
+
 class TestController {
 
     def throwGeneralError() {
         throw new IllegalStateException("Something bad")
+    }
+
+    def sanitizeViaGrailsUtil() {
+        RecordingStackTraceFilterer.invoked = false
+        GrailsUtil.deepSanitize(new RuntimeException('Sanitize me'))
+        render(RecordingStackTraceFilterer.invoked ? 'sanitized-with-configured-filterer' : 'sanitized-with-default-filterer')
     }
 }

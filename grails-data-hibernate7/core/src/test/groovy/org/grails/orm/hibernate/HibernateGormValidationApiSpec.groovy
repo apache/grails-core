@@ -20,6 +20,7 @@ package org.grails.orm.hibernate
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.cfg.Settings
 import org.springframework.core.env.PropertyResolver
@@ -39,10 +40,10 @@ class HibernateGormValidationApiSpec extends Specification {
 
     void "Test that HibernateGormValidationApi uses the shared template from the datastore"() {
         given:
-        def enhancer = hibernateDatastore.gormEnhancer
-        def api = enhancer.getValidationApi(ValidatedBook)
+        def api = (HibernateGormValidationApi) GormRegistry.instance.getValidationApi(ValidatedBook.name)
 
         expect:
+        api instanceof HibernateGormValidationApi
         api.hibernateTemplate.is(hibernateDatastore.getHibernateTemplate())
     }
 

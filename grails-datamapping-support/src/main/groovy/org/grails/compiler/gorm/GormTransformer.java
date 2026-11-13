@@ -26,6 +26,8 @@ import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.classgen.GeneratorContext;
 import org.codehaus.groovy.control.SourceUnit;
 
+import org.springframework.core.Ordered;
+
 import grails.compiler.ast.AstTransformer;
 import grails.compiler.ast.GrailsArtefactClassInjector;
 import org.grails.compiler.injection.GrailsASTUtils;
@@ -40,7 +42,12 @@ import org.grails.io.support.GrailsResourceUtils;
  * @since 2.0
  */
 @AstTransformer
-public class GormTransformer implements GrailsArtefactClassInjector {
+public class GormTransformer implements GrailsArtefactClassInjector, Ordered {
+
+    @Override
+    public int getOrder() {
+        return Ordered.HIGHEST_PRECEDENCE;
+    }
 
     @Override
     public String[] getArtefactTypes() {

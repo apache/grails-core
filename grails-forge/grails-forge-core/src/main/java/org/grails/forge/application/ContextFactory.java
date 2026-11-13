@@ -19,7 +19,9 @@
 package org.grails.forge.application;
 
 import io.micronaut.core.annotation.Nullable;
+
 import jakarta.inject.Singleton;
+
 import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.DefaultCoordinateResolver;
 import org.grails.forge.feature.AvailableFeatures;
@@ -53,7 +55,7 @@ public class ContextFactory {
                                                Options options,
                                                @Nullable OperatingSystem operatingSystem) {
         final Set<Feature> features = Collections.newSetFromMap(new IdentityHashMap<>(8));
-        for (String name: selectedFeatures) {
+        for (String name : selectedFeatures) {
             Feature feature = availableFeatures.findFeature(name).orElse(null);
             if (feature != null) {
                 features.add(feature);
@@ -63,14 +65,14 @@ public class ContextFactory {
         }
 
         Options newOptions = options
-                .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
-                .withGormImpl(determineGormImpl(options.getGormImpl()))
-                .withServletImpl(determineServletImpl(options.getServletImpl()));
+            .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
+            .withGormImpl(determineGormImpl(options.getGormImpl()))
+            .withServletImpl(determineServletImpl(options.getServletImpl()));
 
         availableFeatures.getAllFeatures()
-                .filter(f -> f instanceof DefaultFeature)
-                .filter(f -> ((DefaultFeature) f).shouldApply(applicationType, newOptions, features))
-                .forEach(features::add);
+            .filter(f -> f instanceof DefaultFeature)
+            .filter(f -> ((DefaultFeature) f).shouldApply(applicationType, newOptions, features))
+            .forEach(features::add);
 
         featureValidator.validatePreProcessing(newOptions, applicationType, features);
 
@@ -123,15 +125,6 @@ public class ContextFactory {
     ServletImpl determineServletImpl(ServletImpl servletImpl) {
         if (servletImpl == null) {
             servletImpl = ServletImpl.DEFAULT_OPTION;
-        }
-        if (servletImpl == ServletImpl.UNDERTOW) {
-            // Undertow has not been updated for Servlet 6.1, which Spring Boot 4 requires.
-            // Fail fast with a clear message rather than silently dropping the selection.
-            throw new IllegalArgumentException(
-                "Embedded Undertow is not currently supported in Grails 8. " +
-                "Undertow does not yet provide Servlet 6.1 compatibility, which Spring Boot 4 requires. " +
-                "Use TOMCAT or JETTY instead."
-            );
         }
         return servletImpl;
     }

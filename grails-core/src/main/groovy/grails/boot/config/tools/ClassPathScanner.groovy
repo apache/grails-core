@@ -244,7 +244,7 @@ class ClassPathScanner {
                 URL withoutBang = new URL("${urlStr.substring(0, urlStr.length() - 2)}/")
                 addURL(withoutBang)
 
-            } catch (MalformedURLException e) {
+            } catch (MalformedURLException ignored) {
                 // ignore, running as a WAR
             }
         }

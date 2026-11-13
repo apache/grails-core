@@ -23,6 +23,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
@@ -44,6 +45,7 @@ dependencies {
     testImplementation project(':grails-spring')
     testImplementation project(':grails-test-suite-base')
     testImplementation project(':grails-testing-support-core')
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -79,11 +81,11 @@ dependencies {
     testRuntimeOnly 'org.aspectj:aspectjweaver'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
+    testRuntimeOnly project(':grails-test-listener')
 }
 
 def isolatedTestPatterns = [
         isolatedTestsOne: [
-                'org.grails.core.DefaultGrailsControllerClassSpec',
                 'org.grails.web.util.WebUtilsTests'
         ],
         isolatedTestsTwo: [
@@ -108,6 +110,7 @@ def testSkippingProperties = [
         'onlyFunctionalTests',
         'onlyHibernate5Tests',
         'onlyHibernate7Tests',
+        'onlySpringSecurityTests',
         'onlyMongodbTests',
         'skipCoreTests',
         'skipTests',
@@ -116,27 +119,37 @@ def testSkippingProperties = [
 isolatedTestPatterns.keySet().each { taskName ->
     tasks.register(taskName, Test) {
         group = 'verification'
+        // A Test task registered rather than inherited has neither of these, which makes it
+        // NO-SOURCE: it reports success having run nothing. These classes are excluded from
+        // `test` below, so without this they run in no task at all.
+        testClassesDirs = sourceSets.test.output.classesDirs
+        classpath = sourceSets.test.runtimeClasspath
         filter.includePatterns = isolatedTestPatterns[taskName]
     }
 }
 
-tasks.named('isolatedTestsTwo', Test) {
-    maxParallelForks = 1
-    forkEvery = 100
-}
-
+boolean cacheTests = !doNotCacheTests
+boolean testsSkipped = testSkippingProperties.any { project.hasProperty(it) }
 tasks.withType(Test).configureEach {
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    outputs.cacheIf { !doNotCacheTests }
-    outputs.upToDateWhen { !doNotCacheTests }
+    outputs.cacheIf { cacheTests }
+    outputs.upToDateWhen { cacheTests }
 
-    onlyIf { !testSkippingProperties.any {project.hasProperty(it) } }
+    onlyIf { !testsSkipped }
     useJUnitPlatform()
-    maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 50 : 100
-    maxHeapSize = isCiBuild ? '768m' : '1024m'
+    // The excludes of test-config.gradle, which this build does not apply.
+    exclude('**/*TestCase.class', '**/*$*.class')
+    maxParallelForks = rootProject.ext.configuredTestParallel
+    maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
+}
+
+// Must be configured AFTER the tasks.withType(Test) block above. Both are deferred
+// configuration actions and Gradle runs them in registration order, so a tasks.named
+// block registered first would be silently overwritten by the later configureEach.
+tasks.named('isolatedTestsTwo', Test) {
+    maxParallelForks = 1
 }
 
 tasks.named('test', Test) {

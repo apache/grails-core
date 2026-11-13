@@ -85,7 +85,7 @@ public class HibernateSpringDatabaseTest {
 
         DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database));
 
-        HibernateClassicDatabaseTest.assertPojoHibernateMapped(snapshot);
+        HibernateClassicDatabaseTest.assertPojoHibernateMapped(snapshot, false);
     }
 
     @Test
@@ -97,7 +97,7 @@ public class HibernateSpringDatabaseTest {
 
         DatabaseSnapshot snapshot = SnapshotGeneratorFactory.getInstance().createSnapshot(CatalogAndSchema.DEFAULT, database, new SnapshotControl(database));
 
-        HibernateClassicDatabaseTest.assertPojoHibernateMapped(snapshot);
+        HibernateClassicDatabaseTest.assertPojoHibernateMapped(snapshot, false);
         Table watcherTable = (Table) snapshot.get(new Table().setName("watcher").setSchema(new Schema()));
         assertEquals("nvarchar", watcherTable.getColumn("name").getType().getTypeName());
     }

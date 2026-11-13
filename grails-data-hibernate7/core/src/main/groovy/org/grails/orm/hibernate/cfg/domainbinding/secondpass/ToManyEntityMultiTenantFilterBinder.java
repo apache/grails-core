@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.cfg.domainbinding.secondpass;
 
 import java.util.Collections;
 
+import org.hibernate.FetchMode;
 import org.hibernate.mapping.Collection;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
@@ -42,11 +43,11 @@ public class ToManyEntityMultiTenantFilterBinder {
         if (referenced == null) {
             return;
         }
-        if (entityProperty.isOneToMany() && referenced.isMultiTenant()) {
+        if (referenced.isMultiTenant()) {
             String filterCondition = referenced.getMultiTenantFilterCondition(defaultColumnNameFetcher);
             if (filterCondition != null) {
                 Collection collection = entityProperty.getCollection();
-                if (entityProperty.isUnidirectionalOneToMany()) {
+                if (entityProperty.isManyToMany() || entityProperty.isUnidirectionalOneToMany()) {
                     collection.addManyToManyFilter(
                             GormProperties.TENANT_IDENTITY,
                             filterCondition,
@@ -60,6 +61,12 @@ public class ToManyEntityMultiTenantFilterBinder {
                             true,
                             Collections.emptyMap(),
                             Collections.emptyMap());
+                }
+                if (collection.getFetchMode() == FetchMode.JOIN) {
+                    // Hibernate does not apply the tenant filter to a collection that it fetches by join with an
+                    // instance loaded by id, so the collection is loaded eagerly with a select of its own instead
+                    collection.setFetchMode(FetchMode.SELECT);
+                    collection.setLazy(false);
                 }
             }
         }

@@ -19,6 +19,7 @@
 
 package org.grails.forge.api
 
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.i18n.ResourceBundleMessageSource
 import io.micronaut.http.HttpHeaders
 import io.micronaut.http.HttpRequest
@@ -29,9 +30,13 @@ import io.micronaut.http.client.annotation.Client
 import io.micronaut.test.extensions.spock.annotation.MicronautTest
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
+import org.grails.forge.util.VersionInfo
 import spock.lang.Specification
 
+import java.time.LocalDate
+
 @MicronautTest
+@Property(name = 'grails.forge.redirect-url', value = 'https://example.com/forge/')
 class ApplicationControllerSpec extends Specification {
 
     @Inject
@@ -41,6 +46,9 @@ class ApplicationControllerSpec extends Specification {
     @Inject
     ApplicationTypeClient applicationTypeClient
 
+    @Inject
+    GrailsForgeConfiguration configuration
+
     void "test versions"() {
         given:
         def response = client.toBlocking().retrieve(HttpRequest.GET('/versions'), Map)
@@ -48,6 +56,34 @@ class ApplicationControllerSpec extends Specification {
         expect:
         response.containsKey("versions")
         response.versions["grails.version"]
+    }
+
+    void "test versions report end of support"() {
+        given:
+        def response = client.toBlocking().retrieve(HttpRequest.GET('/versions'), Map)
+
+        expect:
+        response.versions["grails.version"] == VersionInfo.getGrailsVersion()
+        LocalDate.parse(response.endOfSupport) == VersionInfo.getEndOfSupport().get()
+        !response.versions.containsKey("grails.endOfSupport")
+    }
+
+    void "test redirect URL configuration"() {
+        expect:
+        configuration.redirectUri.get().toString() == 'https://example.com/forge/'
+    }
+
+    void "test absent redirect URL configuration ignores null"() {
+        given:
+        GrailsForgeConfiguration configuration = new GrailsForgeConfiguration()
+        def before = configuration.redirectUrl
+
+        when:
+        configuration.redirectUrl = null
+
+        then:
+        configuration.redirectUrl == before
+        configuration.redirectUri.present
     }
 
     void "test application types"() {

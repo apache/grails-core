@@ -38,6 +38,20 @@ def b = Book.get(1)
 b.refresh()
 ----
 
+Refreshing under a pessimistic write lock:
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
 
 === Description
 
@@ -49,3 +63,61 @@ Re-reads the state of the given instance from the underlying database. It is ina
 * where a database trigger alters the object state upon insert or update
 * after executing direct SQL (e.g. a bulk update) in the same Session
 * after inserting a Blob or Clob
+
+Pass `lock: true` to reload the instance's database state and version under a pessimistic WRITE lock. `entity.refresh(lock: true)` acquires the row lock before it reads, so the state and version it loads are the ones the lock protects; it never checks the already-loaded version, and it returns the same instance.
+
+To request a different lock, pass a `jakarta.persistence.LockModeType` (or its name) instead of `true`. For example `entity.refresh(lock: LockModeType.PESSIMISTIC_READ)` reloads the instance under a pessimistic READ lock. `lock: true` is equivalent to `lock: LockModeType.PESSIMISTIC_WRITE`; `lock: false` and `lock: LockModeType.NONE` request no lock and behave like `entity.refresh()`. A value that is neither a boolean, a `LockModeType`, nor the name of one throws `IllegalArgumentException`. The semantics of each lock mode are those of the JPA `LockModeType` of the same name.
+
+The lock modes behave as follows on Hibernate 5 and Hibernate 7:
+
+[cols="2,2,3",options="header"]
+|===
+| Lock mode | Database lock | Effect
+
+| `PESSIMISTIC_WRITE`
+| Exclusive row lock, typically `SELECT ... FOR UPDATE`
+| The default, so `lock: true` means `lock: LockModeType.PESSIMISTIC_WRITE`. Other transactions cannot update the row or take a pessimistic lock on it until this transaction ends.
+
+| `PESSIMISTIC_READ`
+| Shared row lock, `SELECT ... FOR SHARE` where the database supports it
+| Other transactions cannot update the row but may take the same shared lock. Databases without shared row locks take an exclusive lock instead.
+
+| `PESSIMISTIC_FORCE_INCREMENT`
+| Exclusive row lock
+| As `PESSIMISTIC_WRITE`, and the version is incremented as part of taking the lock, so a transaction still holding the previous version fails its next update.
+
+| `OPTIMISTIC` (JPA alias `READ`)
+| None
+| The version is re-read when the transaction commits, and the commit fails if another transaction changed it.
+
+| `OPTIMISTIC_FORCE_INCREMENT` (JPA alias `WRITE`)
+| None
+| The version is incremented when the transaction commits, so other transactions holding the previous version fail.
+
+| `NONE`
+| None
+| A plain refresh, exactly like `lock: false`: the state is reloaded and no lock is taken.
+|===
+
+An active transaction is required whenever a lock is requested. Use link:{domainClassesRefFromRef}withTransaction.html[withTransaction] as above or a GORM `@Transactional` method, and keep the lock and the work it protects in the same transaction. The lock is held until that transaction commits or rolls back. Calling `refresh` with a lock but without an active transaction throws `jakarta.persistence.TransactionRequiredException`. The instance must be attached to the current session: refreshing a detached instance under a lock throws `IllegalArgumentException` on every supported implementation, so re-attach it with link:{domainClassesRefFromRef}attach.html[attach] first.
+
+WARNING: `refresh(lock: true)` discards unflushed changes to the entity. Configured refresh cascades can also discard unflushed changes to associated entities; this is not a refresh of the whole object graph. Call it *before* making decisions based on the entity's state or applying mutations. It does not preserve or merge pending edits.
+
+The lock applies to the refreshed entity's own row. Associated entities reloaded through a refresh cascade are not guaranteed to be locked.
+
+The database and transaction isolation level determine which state is visible to the locked refresh. `refresh(lock: true)` does not override isolation rules or guarantee that every concurrent attempt succeeds. Deadlocks, lock timeouts, and transaction serialization failures remain possible.
+
+The same operation is available on a named connection and under a bound tenant:
+
+[source,groovy]
+----
+Book.secondary.withTransaction {
+    def book = Book.secondary.get(1)
+    book.secondary.refresh(lock: true)     // <1>
+}
+----
+<1> Reloads and locks the row on the `secondary` connection. The transaction and the instance must both belong to that connection; a transaction on the default datasource does not satisfy the requirement.
+
+Refreshing under a lock is supported by GORM for Hibernate 5 and Hibernate 7. Other datastores throw `UnsupportedOperationException` rather than silently falling back to a plain refresh.
+
+`entity.refresh()` is unchanged. `entity.refresh([:])`, `entity.refresh(lock: false)` and `entity.refresh(lock: LockModeType.NONE)` behave exactly like `entity.refresh()`: a plain refresh with no lock and no transaction requirement. To lock by identifier and reload an already-managed instance under the lock, use link:{domainClassesRefFromRef}lock.html[DomainClass.lock(id, refresh: true)]. There is no `entity.lock(refresh: true)`: that call throws `IllegalArgumentException` pointing to the two supported forms.

@@ -105,6 +105,7 @@ public class AssetPipeline implements DefaultFeature {
                 "grails-app/assets/images/spring-boot.svg",
 
                 "grails-app/assets/javascripts/application.js",
+                "grails-app/assets/javascripts/theme.js",
                 "grails-app/assets/javascripts/welcome.js",
 
                 "grails-app/assets/stylesheets/application.css",

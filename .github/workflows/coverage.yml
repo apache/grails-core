@@ -21,16 +21,35 @@ on:
       - '[0-9]+.[0-9]+.x'
       - '8.0.x-hibernate7.*'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
   workflow_dispatch:
+    inputs:
+      run-tests:
+        description: "Run the test jobs where the branch rule would skip them (a release branch below the default); a [skip tests] head commit still skips them"
+        type: boolean
+        default: false
 
+# One run per branch or pull request: a new commit cancels the run in flight, whose result would be for a
+# superseded commit. This workflow publishes nothing, so nothing here needs to survive the cancel.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
+  policy:
+    name: "CI policy"
+    # A pull request labelled "no ci", or a draft without the "run ci" label, skips this job; every other
+    # job needs it, so nothing runs for such a pull request.
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
+    uses: ./.github/workflows/ci-policy.yml
   coverage-core:
     name: "Coverage - grails-core (${{ matrix.os }})"
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    needs: [ policy ]
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,17 +57,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: liberica
           java-version: 21
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🌡️ Run tests with coverage"
         run: >
           ./gradlew jacocoAggregateReport
@@ -56,7 +79,7 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-core-${{ matrix.os }}
           path: build/reports/jacoco/aggregate/jacocoAggregateReport.xml
@@ -64,7 +87,8 @@ jobs:
 
   coverage-gradle:
     name: "Coverage - grails-gradle (${{ matrix.os }})"
-    if: ${{ !contains(github.event.head_commit.message, '[skip tests]') }}
+    needs: [ policy ]
+    if: ${{ needs.policy.outputs.run-tests == 'true' }}
     strategy:
       fail-fast: false
       matrix:
@@ -72,17 +96,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: liberica
           java-version: 21
+      - name: "🗄️ Decide the Gradle cache mode"
+        id: gradle-cache-policy
+        uses: ./.github/actions/gradle-cache-policy
       - name: "🐘 Setup Gradle"
-        uses: gradle/actions/setup-gradle@50e97c2cd7a37755bbfafc9c5b7cafaece252f6e # v6.1.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
-          cache-provider: basic # 'basic' uses the MIT-licensed, open-source cache provider; the default 'enhanced' provider (v6+) is proprietary (Gradle commercial Terms of Use)
-          develocity-access-key: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+          # Decided by the step above; see .github/actions/gradle-cache-policy.
+          cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
+          develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🌡️ Run tests with coverage"
         working-directory: grails-gradle
         run: >
@@ -91,7 +119,7 @@ jobs:
           --stacktrace
           -PskipCodeStyle
       - name: "📤 Upload coverage artifact"
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: coverage-gradle-${{ matrix.os }}
           path: grails-gradle/build/reports/jacoco/aggregate/jacocoAggregateReport.xml
@@ -99,20 +127,20 @@ jobs:
 
   upload-coverage:
     name: "Upload Coverage to Codecov"
-    needs: [coverage-core, coverage-gradle]
-    # Run even if some matrix legs fail so partial coverage is still uploaded
-    if: always()
+    needs: [ policy, coverage-core, coverage-gradle ]
+    # Run even if some matrix legs fail so partial coverage is still uploaded, but not on a run that skipped the tests
+    if: ${{ always() && needs.policy.outputs.run-tests == 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v7.0.1
       - name: "📥 Download all coverage artifacts"
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@v8.0.1
         with:
           path: coverage-reports
       - name: "📊 Upload coverage to Codecov"
         continue-on-error: true
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           directory: coverage-reports

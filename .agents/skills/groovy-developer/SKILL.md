@@ -1,6 +1,6 @@
 ---
 name: groovy-developer
-description: Expert guide for Groovy 4 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 17 and Grails
+description: Expert guide for Groovy 5 development, covering concise syntax, closures, DSLs, metaprogramming, static compilation, and integration with Java 21 and Grails
 license: Apache-2.0
 ---
 <!--
@@ -11,11 +11,11 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide deep expertise in Groovy 4.0, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
+- Provide deep expertise in Groovy 5.1, including core language features: syntax, closures, traits, GStrings, operators, and Groovy Truth.
 - Guide metaprogramming techniques: runtime (categories, ExpandoMetaClass, extension modules) and compile-time (AST transformations like @Immutable, @Builder, @Delegate, @Singleton, @Log, @Memoized).
 - Assist with DSL creation and usage (MarkupBuilder, JsonBuilder, builders for configuration).
 - Support testing with Spock Framework (BDD, data-driven tests, mocking) and built-in power assertions.
-- Help integrate Groovy with Java 17: joint compilation, Gradle builds, Grails, and Spring Boot.
+- Help integrate Groovy with Java 21: joint compilation, Gradle builds, Grails, and Spring Boot.
 - Cover data handling: JSON/XML parsing and building, Groovy SQL, collection processing.
 - Advise on performance: @CompileStatic, @TypeChecked, @GrailsCompileStatic for optimal execution.
 
@@ -27,11 +27,11 @@ Activate this skill for any Groovy-related task, including:
 - Building or enhancing Gradle build scripts (build.gradle).
 - Creating DSLs for configuration, testing, or business rules.
 - Writing Spock specifications for unit and integration tests.
-- Migrating from older Groovy versions (2.x/3.x) to 4.0.
+- Migrating from older Groovy versions (2.x/3.x/4.x) to 5.1.
 - Performance optimization with static compilation.
 - Working with JSON/XML data, GORM criteria queries, or builders.
 
-## Groovy 4 Key Features
+## Groovy 5 Key Features
 
 ### Concise Syntax
 ```groovy
@@ -107,6 +107,16 @@ def length = text?.length() ?: 0
 
 // Combine with collections
 def firstTitle = books?.first()?.title ?: "No books"
+```
+
+### Ternary Operator
+```groovy
+// Use ternary operators only for simple conditions.
+// Split long ternary expressions into multiple lines.
+// Align `?` and `:` branches for readability.
+String message = condition
+        ? "Value when true"
+        : "Value when false"
 ```
 
 ### Spread Operator
@@ -497,9 +507,33 @@ sql.execute("INSERT INTO books (title) VALUES ($title)")
 - **Optional parentheses**: Can cause ambiguity; always use parentheses for clarity.
 - **Static imports**: Always use explicit imports for statically imported methods.
 
+## Semantic Pathway and Defensive Lifecycle Protocol
+
+When writing or testing Groovy classes coordinating resources, lifecycle hooks, transaction boundaries, or multi-branch strategies, apply this mandatory engineering protocol:
+
+### 1. Collaborator Nullability Analysis
+- Determine whether external or looked-up collaborators (`DataSource`, `HttpServletRequest`, `SessionFactory`, `ClassLoader`, `TransactionStatus`, etc.) can ever be `null` in non-standard environments (e.g. standalone unit tests, mock frameworks, alternative SPI providers, or uninitialized scopes).
+- Before passing any collaborator to external libraries or SPIs that enforce strict non-null assertions (such as Spring's `TransactionSynchronizationManager`, `Assert.notNull()`, or Jakarta Servlet APIs), guard with explicit null checks (e.g. `dataSource != null ? txResources.getResource(dataSource) : null`).
+- Safe navigation (`?.`) does not protect arguments passed into strict Java methods expecting non-null parameters (`method(obj?.property)` passes `null` if `obj` is null).
+
+### 2. Early Failure Injection and Cleanup Symmetry
+- Trace what happens if an exception is thrown *before* a resource is registered, bound, or opened (e.g., `openSession()`, `getConnection()`, or `prepare()` failing).
+- In `finally` or cleanup blocks, use safe unbinding (`unbindResourceIfPossible` instead of unconditional `unbindResource`) so a missing binding does not throw a secondary `IllegalStateException` or `NullPointerException` that masks the primary root cause.
+- Guard against calling methods on half-initialized objects in `finally` blocks (e.g., check `newSession != null` before `closeSession(newSession)`).
+- Symmetrically undo any intermediate state changes (e.g., restore previously suspended holders/synchronizations) even when initial acquisition fails.
+
+### 3. Exhaustive Decision Matrix Branching
+- When selecting a strategy or executing conditional flows (e.g. `from(...)` factory methods, state transitions):
+  - Explicitly define the combinatorial state table (e.g. `holder exists / null` × `transaction active / inactive` × `synchronization active / inactive` × `lazy / non-lazy`).
+  - Verify every branch resolves to an intentional, well-defined strategy.
+  - Use Spock data-driven tables (`where:`) to verify every branch of the decision matrix, including compound negatives.
+
+### 4. Authentic Boundary and Failure Testing
+- Tests covering exception translation or failure recovery must exercise real database/runtime failure modes (e.g., genuine column length overruns, constraint violations, closed connection probes) rather than artificial subclass overrides or mocks throwing synthetic exceptions that bypass real translator chains.
+
 ## Resources
 
-- **Groovy 4 Documentation**: https://docs.groovy-lang.org/docs/groovy-4.0.30/html/documentation/
+- **Groovy 5 Documentation**: https://groovy-lang.org/documentation.html#all-versions (select latest 5.1.x)
 - **Groovy Style Guide**: https://groovy-lang.org/style-guide.html
 - **GORM Documentation**: https://grails.apache.org/docs/latest/grails-data/
-- **Spock Framework**: https://spockframework.org/spock/docs/2.3/all_in_one.html
+- **Spock Framework**: https://spockframework.org/spock/docs/2.4/all_in_one.html

@@ -1,6 +1,6 @@
 ---
 name: java-developer
-description: Guide for developing in Java 17 LTS, including modern features, best practices, and integration with Groovy/Grails projects
+description: Guide for developing on the Java 21 baseline, including modern features, best practices, and integration with Groovy/Grails projects
 license: Apache-2.0
 ---
 <!--
@@ -11,8 +11,8 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## What I Do
 
-- Provide guidance on Java 17 LTS syntax, features, and APIs for use in Grails/Groovy projects.
-- Assist with code generation, refactoring, and debugging using Java 17 enhancements like records, sealed classes, pattern matching, and text blocks.
+- Provide guidance on Java 21 syntax, features, and APIs for use in Grails/Groovy projects.
+- Assist with code generation, refactoring, and debugging using modern Java features like records, sealed classes, pattern matching, and text blocks.
 - Recommend best practices for Java code that interoperates with Groovy in mixed-language projects.
 - Guide on tooling: Gradle builds, JDK setup, testing with JUnit 5/Spock, and profiling.
 
@@ -21,11 +21,11 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 Use this skill when working on Java code within this repository, especially for:
 - Writing Java classes that will be used alongside Groovy code.
 - Implementing features using records, sealed classes, or pattern matching for instanceof.
-- Migrating older Java code (e.g., Java 8/11) to Java 17 idioms.
+- Migrating older Java code (e.g., Java 8/11/17) to Java 21 idioms.
 - Performance optimization, security hardening, or module system (JPMS) questions.
 - Understanding how Java code integrates with Groovy's dynamic features.
 
-## Java 17 Key Features
+## Java 21 Baseline Features
 
 ### Records (JEP 395)
 Immutable data carriers with auto-generated constructors, accessors, equals, hashCode, and toString:
@@ -61,13 +61,13 @@ public non-sealed class Rectangle implements Shape {
 ### Pattern Matching for instanceof (JEP 394)
 Eliminate redundant casts:
 ```java
-// Before Java 17
+// Before pattern matching
 if (obj instanceof String) {
     String s = (String) obj;
     System.out.println(s.length());
 }
 
-// Java 17
+// Modern Java
 if (obj instanceof String s) {
     System.out.println(s.length());
 }
@@ -200,7 +200,7 @@ def "Java record should work in Spock tests"() {
 
 ## Performance and Profiling
 
-### JVM Options for Java 17
+### JVM Options for Java 21
 ```bash
 # Recommended GC for most workloads
 -XX:+UseG1GC
@@ -264,8 +264,32 @@ List<String> copy = List.copyOf(mutableList);
 - Add `@Override` annotation when overriding methods.
 - Use meaningful parameter names (preserved with `-parameters` flag).
 
+## Semantic Pathway and Defensive Lifecycle Protocol
+
+When designing, modifying, or refactoring classes coordinating resources, lifecycle hooks, transaction boundaries, or multi-branch strategies, apply this mandatory engineering protocol:
+
+### 1. Collaborator Nullability Analysis
+- Determine whether external or looked-up collaborators (`DataSource`, `HttpServletRequest`, `SessionFactory`, `ClassLoader`, `TransactionStatus`, etc.) can ever be `null` in non-standard environments (e.g. standalone unit tests, mock frameworks, alternative SPI providers, or uninitialized scopes).
+- Before passing any collaborator to external libraries or SPIs that enforce strict non-null assertions (such as Spring's `TransactionSynchronizationManager`, `Assert.notNull()`, or Jakarta Servlet APIs), guard with explicit null checks (e.g. `dataSource != null ? txResources.getResource(dataSource) : null`).
+- Never assume an injected or looked-up collaborator is non-null unless strictly guaranteed by constructor invariants.
+
+### 2. Early Failure Injection and Cleanup Symmetry
+- Trace what happens if an exception is thrown *before* a resource is registered, bound, or opened (e.g., `openSession()`, `getConnection()`, or `prepare()` failing).
+- In `finally` or cleanup blocks, use safe unbinding (`unbindResourceIfPossible` instead of unconditional `unbindResource`) so a missing binding does not throw a secondary `IllegalStateException` or `NullPointerException` that masks the primary root cause.
+- Guard against calling methods on half-initialized objects in `finally` blocks (e.g., check `newSession != null` before `closeSession(newSession)`).
+- Symmetrically undo any intermediate state changes (e.g., restore previously suspended holders/synchronizations) even when initial acquisition fails.
+
+### 3. Exhaustive Decision Matrix Branching
+- When selecting a strategy or executing conditional flows (e.g. `from(...)` factory methods, state transitions):
+  - Explicitly define the combinatorial state table (e.g. `holder exists / null` × `transaction active / inactive` × `synchronization active / inactive` × `lazy / non-lazy`).
+  - Verify every branch resolves to an intentional, well-defined strategy.
+  - Write targeted tests for *every* decision branch, including compound negatives (e.g., no holder + no transaction + no synchronization).
+
+### 4. Authentic Boundary and Failure Testing
+- Tests covering exception translation or failure recovery must exercise real database/runtime failure modes (e.g., genuine column length overruns, constraint violations, closed connection probes) rather than artificial subclass overrides or mocks throwing synthetic exceptions that bypass real translator chains.
+
 ## Resources
 
-- **Java 17 Documentation**: https://docs.oracle.com/en/java/javase/17/
-- **Java Language Updates**: https://docs.oracle.com/en/java/javase/17/language/
+- **Java 21 Documentation**: https://docs.oracle.com/en/java/javase/21/
+- **Java Language Updates**: https://docs.oracle.com/en/java/javase/21/language/
 - **JEP Index**: https://openjdk.org/jeps/0

@@ -104,6 +104,21 @@ class FormTagLibTests extends Specification implements TagLibUnitTest<FormTagLib
                 '<form action="/foo/bar" method="post" ><input type="hidden" name="_method" value="DELETE" id="_method" /></form>'
     }
 
+    // A form aimed at a URL of the application's own choosing is not a resource form, so nothing generates
+    // a POST route that would reach it. The parameter is the only thing a mapping declared for PUT or
+    // PATCH can match on, and dropping it would leave such a mapping unreachable from a form.
+    def testFormTagWithAlternativeMethodOnAnApplicationUrl() {
+        given:
+        unRegisterRequestDataValueProcessor()
+
+        expect:
+        applyTemplate("<g:form url=\"/admin/update\" method=\"${method}\"></g:form>") ==
+                "<form action=\"/admin/update\" method=\"post\" ><input type=\"hidden\" name=\"_method\" value=\"${method.toUpperCase()}\" id=\"_method\" /></form>"
+
+        where:
+        method << ['put', 'patch', 'delete']
+    }
+
     def testFormTagWithAlternativeMethodAndRequestDataValueProcessor() {
         expect:
         applyTemplate('<g:form url="/foo/bar" method="delete"></g:form>') ==

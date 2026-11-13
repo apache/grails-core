@@ -404,16 +404,10 @@ class DataBindingTests extends Specification implements ControllerUnitTest<TestC
     }
 
     void testAssociationsBinding() {
+        given:
+        GroovySpy(Author, global: true)
+
         when:
-        def authorClass = new Author()
-
-        Author.metaClass.static.get = { Serializable id ->
-            def result = new Author()
-            result.id = id as long
-            result.name = "Mocked ${id}"
-            result
-        }
-
         request.addParameter("title", "The Stand")
         request.addParameter("author.id", "5")
 
@@ -422,10 +416,19 @@ class DataBindingTests extends Specification implements ControllerUnitTest<TestC
         b.properties = params
 
         then:
+        1 * Author.get(_) >> { args ->
+            def result = new Author()
+            result.id = args[0] as long
+            result.name = "Mocked ${args[0]}"
+            result
+        }
         "The Stand" == b.title
         b.author != null
         5 == b.author.id
         "Mocked 5" == b.author.name
+
+        cleanup:
+        GroovySystem.metaClassRegistry.removeMetaClass(Author)
     }
 
     void testMultiDBinding() {

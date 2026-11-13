@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer
 import org.grails.datastore.mapping.mongo.connections.MongoClientSettingsBuilderCustomizer
+import org.grails.datastore.mapping.mongo.connections.MongoConnectionSource
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceFactory
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 import spock.lang.Specification
@@ -53,6 +54,9 @@ class MongoConnectionSourceFactorySpec extends Specification {
         sources.defaultConnectionSource.settings.url.database == 'myDb'
         sources.allConnectionSources.size() == 2
         sources.getConnectionSource('another').settings.url.database == 'anotherDb'
+
+        and: "each can have its client replaced after a checkpoint and restore"
+        sources.allConnectionSources.every { it instanceof MongoConnectionSource }
 
         cleanup:
         sources?.close()

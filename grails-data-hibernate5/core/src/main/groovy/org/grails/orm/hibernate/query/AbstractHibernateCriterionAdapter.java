@@ -34,6 +34,7 @@ import org.hibernate.criterion.Subqueries;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
@@ -188,6 +189,16 @@ public abstract class AbstractHibernateCriterionAdapter {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
                 DetachedAssociationCriteria<?> existing = (DetachedAssociationCriteria<?>) criterion;
+                if (existing.getAssociation() instanceof Embedded) {
+                    Association<?> association = existing.getAssociation();
+                    String associationName = association.getName();
+                    if (alias != null) {
+                        associationName = alias + '.' + associationName;
+                    }
+                    Junction conjunction = Restrictions.conjunction();
+                    applySubCriteriaToJunction(association.getAssociatedEntity(), hibernateQuery, existing.getCriteria(), conjunction, associationName);
+                    return conjunction;
+                }
                 if (existing.getAlias() == null) {
                     alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria());
                 }
@@ -210,6 +221,15 @@ public abstract class AbstractHibernateCriterionAdapter {
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
                 AssociationQuery existing = (AssociationQuery) criterion;
                 Junction conjunction = Restrictions.conjunction();
+                Association<?> association = existing.getAssociation();
+                if (association instanceof Embedded) {
+                    String associationName = association.getName();
+                    if (alias != null) {
+                        associationName = alias + '.' + associationName;
+                    }
+                    applySubCriteriaToJunction(association.getAssociatedEntity(), hibernateQuery, existing.getCriteria().getCriteria(), conjunction, associationName);
+                    return conjunction;
+                }
                 String newAlias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria().getCriteria());
                 if (alias == null) {
                     alias = newAlias;

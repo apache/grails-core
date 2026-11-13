@@ -27,7 +27,7 @@ import org.codehaus.groovy.transform.stc.GroovyTypeCheckingExtensionSupport.Type
 /**
  * Test fixture that mimics a DSL-handling type-checking extension (such as a criteria
  * extension): it resolves unrecognised implicit-{@code this} method calls by making
- * them dynamic. Used to verify that {@link ControllerTagLibTypeCheckingExtension}
+ * them dynamic. Used to verify that {@link TagLibraryInvokerTypeCheckingExtension}
  * composes with other extensions that also resolve unrecognised calls, rather than
  * both contributing a candidate method node and producing an "ambiguous method" error.
  */

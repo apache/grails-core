@@ -20,6 +20,7 @@ package org.apache.grails.data.testing.tck.tests
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Person
+import spock.lang.Issue
 
 class DeleteAllSpec extends GrailsDataTckSpec {
 
@@ -92,5 +93,25 @@ class DeleteAllSpec extends GrailsDataTckSpec {
         def total = Person.count()
         then:
         total == 0
+    }
+
+    @Issue('https://github.com/apache/grails-data-mapping/issues/969')
+    def 'Test deleteAll on a where query converts identifier types'() {
+        given:
+        new Person(firstName: 'Bob', lastName: 'Builder').save(flush: true)
+        new Person(firstName: 'Fred', lastName: 'Flintstone').save(flush: true)
+
+        expect:
+        Person.count() == 2
+
+        when: 'deleting by a where query whose id list holds a narrower numeric type'
+        def idList = [Person.findByFirstName('Fred').id as Integer]
+        Person.where {
+            id in idList
+        }.deleteAll()
+
+        then:
+        Person.count() == 1
+        Person.findByFirstName('Bob')
     }
 }

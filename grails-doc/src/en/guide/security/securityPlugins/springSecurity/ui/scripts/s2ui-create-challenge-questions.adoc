@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[ui-s2ui-create-challenge-questions]]
+=== s2ui-create-challenge-questions
+
+.Purpose
+
+Generates controllers, services, domain object, views, i18N, and application configuration to have challenge questions
+
+The general format is:
+----
+grails s2ui-create-challenge-questions <domain-class-package> <challenge-qa-class-name> <user-domain-class-name> [number-of-questions]
+----
+
+- domain-class-package is required and is the package where the Domain, Controller, and Services will be created.  It is recommend to use the same class where your 'User' class is created.
+- challenge-qa-class-name  is required and is the Name of the domain class used to store this information
+- user-domain-class-name is required and is the package and name of the User class.  It is recommend to ensure the first parameter is the same package as the User class.
+- number-of-questions is optional but if not given will default to 2.
+
+----
+Example: s2ui-create-challenge-questions com.mycompany Profile com.mycompany.User  4
+----
+
+This script will create one Domain Class.  This will contain a link to the user and also contain one entry for each questions and answer.  If you pass in either no package or the same package as the what is used for the Challenge Question domain it will not put a package in front of the User class. However, if you pass in a different package then it will add the package in front of the user class.
+
+This script will create one controller which contains all the logic for handling the actions needed to provide a user interface to manage different users challenge questions and answers.
+
+This script will create two services.  The first service is to handle to be the implementation for the controller/domain object handling the data needed to set/get questions and answers.
+The second service is a listener service which ensures that anytime an answer is created or updated the value is encypted before it is stores in the database.
+
+This script will create three views.  Each of the three views (List/index, edit, and create) will support all the CRUD operations.
+
+This script will add lines into your application.groovy file in order to ensure the questions and answers are properly configured.
+
+This script will insert one line into messages.properties. This will be the menu item in the nav bar for spring security.
+----
+spring.security.ui.menu.<domain-class-package>.<challenge-qa-class-name>=<challenge-qa-class-name> Questions"
+----

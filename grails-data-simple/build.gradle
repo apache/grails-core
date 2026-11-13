@@ -25,6 +25,7 @@ plugins {
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
     id 'org.apache.grails.gradle.grails-jacoco'
 }
@@ -88,6 +89,8 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
+
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

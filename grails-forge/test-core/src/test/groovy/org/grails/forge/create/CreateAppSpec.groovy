@@ -46,7 +46,18 @@ class CreateAppSpec extends CommandSpec {
             dependencies are included for OperatingSystem.MACOS_ARCH64 and this
             causes the integrationTest task to fail.
         */
-        final String output = executeGradle("build -x iT").getOutput()
+        final String output = executeGradle("build -x integrationTest").getOutput()
+
+        then:
+        output.contains('BUILD SUCCESSFUL')
+    }
+
+    void "test create-app with grails-compile-static compiles statically"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-compile-static'])
+
+        when:
+        final String output = executeGradle('compileGroovyPages').getOutput()
 
         then:
         output.contains('BUILD SUCCESSFUL')
@@ -96,7 +107,7 @@ class CreateAppSpec extends CommandSpec {
 
         expect:
         gradleProperties.exists()
-        gradleProperties.text.contains('micronautPlatformVersion=4.10.1')
+        gradleProperties.text.contains('micronautPlatformVersion=4.10.16')
         gradleBuildFile.exists()
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
     }

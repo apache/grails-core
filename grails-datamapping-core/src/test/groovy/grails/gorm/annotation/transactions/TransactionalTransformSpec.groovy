@@ -18,9 +18,13 @@
  */
 package grails.gorm.annotation.transactions
 
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
+import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import org.springframework.beans.factory.InitializingBean
@@ -36,6 +40,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.ReflectionUtils
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import javax.sql.DataSource
 /**
@@ -130,6 +135,95 @@ import grails.gorm.transactions.Transactional
         instance.targetDatastore == mockDatastore
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'the transaction manager is the one of the tenant bound for the default datastore while another datastore has a different tenant'() {
+        given:
+        var testService = new GroovyShell().evaluate('''
+import grails.gorm.transactions.Transactional
+
+@Transactional
+class TestService {
+
+    void update() {
+    }
+}
+
+TestService
+''').getDeclaredConstructor().newInstance()
+        var defaultTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> defaultTransactionManager
+        }
+        var otherDatastore = Stub(Datastore)
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerDatastore('test', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect:
+        CurrentTenantHolder.withTenant(defaultDatastore, 'test') {
+            CurrentTenantHolder.withTenant(otherDatastore, ConnectionSource.DEFAULT) {
+                testService.transactionManager
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for another datastore only does not count'
+        CurrentTenantHolder.withTenant(otherDatastore, 'test') {
+            testService.transactionManager
+        } == defaultTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'with a datastore attribute, the transaction manager is the one of the connection of the tenant bound for the datastore of that type'() {
+        given:
+        var testService = new GroovyShell().evaluate('''
+import grails.gorm.transactions.Transactional
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
+
+@Transactional(datastore = MultipleConnectionSourceCapableDatastore)
+class TestService {
+
+    void update() {
+    }
+}
+
+TestService
+''').getDeclaredConstructor().newInstance()
+        var defaultTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> defaultTransactionManager
+        }
+        var connectionDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        }
+        var typedDatastore = Stub(MultipleConnectionSourceCapableDatastore) {
+            getDatastoreForConnection('test') >> connectionDatastore
+        }
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerDatastoreByType(typedDatastore)
+        GormRegistry.instance.registerDatastore('test', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        })
+
+        expect: 'not the one of the connection of that name the registry has'
+        CurrentTenantHolder.withTenant(typedDatastore, 'test') {
+            testService.transactionManager
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for the default datastore only does not count'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'test') {
+            testService.transactionManager
+        } == defaultTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
     @Issue('https://github.com/apache/grails-core/issues/9989')
     void "Test transactional transform when applied to inheritance"() {
         when: "A subclass subclasses a transactional service"
@@ -202,8 +296,6 @@ import grails.gorm.transactions.Transactional
         // so a reflective call outside Spock's runner throws IllegalStateException. The
         // GroovyShell compilation above plus the transformed method signature checks
         // already cover this regression (@Rollback must produce a valid, well-formed spec).
-
-
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9646')
@@ -239,8 +331,6 @@ import grails.gorm.transactions.Transactional
         // reflective call outside Spock's runner throws IllegalStateException. The
         // GroovyShell compilation above plus the transformed method signature checks
         // already cover this regression (@Rollback must produce a valid, well-formed spec).
-
-
     }
 
     void "Test @Rollback when applied to JUnit specifications"() {
@@ -1053,6 +1143,112 @@ new SomeClass()
 
         then:
         noExceptionThrown()
+    }
+
+    void "test a method redundantly re-annotated with the same annotation as the class is not double-decorated"() {
+        when: "hasLocalAnnotation(method, classAnnotation) should skip re-decorating this method"
+        def someClass = new GroovyShell().evaluate('''
+package demo
+
+    import grails.gorm.transactions.*
+    import org.springframework.transaction.support.*
+
+@Transactional
+class SomeClass {
+
+    @Transactional
+    void explicitlyAnnotated() {
+        assert TransactionSynchronizationManager.isActualTransactionActive()
+    }
+
+    void implicitlyDecorated() {
+        assert TransactionSynchronizationManager.isActualTransactionActive()
+    }
+}
+new SomeClass()
+''')
+
+        final transactionManager = getPlatformTransactionManager()
+        someClass.transactionManager = transactionManager
+        someClass.explicitlyAnnotated()
+        someClass.implicitlyDecorated()
+
+        then:
+        noExceptionThrown()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16334')
+    void "test @NotTransactional opts a method out of the transaction woven by a class-level @Transactional"() {
+        given: "a service compiled by the Groovy compiler under a class-level @Transactional"
+        def service = new TransactionalTransformSpecService()
+        def transactionManager = getPlatformTransactionManager()
+        service.transactionManager = transactionManager
+
+        when: "a method annotated @NotTransactional is called"
+        boolean activeInOptedOutMethod = service.isActualTransactionActive()
+
+        then: "it runs outside a transaction and none was started for it"
+        activeInOptedOutMethod == false
+        transactionManager.transactionStarted == false
+
+        when: "a method without the opt-out is called"
+        boolean activeInDecoratedMethod = service.isActive()
+
+        then: "the class-level annotation still applies to it"
+        activeInDecoratedMethod == true
+        transactionManager.transactionStarted == true
+
+        when: "an ordinary method is called"
+        transactionManager.transactionStarted = false
+        TransactionStatus status = service.process()
+
+        then: "it is decorated too"
+        status != null
+        transactionManager.transactionStarted == true
+    }
+
+    @Unroll
+    @Issue('https://github.com/apache/grails-core/issues/16334')
+    void "test @NotTransactional opts a method out of a class-level @#annotationName"() {
+        given: "a service annotated at class level with a @NotTransactional method"
+        def service = new GroovyShell().evaluate("""
+import grails.gorm.transactions.${annotationName}
+import grails.gorm.transactions.NotTransactional
+import org.springframework.transaction.support.TransactionSynchronizationManager
+
+@${annotationName}
+class DemoService {
+
+    boolean decorated() {
+        TransactionSynchronizationManager.isActualTransactionActive()
+    }
+
+    @NotTransactional
+    boolean optedOut() {
+        TransactionSynchronizationManager.isActualTransactionActive()
+    }
+}
+new DemoService()
+""")
+        def transactionManager = getPlatformTransactionManager()
+        service.transactionManager = transactionManager
+
+        when: "the opted-out method is called"
+        boolean activeInOptedOutMethod = service.optedOut()
+
+        then: "no transaction is started around it"
+        activeInOptedOutMethod == false
+        transactionManager.transactionStarted == false
+
+        when: "a sibling method without the opt-out is called"
+        boolean activeInDecoratedMethod = service.decorated()
+
+        then: "that method is still decorated"
+        activeInDecoratedMethod == true
+        transactionManager.transactionStarted == true
+
+        where:
+        annotationName << ['Transactional', 'ReadOnly', 'Rollback']
     }
 }
 

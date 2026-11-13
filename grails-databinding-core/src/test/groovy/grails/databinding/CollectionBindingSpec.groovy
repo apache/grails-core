@@ -145,6 +145,21 @@ class CollectionBindingSpec extends Specification {
         obj.mapOfStuff.name == 'Herman'
         obj.mapOfStuff.show == 'The Munsters'
     }
+
+    void 'Test binding indexed entries whose keys name bean properties of the map to an untyped Map'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def obj = new Store()
+
+        when:
+        binder.bind obj, new SimpleMapDataBindingSource(['mapOfStuff[properties]': 'Herman', 'mapOfStuff[metaClass]': 'The Munsters', 'mapOfStuff[class]': 'Sitcom'])
+
+        then:
+        obj.mapOfStuff.get('properties') == 'Herman'
+        obj.mapOfStuff.get('metaClass') == 'The Munsters'
+        obj.mapOfStuff.get('class') == 'Sitcom'
+        obj.mapOfStuff.size() == 3
+    }
 }
 
 class Store {

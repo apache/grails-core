@@ -22,14 +22,14 @@ In this example we are updating properties of a speaker.
 :url: http://localhost:8080/graphql
 [source, bash, subs="attributes"]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateCurlCommand]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateCurlCommand]
 ----
 
 and the server acknowledges the update:
 
 [source, json]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateResponse]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/SpeakerIntegrationSpec.groovy[tags=updateResponse]
 ----
 
 

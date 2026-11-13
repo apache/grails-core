@@ -23,9 +23,11 @@ import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.interceptor.DefaultTransactionAttribute
 import org.springframework.transaction.interceptor.NoRollbackRuleAttribute
 import org.springframework.transaction.interceptor.RollbackRuleAttribute
 import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
+import org.springframework.transaction.interceptor.TransactionAttribute
 
 /**
  * Used to configure a {@link GrailsTransactionTemplate}
@@ -41,13 +43,8 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
     private static final long serialVersionUID = 1L
     private boolean inheritRollbackOnly = true
 
-    GrailsTransactionAttribute(org.springframework.transaction.interceptor.TransactionAttribute other) {
-        super()
-        propagationBehavior = other.propagationBehavior
-        isolationLevel = other.isolationLevel
-        timeout = other.timeout
-        readOnly = other.readOnly
-        name = other.name
+    GrailsTransactionAttribute(TransactionAttribute other) {
+        this((TransactionDefinition) other)
     }
 
     GrailsTransactionAttribute(TransactionDefinition other) {
@@ -57,6 +54,15 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
         timeout = other.timeout
         readOnly = other.readOnly
         name = other.name
+        if (other instanceof TransactionAttribute) {
+            copyAttributeState((TransactionAttribute) other)
+        }
+        if (other instanceof RuleBasedTransactionAttribute) {
+            // Spring's copy constructor snapshots the source's rule list from the field, unlike
+            // getRollbackRules() which would lazily assign a new list into the source object
+            setRollbackRules(new RuleBasedTransactionAttribute((RuleBasedTransactionAttribute) other).getRollbackRules())
+        }
+        copyGrailsState(other)
     }
 
     GrailsTransactionAttribute(GrailsTransactionAttribute other) {
@@ -65,6 +71,29 @@ class GrailsTransactionAttribute extends RuleBasedTransactionAttribute {
 
     GrailsTransactionAttribute(RuleBasedTransactionAttribute other) {
         super(other)
+        copyAttributeState(other)
+        copyGrailsState(other)
+    }
+
+    /**
+     * Copies the attribute-level state that Spring's copy constructors do not carry over.
+     * As of Spring Framework 7.0, {@code DefaultTransactionAttribute(TransactionAttribute)}
+     * only copies the {@link TransactionDefinition} fields.
+     */
+    private void copyAttributeState(TransactionAttribute other) {
+        if (other instanceof DefaultTransactionAttribute) {
+            descriptor = ((DefaultTransactionAttribute) other).descriptor
+            timeoutString = ((DefaultTransactionAttribute) other).timeoutString
+        }
+        qualifier = other.qualifier
+        Collection<String> otherLabels = other.labels
+        if (otherLabels != null) {
+            // defensive copy: setLabels stores the given reference
+            labels = new ArrayList<String>(otherLabels)
+        }
+    }
+
+    private void copyGrailsState(TransactionDefinition other) {
         if (other instanceof GrailsTransactionAttribute) {
             this.inheritRollbackOnly = ((GrailsTransactionAttribute) other).inheritRollbackOnly
         }

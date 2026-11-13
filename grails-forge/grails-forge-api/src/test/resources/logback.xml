@@ -13,6 +13,5 @@
     </root>
 
     <logger name="io.micronaut.http" level="trace" />
-    <logger name="org.grails.forge.api.create.github" level="trace" />
 
 </configuration>

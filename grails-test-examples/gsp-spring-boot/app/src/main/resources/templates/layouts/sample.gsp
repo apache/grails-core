@@ -16,8 +16,11 @@
   ~  specific language governing permissions and limitations
   ~  under the License.
   --%>
-<div style="border: 1px solid; text-align: center; width: 50%;">
-    <h3>Sample Inline Layout</h3>
-    <g:layoutBody /><br>
-    <br />
+<div class="card border-primary-subtle mt-4">
+    <div class="card-header bg-primary-subtle d-flex align-items-center gap-2">
+        <i class="bi bi-layers"></i>Sample Inline Layout
+    </div>
+    <div class="card-body text-center">
+        <g:layoutBody />
+    </div>
 </div>

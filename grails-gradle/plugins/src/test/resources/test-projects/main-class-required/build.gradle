@@ -1,0 +1,9 @@
+// A plugin without an Application class, so the tasks that run against the application have no main class
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+grails {
+    bom = null
+    cliAutoProvision = false
+}

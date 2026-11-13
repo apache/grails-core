@@ -39,7 +39,7 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
     @Override
     @Generated
     boolean hasChanged(String propertyName) {
-        PersistentEntity entity = currentGormInstanceApi().persistentEntity
+        PersistentEntity entity = currentGormInstanceApi().getGormPersistentEntity()
 
         PersistentProperty persistentProperty = entity.getPropertyByName(propertyName)
         if (!persistentProperty) {
@@ -58,6 +58,10 @@ trait GormEntityDirtyCheckable extends DirtyCheckable {
 
     @Generated
     private GormInstanceApi currentGormInstanceApi() {
-        (GormInstanceApi) GormEnhancer.findInstanceApi(getClass())
+        GormInstanceApi api = (GormInstanceApi) GormRegistry.instance.findInstanceApi(getClass())
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${getClass().name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 }

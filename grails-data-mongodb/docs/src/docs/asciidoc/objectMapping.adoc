@@ -96,6 +96,8 @@ new Person(friends:['Fred', 'Bob'], pets:[chuck:"Dog", eddie:'Parrot']).save(flu
 
 Basic collection types are stored as native ArrayList and BSON documents within the Mongo documents.
 
+NOTE: An entry whose key is also a property of every Groovy object, such as the `properties` member of a GeoJSON `Feature` or `metaClass`, is stored and loaded like any other entry. Read it with `pets.get('properties')`: on Groovy 5, `pets.properties` and `pets['properties']` return the meta-properties of the map object rather than the entry.
+
 
 === Customized Collection and Database Mapping
 

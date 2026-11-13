@@ -30,6 +30,8 @@ import org.jline.reader.EndOfFileException
 import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.completer.ArgumentCompleter
 import org.jline.terminal.Terminal
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.gradle.tooling.BuildActionExecuter
 import org.gradle.tooling.BuildCancelledException
 import org.gradle.tooling.ProjectConnection
@@ -79,6 +81,8 @@ import org.grails.exceptions.ExceptionUtils
 @CompileStatic
 class GrailsCli {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsCli)
+
     static final String ARG_SPLIT_PATTERN = /(?<!\\)\s+/
     public static final String DEFAULT_PROFILE_NAME = ProfileRepository.DEFAULT_PROFILE_NAME
     private static final String USAGE_MESSAGE = 'create-app [NAME] --profile=web'
@@ -98,7 +102,7 @@ class GrailsCli {
             try {
                 SETTINGS_MAP.merge(new ConfigSlurper().parse(BuildSettings.SHARED_SETTINGS_FILE.toURI().toURL()))
             } catch (Throwable e) {
-                e.printStackTrace()
+                LOG.error("Problem loading $BuildSettings.SHARED_SETTINGS_FILE", e)
                 System.err.println("ERROR: Problem loading $BuildSettings.SHARED_SETTINGS_FILE: ${e.message}")
             }
 
@@ -108,12 +112,10 @@ class GrailsCli {
                         Thread.start {
                             currentExecutionContext?.cancel()
                         }.join(1000)
-                    } catch (Throwable e) {
-                        // ignore
+                    } catch (Throwable ignored) {
                     }
                 }
-            } catch (e) {
-                // ignore
+            } catch (ignored) {
             }
         }
     }
@@ -128,7 +130,7 @@ class GrailsCli {
     CodeGenConfig applicationConfig
     ProjectContext projectContext
     Profile profile = null
-    List<GrailsRepositoryConfiguration> profileRepositories = [MavenProfileRepository.APACHE_REPO, MavenProfileRepository.GRAILS_REPO]
+    List<GrailsRepositoryConfiguration> profileRepositories = [MavenProfileRepository.apacheRepo(), MavenProfileRepository.grailsRepo()]
 
     /**
      * Obtains a value from .grails/settings.yml
@@ -223,9 +225,20 @@ class GrailsCli {
         }
 
         if (mainCommandLine.hasOption(CommandLine.HELP_ARGUMENT) || mainCommandLine.hasOption('h')) {
-            profileRepository = createMavenProfileRepository()
-            def cmd = CommandRegistry.instance.getCommand('help', profileRepository)
-            cmd.handle(createExecutionContext(mainCommandLine))
+            if (mainCommandLine.environmentSet) {
+                System.setProperty(Environment.KEY, mainCommandLine.environment)
+                Environment.reset()
+            }
+            if (isGrailsProject()) {
+                // Inside a project, resolve the profile so the help listing includes the
+                // application (project) commands, matching what interactive mode offers.
+                initializeApplication(mainCommandLine)
+                handleCommand(cliParser.parse('help'))
+            } else {
+                profileRepository = createMavenProfileRepository()
+                def cmd = CommandRegistry.instance.getCommand('help', profileRepository)
+                cmd.handle(createExecutionContext(mainCommandLine))
+            }
             exit(0)
         }
 
@@ -234,10 +247,7 @@ class GrailsCli {
             Environment.reset()
         }
 
-        File grailsAppDir = new File('grails-app')
-        File applicationGroovy = new File('Application.groovy')
-        File profileYml = new File('profile.yml')
-        if (!grailsAppDir.isDirectory() && !applicationGroovy.exists() && !profileYml.exists()) {
+        if (!isGrailsProject()) {
             profileRepository = createMavenProfileRepository()
             if (!mainCommandLine || !mainCommandLine.commandName) {
                 integrateGradle = false
@@ -331,6 +341,17 @@ class GrailsCli {
 
     ExecutionContext createExecutionContext(CommandLine commandLine) {
         new ExecutionContextImpl(commandLine, projectContext)
+    }
+
+    /**
+     * Whether the given directory (the current working directory by default) is a Grails project
+     * (application, plugin, or profile), in which case the project profile — and its application
+     * commands — can be resolved.
+     */
+    protected static boolean isGrailsProject(File baseDir = new File('.')) {
+        new File(baseDir, 'grails-app').isDirectory() ||
+                new File(baseDir, 'Application.groovy').exists() ||
+                new File(baseDir, 'profile.yml').exists()
     }
 
     Boolean handleCommand(CommandLine commandLine) {
@@ -500,8 +521,7 @@ class GrailsCli {
         if (!new File(BuildSettings.BASE_DIR, 'profile.yml').exists()) {
             // must be inside of a grails app, so share the classpath from the grails app to find all of the necessary commands, scripts, etc
             populateContextLoader()
-        }
-        else {
+        } else {
             this.profileRepository = createMavenProfileRepository()
         }
 
@@ -557,8 +577,7 @@ class GrailsCli {
                 try {
                     // add tools.jar
                     urls.add(new File("${System.getenv('JAVA_HOME')}/lib/tools.jar").toURI().toURL())
-                } catch (Throwable e) {
-                    // ignore
+                } catch (Throwable ignored) {
                 }
                 def profiles = (List<URL>) dependencyMap.get('profiles')
                 URLClassLoader classLoader = new URLClassLoader(urls as URL[], Thread.currentThread().contextClassLoader)
@@ -660,12 +679,12 @@ class GrailsCli {
         keepRunning = false
         try {
             GradleAsyncInvoker.POOL.shutdownNow()
-        } catch (Throwable e) {
-            // ignore
+        } catch (Throwable ignored) {
         }
     }
 
     static class ExecutionContextImpl implements ExecutionContext {
+
         CommandLine commandLine
 
         @Delegate(excludes = ['getConsole', 'getBaseDir'])
@@ -711,6 +730,7 @@ class GrailsCli {
 
     @Canonical
     private static class ProjectContextImpl implements ProjectContext {
+
         GrailsConsole console = GrailsConsole.getInstance()
         File baseDir
         CodeGenConfig grailsConfig

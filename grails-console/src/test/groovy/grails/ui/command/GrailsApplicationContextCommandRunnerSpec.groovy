@@ -16,6 +16,7 @@
  */
 package grails.ui.command
 
+import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -27,6 +28,21 @@ import spock.lang.Unroll
  * non-option arguments like the command name.
  */
 class GrailsApplicationContextCommandRunnerSpec extends Specification {
+
+    private static final String LEGACY_COMMAND_HINT =
+            'Grails 7 commands were detected; set grails { legacyCommandSupport = true } or upgrade the plugin.'
+
+    def "unknown command output appends the legacy command hint"() {
+        expect:
+        GrailsApplicationContextCommandRunner.unknownCommandMessage('missing-command', LEGACY_COMMAND_HINT) ==
+                "Command not found for name: missing-command\n${LEGACY_COMMAND_HINT}"
+    }
+
+    def "unknown command output remains unchanged without a legacy command hint"() {
+        expect:
+        GrailsApplicationContextCommandRunner.unknownCommandMessage('missing-command', null) ==
+                'Command not found for name: missing-command'
+    }
 
     @Unroll
     def "filterCommandOptions filters '#description'"() {
@@ -132,5 +148,89 @@ class GrailsApplicationContextCommandRunnerSpec extends Specification {
         ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup'] | ['s2-quickstart', 'com.example', 'User', 'Role']
         // Custom ApplicationCommand with arbitrary --options
         ['my-command', '--customFlag', '--anotherOption=value']              | ['my-command']
+    }
+
+    def "resolveAutowireTarget unwraps a legacy command adapter"() {
+        given:
+        Object legacyCommand = new Object()
+        ApplicationCommandTargetAware adapter = Stub() {
+            getTarget() >> legacyCommand
+        }
+
+        when:
+        Object autowireTarget = GrailsApplicationContextCommandRunner.resolveAutowireTarget(adapter)
+
+        then:
+        autowireTarget.is(legacyCommand)
+    }
+
+    def "resolveAutowireTarget preserves a new-contract command"() {
+        given:
+        Object command = new Object()
+
+        when:
+        Object autowireTarget = GrailsApplicationContextCommandRunner.resolveAutowireTarget(command)
+
+        then:
+        autowireTarget.is(command)
+    }
+
+    def "resolveSkipBootstrap reads the flag declared by a command"() {
+        expect:
+        GrailsApplicationContextCommandRunner.resolveSkipBootstrap(new SkipBootstrapCommand()) == true
+    }
+
+    def "resolveSkipBootstrap returns null for a command without the flag"() {
+        expect:
+        GrailsApplicationContextCommandRunner.resolveSkipBootstrap(new PlainCommand()) == null
+    }
+
+    def "resolveSkipBootstrap reads the flag from the target of a legacy command adapter"() {
+        given: 'an adapter that forwards handle() but not the properties its target declares'
+        Object adapter = new TargetAwareAdapter(new SkipBootstrapCommand())
+
+        expect: 'the flag is invisible on the adapter itself'
+        !adapter.hasProperty('skipBootstrap')
+
+        and: 'so it can only be found by going through the target'
+        GrailsApplicationContextCommandRunner.resolveSkipBootstrap(adapter) == true
+    }
+
+    def "resolveSkipBootstrap ignores a non-Boolean flag declared by the target"() {
+        expect:
+        GrailsApplicationContextCommandRunner.resolveSkipBootstrap(new TargetAwareAdapter(new TextSkipBootstrapCommand())) == null
+    }
+
+    /**
+     * A command opting out of BootStrap execution, like the schema export and database migration commands.
+     */
+    static class SkipBootstrapCommand {
+        Boolean skipBootstrap = true
+    }
+
+    /**
+     * A command declaring a {@code skipBootstrap} property of an unusable type.
+     */
+    static class TextSkipBootstrapCommand {
+        String skipBootstrap = 'true'
+    }
+
+    /**
+     * A command leaving BootStrap execution alone.
+     */
+    static class PlainCommand {
+        String description = 'runs with BootStrap'
+    }
+
+    /**
+     * Stands in for the adapter the registry returns for a Grails 7 command: it exposes the target
+     * but none of the properties that target declares.
+     */
+    static class TargetAwareAdapter implements ApplicationCommandTargetAware {
+        final Object target
+
+        TargetAwareAdapter(Object target) {
+            this.target = target
+        }
     }
 }

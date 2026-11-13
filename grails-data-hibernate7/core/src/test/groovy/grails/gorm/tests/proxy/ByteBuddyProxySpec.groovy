@@ -22,9 +22,7 @@ import grails.gorm.tests.entities.Club
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.grails.datastore.mapping.reflect.ClassUtils
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
-import spock.lang.PendingFeatureIf
 import spock.lang.Shared
 
 /**
@@ -38,10 +36,6 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
 
     @Shared
     HibernateProxyHandler proxyHandler = new HibernateProxyHandler()
-
-    //to show test that fail that should succeed set this to true. or uncomment the
-    // testImplementation "org.yakworks:hibernate-groovy-proxy:$yakworksHibernateGroovyProxy" to see pass
-    boolean runPending = ClassUtils.isPresent("yakworks.hibernate.proxy.ByteBuddyGroovyInterceptor")
 
     Team createATeam(){
         Club c = new Club(name: "DOOM Club").save(failOnError:true)
@@ -63,7 +57,6 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
         !proxyHandler.isInitialized(team.club)
     }
 
-    @PendingFeatureIf({ !instance.runPending })
     void "getId and id dont initialize proxy"() {
         when:"load proxy"
         Team team = createATeam()
@@ -83,7 +76,43 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
         !proxyHandler.isInitialized(team)
     }
 
-    @PendingFeatureIf({ !instance.runPending })
+    void "id access on a detached proxy does not initialize it or require a session"() {
+        when: "a proxy is detached from its session"
+        Team team = createATeam()
+        def id = team.id
+        manager.session.clear()
+        team = Team.load(id)
+        manager.session.clear()
+
+        then: "id access works without a session and does not initialize the proxy"
+        team.id == id
+        team.getId() == id
+        team.ident() == id
+        !proxyHandler.isInitialized(team)
+        proxyHandler.getIdentifier(team) == id
+    }
+
+    void "unwrap of a detached uninitialized proxy requires a session but identifier access does not"() {
+        given: "a proxy detached from its session"
+        Team team = createATeam()
+        def id = team.id
+        manager.session.clear()
+        team = Team.load(id)
+        manager.session.clear()
+
+        expect: "the identifier is available without a session"
+        proxyHandler.getIdentifier(team) == id
+        team.ident() == id
+        !proxyHandler.isInitialized(team)
+
+        when: "the proxy is unwrapped, which must materialize the real entity"
+        proxyHandler.unwrap(team)
+
+        then: "a database hit is unavoidable, so without a session this fails - code that only \
+needs the identifier must use id/ident()/getIdentifier() instead of unwrapping"
+        thrown(org.hibernate.LazyInitializationException)
+    }
+
     void "truthy check on instance should not initialize proxy"() {
         when:"load proxy"
         Team team = createATeam()
@@ -99,7 +128,6 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
         !proxyHandler.isInitialized(team.club)
     }
 
-    @PendingFeatureIf({ !instance.runPending })
     void "id checks on association should not initialize its proxy"() {
         when:"load instance"
         Team team = createATeam()
@@ -121,6 +149,25 @@ class ByteBuddyProxySpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManage
         and: "the getAt check for id should not initialize"
         team.club['id']
         !proxyHandler.isInitialized(team.club)
+    }
+
+    void "toString initializes the proxy and delegates to the entity implementation by default"() {
+        when:"load proxy"
+        Team team = createATeam()
+        def clubId = team.club.id
+        manager.session.clear()
+        Club club = Club.load(clubId)
+
+        then:"the proxy starts uninitialized"
+        proxyHandler.isProxy(club)
+        !proxyHandler.isInitialized(club)
+
+        when:"toString is called"
+        String value = club.toString()
+
+        then:"the entity's own toString runs, which requires initialization"
+        value == "DOOM Club"
+        proxyHandler.isInitialized(club)
     }
 
     void "isDirty should not intialize the association proxy"() {

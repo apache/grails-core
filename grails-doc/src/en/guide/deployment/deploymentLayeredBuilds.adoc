@@ -1,0 +1,245 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+An OCI image packages the application and a Java runtime for Docker, Podman, Kubernetes, or another compatible platform.
+Use a Dockerfile when you need control over the base image and installed software, or Spring Boot's `bootBuildImage` task when you want Cloud Native Buildpacks to manage that packaging.
+Buildah can build the same Dockerfile on Linux without a Docker daemon.
+
+== Prepare the application artifact
+
+Build and verify the application before creating the image. This preserves the complete Grails build, including `grails-app`, compiled views, assets, resources, and dependencies from other modules.
+The image build below consumes the resulting executable JAR; it does not run Gradle inside the image.
+
+In the existing application's `build.gradle`, give `bootJar` a predictable filename and reproducible archive entries readable by a non-root runtime:
+
+[source,groovy]
+----
+tasks.named('bootJar') {
+    archiveFileName = 'application.jar'
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    filePermissions {
+        unix('0644')
+    }
+    dirPermissions {
+        unix('0755')
+    }
+}
+----
+
+Stable ordering and timestamps help identical content reuse image layers across build hosts.
+Explicit read permissions also avoid importing owner-only permissions from a build agent's dependency cache into a buildpack image. If your archive includes native executables, give those specific entries execute permission as well.
+
+Grails applies Spring Boot's Gradle plugin. In Spring Boot 4.1, layering and the JAR tools are enabled by default; no separate layering plugin or forced plugin dependency is needed.
+If the application has disabled `bootJar`, layering, or `includeTools`, enable them again for this workflow.
+Do not configure `launchScript()` for this JAR: extraction with `jarmode=tools` does not support archives with a prepended shell launch script.
+
+[source,bash]
+----
+./gradlew clean check bootJar
+java -Djarmode=tools -jar build/libs/application.jar list-layers
+----
+
+The default layers, in order, are:
+
+. `dependencies`: non-project dependencies whose versions do not contain `SNAPSHOT`.
+. `spring-boot-loader`: Spring Boot loader content.
+. `snapshot-dependencies`: non-project dependencies whose versions contain `SNAPSHOT`.
+. `application`: application classes, resources, and dependencies on other projects in the build.
+
+Resources belong to `application`; there is no separate default `resources` layer.
+The layer index in a JAR is metadata. Copying the entire JAR in a single Dockerfile instruction does not create separately reusable image layers.
+Extract the layers and copy them individually, from least frequently changed to most frequently changed.
+This reduces repeated registry transfers and storage across image versions that share identical layers. It does not remove dependencies or necessarily make one image smaller than a single-JAR image.
+
+== Build a layered image with Docker
+
+Create `Dockerfile` in the application root:
+
+[source,dockerfile]
+----
+ARG JAVA_IMAGE=docker.io/library/eclipse-temurin:21-jre-noble
+
+FROM ${JAVA_IMAGE} AS extract
+WORKDIR /builder
+COPY build/libs/application.jar application.jar
+RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
+
+FROM ${JAVA_IMAGE} AS runtime
+WORKDIR /application
+RUN groupadd --gid 10001 app \
+    && useradd --uid 10001 --gid app --no-create-home --no-log-init --home-dir /application app
+COPY --from=extract /builder/extracted/dependencies/ ./
+COPY --from=extract /builder/extracted/spring-boot-loader/ ./
+COPY --from=extract /builder/extracted/snapshot-dependencies/ ./
+COPY --from=extract /builder/extracted/application/ ./
+USER 10001:10001
+EXPOSE 8080
+ENTRYPOINT ["java", "-Dgrails.env=prod", "-jar", "application.jar"]
+----
+
+The runtime `application.jar` is the small archive produced by compact extraction, containing the application classes and resources, including compiled assets. Its manifest references the extracted dependencies beside it.
+Keep all extracted layers together in `/application`, and run this archive with `java -jar` as shown above.
+The original large JAR stays in the extraction stage. This layout does not require a hard-coded Spring Boot launcher class.
+The application runs as a non-root user, with root-owned, read-only application files. Provide separate writable mounts if it stores data.
+
+The base image tag is a readable example. For release builds, resolve and record a tested base-image digest and pass its full `name@sha256:...` reference as the `JAVA_IMAGE` build argument.
+Update that digest regularly to take in runtime and OS fixes. Use a compatible Java version in both stages; select a JDK instead of a JRE only when runtime diagnostics or application requirements need it.
+Changing the distribution also requires adapting `groupadd` and `useradd`. Check native libraries, fonts, locale data, and CA certificates before choosing a smaller base; Alpine's musl libc is not a drop-in replacement for glibc for every dependency.
+
+Limit the build context with a `.dockerignore` beside the Dockerfile:
+
+[source,text]
+----
+**
+!Dockerfile
+!build/
+!build/libs/
+!build/libs/application.jar
+----
+
+Only the packaged application is needed. This also prevents source checkouts, local Gradle caches, and external credentials from being sent as build context.
+It cannot remove secrets already packaged into the JAR: keep those in <<deploymentTasks,runtime configuration>>.
+For a multi-project application, run the subproject's `bootJar` task and adjust the JAR path and ignore rules, or stage that task's exact output in a dedicated build context.
+
+[source,bash]
+----
+docker build --pull --tag myapp:0.1 .
+docker run --rm --name myapp \
+    --publish 127.0.0.1:8080:8080 \
+    --memory=1g --cpus=2 \
+    --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+    --cap-drop=ALL --security-opt=no-new-privileges \
+    --env JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=60.0 -XX:+ExitOnOutOfMemoryError' \
+    myapp:0.1
+----
+
+Supply the database and other required runtime configuration before starting your application.
+The limits above are examples to load-test, not universal Grails defaults. The writable `/tmp` supports the embedded server and temporary files; add appropriately permissioned volumes for uploads or other required writes.
+`EXPOSE` documents the port but does not publish it. This example binds it to host loopback for local testing; production traffic should enter through your platform's service or ingress.
+See <<deploymentTasks,production configuration>> for memory sizing, probes, logging, and shutdown.
+
+== Build with rootless Buildah
+
+Install https://buildah.io/[Buildah] on a Linux build host with user namespaces, subordinate UID/GID mappings, and rootless container storage configured for the build account.
+Run the following as that account after building the JAR. On macOS or Windows, use a Linux VM or a Linux CI runner for Buildah.
+
+[source,bash]
+----
+buildah build --layers --pull=always \
+    --file Dockerfile --tag localhost/myapp:0.1 .
+podman run --rm --name myapp \
+    --publish 127.0.0.1:8080:8080 \
+    --memory=1g --cpus=2 \
+    --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+    --cap-drop=ALL --security-opt=no-new-privileges \
+    --env JAVA_TOOL_OPTIONS='-XX:MaxRAMPercentage=60.0 -XX:+ExitOnOutOfMemoryError' \
+    localhost/myapp:0.1
+----
+
+Buildah reads `.dockerignore` when no `.containerignore` is present; if both exist, it uses `.containerignore`. Keep their rules consistent.
+`--layers` enables caching of intermediate builds. Keep the separate layer `COPY` instructions; squashing the image defeats reuse of those layers.
+Rootless building and a non-root runtime `USER` are separate properties: this example provides both.
+Podman can use Buildah's local image storage when run as the same user with the same storage configuration. Docker uses separate storage, so transfer the image through a registry when switching runtimes.
+Resource controls for rootless containers also depend on the host's cgroup configuration.
+
+To publish a tested image, authenticate to your registry, then push it. Replace `registry.example.com/team` with your own registry namespace:
+
+[source,bash]
+----
+buildah login registry.example.com
+buildah push --digestfile build/image-digest.txt \
+    localhost/myapp:0.1 docker://registry.example.com/team/myapp:0.1
+----
+
+In CI, supply authentication with a protected auth file or `buildah login --password-stdin`. Do not put credentials in build arguments or image layers.
+The digest file contains the pushed manifest digest; deploy `registry.example.com/team/myapp@sha256:...` using that value.
+For ephemeral runners, Buildah can store its build cache in a registry:
+
+[source,bash]
+----
+buildah build --layers --pull=always \
+    --cache-from registry.example.com/team/myapp-build-cache \
+    --cache-to registry.example.com/team/myapp-build-cache \
+    --file Dockerfile --tag localhost/myapp:0.1 .
+----
+
+Authenticate before using a private cache, restrict its writers, and configure retention. Buildah's registry-cache options differ from Docker BuildKit's cache options.
+See the https://github.com/containers/buildah/blob/main/docs/buildah-build.1.md[Buildah build reference] for host requirements and available flags.
+
+== Cloud Native Buildpacks
+
+Spring Boot's `bootBuildImage` builds an OCI image from the application's executable archive without a Dockerfile.
+It uses a builder image and a compatible run image to supply the Java runtime and application layers, and runs the resulting application as a non-root user.
+It requires a Docker-compatible daemon; a configured Podman API connection is also supported. It does not use Buildah or the Dockerfile above.
+
+Select the executable JAR explicitly, and for Paketo Java buildpacks configure the Java major version to match the application:
+
+[source,groovy]
+----
+tasks.named('bootBuildImage') {
+    archiveFile = tasks.named('bootJar').flatMap { it.archiveFile }
+    environment.put('BP_JVM_VERSION', '21')
+}
+----
+
+Explicitly selecting `bootJar` matters when the `war` plugin is also applied: Spring Boot otherwise uses `bootWar` for image creation, which may select a different buildpack deployment layout.
+
+[source,bash]
+----
+./gradlew clean check bootBuildImage --imageName=myapp:0.1
+----
+
+Use the builder supported by the Spring Boot plugin version in your application, or select a maintained builder and its compatible run image explicitly.
+For repeatable release builds, pin both images to tested digests and schedule rebuilds when they change.
+Check that the builder, run image, and buildpacks support your target CPU architecture and any required native libraries.
+
+Paketo's Java buildpack calculates JVM memory settings from the container memory limit and non-heap requirements.
+Set a container limit and tune its documented `BPL_JVM_*` runtime options for your workload rather than copying the manual Dockerfile's heap percentage into a buildpack image.
+Keep the buildpack launcher as the entry point so its memory calculation, bindings, and runtime configuration execute.
+`BP_*` settings configure the image build; deployment-specific configuration and secrets belong at runtime.
+When image tags change on every release, use stable, application-specific `buildCache` and `launchCache` volume names if you want to retain buildpack caches across versions.
+
+For a local smoke test, supply the application's required external configuration and run the image with a memory limit:
+
+[source,bash]
+----
+docker run --rm --name myapp \
+    --publish 127.0.0.1:8080:8080 --memory=1g --cpus=2 \
+    --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m \
+    --cap-drop=ALL --security-opt=no-new-privileges \
+    --env JAVA_TOOL_OPTIONS='-Dgrails.env=prod' \
+    myapp:0.1
+----
+
+Verify writable paths required by the selected buildpacks and any agents or bindings you enable. Here the buildpack retains control of heap sizing; the memory and temporary-storage limits still need workload-specific tuning.
+
+See https://docs.spring.io/spring-boot/{springBootVersion}/gradle-plugin/packaging-oci-image.html[Spring Boot's Gradle OCI image reference] for daemon connections, cache configuration, registry authentication, and publishing, and https://paketo.io/docs/howto/java/[Paketo's Java reference] for runtime tuning.
+
+== Release and architecture considerations
+
+* Tag images with a release version or commit identifier, record the source revision and artifact checksum in your build metadata, and promote the tested digest instead of rebuilding per environment.
+* Scan the final image, retain its software bill of materials, and rebuild for base-image and application-dependency fixes. A cached layer is reusable, not automatically up to date.
+* Build for the deployment platform explicitly when it differs from the build host, such as `--platform=linux/amd64` on an ARM workstation. Both Docker and Buildah support selecting a platform, but the extraction stage executes Java and therefore needs a native runner or configured emulation for that platform.
+* A Java JAR may be portable while JNI libraries and bundled executables are architecture-specific. Build and smoke-test each target architecture. Publish a multi-platform image index only after its constituent images pass; a single-platform image tag is not a multi-platform release.
+* Verify a representative controller request, compiled views, static assets, database access, and termination using the final image and production-like resource limits. Check that an application-only change reuses dependency layers, for example with `docker history` and registry layer digests.
+
+The link:{springBootReference}packaging/container-images/dockerfiles.html[Spring Boot Dockerfile guide] explains JAR extraction, and the link:{springBootReference}packaging/container-images/efficient-images.html[efficient container images guide] describes layer ordering.
+For further startup optimizations, see <<deploymentAot,ahead-of-time processing>> and <<deploymentAotCache,ahead-of-time caching>>. A trained JVM cache must match the deployment's JDK, application, architecture, and runtime layout.
+See also Docker's https://docs.docker.com/build/building/best-practices/[image-building best practices].

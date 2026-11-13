@@ -38,8 +38,7 @@ import org.grails.orm.hibernate.GrailsHibernateTemplate;
 /**
  * Implementation of the ProxyHandler interface for Hibernate 7.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 1.2.2
  */
 @SuppressWarnings("PMD.CloseResource")
 public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
@@ -101,16 +100,15 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
             return ep.getProxyKey();
         }
 
-        Serializable identifier = GroovyProxyInterceptorLogic.getIdentifier(o);
-        if (identifier != null) {
-            return identifier;
-        }
-
+        // check HibernateProxy before the Groovy metaClass probe: probing the metaClass of a
+        // proxy whose interceptor is not Groovy-aware would initialize it (or throw
+        // LazyInitializationException when detached), while the LazyInitializer holds the
+        // identifier without needing a session
         if (o instanceof HibernateProxy hp) {
             return (Serializable) hp.getHibernateLazyInitializer().getIdentifier();
         }
 
-        return null;
+        return GroovyProxyInterceptorLogic.getIdentifier(o);
     }
 
     @Override
@@ -120,10 +118,12 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
 
     @Override
     public boolean isProxy(Object o) {
-        return GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null ||
-                o instanceof EntityProxy ||
+        // instanceof checks first: the Groovy metaClass probe initializes a proxy whose
+        // interceptor is not Groovy-aware
+        return o instanceof EntityProxy ||
                 o instanceof HibernateProxy ||
-                o instanceof PersistentCollection;
+                o instanceof PersistentCollection ||
+                GroovyProxyInterceptorLogic.getProxyInstanceMetaClass(o) != null;
     }
 
     @Override
@@ -144,13 +144,12 @@ public class HibernateProxyHandler implements ProxyHandler, ProxyFactory {
     @Override
     public <T> T createProxy(Session session, Class<T> type, Serializable key) {
         if (session.getNativeInterface() instanceof GrailsHibernateTemplate ght) {
-            org.hibernate.SessionFactory sessionFactory = ght.getSessionFactory();
-            if (sessionFactory != null) {
-                return org.hibernate.Hibernate.createDetachedProxy(sessionFactory, type, key);
-            }
+            // Obtain the proxy from the current Hibernate session (Session#getReference),
+            // so that it is attached to it and can be initialized on first access
+            return ght.load(type, key);
         }
         throw new IllegalStateException(
-                "Could not obtain native Hibernate SessionFactory from Session#getNativeInterface()");
+                "Could not obtain GrailsHibernateTemplate from Session#getNativeInterface()");
     }
 
     @Override

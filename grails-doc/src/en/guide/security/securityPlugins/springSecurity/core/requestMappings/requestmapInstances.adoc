@@ -1,0 +1,96 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[core-requestmapInstances]]
+=== Request Mappings Stored in the Database
+
+With this approach you create and use a domain class to store security mapping entries in the database.
+
+The domain class must have the following properties:
+
+* `url` - the secured URL pattern
+* `httpMethod` - the http method for which the rule applies (or null for all methods)
+* `configAttribute` - containing a comma-delimited list of required roles,
+  SpEL expressions, and/or tokens such as `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`,
+  and `IS_AUTHENTICATED_ANONYMOUSLY`
+
+To use database-backed url security mappings, use the following configuration:
+
+[source,groovy]
+.Listing {counter:listing}. Configuring database-backed url security rules
+----
+grails.plugin.springsecurity.securityConfigType = 'Requestmap'
+grails.plugin.springsecurity.requestMap.className = 'com.mycompany.myapp.SecurityMapping'
+----
+
+See <<core-requestmapClass>> for an example request map domain class.
+
+You create request map entries as you create entries in any Grails domain class:
+
+[source,groovy]
+.Listing {counter:listing}. Creating request map entries
+----
+for (String url in [
+      '/', '/error', '/index', '/index.gsp', '/**/favicon.ico', '/shutdown',
+      '/assets/**', '/**/js/**', '/**/css/**', '/**/images/**',
+      '/login', '/login.*', '/login/*',
+      '/logout', '/logout.*', '/logout/*']) {
+   new SecurityMapping(url: url, configAttribute: 'permitAll').save()
+}
+
+new SecurityMapping(url: '/profile/**',    configAttribute: 'ROLE_USER').save()
+new SecurityMapping(url: '/admin/**',      configAttribute: 'ROLE_ADMIN').save()
+new SecurityMapping(url: '/admin/role/**', configAttribute: 'ROLE_SUPERVISOR').save()
+new SecurityMapping(url: '/admin/user/**',
+               configAttribute: 'ROLE_ADMIN,ROLE_SUPERVISOR').save()
+new SecurityMapping(url: '/login/impersonate',
+               configAttribute: 'ROLE_SWITCH_USER,IS_AUTHENTICATED_FULLY').save()
+springSecurityService.clearCachedRequestmaps()
+----
+
+The `configAttribute` value can have a single value or have multiple comma-delimited values. In this example only users with `ROLE_ADMIN` or `ROLE_SUPERVISOR` can access `/admin/user/pass:[**]` urls, and only users with `ROLE_SWITCH_USER` can access the switch-user url (`/login/impersonate`) and in addition must be authenticated fully, i.e. not using a remember-me cookie. Note that when specifying multiple roles, the user must have at least one of them, but when combining `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, or `IS_AUTHENTICATED_ANONYMOUSLY` with one or more roles means the user must have one of the roles and satisfy the `IS_AUTHENTICATED` rule.
+
+Unlike the `application.groovy` map approach (<<core-configGroovyMap>>), you do not need to revise the request map entry order because the plugin calculates the most specific rule that applies to the current request.
+
+==== Request Map Cache
+
+Request map entries are cached for performance, but caching affects runtime configurability. If you create, edit, or delete an instance, the cache must be flushed and repopulated to be consistent with the database. You can call `springSecurityService.clearCachedRequestmaps()` to do this. For example, if you create a `RequestSecurityRuleController` the `save` action should look like this (and the update and delete actions should similarly call `clearCachedRequestmaps()`):
+
+[source,groovy]
+.Listing {counter:listing}. Calling `clearCachedRequestmaps()`
+----
+class SecurityMappingController {
+
+   def springSecurityService
+
+   //...
+
+   def save(SecurityMapping mapping) {
+      if (!mapping.save(flush: true)) {
+         render(view: 'create', model: [instance: mapping])
+         return
+      }
+
+      springSecurityService.clearCachedRequestmaps()
+
+      flash.message = 'Mapping saved'
+      redirect(action: 'show', id: mapping.id)
+   }
+}
+----

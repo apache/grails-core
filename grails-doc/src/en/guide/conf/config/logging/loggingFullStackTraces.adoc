@@ -97,6 +97,15 @@ log record. It means non-resolver code paths (for example, a scheduled job that 
 `GrailsUtil.sanitizeRootCause(ex)` before logging via its own logger) continue to populate the `StackTrace`
 appender without an explicit emission call.
 
+NOTE: Both `grails.logging.stackTraceFiltererClass` and `grails.exceptionresolver.logFullStackTraceOnFilter`
+apply outside the exception resolver too — including GSP view-render exceptions — so this property controls
+emission everywhere the filterer is used, not just for resolver-driven requests. In any context not started
+through `SpringApplication` — the CLI, plain `main()` usage, Grails unit tests — the previous fallback
+behaviour applies unchanged: a plain `DefaultStackTraceFilterer` with no configuration applied. The
+configured filterer is JVM-global rather than per-context, so in a JVM hosting more than one application
+context the last one booted supplies the filterer for all of them. Custom `StackTraceFilterer`
+implementations that don't extend `DefaultStackTraceFilterer` are responsible for their own logging policy.
+
 The behaviour is enabled by default. To disable the side-effect emission and rely solely on
 `logFullStackTrace` for resolver-driven output, set:
 

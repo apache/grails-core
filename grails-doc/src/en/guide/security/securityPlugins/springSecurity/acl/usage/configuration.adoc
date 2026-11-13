@@ -1,0 +1,64 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[acl-configuration]]
+=== Configuration
+
+Creating, editing, or deleting permissions requires an authenticated user. In most cases  if the authenticated user is the owner of the ACL then access is allowed, but granted roles also affect whether access is allowed. The default required role is `ROLE_ADMIN` for all actions, but this can be configured in `grails-app/conf/application.groovy`. This table summarizes the attribute names and the corresponding actions that are allowed for it:
+
+[width="100%",options="header"]
+|====================
+| *Attribute* | *Affected methods*
+| `grails.plugin.springsecurity. acl.authority. modifyAuditingDetails` | `AuditableAcl.updateAuditing()`
+| `grails.plugin.springsecurity. acl.authority. changeOwnership` | `OwnershipAcl.setOwner()`
+| `grails.plugin.springsecurity. acl.authority. changeAclDetails` | `MutableAcl.deleteAce()`, `MutableAcl.insertAce()`, `MutableAcl.setEntriesInheriting()`, `MutableAcl.setParent()`, `MutableAcl.updateAce()`
+|====================
+
+You can leave the attributes set to `ROLE_ADMIN` or change them to have separate values, e.g.
+
+[source,groovy]
+----
+grails.plugin.springsecurity.acl.authority.
+        modifyAuditingDetails = 'ROLE_ACL_MODIFY_AUDITING'
+
+grails.plugin.springsecurity.acl.authority.
+        changeOwnership = 'ROLE_ACL_CHANGE_OWNERSHIP'
+
+grails.plugin.springsecurity.acl.authority.
+        changeAclDetails = 'ROLE_ACL_CHANGE_DETAILS'
+----
+
+==== Run-As Authentication Replacement
+
+There are also two options to configure https://docs.spring.io/spring-security/reference/servlet/authentication/runas.html[Run-As Authentication Replacement]:
+
+[width="100%",options="header"]
+|====================
+| *Attribute* | *Meaning*
+| `grails.plugin.springsecurity. useRunAs` | change to `true` to enable; defaults to `false`
+| `grails.plugin.springsecurity. runAs.key` | a shared key between the two standard implementation classes, used to verify that a third party hasn't created a token for the user; should be changed from its default value
+|====================
+
+Example:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.useRunAs = true
+grails.plugin.springsecurity.runAs.key = 'your run-as key'
+----

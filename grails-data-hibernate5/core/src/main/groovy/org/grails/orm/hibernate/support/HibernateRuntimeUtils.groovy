@@ -28,7 +28,6 @@ import org.hibernate.SessionFactory
 import org.springframework.core.convert.ConversionService
 import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
-import org.springframework.validation.ObjectError
 
 import org.grails.datastore.gorm.GormValidateable
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -77,21 +76,16 @@ class HibernateRuntimeUtils {
         def errors = new ValidationErrors(target)
 
         Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) mc.getProperty(target, GormProperties.ERRORS)
-        // Copy binding failures and any existing object-level errors
-        for (Object o in originalErrors.allErrors) {
-            if (o instanceof FieldError) {
-                FieldError fe = (FieldError) o
-                if (fe.isBindingFailure()) {
-                    errors.addError(new FieldError(fe.getObjectName(),
-                            fe.field,
-                            fe.rejectedValue,
-                            fe.bindingFailure,
-                            fe.codes,
-                            fe.arguments,
-                            fe.defaultMessage))
-                }
-            } else {
-                errors.addError((ObjectError) o)
+        for (Object o in originalErrors.fieldErrors) {
+            FieldError fe = (FieldError) o
+            if (fe.isBindingFailure()) {
+                errors.addError(new FieldError(fe.getObjectName(),
+                        fe.field,
+                        fe.rejectedValue,
+                        fe.bindingFailure,
+                        fe.codes,
+                        fe.arguments,
+                        fe.defaultMessage))
             }
         }
 
@@ -128,15 +122,17 @@ class HibernateRuntimeUtils {
                 continue
             }
 
+            // The inverse object is initialized here, so reading its back-reference never loads a proxy.
+            // A non-null back-reference is left alone whether or not it is itself initialized, and a null
+            // one has nothing to initialize, so there is no proxy check to make before setting it.
+            // The reflector reads through a proxy but writes to the object it is given, so an initialized
+            // proxy is unwrapped once and the back-reference is set on the entity behind it.
             def otherSidePropertyName = otherSide.getName()
-            if (!proxyHandler.isInitialized(inverseObject, otherSidePropertyName)) {
-                continue
-            }
-
             def associationReflector = mappingContext.getEntityReflector(association.associatedEntity)
-            def propertyValue = associationReflector.getProperty(inverseObject, otherSidePropertyName)
+            Object child = proxyHandler.unwrap(inverseObject)
+            def propertyValue = associationReflector.getProperty(child, otherSidePropertyName)
             if (propertyValue == null) {
-                associationReflector.setProperty(inverseObject, otherSidePropertyName, target)
+                associationReflector.setProperty(child, otherSidePropertyName, target)
             }
         }
     }
@@ -170,8 +166,7 @@ class HibernateRuntimeUtils {
                 } else {
                     value = conversionService.convert(value, targetType)
                 }
-            } catch (e) {
-                // ignore
+            } catch (ignored) {
             }
         }
         return value

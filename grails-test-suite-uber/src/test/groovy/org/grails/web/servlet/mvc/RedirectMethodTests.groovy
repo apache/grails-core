@@ -19,6 +19,7 @@
 package org.grails.web.servlet.mvc
 
 import grails.testing.web.UrlMappingsUnitTest
+import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.servlet.mvc.alpha.NamespacedController
 import grails.web.mapping.mvc.exceptions.CannotRedirectException
 import org.grails.web.util.GrailsApplicationAttributes
@@ -93,6 +94,61 @@ class RedirectMethodTests extends Specification implements UrlMappingsUnitTest<U
 
         then:
         '/anotherSecondaryNamespace/demo' == response.redirectedUrl
+    }
+
+    // chain() issues a real HTTP redirect via response.sendRedirect(), which commits the mock
+    // response; a committed MockHttpServletResponse cannot be reused, so each chain case lives in its
+    // own feature method to get a fresh response (unlike redirect(), which only sets the Location
+    // header and can be exercised repeatedly within a single method).
+
+    void "test chain to the same namespaced controller infers the current namespace"() {
+        when:
+        def secondary = new org.grails.web.servlet.mvc.beta.NamespacedController()
+        webRequest.controllerName = 'namespaced'
+        webRequest.controllerNamespace = 'secondary'
+        secondary.chainToSelfWithImplicitNamespace()
+
+        then:
+        '/secondaryNamespace/demo' == response.redirectedUrl
+    }
+
+    void "test chain to a different controller in the same namespace infers the namespace"() {
+        given: 'the target namespaced controller is registered so its namespace can be inferred'
+        grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, org.grails.web.servlet.mvc.beta.AnotherNamespacedController)
+        def linkGenerator = applicationContext.getBean('grailsLinkGenerator')
+        linkGenerator.grailsApplication = grailsApplication
+        linkGenerator.resetControllerNamespaceCache()
+
+        when:
+        def secondary = new org.grails.web.servlet.mvc.beta.NamespacedController()
+        webRequest.controllerName = 'namespaced'
+        webRequest.controllerNamespace = 'secondary'
+        secondary.chainToAnotherSecondaryImplicitNamespace()
+
+        then:
+        '/anotherSecondaryNamespace/demo' == response.redirectedUrl
+    }
+
+    void "test chain with an explicit namespace is honored"() {
+        when:
+        def secondary = new org.grails.web.servlet.mvc.beta.NamespacedController()
+        webRequest.controllerName = 'namespaced'
+        webRequest.controllerNamespace = 'secondary'
+        secondary.chainToAnotherSecondaryExplicitNamespace()
+
+        then:
+        '/anotherSecondaryNamespace/demo' == response.redirectedUrl
+    }
+
+    void "test chain with an explicit null namespace opts out to the root controller"() {
+        when:
+        def secondary = new org.grails.web.servlet.mvc.beta.NamespacedController()
+        webRequest.controllerName = 'namespaced'
+        webRequest.controllerNamespace = 'secondary'
+        secondary.chainToPrimaryExplicitNullNamespace()
+
+        then:
+        '/anotherNoNamespace/demo' == response.redirectedUrl
     }
 
     void testRedirectToDefaultActionOfAnotherController() {

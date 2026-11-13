@@ -35,6 +35,10 @@ The `validate` method validates a domain class based on its defined link:{guideP
 
 The `validate` method accepts an optional `List` argument which contains the names of the properties to be validated. When a `List` of names is specified, only those properties will be validated.
 
+For Hibernate-backed domain classes, each validation starts with a fresh errors object that preserves existing data-binding failures. Previously added global errors (`errors.reject(...)`) and ordinary field errors (`errors.rejectValue(...)`) are cleared before validation runs. Constraints and `beforeValidate` callbacks can add errors for the current validation. This also applies when validation is triggered by `save()` or by flushing a dirty instance, and when `deepValidate: false` disables association validation.
+
+Inspect manually added errors before invoking validation if they should prevent an operation. Place rules that must be checked on every validation in a constraint or a `beforeValidate` callback. Other GORM datastores can have different error-reset behavior.
+
 
 === Examples
 

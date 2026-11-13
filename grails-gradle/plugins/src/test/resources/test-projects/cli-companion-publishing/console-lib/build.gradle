@@ -1,0 +1,28 @@
+// Analog of grails-console: a plain library that consumes the owner's cli tier in its MAIN variants
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.grails-cli-library'
+    id 'org.apache.grails.gradle.grails-publish'
+}
+
+group = 'org.example.test'
+
+dependencies {
+    api project(':owner')
+    api(project(':owner')) {
+        capabilities {
+            requireCapability('org.example.test:owner-cli')
+        }
+    }
+}
+
+grailsPublish {
+    githubSlug = 'apache/grails-core'
+    license {
+        name = 'Apache-2.0'
+    }
+    title = 'Console Lib'
+    desc = 'Test library that consumes the owner cli companion in its main variants'
+    developers = [test: 'Test Developer']
+    testRepositoryPath = rootProject.layout.buildDirectory.dir('test-repo').get()
+}

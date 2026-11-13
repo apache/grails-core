@@ -18,17 +18,99 @@ package org.grails.core.cfg
 
 import grails.util.Environment
 import org.grails.config.PropertySourcesConfig
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.boot.context.properties.source.ConfigurationPropertySources
 import org.springframework.core.env.MutablePropertySources
+import org.springframework.core.env.StandardEnvironment
 import org.springframework.core.env.PropertySources
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import spock.lang.Specification
+import spock.lang.TempDir
+import spock.util.environment.RestoreSystemProperties
 
+@RestoreSystemProperties
 @SuppressWarnings("GrMethodMayBeStatic")
 class GroovyConfigPropertySourceLoaderSpec extends Specification implements EnvironmentAwareSpec {
 
+    @TempDir
+    File configDirectory
+
     void setup() {
         resetEnvironment()
+    }
+
+    void "a list of objects in application.groovy binds to configuration properties element by element"() {
+        given:
+        File file = File.createTempFile('list-binding-application', '.groovy')
+        file.deleteOnExit()
+        file.text = '''
+            app {
+                items = [[name: 'one', tags: ['x', 'y']], [name: 'two']]
+                rows = [[[name: 'a'], [name: 'b']], [[name: 'c']]]
+                names = ['p', '${EXAMPLE_NAME:q}']
+            }
+        '''.stripIndent()
+        def environment = new StandardEnvironment()
+        environment.propertySources.addFirst(new GroovyConfigPropertySourceLoader().load(file.name, new FileSystemResource(file)).first())
+        ConfigurationPropertySources.attach(environment)
+
+        when:
+        ListBindingProperties bound = Binder.get(environment).bind('app', Bindable.of(ListBindingProperties)).get()
+
+        then: 'a list of objects, a list inside one of them, and a list of lists of objects'
+        bound.items*.getClass() == [ListBindingItem, ListBindingItem]
+        bound.items*.name == ['one', 'two']
+        bound.items[0].tags == ['x', 'y']
+        bound.rows*.collect { it.name } == [['a', 'b'], ['c']]
+
+        and: 'placeholders in a list of plain values are resolved'
+        bound.names == ['p', 'q']
+    }
+
+    void cleanup() {
+        Environment.reset()
+    }
+
+    void '#fileName retains #profileKey as data and selects Grails environment blocks'() {
+        given:
+        environment = Environment.TEST
+        Environment.reset()
+        System.setProperty('spring.profiles.active', 'dev')
+        File applicationFile = new File(configDirectory, 'application.groovy')
+        applicationFile.text = "sample.message = 'application'"
+        new File(configDirectory, fileName).text = """
+${profileSetting}
+sample.message = 'default'
+sample.retained = 'loaded'
+environments {
+    test {
+        sample.message = 'test'
+    }
+    production {
+        sample.message = 'production'
+        sample.productionOnly = 'production'
+    }
+}
+"""
+
+        when:
+        def sources = new GroovyConfigPropertySourceLoader().load('application.groovy', new FileSystemResource(applicationFile))
+        def config = new PropertySourcesConfig(sources.first())
+
+        then:
+        config.getProperty(profileKey) == 'prod'
+        config.getProperty('sample.retained') == 'loaded'
+        config.getProperty('sample.message') == 'test'
+        config.getProperty('sample.productionOnly') == null
+
+        where:
+        fileName             | profileKey                          | profileSetting
+        'application.groovy' | 'spring.profiles'                   | "spring.profiles = 'prod'"
+        'application.groovy' | 'spring.config.activate.on-profile' | "spring.config.activate.'on-profile' = 'prod'"
+        'runtime.groovy'     | 'spring.profiles'                   | "spring.profiles = 'prod'"
+        'runtime.groovy'     | 'spring.config.activate.on-profile' | "spring.config.activate.'on-profile' = 'prod'"
     }
 
     void "test loading multiple configuration files"() {
@@ -54,4 +136,15 @@ class GroovyConfigPropertySourceLoaderSpec extends Specification implements Envi
 
     }
 
+}
+
+class ListBindingProperties {
+    List<ListBindingItem> items = []
+    List<List<ListBindingItem>> rows = []
+    List<String> names = []
+}
+
+class ListBindingItem {
+    String name
+    List<String> tags
 }

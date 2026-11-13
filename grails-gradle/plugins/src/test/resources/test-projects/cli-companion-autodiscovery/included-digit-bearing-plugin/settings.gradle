@@ -1,0 +1,3 @@
+rootProject.name = 'included-digit-bearing-plugin'
+
+include 'my-plugin-2fa-one', 'my-plugin-2fa-snapshot', 'my-plugin-2fa-timestamp', 'my-plugin-2fa-unspecified'

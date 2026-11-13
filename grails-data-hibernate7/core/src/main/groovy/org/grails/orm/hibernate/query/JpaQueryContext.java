@@ -15,27 +15,33 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
 /**
  * Orchestrator for JPA query translation state (Aliases, Joins, Expressions).
  *
- * TODO: Better separation of concerns between JpaQueryContext and ExpressionResolver.
- * It is a bit icky that AliasRegistry and JoinTracker are passed into ExpressionResolver.
+ * {@link ExpressionResolver} receives the shared {@link AliasRegistry} and {@link JoinTracker}
+ * so aliases and joins remain scoped to the current root or subquery context.
  *
- * @author walterduquedeestrada
- * @author graemerocher
- * @since 7.0.0
+ * @since 8.0
  */
 public class JpaQueryContext implements Cloneable {
 
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
     private final ExpressionResolver resolver;
+    private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
+    private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
     private JpaQueryContext parent;
 
     public JpaQueryContext() {
@@ -71,11 +77,29 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
+     * Creates the context of an association block, which shares the joins of the context that contains it.
+     *
+     * @param parent the context of the query or block that contains the block
+     * @param aliases the aliases the block declares, or {@code null}
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the container
+     */
+    public static JpaQueryContext forBlock(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root,
+                                           String blockPath) {
+        return new JpaQueryContext(parent, aliases, root, blockPath);
+    }
+
+    /**
      * Internal constructor for subqueries and base initialization.
      */
     public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this(parent, aliases, root, null);
+    }
+
+    private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
         this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
+        this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.getJoinTracker(), root, blockPath) :
+                new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
         if (aliases != null) {
@@ -117,12 +141,50 @@ public class JpaQueryContext implements Cloneable {
         return joinTracker.getJoin(path);
     }
 
+    void setJoinPlan(JoinPlan joinPlan) {
+        joinTracker.setPlan(joinPlan);
+    }
+
+    /**
+     * The join of an association path relative to this scope. It is the join every alias, block and property
+     * that goes through the path of the query shares, with the join type the criteria decided for the path.
+     */
+    From<?, ?> resolveAssociation(String path) {
+        HibernateAlias definition = aliasRegistry.getDefinition(path);
+        JoinType planned = joinTracker.plannedType(path);
+        JoinType joinType = planned != null ? planned :
+                definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
+        return resolver.resolveAssociation(path, joinType);
+    }
+
     public void registerAlias(String alias, Expression<?> expression) {
         aliasRegistry.realize(alias, expression);
     }
 
     public void registerAlias(String alias, HibernateAlias definition) {
         aliasRegistry.define(alias, definition);
+    }
+
+    /**
+     * Records a selection of the query under its alias, by which an order of the query refers to it. Unlike
+     * {@link #registerAlias(String, Expression)}, the alias does not resolve a property path, in this context or a
+     * nested one, so a restriction on a property with the same name still restricts the property.
+     *
+     * @param alias the alias of the selection
+     * @param selection the selection
+     */
+    public void registerSelectionAlias(String alias, Expression<?> selection) {
+        selectionAliases.put(alias, selection);
+    }
+
+    /**
+     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}.
+     *
+     * @param alias the alias of the selection
+     * @return the selection, or {@code null} if no selection of this query has the alias
+     */
+    public Expression<?> getSelectionAlias(String alias) {
+        return selectionAliases.get(alias);
     }
 
     public void registerAliasFromPath(String path) {
@@ -169,6 +231,30 @@ public class JpaQueryContext implements Cloneable {
         }
         Expression<?> resolved = resolver.resolve(path);
         return resolved instanceof Path<?> path1 ? path1 : null;
+    }
+
+    /**
+     * Records the value of a criteria parameter, to be bound once the query is created. A subquery context
+     * records it in the context of the query that contains the subquery.
+     *
+     * @param parameter the parameter used in the criteria query
+     * @param value the value to bind to the parameter
+     */
+    public void bindParameter(ParameterExpression<?> parameter, Object value) {
+        if (parent != null) {
+            parent.bindParameter(parameter, value);
+        } else {
+            parameterValues.put(parameter, value);
+        }
+    }
+
+    /**
+     * Returns the values of the criteria parameters recorded for the query, in the order they were recorded.
+     *
+     * @return the value of each parameter
+     */
+    public Map<ParameterExpression<?>, Object> getParameterValues() {
+        return parent != null ? parent.getParameterValues() : Collections.unmodifiableMap(parameterValues);
     }
 
     @Override

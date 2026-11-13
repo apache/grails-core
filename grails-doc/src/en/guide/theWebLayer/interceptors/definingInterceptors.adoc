@@ -47,8 +47,6 @@ As described above the `before` method is executed prior to an action and can ca
 
 The `after` method is executed after an action executes and can halt view rendering if it returns false. The `after` method can also modify the view or model using the `view` and `model` properties respectively:
 
-
-
 [source,groovy]
 ----
 boolean after() {
@@ -58,4 +56,38 @@ boolean after() {
 }
 ----
 
-The `afterView` method is executed after view rendering completes. If an exception occurs, the exception is available using the `throwable` property of the link:{api}grails/artefact/Interceptor.html[Interceptor] trait.
+When an action renders a view, for example with `render(view: ...)`, `respond`, or by returning a model, the view is rendered after `after()` returns, so changes to `model` and `view` take effect.
+
+When an action calls `render(template: ..., model: ...)`, the template is rendered during that call, before `after()` runs. The `model` property returns the map passed as `model`, so `after()` can inspect what was rendered, but it cannot change the response: changes to `model` or `view` have no effect, and returning `false` does not stop the response. The map is the instance the action passed, so modifying it changes the action's map, and modifying an immutable map throws an `UnsupportedOperationException`.
+
+[source,groovy]
+----
+// BookController.groovy
+def show() {
+    render template: 'bookDetail', model: [book: Book.get(params.id)]
+}
+
+// BookInterceptor.groovy
+boolean after() {
+    log.debug "Rendered book: ${model?.book?.title}"
+    true
+}
+----
+
+Only the `model` argument is available. An object passed with `bean` or `collection` is not part of `model`:
+
+[cols="1,1", options="header"]
+|===
+| Action code | `model` in `after()`
+
+| `render template: 't', model: [a: 1]` | `[a: 1]`
+| `render template: 't', bean: book, model: [a: 1]` | `[a: 1]`
+| `render template: 't', bean: book` | `null`
+| `render template: 't', collection: books` | `null`
+| `render template: 't'` | `null`
+|===
+
+The `afterView` method is executed after view rendering completes. If an exception occurs, it is available using the `throwable` property of the link:{api}grails/artefact/Interceptor.html[Interceptor] trait. The property has type `Throwable`, so it can hold an `Error` as well as an `Exception`:
+
+* An `Error` thrown by an action arrives wrapped in an exception. Use `getCause()` to reach it.
+* An `Error` thrown outside the action, for example by a servlet filter, is handed to the servlet container's error page, and interceptors that match the error page's action run for that dispatch. If the error page passes the error to its model as `exception`, `throwable` holds it as the container provided it: Undertow passes the `Error` itself, while Tomcat wraps it in a `ServletException`.

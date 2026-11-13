@@ -100,7 +100,7 @@ class HibernateGrailsPlugin extends Plugin {
 
     @Override
     void onChange(Map<String, Object> event) {
-        // TODO: rewrite onChange handling
+        // No plugin-level onChange handling is currently implemented here.
     }
 
 }

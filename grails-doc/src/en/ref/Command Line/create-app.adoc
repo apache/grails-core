@@ -29,7 +29,7 @@ In Grails {grailsMajorVersion}, `create-app` is available in both the **Grails S
 
 - Most users should use the **Grails Shell CLI** by default (`grails create-app bookstore`). This version supports core development commands and project lifecycle management, and includes basic `create-*` flags like `--inplace`, `--features`, and `--profile`.
 
-- The **Forge CLI** (`grails -t forge create-app bookstore`) is intended solely for **application generation** with extended configuration flags such as `--jdk`, `--gorm`, and `--servlet`.
+- The **Forge CLI** (`grails -t forge create-app bookstore`) is intended solely for **application generation** with extended configuration flags such as `--jdk`, `--data`, and `--servlet`.
 
 Forge-specific flags will result in an error if used with the Shell CLI.
 ====
@@ -50,7 +50,7 @@ This uses the **Forge CLI** to generate an application with extended configurati
 ----
 $ grails -t forge create-app bookstore \
     --jdk=17 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --servlet=tomcat \
     --test=spock \
     --features=asciidoctor,github-workflow-java-ci
@@ -61,8 +61,8 @@ $ grails -t forge create-app bookstore \
 These options are available only when using `grails -t forge`:
 
 - `NAME`: The desired name for the application.
-- `-f, --features=FEATURE[,FEATURE...]`: Enable features like `gorm-hibernate5`, `postgres`, `asciidoctor`, `grails-gsp`, etc.
-- `-g, --gorm=GORM Implementation`: Choose GORM implementation: `hibernate`, `mongodb`, `neo4j`.
+- `-f, --features=FEATURE[,FEATURE...]`: Enable features like `gorm-hibernate5`, `gorm-hibernate7`, `postgres`, `asciidoctor`, `grails-gsp`, etc.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): Choose the Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`.
 - `--jdk=<javaVersion>`: Target JDK version (e.g., 11 or 17).
 - `-s, --servlet=Servlet Implementation`: Choose embedded servlet: `tomcat`, `jetty`, `undertow`, `none`.
 - `-t, --test=TEST`: Select test framework: `spock`, `junit`.
@@ -83,7 +83,7 @@ Available flags:
 - `--features` _(limited support depending on profile)_
 - `--profile`
 
-Forge-only options such as `--jdk`, `--gorm`, or `--servlet` are **not supported** in the Shell CLI.
+Forge-only options such as `--jdk`, `--data`, or `--servlet` are **not supported** in the Shell CLI.
 
 === Examples
 
@@ -101,7 +101,7 @@ $ cd bookstore
 ----
 $ grails -t forge create-app bookstore \
     --jdk=17 \
-    --gorm=hibernate \
+    --data=hibernate5 \
     --features=asciidoctor,grails-gsp
 ----
 

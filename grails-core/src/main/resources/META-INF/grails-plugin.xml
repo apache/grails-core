@@ -1,4 +1,3 @@
 <plugin name='core'>
   <type>org.grails.plugins.CoreGrailsPlugin</type>
-  <type>org.grails.plugins.domain.DomainClassGrailsPlugin</type>
 </plugin>

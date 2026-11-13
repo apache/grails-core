@@ -35,5 +35,9 @@ class DemoController {
 
     def throwCustomError() {
         throw new CustomException("Something bad")
-    }    
+    }
+
+    def throwCustomErrorWithCause() {
+        throw new CustomException("Something bad", new IllegalStateException("Its own cause"))
+    }
 }

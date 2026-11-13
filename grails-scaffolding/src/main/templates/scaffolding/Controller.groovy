@@ -14,7 +14,7 @@ class ${className}Controller {
         respond ${propertyName}Service.list(params), model:[${propertyName}Count: ${propertyName}Service.count()]
     }
 
-    def show(Long id) {
+    def show(Serializable id) {
         respond ${propertyName}Service.get(id)
     }
 
@@ -38,13 +38,13 @@ class ${className}Controller {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.created.message', args: [message(code: '${propertyName}.label', default: '${className}'), ${propertyName}.id])
-                redirect ${propertyName}
+                redirect action: "show", id: ${propertyName}.id, method: "GET"
             }
             '*' { respond ${propertyName}, [status: CREATED] }
         }
     }
 
-    def edit(Long id) {
+    def edit(Serializable id) {
         respond ${propertyName}Service.get(id)
     }
 
@@ -64,13 +64,13 @@ class ${className}Controller {
         request.withFormat {
             form multipartForm {
                 flash.message = message(code: 'default.updated.message', args: [message(code: '${propertyName}.label', default: '${className}'), ${propertyName}.id])
-                redirect ${propertyName}
+                redirect action: "show", id: ${propertyName}.id, method: "GET"
             }
             '*'{ respond ${propertyName}, [status: OK] }
         }
     }
 
-    def delete(Long id) {
+    def delete(Serializable id) {
         if (id == null) {
             notFound()
             return

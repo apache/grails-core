@@ -22,6 +22,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
 version = projectVersion
@@ -46,50 +47,11 @@ dependencies {
         exclude group: 'org.apache.grails', module: 'grails-testing-support-core'
         exclude group: 'org.apache.grails', module: 'grails-rest-transforms'
     }
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation testFixtures(project(':grails-web-common'))
     testImplementation 'org.spockframework:spock-core'
-}
 
-def defaultTestConfig = {
-    maxParallelForks = configuredTestParallel
-    forkEvery = isCiBuild ? 50 : 100
-    excludes = ['**/*TestCase.class', '**/*$*.class']
-}
-
-def isolatedTests = [
-        '**/ContentFormatControllerTests.class',
-        '**/JSONBindingTests.class',
-        '**/AutoParams*MarshallingTests.class',
-        '**/JSONBindingToNullTests.class',
-        '**/ControllerWithXmlConvertersTests.class',
-        '**/GroovyPageAttributesTests.class',
-        '**/BindingExcludeTests.class',
-        '**/NestedXmlBindingTests.class',
-        '**/GSPResponseWriterSpec.class',
-        '**/RespondMethodSpec.class',
-        '**/ContentNegotiationSpec.class',
-        '**/pages/ext/jsp/*.class',
-        '**/WithFormatContentTypeSpec.class',
-        '**/CommandObjectNoDataSpec.class'
-]
-
-tasks.register('execIsolatedTests', Test).configure { Test it ->
-    it.configure(defaultTestConfig)
-    it.forkEvery = 1
-    it.includes.addAll(isolatedTests)
-}
-
-tasks.register('createCombinedReport', TestReport).configure { TestReport rTask ->
-    rTask.group = 'verification'
-    rTask.destinationDirectory = layout.buildDirectory.dir('reports/allTests')
-    rTask.testResults.from(
-            tasks.named('execIsolatedTests', Test).map({ it.binaryResultsDirectory }),
-            tasks.named('test', Test).map({ it.binaryResultsDirectory })
-    )
-}
-
-tasks.named('test', Test).configure { Test it ->
-    it.configure(defaultTestConfig)
-    it.excludes.addAll(isolatedTests)
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 tasks.withType(Groovydoc).configureEach {

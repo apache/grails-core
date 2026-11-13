@@ -17,10 +17,10 @@
  *  under the License.
  */
 
-import org.asciidoctor.gradle.jvm.AsciidoctorTask
+import grails.doc.gradle.ConvertAsciidocTask
 
 plugins {
-    id 'org.asciidoctor.jvm.convert'
+    id 'base'
 }
 
 version = projectVersion
@@ -32,16 +32,9 @@ def asciidoctorAttributes = [
         imagesdir           : 'images',
 ]
 
-tasks.named('asciidoctor', AsciidoctorTask) { AsciidoctorTask it ->
-    inputs.dir(project.layout.projectDirectory.dir('src/main/docs')).withPropertyName('docsSrcDir').withPathSensitivity(PathSensitivity.RELATIVE)
-    outputs.dir project.layout.buildDirectory.dir('docs')
-
-    it.jvm {
-        jvmArgs("--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED", "--add-opens", "java.base/java.io=ALL-UNNAMED")
-    }
-    it.baseDirFollowsSourceFile()
-    it.sourceDir project.layout.projectDirectory.dir('src/main/docs')
+tasks.register('asciidoctor', ConvertAsciidocTask) { ConvertAsciidocTask it ->
+    it.sourceDir = project.layout.projectDirectory.dir('src/main/docs')
     it.outputDir = project.layout.buildDirectory.dir('docs')
-    it.attributes asciidoctorAttributes
+    it.attributes = asciidoctorAttributes
 }
 

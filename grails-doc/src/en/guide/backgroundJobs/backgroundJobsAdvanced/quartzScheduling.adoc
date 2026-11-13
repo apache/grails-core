@@ -1,0 +1,138 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A job is a class in `grails-app/jobs` whose name ends in `Job` and which declares an `execute` method. The `triggers` block describes when it runs:
+
+[source,groovy]
+----
+class MyJob {
+
+    static group = 'MyGroup'
+    static description = 'Example job with a simple trigger'
+
+    static triggers = {
+        simple(
+            name: 'mySimpleTrigger',
+            startDelay: 60000,
+            repeatInterval: 1000
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+The example above waits one minute after the scheduler starts, then calls `execute()` every second. `repeatInterval` and `startDelay` are expressed in milliseconds and must be `Integer` or `Long`; a negative value is rejected at startup. When they are omitted, the defaults in <<quartzTriggers,Triggers>> apply.
+
+The `name` of a trigger must be unique across every trigger in the application. If you do not supply one, the plugin generates a name from the job name and a counter.
+
+===== Scheduling a cron job
+
+Jobs can also be scheduled with a cron expression — for example "at 6:00am every day" or "at 1:30am on the last Friday of the month":
+
+[source,groovy]
+----
+class MyJob {
+
+    static group = 'MyGroup'
+    static description = 'Example job with a cron trigger'
+
+    static triggers = {
+        cron(
+            name: 'myTrigger',
+            cronExpression: '0 0 6 * * ?'
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+The fields of a `cronExpression` are:
+
+[source]
+----
+cronExpression: "s m h D M W Y"
+                 | | | | | | - Year (optional)
+                 | | | | | - Day of Week, 1-7 or SUN-SAT, ?
+                 | | | | - Month, 1-12 or JAN-DEC
+                 | | | - Day of Month, 1-31, ?
+                 | | - Hour, 0-23
+                 | - Minute, 0-59
+                 - Second, 0-59
+----
+
+[NOTE]
+====
+* Year is the only optional field; the rest are mandatory.
+* Day-of-Week and Month are case-insensitive, so `DEC` = `dec` = `Dec`.
+* Either Day-of-Week or Day-of-Month must be `?`. You cannot specify both, nor leave both as the `*` wildcard — this is a departure from the unix crontab specification.
+====
+
+See the Quartz https://www.quartz-scheduler.org/api/2.5.0/org/quartz/CronExpression.html[`CronExpression`] documentation for the full set of special characters.
+
+===== Receiving the execution context
+
+`execute` may optionally accept the Quartz https://www.quartz-scheduler.org/api/2.5.0/org/quartz/JobExecutionContext.html[`JobExecutionContext`], which carries the merged job data map and the fire-time details:
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        simple repeatInterval: 5000L
+    }
+
+    void execute(JobExecutionContext context) {
+        println context.mergedJobDataMap.foo
+    }
+}
+----
+
+===== Interrupting a running job
+
+A job that declares an `interrupt()` method can be interrupted mid-execution through the <<quartzJobManagerService,`jobManagerService`>>. The plugin discovers the method reflectively, so the job class does not need to implement any Quartz interface:
+
+[source,groovy]
+----
+class MyJob {
+
+    private volatile boolean cancelled = false
+
+    static triggers = {
+        simple repeatInterval: 5000L
+    }
+
+    void execute() {
+        while (!cancelled) {
+            // do a unit of work
+        }
+    }
+
+    void interrupt() {
+        cancelled = true
+    }
+}
+----
+
+Calling `interruptJob` on a job that has no `interrupt()` method raises an `UnableToInterruptJobException`.

@@ -1,0 +1,176 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The {grailsApiDocsUrl}grails/plugin/springsecurity/rest/RestAuthenticationFilter.html[authentication filter]
+uses the default `authenticationManager` bean, which in turn uses all the registered authentication
+providers. See the https://apache.github.io/grails-spring-security/latest/index.html#authenticationProviders[Spring Security Core guide]
+for more information about how to define your own providers. Note that you can easily plug any Spring Security sub-plugin
+(like the LDAP one) to use a different authentication strategy.
+
+If the authentication is successful, a token generator is used to generate a token, and a
+token storage implementation is used to store the token. Finally, the JSON response sent back to the
+client is rendered by a `restAuthenticationTokenJsonRenderer` bean. See the token rendering documentation for more details.
+
+[NOTE]
+====
+This authentication filter will only be applied to the above configured URL and can also be disabled, in case a different approach
+for token creation is followed. In the rest of the cases, the request will continue through the filter chain, reaching Spring Security
+Core filters. Bear in mind that, by default, Spring Security Core 2.x locks down all URL's unless a explicit securiy rule has been
+specified for each of them.
+
+See https://apache.github.io/grails-spring-security/latest/index.html#requestMappings[Spring Security Core documentation]
+for more information.
+====
+
+The following are the configuration properties available:
+
+.Authentication configuration options
+[cols="80,20"]
+|===
+|*Config key* |*Default value*
+
+|`grails.plugin.springsecurity.rest.login.active`
+|`true`
+
+|`grails.plugin.springsecurity.rest.login.endpointUrl`
+|`/api/login`
+
+|`grails.plugin.springsecurity.rest.login.failureStatusCode`
+|`401`
+|===
+
+[[rest-extracting-credentials]]
+== Extracting credentials from the request
+
+The plugin supports 2 ways of extracting the username and password: using request parameters, and using a JSON payload.
+To align with the RESTful principles, JSON payload is the default behaviour.
+
+=== From a JSON request
+
+.JSON credentials extraction configuration properties
+[cols="80,20"]
+|===
+|*Config key* |*Default value*
+
+|`grails.plugin.springsecurity.rest.login.useJsonCredentials`
+|`true`
+
+|`grails.plugin.springsecurity.rest.login.usernamePropertyName`
+|`username`
+
+|`grails.plugin.springsecurity.rest.login.passwordPropertyName`
+|`password`
+|===
+
+The default implementation expects a request like this:
+
+[source,javascript]
+.Listing {counter:listing}. Example JSON authentication request
+----
+{
+    "username": "john.doe",
+    "password": "dontTellAnybody"
+}
+----
+
+If you use `usernamePropertyName` and `passwordPropertyName` properties mentioned above, your JSON request can look like:
+
+[source,javascript]
+.Listing {counter:listing}. Custom JSON authentication request
+----
+{
+    "login": "john.doe",
+    "pwd": "dontTellAnybody"
+}
+----
+
+With the following config:
+
+[source,groovy]
+.Listing {counter:listing}. Custom JSON authentication configuration properties
+----
+grails.plugin.springsecurity.rest.login.usernamePropertyName = 'login'
+grails.plugin.springsecurity.rest.login.passwordPropertyName = 'pwd'
+----
+
+If your JSON request format is different, you can plug your own implementation by defining a class which extends
+{grailsApiDocsUrl}grails/plugin/springsecurity/rest/credentials/AbstractJsonPayloadCredentialsExtractor.html[AbstractJsonPayloadCredentialsExtractor].
+The default implementation looks like this:
+
+[source,groovy]
+.Listing {counter:listing}. `DefaultJsonPayloadCredentialsExtractor`
+----
+include::{springSecurityRestSourceDir}/grails/plugin/springsecurity/rest/credentials/DefaultJsonPayloadCredentialsExtractor.groovy[tags=class]
+----
+
+Once you are done, register it in `resources.groovy` with the name `credentialsExtractor`.
+
+=== From request parameters
+
+Note that the name of the parameters can also be customised:
+
+.Parameter extraction configuration options
+[cols="80,20"]
+|===
+| *Config key* | *Default value*
+
+|`grails.plugin.springsecurity.rest.login.useRequestParamsCredentials`
+|`false`
+
+|`grails.plugin.springsecurity.rest.login.usernamePropertyName`
+|`username`
+
+|`grails.plugin.springsecurity.rest.login.passwordPropertyName`
+|`password`
+|===
+
+[[rest-logout]]
+== Logout
+
+[NOTE]
+====
+Logout is not possible when using JWT tokens (the default strategy), as no state is kept in the server. If
+you still want to have logout, you can provide your own implementation by creating a subclass of
+link:{grailsApiDocsUrl}grails/plugin/springsecurity/rest/token/storage/jwt/JwtTokenStorageService.html[JwtTokenStorageService]
+and overriding the methods `storeToken` and `removeToken`.
+
+Then, register your implementation in `resources.groovy` as `tokenStorageService`.
+
+However, a more rational approach would be just to remove the token from the client (eg, browser's local storage) and
+let the tokens expire (they will expire anyway, unlike with other storages like Memcached or Redis where they get refreshed
+on every access).
+====
+
+The {grailsApiDocsUrl}grails/plugin/springsecurity/rest/RestLogoutFilter.html[logout filter]
+exposes an endpoint for deleting tokens. It will read the token from an HTTP header. If found, will delete it from the
+storage, sending a 200 response. Otherwise, it will send a 404 response.
+
+You can configure it using this properties:
+
+.Logout configuration options
+[cols="80,20"]
+|===
+| *Config key* | *Default value*
+
+|`grails.plugin.springsecurity.rest.logout.endpointUrl`
+|`/api/logout`
+
+|`grails.plugin.springsecurity.rest.token.validation.headerName`
+|`X-Auth-Token`
+|===
