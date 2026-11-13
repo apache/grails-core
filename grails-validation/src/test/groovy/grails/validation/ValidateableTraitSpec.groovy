@@ -339,6 +339,16 @@ class ValidateableTraitSpec extends Specification {
             assert TestGeneratedAnnotations.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
     }
+    void "test that validateable implementations initialize successfully and handle basic states"() {
+        given: "instances of validateable classes"
+        def myValidateable = new MyValidateable(name: 'Kirk', age: 47, town: 'STL')
+        def noConstraints = new NoConstraintsValidateable()
+
+        expect: "instances are successfully created and valid/invalid states behave as expected"
+        myValidateable != null
+        noConstraints != null
+        noConstraints.validate()
+    }
 }
 
 class MyValidateable implements Validateable {
