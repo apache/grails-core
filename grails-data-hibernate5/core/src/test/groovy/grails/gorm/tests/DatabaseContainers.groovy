@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
+import org.testcontainers.mssqlserver.MSSQLServerContainer
 import org.testcontainers.mysql.MySQLContainer
 import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
@@ -68,6 +69,17 @@ final class DatabaseContainers {
      * daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP address
      * or a socket elsewhere. None of those is a file, so then the daemon itself is asked, and an error from the client
      * means it is not reachable.
+     * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation,
+     * which makes it slow to start; the startup timeout allows for that.
+     */
+    static final MSSQLServerContainer SQL_SERVER = new MSSQLServerContainer('mcr.microsoft.com/mssql/server:2022-latest')
+            .acceptLicense()
+            .withStartupTimeout(Duration.ofMinutes(10))
+
+    /**
+     * Whether a Docker daemon is reachable on this machine, from the well-known socket paths of Docker Desktop and
+     * Linux. Asking Testcontainers' client directly can fail with a 500 on macOS when the daemon API version does not
+     * match the docker-java version it bundles.
      */
     static boolean isDockerAvailable() {
         if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
