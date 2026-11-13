@@ -341,6 +341,24 @@ class ApplicationTagLibTests extends Specification implements TagLibUnitTest<App
         assertOutputEquals('<a href="/foo/list" id="myId">bar</a>', template)
     }
 
+    void testLinkHtmlEncodesElementIdAndHref() {
+        given:
+        unRegisterRequestDataValueProcessor()
+        def template = '<g:link elementId="${linkId}" url="${linkUrl}">book</g:link>'
+
+        when:
+        def result = applyTemplate(template, [linkId: elementId, linkUrl: 'https://example.org/books?first=1&second="two"'])
+
+        then:
+        result == '<a href="https://example.org/books?first=1&amp;second=&quot;two&quot;" id="' + encodedId + '">book</a>'
+        !result.contains('" onmouseover=')
+
+        where:
+        elementId                 | encodedId
+        'book-link'               | 'book-link'
+        'x" onmouseover="probe'   | 'x&quot; onmouseover=&quot;probe'
+    }
+
     void testLikeWithElementIdAndRequestDataValueProcessor() {
         def template = '<g:link elementId="myId" controller="foo" action="list">bar</g:link>'
         assertOutputEquals('<a href="/foo/list?requestDataValueProcessorParamName=paramValue" id="myId">bar</a>', template)
