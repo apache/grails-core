@@ -74,7 +74,7 @@ public class EnumTypeBinder {
                 indexBinder,
                 columnConfigToColumnBinder,
                 namingStrategy,
-                new CreateKeyForProps(columnNameForPropertyAndPathFetcher));
+                new CreateKeyForProps(columnNameForPropertyAndPathFetcher, metadataBuildingContext.getMetadataCollector()));
     }
 
     protected EnumTypeBinder(
