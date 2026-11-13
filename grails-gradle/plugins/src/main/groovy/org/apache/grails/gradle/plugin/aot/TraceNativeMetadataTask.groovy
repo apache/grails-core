@@ -138,9 +138,9 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     private static final Pattern MAX = Pattern.compile(/(?i)\bmax\s*=\s*"([^"]*)"/)
 
     private static final String EMAIL_DOMAIN = '@example.com'
-    private static final String SHORT_EMAIL_DOMAIN = '@x.io'
     private static final String URL_BASE = 'https://example.com/'
-    private static final List<String> SHORT_URLS = ['https://example.com/', 'https://example.com', 'http://x.io']
+    private static final List<String> SHORT_URLS = ['https://example.com/', 'https://example.com',
+            'http://example.com', 'ftp://example.com']
 
     /**
      * Carries the session from one request to the next, which is what makes a form that
@@ -659,27 +659,28 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     }
 
     /**
-     * An address within the field's {@code maxlength}: on a domain kept for examples where that leaves room for a
-     * name, and on a shorter one where it does not, as the domain is what makes it an address. Where not even the
-     * shortest address fits, what is sent is cut to the length, so that the field fails as it would for anyone.
+     * An address on {@code example.com}, which is kept for examples and accepts no mail, within the field's
+     * {@code maxlength}. Where not even one character and the domain fit, the traced name is sent alone: it is not
+     * an address, so the field fails as it would for anyone, and no shorter domain is used, because each that fits
+     * is someone's, and a save that sends mail would send it there.
      */
     private static String address(Integer maxLength) {
         if (maxLength == null || maxLength > EMAIL_DOMAIN.length()) {
             return traced(maxLength == null ? null : maxLength - EMAIL_DOMAIN.length()) + EMAIL_DOMAIN
         }
-        cut(traced(Math.max(maxLength - SHORT_EMAIL_DOMAIN.length(), 1)) + SHORT_EMAIL_DOMAIN, maxLength)
+        traced(maxLength)
     }
 
     /**
-     * A link within the field's {@code maxlength}: a path under a site kept for examples where there is room for
-     * one, and otherwise the longest of the shorter links that fits. Where none does, the shortest is cut to the
-     * length.
+     * A link to {@code example.com} within the field's {@code maxlength}: a path under it where there is room for
+     * one, and otherwise the longest of the shorter links to it that fits. Where none does, the traced name is
+     * sent alone, for the reason an address is: a link cut to the length can name another host.
      */
     private static String link(Integer maxLength) {
         if (maxLength == null || maxLength > URL_BASE.length()) {
             return URL_BASE + traced(maxLength == null ? null : maxLength - URL_BASE.length())
         }
-        SHORT_URLS.find { String url -> url.length() <= maxLength } ?: cut(SHORT_URLS.last(), maxLength)
+        SHORT_URLS.find { String url -> url.length() <= maxLength } ?: traced(maxLength)
     }
 
     private static String cut(String value, Integer maxLength) {

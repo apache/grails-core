@@ -38,6 +38,9 @@ ext {
     pomMavenPublicationName = 'pluginMaven'
 }
 
+Properties rootVersions = new Properties()
+rootProject.layout.projectDirectory.file('../gradle.properties').asFile.withInputStream { rootVersions.load(it) }
+
 dependencies {
     implementation platform(project(':grails-gradle-bom'))
 
@@ -79,6 +82,12 @@ dependencies {
     // Testing - Gradle TestKit is auto-added by java-gradle-plugin
     testImplementation('org.spockframework:spock-core') { transitive = false }
     testImplementation 'org.apache.groovy:groovy-test-junit5'
+    // The validators behind Grails' email and url constraints, so what traceNativeMetadata fills an email or URL
+    // field with is checked the way an application's save checks it. Its version is the one the root build gives
+    // grails-datamapping-validation, read from the root gradle.properties as this build does not see it.
+    testImplementation("commons-validator:commons-validator:${rootVersions.getProperty('commonsValidatorVersion')}") {
+        transitive = false
+    }
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     // The asset pipeline plugin the Grails BOM manages, so the layout this plugin gives it is tested
     // against the real one

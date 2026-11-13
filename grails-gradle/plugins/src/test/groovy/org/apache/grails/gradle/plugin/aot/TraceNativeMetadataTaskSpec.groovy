@@ -26,6 +26,9 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 
+import org.apache.commons.validator.routines.EmailValidator
+import org.apache.commons.validator.routines.RegexValidator
+import org.apache.commons.validator.routines.UrlValidator
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
@@ -39,6 +42,10 @@ import spock.lang.TempDir
  * task asks the application for, because the metadata is only ever as complete as that.</p>
  */
 class TraceNativeMetadataTaskSpec extends Specification {
+
+    /** The validator Grails' {@code url} constraint builds, which accepts any scheme. */
+    private static final UrlValidator URL_CONSTRAINT = new UrlValidator((RegexValidator) null,
+            UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.ALLOW_2_SLASHES)
 
     @TempDir
     File temporaryFolder
@@ -209,16 +216,29 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
                 sprint ==~ /\d{4}-W\d{2}/
                 contact ==~ /traced-\d+@example\.com/
                 (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
-                (tinyContact ==~ /\d+@x\.io/) && tinyContact.size() <= 10
-                narrowContact.size() <= 4
+                edgeContact ==~ /\d@example\.com/
+                (tinyContact ==~ /traced-\d+/) && tinyContact.size() <= 12
                 new URI(homepage).scheme == 'https' && new URI(homepage).host
                 (shortHomepage ==~ /https:\/\/example\.com\/\d+/) && shortHomepage.size() <= 24
                 siteHomepage == 'https://example.com'
-                tinyHomepage == 'http://x.io'
-                narrowHomepage.size() <= 5
+                plainHomepage == 'http://example.com'
+                ftpHomepage == 'ftp://example.com'
+                (tinyHomepage ==~ /traced-\d+/) && tinyHomepage.size() <= 16
                 phone ==~ /\d+/
                 colour ==~ /#[0-9a-f]{6}/
             }
+
+        and: 'each address and link passes the check the email and url constraints make, and stays on example.com'
+            [sent.contact, sent.shortContact, sent.edgeContact].every { String email ->
+                EmailValidator.instance.isValid(email) && email.endsWith('@example.com')
+            }
+            [sent.homepage, sent.shortHomepage, sent.siteHomepage, sent.plainHomepage, sent.ftpHomepage].every { String url ->
+                URL_CONSTRAINT.isValid(url) && new UrlValidator().isValid(url) && new URI(url).host == 'example.com'
+            }
+
+        and: 'where no address or link to example.com fits, the field fails rather than naming another host'
+            !EmailValidator.instance.isValid(sent.tinyContact)
+            !URL_CONSTRAINT.isValid(sent.tinyHomepage)
 
         and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
             sent._available == ''
