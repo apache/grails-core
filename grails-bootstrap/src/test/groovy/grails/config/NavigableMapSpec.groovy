@@ -19,6 +19,7 @@
 package grails.config
 
 import org.grails.config.NavigableMap
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -425,5 +426,56 @@ class NavigableMapSpec extends Specification {
         then:
         output.navigate('a', 'routes') == [x: [name: 'second']]
         output.get('a.routes') == [x: [name: 'second']]
+    }
+
+    @Issue('#16766')
+    void 'a nested map merged over a block that holds the name as a key with dots writes into that key'() {
+        given: 'a block that application.groovy wrote with a key that has dots'
+        NavigableMap groovyConfig = new NavigableMap()
+        groovyConfig.merge([logging: [level: ['org.hibernate.SQL': 'debug']]])
+
+        and: 'the same name written as a path, as application.yml is merged'
+        NavigableMap yaml = new NavigableMap()
+        yaml.merge(['logging.level.org.hibernate.SQL': 'info'], true)
+
+        when: 'each source is merged as PropertySourcesConfig merges it'
+        NavigableMap config = new NavigableMap()
+        config.merge(groovyConfig, false)
+        config.merge(yaml, false)
+
+        then: 'the block holds one entry, with the value of the source merged last'
+        config.navigate('logging', 'level') == ['org.hibernate.SQL': 'info']
+        config.logging.level.get('org.hibernate.SQL') == 'info'
+        config.getProperty('logging.level.org.hibernate.SQL') == 'info'
+    }
+
+    @Issue('#16766')
+    void 'only the leaves that a key with dots holds are written into it, the others stay nested'() {
+        given:
+        NavigableMap groovyConfig = new NavigableMap()
+        groovyConfig.merge([logging: [level: ['org.hibernate.SQL': 'debug']]])
+        NavigableMap other = new NavigableMap()
+        other.merge([logging: [level: [org: [hibernate: [SQL: 'info', type: 'trace']]]]], false)
+
+        when:
+        NavigableMap config = new NavigableMap()
+        config.merge(groovyConfig, false)
+        config.merge(other, false)
+
+        then:
+        config.navigate('logging', 'level') == ['org.hibernate.SQL': 'info', org: [hibernate: [type: 'trace']]]
+        config.getProperty('logging.level.org.hibernate.type') == 'trace'
+        config.getProperty('logging.level.org.hibernate.SQL') == 'info'
+    }
+
+    @Issue('#16766')
+    void 'a nested map merged over a block that holds no such key with dots stays nested'() {
+        when:
+        NavigableMap config = new NavigableMap()
+        config.merge([logging: [level: [root: 'warn']]], false)
+        config.merge([logging: [level: [org: [hibernate: [SQL: 'info']]]]], false)
+
+        then:
+        config.navigate('logging', 'level') == [root: 'warn', org: [hibernate: [SQL: 'info']]]
     }
 }
