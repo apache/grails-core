@@ -24,6 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.grails.datastore.mapping.model.PersistentEntity;
+
 /**
  * A builder for Cypher queries
  *
@@ -66,6 +68,8 @@ public class CypherBuilder {
     private final List<String> matches = new ArrayList<>();
     private final List<String> relationshipMatches = new ArrayList<>();
     private final List<String> optionalMatches = new ArrayList<String>();
+    private int disjunctionDepth;
+    private int localNumber;
     private String conditions;
     private String orderAndLimits;
     private final List<String> returnColumns = new ArrayList<String>();
@@ -157,8 +161,61 @@ public class CypherBuilder {
         optionalMatches.add(match);
     }
 
+    private final Map<String, PersistentEntity> relationshipVariables = new LinkedHashMap<>();
+
+    /**
+     * Records that a variable of the query stands for a relationship, so a criterion on it is about the
+     * relationship's own properties, identified as that relationship entity maps them, and not about the
+     * relationships or the identity of a node.
+     *
+     * @param variable the variable of the relationship
+     * @param relationshipEntity the relationship entity the variable stands for
+     */
+    public void addRelationshipVariable(String variable, PersistentEntity relationshipEntity) {
+        relationshipVariables.put(variable, relationshipEntity);
+    }
+
+    public boolean isRelationshipVariable(String variable) {
+        return relationshipVariables.containsKey(variable);
+    }
+
+    /**
+     * @param variable a variable of the query
+     * @return the relationship entity the variable stands for, or {@code null} when it does not stand for a relationship
+     */
+    public PersistentEntity getRelationshipEntity(String variable) {
+        return relationshipVariables.get(variable);
+    }
+
     public int getNextMatchNumber() {
         return matches.size();
+    }
+
+    /**
+     * Marks the start of a disjunction: a criterion in it must not narrow the rows the other branches see, so it
+     * tests for what it needs where it stands and adds no match to the query.
+     */
+    public void enterDisjunction() {
+        disjunctionDepth++;
+    }
+
+    public void leaveDisjunction() {
+        disjunctionDepth--;
+    }
+
+    /**
+     * @return whether the criterion being built is inside a disjunction
+     */
+    public boolean isInDisjunction() {
+        return disjunctionDepth > 0;
+    }
+
+    /**
+     * @return a number for a variable that is local to one expression of the conditions, such as the node of an
+     * existence test, and cannot clash with a variable of the matches
+     */
+    public int nextLocalNumber() {
+        return localNumber++;
     }
 
     public void setConditions(String conditions) {
