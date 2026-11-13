@@ -264,6 +264,30 @@ List<String> copy = List.copyOf(mutableList);
 - Add `@Override` annotation when overriding methods.
 - Use meaningful parameter names (preserved with `-parameters` flag).
 
+## Semantic Pathway and Defensive Lifecycle Protocol
+
+When designing, modifying, or refactoring classes coordinating resources, lifecycle hooks, transaction boundaries, or multi-branch strategies, apply this mandatory engineering protocol:
+
+### 1. Collaborator Nullability Analysis
+- Determine whether external or looked-up collaborators (`DataSource`, `HttpServletRequest`, `SessionFactory`, `ClassLoader`, `TransactionStatus`, etc.) can ever be `null` in non-standard environments (e.g. standalone unit tests, mock frameworks, alternative SPI providers, or uninitialized scopes).
+- Before passing any collaborator to external libraries or SPIs that enforce strict non-null assertions (such as Spring's `TransactionSynchronizationManager`, `Assert.notNull()`, or Jakarta Servlet APIs), guard with explicit null checks (e.g. `dataSource != null ? txResources.getResource(dataSource) : null`).
+- Never assume an injected or looked-up collaborator is non-null unless strictly guaranteed by constructor invariants.
+
+### 2. Early Failure Injection and Cleanup Symmetry
+- Trace what happens if an exception is thrown *before* a resource is registered, bound, or opened (e.g., `openSession()`, `getConnection()`, or `prepare()` failing).
+- In `finally` or cleanup blocks, use safe unbinding (`unbindResourceIfPossible` instead of unconditional `unbindResource`) so a missing binding does not throw a secondary `IllegalStateException` or `NullPointerException` that masks the primary root cause.
+- Guard against calling methods on half-initialized objects in `finally` blocks (e.g., check `newSession != null` before `closeSession(newSession)`).
+- Symmetrically undo any intermediate state changes (e.g., restore previously suspended holders/synchronizations) even when initial acquisition fails.
+
+### 3. Exhaustive Decision Matrix Branching
+- When selecting a strategy or executing conditional flows (e.g. `from(...)` factory methods, state transitions):
+  - Explicitly define the combinatorial state table (e.g. `holder exists / null` × `transaction active / inactive` × `synchronization active / inactive` × `lazy / non-lazy`).
+  - Verify every branch resolves to an intentional, well-defined strategy.
+  - Write targeted tests for *every* decision branch, including compound negatives (e.g., no holder + no transaction + no synchronization).
+
+### 4. Authentic Boundary and Failure Testing
+- Tests covering exception translation or failure recovery must exercise real database/runtime failure modes (e.g., genuine column length overruns, constraint violations, closed connection probes) rather than artificial subclass overrides or mocks throwing synthetic exceptions that bypass real translator chains.
+
 ## Resources
 
 - **Java 21 Documentation**: https://docs.oracle.com/en/java/javase/21/
