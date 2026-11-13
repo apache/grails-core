@@ -89,6 +89,46 @@ class SpringSecurityOAuth2ControllerSpec extends Specification implements Contro
         null     | _
     }
 
+    void "authenticate redirects to the authorization url of the provider, an intranet host name included"() {
+        given:
+        params.provider = 'okta'
+        def springSecurityOauth2BaseService = Mock(SpringSecurityOauth2BaseService)
+        controller.springSecurityOauth2BaseService = springSecurityOauth2BaseService
+
+        when:
+        controller.authenticate()
+
+        then:
+        1 * springSecurityOauth2BaseService.getAuthorizationUrl('okta') >> url
+        response.redirectedUrl == url
+
+        where:
+        url << [
+                'https://login.example.com/oauth2/authorize?client_id=abc&state=1',
+                'https://dev.somewhere.local/oauth2/authorize?client_id=abc',
+                'http://keycloak:8080/realms/app/protocol/openid-connect/auth',
+                'http://localhost:8180/auth'
+        ]
+    }
+
+    void "authenticate redirects once, to the login page, when the authorization url is not a web address"() {
+        given:
+        params.provider = 'okta'
+        def springSecurityOauth2BaseService = Mock(SpringSecurityOauth2BaseService)
+        controller.springSecurityOauth2BaseService = springSecurityOauth2BaseService
+
+        when:
+        controller.authenticate()
+
+        then:
+        1 * springSecurityOauth2BaseService.getAuthorizationUrl('okta') >> url
+        response.redirectedUrl == '/login/index'
+        flash.message == "Authorization url for provider 'okta' is invalid."
+
+        where:
+        url << [null, '', '   ', 'not a url', 'javascript:alert(1)', 'ftp://example.com/auth', 'https:///no-host']
+    }
+
     void "onSuccess should throw exception if request is missing data"() {
         given:
         params.provider = provider
