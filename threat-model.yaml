@@ -39,6 +39,18 @@ components:
     representative_files:
       - grails-interceptors/src/main/groovy/org/grails/plugins/web/interceptors/GrailsInterceptorHandlerInterceptorAdapter.groovy
       - grails-controllers/src/main/groovy/grails/artefact/Controller.groovy
+  - name: grails_spring_security_integration
+    in_model: true
+    notes: "Grails-owned grails-spring-security (core), rest, oauth2, and all other in-tree grails-spring-security-* plugins are in scope. Defects in session binding, filter-rule installation, OAuth state handling, or account linking are framework findings, reportable privately per SECURITY.md. Applications supply their user store and role policy and must enable and configure the modules."
+    provenance: documented
+    source: settings.gradle
+    representative_files:
+      - grails-spring-security/
+  - name: upstream_auth_libraries
+    in_model: false
+    out_of_model_reason: "Upstream org.springframework.security (including its own filters), Apache Shiro, and other non-Grails auth libraries remain external; defects in Grails-owned integration remain in scope (§3)."
+    provenance: inferred
+    open_question: "§14 wave 1, question 2"
   - name: data_binding
     in_model: true
     representative_files:
@@ -316,11 +328,12 @@ properties_provided:
 # §9 - properties the framework does NOT provide.
 properties_disclaimed:
   - id: auth
-    description: "Authentication, authorization, session management, password storage."
-    delegate_to: spring_security_plugin_or_equivalent
+    description: "Automatic authentication without enabled auth modules; an application-defined user store and role policy."
+    notes: "Grails-owned Spring Security integration defects remain in scope, including session binding, filter-rule installation, OAuth state handling, and account linking; report privately per SECURITY.md. Upstream org.springframework.security defects remain external and out of scope (§2-§3, §9)."
     provenance: documented
   - id: csrf_without_useToken
-    description: "CSRF protection on requests not protected by useToken."
+    description: "CSRF protection on requests not protected by useToken or an enabled auth module's CSRF protection."
+    notes: "Omitting protection is application misuse; defects in Grails-owned auth modules remain in scope."
     provenance: documented
   - id: xss_with_codec_disabled
     description: "XSS protection when codec is disabled or raw() is used."
@@ -354,7 +367,7 @@ properties_disclaimed:
 false_friends:
   - id: secured_annotation
     looks_like: "Authorization decoration on a method."
-    actually_is: "Integration hint for the Spring Security plugin. Inert without the plugin."
+    actually_is: "Inert unless the Grails Spring Security module is installed and configured. Defects in that module's enforcement remain in scope (§2-§3)."
   - id: bindable_false
     looks_like: "Field-level access control."
     actually_is: "Data-binding allow-list only; does not prevent code from setting the field or response from including it."
@@ -420,7 +433,7 @@ known_non_findings:
     discharged_by: "§6 trust assumption on session-store infrastructure"
     disposition: "OUT-OF-MODEL: trusted-input"
   - pattern: "@Secured present but no in-method authz logic"
-    discharged_by: "§9 (auth delegated to Spring Security plugin)"
+    discharged_by: "Absence of an inline check alone is not a defect when the Grails Spring Security module is installed and configured; verify external enforcement before suppressing. Does not discharge enforcement defects (§2-§3, §9)."
     disposition: "KNOWN-NON-FINDING"
   - pattern: "Framework-level logging reflects user input"
     discharged_by: "§6 (framework's own logging never serializes request data without explicit developer code)"
@@ -429,13 +442,13 @@ known_non_findings:
     discharged_by: "§6 (no in-framework sink reaches a request-influenced filename; the risk lives in user controller code)"
     disposition: "OUT-OF-MODEL: unsupported-component"
   - pattern: "Production @RestController / @Controller beans shipped in framework JARs"
-    discharged_by: "§2 (framework ships no Spring HTTP-handler beans; every endpoint is user-defined)"
+    discharged_by: "Presence of a handler alone is not a vulnerability; does not discharge defects in Grails Spring Security endpoints or filters (§2-§3)."
     disposition: "KNOWN-NON-FINDING"
 
 # §13 - closed set of triage dispositions.
 dispositions:
   - label: VALID
-    licensed_by: ["§8", "§6", "§7"]
+    licensed_by: ["§2-§3", "§8", "§6", "§7"]
   - label: VALID-HARDENING
     licensed_by: ["§11"]
   - label: "OUT-OF-MODEL: trusted-input"
