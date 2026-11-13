@@ -36,6 +36,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared oracle = DatabaseContainers.ORACLE
     @Shared db2 = DatabaseContainers.DB2
     @Shared sqlServer = DatabaseContainers.SQL_SERVER
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
@@ -88,6 +89,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle     || 2
         "DB2"        | db2        || 2
         "SQL Server" | sqlServer  || 0
+        "CockroachDB"| cockroach  || 2
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
@@ -113,7 +115,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
 
-        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        then: 'whether case matters follows the database: PostgreSQL and CockroachDB match with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
         names == expected
 
         where:
@@ -125,6 +127,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle    || ['alice']
         "DB2"        | db2       || ['alice']
         "SQL Server" | sqlServer || []
+        "CockroachDB"| cockroach || ['alice']
     }
 
     void "rlike on #db falls back to like, so the wildcard % selects rows"() {

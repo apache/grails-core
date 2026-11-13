@@ -101,6 +101,8 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-db2'
     testImplementation 'com.microsoft.sqlserver:mssql-jdbc'
     testImplementation 'org.testcontainers:testcontainers-mssqlserver'
+    // CockroachDB speaks the PostgreSQL wire protocol, so the PostgreSQL driver above serves its container too
+    testImplementation 'org.testcontainers:testcontainers-cockroachdb'
     testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'org.jsr107.ri:cache-ri-impl'
 

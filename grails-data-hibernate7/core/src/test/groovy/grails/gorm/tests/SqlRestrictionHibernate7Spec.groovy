@@ -33,6 +33,7 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mysql = DatabaseContainers.MYSQL
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(SqlRestrictionParent, SqlRestrictionChild)
@@ -137,6 +138,7 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
         'MySQL'    | mysql
         'MariaDB'  | mariadb
         'Oracle'   | oracle
+        'CockroachDB' | cockroach
     }
 }
 
