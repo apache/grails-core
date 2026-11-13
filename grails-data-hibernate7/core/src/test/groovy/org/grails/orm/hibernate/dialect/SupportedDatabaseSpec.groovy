@@ -74,6 +74,7 @@ class SupportedDatabaseSpec extends Specification {
         new MySQLDialect()      || '?1 RLIKE ?2'
         new MariaDBDialect()    || '?1 REGEXP ?2'
         new PostgreSQLDialect() || '?1 ~ ?2'
+        new CockroachDialect()  || '?1 ~ ?2'
         new OracleDialect()     || 'REGEXP_LIKE(?1, ?2)'
         new H2Dialect()         || 'REGEXP_LIKE(?1, ?2)'
         new DB2Dialect()        || 'REGEXP_LIKE(?1, ?2)'

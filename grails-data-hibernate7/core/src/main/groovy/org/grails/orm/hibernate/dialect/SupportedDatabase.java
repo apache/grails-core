@@ -78,8 +78,9 @@ public enum SupportedDatabase implements ClassKeyed<SupportedDatabase> {
     // ~ is case-sensitive; Hibernate 5 renders ~*, see #16882
     POSTGRESQL(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, PostgreSQLDialect.class),
 
-    // reads native SQL as PostgreSQL does, and has no regular expression operator here
-    COCKROACH(SqlSyntax.POSTGRESQL, "?1 LIKE ?2", UniqueIndexNulls.DISTINCT, CockroachDialect.class),
+    // reads native SQL and matches regular expressions as PostgreSQL does (run on a CockroachDB container, #16955); ~ is
+    // case-sensitive, Hibernate 5 renders ~*, see #16882
+    COCKROACH(SqlSyntax.POSTGRESQL, "?1 ~ ?2", UniqueIndexNulls.DISTINCT, CockroachDialect.class),
 
     ORACLE(SqlSyntax.ORACLE, "REGEXP_LIKE(?1, ?2)", UniqueIndexNulls.COMPARED, OracleDialect.class),
 

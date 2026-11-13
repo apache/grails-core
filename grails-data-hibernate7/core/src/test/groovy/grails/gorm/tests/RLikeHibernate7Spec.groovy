@@ -77,7 +77,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<RlikeFoo> allFoos = RlikeFoo.findAllByNameRlike("ABCD.*")
 
-        then: 'SQL Server and CockroachDB have no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
+        then: 'SQL Server has no regular expression operator Grails uses, so rlike is a like and the pattern matches nothing'
         allFoos.size() == expected
 
         where:
@@ -89,7 +89,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle     || 2
         "DB2"        | db2        || 2
         "SQL Server" | sqlServer  || 0
-        "CockroachDB"| cockroach  || 0
+        "CockroachDB"| cockroach  || 2
     }
 
     @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
@@ -115,7 +115,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         manager.session.clear()
         List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
 
-        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        then: 'whether case matters follows the database: PostgreSQL and CockroachDB match with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
         names == expected
 
         where:
@@ -127,7 +127,7 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "Oracle"     | oracle    || ['alice']
         "DB2"        | db2       || ['alice']
         "SQL Server" | sqlServer || []
-        "CockroachDB"| cockroach || []
+        "CockroachDB"| cockroach || ['alice']
     }
 
     void "rlike on #db falls back to like, so the wildcard % selects rows"() {
