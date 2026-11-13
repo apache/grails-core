@@ -119,7 +119,7 @@ spring:
 
 Spring Boot also composes any `org.springframework.core.task.TaskDecorator` beans with the executor. Grails contributes a decorator that makes the current `GrailsWebRequest` available inside `task { }`. When Micrometer context propagation is on the classpath, setting `spring.task.execution.propagate-context` to `true` additionally propagates observation and logging context.
 
-The Grails decorator also applies to other Boot-managed executors that consume `TaskDecorator` beans, including `@Async` execution and scheduling initiated during a web request. Avoid retaining request state in long-lived background work.
+The Grails decorator also applies to other Boot-managed executors that consume `TaskDecorator` beans, including `@Async` execution and scheduling initiated during a web request. Avoid retaining request state in long-lived background work; see <<asyncTaskRequest>> for what a task can still use once the request has completed.
 
 If Boot does not provide a bean named `applicationTaskExecutor`, Grails uses its managed `grailsPromiseExecutor`, with eight core threads and an unbounded queue. Other executor and scheduler beans do not change that selection. Tune the Boot executor using `spring.task.execution` for application workloads; blocking on tasks queued to the same saturated pool can deadlock. A standalone factory continues to use a cached pool, and standalone `WebPromises` propagate request context without requiring the plugin.
 
@@ -181,6 +181,19 @@ Promises.promiseFactory = new SynchronousPromiseFactory()
 ----
 
 Using the `PromiseFactory` mechanism it is theoretically possible to plug in other concurrency libraries into the Grails framework. For this you need to override the two interfaces `grails.async.Promise` and `grails.async.PromiseFactory`.
+
+[[asyncTaskRequest]]
+==== The Request and Response of a Task
+
+A task started during a request, through a promise or a Boot-managed executor, is given wrappers of its own of that request and its response:
+
+* While the request is live, the task's `request` and `response` call the real ones, so a task the response waits for can render through them, and unwrapping them, as Spring's `WebUtils.getNativeRequest` does, finds the real ones.
+* Once the servlet container is done with the request, after any forward, include or asynchronous processing, every call on them, or on a body stream, reader or writer the task took from them, throws an `IllegalStateException`. `GrailsWebRequest.lookup()` then returns `null` in the task, so data binding behaves as it does outside a request, and a task that starts after that runs without a request.
+* A task should take what it needs, such as parameters, headers and attribute values, while the request is live. The parameters, headers, attribute names, locales, trailer fields and parts its request returns are copies, which stay readable; attribute values are the objects the request holds.
+* A call in progress when the request completes, such as a read of the body or a write to the response, finishes first, for up to `grails.async.requestCompletionWait` (default `60s`; a duration such as `30s`, or a number of milliseconds). After that the request completes without it, and the task's next call throws.
+* Not covered: Spring's `RequestContextHolder`, which still finds the task's web request, whose request throws; objects a task obtained by unwrapping its request or response, and the parts, session and asynchronous context it obtained from them; the calls that are not waited for (asking whether the body is ready, setting a read or write listener, and starting asynchronous processing); and, when asynchronous processing started with the servlet API's `request.startAsync()` is completed before the dispatch that started it returns, a call a task starts just as the container recycles the request, unless a task was started after the processing began. A call already in progress then is waited for. Because of that wait, while processing started that way is going on and no task was started after it began, a container that tells Grails at the end of every dispatch, such as Jetty, ends a dispatch only once the call a task is making finishes.
+
+NOTE: The default wait is as long as Tomcat lets a blocking read or write wait by default; shorten it in case a call waits for something the thread completing the request holds. The calls that are not waited for are those the container may answer while it completes the request. Such a call fails as the request completes, though it may already have reached the request, and a listener set through the task's stream is no longer called; once a read listener was set that way, reading the body or the parts is not waited for either. Nothing is read from the request as it completes. The task's request does not show the web request the request thread is bound to, so `GrailsWebRequest.lookup(request)` in a task finds the task's own, or `null` once the request has completed. The async plugin registers the servlet request listener that tells when the container is done with the request; without it, such as in a unit test, the request completes with the web request the first task was started during.
 
 ==== Migrating Legacy Promise Configuration
 
