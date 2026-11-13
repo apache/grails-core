@@ -2264,6 +2264,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         simpleValue.addColumn(column);
 
+        if (typeName == null && (pc == null || DEFAULT_ENUM_TYPE.equals(pc.getEnumType()) || "string".equalsIgnoreCase(pc.getEnumType()))) {
+            bindStringColumnConstraints(column, property);
+        }
+
         PropertyConfig propertyConfig = getPropertyConfig(property);
         if (propertyConfig != null && !propertyConfig.getColumns().isEmpty()) {
             ColumnConfig cc = propertyConfig.getColumns().get(0);

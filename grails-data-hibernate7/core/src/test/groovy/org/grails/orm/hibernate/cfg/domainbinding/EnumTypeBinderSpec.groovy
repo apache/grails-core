@@ -121,6 +121,25 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
     }
 
     @Unroll
+    def "maxSize is applied to the column of a #mapping enum: #applied"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(clazz, "status", table)
+
+        when:
+        def simpleValue = binder.bindEnumType(property as HibernateEnumProperty, "")
+
+        then: 'maxSize reaches a string-mapped enum column and leaves an ordinal one at the default'
+        (simpleValue.getColumns()[0].getLength() == 42L) == applied
+
+        where:
+        clazz               | mapping   | applied
+        PersonSizedDefault  | "default" | true
+        PersonSizedString   | "string"  | true
+        PersonSizedOrdinal  | "ordinal" | false
+    }
+
+    @Unroll
     def "should set column nullability"() {
         given: "A root entity and its enum property"
         def table = new Table("person")
@@ -239,6 +258,20 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
 @Entity class Person01 {
     Long id; Status01 status
     static constraints = { status nullable: false }
+}
+@Entity class PersonSizedDefault {
+    Long id; Status01 status
+    static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedString {
+    Long id; Status01 status
+    static mapping = { status enumType: "string" }
+    static constraints = { status maxSize: 42 }
+}
+@Entity class PersonSizedOrdinal {
+    Long id; Status01 status
+    static mapping = { status enumType: "ordinal" }
+    static constraints = { status maxSize: 42 }
 }
 @Entity class Person02 {
     Long id; Status01 status
