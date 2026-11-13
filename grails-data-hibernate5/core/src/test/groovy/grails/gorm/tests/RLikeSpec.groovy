@@ -81,14 +81,31 @@ class RLikeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
         names == expected
 
         where:
-        db         | container || expected
-        'H2'       | null      || ['alice']
-        'Postgres' | postgres  || ['Alice', 'alice']
-        'MySQL'    | mysql     || ['Alice', 'alice']
-        'MariaDB'  | mariadb   || ['Alice', 'alice']
-        'Oracle'   | oracle    || ['alice']
-        'DB2'      | db2       || ['alice']
+        db           | container || expected
+        'H2'         | null      || ['alice']
+        'Postgres'   | postgres  || ['Alice', 'alice']
+        'MySQL'      | mysql     || ['Alice', 'alice']
+        'MariaDB'    | mariadb   || ['Alice', 'alice']
+        'Oracle'     | oracle    || ['alice']
+        'DB2'        | db2       || ['alice']
         'SQL Server' | sqlServer || []
+    }
+
+    void "rlike on #db falls back to like, so the wildcard % selects rows"() {
+        given:
+        useDatabase(container, 'rlikeFallbackDB')
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save(flush: true) }
+
+        when: 'a pattern that a like matches is used, as the fallback is a like'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('al%')*.name.sort()
+
+        then: 'the fallback selects the rows, and the default collation of the image ignores case'
+        names == ['Alice', 'alice']
+
+        where:
+        db           | container
+        'SQL Server' | sqlServer
     }
 
     private void useDatabase(container, String h2Name) {
