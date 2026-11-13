@@ -70,9 +70,9 @@ class SpringSecurityOauth2BaseService {
      * @param providerName
      * @return The authorization url for the provider
      */
-    String getAuthorizationUrl(String providerName) {
+    String getAuthorizationUrl(String providerName, String state) {
         OAuth2AbstractProviderService providerService = getProviderService(providerName)
-        providerService.getAuthUrl([:])
+        providerService.getAuthUrl(state, [:])
     }
 
     /**
@@ -196,7 +196,7 @@ class SpringSecurityOauth2BaseService {
      */
     String getFailureUrl(String providerName) {
         def providerService = getProviderService(providerName)
-        providerService.failureUrl ?: baseUrl + '/oauth2/' + providerName + '/success'
+        providerService.failureUrl ?: baseUrl + '/oauth2/' + providerName + '/failure'
     }
 
     /**
@@ -226,6 +226,10 @@ class SpringSecurityOauth2BaseService {
      */
     String sessionKeyForAccessToken(String providerName) {
         return "OAuth2:access-t:${providerName}"
+    }
+
+    String sessionKeyForState(String providerName) {
+        return "OAuth2:state:${providerName}"
     }
 
     /**
