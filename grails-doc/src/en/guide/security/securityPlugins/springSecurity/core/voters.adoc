@@ -36,6 +36,8 @@ You can register the voters to use with the `voterNames` setting; each element i
 
 The default voters include a {springSecurityApiDocsUrl}org/springframework/security/access/vote/RoleHierarchyVoter.html[RoleHierarchyVoter] to ensure users have the required roles for the request, an {springSecurityApiDocsUrl}org/springframework/security/access/vote/AuthenticatedVoter.html[AuthenticatedVoter] to support `IS_AUTHENTICATED_FULLY`, `IS_AUTHENTICATED_REMEMBERED`, and `IS_AUTHENTICATED_ANONYMOUSLY` tokens, a {springSecurityApiDocsUrl}org/springframework/security/web/access/expression/WebExpressionVoter.html[WebExpressionVoter] to evaluate SpEL expressions, and a `grails.plugin.springsecurity.access.vote.ClosureVoter` to invoke annotation closures.
 
+A user who is logged in only by a <<core-rememberMeCookie,remember-me cookie>> does not satisfy `IS_AUTHENTICATED_FULLY` (or `isFullyAuthenticated()`). When such a user requests a page that needs it, Spring Security sends the user to `/login/auth`, and `LoginController` shows the full login page (`/login/full`) so the user can log in again, instead of redirecting on to the page, which would need that login too.
+
 To customize this list, you define a `voterNames` attribute with a list of bean names. Any existing bean that implements the interface can be used, whether it is declared by this plugin, in your application's resources.groovy, another plugin, or any other source.
 
 Suppose you have registered a bean for a custom `MyAccessDecisionVoter` in `resources.groovy`:
