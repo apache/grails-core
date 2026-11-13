@@ -21,6 +21,7 @@ package grails.gorm.tests
 import java.time.Duration
 
 import groovy.transform.CompileStatic
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
 import org.testcontainers.mssqlserver.MSSQLServerContainer
@@ -62,6 +63,12 @@ final class DatabaseContainers {
             .withStartupTimeout(Duration.ofMinutes(10))
 
     /**
+     * Whether a Docker daemon is reachable on this machine. A socket file at the well-known path of Docker Desktop or
+     * Linux answers yes without a call, which avoids asking Testcontainers' client on macOS, where it can fail with a
+     * 500 when the daemon API version does not match the docker-java version it bundles. Without such a file the
+     * daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP address
+     * or a socket elsewhere. None of those is a file, so then the daemon itself is asked, and an error from the client
+     * means it is not reachable.
      * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation,
      * which makes it slow to start; the startup timeout allows for that.
      */
@@ -75,8 +82,14 @@ final class DatabaseContainers {
      * match the docker-java version it bundles.
      */
     static boolean isDockerAvailable() {
-        [System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock', System.getenv('DOCKER_HOST') ?: '']
-                .any { it && new File(it).exists() }
+        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
+            return true
+        }
+        try {
+            return DockerClientFactory.instance().isDockerAvailable()
+        } catch (Throwable ignored) {
+            return false
+        }
     }
 
     private DatabaseContainers() {
