@@ -20,6 +20,8 @@ package grails.plugin.cache
 
 import groovy.transform.CompileStatic
 
+import org.springframework.cache.CacheManager
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource
 
@@ -27,6 +29,7 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
 import org.grails.plugin.cache.GrailsCacheManager
+import org.grails.plugin.cache.GrailsCacheManagerAware
 
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -144,6 +147,47 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
+        given: 'Spring Security defines cacheManager when cacheUsers is set'
+        CacheManager other = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: other])
+
+        expect: 'the context starts, and what the plugin caches with is its own cache manager'
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+    }
+
+    void 'with caching disabled, the one cache manager the context has is used, as before'() {
+        given:
+        CacheManager only = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null, [cacheManager: only])
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(only)
+
+        cleanup:
+        context.close()
+    }
+
+    void 'with caching disabled and several cache managers, none named grailsCacheManager, none is used'() {
+        given:
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
+                [cacheManager: new ConcurrentMapCacheManager(), otherCacheManager: new ConcurrentMapCacheManager()])
+
+        expect: 'the context still starts'
+        context.getBean(CacheAware).grailsCacheManager == null
+
+        cleanup:
+        context.close()
+    }
+
+    /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
+    static class CacheAware implements GrailsCacheManagerAware {
+    }
+
     /**
      * A plugin wired the way the runtime wires it: with the application context and with a
      * GrailsApplication carrying the same configuration. Both matter - reading the property back out
@@ -160,12 +204,17 @@ class CacheAutoConfigurationSpec extends Specification {
 
     @CompileStatic
     private static AnnotationConfigApplicationContext buildContext(
-            Map<String, Object> properties, GrailsCacheManager userCacheManager = null) {
+            Map<String, Object> properties, GrailsCacheManager userCacheManager = null,
+            Map<String, CacheManager> otherCacheManagers = [:]) {
         def context = new AnnotationConfigApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
         if (userCacheManager != null) {
             context.registerBean('grailsCacheManager', GrailsCacheManager, () -> userCacheManager)
         }
+        otherCacheManagers.each { String name, CacheManager cacheManager ->
+            context.registerBean(name, CacheManager, () -> cacheManager)
+        }
+        context.registerBean(CacheAware)
         context.register(CacheAutoConfiguration)
         context.refresh()
         return context

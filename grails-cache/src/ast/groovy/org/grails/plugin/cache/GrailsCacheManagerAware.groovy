@@ -39,13 +39,27 @@ trait GrailsCacheManagerAware {
     @Autowired(required = false)
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
+    /**
+     * Every cache manager in the context, by bean name. Injected as a map rather than as the one
+     * cache manager because another one, such as the one the Spring Security plugin caches users with
+     * when {@code cacheUsers} is set, made that injection ambiguous and the context failed to start:
+     * Spring falls back to matching the field's name, and a trait's field is renamed in the class
+     * that implements it.
+     */
     @Autowired(required = false)
+    private Map<String, CacheManager> cacheManagers
+
     private CacheManager grailsCacheManager
 
     /**
-     * @return The Grails cache manager or null if it isn't present
+     * @return The Grails cache manager, the bean named {@code grailsCacheManager}, or where there is
+     * none the only cache manager in the context, or null if there is no such cache manager
      */
     CacheManager getGrailsCacheManager() {
+        if (grailsCacheManager == null && cacheManagers) {
+            grailsCacheManager = cacheManagers.get('grailsCacheManager') ?:
+                    (cacheManagers.size() == 1 ? cacheManagers.values().first() : null)
+        }
         return grailsCacheManager
     }
 
