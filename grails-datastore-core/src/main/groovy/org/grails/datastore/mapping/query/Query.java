@@ -164,7 +164,7 @@ public abstract class Query implements Cloneable, Serializable {
      * @return The query
      */
     public Query lock(boolean lock) {
-        lockResult = LockModeType.PESSIMISTIC_WRITE;
+        lockResult = lock ? LockModeType.PESSIMISTIC_WRITE : null;
         return this;
     }
 
