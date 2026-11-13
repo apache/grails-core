@@ -308,6 +308,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 // Spring Security 6 and later saves a remember-me login only in the request unless told where; saved in the session,
                 // the page the success handler redirects to finds the remembered user and does not log in and redirect again
                 securityContextRepository = ref('securityContextRepository')
+                loginFormUrl = conf.auth.loginFormUrl // /login/auth
                 createSessionOnSuccess = conf.rememberMe.createSessionOnSuccess // true
             }
 

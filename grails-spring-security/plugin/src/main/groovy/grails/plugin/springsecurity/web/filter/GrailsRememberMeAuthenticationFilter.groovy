@@ -43,7 +43,7 @@ import grails.plugin.springsecurity.SpringSecurityUtils
  * which redirects, and then does not run the rest of the filter chain. That suits a page that is fetched with a GET. A
  * request that carries data (POST, PUT, PATCH, DELETE), or one that comes from Ajax, would be turned into a GET, or into the
  * Ajax success url, and its action would never run. So the success handler is kept here and used only for a GET that is
- * not an Ajax call; any other request goes on down the filter chain as the remembered user.</p>
+ * not an Ajax call, and not the request for the login form; any other request goes on down the filter chain as the remembered user.</p>
  *
  * @author Burt Beckwith
  */
@@ -57,6 +57,9 @@ class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilte
 
     /** Dependency injection for createSessionOnSuccess. */
     boolean createSessionOnSuccess = true
+
+    /** Dependency injection for the url of the login form, the page a user who is not fully authenticated is sent to. */
+    String loginFormUrl
 
     private AuthenticationSuccessHandler redirectHandler
 
@@ -107,10 +110,16 @@ class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilte
     }
 
     /**
-     * @return whether a request that logs in through remember-me is redirected to the page it asked for: a GET that is not an Ajax call
+     * @return whether a request that logs in through remember-me is redirected to the page it asked for: a GET that is not an Ajax
+     * call and not the request for the login form. A page that needs a full login sends a remembered user to the login form,
+     * where the cookie logs in again; redirecting back to the page from there would bounce between the two.
      */
     protected boolean redirects(HttpServletRequest request) {
-        'GET' == request.method && !SpringSecurityUtils.isAjax(request)
+        'GET' == request.method && !SpringSecurityUtils.isAjax(request) && !isLoginForm(request)
+    }
+
+    protected boolean isLoginForm(HttpServletRequest request) {
+        loginFormUrl && request.requestURI == request.contextPath + loginFormUrl
     }
 
     @Override
