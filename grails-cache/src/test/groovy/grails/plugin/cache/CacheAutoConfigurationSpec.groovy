@@ -20,6 +20,7 @@ package grails.plugin.cache
 
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -184,6 +185,31 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'with caching disabled and several cache managers, the one marked primary is used, as Spring chose it before'() {
+        given:
+        CacheManager primary = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
+                [cacheManager: new ConcurrentMapCacheManager(), primaryCacheManager: primary], 'primaryCacheManager')
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(primary)
+
+        cleanup:
+        context.close()
+    }
+
+    void 'a cache manager marked primary is used over the Grails one, as Spring chose it before'() {
+        given: 'an application\'s own cache manager, marked primary'
+        CacheManager primary = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: primary], 'cacheManager')
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(primary)
+
+        cleanup:
+        context.close()
+    }
+
     /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
     static class CacheAware implements GrailsCacheManagerAware {
     }
@@ -205,14 +231,16 @@ class CacheAutoConfigurationSpec extends Specification {
     @CompileStatic
     private static AnnotationConfigApplicationContext buildContext(
             Map<String, Object> properties, GrailsCacheManager userCacheManager = null,
-            Map<String, CacheManager> otherCacheManagers = [:]) {
+            Map<String, CacheManager> otherCacheManagers = [:], String primary = null) {
         def context = new AnnotationConfigApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
         if (userCacheManager != null) {
             context.registerBean('grailsCacheManager', GrailsCacheManager, () -> userCacheManager)
         }
         otherCacheManagers.each { String name, CacheManager cacheManager ->
-            context.registerBean(name, CacheManager, () -> cacheManager)
+            context.registerBean(name, CacheManager, () -> cacheManager) { BeanDefinition definition ->
+                definition.primary = name == primary
+            }
         }
         context.registerBean(CacheAware)
         context.register(CacheAutoConfiguration)
