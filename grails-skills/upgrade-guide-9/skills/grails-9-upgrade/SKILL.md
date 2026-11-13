@@ -456,6 +456,7 @@ With `cacheUsers`, the Spring Security plugin's user cache stores users by value
 - A custom `UserDetails` with a field that cannot be serialized is not cached: it is loaded on every sign-in, with a warning. Make the field `transient` or hold an id.
 - Code that changed a user read from `userCache` puts it back with `userCache.putUserInCache`.
 - `cacheConfig` on the `userCache` bean, a `MutableConfiguration` with `setStoreByValue(false)`, restores storing by reference.
+- In a native image, the plugin registers `User`, `GrailsUser` with a `Long` id and `SimpleGrantedAuthority` for serialization; a custom user class or id type needs metadata, which `traceNativeMetadata` records when the login form is in `forms`.
 
 ## Verification Checklist
 

@@ -1445,7 +1445,7 @@ A property source of lower precedence that sets the deeper key now answers it. W
 
 ==== 24. The Spring Security User Cache Stores Copies
 
-With `cacheUsers` enabled, the Spring Security plugin's user cache now stores users by value, so each lookup gets its own copy, made by serializing the user. Grails 8 stored the instance itself. The authentication manager erases the password of the user it signs in, and it erased the cached instance too: the next sign-in missed the cache and loaded the user again. A copy is erased instead, so the cached user keeps its password and the user kept in the session holds none.
+With `cacheUsers` enabled, the Spring Security plugin's user cache now stores users by value, so each lookup gets its own copy, made by serializing the user. Grails 8 stored the instance itself. The authentication manager erases the password of the user it signs in, and it erased the cached instance too: the next sign-in missed the cache and loaded the user again. A copy is erased instead, so the cached user keeps its password and the user kept in the session holds none. In a native image the plugin registers its own user classes for this. A user class or id type of your own needs serialization metadata, which `traceNativeMetadata` records when the login form is listed in `forms`.
 
 ===== Required Actions
 

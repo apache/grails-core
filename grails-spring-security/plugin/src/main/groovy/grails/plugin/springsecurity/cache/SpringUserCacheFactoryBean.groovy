@@ -42,7 +42,8 @@ import org.springframework.util.Assert
  * signed in is erased and what is cached keeps what it is checked against.</p>
  *
  * <p>A user is copied by serializing it, as {@code UserDetails} is {@code Serializable}. One that cannot be serialized
- * is not cached, and is loaded on every sign-in. A {@code cacheConfig} set on the bean is used as it is.</p>
+ * is not cached, and is loaded on every sign-in, as is one a native image has no serialization metadata for. A
+ * {@code cacheConfig} set on the bean is used as it is.</p>
  */
 @CompileStatic
 class SpringUserCacheFactoryBean implements FactoryBean<SpringCacheBasedUserCache>, InitializingBean {
@@ -88,7 +89,8 @@ class SpringUserCacheFactoryBean implements FactoryBean<SpringCacheBasedUserCach
             try {
                 super.putUserInCache(user)
             }
-            catch (RuntimeException e) {
+            catch (RuntimeException | LinkageError e) {
+                // a LinkageError where a native image has no serialization metadata for a class of the user
                 log.warn('User {} was not cached, as it could not be copied into the user cache: {}', user.username, e.message)
             }
         }

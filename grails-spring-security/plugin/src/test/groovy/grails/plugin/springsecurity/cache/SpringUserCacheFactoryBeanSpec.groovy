@@ -72,6 +72,15 @@ class SpringUserCacheFactoryBeanSpec extends Specification {
             cache.getUserFromCache('user') == null
     }
 
+    void 'a user an image cannot copy is left out of the cache rather than failing the sign-in'() {
+        when: 'a native image without serialization metadata for a class throws an error rather than an exception'
+            cache.putUserInCache(new CannotBeCopiedInAnImage('user', 'stored'))
+
+        then:
+            noExceptionThrown()
+            cache.getUserFromCache('user') == null
+    }
+
     void 'a user that is removed is no longer cached'() {
         given:
             cache.putUserInCache(new User('user', 'stored', []))
@@ -81,6 +90,17 @@ class SpringUserCacheFactoryBeanSpec extends Specification {
 
         then:
             cache.getUserFromCache('user') == null
+    }
+
+    static class CannotBeCopiedInAnImage extends User {
+
+        CannotBeCopiedInAnImage(String username, String password) {
+            super(username, password, [])
+        }
+
+        private void writeObject(ObjectOutputStream out) {
+            throw new LinkageError('no serialization metadata in this image')
+        }
     }
 
     static class HoldsSomethingUnserializable extends User {
