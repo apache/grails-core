@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import com.github.scribejava.core.model.OAuth2AccessToken
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.apache.commons.validator.routines.UrlValidator
 
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.ModelAndView
@@ -61,11 +60,29 @@ class SpringSecurityOAuth2Controller {
         log.debug "authenticate ${providerName}"
         String url = springSecurityOauth2BaseService.getAuthorizationUrl(providerName)
         log.debug "redirect url from s2oauthservice=${url}"
-        if (!UrlValidator.instance.isValid(url)) {
+        if (!isWebAddress(url)) {
             flash.message = "Authorization url for provider '${providerName}' is invalid."
             redirect(controller: 'login', action: 'index')
+            return
         }
         redirect(url: url)
+    }
+
+    /**
+     * Whether the authorization url of a provider is an http or https address with a host. The host name is not checked
+     * against a list of top level domains, so the address of an intranet server, such as {@code dev.somewhere.local} or
+     * {@code keycloak:8080}, is accepted.
+     */
+    private static boolean isWebAddress(String url) {
+        if (!url?.trim()) {
+            return false
+        }
+        try {
+            URI uri = new URI(url)
+            return uri.scheme?.toLowerCase() in ['http', 'https'] && uri.host
+        } catch (URISyntaxException ignored) {
+            return false
+        }
     }
 
     /**
