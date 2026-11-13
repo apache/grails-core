@@ -587,6 +587,64 @@ class SimpleDataBinderSpec extends Specification {
         widget.factories.find { it.name == 'Tres' }
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers binds the first as the index and the second as a key of that element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource([
+                'columns[0][data]': 'id', 'columns[0][name]': 'Id', 'columns[1][data]': 'title',
+                'columns[1][search][value]': 'x'
+        ])
+
+        then:
+        table.columns.size() == 2
+        table.columns[0] == [data: 'id', name: 'Id']
+        table.columns[1].data == 'title'
+        table.columns[1]['search[value]'] == 'x'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers binds the properties of a typed element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['factories[1][name]': 'Dos', 'factories[0][name]': 'Uno'])
+
+        then:
+        table.factories*.name == ['Uno', 'Dos']
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers adds to an element given as a map and quoted keys work'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['columns[0]': [data: 'id'], "columns[0]['name']": 'Id'])
+
+        then:
+        table.columns == [[data: 'id', name: 'Id']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'names with one indexer are bound as before'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def widget = new Widget()
+
+        when:
+        binder.bind widget, new SimpleMapDataBindingSource(['integers[1]': 2, 'integers[0]': 1])
+
+        then:
+        widget.integers == [1, 2]
+    }
+
     @Issue('GRAILS-10865')
     void 'Test binding to an inherited typed collection'() {
         given:
@@ -776,6 +834,11 @@ class ClassWithInheritedTypedCollection extends AbstractClassWithTypedCollection
 
 class DateCollection {
     List<Date> dates
+}
+
+class IndexedTable {
+    List<Map> columns
+    List<Factory> factories
 }
 
 class Comment {
