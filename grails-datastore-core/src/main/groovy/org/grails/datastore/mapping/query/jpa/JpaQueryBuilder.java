@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.query.jpa;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,6 +43,8 @@ import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.AssociationCriteria;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
+import org.grails.datastore.mapping.query.criteria.FunctionCallingCriterion;
+import org.grails.datastore.mapping.query.criteria.FunctionComparison;
 
 /**
  * Builds JPA 1.0 String-based queries from the Query model
@@ -605,6 +609,68 @@ public class JpaQueryBuilder {
             }
         });
 
+        queryHandlers.put(FunctionCallingCriterion.class, new QueryHandler() {
+            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
+                FunctionCallingCriterion functionCriterion = (FunctionCallingCriterion) criterion;
+                validateProperty(entity, functionCriterion.getProperty(), FunctionCallingCriterion.class);
+                FunctionComparison comparison = FunctionComparison.of(functionCriterion, conversionService);
+                String function = comparison.getFunctionName() + OPEN_BRACKET + logicalName + DOT + comparison.getProperty() + CLOSE_BRACKET;
+                switch (comparison.getKind()) {
+                    case ILIKE:
+                        whereClause.append("lower(").append(function).append(") like lower(").append(PARAMETER_PREFIX).append(++position).append(CLOSE_BRACKET);
+                        parameters.add(comparison.getOperand());
+                        return position;
+                    case RLIKE:
+                        // a regular expression is not LIKE, and a bulk statement has no regular expression operator
+                        throw new InvalidDataAccessResourceUsageException("Unsupported criterion in a function call: RLike");
+                    case IS_NULL:
+                        whereClause.append(function).append(" IS NULL");
+                        return position;
+                    case IS_NOT_NULL:
+                        whereClause.append(function).append(" IS NOT NULL");
+                        return position;
+                    case IN_SUBQUERY:
+                        whereClause.append(function).append(" IN (");
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery(), comparison.getProperty());
+                        whereClause.append(CLOSE_BRACKET);
+                        return parameters.size();
+                    case IN_VALUES:
+                        whereClause.append(function).append(" IN (");
+                        for (Iterator i = comparison.getValues().iterator(); i.hasNext();) {
+                            Object val = i.next();
+                            position = appendOperand(whereClause, parameters, position, val);
+                            if (i.hasNext()) {
+                                whereClause.append(COMMA);
+                            }
+                        }
+                        whereClause.append(CLOSE_BRACKET);
+                        return position;
+                    case COMPARE_SUBQUERY:
+                        whereClause.append(function).append(comparison.getOperator().jpql()).append(OPEN_BRACKET);
+                        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, (QueryableCriteria) comparison.getSubquery(), comparison.getProperty());
+                        whereClause.append(CLOSE_BRACKET);
+                        return parameters.size();
+                    default:
+                        whereClause.append(function).append(comparison.getOperator().jpql());
+                        return appendOperand(whereClause, parameters, position, comparison.getOperand());
+                }
+            }
+
+            /**
+             * A parameter takes the type of the function, an int, which would not hold a fraction, so a fraction is
+             * written as a literal of its own type.
+             */
+            private int appendOperand(StringBuilder whereClause, List parameters, int position, Object value) {
+                if (FunctionComparison.needsLiteral(value)) {
+                    whereClause.append(numberLiteral((Number) value));
+                    return position;
+                }
+                whereClause.append(PARAMETER_PREFIX).append(++position);
+                parameters.add(value);
+                return position;
+            }
+        });
+
         queryHandlers.put(Query.In.class, new QueryHandler() {
             public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
                 Query.In inQuery = (Query.In) criterion;
@@ -618,6 +684,7 @@ public class JpaQueryBuilder {
                 QueryableCriteria subquery = inQuery.getSubquery();
                 if (subquery != null) {
                     buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+                    position = parameters.size();
                 }
                 else {
                     for (Iterator i = inQuery.getValues().iterator(); i.hasNext();) {
@@ -771,6 +838,7 @@ public class JpaQueryBuilder {
                 .append(name)
                 .append(comparisonExpression);
         buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery);
+        position = parameters.size();
         whereClause.append(CLOSE_BRACKET);
         return position;
     }
@@ -793,20 +861,37 @@ public class JpaQueryBuilder {
     }
 
     protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery) {
+        buildSubQuery(q, whereClause, position, parameters, conversionService, allowJoins, hibernateCompatible, subquery, null);
+    }
+
+    /**
+     * Builds a subquery. A subquery without a projection selects its entity, unless the property it is compared with is
+     * given: it then selects that property, as the read of the same query does.
+     *
+     * @param comparedProperty the property the subquery is compared with, or {@code null} to select the entity
+     */
+    protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
         PersistentEntity associatedEntity = subquery.getPersistentEntity();
         String associatedEntityName = associatedEntity.getName();
         String associatedEntityLogicalName = associatedEntity.getDecapitalizedName() + position;
         whereClause.append("SELECT ");
-        buildSelect(whereClause, subquery.getProjections(), associatedEntityLogicalName, associatedEntity);
+        if (comparedProperty != null && subquery.getProjections().isEmpty()) {
+            whereClause.append(associatedEntityLogicalName).append(DOT).append(comparedProperty);
+        }
+        else {
+            buildSelect(whereClause, subquery.getProjections(), associatedEntityLogicalName, associatedEntity);
+        }
         whereClause.append(" FROM ")
                 .append(associatedEntityName)
                 .append(' ')
-                .append(associatedEntityLogicalName)
-                .append(" WHERE ");
+                .append(associatedEntityLogicalName);
         List<Query.Criterion> criteria = subquery.getCriteria();
-        for (Query.Criterion subCriteria : criteria) {
-            QueryHandler queryHandler = queryHandlers.get(subCriteria.getClass());
-            queryHandler.handle(associatedEntity, subCriteria, q, whereClause, associatedEntityLogicalName, position, parameters, conversionService, allowJoins, hibernateCompatible);
+        if (!criteria.isEmpty()) {
+            // the criteria of a subquery are all required, as they are of the query, and a subquery
+            // without criteria has no WHERE
+            whereClause.append(" WHERE ");
+            buildWhereClauseForCriterion(associatedEntity, new Query.Conjunction(), q, whereClause, associatedEntityLogicalName,
+                    criteria, position, parameters, conversionService, allowJoins, hibernateCompatible);
         }
     }
 
@@ -960,5 +1045,29 @@ public class JpaQueryBuilder {
         }
 
         return position;
+    }
+
+    /**
+     * A number written into the query as a big decimal literal, which keeps the number as it is.
+     */
+    private static String numberLiteral(Number number) {
+        BigDecimal decimal;
+        if (number instanceof BigDecimal) {
+            decimal = (BigDecimal) number;
+        }
+        else if (number instanceof BigInteger) {
+            decimal = new BigDecimal((BigInteger) number);
+        }
+        else if (number instanceof Double || number instanceof Float) {
+            double value = number.doubleValue();
+            if (Double.isNaN(value) || Double.isInfinite(value)) {
+                throw new InvalidDataAccessResourceUsageException("A function cannot be compared with [" + number + "]");
+            }
+            decimal = number instanceof Float ? new BigDecimal(number.toString()) : BigDecimal.valueOf(value);
+        }
+        else {
+            decimal = BigDecimal.valueOf(number.longValue());
+        }
+        return decimal.toPlainString() + "bd";
     }
 }

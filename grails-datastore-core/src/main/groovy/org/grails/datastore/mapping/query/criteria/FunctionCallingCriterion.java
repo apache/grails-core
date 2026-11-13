@@ -18,6 +18,16 @@
  */
 package org.grails.datastore.mapping.query.criteria;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+import org.springframework.core.convert.ConversionService;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
+
 import org.grails.datastore.mapping.query.Query;
 
 /**
@@ -26,6 +36,102 @@ import org.grails.datastore.mapping.query.Query;
  * Example in SQL: year(date) == 2007 where the function is 'year', the property 'date' and the value is '2007'
  */
 public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
+
+    /**
+     * The functions a where query can call on a property: the ten that the where DSL accepts. A query that runs
+     * a function by name, as the bulk statements of {@code updateAll} and {@code deleteAll} and Hibernate 7 do,
+     * accepts no other name, so that the name is never text that changes the query.
+     */
+    public static final Set<String> SUPPORTED_FUNCTIONS = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(
+            "lower", "upper", "trim", "length", "second", "hour", "minute", "day", "month", "year")));
+
+    /**
+     * Rejects a function name that the where DSL does not support.
+     *
+     * @param functionName the name of the function
+     * @throws InvalidDataAccessResourceUsageException when the name is not one of {@link #SUPPORTED_FUNCTIONS}
+     */
+    public static void requireSupported(String functionName) {
+        if (!SUPPORTED_FUNCTIONS.contains(functionName)) {
+            throw new InvalidDataAccessResourceUsageException("Unsupported function defined in query [" + functionName +
+                    "]. The functions supported are " + SUPPORTED_FUNCTIONS);
+        }
+    }
+
+    private static final BigDecimal INT_MIN = BigDecimal.valueOf(Integer.MIN_VALUE);
+    private static final BigDecimal INT_MAX = BigDecimal.valueOf(Integer.MAX_VALUE);
+
+    /**
+     * Whether a number is a whole number that an int holds exactly. The functions a where query can call return an
+     * int, so such a number can be compared as an int. Any other number, a fraction or one that is too large, has
+     * to be compared as it is: narrowing it changes which rows match. The test is exact, so a decimal a hair past
+     * a whole number is not the whole number.
+     *
+     * @param number the operand of a comparison with a function
+     */
+    public static boolean isWholeInt(Number number) {
+        BigDecimal exact;
+        if (number instanceof BigDecimal) {
+            exact = (BigDecimal) number;
+        }
+        else if (number instanceof BigInteger) {
+            exact = new BigDecimal((BigInteger) number);
+        }
+        else if (number instanceof Double || number instanceof Float) {
+            double value = number.doubleValue();
+            if (Double.isNaN(value) || Double.isInfinite(value)) {
+                return false;
+            }
+            exact = new BigDecimal(value);
+        }
+        else {
+            exact = BigDecimal.valueOf(number.longValue());
+        }
+        return exact.stripTrailingZeros().scale() <= 0 && exact.compareTo(INT_MIN) >= 0 && exact.compareTo(INT_MAX) <= 0;
+    }
+
+    /**
+     * Whether an operand is a number that {@link #isWholeInt} rejects.
+     *
+     * @param value the operand of a comparison with a function
+     */
+    public static boolean isFractional(Object value) {
+        return value instanceof Number && !isWholeInt((Number) value);
+    }
+
+    /**
+     * The operand of a comparison with a function, as the type the function returns: text for a string function,
+     * a whole number for the others. A number that does not fit an int, or has a fraction, stays as it is, as
+     * narrowing it would change the answer.
+     *
+     * @param conversionService converts the operand, may be {@code null}
+     * @param functionName the name of the function
+     * @param value the operand
+     * @return the operand to compare the function with
+     */
+    public static Object convertOperand(ConversionService conversionService, String functionName, Object value) {
+        if (value == null) {
+            return null;
+        }
+        Class<?> targetType = switch (functionName) {
+            case "lower", "upper", "trim" -> String.class;
+            default -> Integer.class;
+        };
+        if (value instanceof CharSequence) {
+            // a GString or any other text is bound as the text it holds, not as the object
+            value = value.toString();
+        }
+        if (targetType == String.class) {
+            return conversionService != null && conversionService.canConvert(value.getClass(), String.class) ?
+                    conversionService.convert(value, String.class) : value.toString();
+        }
+        if (value instanceof Number number && !isWholeInt(number)) {
+            return value;
+        }
+        return conversionService != null && conversionService.canConvert(value.getClass(), targetType) ?
+                conversionService.convert(value, targetType) :
+                value;
+    }
 
     private String functionName;
     private Query.PropertyCriterion propertyCriterion;

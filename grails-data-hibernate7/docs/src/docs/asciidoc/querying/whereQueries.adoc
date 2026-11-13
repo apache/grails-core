@@ -80,6 +80,8 @@ Operator,Criteria Method,Description
 *`=~`*,ilike,Case insensitive like
 |===
 
+A `!=` or `ne` comparison does not return the rows whose property is `null`, as SQL does, so `where { qty != 2 }` returns the rows whose `qty` is something other than 2. To include the rows with no `qty`, write `qty != 2 || qty == null`.
+
 It is possible use regular Groovy comparison operators and logic to formulate complex queries:
 
 [source,groovy]
@@ -416,6 +418,8 @@ Method,Description
 |===
 
 NOTE: Currently functions can only be applied to properties or associations of domain classes. You cannot, for example, use a function on a result of a subquery.
+
+Only the functions in the table are available; a criterion that names another function throws an `InvalidDataAccessResourceUsageException`. A function over a regular expression (`rlike`) works in a query that is read, and is rejected in `updateAll` and `deleteAll`.
 
 For example the following query can be used to find all pet's born in 2011:
 
