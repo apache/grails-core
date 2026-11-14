@@ -180,6 +180,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      * @throws IllegalStateException when that datastore has no such listener
      * @since 9.0
      */
+    @Override
     AutoTimestampEventListener getAutoTimestampEventListener() {
         // An instance is saved through execute(), which routes to the datastore of a bound tenant when there is one,
         // so a session of that routing is asked for its datastore, rather than taking the one this API was made for.

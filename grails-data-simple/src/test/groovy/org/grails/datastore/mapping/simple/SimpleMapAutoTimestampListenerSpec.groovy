@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.simple
 
+import groovy.transform.CompileStatic
+
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
@@ -155,6 +157,10 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
         Tenants.withId('bar') { TenantListenerNote.autoTimestampEventListener }.is(bar)
         TenantListenerNote.withTenant('bar').autoTimestampEventListener.is(bar)
 
+        and: 'statically compiled code reaches it through the operations withTenant returns'
+        StaticTenantListenerLookup.forTenant('foo').is(foo)
+        StaticTenantListenerLookup.forTenant('bar').is(bar)
+
         when: 'the current tenant comes from the resolver'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'foo')
 
@@ -232,6 +238,14 @@ class ListenerNote {
 
     static mapping = {
         datasource 'ALL'
+    }
+}
+
+@CompileStatic
+class StaticTenantListenerLookup {
+
+    static AutoTimestampEventListener forTenant(String tenantId) {
+        TenantListenerNote.withTenant(tenantId).autoTimestampEventListener
     }
 }
 

@@ -170,6 +170,25 @@ class GormStaticApiSpec extends Specification {
         GormStaticApiThing.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
     }
 
+    void "the default auto-timestamp listener of the static operations contract says it cannot be looked up"() {
+        given: 'an implementation that provides nothing beyond the interface defaults'
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    throw new AssertionError("unexpected call of ${method.name}")
+                } as InvocationHandler)
+
+        when:
+        operations.autoTimestampEventListener
+
+        then:
+        UnsupportedOperationException e = thrown()
+        e.message.contains('cannot look up the auto-timestamp event listener')
+    }
+
     void "getAutoTimestampEventListener rejects a datastore that does not set timestamps through a listener"() {
         given:
         Datastore plainDatastore = Stub(Datastore)
