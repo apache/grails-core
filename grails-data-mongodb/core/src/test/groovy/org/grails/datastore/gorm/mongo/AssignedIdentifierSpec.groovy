@@ -96,6 +96,24 @@ class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager
         totalRivers == 2
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/14511')
+    void "Test that an instance loaded in one session and saved after that session was cleared is updated"() {
+        given:
+        new River(name: "Amazon", country: "Brazil").save flush: true
+        manager.session.clear()
+        def r = River.get("Amazon")
+        manager.session.clear()
+
+        when: "the detached instance is changed and saved"
+        r.country = "Argentina"
+        r.save flush: true
+        manager.session.clear()
+
+        then: "the row is updated rather than inserted again"
+        River.count() == 1
+        River.get("Amazon").country == "Argentina"
+    }
+
     @Issue("GPMONGODB-170")
     void "Test that assigned identifiers work with the constructor"() {
         when: "An entity is saved with an assigned id"

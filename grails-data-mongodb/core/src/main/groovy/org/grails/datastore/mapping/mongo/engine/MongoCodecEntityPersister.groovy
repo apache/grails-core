@@ -212,7 +212,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             } else if (idIsNull) {
                 throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
             } else if (isAssigned && !si.isStateless(entity)) {
-                isUpdate = mongoCodecSession.contains(obj)
+                isUpdate = mongoCodecSession.contains(obj) || wasPersisted(obj)
             }
 
             si.registerPending(obj)
@@ -283,7 +283,19 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     }
 
     private boolean isNotUpdateForAssignedId(PersistentEntity persistentEntity, Object obj, boolean update, boolean assignedId, SessionImplementor<Object> si) {
-        return assignedId && update && !si.isStateless(persistentEntity) && !session.contains(obj)
+        return assignedId && update && !si.isStateless(persistentEntity) && !session.contains(obj) && !wasPersisted(obj)
+    }
+
+    /**
+     * An instance that was loaded or saved starts tracking its changes, a new one does not. With an assigned id that is what
+     * tells a detached instance, which is updated, from a new one, which is inserted.
+     */
+    private static boolean wasPersisted(Object obj) {
+        if (obj instanceof DirtyCheckable) {
+            DirtyCheckable checkable = (DirtyCheckable) obj
+            return !checkable.hasChanged() || !checkable.listDirtyPropertyNames().isEmpty()
+        }
+        return false
     }
 
     protected void processAssociations(MongoCodecSession mongoCodecSession, PersistentEntity entity, EntityAccess entityAccess, obj, ProxyFactory proxyFactory, boolean isUpdate) {
