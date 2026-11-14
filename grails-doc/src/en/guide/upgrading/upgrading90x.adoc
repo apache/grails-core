@@ -1296,8 +1296,9 @@ The setting changes these answers, which the framework's tests record by running
 
 * *The order of the `Accept` header.* Spring MVC takes a more specific type ahead of a less specific one of equal
 quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
-where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the `+xml` suffix no longer comes ahead
-of `application/xml`: `Accept: application/xml, application/atom+xml` is `xml`, where it is `atom` without the setting.
+where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
+`+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
+`atom` either way, and Spring MVC now writes what an action returns in that order too.
 * *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
 `application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
 Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent
@@ -1321,8 +1322,8 @@ too.
 * *Without the `all` format.* Where `grails.mime.types` does not list `all`, a request without an `Accept` header is of
 the `all` format, as one that sends `Accept: */*` is, where the Grails rules give the first configured format, so
 `withFormat` runs its `*` block, or its first block, rather than the block of that format. A type of quality `0` comes
-after any other, so `Accept: application/json;q=0, */*;q=0.1` is `all`, where it is otherwise `json`. `?format=all` is
-then an unknown format.
+after any other, so `Accept: application/json;q=0, */*;q=0.1` is `all`, where it is otherwise `json`. `?format=all`
+leaves the format to the `Accept` header there too, where the Grails rules give the first configured format.
 * *Wildcards.* A wildcard such as `text/*` is the `all` format as before, but `withFormat` runs the first block of a
 format with a type compatible with it, and `respond` answers in the first such format of the action, where the Grails
 rules run the first block and answer in the first format: `withFormat { pdf {...}; html {...} }` runs the `html` block for

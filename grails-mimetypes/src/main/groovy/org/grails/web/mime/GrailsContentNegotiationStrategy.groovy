@@ -347,7 +347,7 @@ class GrailsContentNegotiationStrategy {
                 }
                 List<MediaType> resolved = strategy.resolveMediaTypes(webRequest)
                 if (resolved != ContentNegotiationStrategy.MEDIA_TYPE_ALL_LIST) {
-                    return resolved
+                    return preferringSuffixedXml(resolved)
                 }
             }
         }
@@ -356,6 +356,33 @@ class GrailsContentNegotiationStrategy {
             return null
         }
         return ContentNegotiationStrategy.MEDIA_TYPE_ALL_LIST
+    }
+
+    /**
+     * Media types in the order Grails reads them, which keeps Spring MVC's order but for the types with the {@code +xml}
+     * suffix of the quality of the XML type, the first {@code application/xml} or {@code text/xml}: they come ahead of
+     * it, as the more specific types, each one later in the header in front of those before it, as Grails 9 orders them.
+     *
+     * @param mediaTypes the media types in Spring MVC's order
+     * @return the media types in the order Grails reads them
+     * @since 9.0
+     */
+    static List<MediaType> preferringSuffixedXml(List<MediaType> mediaTypes) {
+        int xml = mediaTypes.findIndexOf { MediaType mediaType ->
+            mediaType.type == 'application' && mediaType.subtype == 'xml' || mediaType.type == 'text' && mediaType.subtype == 'xml'
+        }
+        if (xml < 0) {
+            return mediaTypes
+        }
+        double quality = mediaTypes[xml].qualityValue
+        List<MediaType> ordered = new ArrayList<>(mediaTypes)
+        for (MediaType mediaType in mediaTypes.subList(xml + 1, mediaTypes.size())) {
+            if (mediaType.subtypeSuffix?.equalsIgnoreCase('xml') && mediaType.qualityValue >= quality) {
+                ordered.remove(mediaType)
+                ordered.add(xml, mediaType)
+            }
+        }
+        return ordered
     }
 
     /**

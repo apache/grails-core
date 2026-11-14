@@ -222,7 +222,7 @@ class SpringFormatNegotiationSpec extends Specification {
         'application/problem+json'                                || ['json']
         'application/vnd.api+json, application/xml'               || ['json', 'xml']
         'application/soap+xml'                                    || ['xml']
-        'application/xml, application/atom+xml'                   || ['xml', 'atom']
+        'application/xml, application/atom+xml'                   || ['atom', 'xml']
         'text/xml;q=0.5, application/xml;q=0.9, application/json' || ['json', 'xml', 'xml']
         'image/png'                                               || []
         'application/json;q=abc'                                  || []
@@ -289,6 +289,26 @@ class SpringFormatNegotiationSpec extends Specification {
         expect:
         GrailsWebRequest.lookup().currentResponse.format == 'json'
         manager().resolveMediaTypes(new ServletWebRequest(request)) == [MediaType.APPLICATION_JSON]
+    }
+
+    void 'a type with the +xml suffix comes ahead of the XML type of equal quality, for Grails and for what Spring MVC writes: #accept'() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true)
+        def request = request('Accept': accept)
+        handledBy(request, urlMapping())
+
+        expect:
+        GrailsWebRequest.lookup().currentResponse.mimeTypes*.extension == formats
+        manager().resolveMediaTypes(new ServletWebRequest(request))*.toString() == resolved
+
+        where:
+        accept                                                    || formats                    | resolved
+        'application/xml, application/atom+xml'                   || ['atom', 'xml']            | ['application/atom+xml', 'application/xml']
+        'text/xml, application/json, application/atom+xml'        || ['atom', 'xml', 'json']    | ['application/atom+xml', 'text/xml', 'application/json']
+        'application/xml, application/rss+xml, application/atom+xml' || ['atom', 'rss', 'xml']  | ['application/atom+xml', 'application/rss+xml', 'application/xml']
+        'application/xml, application/atom+xml;q=0.5'             || ['xml', 'atom']            | ['application/xml', 'application/atom+xml;q=0.5']
+        'application/atom+xml, application/xml'                   || ['atom', 'xml']            | ['application/atom+xml', 'application/xml']
+        'application/json, application/atom+xml'                  || ['json', 'atom']           | ['application/json', 'application/atom+xml']
     }
 
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {

@@ -32,8 +32,9 @@ import org.springframework.web.context.request.NativeWebRequest
 /**
  * The strategy of Spring MVC's content negotiation manager that reads the {@code Accept} header in place of Spring MVC's
  * own, and ignores it for a request a URL mapping handles where {@code grails.mime.use.accept.header} or
- * {@code grails.mime.disable.accept.header.*} say so, so that what Spring MVC writes for it is in the format Grails
- * resolves for it. Any other request, such as one a Spring MVC endpoint handles, is negotiated by the strategy it
+ * {@code grails.mime.disable.accept.header.*} say so, and otherwise takes a type with the {@code +xml} suffix ahead of the
+ * XML type of equal quality, as Grails does, so that what Spring MVC writes for it is in the format Grails resolves for
+ * it. Any other request, such as one a Spring MVC endpoint handles, is negotiated by the strategy it
  * replaces. It is a {@link HeaderContentNegotiationStrategy}, so that it is found as Spring MVC's is.
  *
  * @since 9.0
@@ -64,10 +65,12 @@ class GrailsAcceptHeaderContentNegotiationStrategy extends HeaderContentNegotiat
     @Override
     List<MediaType> resolveMediaTypes(NativeWebRequest webRequest) throws HttpMediaTypeNotAcceptableException {
         HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest)
-        if (request != null && GrailsContentNegotiationStrategy.handlesRequest(request) &&
-                grailsStrategy.get().ignoresAcceptHeader(request)) {
+        boolean handled = request != null && GrailsContentNegotiationStrategy.handlesRequest(request)
+        if (handled && grailsStrategy.get().ignoresAcceptHeader(request)) {
             return MEDIA_TYPE_ALL_LIST
         }
-        return springStrategy.resolveMediaTypes(webRequest)
+        List<MediaType> mediaTypes = springStrategy.resolveMediaTypes(webRequest)
+        // in the order Grails reads them, so that what Spring MVC writes is in the format Grails resolves
+        return handled ? GrailsContentNegotiationStrategy.preferringSuffixedXml(mediaTypes) : mediaTypes
     }
 }
