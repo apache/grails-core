@@ -175,6 +175,7 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
     @Override
     void visitAfterTraitApplied(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
+        QueryStubTransformation.restoreQueries(classNode, sourceUnit, compilationUnit)
         // if the class node is an interface we are going to try and generate an implementation
         // and add the implementation as an inner class. If any method of the interface cannot be implemented
         // a compilation error occurs
