@@ -58,6 +58,32 @@ class SimpleMapConnectionEventsSpec extends Specification {
         note.lastUpdated != null
     }
 
+    void 'with a discriminator column, another connection keeps the tenant handling it had and sets the timestamps'() {
+        given: 'no tenant from the resolver'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver([
+                        (Settings.SETTING_MULTI_TENANCY_MODE)   : MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR,
+                        (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
+                ]),
+                [ConnectionSource.DEFAULT, 'secondary'],
+                DiscriminatorNote
+        )
+        DiscriminatorNote note = new DiscriminatorNote(text: 'draft', tenantId: 't1')
+
+        when:
+        List<DiscriminatorNote> found = Tenants.withId('t1') {
+            DiscriminatorNote.secondary.withTransaction {
+                note.secondary.save(flush: true)
+                DiscriminatorNote.secondary.list()
+            }
+        }
+
+        then:
+        found*.text == ['draft']
+        note.dateCreated != null
+    }
+
     void 'a save for a tenant with a database of its own runs the events and sets the timestamps'() {
         given:
         datastore = new SimpleMapDatastore(
@@ -105,6 +131,18 @@ class SimpleMapConnectionEventsSpec extends Specification {
         note.text == 'DRAFT'
         note.dateCreated != null
         note.lastUpdated != null
+    }
+}
+
+@Entity
+class DiscriminatorNote implements MultiTenant<DiscriminatorNote> {
+
+    String text
+    String tenantId
+    Date dateCreated
+
+    static mapping = {
+        datasource 'ALL'
     }
 }
 

@@ -128,7 +128,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
                             // The parent's enhancer serves this connection's entities, but the sessions of this
                             // connection publish their events with this datastore as the source, and only
                             // listeners of its own handle those.
-                            registerEventListeners(eventPublisher);
+                            registerEntityEventListeners(eventPublisher);
                             return null;
                         }
 
@@ -297,12 +297,25 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new DomainEventListener(this));
-        autoTimestampEventListener = new AutoTimestampEventListener(this);
-        eventPublisher.addApplicationListener(autoTimestampEventListener);
+        registerEntityEventListeners(eventPublisher);
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
+    }
+
+    /**
+     * Registers the listeners that run the domain class events and set the timestamps of the entities saved through
+     * this datastore. The datastore of another connection, or of a schema, registers only these: the tenant of a
+     * discriminator column is bound for the datastore of the default connection, and a tenant filter of its own
+     * would not see it.
+     *
+     * @param eventPublisher The publisher of this datastore's events
+     * @since 9.0
+     */
+    protected void registerEntityEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
+        eventPublisher.addApplicationListener(new DomainEventListener(this));
+        autoTimestampEventListener = new AutoTimestampEventListener(this);
+        eventPublisher.addApplicationListener(autoTimestampEventListener);
     }
 
     public Map getIndices() {
@@ -480,7 +493,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
                 protected GormEnhancer initialize(ConnectionSourceSettings settings) {
                     // As for a connection's datastore, the schema's sessions publish their events with this
                     // datastore as the source.
-                    registerEventListeners(eventPublisher);
+                    registerEntityEventListeners(eventPublisher);
                     return null;
                 }
             };
