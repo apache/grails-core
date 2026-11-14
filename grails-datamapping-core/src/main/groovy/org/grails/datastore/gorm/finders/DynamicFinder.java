@@ -648,6 +648,7 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             }
         }
 
+        rejectTextAfterOperator(expression, methodExpressionClass.getSimpleName());
         String propertyName = calcPropertyName(expression, methodExpressionClass.getSimpleName());
         boolean negation = false;
         if (propertyName.endsWith(NOT)) {
@@ -741,6 +742,25 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
 
         Map<?, ?> argMap = (Map<?, ?>) arguments[0];
         populateArgumentsForCriteria(clazz, query, argMap);
+    }
+
+    /**
+     * The name of a property is followed by at most one operator, and nothing may follow the operator: text after it, for
+     * example an {@code OrderBy} suffix, would otherwise be dropped and the finder would silently run without it.
+     */
+    private static void rejectTextAfterOperator(String expression, String clause) {
+        if (clause == null || clause.equals(Equal.class.getSimpleName())) {
+            return;
+        }
+        final int start = expression.indexOf(clause);
+        if (start < 0) {
+            return;
+        }
+        final String tail = expression.substring(start + clause.length());
+        if (!tail.isEmpty()) {
+            throw new IllegalArgumentException("Unexpected text [" + tail + "] after the [" + clause + "] operator in the dynamic finder expression [" +
+                    expression + "]. A dynamic finder cannot sort by name: pass the sort and order arguments, for example [sort: 'name', order: 'desc'], or use listOrderBy*.");
+        }
     }
 
     private static String calcPropertyName(String queryParameter, String clause) {
