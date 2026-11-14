@@ -1461,3 +1461,11 @@ In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a 
 
 * A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
 * A test that expected a domain class event not to run on such a save expects what the event does.
+
+==== 26. A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
+
+===== Required Actions
+
+* Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
