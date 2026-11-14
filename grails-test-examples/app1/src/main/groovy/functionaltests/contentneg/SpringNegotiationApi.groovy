@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController
 @RestController
 class SpringNegotiationApi {
 
-    @GetMapping('/springNegotiation')
+    @GetMapping(path = '/springNegotiation', produces = 'application/json')
     Map<String, Object> negotiation() {
         [title: 'Grails']
     }

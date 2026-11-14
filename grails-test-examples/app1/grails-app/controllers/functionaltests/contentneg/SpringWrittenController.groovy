@@ -37,4 +37,8 @@ class SpringWrittenController {
     def formats() {
         render(contentType: 'text/plain', text: "${response.format}|${request.format}")
     }
+
+    def forwardToSpring() {
+        forward(uri: '/springNegotiation')
+    }
 }

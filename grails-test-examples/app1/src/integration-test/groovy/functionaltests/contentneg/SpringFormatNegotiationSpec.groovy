@@ -73,9 +73,14 @@ class SpringFormatNegotiationSpec extends Specification implements HttpClientSup
         http("/springNegotiation${query}", Accept: accept).assertStatus(status)
 
         where:
-        description                        | query         | accept             || status
-        'the format parameter is ignored'  | '?format=xml' | 'application/json' || 200
+        description                         | query         | accept             || status
+        'the format parameter is ignored'   | '?format=xml' | 'application/json' || 200
         'an unknown type is not acceptable' | ''            | 'image/png'        || 406
+    }
+
+    void 'a Spring MVC endpoint an action forwards to is matched on the Accept header, not on the format the action was asked for'() {
+        expect:
+        http('/springWritten/forwardToSpring?format=xml', Accept: 'application/json').assertStatus(200).assertJson([title: 'Grails'])
     }
 }
 

@@ -738,6 +738,26 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE).is(springHandler)
     }
 
+    void 'a forward no mapping matches is no longer handled by the mapping of the dispatch that made it'() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def handler = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            '/foo/bar'(controller: 'foo', action: 'bar')
+        }))
+        def request = GrailsWebMockUtil.bindMockWebRequest().request
+        request.requestURI = '/foo/bar'
+        handler.getHandler(request)
+
+        when: 'the action forwards to a URI that a handler mapping of Spring MVC, which comes later, handles'
+        request.setAttribute(WebUtils.FORWARD_REQUEST_URI_ATTRIBUTE, '/foo/bar')
+        request.requestURI = '/spring/endpoint'
+
+        then:
+        handler.getHandler(request) == null
+        request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) == null
+    }
+
     void 'a request no mapping matches keeps the best matching handler another handler mapping set'() {
         given:
         def handler = new UrlMappingsHandlerMapping(getUrlMappingsHolder {

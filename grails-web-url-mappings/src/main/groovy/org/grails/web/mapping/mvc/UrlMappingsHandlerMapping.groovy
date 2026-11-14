@@ -193,6 +193,11 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         if (handler != null) {
             request.setAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE, handler)
         }
+        else if (request.getAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE) instanceof UrlMappingInfo) {
+            // A dispatch no mapping handles, such as a forward an action makes to a Spring MVC endpoint, is not handled by
+            // the mapping of the dispatch that made it, whose attribute the handler mapping that matches it reads first
+            request.removeAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE)
+        }
         return handler
     }
 
