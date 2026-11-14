@@ -18,6 +18,8 @@
  */
 package org.grails.plugin.cache
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -60,7 +62,32 @@ final class GrailsCacheManagerLookup {
     private static final Set<BeanFactory> REPORTED = Collections.synchronizedSet(
             Collections.newSetFromMap(new WeakHashMap<BeanFactory, Boolean>()))
 
+    /** The names of the caches reported missing, for each cache manager. */
+    private static final Map<CacheManager, Set<String>> MISSING = Collections.synchronizedMap(
+            new WeakHashMap<CacheManager, Set<String>>())
+
     private GrailsCacheManagerLookup() {
+    }
+
+    /**
+     * Called by the code the cache annotations generate, where the cache manager has no cache of the
+     * name an annotation gives, as {@code JCacheCacheManager} has none it was not configured with.
+     * The method then runs as it does without a cache manager, and this says so once for each cache
+     * manager and name.
+     *
+     * @param cacheManager the cache manager without the cache
+     * @param cacheName the name the annotation gives
+     * @param owner the class of the annotated method
+     */
+    static void reportMissingCache(CacheManager cacheManager, String cacheName, Class<?> owner) {
+        Set<String> reported = MISSING.computeIfAbsent(cacheManager) { CacheManager ignored ->
+            ConcurrentHashMap.<String> newKeySet()
+        }
+        if (reported.add(cacheName)) {
+            log.warn('{} does not cache with {}: its cache manager, {}, has no cache of that name, so the methods ' +
+                    'run uncached. Configure the cache in that cache manager, or define the one to cache with as {}.',
+                    owner.name, cacheName, cacheManager.getClass().name, BEAN_NAME)
+        }
     }
 
     /**
