@@ -175,6 +175,45 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
         parent?.close()
     }
 
+    void 'a cache manager registered as a singleton beside grailsCacheManager is reported by its priority, and fails nothing'() {
+        given: 'cache managers with no bean definition, one of a class with a priority'
+        GenericApplicationContext context = context([grailsCacheManager: 'plain'], [:])
+        context.beanFactory.registerSingleton('plainSingleton', new ConcurrentMapCacheManager())
+        context.beanFactory.registerSingleton('prioritySingleton', new HighPriorityCacheManager())
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.INFO)
+
+        when:
+        CacheManager found = context.getBean('probe', CacheAware).grailsCacheManager
+
+        then:
+        found.is(context.getBean('grailsCacheManager'))
+        log.events*.formattedMessage == ['Grails caches with the cache manager named grailsCacheManager, not with ' +
+                'prioritySingleton, which Spring prefers as primary or by priority. Define the one to cache with as grailsCacheManager.']
+
+        cleanup:
+        log?.close()
+        context?.close()
+    }
+
+    void 'a cache manager is not chosen for being named like a parameter of the injection method'() {
+        given: 'a cache-aware class compiled keeping parameter names, as the Grails Gradle plugin compiles an application'
+        Class<?> compiled = compiledWithParameterNames('''
+            package names
+            class NamedCacheAware implements org.grails.plugin.cache.GrailsCacheManagerAware {
+            }
+        ''', 'names.NamedCacheAware')
+
+        and: 'cache managers named as such a parameter might be, none primary, which Spring matches by name only then'
+        GenericApplicationContext context = context(
+                [cacheManagers: 'plain', cacheManager: 'plain', candidates: 'plain', beanFactory: 'plain'], [:], [], compiled)
+
+        expect: 'none is chosen for its name, as none was for the field the trait had, whose name matched no bean'
+        context.getBean('probe').grailsCacheManager == null
+
+        cleanup:
+        context?.close()
+    }
+
     void 'a primary cache manager that Spring would not inject is not reported as passed over'() {
         given: 'one excluded from injection, and one that is not a default candidate'
         GenericApplicationContext context = context(
@@ -298,6 +337,16 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
 
         cleanup:
         context?.close()
+    }
+
+    /** Compiles the source against this trait, keeping parameter names, and loads it. */
+    private Class<?> compiledWithParameterNames(String source, String className) {
+        CompilerConfiguration configuration = new CompilerConfiguration()
+        configuration.parameters = true
+        new GroovyClassLoader(getClass().classLoader, configuration).with {
+            parseClass(source)
+            loadClass(className)
+        }
     }
 
     /**

@@ -21,6 +21,7 @@ package org.grails.plugin.cache
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryUtils
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
@@ -38,7 +39,8 @@ import org.springframework.core.annotation.OrderUtils
  *
  * <p>The bean named {@code grailsCacheManager} comes first, as the plugin creates its caches in it
  * and its tag library is wired to it by name. A cache manager Spring would have preferred, as primary
- * or by priority, is passed over for it, which is logged once for each bean factory. Without one of
+ * or by priority, is passed over for it, which is logged once for each bean factory; the check never
+ * fails the bean. Without one of
  * that name, the cache manager is the one Spring resolves for the {@code ObjectProvider} it is given,
  * which is how it resolved the trait's {@code @Autowired(required = false)} field: the only
  * candidate, or the one marked primary or of the highest priority, with lazy beans, fallback beans,
@@ -88,32 +90,52 @@ final class GrailsCacheManagerLookup {
         }
     }
 
+    /** Only reports, so that nothing it meets fails the bean it is reported for. */
     private static void reportPreferredPassedOver(BeanFactory beanFactory) {
-        if (!log.infoEnabled || !(beanFactory instanceof ConfigurableListableBeanFactory) || REPORTED.contains(beanFactory)) {
+        if (!log.infoEnabled || !(beanFactory instanceof ConfigurableListableBeanFactory) || !REPORTED.add(beanFactory)) {
             return
         }
-        ConfigurableListableBeanFactory listable = (ConfigurableListableBeanFactory) beanFactory
-        List<String> preferred = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(listable, CacheManager, true, false)
-                .findAll { String name ->
-                    name != BEAN_NAME && !(BEAN_NAME in listable.getAliases(name)) && preferredBySpring(listable, name)
-                }
-        if (REPORTED.add(beanFactory) && preferred) {
-            log.info('Grails caches with the cache manager named {}, not with {}, which Spring prefers as primary or ' +
-                    'by priority. Define the one to cache with as {}.', BEAN_NAME, preferred.join(', '), BEAN_NAME)
+        try {
+            ConfigurableListableBeanFactory listable = (ConfigurableListableBeanFactory) beanFactory
+            List<String> preferred = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(listable, CacheManager, true, false)
+                    .findAll { String name ->
+                        name != BEAN_NAME && !(BEAN_NAME in listable.getAliases(name)) && preferredBySpring(listable, name)
+                    }
+            if (preferred) {
+                log.info('Grails caches with the cache manager named {}, not with {}, which Spring prefers as primary or ' +
+                        'by priority. Define the one to cache with as {}.', BEAN_NAME, preferred.join(', '), BEAN_NAME)
+            }
+        }
+        catch (BeansException e) {
+            log.debug('Could not tell whether a cache manager Spring prefers was passed over for {}', BEAN_NAME, e)
         }
     }
 
-    /** Whether Spring would have preferred the cache manager when injecting one by type. */
+    /**
+     * Whether Spring would have preferred the cache manager when injecting one by type. A cache
+     * manager registered as a singleton has no bean definition, and only the priority of its class.
+     */
     private static boolean preferredBySpring(ConfigurableListableBeanFactory beanFactory, String name) {
-        BeanDefinition definition = beanFactory.getMergedBeanDefinition(name)
-        if (!definition.autowireCandidate ||
-                (definition instanceof AbstractBeanDefinition && !((AbstractBeanDefinition) definition).defaultCandidate)) {
-            return false
-        }
-        if (definition.primary) {
-            return true
+        BeanDefinition definition = definitionOf(beanFactory, name)
+        if (definition != null) {
+            if (!definition.autowireCandidate ||
+                    (definition instanceof AbstractBeanDefinition && !((AbstractBeanDefinition) definition).defaultCandidate)) {
+                return false
+            }
+            if (definition.primary) {
+                return true
+            }
         }
         Class<?> type = beanFactory.getType(name, false)
         type != null && OrderUtils.getPriority(type) != null
+    }
+
+    private static BeanDefinition definitionOf(ConfigurableListableBeanFactory beanFactory, String name) {
+        try {
+            beanFactory.getMergedBeanDefinition(name)
+        }
+        catch (NoSuchBeanDefinitionException ignored) {
+            null
+        }
     }
 }

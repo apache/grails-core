@@ -55,13 +55,20 @@ trait GrailsCacheManagerAware {
      * as Spring falls back to matching the field's name and a trait's field is renamed in the class
      * that implements it. See {@link GrailsCacheManagerLookup} for which cache manager is chosen.
      *
-     * @param beanFactory where the cache manager named {@code grailsCacheManager} is looked up; a
-     * provider, as a bean factory that is not an application context does not inject itself
-     * @param cacheManagers the cache manager Spring would inject, where there is none of that name
+     * <p>Where Spring cannot otherwise choose, it takes the bean named like the parameter, which the
+     * trait's renamed field never matched, so the parameters are named as no bean would be.</p>
+     *
+     * @param grailsCacheManagerLookupBeanFactory where the cache manager named {@code grailsCacheManager}
+     * is looked up; a provider, as a bean factory that is not an application context does not inject
+     * itself
+     * @param grailsCacheManagerLookupCandidates the cache manager Spring would inject, where there is
+     * none of that name
      */
     @Autowired(required = false)
-    void injectGrailsCacheManager(ObjectProvider<BeanFactory> beanFactory, ObjectProvider<CacheManager> cacheManagers) {
-        grailsCacheManager = GrailsCacheManagerLookup.find(beanFactory.getIfAvailable(), cacheManagers, getClass())
+    void injectGrailsCacheManager(ObjectProvider<BeanFactory> grailsCacheManagerLookupBeanFactory,
+                                  ObjectProvider<CacheManager> grailsCacheManagerLookupCandidates) {
+        grailsCacheManager = GrailsCacheManagerLookup.find(grailsCacheManagerLookupBeanFactory.getIfAvailable(),
+                grailsCacheManagerLookupCandidates, getClass())
     }
 
     /**
