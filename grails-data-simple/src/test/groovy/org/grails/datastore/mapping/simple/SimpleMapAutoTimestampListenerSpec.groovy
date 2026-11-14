@@ -123,6 +123,33 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
         TenantListenerNote.autoTimestampEventListener.is(foo)
     }
 
+    void 'a class that is not multi-tenant answers inside a tenant block with the listener of the datastore that saves it'() {
+        given: 'the in-memory datastore runs the operations of every class inside a tenant block on that tenant\'s database'
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver([
+                        (Settings.SETTING_MULTI_TENANCY_MODE)   : MultiTenancySettings.MultiTenancyMode.DATABASE,
+                        (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
+                ]),
+                [ConnectionSource.DEFAULT, 'foo'],
+                TenantListenerNote, ListenerNote
+        )
+        ListenerNote note = new ListenerNote(text: 'kept', dateCreated: PAST, lastUpdated: PAST)
+
+        when:
+        def listener = Tenants.withId('foo') {
+            ListenerNote.autoTimestampEventListener.withoutTimestamps {
+                note.save(flush: true)
+            }
+            ListenerNote.autoTimestampEventListener
+        }
+
+        then:
+        Tenants.withId('foo') { ListenerNote.count() } == 1
+        listener.is(datastore.getDatastoreForConnection('foo').autoTimestampEventListener)
+        note.dateCreated == PAST
+        note.lastUpdated == PAST
+    }
+
     void 'a tenant with a schema added at runtime answers with the listener of that schema'() {
         given:
         datastore = new SimpleMapDatastore(

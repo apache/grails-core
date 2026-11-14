@@ -172,9 +172,9 @@ class GormStaticApiSpec extends Specification {
 
     void "getAutoTimestampEventListener rejects a datastore that does not set timestamps through a listener"() {
         given:
-        def plainDatastore = Stub(Datastore) {
-            getMappingContext() >> datastore.mappingContext
-        }
+        Datastore plainDatastore = Stub(Datastore)
+        plainDatastore.getMappingContext() >> datastore.mappingContext
+        plainDatastore.connect() >> Stub(Session) { getDatastore() >> plainDatastore }
         def api = new GormStaticApi(GormStaticApiThing, plainDatastore, [])
 
         when:
@@ -183,14 +183,15 @@ class GormStaticApiSpec extends Specification {
         then:
         IllegalStateException e = thrown()
         e.message.contains(GormStaticApiThing.name)
+        e.message.contains(plainDatastore.toString())
     }
 
     void "getAutoTimestampEventListener rejects an auto-timestamping datastore that has no listener"() {
         given:
-        def listenerlessDatastore = Stub(Datastore, additionalInterfaces: [AutoTimestampingDatastore]) {
-            getMappingContext() >> datastore.mappingContext
-            getAutoTimestampEventListener() >> null
-        }
+        Datastore listenerlessDatastore = Stub(Datastore, additionalInterfaces: [AutoTimestampingDatastore])
+        listenerlessDatastore.getMappingContext() >> datastore.mappingContext
+        listenerlessDatastore.connect() >> Stub(Session) { getDatastore() >> listenerlessDatastore }
+        ((AutoTimestampingDatastore) listenerlessDatastore).getAutoTimestampEventListener() >> null
         def api = new GormStaticApi(GormStaticApiThing, listenerlessDatastore, [])
 
         when:
@@ -199,6 +200,7 @@ class GormStaticApiSpec extends Specification {
         then:
         IllegalStateException e = thrown()
         e.message.contains(GormStaticApiThing.name)
+        e.message.contains(listenerlessDatastore.toString())
     }
 
     void "forQualifier creates a new static api bound to the requested qualifier"() {

@@ -94,6 +94,27 @@ class AutoTimestampEventListenerTenantSpec extends Specification {
         TenantTimestampNote.withNewTransaction { TenantTimestampNote.get(stamped.id).lastUpdated } != PAST
     }
 
+    void 'a class that is not multi-tenant answers inside a tenant block with the listener of the default database'() {
+        given: 'Hibernate saves a class that is not multi-tenant to the default database inside a tenant block too'
+        datastore = databasePerTenant()
+        PlainTimestampNote kept = new PlainTimestampNote(text: 'kept', dateCreated: PAST, lastUpdated: PAST)
+
+        when:
+        def listener = Tenants.withId('books') {
+            PlainTimestampNote.withTransaction {
+                PlainTimestampNote.autoTimestampEventListener.withoutTimestamps {
+                    kept.save(flush: true)
+                }
+            }
+            PlainTimestampNote.autoTimestampEventListener
+        }
+
+        then:
+        listener.is(datastore.autoTimestampEventListener)
+        PlainTimestampNote.withNewTransaction { PlainTimestampNote.get(kept.id).dateCreated } == PAST
+        PlainTimestampNote.withNewTransaction { PlainTimestampNote.get(kept.id).lastUpdated } == PAST
+    }
+
     void 'a tenant with a schema of its own answers with the listener of that schema'() {
         given:
         datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
@@ -134,7 +155,7 @@ class AutoTimestampEventListenerTenantSpec extends Specification {
                 'hibernate.hbm2ddl.auto'                      : 'create',
                 'dataSources.books'                           : [url: 'jdbc:h2:mem:timestampBooksDB;LOCK_TIMEOUT=10000'],
                 'dataSources.moreBooks'                       : [url: 'jdbc:h2:mem:timestampMoreBooksDB;LOCK_TIMEOUT=10000']
-        ]), TenantTimestampNote)
+        ]), TenantTimestampNote, PlainTimestampNote)
     }
 
     private AutoTimestampEventListener listenerOf(String connectionName) {
@@ -152,6 +173,14 @@ class AutoTimestampEventListenerTenantSpec extends Specification {
 
 @Entity
 class TenantTimestampNote implements MultiTenant<TenantTimestampNote> {
+
+    String text
+    Date dateCreated
+    Date lastUpdated
+}
+
+@Entity
+class PlainTimestampNote {
 
     String text
     Date dateCreated
