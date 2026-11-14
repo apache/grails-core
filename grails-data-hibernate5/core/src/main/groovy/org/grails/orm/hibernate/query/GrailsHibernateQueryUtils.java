@@ -19,6 +19,8 @@
 
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.persistence.LockModeType;
@@ -328,36 +330,25 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
-     * Add order directly to criteria.
+     * Add order directly to criteria, after any order already there.
      */
     private static void addOrder(PersistentEntity entity,
                                  CriteriaQuery query,
                                  From queryRoot,
                                  CriteriaBuilder criteriaBuilder,
                                  String sort, String order, boolean ignoreCase) {
-        if (sort.equalsIgnoreCase(entity.getIdentity().getName())) {
-            Expression path = queryRoot;
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
-        } else {
-            Expression path = queryRoot.get(sort);
-
-            if (ignoreCase) {
-                path = criteriaBuilder.upper(path);
-            }
-            if (DynamicFinder.ORDER_DESC.equals(order)) {
-                query.orderBy(criteriaBuilder.desc(path));
-            } else {
-                query.orderBy(criteriaBuilder.asc(path));
-            }
+        // an entity with a composite id has no single identity property
+        final PersistentProperty identity = entity.getIdentity();
+        Expression path = identity != null && sort.equalsIgnoreCase(identity.getName()) ? queryRoot : queryRoot.get(sort);
+        if (ignoreCase) {
+            path = criteriaBuilder.upper(path);
         }
+        final jakarta.persistence.criteria.Order sortOrder = DynamicFinder.ORDER_DESC.equals(order) ?
+                criteriaBuilder.desc(path) : criteriaBuilder.asc(path);
+        // CriteriaQuery.orderBy replaces the order it had, so a sort on several properties is built up
+        final List<jakarta.persistence.criteria.Order> orders = new ArrayList<>(query.getOrderList());
+        orders.add(sortOrder);
+        query.orderBy(orders);
     }
 
     /**

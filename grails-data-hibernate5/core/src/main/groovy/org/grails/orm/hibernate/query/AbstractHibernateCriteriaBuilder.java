@@ -1308,9 +1308,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 createAlias(propertyName, alias);
                 aliasMap.put(propertyName, alias);
             }
-            addToCriteria(Restrictions.in(alias + ".elements", values == null ? Collections.EMPTY_LIST : values));
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(alias + ".elements", values));
         } else {
-            addToCriteria(Restrictions.in(propertyName, values == null ? Collections.EMPTY_LIST : values));
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(propertyName, values));
         }
         return this;
     }
@@ -1758,7 +1758,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = (Map) args[0];
-                    final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria
+                    final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    final String sort = sortArgument instanceof Map ? null : (String) sortArgument;
                     if (sort != null) {
                         boolean ignoreCase = true;
                         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
