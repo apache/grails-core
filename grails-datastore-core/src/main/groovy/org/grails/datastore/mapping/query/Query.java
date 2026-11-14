@@ -146,7 +146,7 @@ public abstract class Query implements Cloneable {
      * @return The query
      */
     public Query lock(boolean lock) {
-        lockResult = LockModeType.PESSIMISTIC_WRITE;
+        lockResult = lock ? LockModeType.PESSIMISTIC_WRITE : LockModeType.NONE;
         return this;
     }
 

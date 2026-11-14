@@ -601,8 +601,13 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query lock(boolean lock) {
-        criteria.setCacheable(false);
-        criteria.setLockMode(LockMode.PESSIMISTIC_WRITE);
+        if (lock) {
+            criteria.setCacheable(false);
+            criteria.setLockMode(LockMode.PESSIMISTIC_WRITE);
+        }
+        else {
+            criteria.setLockMode(LockMode.NONE);
+        }
         return super.lock(lock);
     }
 
