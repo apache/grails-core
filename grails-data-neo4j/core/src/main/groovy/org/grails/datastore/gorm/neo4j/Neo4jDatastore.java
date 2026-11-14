@@ -152,6 +152,10 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
                     childDatastore = new Neo4jDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                         @Override
                         protected GormEnhancer initialize(Neo4jConnectionSourceSettings settings) {
+                            // The parent's enhancer serves this connection's entities, but the sessions of this
+                            // connection publish their events with this datastore as the source, and only
+                            // listeners of its own handle those.
+                            registerEntityEventListeners(eventPublisher);
                             return null;
                         }
                     };
@@ -433,11 +437,24 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
     }
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
-        eventPublisher.addApplicationListener(new DomainEventListener(this));
-        eventPublisher.addApplicationListener(autoTimestampEventListener);
+        registerEntityEventListeners(eventPublisher);
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
+    }
+
+    /**
+     * Registers the listeners that run the domain class events and set the timestamps of the entities saved through
+     * this datastore. The datastore of another connection registers only these: the tenant of a discriminator
+     * property is bound for the datastore of the default connection, and a tenant filter of its own would not see
+     * it.
+     *
+     * @param eventPublisher The publisher of this datastore's events
+     * @since 9.0
+     */
+    protected void registerEntityEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
+        eventPublisher.addApplicationListener(new DomainEventListener(this));
+        eventPublisher.addApplicationListener(autoTimestampEventListener);
     }
 
     protected GormEnhancer initialize(Neo4jConnectionSourceSettings settings) {
