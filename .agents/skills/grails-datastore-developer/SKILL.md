@@ -30,9 +30,9 @@ Use `hibernate-developer` as well for Hibernate 7 binding and SQM work, and `tes
 ## Layering
 
 - **Core is universal.** A type in `grails-datastore-core` or `grails-datamapping-core` must make sense to a datastore that is not SQL. It never names a database, a dialect, a driver or a JDBC URL. A fact that differs by store reaches core as a question on `Datastore` (for example `getUniqueNulls()`), and each module answers it.
-- **A SQL module owns its databases.** A SQL module declares the supported databases once, keyed by its own Hibernate dialect classes, and everything that depends on the database asks that one declaration: the regular expression pattern, the native SQL syntax, how a unique index treats a `null`, how H2 modes change that. Hibernate 5 and 7 render different SQL, so each module has its own table. The dialect-keyed enums of the Hibernate 7 module (`RegexDialectPattern`, `SqlSyntax`, `UniqueIndexNulls`) each list the databases again; consolidate them into one declaration (proposed as `SupportedDatabase`, in review) and do not add another list next to them.
+- **A SQL module owns its databases.** A SQL module declares the supported databases once, keyed by its own Hibernate dialect classes, and everything that depends on the database asks that one declaration: the regular expression pattern, the native SQL syntax, how a unique index treats a `null`, how H2 modes change that. Hibernate 5 and 7 render different SQL, so each module has its own table. Each Hibernate module has that declaration in `SupportedDatabase`; extend it and do not add another list of databases, dialects or modes next to it.
 - **A store that is not SQL owns its own.** MongoDB, Neo4j, the in-memory datastore and a future module answer the same questions in their own module and import nothing from a SQL module.
-- **Public in core is API.** Java cannot narrow visibility between artifacts, so a type that two modules share but applications must not use is public and goes in an `internal` package, with Javadoc that says it is internal, that it carries no compatibility promise and that it can change in a patch release (a generic, database-free `ClassKeyed` lookup is the proposed example, in review). Never put it in a docs page.
+- **Public in core is API.** Java cannot narrow visibility between artifacts, so a type that two modules share but applications must not use is public and goes in an `internal` package, with Javadoc that says it is internal, that it carries no compatibility promise and that it can change in a patch release (the generic, database-free `ClassKeyed` lookup is the example). Never put it in a docs page.
 - **The DSL is the contract.** Applications meet this layer through constraints, mapping, criteria, `where` and finders. A change that alters what the DSL returns is a behavior change: state it in the docs and the upgrade notes.
 
 ## The Whole-Surface Protocol
@@ -47,9 +47,25 @@ Run it before changing a type that holds state or hides a decision: a builder, a
 6. **Check what the type is shared with.** Mutable lists handed out by a getter, a shallow `clone`, a projection list shared between two objects and a reader that bypasses the accessor are the usual leaks.
 7. **Remember Groovy does not enforce `private` or `protected`.** Dynamic code, `.@field` and in-class names reach the field directly, so a field being private proves nothing about who reads it.
 
+## Before You Push
+
+A reviewer who finds one bug has found a sample of a class. Find the class yourself, before the review does. The review of one criteria change took ten rounds, each with a different case of the same two questions: where does the property resolve, and does a branch of an `or` keep its rows. A table written first would have answered all ten.
+
+1. **Name the dimensions of the change.** For a criteria translator, a `where` or finder rewrite, a validator or a constraint, write down each of these and pick the rows that are meaningful:
+   - **The criterion**: comparison, range (`between`, `gt`), `in`/`inList`, `like`/`ilike`/`rlike`, `isNull`/`isNotNull`, `isEmpty`/`isNotEmpty`, size, property-to-property, subquery.
+   - **The scope the property resolves in**: the root entity; a nested association block; a block on a relationship entity (Neo4j); an embedded component; a self-referential association; an inherited or abstract target; a composite or named id; an owner and a target that have a property of the same name.
+   - **The context**: top level; inside `or`; inside `not`; an `or` nested in an `and` nested in an `or`; inside a subquery; with a projection, an order, `max`/`offset` or a join that is already there.
+   - **The connection**: the default; a named one; several that all map the entity; each multi-tenancy mode.
+   - **The data**: `null`; an empty collection; an owner with no row in the association; a row that matches only one branch; a row that matches none.
+2. **Write the table first.** One data-driven spec, one row per meaningful combination, each asserting the rows a known fixture returns. The fixture must hold the row that only each branch matches and a row that matches nothing, because the bug in a disjunction is the row that is silently dropped. Pin it in the TCK or the shared module so every datastore and both Hibernate versions run it.
+3. **Make the rule one decision.** If the table needs the same "where does this resolve" answer in several places, move it to one method and test that method with the table. A fix that patches one call site starts the next review round.
+4. **Test what a fail-fast check must accept.** Before a startup validator rejects a configuration, list every valid layout it can see (single datasource, named, several that all map the same entity, a tenant owner that points at a non-tenant entity) and assert each starts.
+5. **Check every sentence that describes behavior.** A line in the docs or an upgrade note is a claim: read the generated schema, the SQL or the Cypher and compare it to the sentence. Do not describe the mapping block when the behavior follows the declaration order.
+6. **Say what you covered.** The PR description lists the rows of the table, and the ones left out with the reason, so a reviewer starts from the map instead of discovering it.
+
 ## Reviews
 
-- A review comment that shows a bug is a sample of a class of bug. Name the class, apply the protocol to it, then answer. Fixing the one example is how the same review comes back three times.
+- A review comment that shows a bug is a sample of a class of bug. Name the class, add its whole row set to the table in [Before You Push](#before-you-push), then answer. Fixing the one example is how the same review comes back three times.
 - When a reviewer's fix and an earlier reviewer's fix pull in different directions, say so and pick one in the reply. Do not satisfy each in turn.
 - Reply on the thread with the commit that fixes it. Never resolve a thread.
 - A decision about behavior that a reviewer can reasonably question goes in the Javadoc and in the PR description, not only in a reply.

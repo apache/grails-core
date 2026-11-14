@@ -18,6 +18,8 @@
  */
 package org.grails.web.mapping.mvc
 
+import jakarta.servlet.DispatcherType
+
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
@@ -27,6 +29,7 @@ import org.springframework.web.context.request.async.WebAsyncManager
 import org.springframework.web.context.request.async.WebAsyncUtils
 import org.springframework.web.servlet.ModelAndView
 
+import grails.core.GrailsControllerClass
 import grails.web.mapping.UrlMappingInfo
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.util.WebUtils
@@ -70,10 +73,35 @@ class UrlMappingsInfoHandlerAdapterAsyncSpec extends Specification {
         failure.message == 'bad'
     }
 
+    void 'runs the action a forward made during the async dispatch names, rather than answering with the async result'() {
+        given: 'a dispatch that returned the result of async processing, whose view forwards to another action'
+        completeAsyncRequest(new ModelAndView('/book/index'))
+        request.dispatcherType = DispatcherType.FORWARD
+        WebUtils.storeGrailsWebRequest(new GrailsWebRequest(request, response, request.servletContext))
+        def controllerClass = Mock(GrailsControllerClass) {
+            getFullName() >> 'BookController'
+            isSingleton() >> false
+            newInstance() >> new Object()
+            getDefaultAction() >> 'show'
+        }
+        def info = Mock(GrailsControllerUrlMappingInfo) {
+            getControllerClass() >> controllerClass
+            getActionName() >> 'show'
+        }
+
+        when:
+        adapter.handle(request, response, info)
+
+        then: 'the action runs, and the async result is left for the dispatch it belongs to'
+        1 * controllerClass.invoke(_, 'show') >> [book: 'one']
+        asyncManager.hasConcurrentResult()
+    }
+
     private void completeAsyncRequest(Object result) {
         DeferredResult<Object> deferredResult = new DeferredResult<>()
         asyncManager.startDeferredResultProcessing(deferredResult)
         deferredResult.setResult(result)
+        request.dispatcherType = DispatcherType.ASYNC
         request.setAttribute(WebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, '/book/index')
     }
 }
