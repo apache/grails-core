@@ -74,6 +74,7 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     // Both are stateless, so one shared instance each rather than two allocations per request.
     private static final HandlerInterceptor OBSERVATION_ROUTE_HANDLER = new ObservationRouteHandler()
     private static final HandlerInterceptor ERROR_HANDLING_HANDLER = new ErrorHandlingHandler()
+    private static final HandlerInterceptor HANDLED_REQUEST_HANDLER = new HandledRequestHandler()
 
     /**
      * Whether to resolve a "_method" parameter on a POST into the overridden request method while matching
@@ -164,6 +165,8 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         // before(), so that a failure in one is reported under the route that failed
         chain.addInterceptor(webRequestInterceptorCount, OBSERVATION_ROUTE_HANDLER)
         chain.addInterceptor(ERROR_HANDLING_HANDLER)
+        // First, so that it completes last, whichever interceptor stops the request
+        chain.addInterceptor(0, HANDLED_REQUEST_HANDLER)
         return chain
     }
 
@@ -178,8 +181,22 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         return match == null && !rootCause.is(thrown) ? urlMappingsHolder.matchStatusCode(status, rootCause) : match
     }
 
+    /**
+     * The mapping that handles the request, which is also the request's
+     * {@link org.springframework.web.servlet.HandlerMapping#BEST_MATCHING_HANDLER_ATTRIBUTE}, as each of Spring MVC's
+     * handler mappings sets it for the handler it finds, until the dispatch completes, so that what Spring MVC
+     * negotiates for the request while a URL mapping handles it can tell that one does.
+     */
     @Override
     protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
+        Object handler = matchHandler(request)
+        if (handler != null) {
+            request.setAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE, handler)
+        }
+        return handler
+    }
+
+    private Object matchHandler(HttpServletRequest request) {
 
         def includedInfo = WebUtils.isInclude(request) ? request.getAttribute(INCLUDED_MAPPING_INFO) : null
         if (includedInfo != null) {
@@ -273,8 +290,9 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
     protected String findRequestedVersion(GrailsWebRequest currentRequest) {
         String version = currentRequest.getHeader(HttpHeaders.ACCEPT_VERSION)
         if (!version && mimeTypeResolver) {
+            // none where the request accepts no configured type, as with grails.mime.negotiation.spring
             MimeType mimeType = mimeTypeResolver.resolveResponseMimeType(currentRequest)
-            version = mimeType.version
+            version = mimeType?.version
         }
         return version
     }
@@ -328,6 +346,22 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
             catch (Throwable ignored) {
             }
             return true
+        }
+    }
+
+    /**
+     * Takes the mapping off the request as its best matching handler once the dispatch it handles completes, so that
+     * what negotiates for the request afterwards, such as Spring Security's filters for an exception the dispatch left
+     * unresolved, or the handler mapping of an error dispatch, does not take it for a request a URL mapping handles.
+     */
+    @CompileStatic
+    static class HandledRequestHandler implements HandlerInterceptor {
+
+        @Override
+        void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+            if (request.getAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE).is(handler)) {
+                request.removeAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE)
+            }
         }
     }
 
