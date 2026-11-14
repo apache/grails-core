@@ -50,6 +50,11 @@ dependencies {
     integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
 }
 
+// BookTitleReader is Java, so javadoc runs here; it reads the Gson views output on its classpath
+tasks.named('javadoc') {
+    dependsOn tasks.named('compileGsonViews')
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
