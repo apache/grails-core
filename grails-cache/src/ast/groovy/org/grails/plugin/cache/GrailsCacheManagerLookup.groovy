@@ -39,8 +39,8 @@ import org.springframework.core.annotation.OrderUtils
  *
  * <p>The bean named {@code grailsCacheManager} comes first, as the plugin creates its caches in it
  * and its tag library is wired to it by name. A cache manager Spring would have preferred, as primary
- * or by priority, is passed over for it, which is logged once for each bean factory; the check never
- * fails the bean. Without one of
+ * or by priority, is passed over for it, which is logged once for each bean factory; what the bean
+ * factory throws while it is checked fails nothing. Without one of
  * that name, the cache manager is the one Spring resolves for the {@code ObjectProvider} it is given,
  * which is how it resolved the trait's {@code @Autowired(required = false)} field: the only
  * candidate, or the one marked primary or of the highest priority, with lazy beans, fallback beans,
@@ -90,7 +90,7 @@ final class GrailsCacheManagerLookup {
         }
     }
 
-    /** Only reports, so that nothing it meets fails the bean it is reported for. */
+    /** Only reports: what the bean factory throws while it is asked fails nothing. */
     private static void reportPreferredPassedOver(BeanFactory beanFactory) {
         if (!log.infoEnabled || !(beanFactory instanceof ConfigurableListableBeanFactory) || !REPORTED.add(beanFactory)) {
             return
