@@ -23,27 +23,35 @@ import java.util.function.Supplier
 import jakarta.annotation.Priority
 
 import ch.qos.logback.classic.Level
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.tools.GroovyClass
 import org.springframework.beans.BeansException
+import org.springframework.beans.factory.ObjectFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
+import org.springframework.beans.factory.config.Scope
 import org.springframework.beans.factory.support.AbstractBeanDefinition
+import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.beans.factory.support.ScopeNotActiveException
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.support.GenericApplicationContext
-import org.codehaus.groovy.control.CompilationUnit
-import org.codehaus.groovy.control.CompilerConfiguration
-import org.codehaus.groovy.tools.GroovyClass
 import spock.lang.Shared
 import spock.lang.Specification
 
 import org.apache.grails.core.testing.support.LogCapture
 
 /**
- * Which cache manager a cache-aware class gets, for every arrangement of cache managers, against the
- * oracle of what Spring injected into the trait's {@code @Autowired(required = false) CacheManager}
- * field before it looked the cache manager up.
+ * Which cache manager a cache-aware class gets, against the oracle of what Spring injected into the
+ * trait's {@code @Autowired(required = false) CacheManager} field before the trait chose it itself.
+ * The matrix crosses the ways a bean named {@code grailsCacheManager} can be defined with none, one
+ * or two other cache managers, each defined in one of the ways a bean is chosen or passed over for
+ * injection, all in one context; the features after it cover the arrangements it does not.
  *
  * <p>The deliberate differences: a cache manager named {@code grailsCacheManager} is used whenever
  * there is one, as the plugin and its tag library use it by name; and where Spring cannot choose, which
@@ -141,10 +149,95 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
 
         then:
         log.events*.formattedMessage == ['Grails caches with the cache manager named grailsCacheManager, not with redis, ' +
-                'which is marked primary. Define the one to cache with as grailsCacheManager.']
+                'which Spring prefers as primary or by priority. Define the one to cache with as grailsCacheManager.']
 
         cleanup:
         log?.close()
+        context?.close()
+    }
+
+    void 'a cache manager passed over that Spring prefers by priority, or that is primary in a parent context, is reported'() {
+        given:
+        GenericApplicationContext parent = context([redis: 'primary'], [:])
+        GenericApplicationContext child = context([grailsCacheManager: 'plain', hazelcast: 'priority'], [:], [], CacheAware, parent)
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.INFO)
+
+        when:
+        child.getBean('probe', CacheAware).grailsCacheManager
+
+        then:
+        log.events.size() == 1
+        log.events[0].formattedMessage.contains('not with hazelcast, redis,')
+
+        cleanup:
+        log?.close()
+        child?.close()
+        parent?.close()
+    }
+
+    void 'a primary cache manager that Spring would not inject is not reported as passed over'() {
+        given: 'one excluded from injection, and one that is not a default candidate'
+        GenericApplicationContext context = context(
+                [grailsCacheManager: 'plain', first: 'primary+notCandidate', second: 'primary+notDefault'], [:])
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.INFO)
+
+        when:
+        context.getBean('probe', CacheAware).grailsCacheManager
+
+        then:
+        log.events == []
+
+        cleanup:
+        log?.close()
+        context?.close()
+    }
+
+    void 'in a bean factory that is not an application context, the cache manager is still the one Spring injects'() {
+        given: 'a bare bean factory, which does not inject itself, processing @Autowired'
+        DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory()
+        beanFactory.addBeanPostProcessor(new AutowiredAnnotationBeanPostProcessor(beanFactory: beanFactory))
+        CacheManager only = new ConcurrentMapCacheManager()
+        beanFactory.registerSingleton('cacheManager', only)
+        beanFactory.registerBeanDefinition('probe', new RootBeanDefinition(CacheAware))
+
+        expect:
+        beanFactory.getBean('probe', CacheAware).grailsCacheManager.is(only)
+    }
+
+    void 'a cache manager whose scope is not active fails the bean, as its injection did'() {
+        given: 'the only cache manager, in a scope with no active instance, with no proxy'
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        context.beanFactory.registerScope('inactive', new Scope() {
+            Object get(String name, ObjectFactory<?> factory) {
+                throw new ScopeNotActiveException(name, 'inactive', new IllegalStateException('no active instance'))
+            }
+            Object remove(String name) { null }
+            void registerDestructionCallback(String name, Runnable callback) { }
+            Object resolveContextualObject(String key) { null }
+            String getConversationId() { null }
+        })
+        BeanDefinitionCustomizer inactive = { BeanDefinition definition -> definition.scope = 'inactive' } as BeanDefinitionCustomizer
+        context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>, inactive)
+        BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
+        context.registerBean('injected', Injected, lazy)
+        context.registerBean('probe', CacheAware, lazy)
+        context.refresh()
+
+        when:
+        context.getBean('injected')
+
+        then: 'the oracle'
+        thrown(BeansException)
+
+        when:
+        context.getBean('probe')
+
+        then:
+        BeansException e = thrown()
+        e.mostSpecificCause instanceof IllegalStateException
+
+        cleanup:
         context?.close()
     }
 
@@ -166,16 +259,14 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
     }
 
     void 'the cache manager is chosen when the bean is created, as an injected one was'() {
-        given: 'a context with no cache manager'
+        given: 'a bean created in a context with no cache manager'
         GenericApplicationContext context = context([:], [:])
         CacheAware aware = context.getBean('probe', CacheAware)
 
-        when: 'one is defined after the first lookup'
-        CacheManager first = aware.grailsCacheManager
+        when: 'one is defined before the bean is first asked for its cache manager'
         context.registerBean('later', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
 
-        then: 'it would be found, but the lookup is not made again'
-        first == null
+        then: 'it would be found, but the choice was made when the bean was created'
         context.getBean('later') instanceof CacheManager
         aware.grailsCacheManager == null
 
@@ -255,15 +346,17 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
     }
 
     private GenericApplicationContext context(Map<String, String> row, Map<String, CacheManager> instances,
-                                              List<String> created = [], Class<?> probe = CacheAware) {
-        GenericApplicationContext context = new GenericApplicationContext()
+                                              List<String> created = [], Class<?> probe = CacheAware,
+                                              GenericApplicationContext parent = null) {
+        GenericApplicationContext context = new GenericApplicationContext(parent)
         AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
         row.each { String name, String kind ->
             if (kind == 'wrongType') {
                 context.registerBean(name, String, { -> 'not a cache manager' } as Supplier<String>)
                 return
             }
-            Class<? extends CacheManager> type = kind == 'priority' ? HighPriorityCacheManager : ConcurrentMapCacheManager
+            Set<String> attributes = kind.split(/\+/) as Set<String>
+            Class<? extends CacheManager> type = 'priority' in attributes ? HighPriorityCacheManager : ConcurrentMapCacheManager
             Supplier<CacheManager> supplier = { ->
                 created << name
                 CacheManager instance = type.getDeclaredConstructor().newInstance()
@@ -272,11 +365,11 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
             } as Supplier<CacheManager>
             BeanDefinitionCustomizer customizer = { BeanDefinition definition ->
                 AbstractBeanDefinition bean = (AbstractBeanDefinition) definition
-                bean.primary = kind == 'primary'
-                bean.lazyInit = kind == 'lazy'
-                bean.autowireCandidate = kind != 'notCandidate'
-                bean.fallback = kind == 'fallback'
-                bean.defaultCandidate = kind != 'notDefault'
+                bean.primary = 'primary' in attributes
+                bean.lazyInit = 'lazy' in attributes
+                bean.autowireCandidate = !('notCandidate' in attributes)
+                bean.fallback = 'fallback' in attributes
+                bean.defaultCandidate = !('notDefault' in attributes)
             } as BeanDefinitionCustomizer
             context.registerBean(name, (Class<CacheManager>) type, supplier, customizer)
         }

@@ -214,7 +214,7 @@ class CacheAutoConfigurationSpec extends Specification {
     }
 
     void 'a lazy cache manager is not created to find the Grails one'() {
-        given: 'a lazy cache manager whose store is down, which the injection this replaced never created'
+        given: 'a lazy cache manager whose store is down, beside the plugin\'s'
         AnnotationConfigApplicationContext context = buildContext([:], null, [:], null, [unreachableCacheManager: STORE_DOWN])
 
         expect: 'the context starts, and the Grails cache manager is used'
