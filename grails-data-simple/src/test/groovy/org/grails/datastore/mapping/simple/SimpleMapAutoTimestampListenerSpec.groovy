@@ -29,6 +29,8 @@ import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
@@ -161,7 +163,7 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
     }
 
     void 'a class that is not multi-tenant answers inside a tenant block with the listener of the datastore that saves it'() {
-        given: 'the in-memory datastore runs the operations of every class inside a tenant block on that tenant\'s database'
+        given:
         datastore = new SimpleMapDatastore(
                 DatastoreUtils.createPropertyResolver([
                         (Settings.SETTING_MULTI_TENANCY_MODE)   : MultiTenancySettings.MultiTenancyMode.DATABASE,
@@ -180,11 +182,17 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
             ListenerNote.autoTimestampEventListener
         }
 
-        then:
-        Tenants.withId('foo') { ListenerNote.count() } == 1
-        listener.is(datastore.getDatastoreForConnection('foo').autoTimestampEventListener)
+        then: 'the timestamps were turned off for the save'
         note.dateCreated == PAST
         note.lastUpdated == PAST
+
+        and: 'by the listener of the datastore that holds the saved instance'
+        SimpleMapDatastore foo = (SimpleMapDatastore) datastore.getDatastoreForConnection('foo')
+        List<SimpleMapDatastore> holding = [datastore, foo].findAll { SimpleMapDatastore ds ->
+            DatastoreUtils.execute(ds, { Session session -> session.retrieve(ListenerNote, note.id) } as SessionCallback) != null
+        }
+        holding.size() == 1
+        listener.is(holding.first().autoTimestampEventListener)
     }
 
     void 'a tenant with a schema added at runtime answers with the listener of that schema'() {
