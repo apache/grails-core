@@ -21,7 +21,7 @@ package org.grails.plugin.cache
 
 import groovy.transform.CompileStatic
 
-import org.springframework.beans.factory.ObjectProvider
+import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.CacheManager
 
@@ -41,32 +41,29 @@ trait GrailsCacheManagerAware {
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
     /**
-     * The cache manager Spring would inject, the only one in the context or the one marked primary, for
-     * when there is none named {@code grailsCacheManager}.
+     * Where the cache manager is looked up, when it is first asked for. Looked up rather than injected:
+     * another cache manager, such as the one the Spring Security plugin caches users with when
+     * {@code cacheUsers} is set, made the injection of a single cache manager ambiguous, and the context
+     * failed to start, as Spring falls back to matching the field's name and a trait's field is renamed
+     * in the class that implements it. Injecting every cache manager instead would create those declared
+     * lazy, which the injection never did.
      */
     @Autowired(required = false)
-    private ObjectProvider<CacheManager> cacheManagerProvider
-
-    /**
-     * Every cache manager in the context, by bean name, so that the plugin's own, named
-     * {@code grailsCacheManager}, is found by that name, as the plugin and its tag library find it.
-     * Another cache manager, such as the one the Spring Security plugin caches users with when
-     * {@code cacheUsers} is set, used to make the injection of a single cache manager ambiguous, and
-     * the context failed to start: Spring falls back to matching the field's name, and a trait's field
-     * is renamed in the class that implements it.
-     */
-    @Autowired(required = false)
-    private Map<String, CacheManager> cacheManagers
+    private BeanFactory cacheManagerSource
 
     private CacheManager grailsCacheManager
 
     /**
-     * @return The cache manager named {@code grailsCacheManager}, or where there is none the only cache
-     * manager or the one marked primary, or null if there is no such cache manager
+     * @return The cache manager named {@code grailsCacheManager}, which the plugin creates its caches in
+     * and its tag library uses, or where there is none the only cache manager or the one marked primary,
+     * or null if there is no such cache manager. Only the cache manager returned is created.
      */
     CacheManager getGrailsCacheManager() {
-        if (grailsCacheManager == null) {
-            grailsCacheManager = cacheManagers?.get('grailsCacheManager') ?: cacheManagerProvider?.getIfUnique()
+        if (grailsCacheManager == null && cacheManagerSource != null) {
+            grailsCacheManager = cacheManagerSource.containsBean('grailsCacheManager') &&
+                    cacheManagerSource.isTypeMatch('grailsCacheManager', CacheManager) ?
+                    cacheManagerSource.getBean('grailsCacheManager', CacheManager) :
+                    cacheManagerSource.getBeanProvider(CacheManager).getIfUnique()
         }
         return grailsCacheManager
     }

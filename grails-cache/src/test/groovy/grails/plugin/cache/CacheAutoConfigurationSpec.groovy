@@ -18,6 +18,8 @@
  */
 package grails.plugin.cache
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.config.BeanDefinition
@@ -211,6 +213,35 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'a lazy cache manager is not created to find the Grails one'() {
+        given: 'a lazy cache manager whose store is down, which the injection this replaced never created'
+        AnnotationConfigApplicationContext context = buildContext([:], null, [:], null, [unreachableCacheManager: STORE_DOWN])
+
+        expect: 'the context starts, and the Grails cache manager is used'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+    }
+
+    void 'a lazy cache manager is not created to find the primary one where there is no Grails one'() {
+        given:
+        CacheManager primary = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
+                [primaryCacheManager: primary], 'primaryCacheManager', [unreachableCacheManager: STORE_DOWN])
+
+        expect:
+        context.getBean(CacheAware).grailsCacheManager.is(primary)
+
+        cleanup:
+        context.close()
+    }
+
+    private static final Supplier<CacheManager> STORE_DOWN = { ->
+        throw new IllegalStateException('the cache store is down')
+    } as Supplier<CacheManager>
+
     /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
     static class CacheAware implements GrailsCacheManagerAware {
     }
@@ -232,7 +263,8 @@ class CacheAutoConfigurationSpec extends Specification {
     @CompileStatic
     private static AnnotationConfigApplicationContext buildContext(
             Map<String, Object> properties, GrailsCacheManager userCacheManager = null,
-            Map<String, CacheManager> otherCacheManagers = [:], String primary = null) {
+            Map<String, CacheManager> otherCacheManagers = [:], String primary = null,
+            Map<String, Supplier<CacheManager>> lazyCacheManagers = [:]) {
         def context = new AnnotationConfigApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
         if (userCacheManager != null) {
@@ -241,6 +273,11 @@ class CacheAutoConfigurationSpec extends Specification {
         otherCacheManagers.each { String name, CacheManager cacheManager ->
             context.registerBean(name, CacheManager, () -> cacheManager) { BeanDefinition definition ->
                 definition.primary = name == primary
+            }
+        }
+        lazyCacheManagers.each { String name, Supplier<CacheManager> cacheManager ->
+            context.registerBean(name, CacheManager, cacheManager) { BeanDefinition definition ->
+                definition.lazyInit = true
             }
         }
         context.registerBean(CacheAware)
