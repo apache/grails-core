@@ -31,6 +31,7 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.io.ConsoleOutput
 import picocli.CommandLine
 import spock.lang.AutoCleanup
+import spock.lang.Issue
 import spock.lang.Shared
 
 class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
@@ -67,6 +68,40 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         then:
         noExceptionThrown()
         out.toString().contains("Application created")
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14872')
+    void "test --inplace without a name uses the current directory and its name"() {
+        given:
+        File appDir = new File(dir, 'inplaceapp')
+        appDir.mkdirs()
+        System.setProperty('user.dir', appDir.absolutePath)
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "--inplace")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+        new File(appDir, 'build.gradle').exists()
+        new File(appDir, 'grails-app/init/inplaceapp/Application.groovy').exists()
+    }
+
+    void "test --inplace with a name creates the application in the current directory"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "--inplace", "namedinplace")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+        new File(dir, 'build.gradle').exists()
+        !new File(dir, 'namedinplace').exists()
     }
 
     void "test creating a project with an invalid gorm implementation"() {
