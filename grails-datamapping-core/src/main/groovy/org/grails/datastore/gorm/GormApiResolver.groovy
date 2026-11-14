@@ -198,6 +198,14 @@ class GormApiResolver {
 @Slf4j
 class PreferredDatastoreSelector {
 
+    /**
+     * @return whether a lookup for the entity follows the tenant bound on the thread: a multi-tenant entity does, and
+     * so does a lookup that names no entity; any other entity keeps its own datastore inside a tenant block
+     */
+    static boolean followsTenant(Class entity) {
+        return entity == null || MultiTenant.isAssignableFrom(entity)
+    }
+
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String qualifier, String className, int depth, GormApiResolver resolver) {
         Datastore preferred = stateRegistry.getPreferredDatastore()
@@ -216,7 +224,7 @@ class PreferredDatastoreSelector {
 
         boolean isDefaultQualifier = qualifier == null || ConnectionSource.DEFAULT.equals(qualifier)
         if (isDefaultQualifier) {
-            if (preferred instanceof MultiTenantCapableDatastore) {
+            if (preferred instanceof MultiTenantCapableDatastore && followsTenant(entity)) {
                 MultiTenantCapableDatastore mtds = (MultiTenantCapableDatastore) preferred
                 try {
                     Serializable tid = CurrentTenantHolder.get((Datastore) mtds)
@@ -423,7 +431,7 @@ class DefaultDatastoreSelector {
     @CompileDynamic
     Datastore select(GormRegistry registry, GormEnhancerRegistry stateRegistry, Class entity, String className, int depth, GormApiResolver resolver) {
         Datastore defaultDs = registry.getDatastoreByString(className, ConnectionSource.DEFAULT)
-        if (defaultDs instanceof MultiTenantCapableDatastore) {
+        if (defaultDs instanceof MultiTenantCapableDatastore && PreferredDatastoreSelector.followsTenant(entity)) {
             MultiTenantCapableDatastore multiTenantCapableDatastore = (MultiTenantCapableDatastore) defaultDs
             boolean isDatabaseMode = multiTenantCapableDatastore.getMultiTenancyMode() ==
                     MultiTenancySettings.MultiTenancyMode.DATABASE

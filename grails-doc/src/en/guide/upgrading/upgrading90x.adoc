@@ -1453,3 +1453,12 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 * Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
 * To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
 
+==== 25. A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
+
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` now stays on its own datastore inside a block that binds a tenant, such as `Tenants.withId('acme') { }`, as it does outside one. Only the classes that implement `MultiTenant` follow the tenant.
+
+In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `where` queries and data service methods reached the tenant's database, while `save`, `get`, `list` and `count` reached the default one.
+
+===== Required Actions
+
+For most applications **no changes are required**. An application that kept a class that is not multi-tenant in each tenant's database implements `MultiTenant` on it. Instances such a class saved inside a tenant block in Grails 8 stay in the tenant's database, where the class no longer reads them.

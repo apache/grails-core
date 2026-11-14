@@ -144,8 +144,9 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
             return executeQualified(currentQualifier, callback)
         }
 
-        // DEFAULT qualifier path: check if a tenant is already bound
-        if (isMultiTenantCapable) {
+        // DEFAULT qualifier path: check if a tenant is already bound. Only a multi-tenant entity follows it: any other
+        // entity keeps its own datastore inside a tenant block, as it does outside one.
+        if (isMultiTenantCapable && isMultiTenantEntity) {
             Serializable tenantId = CurrentTenantHolder.get((MultiTenantCapableDatastore) ds)
             if (tenantId != null) {
                 // If a tenant is already bound, use executeQualified to delegate to a potentially
