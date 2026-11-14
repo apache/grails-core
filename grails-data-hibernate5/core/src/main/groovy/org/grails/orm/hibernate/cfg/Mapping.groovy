@@ -195,9 +195,27 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     Mapping id(Map identityConfig) {
         if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+            Map config = new LinkedHashMap(identityConfig)
+            Object length = config.remove('length')
+            Identity.configureExisting((Identity) identity, config)
+            if (length instanceof Number) {
+                bindIdentityColumnLength((Identity) identity, ((Number) length).intValue())
+            }
         }
         return this
+    }
+
+    private void bindIdentityColumnLength(Identity id, int length) {
+        String name = id.name ?: 'id'
+        PropertyConfig pc = columns[name]
+        if (pc == null) {
+            pc = new PropertyConfig()
+            columns[name] = pc
+        }
+        if (pc.columns.isEmpty()) {
+            pc.columns << new ColumnConfig()
+        }
+        pc.columns[0].length = length
     }
     /**
      * Define the identity config
