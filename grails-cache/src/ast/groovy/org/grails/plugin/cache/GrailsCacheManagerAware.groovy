@@ -41,29 +41,28 @@ trait GrailsCacheManagerAware {
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
     /**
-     * Where the cache manager is looked up, when it is first asked for. Looked up rather than injected:
-     * another cache manager, such as the one the Spring Security plugin caches users with when
-     * {@code cacheUsers} is set, made the injection of a single cache manager ambiguous, and the context
-     * failed to start, as Spring falls back to matching the field's name and a trait's field is renamed
-     * in the class that implements it. Injecting every cache manager instead would create those declared
-     * lazy, which the injection never did.
+     * Where the cache manager is looked up, the first time it is asked for, rather than injected: another
+     * cache manager, such as the one the Spring Security plugin caches users with when {@code cacheUsers}
+     * is set, made the injection of a single cache manager ambiguous, and the context failed to start,
+     * as Spring falls back to matching the field's name and a trait's field is renamed in the class that
+     * implements it.
      */
     @Autowired(required = false)
     private BeanFactory cacheManagerSource
 
     private CacheManager grailsCacheManager
 
+    private boolean grailsCacheManagerLookedUp
+
     /**
-     * @return The cache manager named {@code grailsCacheManager}, which the plugin creates its caches in
-     * and its tag library uses, or where there is none the only cache manager or the one marked primary,
-     * or null if there is no such cache manager. Only the cache manager returned is created.
+     * @return The cache manager named {@code grailsCacheManager}, or where there is none the one Spring
+     * would inject into a {@code CacheManager} field, or null if there is none or Spring cannot choose
+     * one. See {@link GrailsCacheManagerLookup}.
      */
     CacheManager getGrailsCacheManager() {
-        if (grailsCacheManager == null && cacheManagerSource != null) {
-            grailsCacheManager = cacheManagerSource.containsBean('grailsCacheManager') &&
-                    cacheManagerSource.isTypeMatch('grailsCacheManager', CacheManager) ?
-                    cacheManagerSource.getBean('grailsCacheManager', CacheManager) :
-                    cacheManagerSource.getBeanProvider(CacheManager).getIfUnique()
+        if (grailsCacheManager == null && !grailsCacheManagerLookedUp && cacheManagerSource != null) {
+            grailsCacheManager = GrailsCacheManagerLookup.find(cacheManagerSource, getClass())
+            grailsCacheManagerLookedUp = true
         }
         return grailsCacheManager
     }
