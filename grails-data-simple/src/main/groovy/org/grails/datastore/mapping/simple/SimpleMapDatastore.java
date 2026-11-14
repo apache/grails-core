@@ -123,6 +123,10 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
                     childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                         @Override
                         protected GormEnhancer initialize(ConnectionSourceSettings settings) {
+                            // The parent's enhancer serves this connection's entities, but the sessions of this
+                            // connection publish their events with this datastore as the source, and only
+                            // listeners of its own handle those.
+                            registerEventListeners(eventPublisher);
                             return null;
                         }
 
@@ -466,6 +470,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
             childDatastore = new SimpleMapDatastore(singletonConnectionSources, mappingContext, eventPublisher) {
                 @Override
                 protected GormEnhancer initialize(ConnectionSourceSettings settings) {
+                    // As for a connection's datastore, the schema's sessions publish their events with this
+                    // datastore as the source.
+                    registerEventListeners(eventPublisher);
                     return null;
                 }
             };
