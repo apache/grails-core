@@ -16,9 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.contentneg
+package springformatnegotiation
 
-import org.springframework.test.context.TestPropertySource
 import spock.lang.Specification
 import spock.lang.Tag
 
@@ -26,13 +25,12 @@ import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
 
 /**
- * With {@code grails.mime.negotiation.spring}, Grails formats are resolved with Spring MVC's content negotiation, and
+ * With {@code grails.mime.negotiation.spring}, which this application's configuration sets, Grails formats are resolved with Spring MVC's content negotiation, and
  * what Spring MVC writes for an action is negotiated with the format the request names, while a Spring MVC endpoint is
  * negotiated as before.
  */
 @Integration
 @Tag('http-client')
-@TestPropertySource(properties = 'grails.mime.negotiation.spring=true')
 class SpringFormatNegotiationSpec extends Specification implements HttpClientSupport {
 
     void 'a value Spring MVC writes for an action is in the format of its URL extension, which a map cannot be written in as HTML'() {
@@ -81,30 +79,5 @@ class SpringFormatNegotiationSpec extends Specification implements HttpClientSup
     void 'a Spring MVC endpoint an action forwards to is matched on the Accept header, not on the format the action was asked for'() {
         expect:
         http('/springWritten/forwardToSpring?format=xml', Accept: 'application/json').assertStatus(200).assertJson([title: 'Grails'])
-    }
-}
-
-/**
- * Without {@code grails.mime.negotiation.spring}, Grails resolves formats with its own rules, and Spring MVC writes the
- * values of actions as the {@code Accept} header asks.
- */
-@Integration
-@Tag('http-client')
-class GrailsFormatNegotiationSpec extends Specification implements HttpClientSupport {
-
-    void 'a value Spring MVC writes for an action is in the type the Accept header asks for, whatever its URL extension'() {
-        expect:
-        http('/springWritten/entity.html', Accept: '*/*').assertStatus(200).contentType.startsWith('application/json')
-        http('/springWritten/text.json', Accept: 'text/plain').assertStatus(200).contentType.startsWith('text/plain')
-    }
-
-    void 'the formats Grails resolves follow the Grails rules: #accept'() {
-        expect:
-        http('/springWritten/formats', Accept: accept).assertStatus(200).assertEquals(formats)
-
-        where:
-        accept                  || formats
-        '*/*, application/json' || 'all|all'
-        'image/png'             || 'all|all'
     }
 }

@@ -16,20 +16,31 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package functionaltests.contentneg
+package springformatnegotiation
 
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RestController
+import groovy.transform.CompileStatic
+
+import org.springframework.context.annotation.Bean
+
+import grails.boot.GrailsApp
+import grails.boot.config.GrailsAutoConfiguration
 
 /**
- * A Spring MVC endpoint beside the Grails controllers, whose content negotiation {@code grails.mime.negotiation.spring}
- * leaves as Spring MVC configures it.
+ * An application that resolves Grails formats with Spring MVC's content negotiation, as
+ * {@code grails.mime.negotiation.spring} in its {@code application.yml} says.
  */
-@RestController
-class SpringNegotiationApi {
+@CompileStatic
+class Application extends GrailsAutoConfiguration {
 
-    @GetMapping(path = '/springNegotiation', produces = 'application/json')
-    Map<String, Object> negotiation() {
-        [title: 'Grails']
+    static void main(String[] args) {
+        GrailsApp.run(Application, args)
+    }
+
+    /**
+     * A Spring MVC endpoint beside the Grails controllers, which content negotiation leaves to Spring MVC.
+     */
+    @Bean
+    SpringNegotiationApi springNegotiationApi() {
+        new SpringNegotiationApi()
     }
 }

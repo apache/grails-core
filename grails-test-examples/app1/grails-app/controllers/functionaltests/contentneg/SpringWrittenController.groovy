@@ -22,7 +22,7 @@ import org.springframework.http.ResponseEntity
 
 /**
  * Actions whose values Spring MVC writes, and one that answers with the formats Grails resolves for the request, which
- * {@code grails.mime.negotiation.spring} negotiates alike.
+ * the Grails rules negotiate without {@code grails.mime.negotiation.spring}.
  */
 class SpringWrittenController {
 
@@ -36,9 +36,5 @@ class SpringWrittenController {
 
     def formats() {
         render(contentType: 'text/plain', text: "${response.format}|${request.format}")
-    }
-
-    def forwardToSpring() {
-        forward(uri: '/springNegotiation')
     }
 }
