@@ -506,6 +506,8 @@ public abstract class AbstractHibernateQuery extends Query {
     protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
+        final String qualifiedPath = associationPath;
+        final String givenAlias = alias;
         Criteria parentCriteria = criteria;
         if (alias == null) {
             alias = generateAlias(associationName);
@@ -521,8 +523,11 @@ public abstract class AbstractHibernateQuery extends Query {
                 }
             }
         }
-        if (createdAssociationPaths.containsKey(associationName)) {
-            subCriteria = createdAssociationPaths.get(associationName);
+        CriteriaAndAlias existing = createdAssociationPaths.get(associationName);
+        if (existing != null && (givenAlias != null || existing.associationPath == null || existing.associationPath.equals(qualifiedPath))) {
+            // a join made for the same name is reused, unless it was made for another path: a nested block must not take
+            // the join of a block of the same name elsewhere
+            subCriteria = existing;
         }
         else {
             JoinType joinType = joinTypes.get(associationName);
