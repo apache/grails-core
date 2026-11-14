@@ -142,6 +142,8 @@ class Setup {
 }
 ----
 
+A datastore that sets timestamps keeps the `AutoTimestampEventListener` it registers for itself, implements `AutoTimestampingDatastore` and returns that listener from `getAutoTimestampEventListener()`, so that `Book.autoTimestampEventListener` on a domain class finds it. The TCK's `AutoTimestampEventListenerLookupSpec` checks this.
+
 Then in `src/test/groovy` create test suite class to allow running tests in IDE (without this you won't be able to run TCK tests from the IDE). Example test suite:
 
 [source,groovy]

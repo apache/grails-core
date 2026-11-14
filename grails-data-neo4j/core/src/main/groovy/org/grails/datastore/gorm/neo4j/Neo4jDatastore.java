@@ -47,6 +47,7 @@ import org.apache.grails.data.neo4j.core.querytail.QueryTailDriver;
 import org.apache.grails.datastore.core.querytail.QueryTailSettings;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DomainEventListener;
@@ -97,7 +98,7 @@ import static org.grails.datastore.gorm.neo4j.config.Settings.SETTING_NEO4J_TYPE
  *
  * @since 1.0
  */
-public class Neo4jDatastore extends AbstractDatastore implements Closeable, StatelessDatastore, GraphDatastore, Settings, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<Driver, Neo4jConnectionSourceSettings>, MessageSourceAware, TransactionCapableDatastore {
+public class Neo4jDatastore extends AbstractDatastore implements Closeable, StatelessDatastore, GraphDatastore, Settings, MultipleConnectionSourceCapableDatastore, MultiTenantCapableDatastore<Driver, Neo4jConnectionSourceSettings>, MessageSourceAware, TransactionCapableDatastore, AutoTimestampingDatastore {
 
     private static final Logger log = LoggerFactory.getLogger(Neo4jDatastore.class);
     protected final Driver boltDriver;
@@ -611,6 +612,7 @@ public class Neo4jDatastore extends AbstractDatastore implements Closeable, Stat
         }
     }
 
+    @Override
     public AutoTimestampEventListener getAutoTimestampEventListener() {
         return this.autoTimestampEventListener;
     }

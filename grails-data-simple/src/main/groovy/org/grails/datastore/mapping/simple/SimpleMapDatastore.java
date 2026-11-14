@@ -40,6 +40,7 @@ import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormStaticApi;
 import org.grails.datastore.gorm.GormValidationApi;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore;
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher;
 import org.grails.datastore.gorm.events.ConfigurableApplicationEventPublisher;
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher;
@@ -81,7 +82,7 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
+public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings>, AutoTimestampingDatastore {
     private final Map<String, Map> inmemoryData;
     private final TenantResolver tenantResolver;
     protected final GormEnhancer gormEnhancer;
@@ -94,6 +95,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     protected final Map<String, SimpleMapDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
     protected final boolean failOnError;
     private final SimpleMapQueryTail queryTail;
+    private AutoTimestampEventListener autoTimestampEventListener;
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         super(mappingContext);
@@ -296,7 +298,8 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
 
     protected void registerEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
         eventPublisher.addApplicationListener(new DomainEventListener(this));
-        eventPublisher.addApplicationListener(new AutoTimestampEventListener(this));
+        autoTimestampEventListener = new AutoTimestampEventListener(this);
+        eventPublisher.addApplicationListener(autoTimestampEventListener);
         if (multiTenancyMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
             eventPublisher.addApplicationListener(new MultiTenantEventListener(this));
         }
@@ -314,6 +317,11 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     @Override
     public ApplicationEventPublisher getApplicationEventPublisher() {
         return this.eventPublisher;
+    }
+
+    @Override
+    public AutoTimestampEventListener getAutoTimestampEventListener() {
+        return autoTimestampEventListener;
     }
 
     /**

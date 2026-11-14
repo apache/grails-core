@@ -28,6 +28,7 @@ import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormInstanceOperations
 import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
@@ -157,6 +158,47 @@ class GormStaticApiSpec extends Specification {
 
         expect:
         api.getGormDynamicFinders() == [finder]
+    }
+
+    void "getAutoTimestampEventListener returns the listener of the api's datastore"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+
+        expect:
+        api.autoTimestampEventListener != null
+        api.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+        GormStaticApiThing.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
+    }
+
+    void "getAutoTimestampEventListener rejects a datastore that does not set timestamps through a listener"() {
+        given:
+        def plainDatastore = Stub(Datastore) {
+            getMappingContext() >> datastore.mappingContext
+        }
+        def api = new GormStaticApi(GormStaticApiThing, plainDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
+    }
+
+    void "getAutoTimestampEventListener rejects an auto-timestamping datastore that has no listener"() {
+        given:
+        def listenerlessDatastore = Stub(Datastore, additionalInterfaces: [AutoTimestampingDatastore]) {
+            getMappingContext() >> datastore.mappingContext
+            getAutoTimestampEventListener() >> null
+        }
+        def api = new GormStaticApi(GormStaticApiThing, listenerlessDatastore, [])
+
+        when:
+        api.autoTimestampEventListener
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains(GormStaticApiThing.name)
     }
 
     void "forQualifier creates a new static api bound to the requested qualifier"() {

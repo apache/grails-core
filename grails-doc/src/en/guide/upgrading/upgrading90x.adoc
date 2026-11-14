@@ -1453,3 +1453,11 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 * Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
 * To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
 
+==== 25. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither.
+
+===== Required Actions
+
+* A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+* A test that expected a domain class event not to run on such a save expects what the event does.

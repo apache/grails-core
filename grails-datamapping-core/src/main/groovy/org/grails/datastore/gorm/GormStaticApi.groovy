@@ -38,6 +38,8 @@ import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.transactions.GrailsTransactionTemplate
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.gorm.transactions.DefaultTransactionTemplateFactory
@@ -166,6 +168,27 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
     @Override
     List<FinderMethod> getGormDynamicFinders() {
         return finders
+    }
+
+    /**
+     * Returns the listener that sets the timestamp and auditor properties of the entities saved through this API's
+     * datastore. Each datastore has a listener of its own, and so does each connection and each tenant with a
+     * database or schema of its own, so turning timestamps off on this one only reaches the saves made through this
+     * API's datastore.
+     *
+     * @return the listener of this API's datastore
+     * @throws IllegalStateException when that datastore has no such listener
+     * @since 9.0
+     */
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        Datastore ds = getDatastore()
+        AutoTimestampEventListener listener = ds instanceof AutoTimestampingDatastore
+                ? ((AutoTimestampingDatastore) ds).autoTimestampEventListener
+                : null
+        if (listener == null) {
+            throw new IllegalStateException("The datastore [${ds}] of class [${persistentClass.name}] has no auto-timestamp event listener")
+        }
+        listener
     }
 
     GormStaticApi<D> forQualifier(String qualifier) {
