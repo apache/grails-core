@@ -1461,4 +1461,11 @@ In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, ev
 
 ===== Required Actions
 
-For most applications **no changes are required**. An application that kept a class that is not multi-tenant in each tenant's database implements `MultiTenant` on it. Instances such a class saved inside a tenant block in Grails 8 stay in the tenant's database, where the class no longer reads them.
+For most applications **no changes are required**.
+
+With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Depending on what the class is for:
+
+* when each tenant should have its own instances, implement `MultiTenant` on the class, which then reads and writes the tenant's database again.
+* when the instances are shared by every tenant, move the documents from the tenants' databases into the default database.
+
+With GORM for Hibernate, `save` already wrote such a class to the default database. Only a tenant's database that holds rows of the class by other means, such as a per-tenant SQL script, is affected: `where` queries and data service methods inside a tenant block now read the default database instead of it.
