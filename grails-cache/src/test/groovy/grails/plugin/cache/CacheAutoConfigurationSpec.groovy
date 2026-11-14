@@ -198,13 +198,14 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
-    void 'a cache manager marked primary is used over the Grails one, as Spring chose it before'() {
+    void 'the Grails cache manager is used over another cache manager marked primary'() {
         given: 'an application\'s own cache manager, marked primary'
-        CacheManager primary = new ConcurrentMapCacheManager()
-        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: primary], 'cacheManager')
+        AnnotationConfigApplicationContext context = buildContext([:], null,
+                [cacheManager: new ConcurrentMapCacheManager()], 'cacheManager')
 
-        expect:
-        context.getBean(CacheAware).grailsCacheManager.is(primary)
+        expect: 'the one the plugin creates its caches in, and its tag library uses'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
 
         cleanup:
         context.close()

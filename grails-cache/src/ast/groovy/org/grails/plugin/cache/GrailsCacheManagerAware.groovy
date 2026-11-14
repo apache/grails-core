@@ -41,17 +41,19 @@ trait GrailsCacheManagerAware {
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
     /**
-     * The cache manager Spring would inject: the only one in the context, or the one marked primary.
+     * The cache manager Spring would inject, the only one in the context or the one marked primary, for
+     * when there is none named {@code grailsCacheManager}.
      */
     @Autowired(required = false)
     private ObjectProvider<CacheManager> cacheManagerProvider
 
     /**
-     * Every cache manager in the context, by bean name, for when Spring cannot choose one. Another cache
-     * manager, such as the one the Spring Security plugin caches users with when {@code cacheUsers} is
-     * set, used to make the injection of a single cache manager ambiguous, and the context failed to
-     * start: Spring falls back to matching the field's name, and a trait's field is renamed in the class
-     * that implements it.
+     * Every cache manager in the context, by bean name, so that the plugin's own, named
+     * {@code grailsCacheManager}, is found by that name, as the plugin and its tag library find it.
+     * Another cache manager, such as the one the Spring Security plugin caches users with when
+     * {@code cacheUsers} is set, used to make the injection of a single cache manager ambiguous, and
+     * the context failed to start: Spring falls back to matching the field's name, and a trait's field
+     * is renamed in the class that implements it.
      */
     @Autowired(required = false)
     private Map<String, CacheManager> cacheManagers
@@ -59,13 +61,12 @@ trait GrailsCacheManagerAware {
     private CacheManager grailsCacheManager
 
     /**
-     * @return The cache manager Spring would inject, the only one or the one marked primary, or where
-     * there are several and none is primary the one named {@code grailsCacheManager}, or null if there
-     * is no such cache manager
+     * @return The cache manager named {@code grailsCacheManager}, or where there is none the only cache
+     * manager or the one marked primary, or null if there is no such cache manager
      */
     CacheManager getGrailsCacheManager() {
         if (grailsCacheManager == null) {
-            grailsCacheManager = cacheManagerProvider?.getIfUnique() ?: cacheManagers?.get('grailsCacheManager')
+            grailsCacheManager = cacheManagers?.get('grailsCacheManager') ?: cacheManagerProvider?.getIfUnique()
         }
         return grailsCacheManager
     }
