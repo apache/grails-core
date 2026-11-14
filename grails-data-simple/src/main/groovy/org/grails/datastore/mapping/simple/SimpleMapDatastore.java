@@ -95,7 +95,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     protected final Map<String, SimpleMapDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
     protected final boolean failOnError;
     private final SimpleMapQueryTail queryTail;
-    private AutoTimestampEventListener autoTimestampEventListener;
+    private final AutoTimestampEventListener autoTimestampEventListener;
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         super(mappingContext);
@@ -111,6 +111,9 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
         this.tenantResolver = multiTenancy.getTenantResolver();
         PropertyResolver config = connectionSources.getBaseConfiguration();
         this.failOnError = config.getProperty(Settings.SETTING_FAIL_ON_ERROR, Boolean.class, false);
+        // Created ahead of the datastores of the other connections, so that it stays the first one the shared mapping
+        // context lists, as it was when only this datastore had a listener.
+        this.autoTimestampEventListener = new AutoTimestampEventListener(this);
         if (!(connectionSources instanceof SingletonConnectionSources)) {
 
             Iterable<ConnectionSource<Map<String, Map>, ConnectionSourceSettings>> allConnectionSources = connectionSources.getAllConnectionSources();
@@ -314,7 +317,6 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
      */
     protected void registerEntityEventListeners(ConfigurableApplicationEventPublisher eventPublisher) {
         eventPublisher.addApplicationListener(new DomainEventListener(this));
-        autoTimestampEventListener = new AutoTimestampEventListener(this);
         eventPublisher.addApplicationListener(autoTimestampEventListener);
     }
 

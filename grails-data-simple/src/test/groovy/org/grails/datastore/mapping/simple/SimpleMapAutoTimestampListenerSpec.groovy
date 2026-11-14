@@ -61,6 +61,14 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
         !secondary.autoTimestampEventListener.is(datastore.autoTimestampEventListener)
     }
 
+    void 'the first auto-timestamp listener of the mapping context is still the default connection\'s'() {
+        given: 'code that looked the listener up through the mapping context, before domain classes answered with it'
+        datastore = new SimpleMapDatastore(['secondary', 'tertiary'], ListenerNote)
+
+        expect:
+        datastore.mappingContext.eventListeners.find { it instanceof AutoTimestampEventListener }.is(datastore.autoTimestampEventListener)
+    }
+
     void 'a transaction for a connection routes the unqualified lookup to that connection'() {
         given:
         datastore = new SimpleMapDatastore(['secondary'], ListenerNote)
