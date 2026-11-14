@@ -28,7 +28,9 @@ import org.apache.grails.data.testing.tck.domains.SecondaryConnectionTimestampNo
 
 /**
  * Every connection has an auto-timestamp listener of its own, and a domain class answers with the listener of the
- * connection its saves go through.
+ * connection its saves go through. Which connection that is for the unqualified operations of a class mapped only to
+ * another connection is the datastore's own: a datastore with a single session, as the in-memory one of unit tests,
+ * keeps them on the default connection.
  */
 @Issue('https://github.com/apache/grails-core/issues/14509')
 @Requires({ instance.manager?.supportsMultipleDataSources() })
@@ -46,13 +48,12 @@ class AutoTimestampEventListenerMultiDataSourceSpec extends GrailsDataTckSpec {
 
     void 'each connection answers with a listener of its own'() {
         given:
-        def defaultListener = DefaultConnectionTimestampNote.autoTimestampEventListener
-        def secondaryListener = SecondaryConnectionTimestampNote.autoTimestampEventListener
+        def defaultListener = AllConnectionsTimestampNote.autoTimestampEventListener
+        def secondaryListener = AllConnectionsTimestampNote.secondary.autoTimestampEventListener
 
         expect:
         !defaultListener.is(secondaryListener)
-        AllConnectionsTimestampNote.autoTimestampEventListener.is(defaultListener)
-        AllConnectionsTimestampNote.secondary.autoTimestampEventListener.is(secondaryListener)
+        DefaultConnectionTimestampNote.autoTimestampEventListener.is(defaultListener)
         AllConnectionsTimestampNote.secondary.withTransaction { AllConnectionsTimestampNote.autoTimestampEventListener }.is(secondaryListener)
     }
 
@@ -82,18 +83,19 @@ class AutoTimestampEventListenerMultiDataSourceSpec extends GrailsDataTckSpec {
 
     void 'the listener of one connection does not reach a save through another'() {
         given:
-        SecondaryConnectionTimestampNote person = new SecondaryConnectionTimestampNote(text: 'person', dateCreated: PAST, lastUpdated: PAST)
+        def defaultListener = AllConnectionsTimestampNote.autoTimestampEventListener
+        AllConnectionsTimestampNote note = new AllConnectionsTimestampNote(text: 'shared', dateCreated: PAST, lastUpdated: PAST)
 
         when:
-        SecondaryConnectionTimestampNote.withNewTransaction {
-            DefaultConnectionTimestampNote.autoTimestampEventListener.withoutTimestamps {
-                person.save(flush: true)
+        AllConnectionsTimestampNote.secondary.withNewTransaction {
+            defaultListener.withoutTimestamps {
+                note.secondary.save(flush: true)
             }
         }
 
         then:
-        SecondaryConnectionTimestampNote.withNewTransaction { SecondaryConnectionTimestampNote.get(person.id).dateCreated } != PAST
-        SecondaryConnectionTimestampNote.withNewTransaction { SecondaryConnectionTimestampNote.get(person.id).lastUpdated } != PAST
+        AllConnectionsTimestampNote.secondary.withNewTransaction { AllConnectionsTimestampNote.secondary.get(note.id).dateCreated } != PAST
+        AllConnectionsTimestampNote.secondary.withNewTransaction { AllConnectionsTimestampNote.secondary.get(note.id).lastUpdated } != PAST
     }
 
     void 'a domain class on several connections turns off the timestamps of the connection it names'() {
