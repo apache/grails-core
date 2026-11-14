@@ -32,6 +32,7 @@ import org.grails.forge.options.*;
 import org.grails.forge.util.NameUtils;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +105,7 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
         }
         Project project;
         try {
-            project = NameUtils.parse(name);
+            project = NameUtils.parse(resolveName());
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), StringUtils.isEmpty(name) ? "Specify an application name or use --inplace to create an application in the current directory" : e.getMessage());
         }
@@ -118,7 +119,18 @@ public abstract class CreateCommand extends BaseCommand implements Callable<Inte
     }
 
     public void generate(OutputHandler outputHandler) throws Exception {
-        generate(NameUtils.parse(name), outputHandler);
+        generate(NameUtils.parse(resolveName()), outputHandler);
+    }
+
+    /**
+     * @return The given name, or with {@code --inplace} and no name the name of the current directory
+     * @throws IOException If the current directory cannot be resolved
+     */
+    private String resolveName() throws IOException {
+        if (inplace && StringUtils.isEmpty(name)) {
+            return FileSystemOutputHandler.getDefaultBaseDirectory().getName();
+        }
+        return name;
     }
 
     public void generate(Project project, OutputHandler outputHandler) throws Exception {

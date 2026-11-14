@@ -66,7 +66,7 @@ These options are available only when using `grails -t forge`:
 - `--jdk=<javaVersion>`: Target JDK version (e.g., 11 or 17).
 - `-s, --servlet=Servlet Implementation`: Choose embedded servlet: `tomcat`, `jetty`, `undertow`, `none`.
 - `-t, --test=TEST`: Select test framework: `spock`, `junit`.
-- `-i, --inplace`: Create app in current directory.
+- `-i, --inplace`: Create app in current directory. Without a name, the name of the directory is the application name.
 
 === Shell CLI Support
 
