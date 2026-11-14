@@ -26,13 +26,17 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 
 import groovy.transform.InheritConstructors
 import spock.lang.Specification
 
+import org.springframework.context.support.GenericApplicationContext
+
 import grails.gorm.annotation.CreatedBy
 import grails.gorm.annotation.LastModifiedBy
 import org.grails.datastore.gorm.events.AutoTimestampEventListener
+import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.mapping.config.Property
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.engine.EntityAccess
@@ -633,6 +637,65 @@ class AutoTimestampEventListenerSpec extends Specification {
         updated == [lastModifiedBy: 'testUser']
     }
 
+    void "a listener that is not given an auditor looks it up in the application context of its datastore once that is active"() {
+        given: 'the publisher of the datastore, which the datastores of every connection share, holds the context'
+        AuditorAware<String> contextAuditor = { -> Optional.of('contextUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean(AuditorAware, { contextAuditor } as Supplier<AuditorAware>)
+        TestEventListener contextListener = new TestEventListener(Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(context)
+        })
+
+        expect: 'no auditor while the context is not refreshed'
+        contextListener.auditorAware == null
+
+        when:
+        context.refresh()
+        contextListener.persistentEntityAdded(auditedEntity())
+
+        then:
+        contextListener.auditorAware.is(contextAuditor)
+        appliedOnInsert(contextListener, Audited) == [createdBy: 'contextUser', lastModifiedBy: 'contextUser']
+
+        cleanup:
+        context.close()
+    }
+
+    void "an auditor that is set, or found in the application context given to the listener, is not looked up again"() {
+        given:
+        AuditorAware<String> setAuditor = { -> Optional.of('setUser') } as AuditorAware<String>
+        AuditorAware<String> givenAuditor = { -> Optional.of('givenUser') } as AuditorAware<String>
+        GenericApplicationContext datastoreContext = new GenericApplicationContext()
+        datastoreContext.registerBean(AuditorAware, { { -> Optional.of('datastoreUser') } as AuditorAware<String> } as Supplier<AuditorAware>)
+        datastoreContext.refresh()
+        GenericApplicationContext givenContext = new GenericApplicationContext()
+        givenContext.registerBean(AuditorAware, { givenAuditor } as Supplier<AuditorAware>)
+        givenContext.refresh()
+        Datastore datastore = Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(datastoreContext)
+        }
+        TestEventListener withSetAuditor = new TestEventListener(datastore)
+        TestEventListener withGivenContext = new TestEventListener(datastore)
+        TestEventListener withEmptyContext = new TestEventListener(datastore)
+        GenericApplicationContext emptyContext = new GenericApplicationContext()
+        emptyContext.refresh()
+
+        when:
+        withSetAuditor.auditorAware = setAuditor
+        withGivenContext.applicationContext = givenContext
+        withEmptyContext.applicationContext = emptyContext
+
+        then:
+        withSetAuditor.auditorAware.is(setAuditor)
+        withGivenContext.auditorAware.is(givenAuditor)
+        withEmptyContext.auditorAware == null
+
+        cleanup:
+        [datastoreContext, givenContext, emptyContext]*.close()
+    }
+
     private PersistentEntity auditedEntity() {
         PersistentEntity entity = null
         PersistentProperty createdBy = auditedProperty('createdBy') { -> entity }
@@ -660,8 +723,12 @@ class AutoTimestampEventListenerSpec extends Specification {
     }
 
     private Map<String, Object> appliedOnInsert(Class clazz) {
+        appliedOnInsert(listener, clazz)
+    }
+
+    private static Map<String, Object> appliedOnInsert(AutoTimestampEventListener eventListener, Class clazz) {
         Map<String, Object> applied = new ConcurrentHashMap<>()
-        listener.beforeInsert(entityFor(clazz), recordingAccess(applied))
+        eventListener.beforeInsert(entityFor(clazz), recordingAccess(applied))
         applied
     }
 

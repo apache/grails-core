@@ -97,6 +97,35 @@ class SimpleMapAutoTimestampListenerSpec extends Specification {
         overwritten.lastUpdated != PAST
     }
 
+    void 'every connection follows the auto-timestamp settings of the configuration'() {
+        given:
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver([
+                        (Settings.SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE) : false,
+                        (Settings.SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS): false
+                ]),
+                ['secondary'],
+                ListenerNote
+        )
+        ListenerNote onDefault = new ListenerNote(text: 'default', dateCreated: PAST)
+        ListenerNote onSecondary = new ListenerNote(text: 'secondary', dateCreated: PAST)
+
+        when:
+        ListenerNote.withTransaction {
+            onDefault.save(flush: true)
+        }
+        ListenerNote.secondary.withTransaction {
+            onSecondary.secondary.save(flush: true)
+        }
+
+        then:
+        onDefault.dateCreated == PAST
+        onSecondary.dateCreated == PAST
+        onSecondary.lastUpdated != null
+        !ListenerNote.autoTimestampEventListener.cacheAutoTimestampAnnotations
+        !ListenerNote.secondary.autoTimestampEventListener.cacheAutoTimestampAnnotations
+    }
+
     void 'a tenant with a database of its own answers with the listener of that database'() {
         given:
         datastore = new SimpleMapDatastore(
