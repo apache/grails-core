@@ -60,6 +60,7 @@ dependencies {
 
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
+    testImplementation testFixtures(project(':grails-core')) // LogCapture
     testImplementation 'org.spockframework:spock-core'
 
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation

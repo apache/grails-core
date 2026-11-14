@@ -21,6 +21,8 @@ package org.grails.plugin.cache
 
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanFactory
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.CacheManager
 
@@ -39,11 +41,38 @@ trait GrailsCacheManagerAware {
     @Autowired(required = false)
     private GrailsCacheKeyGenerator customCacheKeyGenerator = new CustomCacheKeyGenerator()
 
-    @Autowired(required = false)
+    /**
+     * Set by {@link #injectGrailsCacheManager} rather than injected. The trait keeps exactly the fields
+     * it had, so that a class compiled against an earlier version, which declares them itself, works
+     * with this one.
+     */
     private CacheManager grailsCacheManager
 
     /**
-     * @return The Grails cache manager or null if it isn't present
+     * Called by Spring when the class is created as a bean, where the trait's field used to be
+     * injected: another cache manager, such as the one the Spring Security plugin caches users with
+     * when {@code cacheUsers} is set, made that injection ambiguous, and the context failed to start,
+     * as Spring falls back to matching the field's name and a trait's field is renamed in the class
+     * that implements it. See {@link GrailsCacheManagerLookup} for which cache manager is chosen.
+     *
+     * <p>Unless another cache manager is marked primary, Spring takes the one named like the parameter,
+     * which no bean was for the trait's renamed field, so the parameters are named as no bean would be.</p>
+     *
+     * @param grailsCacheManagerLookupBeanFactory where the cache manager named {@code grailsCacheManager}
+     * is looked up; a provider, as a bean factory that is not an application context does not inject
+     * itself
+     * @param grailsCacheManagerLookupCandidates the cache manager Spring would inject, where there is
+     * none of that name
+     */
+    @Autowired(required = false)
+    void injectGrailsCacheManager(ObjectProvider<BeanFactory> grailsCacheManagerLookupBeanFactory,
+                                  ObjectProvider<CacheManager> grailsCacheManagerLookupCandidates) {
+        grailsCacheManager = GrailsCacheManagerLookup.find(grailsCacheManagerLookupBeanFactory.getIfAvailable(),
+                grailsCacheManagerLookupCandidates, getClass())
+    }
+
+    /**
+     * @return The cache manager this class caches with, or null if it has none
      */
     CacheManager getGrailsCacheManager() {
         return grailsCacheManager
