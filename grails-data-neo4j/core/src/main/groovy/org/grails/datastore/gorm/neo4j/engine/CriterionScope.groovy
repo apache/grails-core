@@ -28,6 +28,7 @@ import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.types.Association
 import org.grails.datastore.mapping.model.types.Basic
 import org.grails.datastore.mapping.model.types.Embedded
+import org.grails.datastore.mapping.model.types.ToMany
 import org.grails.datastore.mapping.model.types.ToOne
 import org.grails.datastore.mapping.query.AssociationQuery
 
@@ -141,6 +142,36 @@ final class CriterionScope {
             return "TYPE(${CypherBuilder.REL_VAR})".toString()
         }
         property(name)
+    }
+
+    /**
+     * Whether a criterion on the property is about a collection of nodes that a disjunction has to read where it stands.
+     * A match would require the collection for the whole query and drop the nodes that have none before the other
+     * branches could keep them. A criterion on a collection holds when some element satisfies it.
+     *
+     * @param name The property name
+     * @return True for a collection of nodes, in a disjunction or a negation
+     */
+    boolean readsMembers(String name) {
+        if (!builder.inDisjunction || entity.isRelationshipEntity()) {
+            return false
+        }
+        PersistentProperty found = entity.getPropertyByName(name)
+        found instanceof ToMany && !(found instanceof Basic) && !(found instanceof Embedded)
+    }
+
+    /**
+     * The identities of the nodes in a collection, read where the collection stands.
+     *
+     * @param name The name of a property for which {@link #readsMembers} is true
+     * @return A list expression
+     */
+    String members(String name) {
+        Association association = (Association) entity.getPropertyByName(name)
+        GraphPersistentEntity associated = (GraphPersistentEntity) association.associatedEntity
+        String local = "e_${builder.nextLocalNumber()}"
+        String pattern = entity.formatAssociationPatternFromExisting(association, '', variable, local)
+        "[${pattern} | ${associated.formatId(local)}]".toString()
     }
 
     /**

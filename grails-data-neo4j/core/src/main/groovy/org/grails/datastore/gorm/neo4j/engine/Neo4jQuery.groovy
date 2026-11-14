@@ -227,6 +227,9 @@ class Neo4jQuery extends Query {
         CypherExpression handle(CriterionScope scope, Query.Equals criterion) {
             Neo4jMappingContext mappingContext = (Neo4jMappingContext) scope.entity.mappingContext
             int paramNumber = scope.builder.addParam(mappingContext.convertToNative(criterion.value))
+            if (scope.readsMembers(criterion.property)) {
+                return new CypherExpression("ANY(x IN ${scope.members(criterion.property)} WHERE x = \$$paramNumber)".toString())
+            }
             return new CypherExpression(scope.reference(criterion.property), "\$$paramNumber", CriterionHandler.OPERATOR_EQUALS)
         }
 
@@ -283,6 +286,10 @@ class Neo4jQuery extends Query {
             GraphPersistentEntity entity = scope.entity
             CypherBuilder builder = scope.builder
             int paramNumber = addBuildParameterForCriterion(builder, entity, criterion)
+            if (scope.readsMembers(criterion.property)) {
+                builder.replaceParamAt(paramNumber, convertEnumsInList(((Query.In) criterion).values))
+                return new CypherExpression("ANY(x IN ${scope.members(criterion.property)} WHERE x IN \$$paramNumber)".toString())
+            }
             String lhs = scope.reference(criterion.property)
             Collection values = ((Query.In) criterion).values
             if (entity.isRelationshipEntity()) {
@@ -322,6 +329,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.IsEmpty criterion) {
+            String relationship = scope.associationPattern(criterion.property)
+            if (relationship != null) {
+                return new CypherExpression("NOT ${relationship}")
+            }
             return new CypherExpression("length(${scope.property(criterion.property)}) = 0")
         }
             },
@@ -330,6 +341,10 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.IsNotEmpty criterion) {
+            String relationship = scope.associationPattern(criterion.property)
+            if (relationship != null) {
+                return new CypherExpression(relationship)
+            }
             return new CypherExpression("length(${scope.property(criterion.property)}) > 0")
         }
             },
@@ -823,6 +838,9 @@ class Neo4jQuery extends Query {
         @Override
         CypherExpression handle(CriterionScope scope, T criterion) {
             int paramNumber = addBuildParameterForCriterion(scope.builder, scope.entity, criterion)
+            if (scope.readsMembers(criterion.property)) {
+                return new CypherExpression("ANY(x IN ${scope.members(criterion.property)} WHERE x${operator}\$$paramNumber)".toString())
+            }
             String lhs = scope.reference(criterion.property)
             if (operator == CriterionHandler.OPERATOR_EQUALS && criterion.value == null) {
                 // Cypher's = follows SQL null semantics (n.prop = null is always NULL, matching no
