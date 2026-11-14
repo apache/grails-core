@@ -218,15 +218,15 @@ interface Settings {
      * Grails keeps to what Spring MVC writes for the requests a URL mapping handles, rather than by Grails' own rules.
      * Defaults to {@link #MIME_NEGOTIATION_SPRING_DEFAULT}.
      *
-     * @since 10.0
+     * @since 9.0
      */
     String MIME_NEGOTIATION_SPRING = 'grails.mime.negotiation.spring'
 
     /**
-     * The default of {@link #MIME_NEGOTIATION_SPRING}, as a property placeholder reads it: {@code false} in Grails 10,
-     * which keeps the negotiation of Grails 9.
+     * The default of {@link #MIME_NEGOTIATION_SPRING}, as a property placeholder reads it: {@code false} in Grails 9,
+     * and {@code true} from Grails 10.
      *
-     * @since 10.0
+     * @since 9.0
      */
     String MIME_NEGOTIATION_SPRING_DEFAULT = 'false'
 

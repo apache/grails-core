@@ -125,7 +125,7 @@ class MimeTypesApiSupport {
      * @param formats the blocks, by format
      * @param accepted the type of the {@code all} format
      * @return the result of the block, or {@link #NO_FORMAT} where none is of a format compatible with the wildcard
-     * @since 10.0
+     * @since 9.0
      */
     protected Object resolveAllFormat(formatProvider, LinkedHashMap<String, Object> formats, MimeType accepted) {
         if (accepted == null || accepted.extension != 'all' || accepted.name == MimeType.ALL.name || formats.containsKey('*')) {

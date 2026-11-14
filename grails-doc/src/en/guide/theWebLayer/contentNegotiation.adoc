@@ -282,7 +282,8 @@ grails:
             spring: true
 ----
 
-Grails {grailsMajorVersion} keeps the Grails rules by default. With the setting:
+Grails {grailsMajorVersion} keeps the Grails rules by default, and Grails 10 makes the setting the default. With the
+setting:
 
 * The `Accept` header is read by Spring MVC's manager, with its strategies, so the `spring.mvc.contentnegotiation.*`
 properties apply to the Grails formats as they do to Spring MVC, and its media types are taken in the order Spring MVC
@@ -342,7 +343,7 @@ type is configured for in the first configured format
 |Dropped: such a request, and one whose `Accept` header Spring cannot read, is not acceptable.
 |===
 
-See xref:upgrading#upgrading100x[Upgrading from Grails 9 to Grails 10] for how each answer changes.
+Section 22 of xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9] lists how each answer changes.
 
 ==== Testing Content Negotiation
 

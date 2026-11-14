@@ -140,7 +140,7 @@ class FormatNegotiationComparisonSpec extends Specification {
             [contentType: 'image/png']
     ]
 
-    /** Every answer that differs, as {@code configuration | request | answer: Grails 9 -> Spring}. */
+    /** Every answer that differs, as {@code configuration | request | answer: Grails rules -> Spring MVC's}. */
     private static final List<String> RECORDED = [
             'defaults | Accept: */*, application/json | response.format: all -> json',
             'defaults | Accept: */*, application/json | withFormat(html, json, xml): html -> json',

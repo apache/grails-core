@@ -174,7 +174,7 @@ class MimeTypesConfiguration {
      * created before the other beans, and the strategy it applies them with is that of the configurer, once a request
      * is negotiated.
      *
-     * @since 10.0
+     * @since 9.0
      */
     @Bean
     static GrailsContentNegotiationManagerPostProcessor grailsContentNegotiationManagerPostProcessor(

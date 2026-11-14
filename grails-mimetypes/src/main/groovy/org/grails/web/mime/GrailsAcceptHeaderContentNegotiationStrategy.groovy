@@ -36,7 +36,7 @@ import org.springframework.web.context.request.NativeWebRequest
  * resolves for it. Any other request, such as one a Spring MVC endpoint handles, is negotiated by the strategy it
  * replaces. It is a {@link HeaderContentNegotiationStrategy}, so that it is found as Spring MVC's is.
  *
- * @since 10.0
+ * @since 9.0
  */
 @CompileStatic
 class GrailsAcceptHeaderContentNegotiationStrategy extends HeaderContentNegotiationStrategy {

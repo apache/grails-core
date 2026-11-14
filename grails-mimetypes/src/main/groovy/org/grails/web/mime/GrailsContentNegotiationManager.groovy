@@ -34,7 +34,7 @@ import org.springframework.web.accept.MediaTypeFileExtensionResolver
  * ignores it for such a request where the {@code grails.mime} settings say so. Any other request is negotiated as by
  * Spring MVC's manager, whose formats and file extensions it answers with.
  *
- * @since 10.0
+ * @since 9.0
  */
 @CompileStatic
 class GrailsContentNegotiationManager extends ContentNegotiationManager {

@@ -94,7 +94,7 @@ class GrailsContentNegotiationStrategy {
      *        {@code grails.mime.negotiation.spring}, the formats are resolved with; asked for each request, since the
      *        strategy is created before it; or {@code null}, or one that supplies none, for one that reads the
      *        {@code Accept} header alone, as Spring MVC's default does
-     * @since 10.0
+     * @since 9.0
      */
     GrailsContentNegotiationStrategy(MimeType[] mimeTypes, Config config,
                                      Supplier<ContentNegotiationManager> contentNegotiationManager) {
@@ -123,7 +123,7 @@ class GrailsContentNegotiationStrategy {
     /**
      * @return whether the formats are resolved with Spring MVC's content negotiation manager, as
      * {@code grails.mime.negotiation.spring} says
-     * @since 10.0
+     * @since 9.0
      */
     boolean isSpringNegotiation() {
         return springNegotiation
@@ -160,7 +160,7 @@ class GrailsContentNegotiationStrategy {
      * @return its first configured type; for a format that is not configured, the first configured type, as Grails 9
      * answers, or, with {@code grails.mime.negotiation.spring}, {@code null}, since the request accepts no
      * configured type
-     * @since 10.0
+     * @since 9.0
      */
     MimeType resolveFormat(Object format) {
         MimeType mimeType = mimeTypes.find { MimeType configured -> configured.extension == format }
@@ -178,7 +178,7 @@ class GrailsContentNegotiationStrategy {
      *
      * @param webRequest the request
      * @return the format, or {@code null} where the request names none
-     * @since 10.0
+     * @since 9.0
      */
     Object requestedFormat(GrailsWebRequest webRequest) {
         Object format = webRequest?.params?.get(FORMAT_PARAMETER)
@@ -202,7 +202,7 @@ class GrailsContentNegotiationStrategy {
      *
      * @param request the request
      * @return the MIME types of its content
-     * @since 10.0
+     * @since 9.0
      */
     MimeType[] resolveContentMimeTypes(HttpServletRequest request) {
         String header = request.contentType ?: request.getHeader(HttpHeaders.CONTENT_TYPE)
@@ -230,7 +230,7 @@ class GrailsContentNegotiationStrategy {
      *
      * @param format the format
      * @return the media types, or {@code null} where no type of the format is configured
-     * @since 10.0
+     * @since 9.0
      */
     List<MediaType> mediaTypesOf(String format) {
         List<MediaType> types = []
@@ -254,7 +254,7 @@ class GrailsContentNegotiationStrategy {
     /**
      * @return the media types of every configured MIME type Spring can read, which a request that names a format no type
      * is configured for is not acceptable in
-     * @since 10.0
+     * @since 9.0
      */
     List<MediaType> getConfiguredMediaTypes() {
         return mediaTypes.findAll { it }.unique() as List<MediaType>
@@ -263,7 +263,7 @@ class GrailsContentNegotiationStrategy {
     /**
      * @return whether the {@code Accept} header of a request is ignored, as {@code grails.mime.use.accept.header} and
      * {@code grails.mime.disable.accept.header.*} say
-     * @since 10.0
+     * @since 9.0
      */
     boolean ignoresAcceptHeader(HttpServletRequest request) {
         if (!useAcceptHeader) {
@@ -284,7 +284,7 @@ class GrailsContentNegotiationStrategy {
      *
      * @param request the request
      * @return whether a URL mapping handles it
-     * @since 10.0
+     * @since 9.0
      */
     static boolean handlesRequest(HttpServletRequest request) {
         return request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) instanceof UrlMappingInfo
@@ -297,7 +297,7 @@ class GrailsContentNegotiationStrategy {
      *
      * @param request the request
      * @return the strategy
-     * @since 10.0
+     * @since 9.0
      */
     static GrailsContentNegotiationStrategy forRequest(HttpServletRequest request) {
         ApplicationContext applicationContext = GrailsWebRequest.lookup()?.applicationContext
@@ -387,7 +387,7 @@ class GrailsContentNegotiationStrategy {
      * @param accepted a type {@code response.mimeTypes} resolves
      * @param format a format
      * @return whether it accepts the format
-     * @since 10.0
+     * @since 9.0
      */
     boolean acceptsFormat(MimeType accepted, String format) {
         if (accepted == null) {

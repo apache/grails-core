@@ -36,7 +36,7 @@ import grails.config.Settings
  * a {@code ProblemDetail} an action returns or {@code respond} writes, is negotiated as Grails resolves their formats.
  * Without it, Spring MVC's manager is left as it is.
  *
- * @since 10.0
+ * @since 9.0
  */
 @CompileStatic
 class GrailsContentNegotiationManagerPostProcessor implements BeanPostProcessor {

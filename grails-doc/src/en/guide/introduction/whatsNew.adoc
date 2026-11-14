@@ -134,7 +134,14 @@ an action annotated `@ResponseBody`, a `CompletableFuture` it returns included. 
 selects the properties `respond` writes through Spring MVC. See
 xref:theWebLayer#springResponses[Returning Spring MVC Responses].
 
-See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
+With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, `request.format`, `response.format`,
+`withFormat` and the format `respond` writes in are resolved with Spring MVC's content negotiation manager, so that the
+`spring.mvc.contentnegotiation.*` settings apply to them, and the `format` parameter, URL extensions and the
+`grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too, such as a
+`ResponseEntity` it returns. See xref:theWebLayer#springFormatNegotiation[Resolving Formats with Spring MVC Content
+Negotiation].
+
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11, 13 to 16 and 22.
 
 ==== Hibernate 7 Criteria Queries Can Be Extended
 

@@ -38,7 +38,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * leaves any other request, such as one a Spring MVC endpoint handles, to them, and so a request whose format names no
  * type, as the {@code all} format does. A request that names a format no type is configured for is not acceptable.
  *
- * @since 10.0
+ * @since 9.0
  */
 @CompileStatic
 class GrailsFormatContentNegotiationStrategy implements ContentNegotiationStrategy {
