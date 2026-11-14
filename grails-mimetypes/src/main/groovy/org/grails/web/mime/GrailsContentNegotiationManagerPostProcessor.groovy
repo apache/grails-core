@@ -24,9 +24,9 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.config.BeanPostProcessor
-import org.springframework.core.env.Environment
 import org.springframework.web.accept.ContentNegotiationManager
 
+import grails.config.Config
 import grails.config.Settings
 
 /**
@@ -34,25 +34,27 @@ import grails.config.Settings
  * the {@code grails.mime} rules Grails keeps to the requests a URL mapping handles (see
  * {@link GrailsContentNegotiationManager}), so that what Spring MVC writes for them, such as a {@code ResponseEntity} or
  * a {@code ProblemDetail} an action returns or {@code respond} writes, is negotiated as Grails resolves their formats.
- * Without it, Spring MVC's manager is left as it is.
+ * Without it, Spring MVC's manager is left as it is. The setting is read from the application's configuration, which
+ * the strategy that resolves Grails formats reads it from too, so that the two never disagree.
  *
  * @since 9.0
  */
 @CompileStatic
 class GrailsContentNegotiationManagerPostProcessor implements BeanPostProcessor {
 
-    private final Environment environment
+    private final Supplier<Config> config
 
     private final Supplier<GrailsContentNegotiationStrategy> grailsStrategy
 
     /**
-     * @param environment the environment the setting is read from
+     * @param config supplies the application's configuration, which the setting is read from as Spring MVC's manager is
+     *        created, since a post-processor is created before the other beans
      * @param grailsStrategy supplies the strategy that resolves Grails formats, which Spring MVC's manager is created
      *        before
      */
-    GrailsContentNegotiationManagerPostProcessor(Environment environment,
+    GrailsContentNegotiationManagerPostProcessor(Supplier<Config> config,
                                                 Supplier<GrailsContentNegotiationStrategy> grailsStrategy) {
-        this.environment = environment
+        this.config = config
         this.grailsStrategy = grailsStrategy
     }
 
@@ -60,7 +62,7 @@ class GrailsContentNegotiationManagerPostProcessor implements BeanPostProcessor 
     Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
         if (beanName == GrailsContentNegotiationStrategy.MVC_CONTENT_NEGOTIATION_MANAGER &&
                 bean instanceof ContentNegotiationManager && !(bean instanceof GrailsContentNegotiationManager) &&
-                environment.getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
+                config.get().getProperty(Settings.MIME_NEGOTIATION_SPRING, Boolean,
                         Boolean.valueOf(Settings.MIME_NEGOTIATION_SPRING_DEFAULT))) {
             return new GrailsContentNegotiationManager((ContentNegotiationManager) bean, grailsStrategy)
         }

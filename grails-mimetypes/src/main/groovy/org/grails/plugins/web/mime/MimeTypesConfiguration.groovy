@@ -28,7 +28,6 @@ import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Primary
-import org.springframework.core.env.Environment
 import org.springframework.web.accept.ContentNegotiationManager
 
 import grails.config.Config
@@ -171,15 +170,17 @@ class MimeTypesConfiguration {
     /**
      * With {@code grails.mime.negotiation.spring}, has Spring MVC's content negotiation manager apply the
      * {@code grails.mime} rules Grails keeps to the requests a URL mapping handles. Static, as a post-processor is
-     * created before the other beans, and the strategy it applies them with is that of the configurer, once a request
-     * is negotiated.
+     * created before the other beans: it reads the setting from the application's configuration as Spring MVC's manager
+     * is created, as the strategy of the configurer, which it applies the rules with once a request is negotiated, reads
+     * it.
      *
      * @since 9.0
      */
     @Bean
     static GrailsContentNegotiationManagerPostProcessor grailsContentNegotiationManagerPostProcessor(
-            Environment environment, ObjectProvider<GrailsMimeTypesWebMvcConfigurer> grailsMimeTypesWebMvcConfigurer) {
-        return new GrailsContentNegotiationManagerPostProcessor(environment, () ->
+            ObjectProvider<GrailsApplication> grailsApplication,
+            ObjectProvider<GrailsMimeTypesWebMvcConfigurer> grailsMimeTypesWebMvcConfigurer) {
+        return new GrailsContentNegotiationManagerPostProcessor(() -> grailsApplication.getObject().config, () ->
                 grailsMimeTypesWebMvcConfigurer.getObject().contentNegotiationStrategy)
     }
 

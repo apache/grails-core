@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.MutablePropertySources
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -377,6 +378,28 @@ class SpringFormatNegotiationSpec extends Specification {
         request.mimeTypes*.name == ['image/png']
     }
 
+    void "the setting is read from the application's configuration, for Spring MVC's manager as for Grails formats, where the environment says #environment"() {
+        given: 'a configuration of the application that is not the environment, as one a test builds by hand'
+        context = new AnnotationConfigWebApplicationContext()
+        context.servletContext = new MockServletContext()
+        context.environment.propertySources.addFirst(new MapPropertySource('test', [
+                (Settings.MIME_NEGOTIATION_SPRING)        : environment,
+                (SeparateConfigConfiguration.CONFIGURED): configured
+        ]))
+        context.register(SeparateConfigConfiguration)
+        context.refresh()
+        request('Accept': '*/*, application/json')
+
+        expect:
+        (manager() instanceof GrailsContentNegotiationManager) == configured
+        GrailsWebRequest.lookup().currentResponse.format == format
+
+        where:
+        environment | configured || format
+        false       | true       || 'json'
+        true        | false      || 'all'
+    }
+
     void 'without the setting, the Grails 9 rules resolve the formats'() {
         given:
         start([:])
@@ -431,6 +454,27 @@ class SpringFormatNegotiationSpec extends Specification {
         GrailsApplication grailsApplication(ApplicationContext applicationContext, ConfigurableEnvironment environment) {
             def application = new DefaultGrailsApplication()
             application.config = new PropertySourcesConfig(environment.propertySources)
+            application.applicationContext = applicationContext
+            application.mainContext = applicationContext
+            application
+        }
+    }
+
+    /** An application whose configuration has the setting the test gives it apart from the environment. */
+    @Configuration(proxyBeanMethods = false)
+    @EnableWebMvc
+    @Import(MimeTypesConfiguration)
+    static class SeparateConfigConfiguration {
+
+        static final String CONFIGURED = 'test.configured.negotiation'
+
+        @Bean
+        GrailsApplication grailsApplication(ApplicationContext applicationContext, ConfigurableEnvironment environment) {
+            def propertySources = new MutablePropertySources()
+            propertySources.addFirst(new MapPropertySource('configured',
+                    [(Settings.MIME_NEGOTIATION_SPRING): environment.getProperty(CONFIGURED, Boolean)]))
+            def application = new DefaultGrailsApplication()
+            application.config = new PropertySourcesConfig(propertySources)
             application.applicationContext = applicationContext
             application.mainContext = applicationContext
             application
