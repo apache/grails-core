@@ -4972,3 +4972,15 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 * Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
+
+==== 94. Cache Annotations Use `grailsCacheManager` When Another Cache Manager Is Defined
+
+Grails 8.0.0 injected the cache manager the cache annotations use by type. An application context with a second `CacheManager` beside the plugin's `grailsCacheManager` therefore failed to start unless one of them was marked primary, and that is what happens when the Spring Security plugin's `cacheUsers` is set. Grails now chooses the cache manager this way:
+
+* The bean named `grailsCacheManager` comes first.
+* Where there is none, as when `grails.cache.enabled` is `false`, it is the cache manager Spring would inject: the only one, or the one marked primary.
+* Where Spring cannot choose one, the class does not cache, and a warning names the cache managers. Grails 8.0.0 failed to start in that case.
+
+In an application that marked a cache manager of its own primary, next to `grailsCacheManager`, the cache annotations used that cache manager. They now use `grailsCacheManager`, and Grails logs once, at INFO level, that it passed the primary one over. To keep caching with another cache manager, define it as the `grailsCacheManager` bean. It has to implement `GrailsCacheManager`, as the cache tags and the plugin's startup use it too.
+
+A plugin compiled against Grails 8.0.0 keeps injecting its cache manager by type until it is compiled against a later version.

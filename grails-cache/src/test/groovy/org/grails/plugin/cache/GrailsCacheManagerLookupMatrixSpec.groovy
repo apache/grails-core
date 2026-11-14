@@ -32,6 +32,9 @@ import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.context.support.GenericApplicationContext
+import org.codehaus.groovy.control.CompilationUnit
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.tools.GroovyClass
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -96,18 +99,73 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
         when:
         CacheManager found = context.getBean('probe', CacheAware).grailsCacheManager
 
-        then:
+        then: 'it names the class and the cache managers, in Spring\'s words'
         found == null
-        log.events*.formattedMessage == ["${CacheAware.name} does not cache: there is no cache manager named grailsCacheManager, " +
-                'and Spring cannot choose among [first, second]. Mark one of them primary, or define the one to cache with as ' +
-                'grailsCacheManager.'] as List<String>
+        log.events.size() == 1
+        log.events[0].formattedMessage.startsWith("${CacheAware.name} does not cache: there is no cache manager named grailsCacheManager")
+        log.events[0].formattedMessage.contains('first,second')
 
         cleanup:
         log?.close()
         context?.close()
     }
 
-    void 'the first answer stands, as an injected cache manager did, so a lookup that finds none is not repeated'() {
+    void 'two cache managers marked primary are reported in Spring\'s words, rather than as a list it does not give'() {
+        given:
+        GenericApplicationContext context = context([first: 'primary', second: 'primary'], [:])
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.WARN)
+
+        when:
+        CacheManager found = context.getBean('probe', CacheAware).grailsCacheManager
+
+        then:
+        found == null
+        log.events.size() == 1
+        log.events[0].formattedMessage.contains("more than one 'primary' bean found")
+        !log.events[0].formattedMessage.contains('null')
+
+        cleanup:
+        log?.close()
+        context?.close()
+    }
+
+    void 'a primary cache manager passed over for grailsCacheManager is reported once'() {
+        given: 'an application cache manager marked primary, and two cache-aware beans'
+        GenericApplicationContext context = context([grailsCacheManager: 'plain', redis: 'primary'], [:])
+        context.registerBean('another', CacheAware, { -> new CacheAware() } as Supplier<CacheAware>)
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.INFO)
+
+        when:
+        context.getBean('probe', CacheAware).grailsCacheManager
+        context.getBean('another', CacheAware).grailsCacheManager
+
+        then:
+        log.events*.formattedMessage == ['Grails caches with the cache manager named grailsCacheManager, not with redis, ' +
+                'which is marked primary. Define the one to cache with as grailsCacheManager.']
+
+        cleanup:
+        log?.close()
+        context?.close()
+    }
+
+    void 'no primary cache manager is reported where grailsCacheManager is an alias of the primary one'() {
+        given: 'the primary cache manager, under another name, aliased as grailsCacheManager'
+        GenericApplicationContext context = context([redis: 'primary'], [:])
+        context.registerAlias('redis', 'grailsCacheManager')
+        LogCapture log = new LogCapture(GrailsCacheManagerLookup, Level.INFO)
+
+        when:
+        context.getBean('probe', CacheAware).grailsCacheManager
+
+        then:
+        log.events == []
+
+        cleanup:
+        log?.close()
+        context?.close()
+    }
+
+    void 'the cache manager is chosen when the bean is created, as an injected one was'() {
         given: 'a context with no cache manager'
         GenericApplicationContext context = context([:], [:])
         CacheAware aware = context.getBean('probe', CacheAware)
@@ -123,6 +181,57 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
 
         cleanup:
         context.close()
+    }
+
+    void 'a class compiled against the trait 8.0.0 shipped works with this one'() {
+        given: 'a cached class compiled together with that trait, of which only the class is loaded beside this one'
+        Class<?> compiled = compiledAgainst800('''
+            package compat
+            class OldCacheAware implements org.grails.plugin.cache.GrailsCacheManagerAware {
+            }
+        ''', 'compat.OldCacheAware')
+
+        expect: 'created on its own, it has no cache manager, rather than throwing'
+        compiled.getDeclaredConstructor().newInstance().grailsCacheManager == null
+
+        when: 'created as a bean, it is injected through the field it declares, as with 8.0.0'
+        CacheManager only = new ConcurrentMapCacheManager()
+        GenericApplicationContext context = new GenericApplicationContext()
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context)
+        context.registerBean('cacheManager', CacheManager, { -> only } as Supplier<CacheManager>)
+        context.registerBean('old', (Class<Object>) compiled)
+        context.refresh()
+
+        then:
+        context.getBean('old').grailsCacheManager.is(only)
+
+        cleanup:
+        context?.close()
+    }
+
+    /**
+     * Compiles the source with the trait as 8.0.0 shipped it, and loads only the class, so that the
+     * trait it runs against is this one, as for a plugin compiled against 8.0.0.
+     */
+    private Class<?> compiledAgainst800(String source, String className) {
+        String trait800 = getClass().getResource('GrailsCacheManagerAware-8.0.0.groovy.txt').text
+        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(), null, new GroovyClassLoader(getClass().classLoader))
+        unit.addSource('GrailsCacheManagerAware.groovy', trait800)
+        unit.addSource('OldCacheAware.groovy', source)
+        unit.compile()
+        Map<String, byte[]> classes = unit.classes.collectEntries { GroovyClass compiled -> [(compiled.name): compiled.bytes] }
+        assert classes.keySet().any { it.startsWith('org.grails.plugin.cache.GrailsCacheManagerAware') }
+        ClassLoader loader = new ClassLoader(getClass().classLoader) {
+            @Override
+            protected Class<?> findClass(String name) {
+                byte[] bytes = name.startsWith('org.grails.plugin.cache.') ? null : classes[name]
+                if (bytes == null) {
+                    throw new ClassNotFoundException(name)
+                }
+                defineClass(name, bytes, 0, bytes.length)
+            }
+        }
+        loader.loadClass(className)
     }
 
     private Map<String, Object> run(Map<String, String> row, Class<?> probe) {

@@ -18,28 +18,28 @@
  */
 package org.grails.plugin.cache
 
-import java.lang.reflect.Field
-
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.beans.factory.config.DependencyDescriptor
+import org.springframework.beans.factory.ObjectProvider
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.cache.CacheManager
 
 /**
- * Finds the cache manager a {@link GrailsCacheManagerAware} class caches with.
+ * Chooses the cache manager a {@link GrailsCacheManagerAware} class caches with, when Spring creates
+ * it.
  *
  * <p>The bean named {@code grailsCacheManager} comes first, as the plugin creates its caches in it
- * and its tag library is wired to it by name. Without one, the cache manager is resolved exactly as
- * Spring resolves a {@code CacheManager} field marked {@code @Autowired(required = false)}, which is
- * how the trait used to receive it: the only candidate, or the one marked primary or of the highest
- * priority, with lazy beans, fallback beans and beans that are not autowire candidates treated as
- * that injection treats them, and only the cache manager chosen created. Where Spring cannot choose,
- * which failed startup when the trait was injected, there is no cache manager, and a warning says
- * why.</p>
+ * and its tag library is wired to it by name; a cache manager marked primary is passed over for it,
+ * which is logged once. Without one, the cache manager is the one Spring resolves for the
+ * {@code ObjectProvider} it is given, which is the one it injected into the trait's
+ * {@code @Autowired(required = false)} field: the only candidate, or the one marked primary or of the
+ * highest priority, with lazy beans, fallback beans and beans that are not autowire candidates
+ * treated as that injection treated them, and only the cache manager chosen created. Where Spring
+ * cannot choose, which failed startup when the field was injected, there is no cache manager, and a
+ * warning says why.</p>
  *
  * @since 8.0.1
  */
@@ -49,39 +49,46 @@ final class GrailsCacheManagerLookup {
 
     static final String BEAN_NAME = 'grailsCacheManager'
 
-    /** The injection point the trait declared, which is resolved as Spring resolved it. */
-    private static final Field INJECTION_POINT = InjectionPoint.getDeclaredField(BEAN_NAME)
+    /** The bean factories a primary cache manager passed over has been reported for. */
+    private static final Set<BeanFactory> REPORTED = Collections.synchronizedSet(
+            Collections.newSetFromMap(new WeakHashMap<BeanFactory, Boolean>()))
 
     private GrailsCacheManagerLookup() {
     }
 
     /**
-     * @param beanFactory where the cache manager is looked up
+     * @param beanFactory where the cache manager named {@code grailsCacheManager} is looked up
+     * @param cacheManagers the cache manager Spring would inject
      * @param owner the class that caches with it, which a warning names
      * @return the cache manager, or null if there is none or Spring cannot choose one
      */
-    static CacheManager find(BeanFactory beanFactory, Class<?> owner) {
+    static CacheManager find(BeanFactory beanFactory, ObjectProvider<CacheManager> cacheManagers, Class<?> owner) {
         if (beanFactory.containsBean(BEAN_NAME) && beanFactory.isTypeMatch(BEAN_NAME, CacheManager)) {
+            reportPrimaryPassedOver(beanFactory)
             return beanFactory.getBean(BEAN_NAME, CacheManager)
         }
-        if (!(beanFactory instanceof AutowireCapableBeanFactory)) {
-            return beanFactory.getBeanProvider(CacheManager).getIfUnique()
-        }
         try {
-            return (CacheManager) ((AutowireCapableBeanFactory) beanFactory)
-                    .resolveDependency(new DependencyDescriptor(INJECTION_POINT, false), null)
+            return cacheManagers.getIfAvailable()
         }
         catch (NoUniqueBeanDefinitionException e) {
-            log.warn('{} does not cache: there is no cache manager named {}, and Spring cannot choose among {}. ' +
-                    'Mark one of them primary, or define the one to cache with as {}.',
-                    owner.name, BEAN_NAME, e.beanNamesFound, BEAN_NAME)
+            log.warn('{} does not cache: there is no cache manager named {}, and Spring cannot choose one. {} ' +
+                    'Define the one to cache with as {}.', owner.name, BEAN_NAME, e.message, BEAN_NAME)
             return null
         }
     }
 
-    @CompileStatic
-    private static class InjectionPoint {
-
-        CacheManager grailsCacheManager
+    private static void reportPrimaryPassedOver(BeanFactory beanFactory) {
+        if (!log.infoEnabled || !(beanFactory instanceof ConfigurableListableBeanFactory)) {
+            return
+        }
+        ConfigurableListableBeanFactory listable = (ConfigurableListableBeanFactory) beanFactory
+        List<String> primary = listable.getBeanNamesForType(CacheManager, true, false).findAll { String name ->
+            name != BEAN_NAME && !(BEAN_NAME in listable.getAliases(name)) &&
+                    listable.containsBeanDefinition(name) && listable.getBeanDefinition(name).primary
+        }
+        if (primary && REPORTED.add(beanFactory)) {
+            log.info('Grails caches with the cache manager named {}, not with {}, which is marked primary. ' +
+                    'Define the one to cache with as {}.', BEAN_NAME, primary.join(', '), BEAN_NAME)
+        }
     }
 }
