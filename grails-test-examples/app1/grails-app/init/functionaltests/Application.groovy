@@ -19,8 +19,11 @@
 
 package functionaltests
 
+import org.springframework.context.annotation.Bean
+
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
+import functionaltests.contentneg.SpringNegotiationApi
 
 class Application extends GrailsAutoConfiguration {
 	static {
@@ -29,5 +32,13 @@ class Application extends GrailsAutoConfiguration {
 	
     static void main(String[] args) {
         GrailsApp.run(Application)
+    }
+
+    /**
+     * A Spring MVC endpoint beside the Grails controllers, which content negotiation leaves to Spring MVC.
+     */
+    @Bean
+    SpringNegotiationApi springNegotiationApi() {
+        new SpringNegotiationApi()
     }
 }
