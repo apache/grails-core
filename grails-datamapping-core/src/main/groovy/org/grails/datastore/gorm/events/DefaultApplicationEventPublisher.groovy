@@ -19,6 +19,8 @@
 
 package org.grails.datastore.gorm.events
 
+import java.util.concurrent.CopyOnWriteArrayList
+
 import groovy.transform.CompileStatic
 
 import org.springframework.context.ApplicationEvent
@@ -35,7 +37,9 @@ import org.springframework.context.event.SmartApplicationListener
 @CompileStatic
 class DefaultApplicationEventPublisher implements ConfigurableApplicationEventPublisher {
 
-    private List<ApplicationListener> applicationListeners = []
+    // Copied on write: a datastore adds the listeners of a schema it adds at runtime, which can happen while an
+    // event is being published on this thread or another one. A listener added then receives the next event.
+    private final List<ApplicationListener> applicationListeners = new CopyOnWriteArrayList<>()
 
     @Override
     void publishEvent(ApplicationEvent event) {
