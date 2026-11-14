@@ -158,14 +158,18 @@ class GrailsContentNegotiationStrategy {
      *
      * @param format the format
      * @return its first configured type; for a format that is not configured, the first configured type, as Grails 9
-     * answers, or, with {@code grails.mime.negotiation.spring}, {@code null}, since the request accepts no
-     * configured type
+     * answers, or, with {@code grails.mime.negotiation.spring}, {@code null}, since the request accepts no configured
+     * type, except for the {@code all} format, which is {@code *&#47;*}, any type
      * @since 9.0
      */
     MimeType resolveFormat(Object format) {
         MimeType mimeType = mimeTypes.find { MimeType configured -> configured.extension == format }
-        if (mimeType != null || springNegotiation) {
+        if (mimeType != null) {
             return mimeType
+        }
+        if (springNegotiation) {
+            // the all format is any type, as Spring MVC reads */*, also where grails.mime.types does not list it
+            return format == ALL_FORMAT ? new MimeType(MimeType.ALL.name, ALL_FORMAT) : null
         }
         return mimeTypes.find { it }
     }
@@ -229,7 +233,8 @@ class GrailsContentNegotiationStrategy {
      * suffix, as Spring MVC's JSON and XML converters write them.
      *
      * @param format the format
-     * @return the media types, or {@code null} where no type of the format is configured
+     * @return the media types, {@code *&#47;*} for the {@code all} format where no type of it is configured, or
+     * {@code null} where no type of another format is
      * @since 9.0
      */
     List<MediaType> mediaTypesOf(String format) {
@@ -240,7 +245,8 @@ class GrailsContentNegotiationStrategy {
             }
         }
         if (types.isEmpty()) {
-            return null
+            // the all format is any type, also where grails.mime.types does not list it
+            return format == ALL_FORMAT ? [MediaType.ALL] : null
         }
         if (format != null && SUFFIX_FORMATS.contains(format)) {
             MediaType suffixed = new MediaType('application', "*+${format}".toString())

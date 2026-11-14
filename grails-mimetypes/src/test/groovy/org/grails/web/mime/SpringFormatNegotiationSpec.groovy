@@ -257,6 +257,40 @@ class SpringFormatNegotiationSpec extends Specification {
         } == 'html'
     }
 
+    void 'a client that accepts any type answers respond with any format after its format is read, #how, also where the all format is not configured'() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [json: 'application/json', html: 'text/html'])
+        def request = request(accept ? ['Accept': accept] : [:])
+        def response = GrailsWebRequest.lookup().currentResponse
+
+        when: 'the format is read, which saves it for the response, and then the types respond answers in'
+        String format = response.format
+        def formatAware = response.mimeTypesFormatAware.toList()
+
+        then:
+        format == 'all'
+        formatAware*.extension == ['all']
+        formatAware*.name == ['*/*']
+        response.mimeType.name == '*/*'
+
+        where:
+        how                   | accept
+        'with Accept: */*'    | '*/*'
+        'without Accept'      | null
+    }
+
+    void 'a format parameter of all, where the all format is not configured, leaves the format to the Accept header'() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [json: 'application/json', html: 'text/html'])
+        def request = request('Accept': 'application/json')
+        handledBy(request, urlMapping())
+        GrailsWebRequest.lookup().params.format = 'all'
+
+        expect:
+        GrailsWebRequest.lookup().currentResponse.format == 'json'
+        manager().resolveMediaTypes(new ServletWebRequest(request)) == [MediaType.APPLICATION_JSON]
+    }
+
     void 'a wildcard is of the all format, which withFormat answers with the first block compatible with it: #result for #accept'() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true)

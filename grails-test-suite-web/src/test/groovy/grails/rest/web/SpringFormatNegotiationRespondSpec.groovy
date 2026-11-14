@@ -149,6 +149,42 @@ class SpringFormatNegotiationRespondSpec extends Specification implements Contro
 }
 
 /**
+ * With {@code grails.mime.negotiation.spring} and a {@code grails.mime.types} that does not list the {@code all} format,
+ * a client that accepts any type is still answered in the action's first format, whatever read the response format first.
+ */
+class SpringFormatNegotiationWithoutAllRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
+
+    Closure doWithConfig() {
+        { config ->
+            config[Settings.WEB_RENDERING_JSON_SPRING] = true
+            config[Settings.MIME_NEGOTIATION_SPRING] = true
+            config[Settings.MIME_TYPES] = [json: 'application/json', xml: 'application/xml', html: 'text/html']
+        }
+    }
+
+    void 'a client that accepts any type is answered in the first format of the action after the response format is read, #how'() {
+        given:
+        if (accept) {
+            request.addHeader('Accept', accept)
+        }
+
+        when:
+        String format = response.format
+        controller.respond([title: 'Grails'], formats: ['json', 'xml'])
+
+        then:
+        format == 'all'
+        response.status == 200
+        response.contentType.startsWith('application/json')
+
+        where:
+        how               | accept
+        'with Accept */*' | '*/*'
+        'without Accept'  | null
+    }
+}
+
+/**
  * Without {@code grails.mime.negotiation.spring}, the Grails 9 rules resolve the format {@code respond} answers in.
  */
 class GrailsFormatNegotiationRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
