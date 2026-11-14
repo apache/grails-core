@@ -184,6 +184,18 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             }
         }
 
+        int jpaIdPropertyCount = 0
+        for (PropertyNode pn in propertyNodes) {
+            final List<AnnotationNode> idCandidates = pn.annotations + pn.getField().annotations
+            final GetterAndSetter idGetterAndSetter = gettersAndSetters[pn.name]
+            if (idGetterAndSetter?.getter != null) {
+                idCandidates.addAll(idGetterAndSetter.getter.annotations)
+            }
+            if (hasAnnotation(idCandidates, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                jpaIdPropertyCount++
+            }
+        }
+
         boolean hasVersion = false
         for (PropertyNode pn in propertyNodes) {
             final propertyName = pn.name
@@ -208,8 +220,9 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
                 if (hasAnnotation(allAnnotationNodes, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
                     if (!propertyName.equals(GormProperties.IDENTITY)) {
-                        // if the property is a JPA @Id but the property name is not id add a transient getter to retrieve the id called getId
-                        if (classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
+                        // if the property is the only JPA @Id but the property name is not id add a transient getter to retrieve the id called getId,
+                        // a composite id has no single value to return
+                        if (jpaIdPropertyCount == 1 && classNode.getField(GormProperties.IDENTITY) == null && gettersAndSetters[GormProperties.IDENTITY] == null) {
                             def getIdMethod = new MethodNode(
                                     'getId',
                                     Modifier.PUBLIC,
