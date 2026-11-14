@@ -183,7 +183,16 @@ class SimpleMapQuery extends Query {
     def associationQueryHandlers = [
         (AssociationQuery): { allEntities, Association association, AssociationQuery aq ->
             Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
+            def matchingIdentifiers = executeAssociationSubQuery(datastore[getFamily(association.associatedEntity)], association.associatedEntity, queryCriteria, aq.association)
+            if (association instanceof Embedded) {
+                return matchingIdentifiers
+            }
+            // the identifiers found are those of the associated entities; the owners are the ones that refer to them
+            Set matching = matchingIdentifiers as Set
+            def reflector = association.associatedEntity.reflector
+            return queryAssociation(allEntities, association) {
+                matching.contains(reflector.getIdentifier(it))
+            }
         },
 
         (FunctionCallingCriterion): { allEntities, Association association, FunctionCallingCriterion fcc ->
@@ -694,7 +703,7 @@ class SimpleMapQuery extends Query {
     Collection executeSubQueryInternal(criteria, criteriaList) {
         SimpleMapResultList resultList = new SimpleMapResultList(this)
         for (Query.Criterion criterion in criteriaList) {
-            if (isEmptyBlock(criterion)) {
+            if (isEmptyBlock(criterion) || isVacuousJunction(criterion)) {
                 continue
             }
             if (criterion instanceof Query.Junction) {
@@ -721,6 +730,11 @@ class SimpleMapQuery extends Query {
             return datastore[family].keySet().toList()
         }
         return applyJunctionToResults(criteria, resultList.results)
+    }
+
+    /** a junction with nothing in it, or only such junctions, adds nothing to the junction it stands in */
+    private static boolean isVacuousJunction(Query.Criterion criterion) {
+        criterion instanceof Query.Junction && ((Query.Junction) criterion).getCriteria().every { Query.Criterion inner -> isVacuousJunction(inner) }
     }
 
     private static boolean isEmptyBlock(Query.Criterion criterion) {
