@@ -25,6 +25,7 @@ import jakarta.annotation.Priority
 import ch.qos.logback.classic.Level
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.Phases
 import org.codehaus.groovy.tools.GroovyClass
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.ObjectFactory
@@ -358,7 +359,8 @@ class GrailsCacheManagerLookupMatrixSpec extends Specification {
         CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(), null, new GroovyClassLoader(getClass().classLoader))
         unit.addSource('GrailsCacheManagerAware.groovy', trait800)
         unit.addSource('OldCacheAware.groovy', source)
-        unit.compile()
+        // up to class generation only, so that nothing is written to the working directory
+        unit.compile(Phases.CLASS_GENERATION)
         Map<String, byte[]> classes = unit.classes.collectEntries { GroovyClass compiled -> [(compiled.name): compiled.bytes] }
         assert classes.keySet().any { it.startsWith('org.grails.plugin.cache.GrailsCacheManagerAware') }
         ClassLoader loader = new ClassLoader(getClass().classLoader) {
