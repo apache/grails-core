@@ -26,7 +26,7 @@ import spock.lang.Issue
 class CompositeIndexColumnOrderSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(OrderedIndexNft)
+        manager.registerDomainClasses(OrderedIndexNft, ShuffledIndexNft)
     }
 
     void "properties naming the same index give a composite index in declaration order"() {
@@ -51,6 +51,29 @@ class CompositeIndexColumnOrderSpec extends HibernateGormDatastoreSpec {
         then:
         columns == ['token', 'address']
     }
+
+    void "the columns follow the order the properties are declared in the class, not the order of the mapping block"() {
+        when:
+        List<String> columns = []
+        datastore.dataSource.connection.withCloseable { conn ->
+            [ 'shuffled_index_nft', 'SHUFFLED_INDEX_NFT' ].each { String table ->
+                conn.metaData.getIndexInfo(null, null, table, false, false).withCloseable { rs ->
+                    List<List> rows = []
+                    while (rs.next()) {
+                        if (rs.getString('INDEX_NAME')?.equalsIgnoreCase('idx_shuffled_nft')) {
+                            rows << [rs.getInt('ORDINAL_POSITION'), rs.getString('COLUMN_NAME').toLowerCase()]
+                        }
+                    }
+                    if (rows) {
+                        columns = rows.sort { it[0] }.collect { (String) it[1] }
+                    }
+                }
+            }
+        }
+
+        then: 'the mapping block names chain, then address, then token'
+        columns == ['token', 'address', 'chain']
+    }
 }
 
 @Entity
@@ -61,5 +84,18 @@ class OrderedIndexNft {
     static mapping = {
         token index: 'idx_ordered_nft'
         address index: 'idx_ordered_nft'
+    }
+}
+
+@Entity
+class ShuffledIndexNft {
+    String token
+    String address
+    String chain
+
+    static mapping = {
+        chain index: 'idx_shuffled_nft'
+        address index: 'idx_shuffled_nft'
+        token index: 'idx_shuffled_nft'
     }
 }

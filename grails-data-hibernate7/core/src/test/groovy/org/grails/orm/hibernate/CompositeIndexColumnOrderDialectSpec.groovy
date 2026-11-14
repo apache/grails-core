@@ -32,7 +32,7 @@ import spock.lang.Shared
 /**
  * Pins https://github.com/apache/grails-core/issues/14424 on every externally-run dialect (see
  * {@link GormTextTypeColumnIntegrationSpec} for the same precedent): properties that name the same
- * index get a composite index whose columns follow the order the properties are declared in. The
+ * index get a composite index whose columns follow the order the properties are declared in the class, whatever order the mapping block names them in. The
  * reporter used PostgreSQL and saw the columns in alphabetical order.
  */
 @Issue('https://github.com/apache/grails-core/issues/14424')
@@ -100,7 +100,7 @@ class IndexedNft implements HibernateEntity<IndexedNft> {
     String address
 
     static mapping = {
-        token index: 'idx_nft'
         address index: 'idx_nft'
+        token index: 'idx_nft'
     }
 }
