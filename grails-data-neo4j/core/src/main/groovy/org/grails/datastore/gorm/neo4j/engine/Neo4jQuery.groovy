@@ -190,6 +190,7 @@ class Neo4jQuery extends Query {
         CypherExpression handle(CriterionScope scope, Query.Conjunction criterion) {
             def inner = ((Query.Junction) criterion).criteria
                     .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
+                    .findAll { String expression -> expression }
                     .join(CriterionHandler.OPERATOR_AND)
             return new CypherExpression(inner ? "( $inner )" : inner)
         }
@@ -203,6 +204,7 @@ class Neo4jQuery extends Query {
             try {
                 def inner = ((Query.Junction) criterion).criteria
                         .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
+                        .findAll { String expression -> expression }
                         .join(CriterionHandler.OPERATOR_OR)
                 return new CypherExpression(inner ? "( $inner )" : inner)
             } finally {
@@ -759,9 +761,10 @@ class Neo4jQuery extends Query {
             if (scope.entity.isRelationshipEntity()) {
                 return dispatchCriterion(criterion.criteria, scope.forEnd(association))
             }
-            if (scope.builder.inDisjunction) {
+            if (scope.builder.inDisjunction && !criterion.criteria.getCriteria().isEmpty()) {
                 // a block in a disjunction is true for a node that has a matching neighbour, and false for one that
-                // has none, so the other branches still see the nodes without; a match would drop them first
+                // has none, so the other branches still see the nodes without; a match would drop them first.
+                // A block without criteria is no branch: it keeps the match, so it still asks for a neighbour.
                 CriterionScope.Existence existence = scope.intoExistence(criterion)
                 String conditions = dispatchCriterion(criterion.criteria, existence.scope).toString()
                 return new CypherExpression("size([${existence.pattern}${conditions ? ' WHERE ' + conditions : ''} | 1]) > 0".toString())
