@@ -304,6 +304,10 @@ public class PredicateGenerator {
                 alternativesDepth--;
             }
         }
+        if (predicates.length == 0) {
+            // a junction with nothing in it adds nothing; JPA would make an empty disjunction false and zero the query
+            return null;
+        }
         if (junction instanceof Query.Conjunction) {
             return criteriaBuilder.and(predicates);
         } else if (junction instanceof Query.Disjunction) {
