@@ -241,7 +241,17 @@ class SimpleMapQuery extends Query {
                 function(resolveIfEmbedded(eq.property, it)) == null
             }
         },
-        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it} ->
+        (Query.IsEmpty): { allEntities, Association association, Query.IsEmpty eq, Closure function = { it } ->
+            queryAssociation(allEntities, association) {
+                isEmptyValue(function(resolveIfEmbedded(eq.property, it)))
+            }
+        },
+        (Query.IsNotEmpty): { allEntities, Association association, Query.IsNotEmpty eq, Closure function = { it } ->
+            queryAssociation(allEntities, association) {
+                !isEmptyValue(function(resolveIfEmbedded(eq.property, it)))
+            }
+        },
+        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(eq)
                 function(resolveIfEmbedded(eq.property, it)) != value
@@ -468,6 +478,12 @@ class SimpleMapQuery extends Query {
         },
         (Query.IsNull): { Query.IsNull equals, PersistentProperty property, Closure function = null , boolean onValue = false ->
             handlers[Query.Equals].call(new Query.Equals(equals.property, null), property, function)
+        },
+        (Query.IsEmpty): { Query.IsEmpty criterion, PersistentProperty property ->
+            identifiersWhereEmpty(property, true)
+        },
+        (Query.IsNotEmpty): { Query.IsNotEmpty criterion, PersistentProperty property ->
+            identifiersWhereEmpty(property, false)
         },
         (Query.IdEquals): { Query.IdEquals equals, PersistentProperty property ->
             def indexer = entityPersister.getPropertyIndexer(property)
@@ -719,8 +735,11 @@ class SimpleMapQuery extends Query {
                 }
                 else {
                     def handler = handlers[criterion.getClass()]
+                    if (handler == null) {
+                        throw new InvalidDataAccessResourceUsageException("Queries of type ${criterion.getClass().simpleName} are not supported by this implementation")
+                    }
 
-                    def results = handler?.call(criterion, property) ?: []
+                    def results = handler.call(criterion, property) ?: []
                     resultList.results << results
                 }
             }
