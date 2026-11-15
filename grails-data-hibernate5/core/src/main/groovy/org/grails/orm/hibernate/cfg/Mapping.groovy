@@ -209,8 +209,11 @@ class Mapping extends Entity<PropertyConfig> {
         String name = id.name ?: 'id'
         PropertyConfig pc = columns[name]
         if (pc == null) {
-            pc = new PropertyConfig()
+            // start from the wildcard defaults, as every other property does, so the id keeps the SQL type they give
+            pc = getOrInitializePropertyConfig(name)
             columns[name] = pc
+            pc.column(length: length)
+            return
         }
         if (pc.columns.isEmpty()) {
             pc.columns << new ColumnConfig()

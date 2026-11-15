@@ -29,7 +29,7 @@ import spock.lang.Issue
 class IdentityLengthSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([BuilderIdLength, ClosureIdLength])
+        manager.domainClasses.addAll([BuilderIdLength, ClosureIdLength, BuilderIdLengthWildcard, ClosureIdLengthWildcard])
     }
 
     private int idColumnLength(String table) {
@@ -47,6 +47,24 @@ class IdentityLengthSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         expect:
         idColumnLength('CLOSURE_ID_LENGTH') == 20
     }
+
+    private Map columnType(String table, String column) {
+        List row = manager.hibernateSession.createSQLQuery(
+                "select data_type, character_maximum_length from information_schema.columns where upper(table_name) = '${table}' and upper(column_name) = '${column}'"
+        ).uniqueResult() as List
+        [type: row[0], length: row[1] as int]
+    }
+
+    void 'a wildcard SQL type still reaches the id when MappingBuilder.orm gives the id a length'() {
+        expect: 'the id takes the type every other column takes, as it does with the mapping closure'
+        columnType('BUILDER_ID_LENGTH_WILDCARD', 'ID').type == columnType('BUILDER_ID_LENGTH_WILDCARD', 'NAME').type
+        columnType('BUILDER_ID_LENGTH_WILDCARD', 'ID') == columnType('CLOSURE_ID_LENGTH_WILDCARD', 'ID')
+    }
+
+    void 'a wildcard SQL type still reaches the id when the mapping closure gives the id a length'() {
+        expect:
+        columnType('CLOSURE_ID_LENGTH_WILDCARD', 'ID').type == columnType('CLOSURE_ID_LENGTH_WILDCARD', 'NAME').type
+    }
 }
 
 @Entity
@@ -63,6 +81,32 @@ class ClosureIdLength {
     String id
 
     static mapping = {
+        id generator: 'assigned', length: 20
+    }
+}
+
+@Entity
+class BuilderIdLengthWildcard {
+    String id
+    String name
+
+    static mapping = MappingBuilder.orm {
+        '*'(property {
+            column {
+                sqlType 'char(30)'
+            }
+        })
+        id generator: 'assigned', length: 20
+    }
+}
+
+@Entity
+class ClosureIdLengthWildcard {
+    String id
+    String name
+
+    static mapping = {
+        '*'(sqlType: 'char(30)')
         id generator: 'assigned', length: 20
     }
 }
