@@ -28,6 +28,7 @@ import jakarta.persistence.CascadeType
 import jakarta.persistence.EnumType
 import jakarta.persistence.FetchType
 
+import org.grails.datastore.mapping.validation.CascadeValidateType
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
 
@@ -121,6 +122,31 @@ class Property implements Cloneable {
      * if the property is an association.
      */
     String cascadeValidate
+
+    /**
+     * Sets the cascade validation mode, refusing a name that is not one when the mapping is read.
+     *
+     * @param cascadeValidate default, none, owned or dirty, in any letter case, or null for the default
+     * @throws IllegalArgumentException when the value names no mode
+     */
+    void setCascadeValidate(String cascadeValidate) {
+        if (cascadeValidate != null) {
+            CascadeValidateType.fromMappedName(cascadeValidate)
+        }
+        this.@cascadeValidate = cascadeValidate
+    }
+
+    /**
+     * The fluent form of {@link #setCascadeValidate(String)}, so the builder method checks the value too.
+     *
+     * @param cascadeValidate default, none, owned or dirty, in any letter case, or null for the default
+     * @return This property
+     * @throws IllegalArgumentException when the value names no mode
+     */
+    Property cascadeValidate(String cascadeValidate) {
+        setCascadeValidate(cascadeValidate)
+        return this
+    }
     /**
      * For specifying the cascade type using {@link CascadeType}
      */
