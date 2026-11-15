@@ -28,4 +28,8 @@ class CriteriaMiddle implements Serializable {
     Long version
     String code
     CriteriaGrandparent parent
+
+    static constraints = {
+        parent nullable: true
+    }
 }
