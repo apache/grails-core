@@ -145,15 +145,17 @@ final class CriterionScope {
     }
 
     /**
-     * Whether a criterion on the property is about a collection of nodes that a disjunction has to read where it stands.
-     * A match would require the collection for the whole query and drop the nodes that have none before the other
-     * branches could keep them. A criterion on a collection holds when some element satisfies it.
+     * Whether a criterion on the property is about a collection of nodes, which is read where it stands. A match
+     * would require the collection for the whole query, which drops the nodes that have none before the other
+     * branches of a disjunction could keep them, and it would give each criterion a relationship of its own, which
+     * Cypher does not let two patterns of one match share, so two criteria that the same element satisfies would
+     * find nothing. A criterion on a collection holds when some element satisfies it, in any context.
      *
      * @param name The property name
-     * @return True for a collection of nodes, in a disjunction or a negation
+     * @return True for a collection of nodes
      */
     boolean readsMembers(String name) {
-        if (!builder.inDisjunction || entity.isRelationshipEntity()) {
+        if (entity.isRelationshipEntity()) {
             return false
         }
         PersistentProperty found = entity.getPropertyByName(name)
