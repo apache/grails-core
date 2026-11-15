@@ -82,7 +82,7 @@ A reviewer who finds one bug has found a sample of a class. Find the class yours
 - Pin user-visible behavior with integration scenarios in `grails-test-examples` for both `hibernate5` and `hibernate7`, and with unit specs in the owning module. Probe Hibernate 5 first, and read the reference docs, before deciding what the right answer is.
 - Reproduce a bug as a failing unit spec in the module that owns it before fixing it, not through a downstream functional failure.
 - Use `HibernateGormDatastoreSpec` for anything that needs real Hibernate wiring, and read the schema it produces when the bug is about the schema.
-- Run Gradle one task at a time on a laptop. Use `cleanTest` and `--no-build-cache`, and judge the result from the XML under `build/test-results`, not from a piped exit code. A `--tests` filter on a module that has a suite class reports an `initializationError` for the suite: ignore that entry and read the specs.
+- Run Gradle one task at a time on a laptop. Use `cleanTest` and `--no-build-cache`, and judge the result from the XML under `build/test-results`, not from a piped exit code. A `--tests` filter on a module that has a suite class reports an `initializationError` for the suite, because the filter leaves the suite nothing to discover (the message is `NoTestsDiscoveredException: Suite [...] did not discover any tests`). Ignore that one entry only after checking that the message is exactly that and that the XML of every requested spec shows the tests you expect, none skipped and none missing. Any other initialization failure is a failure, and a run in which a requested spec has no XML did not run it.
 - Run `codeStyle` and CodeNarc before committing. PMD and SpotBugs run only where a module enables them.
 
 ## Pitfalls to Avoid
