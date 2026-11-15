@@ -239,6 +239,16 @@ def query = Person.where {
 }
 ----
 
+To find the entities whose collection holds a given instance, use the block form with the identifier of the instance. `contains` is not an operator of a where query:
+
+[source,groovy]
+----
+def petId = pet.id
+def query = Person.where {
+    pets { id == petId }
+}
+----
+
 For collection associations it is possible to apply queries to the size of the collection:
 
 [source,groovy]
