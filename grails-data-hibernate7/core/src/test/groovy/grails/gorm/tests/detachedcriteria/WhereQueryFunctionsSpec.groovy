@@ -172,6 +172,23 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
     }
 
+    void "an empty list in a function comparison matches nothing, and its negation matches every row, in a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> empty = lengthIn([])
+        DetachedCriteria<WhereQueryFunctionEntity> notEmpty = criteriaOf(new Query.Negation().add(new FunctionCallingCriterion('length', new Query.In('name', []))))
+
+        expect: 'a read'
+        empty.list().isEmpty()
+        notEmpty.list().size() == 4
+
+        and: 'a bulk write changes nothing for the list and every row for its negation'
+        empty.updateAll(label: 'x') == 0
+        empty.deleteAll() == 0
+        WhereQueryFunctionEntity.count() == 4
+        notEmpty.updateAll(label: 'all') == 4
+    }
+
     void "a function in over a subquery works in a bulk statement"() {
         given:
         seedEntities()
