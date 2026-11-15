@@ -246,6 +246,83 @@ class HibernateCriteriaBuilderDirectSpec extends HibernateGormDatastoreSpec {
         c.list { notExists { eq("category", "does-not-exist") } }.size() == 4
     }
 
+    void "test scalar subqueries in comparison criteria (gt, ge, lt, le)"() {
+        given:
+        def subquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { avg("amount") }
+            eq("name", "C")
+        }
+
+        expect:
+        c.list { gt("amount", subquery) }*.name.sort() == ["D"]
+        c.list { ge("amount", subquery) }*.name.sort() == ["C", "D"]
+        c.list { lt("amount", subquery) }*.name.sort() == ["A", "B"]
+        c.list { le("amount", subquery) }*.name.sort() == ["A", "B", "C"]
+    }
+
+    void "test scalar subqueries with count, countDistinct, id, and property projections in comparison criteria"() {
+        given:
+        CriteriaTestEntity.findByName("A").tap { otherAmount = 1; save() }
+        CriteriaTestEntity.findByName("B").tap { otherAmount = 2; save() }
+        CriteriaTestEntity.findByName("C").tap { otherAmount = 4; save() }
+        CriteriaTestEntity.findByName("D").tap { otherAmount = 5; save(flush: true) }
+
+        def countSubquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { count() }
+        }
+        def countDistinctSubquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { countDistinct("category") }
+        }
+        def idSubquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { id() }
+            eq("name", "B")
+        }
+        def propertySubquery = new DetachedCriteria(CriteriaTestEntity).build {
+            projections { property("amount") }
+            eq("name", "B")
+        }
+
+        expect: "Long count projection compared with Integer property"
+        c.list { eq("otherAmount", countSubquery) }*.name == ["C"]
+        c.list { gt("otherAmount", countSubquery) }*.name == ["D"]
+        c.list { ge("otherAmount", countSubquery) }*.name.sort() == ["C", "D"]
+        c.list { lt("otherAmount", countSubquery) }*.name.sort() == ["A", "B"]
+        c.list { le("otherAmount", countSubquery) }*.name.sort() == ["A", "B", "C"]
+
+        and: "Long countDistinct projection compared with Integer property"
+        c.list { eq("otherAmount", countDistinctSubquery) }*.name == ["B"]
+        c.list { gt("otherAmount", countDistinctSubquery) }*.name.sort() == ["C", "D"]
+        c.list { ge("otherAmount", countDistinctSubquery) }*.name.sort() == ["B", "C", "D"]
+        c.list { lt("otherAmount", countDistinctSubquery) }*.name == ["A"]
+        c.list { le("otherAmount", countDistinctSubquery) }*.name.sort() == ["A", "B"]
+
+        and: "IdProjection compared with identifier property"
+        c.list { eq("id", idSubquery) }*.name == ["B"]
+        c.list { gt("id", idSubquery) }*.name.sort() == ["C", "D"]
+        c.list { ge("id", idSubquery) }*.name.sort() == ["B", "C", "D"]
+        c.list { lt("id", idSubquery) }*.name == ["A"]
+        c.list { le("id", idSubquery) }*.name.sort() == ["A", "B"]
+
+        and: "PropertyProjection compared with property"
+        c.list { eq("amount", propertySubquery) }*.name == ["B"]
+        c.list { gt("amount", propertySubquery) }*.name.sort() == ["C", "D"]
+        c.list { ge("amount", propertySubquery) }*.name.sort() == ["B", "C", "D"]
+        c.list { lt("amount", propertySubquery) }*.name == ["A"]
+        c.list { le("amount", propertySubquery) }*.name.sort() == ["A", "B"]
+    }
+
+    void "test where query with scalar aggregate subqueries"() {
+        when:
+        def gtAvg = CriteriaTestEntity.where { amount > avg(amount) }.list()*.name.sort()
+        def ltAvg = CriteriaTestEntity.where { amount < avg(amount) }.list()*.name.sort()
+        def gtFilteredAvg = CriteriaTestEntity.where { amount > avg(amount).of { category == "Y" } }.list()*.name.sort()
+
+        then:
+        gtAvg == ["C", "D"]
+        ltAvg == ["A", "B"]
+        gtFilteredAvg == ["D"]
+    }
+
     void "test createAlias joins an association with the default and explicit join types"() {
         given:
         def a = CriteriaTestEntity.findByName("A")
