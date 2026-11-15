@@ -23,6 +23,7 @@ import jakarta.persistence.criteria.Predicate;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.query.Query;
 
 /**
@@ -34,7 +35,12 @@ class PropertyNameCriterionHandler implements InternalCriterionHandler<Query.Pro
 
     @Override
     public Predicate handle(CriterionContext context, Query.PropertyNameCriterion c) {
-        Expression<?> propertyPath = context.resolvePath(c.getProperty());
+        String propertyName = c.getProperty();
+        Expression<?> propertyPath = context.resolvePath(propertyName);
+        if (propertyPath == null) {
+            String className = context.getEntity() != null ? context.getEntity().getJavaClass().getName() : "unknown";
+            throw new ConfigurationException("Cannot use property criteria on non-existent property [" + propertyName + "] of class [" + className + "]");
+        }
         HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
 
         if (((Object) c) instanceof Query.IsNull) {
