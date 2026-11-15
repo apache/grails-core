@@ -23,6 +23,7 @@ import java.time.Duration
 import groovy.transform.CompileStatic
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
+import org.testcontainers.mssqlserver.MSSQLServerContainer
 import org.testcontainers.mysql.MySQLContainer
 import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.postgresql.PostgreSQLContainer
@@ -57,6 +58,14 @@ final class DatabaseContainers {
      * runners and are skipped on arm64 machines. It starts in one to three minutes.
      */
     static final Db2Container DB2 = new Db2Container('icr.io/db2_community/db2:11.5.9.0')
+            .acceptLicense()
+            .withStartupTimeout(Duration.ofMinutes(10))
+
+    /**
+     * SQL Server. Microsoft publishes the image for amd64 only, so on an arm64 machine Docker runs it under emulation,
+     * which makes it slow to start; the startup timeout allows for that.
+     */
+    static final MSSQLServerContainer SQL_SERVER = new MSSQLServerContainer('mcr.microsoft.com/mssql/server:2022-latest')
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
 
