@@ -59,6 +59,32 @@ class GlobalCascadeValidateSpec extends Specification {
         expect:
         cascadeValidateOf(plainDefault, PlainCvOwner) == null
     }
+
+    void "with a global cascadeValidate of dirty, validate() skips an invalid child whose changes are tracked"() {
+        when:
+        boolean valid = CvOwner.withNewSession {
+            CvOwner owner = new CvOwner(name: 'owner')
+            CvPart part = new CvPart(label: '')
+            owner.addToParts(part)
+            part.trackChanges()
+            owner.validate()
+        }
+
+        then:
+        valid
+    }
+
+    void "without the global setting, validate() reports an invalid child"() {
+        when:
+        boolean valid = PlainCvOwner.withNewSession {
+            PlainCvOwner owner = new PlainCvOwner(name: 'owner')
+            owner.addToParts(new PlainCvPart(label: ''))
+            owner.validate()
+        }
+
+        then:
+        !valid
+    }
 }
 
 @Entity
