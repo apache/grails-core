@@ -77,6 +77,7 @@ class CreateAppSpec extends CommandSpec {
 
         where:
         features                         | applicationType          | gormImpl            | tasks
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE5 | ['compileGroovy', 'compileGroovyPages']
         ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
         ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.MONGODB    | ['compileGroovy', 'compileGroovyPages']
         ['grails-spring-security']       | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
