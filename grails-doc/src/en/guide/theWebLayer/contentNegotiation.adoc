@@ -305,7 +305,9 @@ that accepts any type, with the `all` format.
 * The `format` parameter and a URL extension name the format, ahead of the `Accept` header, as before. The first value
 of the parameter counts, as for Spring MVC; a format no type is configured for is not acceptable, where the Grails rules
 answer in the first configured format; and the `all` format, which is any type whether or not `grails.mime.types` lists
-it, leaves the format to the `Accept` header.
+it, leaves the format to the `Accept` header. Where `spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read
+the `format` parameter too, Grails reads it in its place for a request a URL mapping handles, so `?format=all` is left
+to the `Accept` header there as well, while a Spring MVC endpoint reads it as Spring MVC does.
 * `grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header as before.
 * The `format` parameter, the URL extension and the `Accept` header settings also decide what Spring MVC writes for a
 request a URL mapping handles, so that it is in the format Grails resolves for the request: an action that returns a

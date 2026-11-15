@@ -387,6 +387,39 @@ class SpringFormatNegotiationSpec extends Specification {
         GrailsWebRequest.lookup().currentResponse.format == 'xml'
     }
 
+    void "a format parameter of all, which Spring MVC's parameter negotiation of the format parameter does not know, leaves the format to the Accept header"() {
+        given: 'parameter negotiation on the format parameter, as spring.mvc.contentnegotiation.favor-parameter enables it'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.ENABLED): true, (ParameterConfiguration.NAME): 'format')
+        def request = request('Accept': 'application/json')
+        request.addParameter('format', 'all')
+        handledBy(request, urlMapping())
+
+        expect:
+        GrailsWebRequest.lookup().currentResponse.format == 'json'
+        GrailsWebRequest.lookup().currentResponse.mimeTypesFormatAware*.extension == ['json']
+        GrailsWebRequest.lookup().currentResponse.mimeTypes*.extension == ['json']
+        manager().resolveMediaTypes(new ServletWebRequest(request)) == [MediaType.APPLICATION_JSON]
+    }
+
+    void "Spring MVC's parameter negotiation of the format parameter still answers #format for an endpoint, as it does without the setting"() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.ENABLED): true, (ParameterConfiguration.NAME): 'format')
+        def request = request('Accept': 'application/json')
+        request.addParameter('format', format)
+        handledBy(request, endpoint())
+
+        when:
+        def resolved = resolve(request)
+
+        then:
+        resolved == expected
+
+        where:
+        format || expected
+        'xml'  || [MediaType.APPLICATION_XML]
+        'all'  || 'not acceptable'
+    }
+
     void 'the Content-Type #contentType is the request format #format'() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true)
@@ -475,6 +508,15 @@ class SpringFormatNegotiationSpec extends Specification {
         context.getBean(GrailsContentNegotiationStrategy.MVC_CONTENT_NEGOTIATION_MANAGER, ContentNegotiationManager)
     }
 
+    private Object resolve(MockHttpServletRequest request) {
+        try {
+            manager().resolveMediaTypes(new ServletWebRequest(request))
+        }
+        catch (HttpMediaTypeNotAcceptableException ignored) {
+            'not acceptable'
+        }
+    }
+
     private MockHttpServletRequest request(Map<String, String> headers) {
         def request = new MockHttpServletRequest(context.servletContext)
         headers.each { String name, String value -> request.addHeader(name, value) }
@@ -541,16 +583,21 @@ class SpringFormatNegotiationSpec extends Specification {
 
         static final String ENABLED = 'test.parameter.negotiation'
 
+        static final String NAME = 'test.parameter.negotiation.name'
+
         private final boolean enabled
+
+        private final String name
 
         ParameterConfiguration(ConfigurableEnvironment environment) {
             enabled = environment.getProperty(ENABLED, Boolean, false)
+            name = environment.getProperty(NAME, 'mediaType')
         }
 
         @Override
         void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
             if (enabled) {
-                configurer.favorParameter(true).parameterName('mediaType')
+                configurer.favorParameter(true).parameterName(name)
             }
         }
     }

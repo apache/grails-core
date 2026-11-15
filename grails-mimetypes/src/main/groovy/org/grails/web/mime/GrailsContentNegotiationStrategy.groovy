@@ -35,6 +35,7 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException
 import org.springframework.web.accept.ContentNegotiationManager
 import org.springframework.web.accept.ContentNegotiationStrategy
 import org.springframework.web.accept.HeaderContentNegotiationStrategy
+import org.springframework.web.accept.ParameterContentNegotiationStrategy
 import org.springframework.web.context.request.ServletWebRequest
 import org.springframework.web.context.support.WebApplicationContextUtils
 import org.springframework.web.servlet.HandlerMapping
@@ -297,6 +298,21 @@ class GrailsContentNegotiationStrategy {
     }
 
     /**
+     * Whether a strategy of Spring MVC's manager reads the parameter Grails reads the format a request names from, as
+     * the parameter negotiation {@code spring.mvc.contentnegotiation.favor-parameter} enables does by default: Grails
+     * reads it on its own, ahead of Spring MVC's strategies, for the requests a URL mapping handles, so that a format
+     * Spring MVC does not know, such as {@code all}, is not read again.
+     *
+     * @param strategy a strategy of Spring MVC's manager
+     * @return whether it reads the {@code format} parameter
+     * @since 9.0
+     */
+    static boolean readsFormatParameter(ContentNegotiationStrategy strategy) {
+        return strategy instanceof ParameterContentNegotiationStrategy &&
+                ((ParameterContentNegotiationStrategy) strategy).parameterName == FORMAT_PARAMETER
+    }
+
+    /**
      * The strategy that resolves the formats of a request: that of the application's {@code MimeTypesConfiguration}, or,
      * in a context without it, such as one a test builds by hand, one built for the request from the application's
      * settings.
@@ -327,7 +343,7 @@ class GrailsContentNegotiationStrategy {
 
     /**
      * The media types Spring MVC's content negotiation manager resolves for a request, in its order, without the format
-     * the request names, which Grails resolves on its own, and with its {@code Accept} header ignored where the
+     * the request names, which Grails resolves on its own, also where Spring MVC's parameter negotiation reads it, and with its {@code Accept} header ignored where the
      * {@code grails.mime} settings ignore it, whether or not a URL mapping handles the request.
      *
      * @return the media types, or {@code null} where the manager finds the request not acceptable, as for an
@@ -341,7 +357,7 @@ class GrailsContentNegotiationStrategy {
         ServletWebRequest webRequest = new ServletWebRequest(request)
         try {
             for (ContentNegotiationStrategy strategy in strategies) {
-                if (strategy instanceof GrailsFormatContentNegotiationStrategy ||
+                if (strategy instanceof GrailsFormatContentNegotiationStrategy || readsFormatParameter(strategy) ||
                         (acceptHeaderIgnored && strategy instanceof HeaderContentNegotiationStrategy)) {
                     continue
                 }

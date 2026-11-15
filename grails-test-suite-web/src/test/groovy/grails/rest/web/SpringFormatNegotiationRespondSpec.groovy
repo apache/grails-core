@@ -185,6 +185,41 @@ class SpringFormatNegotiationWithoutAllRespondSpec extends Specification impleme
 }
 
 /**
+ * With {@code grails.mime.negotiation.spring} and Spring MVC's parameter negotiation of the {@code format} parameter,
+ * which {@code spring.mvc.contentnegotiation.favor-parameter} enables, {@code respond} answers the format the parameter
+ * names, and the {@code all} format with the {@code Accept} header.
+ */
+class SpringFormatNegotiationParameterRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
+
+    Closure doWithConfig() {
+        { config ->
+            config[Settings.WEB_RENDERING_JSON_SPRING] = true
+            config[Settings.MIME_NEGOTIATION_SPRING] = true
+            config['spring.mvc.contentnegotiation.favor-parameter'] = true
+        }
+    }
+
+    void 'a format parameter of #format answers with #status #contentType'() {
+        given:
+        request.addHeader('Accept', 'application/json')
+        request.addParameter('format', format)
+
+        when:
+        controller.respond([title: 'Grails'], formats: ['json', 'xml'])
+
+        then:
+        response.status == status
+        (response.contentType ?: '').startsWith(contentType)
+
+        where:
+        format    || status | contentType
+        'all'     || 200    | 'application/json'
+        'xml'     || 200    | 'text/xml'
+        'unknown' || 406    | ''
+    }
+}
+
+/**
  * Without {@code grails.mime.negotiation.spring}, the Grails 9 rules resolve the format {@code respond} answers in.
  */
 class GrailsFormatNegotiationRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
