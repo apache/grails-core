@@ -27,12 +27,12 @@ import jakarta.persistence.criteria.JoinType
 
 /**
  * Criteria shapes reported against Hibernate: an order inside an association block that must not change the join
- * type the criteria asked for.
+ * type the criteria asked for, and the documented ways to ask whether a collection has a member in a where query.
  */
 class ReportedCriteriaShapesHibernateSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(ShapeBook, ShapeAuthor)
+        manager.registerDomainClasses(ShapeBook, ShapeAuthor, ShapeNode)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14543')
@@ -54,6 +54,34 @@ class ReportedCriteriaShapesHibernateSpec extends HibernateGormDatastoreSpec {
         then: 'the book without an author is still there'
         titles == ['with', 'without']
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/14530')
+    void "a where query on a self-referencing hasMany asks for a collection member with a block or a size, as the guide documents"() {
+        given:
+        ShapeNode kid = new ShapeNode(label: 'kid').save(failOnError: true)
+        ShapeNode top = new ShapeNode(label: 'top', children: [kid]).save(failOnError: true)
+        ShapeNode alone = new ShapeNode(label: 'alone').save(flush: true, failOnError: true)
+        manager.session.clear()
+        Long kidId = kid.id
+        Long topId = top.id
+        Long aloneId = alone.id
+
+        when: 'the queries are built in a when block, where the where transformation applies'
+        List<String> byLabel = ShapeNode.where { children { label == 'kid' } }.list()*.label
+        List<String> byMissingLabel = ShapeNode.where { children { label == 'top' } }.list()*.label
+        List<String> byId = ShapeNode.where { children { id == kidId } }.list()*.label
+        List<String> byIdOfNonMember = ShapeNode.where { children { id == aloneId } }.list()*.label
+        List<String> byIdOfOwner = ShapeNode.where { children { id == topId } }.list()*.label
+        List<String> bySize = ShapeNode.where { children.size() == 1 }.list()*.label
+
+        then:
+        byLabel == ['top']
+        byMissingLabel.isEmpty()
+        byId == ['top']
+        byIdOfNonMember.isEmpty()
+        byIdOfOwner.isEmpty()
+        bySize == ['top']
+    }
 }
 
 @Entity
@@ -69,4 +97,10 @@ class ShapeBook {
     static constraints = {
         author nullable: true
     }
+}
+
+@Entity
+class ShapeNode {
+    String label
+    static hasMany = [children: ShapeNode]
 }
