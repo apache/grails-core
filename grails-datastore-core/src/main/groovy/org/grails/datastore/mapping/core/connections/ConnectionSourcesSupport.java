@@ -21,8 +21,11 @@ package org.grails.datastore.mapping.core.connections;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.util.ClassUtils;
 
@@ -94,14 +97,32 @@ public class ConnectionSourcesSupport {
 
     /**
      * With schema based multi-tenancy every tenant schema gets its own connection source, which maps the
-     * multi tenant entities but only those other entities that use every connection source. An association
-     * from a multi tenant entity to any other entity therefore has nothing to refer to in a tenant schema.
+     * multi tenant entities but only those other entities that use that connection source. An association
+     * from a multi tenant entity to any other entity therefore has nothing to refer to in a tenant schema
+     * that does not map the target.
+     *
+     * <p>Without the names of the tenant schemas the target has to use every connection source ({@code ALL}),
+     * because any schema can be added later.
      *
      * @param entities The persistent entities of the application
      * @return A description of each association of a multi tenant entity to an entity the tenant schemas do
      * not map, in the form {@code Owner.property -> Target}; empty when there is none
      */
     public static List<String> findAssociationsToEntitiesMissingFromTenantSchemas(Iterable<? extends PersistentEntity> entities) {
+        return findAssociationsToEntitiesMissingFromTenantSchemas(entities, Collections.<String>emptyList());
+    }
+
+    /**
+     * The same check against the tenant schemas that are known: a target is mapped when it uses every connection
+     * source or lists each of the named tenant schemas, so a shared entity that names the default connection and
+     * the tenant schemas explicitly is accepted.
+     *
+     * @param entities The persistent entities of the application
+     * @param tenantSchemaNames The names of the tenant schemas (connection sources) that exist now
+     * @return A description of each association of a multi tenant entity to an entity that at least one tenant
+     * schema does not map, in the form {@code Owner.property -> Target}; empty when there is none
+     */
+    public static List<String> findAssociationsToEntitiesMissingFromTenantSchemas(Iterable<? extends PersistentEntity> entities, Collection<String> tenantSchemaNames) {
         List<String> found = new ArrayList<>();
         for (PersistentEntity entity : entities) {
             if (!entity.isMultiTenant()) {
@@ -112,12 +133,34 @@ public class ConnectionSourcesSupport {
                     continue;
                 }
                 PersistentEntity target = ((Association<?>) property).getAssociatedEntity();
-                if (target != null && !target.isMultiTenant() && !getConnectionSourceNames(target).contains(ConnectionSource.ALL)) {
+                if (target != null && !target.isMultiTenant() && !isMappedWhereOwnerIs(entity, target, tenantSchemaNames)) {
                     found.add(entity.getJavaClass().getSimpleName() + '.' + property.getName() + " -> " + target.getJavaClass().getSimpleName());
                 }
             }
         }
         return found;
+    }
+
+    /**
+     * Whether the target is mapped on every connection source the owner is mapped on: each tenant schema, and the default
+     * connection, which also maps a multi tenant entity. A target that lists the tenant schema but not the default connection
+     * leaves the default session factory with an association to an entity it does not map.
+     */
+    private static boolean isMappedWhereOwnerIs(PersistentEntity owner, PersistentEntity target, Collection<String> tenantSchemaNames) {
+        if (getConnectionSourceNames(target).contains(ConnectionSource.ALL)) {
+            return true;
+        }
+        if (tenantSchemaNames == null || tenantSchemaNames.isEmpty()) {
+            return false;
+        }
+        Set<String> names = new LinkedHashSet<>(tenantSchemaNames);
+        names.add(ConnectionSource.DEFAULT);
+        for (String name : names) {
+            if (usesConnectionSource(owner, name) && !usesConnectionSource(target, name)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected static boolean isMultiTenant(Class[] interfaces) {

@@ -23,6 +23,7 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
+import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
 import org.grails.orm.hibernate.cfg.Settings
 import spock.lang.Issue
 import spock.lang.Specification
@@ -82,6 +83,50 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         'that declares datasources with only ALL'                | [LayoutOwnerAllList, LayoutTargetAllList]
         'that is a subclass of a root using every connection'    | [LayoutOwnerChild, LayoutAllRoot, LayoutAllChild]
         'that is the root of a hierarchy using every connection' | [LayoutOwnerRoot, LayoutAllRoot, LayoutAllChild]
+    }
+
+    private static HibernateDatastore startWithTenants(Class... classes) {
+        startWith(['grails.gorm.multiTenancy.tenantResolverClass': KnownTenantsResolver.name], classes)
+    }
+
+    @Unroll
+    void "with the tenant schemas known, an owner pointing at a target that #layout starts"() {
+        when:
+        HibernateDatastore datastore = startWithTenants(*classes)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        datastore?.close()
+
+        where:
+        layout                                          | classes
+        'lists the default connection and the tenant'   | [KnownOwnerDefaultAndTenant, KnownTargetDefaultAndTenant]
+        'declares datasource ALL'                       | [KnownOwnerAll, KnownTargetAll]
+    }
+
+    @Unroll
+    void "with the tenant schemas known, an owner pointing at a target that #layout is refused at startup"() {
+        when:
+        startWithTenants(*classes)
+
+        then:
+        ConfigurationException e = thrown()
+        e.message.contains(classes[0].simpleName)
+
+        where:
+        layout                                                  | classes
+        'lists only the default connection'                     | [KnownOwnerDefaultOnly, KnownTargetDefaultOnly]
+        'lists the default connection and another tenant'       | [KnownOwnerOtherTenant, KnownTargetOtherTenant]
+    }
+
+    void "with the tenant schemas known, an owner pointing at a target that lists only the tenant schema does not start"() {
+        when: 'the default connection also maps the owner, and not the target; Hibernate refuses it before the schema check runs'
+        startWithTenants(KnownOwnerTenantOnly, KnownTargetTenantOnly)
+
+        then:
+        thrown(Exception)
     }
 
     void "an owner of a multi tenant entity pointing at a target that uses every connection through the default mapping starts"() {
@@ -170,4 +215,83 @@ class LayoutTargetDefault {
 class LayoutOwnerDefault implements MultiTenant<LayoutOwnerDefault> {
     String name
     LayoutTargetDefault target
+}
+
+class KnownTenantsResolver implements AllTenantsResolver {
+    @Override
+    Serializable resolveTenantIdentifier() {
+        'tenant1'
+    }
+
+    @Override
+    Iterable<Serializable> resolveTenantIds() {
+        ['tenant1']
+    }
+}
+
+@Entity
+class KnownTargetDefaultAndTenant {
+    String name
+    static mapping = {
+        datasources(['default', 'tenant1'])
+    }
+}
+
+@Entity
+class KnownOwnerDefaultAndTenant implements MultiTenant<KnownOwnerDefaultAndTenant> {
+    String name
+    KnownTargetDefaultAndTenant target
+}
+
+@Entity
+class KnownTargetTenantOnly {
+    String name
+    static mapping = {
+        datasources(['tenant1'])
+    }
+}
+
+@Entity
+class KnownOwnerTenantOnly implements MultiTenant<KnownOwnerTenantOnly> {
+    String name
+    KnownTargetTenantOnly target
+}
+
+@Entity
+class KnownTargetAll {
+    String name
+    static mapping = {
+        datasource 'ALL'
+    }
+}
+
+@Entity
+class KnownOwnerAll implements MultiTenant<KnownOwnerAll> {
+    String name
+    KnownTargetAll target
+}
+
+@Entity
+class KnownTargetDefaultOnly {
+    String name
+}
+
+@Entity
+class KnownOwnerDefaultOnly implements MultiTenant<KnownOwnerDefaultOnly> {
+    String name
+    KnownTargetDefaultOnly target
+}
+
+@Entity
+class KnownTargetOtherTenant {
+    String name
+    static mapping = {
+        datasources(['default', 'tenant2'])
+    }
+}
+
+@Entity
+class KnownOwnerOtherTenant implements MultiTenant<KnownOwnerOtherTenant> {
+    String name
+    KnownTargetOtherTenant target
 }

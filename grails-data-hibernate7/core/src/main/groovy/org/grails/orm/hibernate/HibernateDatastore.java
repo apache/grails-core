@@ -344,21 +344,22 @@ public class HibernateDatastore extends AbstractDatastore
             });
 
             if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
-                List<String> unmapped = ConnectionSourcesSupport.findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities());
-                if (!unmapped.isEmpty()) {
-                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant: " +
-                            String.join(", ", unmapped) + ". Make the target MultiTenant, or use the DISCRIMINATOR multi-tenancy mode.");
+                Collection<String> tenantSchemaNames = new ArrayList<>();
+                if (this.tenantResolver instanceof AllTenantsResolver) {
+                    for (Serializable tenantId : ((AllTenantsResolver) tenantResolver).resolveTenantIds()) {
+                        tenantSchemaNames.add(tenantId.toString());
+                    }
                 }
-                if (this.tenantResolver instanceof AllTenantsResolver allTenantsResolver) {
-                    Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
-                    for (Serializable tenantId : tenantIds) {
-                        addTenantForSchemaInternal(tenantId.toString());
-                    }
-                } else {
-                    Collection<String> allSchemas = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
-                    for (String schema : allSchemas) {
-                        addTenantForSchemaInternal(schema);
-                    }
+                else {
+                    tenantSchemaNames.addAll(schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource()));
+                }
+                List<String> unmapped = ConnectionSourcesSupport.findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities(), tenantSchemaNames);
+                if (!unmapped.isEmpty()) {
+                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant and that a tenant schema does not map: " +
+                            String.join(", ", unmapped) + ". Make the target MultiTenant, map it on every tenant schema (datasource 'ALL', or name each schema), or use the DISCRIMINATOR multi-tenancy mode.");
+                }
+                for (String tenantSchemaName : tenantSchemaNames) {
+                    addTenantForSchemaInternal(tenantSchemaName);
                 }
             }
         }
