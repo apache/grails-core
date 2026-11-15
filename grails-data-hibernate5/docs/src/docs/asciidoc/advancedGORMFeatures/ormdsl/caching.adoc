@@ -155,6 +155,16 @@ def people = Person.withCriteria {
 }
 ----
 
+An entity whose mapping enables the cache has its queries cached by default. The `cache` argument and the `cache` call inside a criteria take precedence over that default, in either direction, so `cache false` (or `cache: false`) keeps one query out of the query cache, and the total count of a paged list follows it:
+
+[source,java]
+----
+def people = Person.createCriteria().list(max: 10) {
+    like('firstName', 'Fr%')
+    cache false
+}
+----
+
 
 ===== Cache usages
 

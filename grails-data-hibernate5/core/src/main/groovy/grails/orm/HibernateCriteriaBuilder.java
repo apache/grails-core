@@ -18,6 +18,7 @@
  */
 package grails.orm;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -34,6 +35,7 @@ import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.Projection;
 import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.sql.JoinType;
 import org.hibernate.type.StandardBasicTypes;
 import org.hibernate.type.Type;
@@ -171,7 +173,15 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
 
     @Override
     protected List createPagedResultList(Map args) {
-        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
+        Map populateArgs = args;
+        if (!args.containsKey(GrailsHibernateUtil.ARGUMENT_CACHE)) {
+            // No cache argument: the criteria already holds the mapping's default, set when it was created, and
+            // possibly the cache(boolean) call of the closure. Hand that on, or the mapping would be applied again
+            // over an explicit cache(false).
+            populateArgs = new HashMap(args);
+            populateArgs.put(GrailsHibernateUtil.ARGUMENT_CACHE, ((CriteriaImpl) criteria).getCacheable());
+        }
+        GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, populateArgs, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
         return new PagedResultList(ght, criteria);
     }

@@ -1,0 +1,161 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate.connections
+
+import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.orm.hibernate.HibernateDatastore
+import org.hibernate.dialect.H2Dialect
+import spock.lang.AutoCleanup
+import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
+
+/**
+ * Whether a query is put in the query cache, by what asks for it: the mapping of the entity, the cache argument and the
+ * cache call inside a criteria, at each way in. An explicit false wins over a mapping that caches, an explicit true over
+ * a mapping that does not, and the total count of a paged list follows the list.
+ */
+@Issue(['https://github.com/apache/grails-core/issues/14472', 'https://github.com/apache/grails-core/issues/14458'])
+class QueryCacheOptionSpec extends Specification {
+
+    @Shared
+    @AutoCleanup
+    HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
+            'dataSource.url'          : 'jdbc:h2:mem:queryCacheOption;LOCK_TIMEOUT=10000',
+            'dataSource.dbCreate'     : 'create-drop',
+            'dataSource.dialect'      : H2Dialect.name,
+            'hibernate.cache.use_query_cache': 'true',
+            'hibernate.cache'         : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory']
+    ]), QcCached, QcPlain)
+
+    @Shared
+    @AutoCleanup
+    HibernateDatastore cachingEverything = new HibernateDatastore(DatastoreUtils.createPropertyResolver([
+            'dataSource.url'                : 'jdbc:h2:mem:queryCacheOptionGlobal;LOCK_TIMEOUT=10000',
+            'dataSource.dbCreate'           : 'create-drop',
+            'dataSource.dialect'            : H2Dialect.name,
+            'grails.hibernate.cache.queries': true,
+            'hibernate.cache.use_query_cache': 'true',
+            'hibernate.cache'               : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory']
+    ]), QcgCached, QcgPlain)
+
+    void setup() {
+        [QcCached, QcPlain, QcgCached, QcgPlain].each { Class type ->
+            type.withNewTransaction {
+                (1..3).each { int i -> type.newInstance(name: "n${i}").save(failOnError: true) }
+            }
+        }
+        [datastore, cachingEverything].each { it.sessionFactory.statistics.setStatisticsEnabled(true) }
+    }
+
+    void cleanup() {
+        [QcCached, QcPlain, QcgCached, QcgPlain].each { Class type -> type.withNewTransaction { type.executeUpdate("delete from ${type.simpleName}".toString()) } }
+    }
+
+    private int putsDuring(HibernateDatastore store, Closure query) {
+        store.sessionFactory.statistics.clear()
+        query.call()
+        store.sessionFactory.statistics.queryCachePutCount
+    }
+
+
+    @Unroll
+    void "#form on #mapping is #outcome"() {
+        expect:
+        putsDuring(store) { type.withNewSession { query.call(type) } } == (cached ? 1 : 0)
+
+        where:
+        form                                      | mapping                | store     | type     | query                                                                              || cached
+        'a criteria list'                         | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list { } }                                         || true
+        'a criteria list with cache(false)'       | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list { cache(false) } }                            || false
+        'a criteria list with cache: false'       | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list([cache: false]) { } }                        || false
+        'a criteria list with cache: true'        | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list([cache: true]) { } }                         || true
+        'a criteria list'                         | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list { } }                                         || false
+        'a criteria list with cache(true)'        | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list { cache(true) } }                             || true
+        'a criteria list with cache: true'        | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list([cache: true]) { } }                          || true
+        'a criteria count with cache(false)'      | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().count { cache(false) } }                           || false
+        'a static list'                           | 'a cached mapping'     | datastore | QcCached | { Class t -> t.list() }                                                            || true
+        'a static list with cache: false'         | 'a cached mapping'     | datastore | QcCached | { Class t -> t.list(cache: false) }                                                || false
+        'a static list with cache: true'          | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.list(cache: true) }                                                 || true
+        'a dynamic finder with cache: false'      | 'a cached mapping'     | datastore | QcCached | { Class t -> t.findAllByName('n1', [cache: false]) }                              || false
+        'a dynamic finder'                        | 'a cached mapping'     | datastore | QcCached | { Class t -> t.findAllByName('n1') }                                               || true
+        'a where query with cache: false'         | 'a cached mapping'     | datastore | QcCached | { Class t -> t.where { name == 'n1' }.list(cache: false) }                         || false
+        'a criteria list([:]) with cache(false)'  | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list([:]) { cache(false) } }                       || false
+        'a criteria list([:])'                    | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list([:]) { } }                                   || true
+        'a criteria list([:])'                    | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list([:]) { } }                                    || false
+        'a criteria list([:]) with cache(true)'   | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list([:]) { cache(true) } }                        || true
+        'a criteria list, with every query cached' | 'a cached mapping'    | cachingEverything | QcgCached | { Class t -> t.createCriteria().list { } }                             || true
+        'a criteria list with cache(false), with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list { cache(false) } }     || false
+        'a criteria list([:]) with cache(false), with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list([:]) { cache(false) } } || false
+        'a criteria list with cache: false, with every query cached' | 'an uncached mapping' | cachingEverything | QcgPlain | { Class t -> t.createCriteria().list([cache: false]) { } } || false
+        'a static list with cache: false, with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.list(cache: false) }                    || false
+        'a dynamic finder with cache: false, with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.findAllByName('n1', [cache: false]) } || false
+        outcome = cached ? 'put in the query cache' : 'not put in the query cache'
+    }
+
+    @Unroll
+    void "the total count of #form puts #puts queries in the cache"() {
+        expect:
+        putsDuring(store) {
+            type.withNewSession {
+                page.call(type).totalCount
+            }
+        } == puts
+
+        where:
+        form                                                         | store             | type      | page                                                                       || puts
+        'a criteria list with cache: false on a cached mapping'      | datastore         | QcCached  | { Class t -> t.createCriteria().list(max: 2, cache: false) { } }          || 0
+        'a criteria list with cache: false, with every query cached' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list(max: 2, cache: false) { } }         || 0
+        'a criteria list with cache: false on an uncached mapping, with every query cached' | cachingEverything | QcgPlain | { Class t -> t.createCriteria().list(max: 2, cache: false) { } } || 0
+        'a criteria list([:]) with cache(false) on a cached mapping' | datastore         | QcCached  | { Class t -> t.createCriteria().list(max: 2) { cache(false) } }           || 0
+        'a static list with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.list(max: 2, cache: false) }                               || 0
+        'a static list with cache: false, with every query cached'   | cachingEverything | QcgCached | { Class t -> t.list(max: 2, cache: false) }                               || 0
+        'a where query with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.where { name != 'x' }.list(max: 2, cache: false) }         || 0
+    }
+}
+
+@Entity
+class QcCached {
+    String name
+
+    static mapping = {
+        cache usage: 'nonstrict-read-write', include: 'all'
+    }
+}
+
+@Entity
+class QcPlain {
+    String name
+}
+
+@Entity
+class QcgCached {
+    String name
+
+    static mapping = {
+        cache usage: 'nonstrict-read-write', include: 'all'
+    }
+}
+
+@Entity
+class QcgPlain {
+    String name
+}
