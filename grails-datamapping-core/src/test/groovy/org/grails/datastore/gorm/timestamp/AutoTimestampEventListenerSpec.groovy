@@ -31,6 +31,8 @@ import java.util.function.Supplier
 import groovy.transform.InheritConstructors
 import spock.lang.Specification
 
+import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.context.support.GenericApplicationContext
 
 import grails.gorm.annotation.CreatedBy
@@ -694,6 +696,45 @@ class AutoTimestampEventListenerSpec extends Specification {
 
         cleanup:
         [datastoreContext, givenContext, emptyContext]*.close()
+    }
+
+    void "a listener bean keeps the auditor it is configured with when the application context has none"() {
+        given: 'Spring sets the bean\'s auditorAware property and then gives it the application context'
+        AuditorAware<String> configuredAuditor = { -> Optional.of('configuredUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean('listener', TestEventListener, { new TestEventListener(Stub(Datastore) { getMappingContext() >> null }) } as Supplier<TestEventListener>,
+                { BeanDefinition definition -> definition.propertyValues.add('auditorAware', configuredAuditor) } as BeanDefinitionCustomizer)
+
+        when:
+        context.refresh()
+        TestEventListener bean = context.getBean(TestEventListener)
+        bean.persistentEntityAdded(auditedEntity())
+
+        then:
+        bean.auditorAware.is(configuredAuditor)
+        appliedOnInsert(bean, Audited) == [createdBy: 'configuredUser', lastModifiedBy: 'configuredUser']
+
+        cleanup:
+        context.close()
+    }
+
+    void "a listener bean takes the auditor of the application context over the one it is configured with"() {
+        given:
+        AuditorAware<String> configuredAuditor = { -> Optional.of('configuredUser') } as AuditorAware<String>
+        AuditorAware<String> contextAuditor = { -> Optional.of('contextUser') } as AuditorAware<String>
+        GenericApplicationContext context = new GenericApplicationContext()
+        context.registerBean(AuditorAware, { contextAuditor } as Supplier<AuditorAware>)
+        context.registerBean('listener', TestEventListener, { new TestEventListener(Stub(Datastore) { getMappingContext() >> null }) } as Supplier<TestEventListener>,
+                { BeanDefinition definition -> definition.propertyValues.add('auditorAware', configuredAuditor) } as BeanDefinitionCustomizer)
+
+        when:
+        context.refresh()
+
+        then:
+        context.getBean(TestEventListener).auditorAware.is(contextAuditor)
+
+        cleanup:
+        context.close()
     }
 
     private PersistentEntity auditedEntity() {

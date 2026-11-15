@@ -128,7 +128,12 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.auditorAware = lookUpAuditorAware(applicationContext);
+        // Spring calls this after it has set the bean's properties, so an auditor the listener was configured with
+        // is kept when the context has none of its own.
+        AuditorAware<?> contextAuditorAware = lookUpAuditorAware(applicationContext);
+        if (contextAuditorAware != null) {
+            this.auditorAware = contextAuditorAware;
+        }
         this.auditorAwareResolved = true;
     }
 
