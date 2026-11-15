@@ -83,7 +83,10 @@ public class PagedResultList extends org.grails.orm.hibernate.query.PagedResultL
                         CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
                         totalCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
                     }
-                    totalCriteria.setProjection(impl.getProjection());
+                    if (impl.getProjection() != null && impl.getProjection().isGrouped()) {
+                        totalCriteria.setProjection(impl.getProjection());
+                        return totalCriteria.list().size();
+                    }
                     totalCriteria.setProjection(Projections.rowCount());
                     return ((Number) totalCriteria.uniqueResult()).intValue();
                 }

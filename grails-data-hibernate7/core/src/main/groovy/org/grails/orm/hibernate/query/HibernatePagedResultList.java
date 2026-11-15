@@ -101,13 +101,32 @@ public class HibernatePagedResultList extends grails.gorm.PagedResultList {
                     newQuery.offset(0);
                     newQuery.max(-1);
                     newQuery.clearOrders();
-                    newQuery.projections().count();
-                    Number result = (Number) newQuery.singleResult();
-                    totalCount = result == null ? 0 : result.intValue();
+                    if (isGrouped(query)) {
+                        // clone() does not carry the projections: restore them so the groups are counted
+                        for (Query.Projection projection : ((Query.ProjectionList) query.projections()).getProjectionList()) {
+                            newQuery.projections().add(projection);
+                        }
+                        totalCount = newQuery.list().size();
+                    } else {
+                        newQuery.projections().count();
+                        Number result = (Number) newQuery.singleResult();
+                        totalCount = result == null ? 0 : result.intValue();
+                    }
                 }
             }
         }
         return totalCount;
+    }
+
+    private static boolean isGrouped(Query query) {
+        if (query.projections() instanceof Query.ProjectionList projectionList) {
+            for (Query.Projection projection : projectionList.getProjectionList()) {
+                if (projection instanceof Query.GroupPropertyProjection || projection instanceof SqlGroupProjection) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private Object writeReplace() throws ObjectStreamException {
