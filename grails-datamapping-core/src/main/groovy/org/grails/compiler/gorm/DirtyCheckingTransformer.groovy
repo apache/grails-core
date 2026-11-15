@@ -195,6 +195,8 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 jpaIdPropertyCount++
             }
         }
+        // an identifier declared on a superclass belongs to the same key, so it counts as well
+        jpaIdPropertyCount += inheritedJpaIdCount(classNode)
 
         boolean hasVersion = false
         for (PropertyNode pn in propertyNodes) {
@@ -488,6 +490,32 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
 
     String[] getArtefactTypes() {
         return ['Domain'] as String[]
+    }
+
+    /**
+     * Counts the JPA {@code @Id} properties that the superclasses of a class declare, by field, property or getter.
+     */
+    private static int inheritedJpaIdCount(ClassNode classNode) {
+        Set<String> names = new LinkedHashSet<String>()
+        for (ClassNode superClass = classNode.superClass; superClass != null && superClass != ClassHelper.OBJECT_TYPE; superClass = superClass.superClass) {
+            for (FieldNode field in superClass.fields) {
+                if (!field.isStatic() && hasAnnotation(field.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(field.name)
+                }
+            }
+            for (PropertyNode property in superClass.properties) {
+                if (hasAnnotation(property.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(property.name)
+                }
+            }
+            for (MethodNode method in superClass.methods) {
+                if (method.parameters.length == 0 && method.name.startsWith('get') && method.name.length() > 3 &&
+                        hasAnnotation(method.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
+                    names.add(NameUtils.getPropertyNameForGetterOrSetter(method.name))
+                }
+            }
+        }
+        return names.size()
     }
 
     @CompileStatic

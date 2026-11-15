@@ -25,9 +25,11 @@ import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
+import jakarta.persistence.MappedSuperclass
 
 @Issue('https://github.com/apache/grails-core/issues/14494')
 class JpaCompositeIdSpec extends Specification {
@@ -43,6 +45,21 @@ class JpaCompositeIdSpec extends Specification {
         then:
         JpaCompositeIdEntity.count() == 1
         JpaCompositeIdEntity.get(new JpaCompositeIdEntity(orgId: 1L, userNo: 2L)).name == 'org-user'
+    }
+
+    @Unroll
+    void 'the @Id properties on #layout #outcome'() {
+        expect: 'the entity declares getId() only when exactly one @Id is declared anywhere in its hierarchy'
+        (entity.declaredMethods.any { it.name == 'getId' }) == declaresGetId
+
+        where:
+        layout                                         | entity                  || declaresGetId
+        'the entity (two)'                             | JpaCompositeIdEntity    || false
+        'the entity (one)'                             | JpaSingleCodeIdEntity   || true
+        'a mapped superclass and the entity (one each)' | JpaSplitIdEntity        || false
+        'a mapped superclass only (the entity has none)' | JpaInheritedIdEntity    || false
+        'a mapped superclass (two) and the entity (one)' | JpaTwoInheritedIdEntity || false
+        outcome = declaresGetId ? 'give it a getId()' : 'leave getId() to the key'
     }
 
     @Rollback
@@ -69,4 +86,36 @@ class JpaSingleCodeIdEntity {
     @Id
     Long code
     String name
+}
+
+@MappedSuperclass
+abstract class JpaOrgBase implements Serializable {
+    @Id
+    Long orgId
+}
+
+@Entity
+class JpaSplitIdEntity extends JpaOrgBase {
+    @Id
+    String userNo
+    String name
+}
+
+@Entity
+class JpaInheritedIdEntity extends JpaOrgBase {
+    String name
+}
+
+@MappedSuperclass
+abstract class JpaTwoIdBase implements Serializable {
+    @Id
+    Long orgId
+    @Id
+    Long unitNo
+}
+
+@Entity
+class JpaTwoInheritedIdEntity extends JpaTwoIdBase {
+    @Id
+    String userNo
 }
