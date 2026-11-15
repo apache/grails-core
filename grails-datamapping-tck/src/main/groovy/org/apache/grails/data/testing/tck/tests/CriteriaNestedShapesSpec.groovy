@@ -38,7 +38,7 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.registerDomainClasses(CriteriaAnimal, CriteriaGrandparent, CriteriaMiddle, CriteriaLeaf)
+        manager.domainClasses.addAll([CriteriaAnimal, CriteriaGrandparent, CriteriaMiddle, CriteriaLeaf])
     }
 
     /** two chains: p1 - m1 - l1 and p2 - m2 - l2, and a leaf l0 whose middle has no parent */

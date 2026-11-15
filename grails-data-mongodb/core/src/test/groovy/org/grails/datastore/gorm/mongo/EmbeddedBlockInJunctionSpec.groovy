@@ -33,7 +33,7 @@ import spock.lang.Unroll
 class EmbeddedBlockInJunctionSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(EmbeddedHolder, EmbeddedDetail)
+        manager.domainClasses.addAll([EmbeddedHolder, EmbeddedDetail])
     }
 
     private void seed() {

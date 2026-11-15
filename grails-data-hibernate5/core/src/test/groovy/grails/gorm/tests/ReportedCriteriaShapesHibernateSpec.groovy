@@ -21,6 +21,8 @@ package grails.gorm.tests
 
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
+import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
+import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
 
 import jakarta.persistence.criteria.JoinType
@@ -29,10 +31,10 @@ import jakarta.persistence.criteria.JoinType
  * Criteria shapes reported against Hibernate: an order inside an association block that must not change the join
  * type the criteria asked for, and the documented ways to ask whether a collection has a member in a where query.
  */
-class ReportedCriteriaShapesHibernateSpec extends HibernateGormDatastoreSpec {
+class ReportedCriteriaShapesHibernateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(ShapeBook, ShapeAuthor, ShapeNode)
+        manager.domainClasses.addAll([ShapeBook, ShapeAuthor, ShapeNode])
     }
 
     @Issue('https://github.com/apache/grails-core/issues/14543')

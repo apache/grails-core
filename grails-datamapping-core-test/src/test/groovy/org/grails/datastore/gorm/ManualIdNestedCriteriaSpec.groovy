@@ -35,7 +35,7 @@ class ManualIdNestedCriteriaSpec extends GrailsDataTckSpec {
 
     @Override
     void setupSpec() {
-        manager.registerDomainClasses(CriteriaGrandparent, CriteriaMiddle, CriteriaLeaf, AssignedTop, AssignedMid, AssignedEnd)
+        manager.domainClasses.addAll([CriteriaGrandparent, CriteriaMiddle, CriteriaLeaf, AssignedTop, AssignedMid, AssignedEnd])
     }
 
     void "a block nested two deep finds the leaf when the ids were assigned by hand and differ per level"() {
