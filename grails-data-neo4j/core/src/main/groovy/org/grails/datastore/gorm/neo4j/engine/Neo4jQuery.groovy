@@ -233,8 +233,47 @@ class Neo4jQuery extends Query {
             if (criteria.isEmpty()) {
                 throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
             }
-            def disjunction = new Query.Disjunction(criteria)
-            new CypherExpression("NOT (${dispatchCriterion(disjunction, scope)})")
+            // a block with criteria asks for a neighbour, as a join does, so its negation is a neighbour that fails them: a node
+            // without a neighbour is not in it. The other criteria are negated together
+            List<Query.Criterion> others = []
+            List<String> negatedBlocks = []
+            for (Query.Criterion child : criteria) {
+                if (negatesAsExistence(scope, child)) {
+                    negatedBlocks << negatedBlock(scope, (AssociationQuery) child)
+                }
+                else {
+                    others << child
+                }
+            }
+            List<String> parts = []
+            String negated = others.isEmpty() ? '' : dispatchCriterion(new Query.Disjunction(others), scope).toString()
+            if (negated) {
+                parts << "NOT ($negated)".toString()
+            }
+            parts.addAll(negatedBlocks)
+            if (parts.isEmpty()) {
+                // nothing is left to negate, as in a negation of a block without criteria: Hibernate 5 refuses it
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            new CypherExpression(parts.size() == 1 ? parts[0] : "( ${parts.join(CriterionHandler.OPERATOR_AND)} )".toString())
+        }
+
+        private boolean negatesAsExistence(CriterionScope scope, Query.Criterion child) {
+            child instanceof AssociationQuery && !((AssociationQuery) child).criteria.getCriteria().isEmpty() &&
+                    !(((AssociationQuery) child).association instanceof Embedded) && !scope.entity.isRelationshipEntity()
+        }
+
+        private String negatedBlock(CriterionScope scope, AssociationQuery block) {
+            CriterionScope.Existence existence = scope.intoExistence(block)
+            scope.builder.enterDisjunction()
+            String conditions
+            try {
+                conditions = dispatchCriterion(block.criteria, existence.scope).toString()
+            }
+            finally {
+                scope.builder.leaveDisjunction()
+            }
+            "size([${existence.pattern} WHERE NOT (${conditions ?: 'true'}) | 1]) > 0".toString()
         }
             },
             (Query.Equals): new CriterionHandler<Query.Equals>() {
