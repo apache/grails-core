@@ -107,6 +107,25 @@ class CollectionAssociationMatrixSpec extends Neo4jGormDatastoreSpec {
     }
 
     @Unroll
+    void "#first and #second together"() {
+        given:
+        Map ids = seed()
+        Closure a = buildA.call(ids)
+        Closure b = buildB.call(ids)
+
+        when:
+        List<String> found = MatrixShelf.createCriteria().list({ -> and { CALL(a, delegate); CALL(b, delegate) } })*.name.unique().sort()
+
+        then: 'two criteria on one collection hold together when some element satisfies each, the same element or not'
+        found == (matchesA.intersect(matchesB) as List).sort()
+
+        where:
+        [first, buildA, matchesA, second, buildB, matchesB] << CRITERIA.collectMany { x ->
+            CRITERIA.collect { y -> [x[0], x[1], x[2], y[0], y[1], y[2]] }
+        }
+    }
+
+    @Unroll
     void "#criterion #context inside a block of the shelf of a holder"() {
         given:
         Map ids = seed()
