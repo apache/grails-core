@@ -305,8 +305,13 @@ public class PredicateGenerator {
             }
         }
         if (predicates.length == 0) {
-            // a junction with nothing in it adds nothing; JPA would make an empty disjunction false and zero the query
-            return null;
+            if (junction instanceof Query.Negation) {
+                throw new IllegalArgumentException("Logical expression [not] must contain at least 1 expression");
+            }
+            // an empty junction is true wherever it stands, as it is on Hibernate 5: beside a property it adds no restriction, in an
+            // or it makes the or true, in an and it is neutral, and under a not the negation is false. Dropping it, or letting JPA
+            // make an empty disjunction false, answers differently in an or and under a not.
+            return criteriaBuilder.conjunction();
         }
         if (junction instanceof Query.Conjunction) {
             return criteriaBuilder.and(predicates);
