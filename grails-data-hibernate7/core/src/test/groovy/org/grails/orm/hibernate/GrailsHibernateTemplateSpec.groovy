@@ -190,6 +190,22 @@ class GrailsHibernateTemplateSpec extends HibernateGormDatastoreSpec {
         thrown(DataIntegrityViolationException)
     }
 
+    void "executeWithNewSession does not flush after the closure committed its own transaction"() {
+        given:
+        template.flushMode = GrailsHibernateTemplate.FLUSH_EAGER
+
+        when: 'the closure begins and commits a transaction, so none is active when the callback returns'
+        template.executeWithNewSession { Session session ->
+            session.beginTransaction()
+            session.persist(new TemplateBook(title: 'committed', author: 'someone'))
+            session.transaction.commit()
+            null
+        }
+
+        then: 'the flush after the callback does not throw for a missing transaction'
+        noExceptionThrown()
+    }
+
     void "executeWithNewSession restores the outer session when the cleanup of the new session throws"() {
         given:
         SessionHolder outerHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory)

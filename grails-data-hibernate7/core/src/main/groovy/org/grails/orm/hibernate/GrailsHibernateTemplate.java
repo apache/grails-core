@@ -240,7 +240,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             txResources.bindResource(sessionFactory, sessionHolder);
 
             final Session scopedSession = newSession;
-            return doExecute(callable::call, false, scopedSession);
+            return doExecute(callable::call, false, scopedSession, true);
         } finally {
             boolean cleaned = false;
             try {
@@ -366,7 +366,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
 
         Assert.notNull(action, "Callback object must not be null");
 
-        return doExecute(action, enforceNativeSession, getSession());
+        return doExecute(action, enforceNativeSession, getSession(), false);
     }
 
     /**
@@ -374,8 +374,13 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
      * has just bound itself: it would register the holder with the surrounding synchronization, and a transaction
      * manager that begins inside the callback would then open a second session instead of using this one.
      */
-    private <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession, Session session)
-            throws DataAccessException {
+    /**
+     * @param newSessionScope true when the session was opened by {@code withNewSession}: the closure may begin and
+     *        commit its own write transaction on it, so the session is not marked read-only, and it is flushed
+     *        after the callback only while a transaction is still active on it
+     */
+    private <T> T doExecute(HibernateCallback<T> action, boolean enforceNativeSession, Session session,
+            boolean newSessionScope) throws DataAccessException {
         boolean existingTransaction = isSessionTransactional(session);
         if (existingTransaction) {
             LOG.debug("Found thread-bound Session for HibernateTemplate");
@@ -384,13 +389,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         FlushMode previousFlushMode = null;
         try {
             previousFlushMode = applyFlushMode(session, existingTransaction);
-            if (shouldPassReadOnlyToHibernate()) {
+            if (!newSessionScope && shouldPassReadOnlyToHibernate()) {
                 session.setDefaultReadOnly(true);
             }
             Session sessionToExpose =
                     (enforceNativeSession || exposeNativeSession ? session : createSessionProxy(session));
             T result = action.doInHibernate(sessionToExpose);
-            flushIfNecessary(session, existingTransaction);
+            if (!newSessionScope || hasActiveTransaction(session)) {
+                flushIfNecessary(session, existingTransaction);
+            }
             return result;
         } catch (HibernateException ex) {
             throw convertHibernateAccessException(ex);
@@ -412,6 +419,11 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 SessionFactoryUtils.closeSession(session);
             }
         }
+    }
+
+    private static boolean hasActiveTransaction(Session session) {
+        org.hibernate.Transaction transaction = session.getTransaction();
+        return transaction != null && transaction.isActive();
     }
 
     protected boolean isSessionTransactional(Session session) {
