@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.mapping.config
 
+import org.grails.datastore.mapping.config.groovy.DefaultMappingConfigurationBuilder
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -57,6 +58,61 @@ class PropertyCascadeValidateSpec extends Specification {
 
         where:
         [way, value] << [['assignment', 'setter', 'builder'], [true, false, 'sometimes', '']].combinations()
+    }
+
+    @Unroll
+    void "a mapping map that names '#value' is refused when it is read through configureExisting"() {
+        when:
+        Property.configureExisting(new Property(), [cascadeValidate: value])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains("'${value}'")
+        ['default', 'none', 'owned', 'dirty'].every { e.message.contains(it) }
+
+        where:
+        value << [true, false, 'sometimes', '']
+    }
+
+    @Unroll
+    void "a mapping map that names the mode '#mode' is kept when it is read through configureExisting"() {
+        expect:
+        Property.configureExisting(new Property(), [cascadeValidate: mode]).cascadeValidate == mode
+
+        where:
+        mode << ['default', 'none', 'owned', 'DIRTY']
+    }
+
+    @Unroll
+    void "a mapping block that names '#value' is refused when it is read by the mapping builder"() {
+        given:
+        DefaultMappingConfigurationBuilder builder = new DefaultMappingConfigurationBuilder(new Entity(), Property)
+
+        when:
+        builder.parts(cascadeValidate: value)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains("'${value}'")
+        builder.properties.get('parts') == null
+
+        where:
+        value << [true, false, 'sometimes', '']
+    }
+
+    @Unroll
+    void "a mapping block that names the mode '#mode' is kept by the mapping builder"() {
+        given:
+        DefaultMappingConfigurationBuilder builder = new DefaultMappingConfigurationBuilder(new Entity(), Property)
+
+        when:
+        builder.parts(cascadeValidate: mode)
+
+        then:
+        builder.properties.get('parts').cascadeValidate == mode
+
+        where:
+        mode << ['default', 'none', 'owned', 'DIRTY']
     }
 
     void "a refused value leaves the earlier mode in place"() {

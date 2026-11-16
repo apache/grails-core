@@ -31,6 +31,7 @@ import jakarta.persistence.FetchType
 import org.grails.datastore.mapping.validation.CascadeValidateType
 import org.springframework.beans.MutablePropertyValues
 import org.springframework.validation.DataBinder
+import org.springframework.validation.FieldError
 
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}
@@ -352,7 +353,23 @@ class Property implements Cloneable {
     static <T extends Property> T configureExisting(T property, Map config) {
         DataBinder dataBinder = new DataBinder(property)
         dataBinder.bind(new MutablePropertyValues(config))
+        refuseInvalidCascadeValidate(dataBinder)
 
         return property
+    }
+
+    /**
+     * Refuses a mapping whose {@code cascadeValidate} names no mode. A binder collects the exception of a setter in its
+     * binding result instead of throwing it, so a mapping read through one would otherwise succeed and keep the default.
+     *
+     * @param dataBinder A binder that has bound a mapping to a property
+     * @throws IllegalArgumentException when the bound value names no mode
+     */
+    static void refuseInvalidCascadeValidate(DataBinder dataBinder) {
+        FieldError error = dataBinder.bindingResult.getFieldError('cascadeValidate')
+        if (error != null) {
+            CascadeValidateType.fromMappedName(error.rejectedValue == null ? null : String.valueOf(error.rejectedValue))
+            throw new IllegalArgumentException("cascadeValidate could not be set: ${error.defaultMessage}")
+        }
     }
 }
