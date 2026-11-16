@@ -509,6 +509,7 @@ public abstract class AbstractHibernateQuery extends Query {
         final String qualifiedPath = associationPath;
         final String givenAlias = alias;
         Criteria parentCriteria = criteria;
+        boolean throughParentAlias = false;
         if (alias == null) {
             alias = generateAlias(associationName);
         }
@@ -520,13 +521,21 @@ public abstract class AbstractHibernateQuery extends Query {
 
                     alias = associationName + '_' + alias;
                     associationPath = criteriaAndAlias.associationPath + '.' + associationPath;
+                    throughParentAlias = true;
                 }
             }
         }
-        CriteriaAndAlias existing = createdAssociationPaths.get(associationName);
-        if (existing != null && (givenAlias != null || existing.associationPath == null || existing.associationPath.equals(qualifiedPath))) {
-            // a join made for the same name is reused, unless it was made for another path: a nested block must not take
-            // the join of a block of the same name elsewhere
+        // the join made for this very path is reused, so a path that a block repeats keeps one join; a join made for the
+        // same name but another path is not, so a nested block does not take the join of a block of the same name
+        // elsewhere. A join named only by its alias, or made without a path, is looked up by the name given.
+        CriteriaAndAlias existing = createdAssociationPaths.get(qualifiedPath);
+        if (existing == null) {
+            CriteriaAndAlias byName = createdAssociationPaths.get(associationName);
+            if (byName != null && (throughParentAlias || byName.associationPath == null)) {
+                existing = byName;
+            }
+        }
+        if (existing != null) {
             subCriteria = existing;
         }
         else {

@@ -150,13 +150,35 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
         }*.code.sort() == ['L1', 'L2']
     }
 
+    /**
+     * A block that is a branch of an or keeps an inner join through a detached criteria on Hibernate 5, so an entity
+     * without the association drops out of the or; a criteria keeps a left join (see #16931). These shapes are checked
+     * through criteria only until that is merged up.
+     */
+    private static final Set<String> DETACHED_OR_BRANCH_SHAPES = [
+        'sire or dam.sire', 'dam.sire or sire', 'sire and dam.sire in an or of ands'
+    ] as Set
+
+    /** the closure of a row takes no argument; a detached criteria hands its builder to the closure it builds from */
+    private static List<String> detachedNames(Closure rows) {
+        Closure adapted = { Object builder ->
+            rows.delegate = delegate
+            rows.resolveStrategy = Closure.DELEGATE_FIRST
+            rows.call()
+        }
+        new DetachedCriteria(CriteriaAnimal).build(adapted).list()*.name.sort()
+    }
+
     @Unroll
     void "the pedigree query #shape returns #expected"() {
         given:
         seedPedigree()
 
-        expect:
+        expect: 'through criteria'
         CriteriaAnimal.createCriteria().list(closure)*.name.sort() == expected
+
+        and: 'through a detached criteria, which builds its joins another way'
+        shape in DETACHED_OR_BRANCH_SHAPES || detachedNames(closure) == expected
 
         where:
         shape                                    | closure                                                                                        || expected
@@ -169,6 +191,12 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
         'sire and dam.sire in an or of ands'     | { -> or { and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } } }; eq('name', 'Lonely') } } || ['Lonely', 'Society Lady']
         'dam.sire and an empty and beside sire'  | { -> and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } }; and {} } } || ['Society Lady']
         'not dam.sire beside sire, keeping the join' | { -> sire { eq('name', 'Mr. Prospector') }; not { dam { sire { eq('name', 'Tentam') } } } }    || []
+        'dam.sire twice in an and'               | { -> and { dam { sire { eq('name', 'Tentam') } }; dam { sire { ne('name', 'Fanfreluche') } } } }  || ['Other', 'Society Lady']
+        'sire, then dam.sire twice'              | { -> and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } }; dam { sire { ne('name', 'Nobody') } } } } || ['Society Lady']
+        'dam.sire twice, no and'                 | { -> dam { sire { eq('name', 'Tentam') } }; dam { sire { ne('name', 'Nobody') } } }                || ['Other', 'Society Lady']
+        'dam.sire, sire, dam.sire again'         | { -> dam { sire { eq('name', 'Tentam') } }; sire { eq('name', 'Mr. Prospector') }; dam { sire { ne('name', 'Nobody') } } } || ['Society Lady']
+        'sire twice at the root'                 | { -> sire { eq('name', 'Mr. Prospector') }; sire { ne('name', 'Nobody') } }                        || ['Lonely', 'Society Lady']
+        'dam.sire twice in an or'                | { -> or { dam { sire { eq('name', 'Tentam') } }; dam { sire { eq('name', 'Nobody') } } } }         || ['Other', 'Society Lady']
     }
 
     void "the same query composed from two detached criteria"() {
