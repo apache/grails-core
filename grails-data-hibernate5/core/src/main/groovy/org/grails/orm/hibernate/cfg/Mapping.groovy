@@ -213,12 +213,28 @@ class Mapping extends Entity<PropertyConfig> {
             pc = getOrInitializePropertyConfig(name)
             columns[name] = pc
             pc.column(length: length)
+            keepColumnOpenToTheNextDeclaration(pc)
             return
         }
+        boolean ours = pc.columns.isEmpty() || pc.firstColumnIsColumnCopy
         if (pc.columns.isEmpty()) {
             pc.columns << new ColumnConfig()
         }
         pc.columns[0].length = length
+        if (ours) {
+            keepColumnOpenToTheNextDeclaration(pc)
+        }
+    }
+
+    /**
+     * The column that a length created, or took over from the wildcard defaults, is not one the application declared: the
+     * column a later declaration of the identifier makes fills it in, as it fills in a copy of the defaults, so the identifier
+     * keeps one column.
+     */
+    private static void keepColumnOpenToTheNextDeclaration(PropertyConfig pc) {
+        if (pc.columns.size() == 1) {
+            pc.firstColumnIsColumnCopy = true
+        }
     }
     /**
      * Define the identity config
