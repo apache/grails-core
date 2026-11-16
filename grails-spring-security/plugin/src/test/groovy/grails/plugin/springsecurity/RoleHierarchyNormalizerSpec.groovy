@@ -51,6 +51,39 @@ class RoleHierarchyNormalizerSpec extends Specification {
         '  ROLE_ADMIN  >  ROLE_USER  \r\n\r\n  ROLE_USER>ROLE_GUEST ' || ['ROLE_ADMIN', 'ROLE_GUEST', 'ROLE_USER']
     }
 
+    void 'a chain grants every role after the first, with or without spaces, and a malformed line grants nothing'() {
+        given:
+        RoleHierarchyImpl hierarchy = RoleHierarchyImpl.fromHierarchy(RoleHierarchyNormalizer.normalize(configured))
+
+        expect:
+        hierarchy.getReachableGrantedAuthorities([new SimpleGrantedAuthority('ROLE_ADMIN')])*.authority.sort() == reachable
+
+        where:
+        form                                       | configured                                         || reachable
+        'a chain without spaces'                   | 'ROLE_ADMIN>ROLE_USER>ROLE_GUEST'                  || ['ROLE_ADMIN', 'ROLE_GUEST', 'ROLE_USER']
+        'a chain with spaces'                      | 'ROLE_ADMIN > ROLE_USER > ROLE_GUEST'              || ['ROLE_ADMIN', 'ROLE_GUEST', 'ROLE_USER']
+        'a chain with tabs'                        | 'ROLE_ADMIN\t>\tROLE_USER\t>\tROLE_GUEST'          || ['ROLE_ADMIN', 'ROLE_GUEST', 'ROLE_USER']
+        'three operators in a row'                 | 'ROLE_ADMIN>>>ROLE_USER'                           || ['ROLE_ADMIN']
+        'two operators in a row'                   | 'ROLE_ADMIN>>ROLE_USER'                            || ['ROLE_ADMIN']
+        'a trailing operator'                      | 'ROLE_ADMIN>ROLE_USER>'                            || ['ROLE_ADMIN']
+        'a leading operator'                       | '>ROLE_ADMIN>ROLE_USER'                            || ['ROLE_ADMIN']
+        'a chain broken by an empty piece'         | 'ROLE_ADMIN>ROLE_USER>>ROLE_GUEST'                 || ['ROLE_ADMIN']
+        'a good line, then a malformed one'        | 'ROLE_ADMIN>ROLE_USER\nROLE_USER>>ROLE_GUEST'      || ['ROLE_ADMIN', 'ROLE_USER']
+        'a malformed line, then a good one'        | 'ROLE_ADMIN>>ROLE_USER\nROLE_ADMIN>ROLE_GUEST'     || ['ROLE_ADMIN', 'ROLE_GUEST']
+    }
+
+    void 'a line with an empty piece is left as written, not rewritten into an operator that is read as a role'() {
+        expect:
+        RoleHierarchyNormalizer.normalize(configured) == normalized
+
+        where:
+        configured                              || normalized
+        'ROLE_ADMIN>>>ROLE_USER'                || 'ROLE_ADMIN>>>ROLE_USER'
+        ' ROLE_ADMIN>ROLE_USER> '               || 'ROLE_ADMIN>ROLE_USER>'
+        '>ROLE_ADMIN>ROLE_USER'                 || '>ROLE_ADMIN>ROLE_USER'
+        'ROLE_A>ROLE_B\nROLE_B>>ROLE_C'         || 'ROLE_A > ROLE_B\nROLE_B>>ROLE_C'
+    }
+
     void 'a hierarchy is rewritten with one space on each side of the operator, one line for each assignment'() {
         expect:
         RoleHierarchyNormalizer.normalize(configured) == normalized
