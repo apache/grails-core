@@ -35,12 +35,12 @@ class CriteriaSortAndListFormsSpec extends GrailsDataTckSpec {
         manager.domainClasses.addAll([CriteriaRanked])
     }
 
-    /** rank 1: bob, dan; rank 2: ann, cat; inserted in an order that no sort below produces */
+    /** tier 1: bob, dan; tier 2: ann, cat; inserted in an order that no sort below produces */
     private void seed() {
-        new CriteriaRanked(name: 'cat', rank: 2).save(failOnError: true)
-        new CriteriaRanked(name: 'ann', rank: 2).save(failOnError: true)
-        new CriteriaRanked(name: 'dan', rank: 1).save(failOnError: true)
-        new CriteriaRanked(name: 'bob', rank: 1).save(flush: true, failOnError: true)
+        new CriteriaRanked(name: 'cat', tier: 2).save(failOnError: true)
+        new CriteriaRanked(name: 'ann', tier: 2).save(failOnError: true)
+        new CriteriaRanked(name: 'dan', tier: 1).save(failOnError: true)
+        new CriteriaRanked(name: 'bob', tier: 1).save(flush: true, failOnError: true)
         manager.session.clear()
     }
 
@@ -57,17 +57,17 @@ class CriteriaSortAndListFormsSpec extends GrailsDataTckSpec {
 
         where:
         form                                                | query                                                                                                              | expected
-        'criteria, sort and order params'                   | { -> CriteriaRanked.createCriteria().list(sort: 'name', order: 'desc') { gt('rank', 0) }*.name }                  | ['dan', 'cat', 'bob', 'ann']
-        'criteria, a map of sort properties'                | { -> CriteriaRanked.createCriteria().list(sort: [rank: 'asc', name: 'desc']) { gt('rank', 0) }*.name }            | ['dan', 'bob', 'cat', 'ann']
-        'criteria, order calls in the closure'              | { -> CriteriaRanked.createCriteria().list { gt('rank', 0); order('rank', 'asc'); order('name', 'desc') }*.name }  | ['dan', 'bob', 'cat', 'ann']
+        'criteria, sort and order params'                   | { -> CriteriaRanked.createCriteria().list(sort: 'name', order: 'desc') { gt('tier', 0) }*.name }                  | ['dan', 'cat', 'bob', 'ann']
+        'criteria, a map of sort properties'                | { -> CriteriaRanked.createCriteria().list(sort: [tier: 'asc', name: 'desc']) { gt('tier', 0) }*.name }            | ['dan', 'bob', 'cat', 'ann']
+        'criteria, order calls in the closure'              | { -> CriteriaRanked.createCriteria().list { gt('tier', 0); order('tier', 'asc'); order('name', 'desc') }*.name }  | ['dan', 'bob', 'cat', 'ann']
         'static list, sort and order params'                | { -> CriteriaRanked.list(sort: 'name', order: 'desc')*.name }                                                      | ['dan', 'cat', 'bob', 'ann']
-        'static list, a map of sort properties'             | { -> CriteriaRanked.list(sort: [rank: 'asc', name: 'desc'])*.name }                                                | ['dan', 'bob', 'cat', 'ann']
-        'dynamic finder, sort and order params'             | { -> CriteriaRanked.findAllByRankGreaterThan(0, [sort: 'name', order: 'desc'])*.name }                            | ['dan', 'cat', 'bob', 'ann']
-        'dynamic finder, a map of sort properties'          | { -> CriteriaRanked.findAllByRankGreaterThan(0, [sort: [rank: 'asc', name: 'desc']])*.name }                      | ['dan', 'bob', 'cat', 'ann']
-        'where query, sort and order params'                | { -> CriteriaRanked.where { rank > 0 }.list(sort: 'name', order: 'desc')*.name }                                  | ['dan', 'cat', 'bob', 'ann']
-        'where query, a map of sort properties'             | { -> CriteriaRanked.where { rank > 0 }.list(sort: [rank: 'asc', name: 'desc'])*.name }                            | ['dan', 'bob', 'cat', 'ann']
-        'detached criteria, sort and order params'          | { -> new DetachedCriteria(CriteriaRanked).build { gt('rank', 0) }.list(sort: 'name', order: 'desc')*.name }       | ['dan', 'cat', 'bob', 'ann']
-        'detached criteria, a map of sort properties'       | { -> new DetachedCriteria(CriteriaRanked).build { gt('rank', 0) }.list(sort: [rank: 'asc', name: 'desc'])*.name } | ['dan', 'bob', 'cat', 'ann']
+        'static list, a map of sort properties'             | { -> CriteriaRanked.list(sort: [tier: 'asc', name: 'desc'])*.name }                                                | ['dan', 'bob', 'cat', 'ann']
+        'dynamic finder, sort and order params'             | { -> CriteriaRanked.findAllByTierGreaterThan(0, [sort: 'name', order: 'desc'])*.name }                            | ['dan', 'cat', 'bob', 'ann']
+        'dynamic finder, a map of sort properties'          | { -> CriteriaRanked.findAllByTierGreaterThan(0, [sort: [tier: 'asc', name: 'desc']])*.name }                      | ['dan', 'bob', 'cat', 'ann']
+        'where query, sort and order params'                | { -> CriteriaRanked.where { tier > 0 }.list(sort: 'name', order: 'desc')*.name }                                  | ['dan', 'cat', 'bob', 'ann']
+        'where query, a map of sort properties'             | { -> CriteriaRanked.where { tier > 0 }.list(sort: [tier: 'asc', name: 'desc'])*.name }                            | ['dan', 'bob', 'cat', 'ann']
+        'detached criteria, sort and order params'          | { -> new DetachedCriteria(CriteriaRanked).build { gt('tier', 0) }.list(sort: 'name', order: 'desc')*.name }       | ['dan', 'cat', 'bob', 'ann']
+        'detached criteria, a map of sort properties'       | { -> new DetachedCriteria(CriteriaRanked).build { gt('tier', 0) }.list(sort: [tier: 'asc', name: 'desc'])*.name } | ['dan', 'bob', 'cat', 'ann']
     }
 
     @Unroll
@@ -90,7 +90,7 @@ class CriteriaSortAndListFormsSpec extends GrailsDataTckSpec {
         'dynamic finder, an empty list'                   | { -> CriteriaRanked.findAllByNameInList([])*.name }                                                           | []
         'dynamic finder, a null list'                     | { -> CriteriaRanked.findAllByNameInList(null)*.name }                                                         | []
         'dynamic finder, a count of an empty list'        | { -> CriteriaRanked.countByNameInList([]) }                                                                   | 0
-        'dynamic finder, an empty list beside a property' | { -> CriteriaRanked.findAllByNameInListAndRank([], 1)*.name }                                                 | []
+        'dynamic finder, an empty list beside a property' | { -> CriteriaRanked.findAllByNameInListAndTier([], 1)*.name }                                                 | []
         'where query, an empty list'                      | { -> CriteriaRanked.where { name in [] }.list()*.name }                                                       | []
         'detached criteria, an empty list'                | { -> new DetachedCriteria(CriteriaRanked).build { inList('name', []) }.list()*.name }                         | []
     }

@@ -127,8 +127,7 @@ public class GrailsHibernateQueryUtils {
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(c, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(c, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -187,8 +186,7 @@ public class GrailsHibernateQueryUtils {
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
                 for (Object sort : sortMap.keySet()) {
-                    final String order = DynamicFinder.ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? DynamicFinder.ORDER_DESC : DynamicFinder.ORDER_ASC;
-                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, order, ignoreCase);
+                    addOrderPossiblyNested(query, queryRoot, criteriaBuilder, entity, (String) sort, sortDirection(sort, sortMap.get(sort)), ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
@@ -264,9 +262,26 @@ public class GrailsHibernateQueryUtils {
     }
 
     /**
+     * The direction of one entry of a map of sort properties: {@code asc} or {@code desc}, in any case. Anything else
+     * is refused, as a sort that silently falls back to ascending hides a typo.
+     */
+    static String sortDirection(Object property, Object direction) {
+        if (direction instanceof CharSequence) {
+            String text = direction.toString();
+            if (DynamicFinder.ORDER_DESC.equalsIgnoreCase(text)) {
+                return DynamicFinder.ORDER_DESC;
+            }
+            if (DynamicFinder.ORDER_ASC.equalsIgnoreCase(text)) {
+                return DynamicFinder.ORDER_ASC;
+            }
+        }
+        throw new IllegalArgumentException("The direction of the sort on [" + property + "] must be 'asc' or 'desc', not [" + direction + "]");
+    }
+
+    /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
-    private static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
+    static void addOrderPossiblyNested(Criteria c, PersistentEntity entity, String sort, String order, boolean ignoreCase) {
         int firstDotPos = sort.indexOf(".");
         if (firstDotPos == -1) {
             addOrder(c, sort, order, ignoreCase);

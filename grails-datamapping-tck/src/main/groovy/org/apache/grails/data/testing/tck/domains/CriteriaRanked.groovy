@@ -27,5 +27,5 @@ class CriteriaRanked implements Serializable {
     Long id
     Long version
     String name
-    Integer rank
+    Integer tier
 }
