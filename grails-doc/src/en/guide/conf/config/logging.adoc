@@ -21,6 +21,8 @@ Logging is handled by the https://logback.qos.ch[Logback logging framework]. A n
 
 NOTE: As of Grails 8, newly generated applications no longer include a `grails-app/conf/logback-spring.xml` file; logging works out of the box using Spring Boot's defaults. Add the file (see below) only when you need to customize logging.
 
+Newly generated applications set `logging.pattern.dateformat` to `HH:mm:ss.SSS` in `application-development.yml`, showing only the time with milliseconds during development. Other environments retain Spring Boot's full timestamp. Remove that property to use the full timestamp in development too.
+
 For most needs, levels and patterns can be adjusted entirely from `application.yml` without any XML:
 
 [source,yaml]
