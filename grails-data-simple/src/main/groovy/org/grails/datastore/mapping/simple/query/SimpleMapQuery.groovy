@@ -344,6 +344,14 @@ class SimpleMapQuery extends Query {
     }
 
     def executeAssociationSubQuery(allEntities, PersistentEntity associatedEntity, Query.Junction queryCriteria, PersistentProperty property) {
+        if (queryCriteria.getCriteria().isEmpty()) {
+            if (queryCriteria instanceof Query.Negation) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            // an empty junction in a block is true, as anywhere else. In the query of an entity the block answers with the owners, so
+            // true is the owners that have an associated entity; in the query of the associated entity it is every associated entity
+            return allEntities.is(datastore[family]) ? identifiersWhereEmpty(property, false) : allEntities.keySet().toList()
+        }
         List resultList = []
         for (Query.Criterion criterion in queryCriteria.getCriteria()) {
             def handler = associationQueryHandlers[criterion.getClass()]
@@ -390,7 +398,10 @@ class SimpleMapQuery extends Query {
         },
         (AssociationQuery): { AssociationQuery aq, PersistentProperty property ->
             Query.Junction queryCriteria = aq.criteria
-            return executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
+            def found = executeAssociationSubQuery(datastore[family], aq.association.associatedEntity, queryCriteria, property)
+            // a block asks for an associated entity, as a join does, so a negation inside it is taken among the owners that have one
+            Set withAssociated = identifiersWhereEmpty(aq.association, false) as Set
+            return found.findAll { withAssociated.contains(it) }
         },
         (Query.EqualsAll): { Query.EqualsAll equalsAll, PersistentProperty property, Closure function=null, boolean onValue = false ->
             def name = equalsAll.property
@@ -524,6 +535,10 @@ class SimpleMapQuery extends Query {
             return executeLikeWithRegex(entityPersister, property, regexFormat)
         },
         (Query.In): { Query.In inList, PersistentProperty property ->
+            if (!inList.values) {
+                // a list with no value matches nothing; the disjunction built below would be empty, which is true
+                return []
+            }
             def disjunction = new Query.Disjunction()
             for (value in inList.values) {
                 disjunction.add(Restrictions.eq(inList.name, value))
@@ -718,9 +733,17 @@ class SimpleMapQuery extends Query {
     }
 
     Collection executeSubQueryInternal(criteria, criteriaList) {
+        if (criteriaList.isEmpty()) {
+            if (criteria instanceof Query.Negation) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
+            // a junction with nothing in it is true wherever it stands, as it is on Hibernate 5: it answers every entity, so in an and it
+            // is neutral, in an or it makes the or true, and under a not the negation is empty
+            return datastore[family].keySet().toList()
+        }
         SimpleMapResultList resultList = new SimpleMapResultList(this)
         for (Query.Criterion criterion in criteriaList) {
-            if (isEmptyBlock(criterion) || isVacuousJunction(criterion)) {
+            if (isEmptyBlock(criterion)) {
                 continue
             }
             if (criterion instanceof Query.Junction) {
@@ -750,11 +773,6 @@ class SimpleMapQuery extends Query {
             return datastore[family].keySet().toList()
         }
         return applyJunctionToResults(criteria, resultList.results)
-    }
-
-    /** a junction with nothing in it, or only such junctions, adds nothing to the junction it stands in */
-    private static boolean isVacuousJunction(Query.Criterion criterion) {
-        criterion instanceof Query.Junction && ((Query.Junction) criterion).getCriteria().every { Query.Criterion inner -> isVacuousJunction(inner) }
     }
 
     private static boolean isEmptyBlock(Query.Criterion criterion) {
