@@ -98,6 +98,45 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
     }
 
     @Issue('#15877')
+    @Unroll
+    void 'with the login form at #formUrl, a GET of #scheme://#host:#port#uri is #outcome'() {
+        given:
+        AuthenticationSuccessHandler handler = Mock(AuthenticationSuccessHandler)
+        MockHttpServletRequest request = new MockHttpServletRequest('GET', uri)
+        request.contextPath = contextPath
+        request.scheme = scheme
+        request.serverName = host
+        request.serverPort = port
+        MockHttpServletResponse response = new MockHttpServletResponse()
+        MockFilterChain chain = new MockFilterChain()
+        GrailsRememberMeAuthenticationFilter filter = filterWith(handler)
+        filter.loginFormUrl = formUrl
+
+        when:
+        filter.doFilter(request, response, chain)
+
+        then: 'the form itself goes down the chain, any other page is redirected to by the handler'
+        (chain.request != null) == isForm
+
+        where:
+        formUrl                                   | uri                 | contextPath | scheme  | host           | port || isForm
+        '/login/auth'                             | '/app/login/auth'   | '/app'      | 'http'  | 'localhost'    | 8080 || true
+        '/login/auth'                             | '/app/other'        | '/app'      | 'http'  | 'localhost'    | 8080 || false
+        'https://example.test/login/auth'         | '/login/auth'       | ''          | 'https' | 'example.test' | 443  || true
+        'https://example.test/app/login/auth'     | '/app/login/auth'   | '/app'      | 'https' | 'example.test' | 443  || true
+        'https://example.test:8443/login/auth'    | '/login/auth'       | ''          | 'https' | 'example.test' | 8443 || true
+        'http://example.test/login/auth'          | '/login/auth'       | ''          | 'http'  | 'example.test' | 80   || true
+        'https://Example.Test/login/auth'         | '/login/auth'       | ''          | 'https' | 'example.test' | 443  || true
+        'https://example.test/login/auth?x=1'     | '/login/auth'       | ''          | 'https' | 'example.test' | 443  || true
+        'https://example.test/login/auth'         | '/login/auth'       | ''          | 'https' | 'other.test'   | 443  || false
+        'https://example.test/login/auth'         | '/login/auth'       | ''          | 'http'  | 'example.test' | 443  || false
+        'https://example.test/login/auth'         | '/login/auth'       | ''          | 'https' | 'example.test' | 8443 || false
+        'https://example.test/login/auth'         | '/other'            | ''          | 'https' | 'example.test' | 443  || false
+        'https://example.test/login/auth'         | '/app/login/auth'   | '/app'      | 'https' | 'example.test' | 443  || false
+        outcome = isForm ? 'the login form, passed down the chain' : 'another page, redirected to'
+    }
+
+    @Issue('#15877')
     void 'the request for the login form goes on down the filter chain, so the controller can send a remembered user to the full login page'() {
         given:
         AuthenticationSuccessHandler handler = Mock(AuthenticationSuccessHandler)
