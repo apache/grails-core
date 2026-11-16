@@ -243,6 +243,28 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         listener.events[1] instanceof ValidationEvent
         ['name'] == listener.events[1].validatedFields
     }
+
+    void 'Test a validation event says whether the associated objects are validated too'() {
+        given:
+        def p = new Simples(name: 'Fred')
+
+        when:
+        p.validate()
+        p.validate(deepValidate: false)
+        p.validate(deepValidate: true)
+
+        then:
+        listener.events.size() == 3
+        listener.events.every { it instanceof ValidationEvent }
+        listener.events*.deepValidate == [true, false, true]
+
+        when: 'the instance is validated as it is saved'
+        listener.events.clear()
+        p.save(deepValidate: false)
+
+        then:
+        !listener.events.find { it instanceof ValidationEvent }.deepValidate
+    }
 }
 
 class SpecPersistenceListener extends AbstractPersistenceEventListener {

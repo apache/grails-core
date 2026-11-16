@@ -141,6 +141,11 @@ public abstract class AbstractGormMappingFactory<R extends Entity, T extends Pro
             if (props != null && props.containsKey(GormProperties.TENANT_IDENTITY)) {
                 T tenantIdProp = props.get(GormProperties.TENANT_IDENTITY);
                 String propertyName = tenantIdProp.getName();
+                if (propertyName == null) {
+                    // The mapping or the constraints configure the tenantId property itself, as
+                    // tenantId nullable: false does, and name no other property with tenantId name:
+                    propertyName = GormProperties.TENANT_IDENTITY;
+                }
                 if (descriptor.getName().equals(propertyName)) {
                     return true;
                 }

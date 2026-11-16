@@ -56,6 +56,8 @@ Driver boltDriver =
 
 When using the `DISCRIMINATOR` approach, GORM for Neo4j will store a `tenantId` attribute in each Neo4j node and attempt to partition the data.
 
+The constraints declared on the tenant id, such as `nullable` or `maxSize`, are checked when an instance is validated, after GORM has set the tenant id of the instance and of the new and the changed associated instances that are validated with it. A tenant id that breaks a constraint declared on one of them is a validation error of the instance that is saved.
+
 Once again this works only when using GORM methods and even then there are cases where it will not work if you use native Neo4j interfaces.
 
 For example the following works fine:

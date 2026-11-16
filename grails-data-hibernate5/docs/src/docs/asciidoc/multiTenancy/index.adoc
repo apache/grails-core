@@ -41,6 +41,11 @@ include::schemaPerTenant.adoc[]
 
 include::discriminatorMultiTenancy.adoc[]
 
+[[tenantIdConstraints]]
+=== Validating the Tenant Id
+
+include::tenantIdConstraints.adoc[]
+
 === Understanding Tenant Resolvers
 
 include::tenantResolvers.adoc[]

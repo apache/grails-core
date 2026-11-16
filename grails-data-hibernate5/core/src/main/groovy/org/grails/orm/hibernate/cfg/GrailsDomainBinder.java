@@ -551,8 +551,9 @@ public class GrailsDomainBinder implements MetadataContributor {
     private String getMultiTenantFilterCondition(String sessionFactoryBeanName, PersistentEntity referenced) {
         TenantId tenantId = referenced.getTenantId();
         if (tenantId != null) {
-            String defaultColumnName = getDefaultColumnName(tenantId, sessionFactoryBeanName);
-            return ":tenantId = " + defaultColumnName;
+            // The column the mapping gives the tenant id, as it is bound, or else the default one
+            String columnName = getColumnNameForPropertyAndPath(tenantId, EMPTY_PATH, null, sessionFactoryBeanName);
+            return ":tenantId = " + columnName;
         }
         else {
             return null;

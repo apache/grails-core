@@ -53,6 +53,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Identity;
+import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.datastore.mapping.reflect.NameUtils;
@@ -144,6 +145,12 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
                     Property mappedForm = p.getMapping().getMappedForm();
                     PersistentProperty version = entity.getVersion();
                     if (canPropertyBeConstrained(p) && !p.equals(version)) {
+                        if (p instanceof TenantId) {
+                            // A tenant id is mapped as derived, but it is persisted like any other property. It
+                            // keeps the constraints declared on it and gets no default constraints, so a tenant id
+                            // that declares none is not checked, as before.
+                            continue;
+                        }
                         if (mappedForm.isDerived()) {
                             if (constrainedProperties.remove(p.getName()) != null) {
                                 LOG.warn("Derived properties may not be constrained. Property [" + p.getName() + "] of domain class " + theClass.getName() + " will not be checked during validation.");
