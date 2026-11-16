@@ -31,6 +31,7 @@ import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.collection.spi.PersistentCollection
+import org.hibernate.engine.internal.ForeignKeys
 import org.hibernate.engine.spi.CascadeStyle
 import org.hibernate.engine.spi.CascadingActions
 import org.hibernate.engine.spi.SessionImplementor
@@ -456,12 +457,16 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         // the dirtiness strategy finds nothing to flush.
         List<String> changed = target instanceof DirtyCheckable ? ((DirtyCheckable) target).listDirtyPropertyNames() : []
         // a detached instance that reports a change without naming the properties, such as one restored from a
-        // serialized session, has all of its properties marked; a new instance is inserted and left alone
+        // serialized session, has all of its properties marked
         boolean changedWithoutNames = changed.isEmpty() && target instanceof DirtyCheckable &&
-                ((DirtyCheckable) target).hasChanged() && persistentEntity.reflector.getIdentifier(target) != null
+                ((DirtyCheckable) target).hasChanged()
         hibernateTemplate.execute { Session session ->
+            // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
+            // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
+            // type it has and whatever changes it tracks.
+            boolean inserted = ForeignKeys.isTransient(target.getClass().name, target, null, (SessionImplementor) session)
             Object merged = session.merge(target)
-            if (merged instanceof DirtyCheckable && !merged.is(target)) {
+            if (!inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
                 if (changedWithoutNames) {
                     ((DirtyCheckable) merged).markDirty()
                 } else {

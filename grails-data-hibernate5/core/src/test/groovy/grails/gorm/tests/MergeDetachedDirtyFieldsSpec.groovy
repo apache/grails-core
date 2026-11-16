@@ -26,7 +26,7 @@ import spock.lang.Issue
 class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(MergeDirtyData)
+        manager.registerDomainClasses(MergeDirtyData, MergePrimitiveIdData)
     }
 
     void "merge writes the changed fields of a detached instance"() {
@@ -82,6 +82,28 @@ class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
         MergeDirtyData.count() == 1
     }
 
+    void "merge of a new instance that tracks a named change is not followed by an update"() {
+        given: 'a new instance whose property is set after construction, so the change is tracked by name'
+        MergeDirtyData data = new MergeDirtyData()
+        data.name = 'tracked'
+
+        when:
+        MergeDirtyData merged = data.merge(flush: true)
+
+        then: 'the insert is the only write'
+        merged.version == 0
+        MergeDirtyData.count() == 1
+    }
+
+    void "merge of a new instance with a primitive id is not followed by an update"() {
+        when: 'the id of a new instance is the primitive default 0, not null'
+        MergePrimitiveIdData merged = new MergePrimitiveIdData(name: 'new').merge(flush: true)
+
+        then: 'it is inserted once'
+        merged.version == 0
+        MergePrimitiveIdData.count() == 1
+    }
+
     void "merge of an instance the session already manages keeps its changes"() {
         given:
         MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
@@ -109,4 +131,10 @@ class MergeDetachedDirtyFieldsSpec extends HibernateGormDatastoreSpec {
 class MergeDirtyData implements Serializable {
     String name
     Integer number
+}
+
+@Entity
+class MergePrimitiveIdData implements Serializable {
+    long id
+    String name
 }

@@ -71,20 +71,29 @@ class HibernateCriterionInJunctionSpec extends HibernateGormDatastoreSpec {
         }*.authorName == ['author2', 'author3']
     }
 
-    void "add returns the criteria so that calls chain at the top level and inside a junction"() {
+    void "add returns the Criteria at the top level, so calls chain, and the criterion it added inside a junction"() {
         expect:
         JunctionAuthor.createCriteria().list {
             add(Restrictions.like('authorName', 'author%')).add(Restrictions.ne('authorName', 'author3'))
             order 'authorName'
         }*.authorName == ['author1', 'author2']
 
-        and:
-        JunctionAuthor.createCriteria().list {
+        when:
+        def added = []
+        def eq1 = Restrictions.eq('authorName', 'author1')
+        def eq3 = Restrictions.eq('authorName', 'author3')
+        List found = JunctionAuthor.createCriteria().list {
             or {
-                add(Restrictions.eq('authorName', 'author1')).add(Restrictions.eq('authorName', 'author3'))
+                added << add(eq1)
+                added << add(eq3)
             }
             order 'authorName'
-        }*.authorName == ['author1', 'author3']
+        }
+
+        then: 'each call returns the criterion it added, and both are part of the disjunction'
+        added[0].is(eq1)
+        added[1].is(eq3)
+        found*.authorName == ['author1', 'author3']
     }
 
     void "the result of add at the top level is the Criteria, so list works on it"() {
