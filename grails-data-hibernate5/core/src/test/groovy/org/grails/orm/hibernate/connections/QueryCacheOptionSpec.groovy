@@ -44,7 +44,7 @@ class QueryCacheOptionSpec extends Specification {
             'dataSource.dialect'      : H2Dialect.name,
             'hibernate.cache.use_query_cache': 'true',
             'hibernate.cache'         : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory']
-    ]), QcCached, QcPlain)
+    ]), QcCached, QcPlain, QcBook, QcNote)
 
     @Shared
     @AutoCleanup
@@ -63,11 +63,18 @@ class QueryCacheOptionSpec extends Specification {
                 (1..3).each { int i -> type.newInstance(name: "n${i}").save(failOnError: true) }
             }
         }
+        QcBook.withNewTransaction {
+            QcCached author = QcCached.findByName('n1')
+            (1..2).each { int i ->
+                new QcBook(title: "b${i}", author: author).save(failOnError: true)
+                new QcNote(title: "b${i}", author: author).save(failOnError: true)
+            }
+        }
         [datastore, cachingEverything].each { it.sessionFactory.statistics.setStatisticsEnabled(true) }
     }
 
     void cleanup() {
-        [QcCached, QcPlain, QcgCached, QcgPlain].each { Class type -> type.withNewTransaction { type.executeUpdate("delete from ${type.simpleName}".toString()) } }
+        [QcBook, QcNote, QcCached, QcPlain, QcgCached, QcgPlain].each { Class type -> type.withNewTransaction { type.executeUpdate("delete from ${type.simpleName}".toString()) } }
     }
 
     private int putsDuring(HibernateDatastore store, Closure query) {
@@ -102,6 +109,14 @@ class QueryCacheOptionSpec extends Specification {
         'a criteria list([:])'                    | 'a cached mapping'     | datastore | QcCached | { Class t -> t.createCriteria().list([:]) { } }                                   || true
         'a criteria list([:])'                    | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list([:]) { } }                                    || false
         'a criteria list([:]) with cache(true)'   | 'an uncached mapping'  | datastore | QcPlain  | { Class t -> t.createCriteria().list([:]) { cache(true) } }                        || true
+        'a criteria list sorted through a cached association with cache(false)' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { cache(false) } } || false
+        'a criteria list sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name', cache: false) { } } || false
+        'a static list sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.list(max: 2, sort: 'author.name', cache: false) } || false
+        'a dynamic finder sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.findAllByTitle('b1', [sort: 'author.name', cache: false]) } || false
+        'a criteria list sorted through a cached association' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { } } || true
+        'a criteria list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { } } || false
+        'a static list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.list(max: 2, sort: 'author.name') } || false
+        'a criteria list sorted through a cached association with cache(true)' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { cache(true) } } || true
         'a criteria list, with every query cached' | 'a cached mapping'    | cachingEverything | QcgCached | { Class t -> t.createCriteria().list { } }                             || true
         'a criteria list with cache(false), with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list { cache(false) } }     || false
         'a criteria list([:]) with cache(false), with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list([:]) { cache(false) } } || false
@@ -126,6 +141,7 @@ class QueryCacheOptionSpec extends Specification {
         'a criteria list with cache: false, with every query cached' | cachingEverything | QcgCached | { Class t -> t.createCriteria().list(max: 2, cache: false) { } }         || 0
         'a criteria list with cache: false on an uncached mapping, with every query cached' | cachingEverything | QcgPlain | { Class t -> t.createCriteria().list(max: 2, cache: false) { } } || 0
         'a criteria list([:]) with cache(false) on a cached mapping' | datastore         | QcCached  | { Class t -> t.createCriteria().list(max: 2) { cache(false) } }           || 0
+        'a criteria list sorted through a cached association with cache(false)' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { cache(false) } } || 0
         'a static list with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.list(max: 2, cache: false) }                               || 0
         'a static list with cache: false, with every query cached'   | cachingEverything | QcgCached | { Class t -> t.list(max: 2, cache: false) }                               || 0
         'a where query with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.where { name != 'x' }.list(max: 2, cache: false) }         || 0
@@ -158,4 +174,20 @@ class QcgCached {
 @Entity
 class QcgPlain {
     String name
+}
+
+@Entity
+class QcBook {
+    String title
+    QcCached author
+
+    static mapping = {
+        cache usage: 'nonstrict-read-write', include: 'all'
+    }
+}
+
+@Entity
+class QcNote {
+    String title
+    QcCached author
 }
