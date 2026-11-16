@@ -59,6 +59,11 @@ class JpaCompositeIdSpec extends Specification {
         'a mapped superclass and the entity (one each)' | JpaSplitIdEntity        || false
         'a mapped superclass only (the entity has none)' | JpaInheritedIdEntity    || false
         'a mapped superclass (two) and the entity (one)' | JpaTwoInheritedIdEntity || false
+        'a plain superclass (one) and the entity (one)'  | JpaPlainIdChild         || true
+        'a plain superclass (two) and the entity (one)'  | JpaPlainTwoIdChild      || true
+        'an entity superclass (one) and the entity (one)' | JpaEntityBaseChild      || false
+        'a mapped superclass (one) above a plain class, and the entity (one)' | JpaMappedAbovePlainChild || false
+        'a plain superclass whose @Id is on a getter, and the entity (one)' | JpaPlainGetterIdChild || true
         outcome = declaresGetId ? 'give it a getId()' : 'leave getId() to the key'
     }
 
@@ -116,6 +121,63 @@ abstract class JpaTwoIdBase implements Serializable {
 
 @Entity
 class JpaTwoInheritedIdEntity extends JpaTwoIdBase {
+    @Id
+    String userNo
+}
+
+abstract class JpaPlainIdBase {
+    @Id
+    Long orgId
+}
+
+@Entity
+class JpaPlainIdChild extends JpaPlainIdBase {
+    @Id
+    String userNo
+}
+
+abstract class JpaPlainTwoIdBase {
+    @Id
+    Long orgId
+    @Id
+    Long unitNo
+}
+
+@Entity
+class JpaPlainTwoIdChild extends JpaPlainTwoIdBase {
+    @Id
+    String userNo
+}
+
+@Entity
+class JpaEntityBase implements Serializable {
+    @Id
+    Long orgId
+}
+
+@Entity
+class JpaEntityBaseChild extends JpaEntityBase {
+    @Id
+    String userNo
+}
+
+class JpaPlainMiddle extends JpaOrgBase {
+    String note
+}
+
+@Entity
+class JpaMappedAbovePlainChild extends JpaPlainMiddle {
+    @Id
+    String userNo
+}
+
+abstract class JpaPlainGetterIdBase {
+    @Id
+    Long getOrgId() { null }
+}
+
+@Entity
+class JpaPlainGetterIdChild extends JpaPlainGetterIdBase {
     @Id
     String userNo
 }

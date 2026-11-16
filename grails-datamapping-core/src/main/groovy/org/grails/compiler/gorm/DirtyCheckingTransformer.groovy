@@ -492,12 +492,27 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
         return ['Domain'] as String[]
     }
 
+    private static final Set<String> MAPPED_SUPERCLASS_ANNOTATIONS = [
+            'jakarta.persistence.MappedSuperclass', 'jakarta.persistence.Entity', 'grails.persistence.Entity', 'grails.gorm.annotation.Entity'
+    ] as Set<String>
+
     /**
-     * Counts the JPA {@code @Id} properties that the superclasses of a class declare, by field, property or getter.
+     * Whether the mapping of a superclass is kept by the classes below it: a mapped superclass or an entity. The identifiers of
+     * a plain class are not part of the key of a class that extends it.
+     */
+    private static boolean keepsMapping(ClassNode superClass) {
+        superClass.annotations.any { AnnotationNode annotation -> MAPPED_SUPERCLASS_ANNOTATIONS.contains(annotation.classNode.name) }
+    }
+
+    /**
+     * Counts the JPA {@code @Id} properties that the mapped superclasses of a class declare, by field, property or getter.
      */
     private static int inheritedJpaIdCount(ClassNode classNode) {
         Set<String> names = new LinkedHashSet<String>()
         for (ClassNode superClass = classNode.superClass; superClass != null && superClass != ClassHelper.OBJECT_TYPE; superClass = superClass.superClass) {
+            if (!keepsMapping(superClass)) {
+                continue
+            }
             for (FieldNode field in superClass.fields) {
                 if (!field.isStatic() && hasAnnotation(field.annotations, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
                     names.add(field.name)
