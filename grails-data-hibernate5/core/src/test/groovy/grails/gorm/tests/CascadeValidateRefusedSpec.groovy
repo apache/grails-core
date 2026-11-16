@@ -22,6 +22,9 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
+import grails.gorm.hibernate.mapping.MappingBuilder
+import org.grails.orm.hibernate.cfg.Mapping
+import org.grails.orm.hibernate.cfg.PropertyConfig
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -48,6 +51,27 @@ class CascadeValidateRefusedSpec extends Specification {
     }
 
     @Unroll
+    void "MappingBuilder #form with cascadeValidate #given is refused when the mapping is read"() {
+        when:
+        read.call()
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('cascadeValidate must be one of')
+
+        where:
+        form                               | given       | read
+        'define, built'                    | 'sometimes' | { -> MappingBuilder.define { parts cascadeValidate: 'sometimes' }.build() }
+        'define, built with a Boolean'     | 'true'      | { -> MappingBuilder.define { parts cascadeValidate: true }.build() }
+        'define, configured onto a mapping' | 'sometimes' | { -> MappingBuilder.define { parts cascadeValidate: 'sometimes' }.configure(new Mapping()) }
+        'define, a property block'         | 'sometimes' | { -> MappingBuilder.define { parts { cascadeValidate 'sometimes' } }.build() }
+        'define, a map beside a block'     | 'sometimes' | { -> MappingBuilder.define { parts(cascadeValidate: 'sometimes') { } }.build() }
+        'a property config built from a map' | 'sometimes' | { -> PropertyConfig.configureNew([cascadeValidate: 'sometimes']) }
+        'a property config built from a block' | 'sometimes' | { -> PropertyConfig.configureNew { cascadeValidate = 'sometimes' } }
+        'the default of every property'    | 'sometimes' | { -> MappingBuilder.define { '*'(cascadeValidate: 'sometimes') }.build() }
+    }
+
+    @Unroll
     void "#scope cascadeValidate #given is refused when the datastore starts"() {
         when:
         HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(settings(name, extra)), *classes)
@@ -61,6 +85,7 @@ class CascadeValidateRefusedSpec extends Specification {
         scope             | given       | name                | extra                                                                            | classes
         'an association'  | 'true'      | 'cvRefusedTrue'     | [:]                                                                              | [CvrTrueOwner, CvrTruePart]
         'an association'  | 'sometimes' | 'cvRefusedName'     | [:]                                                                              | [CvrNameOwner, CvrNamePart]
+        'an association through MappingBuilder.define' | 'sometimes' | 'cvRefusedDefine' | [:]                                       | [CvrDefineOwner, CvrDefinePart]
         'the global'      | 'true'      | 'cvRefusedGlobal'   | ['grails.gorm.default.mapping': { '*'(cascadeValidate: true) }]                  | [CvrPlainOwner, CvrPlainPart]
         'the global'      | 'false'     | 'cvRefusedGlobal2'  | ['grails.gorm.default.mapping': { '*'(cascadeValidate: false) }]                 | [CvrPlainOwner, CvrPlainPart]
     }
@@ -94,6 +119,21 @@ class CvrNameOwner {
 class CvrNamePart {
     String label
     static belongsTo = [owner: CvrNameOwner]
+}
+
+@Entity
+class CvrDefineOwner {
+    String name
+    static hasMany = [parts: CvrDefinePart]
+    static mapping = MappingBuilder.define {
+        parts cascadeValidate: 'sometimes'
+    }
+}
+
+@Entity
+class CvrDefinePart {
+    String label
+    static belongsTo = [owner: CvrDefineOwner]
 }
 
 @Entity
