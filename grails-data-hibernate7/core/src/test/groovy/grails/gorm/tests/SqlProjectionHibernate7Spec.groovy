@@ -37,6 +37,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
     @Shared mysql = DatabaseContainers.MYSQL
     @Shared mariadb = DatabaseContainers.MARIADB
     @Shared oracle = DatabaseContainers.ORACLE
+    @Shared cockroach = DatabaseContainers.COCKROACH
 
     void setupSpec() {
         manager.registerDomainClasses(SqlProjectionDbBox, SqlProjectionDbShelf)
@@ -185,6 +186,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         'MySQL'    | mysql
         'MariaDB'  | mariadb
         'Oracle'   | oracle
+        'CockroachDB' | cockroach
     }
 
     private static Date date(LocalDateTime dateTime) {
