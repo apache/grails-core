@@ -182,12 +182,21 @@ class Neo4jQuery extends Query {
             }
     ] as Map<Class<? extends Query.Projection>, ProjectionHandler<? extends Projection>>
 
+    /**
+     * A junction with no criteria is true wherever it stands, as it is on Hibernate 5: it adds no restriction in an and,
+     * makes the or it stands in true, and makes a negation false.
+     */
+    private static final CypherExpression EMPTY_JUNCTION = new CypherExpression('true')
+
     public static Map<Class<? extends Query.Criterion>, CriterionHandler<? extends Criterion>> CRITERION_HANDLERS = [
             (Query.Conjunction): new CriterionHandler<Query.Conjunction>() {
 
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Conjunction criterion) {
+            if (((Query.Junction) criterion).criteria.isEmpty()) {
+                return EMPTY_JUNCTION
+            }
             def inner = ((Query.Junction) criterion).criteria
                     .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
                     .findAll { String expression -> expression }
@@ -200,6 +209,9 @@ class Neo4jQuery extends Query {
         @Override
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Disjunction criterion) {
+            if (((Query.Junction) criterion).criteria.isEmpty()) {
+                return EMPTY_JUNCTION
+            }
             scope.builder.enterDisjunction()
             try {
                 def inner = ((Query.Junction) criterion).criteria
@@ -218,6 +230,9 @@ class Neo4jQuery extends Query {
         @CompileStatic
         CypherExpression handle(CriterionScope scope, Query.Negation criterion) {
             List<Query.Criterion> criteria = criterion.criteria
+            if (criteria.isEmpty()) {
+                throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
+            }
             def disjunction = new Query.Disjunction(criteria)
             new CypherExpression("NOT (${dispatchCriterion(disjunction, scope)})")
         }
@@ -769,7 +784,9 @@ class Neo4jQuery extends Query {
                 String conditions = dispatchCriterion(criterion.criteria, existence.scope).toString()
                 return new CypherExpression("size([${existence.pattern}${conditions ? ' WHERE ' + conditions : ''} | 1]) > 0".toString())
             }
-            return dispatchCriterion(criterion.criteria, scope.into(criterion))
+            CypherExpression conditions = dispatchCriterion(criterion.criteria, scope.into(criterion))
+            // a block without criteria keeps the match but adds no condition: its empty conjunction is not a branch
+            return criterion.criteria.getCriteria().isEmpty() ? new CypherExpression('') : conditions
         }
 
         /**
