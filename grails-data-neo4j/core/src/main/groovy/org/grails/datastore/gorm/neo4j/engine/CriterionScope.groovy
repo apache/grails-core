@@ -123,7 +123,9 @@ final class CriterionScope {
             Association association = (Association) found
             GraphPersistentEntity associated = (GraphPersistentEntity) association.associatedEntity
             if (entity.isRelationshipEntity() && RelationshipPersistentEntity.isRelationshipAssociation(association)) {
-                return associated.formatId(association.name)
+                // an end of the relationship is the node the block bound for it; when the relationship is the root of the query
+                // the end is named by the pattern itself
+                return associated.formatId(endVariable(association.name))
             }
             if (builder.inDisjunction && found instanceof ToOne) {
                 // in a disjunction the node reached is read where it stands: a match would drop the nodes that have

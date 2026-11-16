@@ -42,8 +42,10 @@ class RelationshipBlockIdentitySpec extends Neo4jGormDatastoreSpec {
         new RelIdLink(from: withLink, to: target, kind: 'a', total: 1L).save(flush: true, failOnError: true)
         new RelIdRoot(label: 'r-with', owner: withLink).save(flush: true, failOnError: true)
         new RelIdRoot(label: 'r-without', owner: without).save(flush: true, failOnError: true)
+        RelIdTarget otherTarget = new RelIdTarget(name: 'other').save(flush: true, failOnError: true)
         RelIdRoot.withSession { it.clear() }
-        [link: RelIdLink.list().find { it.kind == 'a' }]
+        [link: RelIdLink.list().find { it.kind == 'a' }, target: RelIdTarget.findByName('t'), otherTarget: RelIdTarget.findByName('other'),
+         owner: RelIdOwner.findByName('with')]
     }
 
     void "an identity test on a relationship in a block uses the identity of the relationship entity"() {
@@ -90,6 +92,39 @@ class RelationshipBlockIdentitySpec extends Neo4jGormDatastoreSpec {
                 }
             }
         }*.label == ['r-with']
+    }
+
+    void "an end of the relationship in a block is compared through the node the block bound for that end"() {
+        given:
+        Map data = seed()
+
+        expect: 'the end that the link reaches and the end it starts from match, and another node does not'
+        RelIdRoot.createCriteria().list { owner { links { eq('to', data.target) } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { eq('to', data.otherTarget) } } }.empty
+        RelIdRoot.createCriteria().list { owner { links { eq('from', data.owner) } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { ne('to', data.otherTarget) } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { ne('to', data.target) } } }.empty
+    }
+
+    void "an end of the relationship in a block holds beside another criterion, in a disjunction and under a negation"() {
+        given:
+        Map data = seed()
+
+        expect:
+        RelIdRoot.createCriteria().list { owner { links { eq('to', data.target); eq('kind', 'a') } } }*.label == ['r-with']
+        RelIdRoot.createCriteria().list { owner { links { eq('to', data.target); eq('kind', 'b') } } }.empty
+        RelIdRoot.createCriteria().list { or { owner { links { eq('to', data.target) } }; eq('label', 'r-without') } }*.label.sort() == ['r-with', 'r-without']
+        RelIdRoot.createCriteria().list { or { owner { links { eq('to', data.otherTarget) } }; eq('label', 'r-without') } }*.label == ['r-without']
+    }
+
+    void "an end of a relationship is compared when the relationship is the root of the query"() {
+        given:
+        Map data = seed()
+
+        expect:
+        RelIdLink.createCriteria().list { eq('to', data.target) }*.kind == ['a']
+        RelIdLink.createCriteria().list { eq('to', data.otherTarget) }.empty
+        RelIdLink.createCriteria().list { eq('from', data.owner) }*.kind == ['a']
     }
 
     void "a numeric property of the relationship is qualified with the relationship variable"() {
