@@ -34,9 +34,9 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  * the same fix for it, which is on 7.0.x, is merged up; each change removes its skip.
  */
 @IgnoreIf({
-    System.getProperty('mongodb.gorm.suite') == 'true' ||
-            System.getProperty('neo4j.gorm.suite') == 'true' ||
-            Boolean.getBoolean('hibernate5.gorm.suite')
+        System.getProperty('mongodb.gorm.suite') == 'true' ||
+        System.getProperty('neo4j.gorm.suite') == 'true' ||
+        Boolean.getBoolean('hibernate5.gorm.suite')
 })
 class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
 
