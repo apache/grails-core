@@ -79,9 +79,38 @@ class SpringSecurityOAuth2Controller {
         }
         try {
             URI uri = new URI(url)
-            return uri.scheme?.toLowerCase() in ['http', 'https'] && uri.host
+            return uri.scheme?.toLowerCase() in ['http', 'https'] && hostOf(uri) != null
         } catch (URISyntaxException ignored) {
             return false
+        }
+    }
+
+    /**
+     * The host of the address. {@link URI#getHost()} is null for a name with a non-ASCII letter, such as {@code bücher.de}, which
+     * the authority still holds, so the host is read from it and checked as an internationalized name.
+     *
+     * @return the host, or {@code null} when there is none or it is not a valid name
+     */
+    private static String hostOf(URI uri) {
+        if (uri.host) {
+            return uri.host
+        }
+        String authority = uri.authority
+        if (!authority) {
+            return null
+        }
+        String hostAndPort = authority.substring(authority.lastIndexOf('@') + 1)
+        int colon = hostAndPort.lastIndexOf(':')
+        String host = colon >= 0 ? hostAndPort.substring(0, colon) : hostAndPort
+        String port = colon >= 0 ? hostAndPort.substring(colon + 1) : ''
+        if (!host || host.startsWith('[') || (port && !port.every { String digit -> Character.isDigit(digit.charAt(0)) })) {
+            return null
+        }
+        try {
+            IDN.toASCII(host, IDN.USE_STD3_ASCII_RULES)
+            return host
+        } catch (IllegalArgumentException ignored) {
+            return null
         }
     }
 

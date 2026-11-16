@@ -107,7 +107,14 @@ class SpringSecurityOAuth2ControllerSpec extends Specification implements Contro
                 'https://login.example.com/oauth2/authorize?client_id=abc&state=1',
                 'https://dev.somewhere.local/oauth2/authorize?client_id=abc',
                 'http://keycloak:8080/realms/app/protocol/openid-connect/auth',
-                'http://localhost:8180/auth'
+                'http://localhost:8180/auth',
+                'https://bücher.de/oauth2/authorize',
+                'https://bücher.de:8443/oauth2/authorize?client_id=abc',
+                'https://user:secret@bücher.de/oauth2/authorize',
+                'https://пример.рф/oauth2/authorize',
+                'https://127.0.0.1:8080/oauth2/authorize',
+                'https://[::1]:8443/oauth2/authorize',
+                'HTTPS://LOGIN.EXAMPLE.COM/oauth2/authorize'
         ]
     }
 
@@ -126,7 +133,9 @@ class SpringSecurityOAuth2ControllerSpec extends Specification implements Contro
         flash.message == "Authorization url for provider 'okta' is invalid."
 
         where:
-        url << [null, '', '   ', 'not a url', 'javascript:alert(1)', 'ftp://example.com/auth', 'https:///no-host']
+        url << [null, '', '   ', 'not a url', 'javascript:alert(1)', 'ftp://example.com/auth', 'https:///no-host',
+                'https://:8080/auth', 'https://exa mple.com/auth', 'https://bücher.de:port/auth', 'https://bü cher.de/auth',
+                'file:///etc/passwd', 'mailto:someone@example.com', '//example.com/auth', 'example.com/auth']
     }
 
     void "onSuccess should throw exception if request is missing data"() {
