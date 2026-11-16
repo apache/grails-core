@@ -18,8 +18,6 @@
  */
 package org.grails.orm.hibernate;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -29,8 +27,6 @@ import org.hibernate.SessionFactory;
 import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.resource.jdbc.spi.LogicalConnectionImplementor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.orm.hibernate5.SessionHolder;
@@ -43,8 +39,6 @@ import org.grails.orm.hibernate.support.TransactionResources;
  * as well as Spring transaction synchronizations.
  */
 abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLifecycleStrategy {
-
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractOuterSessionLifecycleStrategy.class);
 
     protected final SessionFactory sessionFactory;
     protected final DataSource dataSource;
@@ -92,22 +86,6 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
         LogicalConnectionImplementor logicalConnection = getLogicalConnection();
         if (logicalConnection != null && logicalConnection.isOpen() && logicalConnection.isPhysicallyConnected()) {
             logicalConnection.manualDisconnect();
-        }
-    }
-
-    protected void primeIfDisconnected() {
-        LogicalConnectionImplementor logicalConnection = getLogicalConnection();
-        if (logicalConnection == null || logicalConnection.isPhysicallyConnected()) {
-            return;
-        }
-
-        Connection con = logicalConnection.getPhysicalConnection();
-        if (con != null) {
-            try {
-                con.getAutoCommit();
-            } catch (SQLException e) {
-                LOG.warn("Could not initialize physical connection: {}", e.getMessage(), e);
-            }
         }
     }
 

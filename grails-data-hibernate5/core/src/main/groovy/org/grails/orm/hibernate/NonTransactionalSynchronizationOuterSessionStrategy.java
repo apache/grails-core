@@ -32,10 +32,10 @@ import org.grails.orm.hibernate.support.TransactionResources;
  * Strategy applied when an outer session exists within an active Spring synchronization scope
  * that is not an actual physical transaction (such as {@code PROPAGATION_SUPPORTS} or read-only scopes).
  *
- * <p>Primes a disconnected outer session so Spring's {@code ConnectionHolder} captures it before
- * the nested session begins. Coordinates via {@link TransactionSynchronization} to disconnect
- * the primed session both on suspension (when a nested {@code REQUIRED} transaction begins) and
- * on beforeCompletion (before Spring's {@code ConnectionSynchronization} closes the physical connection),
+ * <p>Leaves a disconnected outer session disconnected: it takes no connection of its own, so a pool of one
+ * connection still serves a transaction in the nested session. Coordinates via {@link TransactionSynchronization}
+ * to disconnect the outer session if it connects later, both on suspension (when a nested {@code REQUIRED}
+ * transaction begins) and on beforeCompletion (before Spring's {@code ConnectionSynchronization} closes the physical connection),
  * preventing closed-connection failures on subsequent outer session access.</p>
  */
 class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy {
@@ -53,7 +53,6 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
     public void prepare() {
         super.prepare();
         if (lazyConnection && !wasPhysicallyConnectedAtPrepare) {
-            primeIfDisconnected();
             txResources.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public int getOrder() {

@@ -1,0 +1,107 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate
+
+import javax.sql.DataSource
+
+import grails.gorm.annotation.Entity
+import org.grails.orm.hibernate.cfg.Settings
+import org.springframework.orm.hibernate5.SessionHolder
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import spock.lang.AutoCleanup
+import spock.lang.Issue
+import spock.lang.Specification
+
+/**
+ * A lazy data source with a pool of one connection: withNewSession must not hold a second connection for the outer
+ * session, or a transaction in the closure that then reads the outer session waits for a connection that never comes.
+ */
+@Issue('https://github.com/apache/grails-core/issues/16783')
+class WithNewSessionLazyPoolSpec extends Specification {
+
+    @AutoCleanup
+    HibernateDatastore datastore
+
+    org.apache.tomcat.jdbc.pool.DataSource tomcatDataSource
+    org.hibernate.Session requestSession
+
+    void setup() {
+        Map config = [
+            (Settings.SETTING_DB_CREATE): 'create-drop',
+            'dataSource.url': 'jdbc:h2:mem:lazyPoolDB;LOCK_TIMEOUT=10000',
+            'dataSource.lazy': true,
+            'dataSource.pooled': true,
+            'dataSource.properties.maxActive': '1',
+            'dataSource.properties.maxWait': '500'
+        ]
+        datastore = new HibernateDatastore(config, LazyPoolAuthor, LazyPoolBook)
+        DataSource ds = datastore.connectionSources.defaultConnectionSource.dataSource
+        Object target = ds
+        while (!(target instanceof org.apache.tomcat.jdbc.pool.DataSource)) {
+            target = ((org.springframework.jdbc.datasource.DelegatingDataSource) target).targetDataSource
+        }
+        tomcatDataSource = (org.apache.tomcat.jdbc.pool.DataSource) target
+        LazyPoolAuthor.withTransaction {
+            LazyPoolAuthor author = new LazyPoolAuthor(name: 'Stephen King').save(flush: true)
+            new LazyPoolBook(title: 'The Stand', author: author).save(flush: true)
+        }
+        requestSession = datastore.sessionFactory.openSession()
+        TransactionSynchronizationManager.bindResource(datastore.sessionFactory, new SessionHolder(requestSession))
+    }
+
+    void cleanup() {
+        if (TransactionSynchronizationManager.hasResource(datastore.sessionFactory)) {
+            TransactionSynchronizationManager.unbindResource(datastore.sessionFactory)
+        }
+        requestSession?.close()
+    }
+
+    void "a transaction in withNewSession that reads the outer session does not need a second connection"() {
+        given: 'the outer session holds a book whose author is lazy, and no connection'
+        LazyPoolBook book = LazyPoolBook.withTransaction { LazyPoolBook.first() }
+        requestSession.disconnect()
+        assert tomcatDataSource.pool.active == 0
+
+        when: 'a SUPPORTS scope runs a transaction in withNewSession and then reads the outer session'
+        String name = LazyPoolBook.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_SUPPORTS, readOnly: true) {
+            LazyPoolBook.withNewSession {
+                LazyPoolBook.withTransaction {
+                    LazyPoolBook.count()
+                    book.author.name
+                }
+            }
+        }
+
+        then: 'the pool of one served both'
+        name == 'Stephen King'
+        tomcatDataSource.pool.active == 0
+    }
+}
+
+@Entity
+class LazyPoolAuthor {
+    String name
+}
+
+@Entity
+class LazyPoolBook {
+    String title
+    LazyPoolAuthor author
+}

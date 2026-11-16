@@ -230,7 +230,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
     // NonTransactionalSynchronizationOuterSessionStrategy
     // -------------------------------------------------------------------------
 
-    void "NonTransactionalSynchronizationOuterSessionStrategy primes disconnected session and registers synchronization when lazyConnection is true"() {
+    void "NonTransactionalSynchronizationOuterSessionStrategy leaves a disconnected session disconnected and registers synchronization when lazyConnection is true"() {
         given:
         SessionImplementor sessionImpl = Mock(SessionImplementor)
         JdbcCoordinator coordinator = Mock(JdbcCoordinator)
@@ -253,8 +253,9 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         when:
         strategy.prepare()
 
-        then: "connection autoCommit probe is executed"
-        1 * physicalCon.getAutoCommit()
+        then: "the outer session takes no physical connection"
+        0 * logicalConnection.getPhysicalConnection()
+        0 * physicalCon.getAutoCommit()
 
         and: "synchronization is registered at SESSION_SYNCHRONIZATION_ORDER"
         1 * txResources.registerSynchronization(_ as TransactionSynchronization) >> { TransactionSynchronization sync ->
@@ -344,7 +345,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         when: "a nested REQUIRED transaction starts, suspending outer synchronizations"
         registeredSync.suspend()
 
-        then: "the primed logical connection is immediately disconnected"
+        then: "the outer connection is disconnected when the session had connected"
         1 * logicalConnection.manualDisconnect()
     }
 
