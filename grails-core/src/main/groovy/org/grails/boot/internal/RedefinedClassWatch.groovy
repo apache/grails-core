@@ -32,6 +32,8 @@ import org.grails.io.support.GrailsResourceUtils
  * after its shape was recorded for the plugins has been redefined, and its source file is returned so that they can
  * be told again.</p>
  *
+ * <p>Not thread-safe: the development watch calls it from its own thread only.</p>
+ *
  * @since 8.1
  */
 @CompileStatic

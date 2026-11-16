@@ -18,13 +18,22 @@
  */
 package org.grails.web.mapping.mvc
 
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.context.support.GenericApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 
 import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.core.GrailsControllerClass
+import grails.plugins.DefaultGrailsPluginManager
+import grails.plugins.GrailsPluginManager
 import grails.util.GrailsWebMockUtil
 import grails.web.mapping.AbstractUrlMappingsSpec
+import grails.web.mapping.UrlMappingsHolder
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.grails.core.DefaultGrailsControllerClass
+import org.grails.core.artefact.ControllerArtefactHandler
+import org.grails.web.mapping.UrlMappingsHolderFactoryBean
 
 /**
  * A controller registered again while the application runs, as the development watch does when a class is reloaded.
@@ -156,6 +165,44 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         controllerFor(mappings, '/reload/index').is(plain.clazz)
     }
 
+    void 'a controller class added again while the application runs is matched through the url mappings bean'() {
+        given:
+        def before = controllerClass('reload.ReloadController', ['index'])
+        def grailsApplication = new DefaultGrailsApplication(before, ReloadUrlMappings)
+        def context = runningContext(grailsApplication)
+        def holder = context.getBean('grailsUrlMappingsHolder', UrlMappingsHolder)
+        def after = controllerClass('reload.ReloadController', ['index', 'added'])
+
+        expect:
+        controllerFor(holder, '/reload/added') == null
+
+        when:
+        grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, after)
+
+        then:
+        controllerFor(holder, '/reload/added').is(after)
+        controllerFor(holder, '/reload/index').is(after)
+
+        cleanup:
+        context?.close()
+    }
+
+    void 'an application controller that lost an action to a plugin controller at startup still loses it once registered again'() {
+        given:
+        def application = controller('reload.BookController', ['index', 'show'])
+        def plugin = controller('bookstore.BookController', ['index', 'show'], null, 'bookstore')
+        def mappings = mappingsFor(application, plugin)
+
+        expect:
+        controllerFor(mappings, '/book/show').is(plugin.clazz)
+
+        when:
+        mappings.registerController(controller('reload.BookController', ['index', 'show']))
+
+        then:
+        controllerFor(mappings, '/book/show').is(plugin.clazz)
+    }
+
     private GrailsControllerUrlMappings mappingsFor(GrailsControllerClass... controllers) {
         def grailsApplication = new DefaultGrailsApplication(controllers*.clazz as Class[]).tap {
             initialise()
@@ -165,29 +212,58 @@ class ReloadedControllerMappingSpec extends AbstractUrlMappingsSpec {
         })
     }
 
-    private static GrailsControllerClass controller(String className, List<String> actions, String namespace = null) {
+    private static GrailsControllerClass controller(String className, List<String> actions, String namespace = null, String pluginName = null) {
+        new DefaultGrailsControllerClass(controllerClass(className, actions, namespace, pluginName))
+    }
+
+    private static Class<?> controllerClass(String className, List<String> actions, String namespace = null, String pluginName = null) {
         int lastDot = className.lastIndexOf('.')
         String source = """
             package ${className.substring(0, lastDot)}
 
+            ${pluginName ? "@grails.plugins.metadata.GrailsPlugin(name = '${pluginName}', version = '1.0')" : ''}
             class ${className.substring(lastDot + 1)} {
                 ${namespace ? "static namespace = '${namespace}'" : ''}
                 ${actions.collect { "@grails.web.Action def ${it}() { '${it}' }" }.join('\n')}
             }
         """
-        new DefaultGrailsControllerClass(new GroovyClassLoader(ReloadedControllerMappingSpec.classLoader).parseClass(source))
+        new GroovyClassLoader(ReloadedControllerMappingSpec.classLoader).parseClass(source)
+    }
+
+    /**
+     * A started application context whose url mappings bean listens for controllers added to the application.
+     */
+    private static GenericApplicationContext runningContext(DefaultGrailsApplication grailsApplication) {
+        def context = new GenericApplicationContext()
+        def discovery = new DefaultPluginDiscovery()
+        discovery.init(context.environment)
+        context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
+        context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME, new DefaultGrailsPluginManager(grailsApplication, discovery))
+        context.registerBeanDefinition('grailsUrlMappingsHolder', new RootBeanDefinition(UrlMappingsHolderFactoryBean))
+        context.addApplicationListener(grailsApplication)
+        grailsApplication.mainContext = context
+        grailsApplication.initialise()
+        context.refresh()
+        context
     }
 
     private static Map<AbstractGrailsControllerUrlMappings.ControllerKey, Class<?>> classesByKey(Map<AbstractGrailsControllerUrlMappings.ControllerKey, GrailsControllerClass> map) {
         map.collectEntries { key, controller -> [(key): controller.clazz] } as Map<AbstractGrailsControllerUrlMappings.ControllerKey, Class<?>>
     }
 
-    private static Class<?> controllerFor(GrailsControllerUrlMappings mappings, String uri) {
+    private static Class<?> controllerFor(UrlMappingsHolder mappings, String uri) {
         def webRequest = GrailsWebMockUtil.bindMockWebRequest()
         def request = webRequest.request as MockHttpServletRequest
         request.requestURI = uri
         request.method = 'GET'
         def info = new UrlMappingsHandlerMapping(mappings).getHandler(request)?.handler
         info instanceof GrailsControllerUrlMappingInfo ? ((GrailsControllerUrlMappingInfo) info).controllerClass.clazz : null
+    }
+
+    static class ReloadUrlMappings {
+
+        static mappings = {
+            "/$controller/$action?"()
+        }
     }
 }
