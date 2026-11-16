@@ -19,6 +19,7 @@
 
 package grails.plugin.springsecurity
 
+import org.springframework.beans.BeansException
 import spock.lang.Issue
 import spock.lang.Specification
 
@@ -56,11 +57,35 @@ class X509EntryPointSpec extends Specification implements GrailsWebUnitTest {
         entryPoint(value).class == type
 
         where:
-        value   || type
-        true    || AjaxAwareAuthenticationEntryPoint
-        'true'  || AjaxAwareAuthenticationEntryPoint
-        false   || Http403ForbiddenEntryPoint
-        'false' || Http403ForbiddenEntryPoint
+        value     || type
+        true      || AjaxAwareAuthenticationEntryPoint
+        'true'    || AjaxAwareAuthenticationEntryPoint
+        'TRUE'    || AjaxAwareAuthenticationEntryPoint
+        ' true '  || AjaxAwareAuthenticationEntryPoint
+        'yes'     || AjaxAwareAuthenticationEntryPoint
+        'on'      || AjaxAwareAuthenticationEntryPoint
+        '1'       || AjaxAwareAuthenticationEntryPoint
+        false     || Http403ForbiddenEntryPoint
+        'false'   || Http403ForbiddenEntryPoint
+        'FALSE'   || Http403ForbiddenEntryPoint
+        ' false ' || Http403ForbiddenEntryPoint
+        'no'      || Http403ForbiddenEntryPoint
+        'off'     || Http403ForbiddenEntryPoint
+        '0'       || Http403ForbiddenEntryPoint
+    }
+
+    void 'the setting not set at all keeps the default, which continues the chain'() {
+        expect:
+        entryPoint(null).class == AjaxAwareAuthenticationEntryPoint
+    }
+
+    void 'a value that is no boolean fails at startup, as it did when the filter converted it'() {
+        when:
+        entryPoint('maybe')
+
+        then: 'the conversion error names the value, so the setting that is wrong can be found'
+        BeansException e = thrown()
+        e.message.contains('maybe')
     }
 
     void 'the filter is told the setting as one boolean, also when it is the string #value'() {
@@ -72,8 +97,15 @@ class X509EntryPointSpec extends Specification implements GrailsWebUnitTest {
                 .get('continueFilterChainOnUnsuccessfulAuthentication') == expected
 
         where:
-        value   || expected
-        'true'  || true
-        'false' || false
+        value     || expected
+        'true'    || true
+        'false'   || false
+        'yes'     || true
+        'on'      || true
+        '1'       || true
+        ' true '  || true
+        'no'      || false
+        'off'     || false
+        '0'       || false
     }
 }
