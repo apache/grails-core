@@ -348,9 +348,10 @@ class SimpleMapQuery extends Query {
             if (queryCriteria instanceof Query.Negation) {
                 throw new IllegalArgumentException('Logical expression [not] must contain at least 1 expression')
             }
-            // an empty junction in a block is true, as anywhere else. In the query of an entity the block answers with the owners, so
-            // true is the owners that have an associated entity; in the query of the associated entity it is every associated entity
-            return allEntities.is(datastore[family]) ? identifiersWhereEmpty(property, false) : allEntities.keySet().toList()
+            // an empty junction in a block is true, as anywhere else, and the block still asks for an associated entity, as a join
+            // does: it answers with the entities of the map it is evaluated against that hold the association, whichever level of
+            // nesting that map is at
+            return identifiersWhereEmpty((Map) allEntities, property, false)
         }
         List resultList = []
         for (Query.Criterion criterion in queryCriteria.getCriteria()) {
@@ -772,7 +773,18 @@ class SimpleMapQuery extends Query {
             // only blocks without criteria: every entity, before the ones without an associated entity are left out
             return datastore[family].keySet().toList()
         }
-        return applyJunctionToResults(criteria, resultList.results)
+        def result = applyJunctionToResults(criteria, resultList.results)
+        if (criteria instanceof Query.Negation) {
+            // a block asks for an associated entity, as a join does, so the entities left by a negation of it are taken among
+            // the ones that have one
+            for (Query.Criterion criterion in criteriaList) {
+                if (criterion instanceof AssociationQuery) {
+                    Set withAssociated = identifiersWhereEmpty(((AssociationQuery) criterion).association, false) as Set
+                    result = result.findAll { withAssociated.contains(it) }
+                }
+            }
+        }
+        return result
     }
 
     private static boolean isEmptyBlock(Query.Criterion criterion) {
@@ -797,8 +809,12 @@ class SimpleMapQuery extends Query {
      * in its association index, any other value is on the entity.
      */
     protected List identifiersWhereEmpty(PersistentProperty property, boolean empty) {
+        identifiersWhereEmpty(datastore[family], property, empty)
+    }
+
+    protected List identifiersWhereEmpty(Map entities, PersistentProperty property, boolean empty) {
         List found = []
-        datastore[family].each { id, data ->
+        entities.each { id, data ->
             boolean propertyEmpty
             if (property instanceof Association && !(property instanceof ToOne) && ((Association) property).associatedEntity != null) {
                 def indexer = entityPersister.getAssociationIndexer((Map) data, (Association) property)

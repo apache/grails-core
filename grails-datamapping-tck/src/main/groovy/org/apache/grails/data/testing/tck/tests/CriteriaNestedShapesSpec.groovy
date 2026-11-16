@@ -43,6 +43,9 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
 
     /** two chains: p1 - m1 - l1 and p2 - m2 - l2, and a leaf l0 whose middle has no parent */
     private void seedChains() {
+        // two unreferenced grandparents first, so that no grandparent shares an identifier with the middle it belongs to
+        new CriteriaGrandparent(code: 'X1').save(failOnError: true)
+        new CriteriaGrandparent(code: 'X2').save(failOnError: true)
         CriteriaGrandparent p1 = new CriteriaGrandparent(code: 'P1').save(failOnError: true)
         CriteriaGrandparent p2 = new CriteriaGrandparent(code: 'P2').save(failOnError: true)
         CriteriaMiddle m1 = new CriteriaMiddle(code: 'M1', parent: p1).save(failOnError: true)
@@ -112,6 +115,60 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
                 }
             }
         }*.name == ['Society Lady']
+    }
+
+    void "a block nested in a block, inside a conjunction, keeps its own join"() {
+        given:
+        seedPedigree()
+
+        expect:
+        CriteriaAnimal.createCriteria().list {
+            and {
+                sire {
+                    eq('name', 'Mr. Prospector')
+                }
+                dam {
+                    sire {
+                        eq('name', 'Tentam')
+                    }
+                }
+            }
+        }*.name == ['Society Lady']
+    }
+
+    void "an empty junction in a nested block still requires the association"() {
+        given:
+        seedChains()
+
+        expect:
+        CriteriaLeaf.createCriteria().list {
+            child {
+                parent {
+                    and {}
+                }
+            }
+        }*.code.sort() == ['L1', 'L2']
+    }
+
+    @Unroll
+    void "the pedigree query #shape returns #expected"() {
+        given:
+        seedPedigree()
+
+        expect:
+        CriteriaAnimal.createCriteria().list(closure)*.name.sort() == expected
+
+        where:
+        shape                                    | closure                                                                                        || expected
+        'sire then dam.sire in an and'           | { -> and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } } } }    || ['Society Lady']
+        'dam.sire then sire in an and'           | { -> and { dam { sire { eq('name', 'Tentam') } }; sire { eq('name', 'Mr. Prospector') } } }    || ['Society Lady']
+        'sire then dam.sire, no and'             | { -> sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } } }             || ['Society Lady']
+        'dam.sire then sire, no and'             | { -> dam { sire { eq('name', 'Tentam') } }; sire { eq('name', 'Mr. Prospector') } }             || ['Society Lady']
+        'sire or dam.sire'                       | { -> or { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } } } }     || ['Lonely', 'Other', 'Society Lady']
+        'dam.sire or sire'                       | { -> or { dam { sire { eq('name', 'Tentam') } }; sire { eq('name', 'Mr. Prospector') } } }     || ['Lonely', 'Other', 'Society Lady']
+        'sire and dam.sire in an or of ands'     | { -> or { and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } } }; eq('name', 'Lonely') } } || ['Lonely', 'Society Lady']
+        'dam.sire and an empty and beside sire'  | { -> and { sire { eq('name', 'Mr. Prospector') }; dam { sire { eq('name', 'Tentam') } }; and {} } } || ['Society Lady']
+        'not dam.sire beside sire, keeping the join' | { -> sire { eq('name', 'Mr. Prospector') }; not { dam { sire { eq('name', 'Tentam') } } } }    || []
     }
 
     void "the same query composed from two detached criteria"() {
