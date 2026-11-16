@@ -47,6 +47,8 @@ public class ConnectionSourcesSupport {
 
     public static final List<String> DEFAULT_CONNECTION_SOURCE_NAMES = Collections.singletonList(ConnectionSource.DEFAULT);
 
+    private static final String JPA_ENTITY_ANNOTATION = "jakarta.persistence.Entity";
+
     /**
      * If a domain class uses more than one datasource, we need to know which one to use
      * when calling a method without a namespace qualifier.
@@ -147,7 +149,7 @@ public class ConnectionSourcesSupport {
      * leaves the default session factory with an association to an entity it does not map.
      */
     private static boolean isMappedWhereOwnerIs(PersistentEntity owner, PersistentEntity target, Collection<String> tenantSchemaNames) {
-        if (getConnectionSourceNames(target).contains(ConnectionSource.ALL)) {
+        if (getConnectionSourceNames(target).contains(ConnectionSource.ALL) || isMappedByJpaAnnotation(target)) {
             return true;
         }
         if (tenantSchemaNames == null || tenantSchemaNames.isEmpty()) {
@@ -161,6 +163,19 @@ public class ConnectionSourcesSupport {
             }
         }
         return true;
+    }
+
+    /**
+     * Whether the entity is a JPA entity by its annotation. The Hibernate binders add such a class to every session factory,
+     * whatever datasources its mapping lists, so it is mapped on each tenant schema.
+     */
+    private static boolean isMappedByJpaAnnotation(PersistentEntity entity) {
+        for (java.lang.annotation.Annotation annotation : entity.getJavaClass().getAnnotations()) {
+            if (JPA_ENTITY_ANNOTATION.equals(annotation.annotationType().getName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected static boolean isMultiTenant(Class[] interfaces) {

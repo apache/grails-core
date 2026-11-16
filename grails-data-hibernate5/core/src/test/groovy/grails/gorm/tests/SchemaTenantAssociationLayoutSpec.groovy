@@ -84,6 +84,7 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         'that declares datasources with only ALL'                | [LayoutOwnerAllList, LayoutTargetAllList]
         'that is a subclass of a root using every connection'    | [LayoutOwnerChild, LayoutAllRoot, LayoutAllChild]
         'that is the root of a hierarchy using every connection' | [LayoutOwnerRoot, LayoutAllRoot, LayoutAllChild]
+        'that is mapped by a JPA annotation and lists no datasource' | [LayoutOwnerJpa, LayoutJpaTarget]
     }
 
     private static HibernateDatastore startWithTenants(Class... classes) {
@@ -105,6 +106,7 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         layout                                          | classes
         'lists the default connection and the tenant'   | [KnownOwnerDefaultAndTenant, KnownTargetDefaultAndTenant]
         'declares datasource ALL'                       | [KnownOwnerAll, KnownTargetAll]
+        'is mapped by a JPA annotation and lists no datasource' | [KnownOwnerJpa, KnownJpaTarget]
     }
 
     @Unroll
@@ -216,6 +218,32 @@ class LayoutTargetDefault {
 class LayoutOwnerDefault implements MultiTenant<LayoutOwnerDefault> {
     String name
     LayoutTargetDefault target
+}
+
+@jakarta.persistence.Entity
+class LayoutJpaTarget {
+    @jakarta.persistence.Id
+    Long id
+    String name
+}
+
+@Entity
+class LayoutOwnerJpa implements MultiTenant<LayoutOwnerJpa> {
+    String name
+    LayoutJpaTarget target
+}
+
+@jakarta.persistence.Entity
+class KnownJpaTarget {
+    @jakarta.persistence.Id
+    Long id
+    String name
+}
+
+@Entity
+class KnownOwnerJpa implements MultiTenant<KnownOwnerJpa> {
+    String name
+    KnownJpaTarget target
 }
 
 class KnownTenantsResolver implements AllTenantsResolver {
