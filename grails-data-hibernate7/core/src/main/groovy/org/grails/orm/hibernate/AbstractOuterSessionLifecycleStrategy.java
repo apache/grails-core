@@ -18,8 +18,6 @@
  */
 package org.grails.orm.hibernate;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -29,8 +27,6 @@ import org.hibernate.SessionFactory;
 import org.hibernate.engine.jdbc.spi.JdbcCoordinator;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.resource.jdbc.spi.LogicalConnectionImplementor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -43,8 +39,6 @@ import org.grails.orm.hibernate.support.hibernate7.TransactionResources;
  * as well as Spring transaction synchronizations.
  */
 abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLifecycleStrategy {
-
-    private static final Logger LOG = LoggerFactory.getLogger(AbstractOuterSessionLifecycleStrategy.class);
 
     protected final SessionFactory sessionFactory;
     protected final DataSource dataSource;
@@ -92,27 +86,6 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
         LogicalConnectionImplementor logicalConnection = getLogicalConnection();
         if (logicalConnection != null && logicalConnection.isOpen() && logicalConnection.isPhysicallyConnected()) {
             logicalConnection.manualDisconnect();
-        }
-    }
-
-    protected void primeIfDisconnected() {
-        LogicalConnectionImplementor logicalConnection = getLogicalConnection();
-        if (logicalConnection == null || logicalConnection.isPhysicallyConnected()) {
-            return;
-        }
-
-        Connection con = logicalConnection.getPhysicalConnection();
-        if (con != null) {
-            try {
-                // getPhysicalConnection() returns the TransactionAwareDataSourceProxy handle, which only takes a
-                // target connection, and binds its ConnectionHolder, on its first real call. getAutoCommit() is
-                // that call; a method the proxy answers itself (hashCode()) would leave the holder unbound and
-                // the outer session would share the inner transaction's connection. Do not remove it as dead code.
-                // With dataSource.lazy: true the lazy proxy defers the pooled connection, so an idle session stays free.
-                con.getAutoCommit();
-            } catch (SQLException e) {
-                LOG.warn("Could not initialize physical connection: {}", e.getMessage(), e);
-            }
         }
     }
 
