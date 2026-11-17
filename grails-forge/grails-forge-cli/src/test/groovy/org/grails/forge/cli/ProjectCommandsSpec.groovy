@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 
 import org.jline.reader.Candidate
 import org.jline.reader.LineReader
@@ -67,6 +68,8 @@ class ProjectCommandsSpec extends Specification {
     private static final Map URL_MAPPINGS_REPORT = [
             name: 'url-mappings-report', description: 'url-mappings-report', arguments: [], options: []
     ]
+
+    private static final List<String> MANIFEST_TASK = ['generateCommandManifest', '-PgrailsCommandManifest=build/grails/commands.json']
 
     private static final Map PLUGIN_CREATE_APP = [
             name: 'create-app', description: 'A plugin command named like a Forge command', arguments: [], options: []
@@ -119,7 +122,7 @@ class ProjectCommandsSpec extends Specification {
         CommandLine commandLine = ForgeCli.createCommandLine(context, false)
 
         then: "the build is run once, quietly, in the project directory"
-        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain', 'generateCommandManifest']]
+        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain'] + MANIFEST_TASK]
         output.toString().contains('Reading the commands of the project from its build...')
 
         and: "the project's commands are offered next to the Forge CLI's own"
@@ -151,12 +154,49 @@ class ProjectCommandsSpec extends Specification {
         CommandLine commandLine = ForgeCli.createCommandLine(context, false)
 
         then:
-        gradleInvocations()*.last() == ['generateCommandManifest']
+        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain'] + MANIFEST_TASK]
         commandLine.subcommands.containsKey('s2-quickstart')
 
         where:
         changed << ['build.gradle', 'settings.gradle', 'gradle.properties', 'gradle/libs.versions.toml',
-                    'grails-app/commands/example/HelloCommand.groovy']
+                    'dependencies.gradle', 'gradle/publishing.gradle', 'buildSrc/src/main/groovy/Conventions.groovy',
+                    'buildSrc/build.gradle', 'grails-app/commands/example/HelloCommand.groovy']
+    }
+
+    void 'the manifest is written again when a command is deleted from the application'() {
+        given:
+        File command = new File(dir, 'grails-app/commands/example/HelloCommand.groovy')
+        command.parentFile.mkdirs()
+        command.text = 'class HelloCommand {}'
+        writeManifest(URL_MAPPINGS_REPORT)
+        [command, command.parentFile, new File(dir, 'grails-app/commands')].each { it.setLastModified(manifest.lastModified() - 10_000) }
+        buildWrites(SECURITY_QUICKSTART)
+
+        when: 'the command is deleted, which changes only its directory'
+        assert command.delete()
+        command.parentFile.setLastModified(manifest.lastModified() + 10_000)
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations()*.first() == ['-p']
+        commandLine.subcommands.containsKey('s2-quickstart')
+    }
+
+    void 'what the build writes for itself does not make the manifest outdated'() {
+        given:
+        writeManifest(URL_MAPPINGS_REPORT)
+        ['buildSrc/build/classes/Conventions.class', 'buildSrc/.gradle/file-system.probe'].each { String path ->
+            File written = new File(dir, path)
+            written.parentFile.mkdirs()
+            written.text = 'written by the build'
+            written.setLastModified(manifest.lastModified() + 10_000)
+        }
+
+        when:
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == []
     }
 
     void 'a directory without a Grails project has no project commands and runs no build'() {
@@ -232,8 +272,12 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         exitCode == 0
-        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain', 'runCommand',
-                                 '-Pargs=s2-quickstart com.example User Role --groupClassName=RoleGroup --uiOnly']]
+        gradleInvocations().size() == 1
+        gradleInvocations().first().take(5) == ['-p', dir.path, '-q', '--console=plain', 'runCommand']
+        commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup', '--uiOnly']
+
+        and: 'the file of the arguments is gone once the command has run'
+        !new File(argumentsFile()).exists()
     }
 
     void 'an option value given as a separate argument is passed as one option'() {
@@ -244,18 +288,63 @@ class ProjectCommandsSpec extends Specification {
         ForgeCli.execute(context, 's2-quickstart', 'com.example', 'User', 'Role', '--groupClassName', 'RoleGroup')
 
         then:
-        gradleInvocations()*.last() == ['-Pargs=s2-quickstart com.example User Role --groupClassName=RoleGroup']
+        commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup']
     }
 
-    void 'a command that describes no arguments or options passes on whatever it is given, quoting what needs it'() {
+    void 'a command that describes no options is given the words in the order they were typed'() {
+        given:
+        writeManifest(declared)
+
+        when: 'an undeclared option whose value is a word of its own'
+        ForgeCli.execute(context, 'url-mappings-report', '--format', 'json', 'first')
+
+        then: 'as runCommand gives them, so the command reads json as the value of --format'
+        commandArguments() == ['url-mappings-report', '--format', 'json', 'first']
+
+        where:
+        declared << [URL_MAPPINGS_REPORT, URL_MAPPINGS_REPORT + [arguments: [[name: 'first', required: false]]]]
+    }
+
+    void 'arguments are passed on unchanged, whatever quotes and spaces they hold'() {
         given:
         writeManifest(URL_MAPPINGS_REPORT)
+        List<String> arguments = ['two words', 'say "hi"', 'it\'s "x" y', '', '%PATH% & | <>']
 
         when:
-        ForgeCli.execute(context, 'url-mappings-report', 'first', 'two words', '--format=json', 'say "hi"', '')
+        ForgeCli.execute(context, (['url-mappings-report'] + arguments) as String[])
 
-        then: 'the arguments in the order given, then the options it does not know'
-        gradleInvocations()*.last() == ['-Pargs=url-mappings-report first "two words" \'say "hi"\' "" --format=json']
+        then:
+        commandArguments() == ['url-mappings-report'] + arguments
+    }
+
+    void '-D sets a system property of the build, such as the environment, and is not passed to the command'() {
+        given:
+        writeManifest(SECURITY_QUICKSTART, URL_MAPPINGS_REPORT)
+
+        when:
+        ForgeCli.execute(context, typed as String[])
+
+        then:
+        gradleInvocations().first().subList(4, 6) == ['-Dgrails.env=test', 'runCommand']
+        commandArguments() == passed
+
+        where:
+        typed                                                            || passed
+        ['s2-quickstart', '-Dgrails.env=test', 'com.example']            || ['s2-quickstart', 'com.example']
+        ['url-mappings-report', '-Dgrails.env=test', 'first']            || ['url-mappings-report', 'first']
+        ['url-mappings-report', 'first', '-D', 'grails.env=test']        || ['url-mappings-report', 'first']
+    }
+
+    void "a project command after the Forge CLI's own options runs the build that finds it"() {
+        given:
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        when:
+        int exitCode = ForgeCli.execute(context, '-x', 'url-mappings-report')
+
+        then:
+        exitCode == 0
+        gradleInvocations()*.get(4) == ['generateCommandManifest', 'runCommand']
     }
 
     void 'the exit code of the command is the exit code of the build'() {
@@ -296,7 +385,7 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations() == []
     }
 
-    void 'a build that cannot write the manifest is reported, and the Forge CLI still runs'() {
+    void 'a build that cannot write the manifest, such as one of an earlier Grails, is reported once, and the Forge CLI still runs'() {
         given:
         new File(dir, 'gradle-exit-code').text = '1'
 
@@ -304,9 +393,102 @@ class ProjectCommandsSpec extends Specification {
         CommandLine commandLine = ForgeCli.createCommandLine(context, false)
 
         then:
-        output.toString().contains('Could not read the commands of the project. Run its generateCommandManifest Gradle task to see why.')
+        output.toString().contains('Could not read the commands of the project: its build failed with exit code 1. ' +
+                'Its commands are not offered, and the build is not run for them again until a build file changes. ' +
+                'A project of Grails 9 or later lists them with its generateCommandManifest Gradle task; run it to see what went wrong.')
         commandLine.subcommands.containsKey('create-app')
         !commandLine.subcommands.containsKey('s2-quickstart')
+
+        when: 'the Forge CLI starts again in the same project'
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the build is not run again'
+        gradleInvocations().size() == 1
+
+        when: 'a build file changes, and the build works again'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWrites(SECURITY_QUICKSTART)
+        new File(dir, 'build.gradle').setLastModified(System.currentTimeMillis() + 20_000)
+        commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations().size() == 2
+        commandLine.subcommands.containsKey('s2-quickstart')
+    }
+
+    void 'a failed build keeps the commands of the last manifest, and is not run again for them'() {
+        given: 'an outdated manifest, and a build that fails, as while the application does not compile'
+        writeManifest(URL_MAPPINGS_REPORT)
+        changedBefore(20_000, manifest)
+        changedBefore(10_000, new File(dir, 'build.gradle'))
+        new File(dir, 'gradle-exit-code').text = '1'
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        commandLine.subcommands.containsKey('url-mappings-report')
+        output.toString().contains('The commands it listed before are offered')
+
+        when:
+        new File(dir, 'gradle-exit-code').delete()
+        int exitCode = ForgeCli.execute(context, 'url-mappings-report')
+
+        then: 'the command runs without the build being tried again'
+        exitCode == 0
+        gradleInvocations()*.get(4) == ['generateCommandManifest', 'runCommand']
+    }
+
+    void 'a wrapper that cannot be started is reported, and the Forge CLI still runs'() {
+        given:
+        writeManifest(URL_MAPPINGS_REPORT)
+        new File(dir, 'build.gradle').setLastModified(manifest.lastModified() + 10_000)
+        Files.setPosixFilePermissions(new File(dir, 'gradlew').toPath(), [PosixFilePermission.OWNER_READ] as Set)
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        output.toString().contains('Could not read the commands of the project: ')
+        commandLine.subcommands.containsKey('create-app')
+        commandLine.subcommands.containsKey('url-mappings-report')
+    }
+
+    void 'a build whose manifest task is up to date is not run again'() {
+        given: 'a build file changed in a way that leaves the classpath, and so the manifest, as it was'
+        writeManifest(URL_MAPPINGS_REPORT)
+        changedBefore(20_000, manifest)
+        changedBefore(10_000, new File(dir, 'build.gradle'))
+
+        when:
+        ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations().size() == 1
+    }
+
+    void 'a manifest #problem is reported, and the Forge CLI still runs'() {
+        given:
+        manifest.parentFile.mkdirs()
+        manifest.text = JsonOutput.toJson(content)
+        manifest.setLastModified(System.currentTimeMillis() + 10_000)
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        output.toString().contains("Could not read the commands of the project from ${manifest}, so they are not offered: ${message}")
+        commandLine.subcommands.containsKey('create-app')
+        gradleInvocations() == []
+
+        where:
+        problem                          | content                                              || message
+        'of a newer format'              | [version: 2, commands: [URL_MAPPINGS_REPORT]]        || 'it was written in format 2, by a newer Grails'
+        'without a format version'       | [commands: [URL_MAPPINGS_REPORT]]                    || 'it has no format version'
+        'whose commands are not a list'  | [version: 1, commands: 'oops']                       || 'it has no list of commands'
+        'with a command without a name'  | [version: 1, commands: [[description: 'nameless']]]  || 'a command has no name'
+        'that is not an object'          | [URL_MAPPINGS_REPORT]                                || 'it is not a JSON object'
     }
 
     void 'a manifest that is not JSON is reported'() {
@@ -318,7 +500,7 @@ class ProjectCommandsSpec extends Specification {
         CommandLine commandLine = ForgeCli.createCommandLine(context, false)
 
         then:
-        output.toString().contains("Could not read the commands of the project from ${manifest}")
+        output.toString().contains("Could not read the commands of the project from ${manifest}, so they are not offered")
         commandLine.subcommands.containsKey('create-app')
     }
 
@@ -331,6 +513,8 @@ class ProjectCommandsSpec extends Specification {
         complete(commandLine, 's2-').containsAll(['s2-quickstart', 's2-create-persistent-token'])
         complete(commandLine, 's2-quickstart --').containsAll(['--groupClassName', '--uiOnly', '--help'])
         complete(commandLine, 's2-create-persistent-token --format ').containsAll(['json', 'yaml'])
+        complete(commandLine, 's2-create-persistent-token --format=').containsAll(['--format=json', '--format=yaml'])
+        complete(commandLine, 's2-create-persistent-token --format=j').contains('--format=json')
     }
 
     void 'a project of a multi-project build runs the wrapper at the root of the build'() {
@@ -344,7 +528,8 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         exitCode == 0
-        gradleInvocations() == [['-p', project.path, '-q', '--console=plain', 'runCommand', '-Pargs=url-mappings-report']]
+        gradleInvocations()*.take(5) == [['-p', project.path, '-q', '--console=plain', 'runCommand']]
+        commandArguments() == ['url-mappings-report']
     }
 
     void 'a wrapper above the root of the build is never run'() {
@@ -389,6 +574,13 @@ class ProjectCommandsSpec extends Specification {
         project
     }
 
+    /**
+     * Dates the file in the past, so that what the Forge CLI writes now is newer than it.
+     */
+    private static void changedBefore(long millis, File file) {
+        assert file.setLastModified(System.currentTimeMillis() - millis)
+    }
+
     private void buildWrites(Map... commands) {
         new File(dir, 'manifest-source.json').text = JsonOutput.toJson([version: 1, commands: commands.toList()])
     }
@@ -421,12 +613,28 @@ class ProjectCommandsSpec extends Specification {
         invocations
     }
 
+    /**
+     * The arguments the last command ran with, from the file runCommand was given, as the stand-in
+     * wrapper logged it.
+     */
+    private List<String> commandArguments() {
+        String logged = gradleInvocations().last().find { String argument -> argument.startsWith('argsFile:') }
+        (List<String>) new JsonSlurper().parseText(logged.substring('argsFile:'.length()))
+    }
+
+    private String argumentsFile() {
+        gradleInvocations().last().find { String argument -> argument.startsWith('-PargsFile=') }.substring('-PargsFile='.length())
+    }
+
     private void writeGradleWrapper(File wrapperDir = dir) {
         File wrapper = new File(wrapperDir, 'gradlew')
         wrapper.text = '''\
             #!/bin/sh
             dir=$(cd "$(dirname "$0")" && pwd)
-            { for argument in "$@"; do printf '%s\\n' "$argument"; done; echo '--'; } >> "$dir/gradle-invocations.txt"
+            { for argument in "$@"; do
+                printf '%s\\n' "$argument"
+                case "$argument" in -PargsFile=*) printf 'argsFile:%s\\n' "$(cat "${argument#-PargsFile=}")";; esac
+              done; echo '--'; } >> "$dir/gradle-invocations.txt"
             case " $* " in
               *" generateCommandManifest "*)
                 if [ -f "$dir/manifest-source.json" ]; then

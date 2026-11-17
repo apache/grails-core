@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
+import picocli.CommandLine.Model.OptionSpec
 import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
@@ -99,12 +100,39 @@ final class ForgeCli {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
         CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
         // the project's build runs only when the command line names a command that is not the Forge CLI's:
-        // its own commands never wait for the build, and its options, such as --help, list the project's
-        // commands from a manifest the build already wrote
-        if (args.length > 0 && !commandLine.subcommands.containsKey(args[0])) {
-            addProjectCommands(commandLine, !args[0].startsWith('-'))
+        // its own commands never wait for the build, and its options alone, such as --help, list the
+        // project's commands from a manifest the build already wrote
+        String command = commandName(commandLine, args)
+        if (command == null) {
+            if (args.length > 0) {
+                addProjectCommands(commandLine, false)
+            }
+        }
+        else if (!commandLine.subcommands.containsKey(command)) {
+            addProjectCommands(commandLine, true)
         }
         return commandLine.execute(args)
+    }
+
+    /**
+     * The command a command line names: its first word that is neither one of the Forge CLI's options
+     * nor the value of one.
+     */
+    private static String commandName(CommandLine commandLine, String... args) {
+        for (int i = 0; i < args.length; i++) {
+            String word = args[i]
+            if (word == '--') {
+                return i + 1 < args.length ? args[i + 1] : null
+            }
+            if (!word.startsWith('-')) {
+                return word
+            }
+            OptionSpec option = commandLine.commandSpec.findOption(word)
+            if (option != null && option.arity().min() > 0) {
+                i++
+            }
+        }
+        null
     }
 
     /**

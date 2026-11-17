@@ -20,6 +20,7 @@ package org.grails.forge.cli.command
 
 import java.util.concurrent.Callable
 
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 
 import picocli.CommandLine
@@ -33,8 +34,13 @@ import picocli.CommandLine.Model.PositionalParamSpec
  * the Forge CLI's own commands, and runs through the project's {@code runCommand} Gradle task.
  *
  * <p>Arguments and options the command declares are checked and completed. A command that declares
- * no arguments takes any, and one that declares no options takes any options, so a command that does
- * not describe itself still runs with whatever it is given.</p>
+ * no arguments takes any, and one that declares no options takes any options and is given the words of
+ * its command line in the order they were typed, so a command that does not describe itself runs as it
+ * does through {@code runCommand}.</p>
+ *
+ * <p>The arguments reach {@code runCommand} in a file, so they need no quoting for the shell or the
+ * wrapper script. {@code -D} sets a system property of the build, such as {@code -Dgrails.env=test},
+ * which {@code runCommand} passes on to the command.</p>
  */
 @CompileStatic
 class ProjectCommand extends BaseCommand implements Callable<Integer> {
@@ -42,12 +48,19 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     /** The task that runs a command of the project */
     static final String RUN_COMMAND_TASK = 'runCommand'
 
+    /** The project property {@code runCommand} reads the arguments of the command from */
+    static final String ARGS_FILE_PROPERTY = 'argsFile'
+
     private static final String PASS_THROUGH_LABEL = 'ARGS'
+
+    private static final String SYSTEM_PROPERTY_OPTION = '-D'
 
     final String name
 
     private final ProjectGradle gradle
     private final CommandSpec commandSpec
+    private final OptionSpec systemProperties
+    private final boolean declaresOptions
 
     /**
      * @param command the command, as described in the manifest
@@ -56,6 +69,13 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     ProjectCommand(Map<String, Object> command, ProjectGradle gradle) {
         this.name = command.name as String
         this.gradle = gradle
+        this.declaresOptions = command.options as boolean
+        this.systemProperties = OptionSpec.builder(SYSTEM_PROPERTY_OPTION)
+                .paramLabel('<property>=<value>')
+                .type(Map)
+                .auxiliaryTypes(String, String)
+                .description('Sets a system property of the build, such as -Dgrails.env=test to run the command in the test environment.')
+                .build()
         this.commandSpec = createSpec(command)
         this.spec = commandSpec
     }
@@ -71,11 +91,28 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     Integer call() throws Exception {
         List<String> commandArguments = [name]
         commandArguments.addAll(givenArguments())
-        gradle.run([RUN_COMMAND_TASK, "-Pargs=${join(commandArguments)}".toString()])
+        File argumentsFile = File.createTempFile('grails-command-arguments', '.json')
+        try {
+            argumentsFile.setText(JsonOutput.toJson(commandArguments), 'UTF-8')
+            List<String> gradleArguments = givenSystemProperties()
+            gradleArguments << RUN_COMMAND_TASK << "-P${ARGS_FILE_PROPERTY}=${argumentsFile.absolutePath}".toString()
+            return gradle.run(gradleArguments)
+        }
+        finally {
+            argumentsFile.delete()
+        }
+    }
+
+    private List<String> givenSystemProperties() {
+        Map<String, String> given = (systemProperties.getValue() ?: [:]) as Map<String, String>
+        given.collect { String property, String value -> "${SYSTEM_PROPERTY_OPTION}${property}=${value}".toString() }
     }
 
     private List<String> givenArguments() {
         CommandLine.ParseResult parsed = commandSpec.commandLine().parseResult
+        if (!declaresOptions) {
+            return typedArguments(parsed.originalArgs())
+        }
         List<String> given = []
         for (PositionalParamSpec positional : commandSpec.positionalParameters()) {
             if (parsed.hasMatchedPositional(positional)) {
@@ -83,7 +120,7 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
             }
         }
         for (OptionSpec option : commandSpec.options()) {
-            if (option.usageHelp() || option.versionHelp() || !parsed.hasMatchedOption(option)) {
+            if (option.usageHelp() || option.versionHelp() || option.is(systemProperties) || !parsed.hasMatchedOption(option)) {
                 continue
             }
             given << (option.arity().max() == 0
@@ -94,6 +131,26 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
         given
     }
 
+    /**
+     * The words typed after the command's name, without those of {@code -D}: picocli cannot tell which
+     * word of an undeclared option is its value, so the command gets them in their order, as it does from
+     * {@code runCommand}.
+     */
+    private List<String> typedArguments(List<String> commandLine) {
+        List<String> typed = []
+        List<String> afterName = commandLine.subList(commandLine.indexOf(name) + 1, commandLine.size())
+        for (int i = 0; i < afterName.size(); i++) {
+            String word = afterName[i]
+            if (word == SYSTEM_PROPERTY_OPTION) {
+                i++
+            }
+            else if (!word.startsWith(SYSTEM_PROPERTY_OPTION)) {
+                typed << word
+            }
+        }
+        typed
+    }
+
     private CommandSpec createSpec(Map<String, Object> command) {
         CommandSpec created = CommandSpec.wrapWithoutInspection(this)
         created.name(name)
@@ -101,6 +158,7 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
                 .usageHelp(true)
                 .description('Show this help message and exit.')
                 .build())
+        created.addOption(systemProperties)
         String description = command.description as String
         if (description) {
             created.usageMessage().description(description)
@@ -149,18 +207,5 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     private static Iterable<String> candidates(Map<String, Object> declaration) {
         List<String> values = (declaration.values ?: []) as List<String>
         values ? values.asImmutable() : null
-    }
-
-    /**
-     * Joins the arguments into the one {@code args} property {@code runCommand} splits again, quoting
-     * those that contain spaces or quotes.
-     */
-    private static String join(List<String> arguments) {
-        arguments.collect { String argument ->
-            if (argument && !(argument =~ /[\s"']/)) {
-                return argument
-            }
-            argument.contains('"') && !argument.contains("'") ? "'${argument}'" : "\"${argument}\""
-        }.join(' ')
     }
 }

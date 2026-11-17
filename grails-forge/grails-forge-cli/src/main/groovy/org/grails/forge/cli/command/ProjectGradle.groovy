@@ -61,6 +61,7 @@ class ProjectGradle {
      *
      * @param arguments the tasks and arguments to run
      * @return the exit code of Gradle
+     * @throws IOException when the wrapper cannot be started
      */
     int run(List<String> arguments) {
         start(arguments) { ProcessBuilder builder -> builder.inheritIO() }
@@ -71,6 +72,7 @@ class ProjectGradle {
      *
      * @param arguments the tasks and arguments to run
      * @return the exit code of Gradle
+     * @throws IOException when the wrapper cannot be started
      */
     int runSilently(List<String> arguments) {
         start(arguments) { ProcessBuilder builder ->
@@ -88,6 +90,10 @@ class ProjectGradle {
         redirect.call(builder)
         try {
             return builder.start().waitFor()
+        }
+        catch (IllegalArgumentException e) {
+            // ProcessBuilder refuses some arguments of a batch file, such as one with a quote inside it
+            throw new IOException("Could not run ${wrapper}: ${e.message}", e)
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt()
