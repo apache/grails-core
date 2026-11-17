@@ -527,6 +527,8 @@ trait GormEntity<D> implements GormValidateable, DirtyCheckable, GormEntityApi<D
      *
      * @return the listener that handles this class
      * @throws IllegalStateException when the class's datastore has no such listener
+     * @throws org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException for a multi-tenant class
+     * with a database or schema per tenant when no tenant is current, as a save would
      * @since 9.0
      */
     @Generated

@@ -1461,6 +1461,7 @@ In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a 
 
 * A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
 * A test that expected a domain class event not to run on such a save expects what the event does.
+* The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
 
 ==== 26. A Domain Class Has an `autoTimestampEventListener` Property
 

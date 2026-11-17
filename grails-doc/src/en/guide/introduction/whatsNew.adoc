@@ -608,7 +608,7 @@ Person.autoTimestampEventListener.withoutTimestamps {
 }
 ----
 
-The lookup follows the data source a save made from the same place goes to: inside a `Car.secondary.withTransaction { }` block, or a method annotated `@Transactional(connection = 'secondary')`, it is the `secondary` data source's listener, and for a multi-tenant class it is the current tenant's. `Car.secondary.autoTimestampEventListener` names another data source of a class mapped to several. This works with GORM for Hibernate 7, Hibernate 5, MongoDB and Neo4j, and in unit tests. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+The lookup follows the data source a save made from the same place goes to. For a `Book` mapped to several data sources, inside a `Book.secondary.withTransaction { }` block, or a method annotated `@Transactional(connection = 'secondary')`, it is the `secondary` data source's listener, and `Book.secondary.autoTimestampEventListener` names that data source anywhere. For a multi-tenant class it is the current tenant's. This works with GORM for Hibernate 7, Hibernate 5, MongoDB and Neo4j, and in unit tests. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
 
 ==== Default Security Response Headers
 
