@@ -18,6 +18,8 @@
  */
 package grails.plugin.springsecurity.rest
 
+import java.nio.charset.StandardCharsets
+
 import groovy.transform.InheritConstructors
 
 import com.nimbusds.jwt.JWT
@@ -90,7 +92,7 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
     }
 
     private static String base64(String value) {
-        value.bytes.encodeBase64().toString()
+        value.getBytes(StandardCharsets.UTF_8).encodeBase64().toString()
     }
 
     void 'a callback URL of an allowed origin receives the token: #callback'() {
@@ -119,6 +121,35 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
 
         expect:
         runOauthFlow('https://frontend.example.com/welcome?token=') == 'https://frontend.example.com/welcome?token=token-value'
+    }
+
+    void 'characters outside US-ASCII in a callback URL are percent-encoded: #callback'() {
+        given:
+        grailsApplication.config.merge([(ALLOWED_CALLBACK_ORIGINS): ['https://frontend.example.com']])
+        stubOauthFlow()
+
+        expect:
+        runOauthFlow(callback) == expectedUrl
+
+        where:
+        callback                                                     || expectedUrl
+        'https://other.exampleį@frontend.example.com/?token='   || 'https://other.example%C4%AF@frontend.example.com/?token=token-value'
+        'https://frontend.example.com/你好?token='           || 'https://frontend.example.com/%E4%BD%A0%E5%A5%BD?token=token-value'
+        'https://frontend.example.com/welcome?name=é&token='    || 'https://frontend.example.com/welcome?name=%C3%A9&token=token-value'
+        base64('https://frontend.example.com/你好?token=')   || 'https://frontend.example.com/%E4%BD%A0%E5%A5%BD?token=token-value'
+    }
+
+    void 'characters outside US-ASCII in a callback URL from the session are percent-encoded'() {
+        given:
+        grailsApplication.config.merge([(ALLOWED_CALLBACK_ORIGINS): ['https://frontend.example.com']])
+        stubOauthFlow()
+        session[controller.CALLBACK_ATTR] = 'https://other.exampleį@frontend.example.com/?token='
+
+        when:
+        controller.callback()
+
+        then:
+        response.redirectedUrl == 'https://other.example%C4%AF@frontend.example.com/?token=token-value'
     }
 
     void 'an allowed IPv6 origin is compared by address: #callback'() {
@@ -203,7 +234,7 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
         response.redirectedUrl == 'http://config.com/welcome#token=token-value'
     }
 
-    void 'an allowed origin that is no http or https URL with a host is ignored: #allowedOrigins'() {
+    void 'an entry of the allowed origins that is no origin is ignored: #allowedOrigins'() {
         given:
         grailsApplication.config.merge([(ALLOWED_CALLBACK_ORIGINS): allowedOrigins])
         stubOauthFlow()
@@ -215,6 +246,11 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
         allowedOrigins                                          || expectedUrl
         ['frontend.example.com']                                || 'http://config.com/welcome#token=token-value'
         ['frontend.example.com', 'https://frontend.example.com'] || 'https://frontend.example.com/welcome?token=token-value'
+        ['https://frontend.example.com/welcome']                || 'http://config.com/welcome#token=token-value'
+        ['https://frontend.example.com/?token=']                || 'http://config.com/welcome#token=token-value'
+        ['https://frontend.example.com#token=']                 || 'http://config.com/welcome#token=token-value'
+        ['https://user@frontend.example.com']                   || 'http://config.com/welcome#token=token-value'
+        ['https://frontend.example.com/']                       || 'https://frontend.example.com/welcome?token=token-value'
     }
 
     void 'allowed origins can be listed in application.yml'() {

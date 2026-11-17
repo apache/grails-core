@@ -80,6 +80,7 @@ class RestOauthController {
                 callback = new String(Base64.decodeBase64(callback), StandardCharsets.UTF_8)
             }
             if (isAllowedCallbackUrl(callback)) {
+                callback = toAsciiUrl(callback)
                 log.debug "Storing in the HTTP session a user specified callback URL: ${callback}"
                 session[CALLBACK_ATTR] = callback
             } else {
@@ -108,7 +109,7 @@ class RestOauthController {
         final sessionCallbackUrl = session[CALLBACK_ATTR] as String
         if (sessionCallbackUrl && isAllowedCallbackUrl(sessionCallbackUrl)) {
             log.debug 'Found callback URL in the HTTP session'
-            frontendCallbackUrl = sessionCallbackUrl
+            frontendCallbackUrl = toAsciiUrl(sessionCallbackUrl)
         } else {
             if (sessionCallbackUrl) {
                 log.warn('The callback URL in the HTTP session is not an http or https URL of an origin listed in {}. Not using it.', ALLOWED_CALLBACK_ORIGINS)
@@ -152,11 +153,32 @@ class RestOauthController {
         final callbackOrigin = originOf(uri)
         return grailsApplication.config.getProperty(ALLOWED_CALLBACK_ORIGINS, List, []).any { entry ->
             final allowedUri = parseHttpUrl(entry?.toString())
-            if (!allowedUri && invalidAllowedCallbackOrigins.add(String.valueOf(entry))) {
-                log.warn('Ignoring {} in {}: it is not an http or https URL with a host', entry, ALLOWED_CALLBACK_ORIGINS)
+            if (!allowedUri || !isOriginOnly(allowedUri)) {
+                if (invalidAllowedCallbackOrigins.add(String.valueOf(entry))) {
+                    log.warn('Ignoring {} in {}: it is not an origin, an http or https URL with only a scheme, host and port', entry, ALLOWED_CALLBACK_ORIGINS)
+                }
+                return false
             }
-            allowedUri && originOf(allowedUri) == callbackOrigin
+            originOf(allowedUri) == callbackOrigin
         }
+    }
+
+    /**
+     * Whether a URL that {@link #parseHttpUrl} accepted has nothing but an origin: no user info, no path other than
+     * {@code /}, no query and no fragment. The path of a callback URL is not compared, so an entry with a path would
+     * allow every path of its origin.
+     */
+    private static boolean isOriginOnly(URI uri) {
+        uri.rawUserInfo == null && uri.rawPath in ['', '/'] && uri.rawQuery == null && uri.rawFragment == null
+    }
+
+    /**
+     * Returns a URL that {@link #isAllowedCallbackUrl} accepted with every character outside US-ASCII percent-encoded
+     * as UTF-8, as browsers send it. A redirect URL has to be ASCII, because servlet containers drop or change other
+     * characters in the {@code Location} header.
+     */
+    private static String toAsciiUrl(String url) {
+        new URI(url).toASCIIString()
     }
 
     /**
