@@ -183,7 +183,9 @@ class HtmlRendererSpec extends Specification {
         modelAndView.viewName == 'conflict'
         modelAndView.model == [problemDetail: problem]
         webRequest.currentResponse.status == 409
-        problem.instance == URI.create('/books/1')
+
+        and: 'the problem is not given an instance'
+        problem.instance == null
     }
 
     void "the view respond names renders a problem with the status respond is given"() {

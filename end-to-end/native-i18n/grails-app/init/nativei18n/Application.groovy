@@ -49,7 +49,9 @@ import org.springframework.context.MessageSource
  * derived from {@code spring.messages.basename} alone.</p>
  *
  * <p>It also reads a value from the plugin's {@code plugin.yml}, which on a JVM is found beside the plugin's
- * classes and in an image only through the copy the build makes of it under the plugin's name.</p>
+ * classes and in an image only through the copy the build makes of it under the plugin's name, and calls a method
+ * that in an image only the metadata in {@code src/native/resources} registers, where {@code traceNativeMetadata}
+ * records.</p>
  *
  * <p>Every run is told which environment it should have started in, through the property
  * {@code i18n.check.environment}, and fails in any other. An image reads its environment from the build
@@ -120,6 +122,12 @@ class Application extends GrailsAutoConfiguration {
                 throw new IllegalStateException("The plugin's plugin.yml did not reach the environment; " +
                         "native.plugin.configuration was '${configured}'")
             }
+
+            // Not a bundle either, but what traceNativeMetadata records, read from where it records it. A JDK class,
+            // because every class of the application is registered from the build output whether this works or not.
+            String recorded = context.environment.getProperty('native.recorded.type')
+            Class<?> recordedType = Class.forName(recorded)
+            recordedType.getMethod('getValue').invoke(recordedType.getDeclaredConstructor().newInstance())
 
             println "i18n-check: in ${expectedEnvironment}, every message bundle resolved, and the plugin configuration was read"
         }

@@ -26,13 +26,18 @@ import grails.util.Metadata
 import grails.util.MockRequestDataValueProcessor
 import groovy.test.NotYetImplemented
 import org.grails.gsp.GroovyPageBinding
+import org.grails.plugins.web.controllers.GrailsSecurityHeadersFilter
+import org.grails.plugins.web.controllers.GrailsSecurityHeadersProperties
 import org.grails.plugins.web.taglib.ApplicationTagLib
 import org.grails.plugins.web.taglib.FormTagLib
 import org.grails.taglib.GrailsTagException
 import org.grails.web.util.GrailsApplicationAttributes
 import org.grails.web.util.WebUtils
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.web.header.ContentSecurityPolicyNonceGeneratingFilter
 import spock.lang.Specification
 
+import jakarta.servlet.FilterChain
 import jakarta.servlet.http.Cookie
 
 class ApplicationTagLibTests extends Specification implements TagLibUnitTest<ApplicationTagLib> {
@@ -236,6 +241,77 @@ class ApplicationTagLibTests extends Specification implements TagLibUnitTest<App
         expect:
         applyTemplate('<g:header name="FOO" />') == 'BAR'
         applyTemplate('${header(name:"FOO")}') == 'BAR'
+    }
+
+    void 'the nonce of a nonce-based Content-Security-Policy renders for an inline script or style in a #compilation page'() {
+        given: 'the security headers filter in front of the page, with a policy that names the nonce'
+        def properties = new GrailsSecurityHeadersProperties()
+        properties.contentSecurityPolicy.enabled = true
+        properties.contentSecurityPolicy.value = "script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'"
+        def response = new MockHttpServletResponse()
+        String page = null
+
+        when:
+        new GrailsSecurityHeadersFilter(properties).doFilter(request, response, { viewRequest, viewResponse ->
+            page = applyTemplate(directive + '<script nonce="${g.cspNonce()}"></script><style nonce="<g:cspNonce/>"></style>')
+        } as FilterChain)
+        String nonce = request.getAttribute('_csp').nonce
+
+        then: 'the page and the policy name the same nonce'
+        nonce ==~ /[A-Za-z0-9+\/]{22}/
+        page == "<script nonce=\"${nonce}\"></script><style nonce=\"${nonce}\"></style>"
+        response.getHeader('Content-Security-Policy') == "script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'"
+
+        where:
+        compilation | directive
+        'dynamic'   | ''
+        'static'    | '<%@ page compileStatic="true" %>'
+    }
+
+    void 'the nonce Spring Security generated renders in a #compilation page, and the policy names it'() {
+        given: 'Spring Security\'s nonce filter ahead of the security headers filter, as with its chain ordered ahead of GrailsFilters.FIRST'
+        def properties = new GrailsSecurityHeadersProperties()
+        properties.contentSecurityPolicy.enabled = true
+        properties.contentSecurityPolicy.value = "script-src 'nonce-{nonce}'; style-src 'nonce-{nonce}'"
+        def response = new MockHttpServletResponse()
+        String page = null
+        FilterChain view = { viewRequest, viewResponse ->
+            page = applyTemplate(directive + '<script nonce="${g.cspNonce()}"></script><style nonce="<g:cspNonce/>"></style>')
+        } as FilterChain
+
+        when:
+        new ContentSecurityPolicyNonceGeneratingFilter().doFilter(request, response, { securedRequest, securedResponse ->
+            new GrailsSecurityHeadersFilter(properties).doFilter(securedRequest, securedResponse, view)
+        } as FilterChain)
+        def carried = request.getAttribute('_csp') as org.springframework.security.web.header.ContentSecurityPolicyNonce
+
+        then: 'the page renders the nonce Spring Security carries in its own non-public class'
+        carried.nonce ==~ /[A-Za-z0-9+\/]{22}/
+        page == "<script nonce=\"${carried.nonce}\"></script><style nonce=\"${carried.nonce}\"></style>"
+
+        and: 'the policy names the same nonce'
+        response.getHeader('Content-Security-Policy') == "script-src 'nonce-${carried.nonce}'; style-src 'nonce-${carried.nonce}'"
+
+        where:
+        compilation | directive
+        'dynamic'   | ''
+        'static'    | '<%@ page compileStatic="true" %>'
+    }
+
+    void 'no nonce renders when the request carries none: #description'() {
+        given:
+        if (holder != null) {
+            request.setAttribute('_csp', holder)
+        }
+
+        expect:
+        applyTemplate('<script nonce="${g.cspNonce()}"></script>') == '<script nonce=""></script>'
+        applyTemplate('<g:cspNonce/>') == ''
+
+        where:
+        description                              | holder
+        'no policy names one'                    | null
+        'the attribute holds something else'     | 'not a nonce'
     }
 
     void testClonedUrlFromVariable() {

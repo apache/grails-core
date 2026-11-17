@@ -25,3 +25,8 @@ spring:
         # Not a base name, so resolving an unknown code to itself proves the rest of
         # MessageSourceProperties was bound too - they all arrive together or not at all.
         use-code-as-default-message: true
+native:
+    # Named here, so that an image has to find it at runtime: a lookup of a constant name is resolved while the
+    # image is built, and needs no metadata. Registered only by src/native/resources, where a trace records.
+    recorded:
+        type: java.util.zip.Adler32

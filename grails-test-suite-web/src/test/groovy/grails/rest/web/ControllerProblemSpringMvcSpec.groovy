@@ -129,7 +129,7 @@ class ControllerProblemSpringMvcSpec extends Specification implements Controller
         response.contentType == 'application/problem+json'
         response.getHeader(HttpHeaders.RETRY_AFTER) == '30'
         response.json.status == 503
-        response.json.instance == '/books/1'
+        !response.json.containsKey('instance')
 
         and: 'the interceptors are given the ErrorResponse'
         response.json.source == 'ErrorResponseException'

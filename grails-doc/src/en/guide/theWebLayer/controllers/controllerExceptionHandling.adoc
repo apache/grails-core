@@ -148,3 +148,36 @@ class BookExceptionAdvice {
 ----
 
 Declare the advice as a bean, in `grails-app/conf/spring/resources.groovy` or as a `@Bean` of a configuration class.
+
+With `grails.exceptionresolver.problemDetails: true`, an exception an action throws that no exception handler method handles is written as an https://www.rfc-editor.org/rfc/rfc9457.html[RFC 9457] problem to a client that does not prefer HTML, using the translation Spring Framework 7.1 adds, and the application's error page stays for browsers. A problem is the last resort after those methods, so the setting turns on `grails.exceptionresolver.springHandlers` unless the application sets that to `false`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    exceptionresolver:
+        problemDetails: true
+----
+
+----
+HTTP/1.1 500
+Content-Type: application/problem+json
+
+{"status":500,"title":"Internal Server Error"}
+----
+
+* An `ErrorResponse`, a `ResponseStatusException` or an exception annotated `@ResponseStatus`, or an exception caused by one of the last two, keeps its status and detail.
+* An exception of Spring such as a `TypeMismatchException` or an `HttpMessageNotReadableException` gets the status and detail `ResponseEntityExceptionHandler` gives it.
+* Any other exception is a `500` without a detail, so its message is never exposed.
+* The type, title and detail can be customized in the message bundles, with the codes `ErrorResponse` defines.
+* The `ResponseBodyAdvice` beans that apply to the controller and the `ErrorResponse.Interceptor` beans apply to it, as to a problem a handler method returns.
+* An unexpected exception is logged at `ERROR`, by Spring's `org.springframework.web.method.annotation.ProblemDetailExceptionHandler` logger with its stack trace, and by Grails with the method and URI of the request. The `grails.exceptionresolver` settings for what is logged, such as `logRequestParameters`, apply to what the Grails exception resolver logs, and so not to these.
+
+The Grails exception resolver and the application's error page still resolve an exception for:
+
+* A client that prefers HTML: a request whose format, from its URL or its `Accept` header, is `html`, or, where Grails resolves any format, as for a browser under `grails.mime.disable.accept.header.userAgents`, whose first concrete `Accept` type is HTML. A client that accepts any type, such as `curl`, gets the problem.
+* An exception that a URL mapping names, or whose root cause it names, such as `"500"(controller: 'errors', action: 'denied', exception: AccessDeniedException)`. A `"500"` mapping without an `exception` is the error page of the clients that prefer HTML, and does not apply to the others.
+
+An exception a view throws while it renders is not one an action throws, and goes to the error page for every client, and an action that a page includes with `<g:include>` is left to the Grails exception resolver too, so that a problem is not written into the page.
+
+WARNING: Do not use Spring Framework's `ProblemDetailsConfigurer.renderUnhandledExceptions(true)` in a `WebMvcConfigurer` for this. It makes Spring MVC's resolver, which runs ahead of the Grails exception resolver, answer every exception of every action with a problem, a browser's included, and `"500"` URL mappings no longer apply.

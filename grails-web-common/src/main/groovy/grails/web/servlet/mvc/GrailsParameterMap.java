@@ -64,8 +64,8 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
     private final HttpServletRequest request;
 
     /**
-     * Retained for binary compatibility. Request-body parsing for form-encoded {@code PUT}, {@code PATCH}
-     * and {@code DELETE} requests is now handled at the servlet layer by Spring's {@code FormContentFilter}
+     * Retained for binary compatibility. Request-body parsing for form-encoded {@code PUT}, {@code PATCH},
+     * {@code DELETE} and {@code QUERY} requests is now handled at the servlet layer by Spring's {@code FormContentFilter}
      * (registered by Boot's {@code WebMvcAutoConfiguration}), not by this map.
      */
     public static final String REQUEST_BODY_PARSED = "org.codehaus.groovy.grails.web.REQUEST_BODY_PARSED";
@@ -89,7 +89,7 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
      */
     public GrailsParameterMap(HttpServletRequest request) {
         this.request = request;
-        // Request parameters (including form-encoded PUT/PATCH/DELETE bodies parsed at the servlet
+        // Request parameters (including form-encoded PUT/PATCH/DELETE/QUERY bodies parsed at the servlet
         // layer by Spring's FormContentFilter) are read straight from the request parameter map.
         // updateNestedKeys only reads this map, so the servlet's own is used directly and copied only when
         // there is something to merge into it. Read tolerantly because a multipart body the container

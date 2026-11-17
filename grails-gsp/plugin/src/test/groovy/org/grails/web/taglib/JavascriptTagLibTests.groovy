@@ -19,12 +19,17 @@
 package org.grails.web.taglib
 
 
+import jakarta.servlet.FilterChain
+
 import grails.util.GrailsUtil
 import org.grails.core.artefact.UrlMappingsArtefactHandler
 import org.grails.gsp.GroovyPageBinding
+import org.grails.plugins.web.controllers.GrailsSecurityHeadersFilter
+import org.grails.plugins.web.controllers.GrailsSecurityHeadersProperties
 import org.grails.web.util.GrailsApplicationAttributes
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.mock.web.MockHttpServletResponse
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 
@@ -158,6 +163,31 @@ class TestUrlMappings {
             tag.call([:]) {"do.this();"}
         }
         assertEquals("<script type=\"text/javascript\">" + EOL + "do.this();" + EOL + "</script>" + EOL, sw.toString())
+    }
+
+    @Test
+    void testInlineScriptCarriesTheNonceOfTheContentSecurityPolicy() {
+        def properties = new GrailsSecurityHeadersProperties()
+        properties.contentSecurityPolicy.enabled = true
+        properties.contentSecurityPolicy.value = "script-src 'nonce-{nonce}'"
+        def response = new MockHttpServletResponse()
+        String output = null
+
+        new GrailsSecurityHeadersFilter(properties).doFilter(request, response, { viewRequest, viewResponse ->
+            output = applyTemplate('<g:javascript>do.this();</g:javascript>')
+        } as FilterChain)
+
+        String nonce = request.getAttribute('_csp').nonce
+        assertEquals("<script type=\"text/javascript\" nonce=\"${nonce}\">${EOL}do.this();${EOL}</script>${EOL}".toString(),
+                output)
+        assertEquals("script-src 'nonce-${nonce}'".toString(), response.getHeader('Content-Security-Policy'))
+    }
+
+    @Test
+    void testInlineScriptCarriesNoNonceWhenTheAttributeHoldsNone() {
+        request.setAttribute('_csp', 'not a nonce')
+        assertOutputEquals('<script type="text/javascript">' + EOL + 'do.this();' + EOL + '</script>' + EOL,
+                '<g:javascript>do.this();</g:javascript>')
     }
 
     @Test

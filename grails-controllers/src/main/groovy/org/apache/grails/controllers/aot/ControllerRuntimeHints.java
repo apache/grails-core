@@ -20,11 +20,14 @@ package org.apache.grails.controllers.aot;
 
 import java.security.Principal;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.jspecify.annotations.Nullable;
 
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
+import org.springframework.http.HttpMethod;
 
 import grails.artefact.Controller;
 import grails.artefact.controller.support.AllowedMethodsHelper;
@@ -69,7 +72,13 @@ public class ControllerRuntimeHints implements RuntimeHintsRegistrar {
         ResponseRenderer.class,
         // a view asking who is logged in reaches the request's principal, and Groovy makes that
         // call on the interface rather than the implementation the container supplies
-        Principal.class
+        Principal.class,
+        // Groovy's == calls compareTo on a Comparable unless the two are the same instance, so binding a command
+        // object reaches this for every method but POST, and a trace that only submits forms never records it
+        HttpMethod.class,
+        // the method check below refuses a method through the response, which a trace cannot record, since it fails on
+        // a request that answers with an error
+        HttpServletResponse.class
     };
 
     /**
