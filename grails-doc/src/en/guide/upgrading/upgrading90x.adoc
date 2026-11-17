@@ -1469,3 +1469,15 @@ Every domain class now has a static `autoTimestampEventListener` property, the l
 ===== Required Actions
 
 * Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
+
+==== 27. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
+
+* sets the `@CreatedBy` and `@LastModifiedBy` properties from the application's `AuditorAware`. In Grails 8 only a save through the default data source set them.
+* follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`. In Grails 8 it overwrote a `dateCreated` or `lastUpdated` that an instance was saved with, whatever `autoTimestampInsertOverwrite` said.
+* with GORM for Neo4j, runs the domain class's events, such as `beforeInsert`, and sets `dateCreated` and `lastUpdated`. In Grails 8 a save through another Neo4j connection ran neither.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
