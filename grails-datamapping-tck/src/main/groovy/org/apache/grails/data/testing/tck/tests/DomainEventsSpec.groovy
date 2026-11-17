@@ -20,6 +20,7 @@ package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.Issue
 import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -250,6 +251,10 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         1 == PersonEvent.STORE.afterInsert
     }
 
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'beforeLoad is 0 instead of 1 for get() after clear() on Neo4j, see #17020'
+    )
     void 'Test load events'() {
         given:
         def p = new PersonEvent()
@@ -265,11 +270,15 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         'Fred' == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            1 == PersonEvent.STORE.beforeLoad
+            assert 1 == PersonEvent.STORE.beforeLoad
         }
         1 == PersonEvent.STORE.afterLoad
     }
 
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'beforeLoad is 0 instead of 3 for findAllByIdInList on MongoDB and Neo4j, see #17020'
+    )
     void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {
@@ -286,7 +295,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         3 == freds.size()
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            3 == PersonEvent.STORE.beforeLoad
+            assert 3 == PersonEvent.STORE.beforeLoad
         }
         3 == PersonEvent.STORE.afterLoad
     }

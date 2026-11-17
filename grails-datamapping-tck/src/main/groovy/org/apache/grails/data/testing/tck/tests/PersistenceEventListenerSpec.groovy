@@ -21,6 +21,8 @@ package org.apache.grails.data.testing.tck.tests
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ConfigurableApplicationContext
 
+import spock.lang.PendingFeatureIf
+
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Simples
@@ -83,6 +85,10 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         listener.events[-2] instanceof PreDeleteEvent
     }
 
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreDeleteCount is 0 instead of 3 after DetachedCriteria.deleteAll() on MongoDB and Neo4j, see #17020'
+    )
     void 'Test multi-delete events'() {
         given:
         def freds = (1..3).collect {
@@ -109,9 +115,9 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         0 == Simples.list().size()
 
         // conditional assertions because in the case of batch DML statements neither Hibernate nor JPA triggers delete events for individual entities
-        if (!manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession']) {
-            3 == listener.PreDeleteCount
-            3 == listener.PostDeleteCount
+        if (!(manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession'])) {
+            assert 3 == listener.PreDeleteCount
+            assert 3 == listener.PostDeleteCount
         }
     }
 
@@ -175,6 +181,10 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         1 == listener.PostInsertCount
     }
 
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreLoadCount is 2 on MongoDB and 0 on Neo4j instead of 1 for get() after clear(), see #17020'
+    )
     void 'Test load events'() {
         given:
         def p = new Simples()
@@ -190,11 +200,15 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         'Fred' == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            1 == listener.PreLoadCount
+            assert 1 == listener.PreLoadCount
         }
         1 == listener.PostLoadCount
     }
 
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'PreLoadCount is 0 instead of 3 for findAllByIdInList on MongoDB and Neo4j, see #17020'
+    )
     void 'Test multi-load events'() {
         given:
         def freds = (1..3).collect {
@@ -211,7 +225,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
         3 == freds.size()
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            3 == listener.PreLoadCount
+            assert 3 == listener.PreLoadCount
         }
         3 == listener.PostLoadCount
     }

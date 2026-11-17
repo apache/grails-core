@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.engine.event.PostDeleteEvent
 import org.grails.datastore.mapping.engine.event.PreDeleteEvent
 import org.grails.datastore.mapping.engine.event.ValidationEvent
 import org.springframework.context.ApplicationEvent
+import spock.lang.PendingFeature
 
 /**
  * @author Tom Widmer
@@ -74,6 +75,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
         listener.events[-2] instanceof PreDeleteEvent
     }
 
+    @PendingFeature(reason = 'PreDeleteCount is 0 instead of 3 after DetachedCriteria.deleteAll() on MongoDB, see #17020')
     void "Test multi-delete events"() {
         given:
         def freds = (1..3).collect {
@@ -100,9 +102,9 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
         0 == Simples.list().size()
 
         // conditional assertions because in the case of batch DML statements neither Hibernate nor JPA triggers delete events for individual entities
-        if (!manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession']) {
-            3 == listener.PreDeleteCount
-            3 == listener.PostDeleteCount
+        if (!(manager.session.getClass().simpleName in ['JpaSession', 'HibernateSession'])) {
+            assert 3 == listener.PreDeleteCount
+            assert 3 == listener.PostDeleteCount
         }
     }
 
@@ -166,6 +168,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
         1 == listener.PostInsertCount
     }
 
+    @PendingFeature(reason = 'PreLoadCount is 2 instead of 1 for get() after clear() on MongoDB, see #17020')
     void "Test load events"() {
         given:
         def p = new Simples()
@@ -181,11 +184,12 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
         "Fred" == p.name
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            1 == listener.PreLoadCount
+            assert 1 == listener.PreLoadCount
         }
         1 == listener.PostLoadCount
     }
 
+    @PendingFeature(reason = 'PreLoadCount is 0 instead of 3 for findAllByIdInList on MongoDB, see #17020')
     void "Test multi-load events"() {
         given:
         def freds = (1..3).collect {
@@ -202,7 +206,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec<GrailsDataMongoTckM
         3 == freds.size()
         if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
             // JPA doesn't seem to support a pre-load event
-            3 == listener.PreLoadCount
+            assert 3 == listener.PreLoadCount
         }
         3 == listener.PostLoadCount
     }
