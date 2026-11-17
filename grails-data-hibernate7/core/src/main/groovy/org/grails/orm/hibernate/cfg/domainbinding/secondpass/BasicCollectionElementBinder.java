@@ -79,7 +79,7 @@ public class BasicCollectionElementBinder {
             if (elementConfig != null) {
                 Column elementColumn = simpleValueColumnFetcher.getColumnForSimpleValue(element);
                 if (elementColumn != null) {
-                    stringColumnConstraintsBinder.bindStringColumnConstraints(elementColumn, elementConfig, typeName);
+                    stringColumnConstraintsBinder.bindTextType(elementColumn, typeName);
                 }
             }
             property.getColumnConfigOptional().ifPresent(columnConfig -> {

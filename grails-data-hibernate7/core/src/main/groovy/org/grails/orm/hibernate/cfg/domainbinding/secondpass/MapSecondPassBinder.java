@@ -99,7 +99,8 @@ public class MapSecondPassBinder {
 
     /**
      * Applies what the mapping says about the property to the column of the values of the map, as is done for the
-     * elements of a list: the length from {@code maxSize}, or an unbounded text column for type {@code text}.
+     * elements of a list: an unbounded text column for type {@code text}. The {@code maxSize} of a map bounds its
+     * number of entries, so it is not the length of a value.
      */
     private void bindElementColumn(HibernateToManyCollectionProperty property, BasicValue element, String typeName) {
         PropertyConfig mappedForm = property.getHibernateMappedForm();
@@ -110,7 +111,7 @@ public class MapSecondPassBinder {
         if (column == null) {
             return;
         }
-        stringColumnConstraintsBinder.bindStringColumnConstraints(column, mappedForm, typeName);
+        stringColumnConstraintsBinder.bindTextType(column, typeName);
     }
 
     ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {

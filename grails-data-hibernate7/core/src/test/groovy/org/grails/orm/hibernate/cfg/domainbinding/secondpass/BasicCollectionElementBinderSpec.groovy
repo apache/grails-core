@@ -200,11 +200,8 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         // tags + _ + java_lang_string
         element.getColumns().get(0).getName() == "tags_java_lang_string"
     }
-}
 
-enum BCEBStatus { ACTIVE, INACTIVE 
-
-    void "bind gives the element column the length of the maxSize constraint"() {
+    void "bind leaves the length of the element column alone for a maxSize constraint, which bounds the size"() {
         given:
         def entity = createPersistentEntity(BCEBSized)
         HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
@@ -215,7 +212,21 @@ enum BCEBStatus { ACTIVE, INACTIVE
         BasicValue element = binder.bind(property)
 
         then:
-        element.getColumn().getLength() == 300L
+        element.getColumn().getLength() == null
+    }
+
+    void "bind leaves the length of the element column alone for an inList whose allowed values are collections"() {
+        given:
+        def entity = createPersistentEntity(BCEBListed)
+        HibernateToManyProperty property = (HibernateToManyProperty) entity.getPropertyByName("tags")
+        Collection collection = collectionWithTable("bceb_listed_tags")
+        property.setCollection(collection)
+
+        when:
+        BasicValue element = binder.bind(property)
+
+        then:
+        element.getColumn().getLength() == null
     }
 
     void "bind leaves the element column unbounded for a mapped type of text"() {
@@ -246,6 +257,8 @@ enum BCEBStatus { ACTIVE, INACTIVE
         element.getColumn().getLength() == null
     }
 }
+
+enum BCEBStatus { ACTIVE, INACTIVE }
 
 @Entity
 class BCEBAuthor {
@@ -321,6 +334,16 @@ class BCEBSized {
     static hasMany = [tags: String]
     static constraints = {
         tags maxSize: 300
+    }
+}
+
+@Entity
+class BCEBListed {
+    Long id
+    java.util.Set<String> tags
+    static hasMany = [tags: String]
+    static constraints = {
+        tags inList: [['a'], ['b']]
     }
 }
 

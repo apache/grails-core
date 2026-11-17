@@ -28,15 +28,17 @@ import spock.lang.Issue
 import spock.lang.Unroll
 
 /**
- * The column of the values of a map is the column of a value: a length, a type or a column configuration that the
- * mapping gives the property applies to it, as it does for the elements of a list and for a plain string property.
+ * The column of the values of a map is the column of a value: a type or a column configuration that the mapping gives
+ * the property applies to it, as it does for the elements of a list. {@code maxSize} of a collection bounds the
+ * number of its elements, and {@code inList} lists whole collections, so neither gives the column of its elements a
+ * length.
  */
 @Issue('https://github.com/apache/grails-core/issues/16897')
 class MapElementColumnSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(MapEltPlain, MapEltText, MapEltMaxSize, MapEltJoinColumn,
-                ListEltText, ListEltMaxSize)
+                ListEltText, ListEltMaxSize, ListEltInList)
     }
 
     private Column elementColumn(Class<?> type, String property) {
@@ -63,7 +65,20 @@ class MapElementColumnSpec extends HibernateGormDatastoreSpec {
         where:
         label                | mapType        | listType      | expected
         "type: 'text'"       | MapEltText     | ListEltText   | Length.LONG32 as Long
-        'maxSize'            | MapEltMaxSize  | ListEltMaxSize | 500L
+        'maxSize'            | MapEltMaxSize  | ListEltMaxSize | null
+    }
+
+    void "a list that is within maxSize is saved, whatever the length of its element"() {
+        when: 'one element of six characters, with maxSize 2: the number of elements is within it'
+        ListEltMaxSize saved = new ListEltMaxSize(body: ['abcdef']).save(flush: true, failOnError: true)
+
+        then:
+        saved.id != null
+    }
+
+    void "an inList whose allowed values are lists leaves the length of the element column"() {
+        expect:
+        elementColumn(ListEltInList, 'body').length == null
     }
 
     void "a join table column configuration names the element column of a map"() {
@@ -98,7 +113,7 @@ class MapEltMaxSize implements HibernateEntity<MapEltMaxSize> {
     Map<String, String> body
 
     static constraints = {
-        body maxSize: 500
+        body maxSize: 2
     }
 }
 
@@ -125,6 +140,15 @@ class ListEltMaxSize implements HibernateEntity<ListEltMaxSize> {
     static hasMany = [body: String]
 
     static constraints = {
-        body maxSize: 500
+        body maxSize: 2
+    }
+}
+
+@Entity
+class ListEltInList implements HibernateEntity<ListEltInList> {
+    static hasMany = [body: String]
+
+    static constraints = {
+        body inList: [['a'], ['b']]
     }
 }

@@ -324,7 +324,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         !map.inverse
     }
 
-    void "Test bind map sizes the element column from the maxSize constraint and the text type"() {
+    void "Test bind map leaves the element column unbounded for the text type, and alone for a maxSize that bounds its size"() {
         given:
         def binder = getGrailsDomainBinder()
         def collector = getCollector()
@@ -355,7 +355,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
 
         where:
         owner          | tableName          | expected
-        MapSPBSized    | 'MAPSPB_SIZED'     | 400L
+        MapSPBSized    | 'MAPSPB_SIZED'     | null
         MapSPBText     | 'MAPSPB_TEXT'      | org.hibernate.Length.LONG32 as Long
         MapSPBOwner    | 'MAPSPB_PLAIN'     | null
     }
