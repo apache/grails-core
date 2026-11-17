@@ -5050,6 +5050,10 @@ an entity, which threw on 8.0.0, now runs. The old result
 contradicted the query, so there is nothing to keep it for; an application that relied on the extra rows adds them back
 with an explicit `or` in the enclosing query.
 
+==== Two Associations to Unrelated Classes Are Compared by Their Identifiers
+
+On Hibernate 7, `eqProperty` and `neProperty` of two associations whose classes are not related, such as `eqProperty('left', 'right')` for a `Left` and a `Right`, threw on 8.0.0 when the identifier of either class is composite. They now compare the identifiers one part at a time, in the order of the property names, also where a part is itself an association: that part is compared by the identifier of the associated entity. Two identifiers with a different number of parts are not compared: the call throws an `IllegalArgumentException` that names both classes. Such a call failed before, so no working code changes.
+
 ==== More GSP tags HTML-encode the attribute values they write
 
 These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
