@@ -201,7 +201,8 @@ class Neo4jQuery extends Query {
                     .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
                     .findAll { String expression -> expression }
                     .join(CriterionHandler.OPERATOR_AND)
-            return new CypherExpression(inner ? "( $inner )" : inner)
+            // a junction whose children add no expression, as one that holds only an empty block, is true like one without children
+            return inner ? new CypherExpression("( $inner )") : EMPTY_JUNCTION
         }
             },
             (Query.Disjunction): new CriterionHandler<Query.Disjunction>() {
@@ -218,7 +219,8 @@ class Neo4jQuery extends Query {
                         .collect { Query.Criterion it -> dispatchCriterion(it, scope).toString() }
                         .findAll { String expression -> expression }
                         .join(CriterionHandler.OPERATOR_OR)
-                return new CypherExpression(inner ? "( $inner )" : inner)
+                // a junction whose children add no expression, as one that holds only an empty block, is true like one without children
+                return inner ? new CypherExpression("( $inner )") : EMPTY_JUNCTION
             } finally {
                 scope.builder.leaveDisjunction()
             }
@@ -246,7 +248,9 @@ class Neo4jQuery extends Query {
                 }
             }
             List<String> parts = []
-            String negated = others.isEmpty() ? '' : dispatchCriterion(new Query.Disjunction(others), scope).toString()
+            // a disjunction whose children add no expression is the shared true value: there is nothing to negate
+            CypherExpression disjunction = others.isEmpty() ? null : dispatchCriterion(new Query.Disjunction(others), scope)
+            String negated = disjunction == null || disjunction.is(EMPTY_JUNCTION) ? '' : disjunction.toString()
             if (negated) {
                 parts << "NOT ($negated)".toString()
             }
