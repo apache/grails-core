@@ -125,6 +125,54 @@ class SubqueryConnectionSpec extends Specification {
         found == ['Jasper', 'Mona']
     }
 
+    void "a subquery that follows the query that holds it follows it back to the default connection"() {
+        when:
+        List<String> found = namesOn(ConnectionSource.DEFAULT) {
+            ConnSubPerson.where { age > avg(age) }.withConnection('archive').withConnection(ConnectionSource.DEFAULT).list(sort: 'name')
+        }
+
+        then: "the default average is 15, so Lisa is above it; the archive average of 60 would select nobody"
+        found == ['Lisa']
+    }
+
+    void "a subquery from where with no connection chosen follows the query that holds it, inside a transaction of that connection"() {
+        when:
+        List<String> found = namesOn('archive') {
+            ConnSubPerson.archive.where {
+                inList 'age', ConnSubPerson.where { age > 50 }.property('age')
+            }.list(sort: 'name')
+        }
+
+        then: "the archive has Mona and Jasper above 50, and the default connection has no age above 50"
+        found == ['Jasper', 'Mona']
+    }
+
+    void "a subquery given the default connection by the caller keeps it on another connection"() {
+        when:
+        List<String> found = namesOn('archive') {
+            ConnSubPerson.archive.where {
+                inList 'age', ConnSubPerson.where { age > 50 }.withConnection(ConnectionSource.DEFAULT).property('age')
+            }.list(sort: 'name')
+        }
+
+        then: "the default connection has no age above 50, so nothing is in the list"
+        found.isEmpty()
+    }
+
+    void "a subquery from where with no connection chosen follows the query that holds it"() {
+        expect: "a count is read outside any transaction, so no session is bound that the subquery could borrow"
+        ConnSubPerson.archive.where {
+            inList 'age', ConnSubPerson.where { age > 50 }.property('age')
+        }.count() == 2
+    }
+
+    void "a subquery of a detached criteria on the archive follows it"() {
+        expect: "the archive has Mona and Jasper above 50, and the default connection has no age above 50"
+        new DetachedCriteria(ConnSubPerson).withConnection('archive').build {
+            inList 'age', ConnSubPerson.where { age > 50 }.property('age')
+        }.count() == 2
+    }
+
     void "a subquery built with its own connection keeps it"() {
         when:
         List<String> found = namesOn(ConnectionSource.DEFAULT) {

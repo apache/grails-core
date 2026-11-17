@@ -101,6 +101,26 @@ class SubqueryConnectionSpec extends AutoStartedMongoSpec {
         found*.name == ['Jasper', 'Mona']
     }
 
+    void "a subquery from where with no connection chosen follows the query that holds it"() {
+        when:
+        List<ConnSubPerson> found = ConnSubPerson.archive.where {
+            inList 'age', ConnSubPerson.where { age > 50 }.property('age')
+        }.list(sort: 'name')
+
+        then: "the archive has Mona and Jasper above 50, and the default connection has no age above 50"
+        found*.name == ['Jasper', 'Mona']
+    }
+
+    void "a subquery given the default connection by the caller keeps it on another connection"() {
+        when:
+        List<ConnSubPerson> found = ConnSubPerson.archive.where {
+            inList 'age', ConnSubPerson.where { age > 50 }.withConnection('default').property('age')
+        }.list(sort: 'name')
+
+        then: "the default connection has no age above 50, so nothing is in the list"
+        found.isEmpty()
+    }
+
     void "a subquery built with its own connection keeps it"() {
         when:
         List<ConnSubPerson> found = new DetachedCriteria(ConnSubPerson).build {
