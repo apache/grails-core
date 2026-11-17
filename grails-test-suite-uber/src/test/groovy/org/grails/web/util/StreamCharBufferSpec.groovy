@@ -380,8 +380,8 @@ class StreamCharBufferSpec extends Specification {
         then:
             if(callSize) {
                 // size and clone have side-effects in SCB, so we want to test both paths
-                scb2.size() == 27
-                scb2.clone().toString() == '\\u003c1\\u003e - Hello\\u003b'
+                assert scb2.size() == 27
+                assert scb2.clone().toString() == '\\u003c1\\u003e - Hello\\u003b'
             }
         when:
             scb.writer.write '(1)'
@@ -390,8 +390,8 @@ class StreamCharBufferSpec extends Specification {
             }
         then:
             if(callFlush) {
-                scb2.toString() == '\\u003c1\\u003e - Hello\\u003b\\u00281\\u0029'
-                scb2.size() == 40
+                assert scb2.toString() == '\\u003c1\\u003e - Hello\\u003b\\u00281\\u0029'
+                assert scb2.size() == 40
             } else {
                 scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
                 scb2.size() == 27
