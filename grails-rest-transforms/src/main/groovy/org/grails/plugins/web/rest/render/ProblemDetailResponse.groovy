@@ -46,8 +46,8 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 /**
  * Writes the response to a {@link ProblemDetail} as Spring MVC writes one a handler method returns, and prepares it
  * where a view or a renderer of the application writes it: the response takes the status the problem carries, unless
- * a {@code status} argument names another, as the status of a {@code ResponseEntity} does, and a problem without an
- * {@code instance} is given the path of the resource.
+ * a {@code status} argument names another, as the status of a {@code ResponseEntity} does. A problem without an
+ * {@code instance} is written without one, as Spring MVC writes it since Spring Framework 7.1.
  *
  * @since 9.0
  */
@@ -109,9 +109,6 @@ class ProblemDetailResponse {
         if (handler == null) {
             return false
         }
-        if (problem.instance == null && context.resourcePath) {
-            problem.instance = URI.create(context.resourcePath)
-        }
         HttpServletRequest request = webRequest.currentRequest
         // the type and encoding a renderer set for its format are not the problem's, which Spring MVC selects
         webRequest.currentResponse.setContentType(null)
@@ -167,7 +164,7 @@ class ProblemDetailResponse {
             }
             request.setAttribute(PREPARED, problem)
         }
-        prepare(problem, context, requestedStatus(context) ?: problem.status)
+        setStatus(context, requestedStatus(context) ?: problem.status)
     }
 
     /**
@@ -178,7 +175,7 @@ class ProblemDetailResponse {
      * @param context the context of the response
      */
     static void prepareBuilt(ProblemDetail problem, RenderContext context) {
-        prepare(problem, context, problem.status)
+        setStatus(context, problem.status)
     }
 
     /**
@@ -199,13 +196,6 @@ class ProblemDetailResponse {
             return ((HttpStatusCode) status).value()
         }
         status.toString().toInteger()
-    }
-
-    private static void prepare(ProblemDetail problem, RenderContext context, int status) {
-        setStatus(context, status)
-        if (problem.instance == null && context.resourcePath) {
-            problem.instance = URI.create(context.resourcePath)
-        }
     }
 
     /**

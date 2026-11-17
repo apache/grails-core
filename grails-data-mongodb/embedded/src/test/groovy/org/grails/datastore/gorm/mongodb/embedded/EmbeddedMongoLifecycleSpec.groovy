@@ -313,6 +313,27 @@ class EmbeddedMongoLifecycleSpec extends Specification {
         application?.destroyForcibly()
     }
 
+    void 'a client sending its first bytes needs no class loaded by the event loop reading them'() {
+        given:
+        File log = temp.resolve('application.log').toFile()
+
+        when: 'they arrive at the moment Spring Boot has the jars of an executable jar closed'
+        Process application = startApplication(27970, log, ClearedJarsServerApplication.name)
+        boolean exited = application.waitFor(30, TimeUnit.SECONDS)
+
+        then: 'the event loop has no reason to end its thread, and stopping the server finds it there'
+        assert exited : "still running 30 seconds after its main method returned:\n${log.text}"
+        assert application.exitValue() == 0 : log.text
+        assert !log.text.contains('Zip file closed') : log.text
+
+        and: 'having the server answer a request on the way there did not trouble it'
+        assert !log.text.contains('failed to handle') : log.text
+        assert !log.text.contains('Connection reset') : log.text
+
+        cleanup:
+        application?.destroyForcibly()
+    }
+
     private static void write(String url, String title) {
         try (MongoClient client = MongoClients.create(url)) {
             client.getDatabase('bookstore').getCollection('books').insertOne(new Document('title', title))
@@ -347,16 +368,15 @@ class EmbeddedMongoLifecycleSpec extends Specification {
     }
 
     /**
-     * {@link ContextStoppedServerApplication} in a JVM of its own, because whether that JVM exits is
-     * the question. The command is written to an argument file, since a test class path is longer
+     * An application in a JVM of its own, because whether that JVM exits is the question. The command is written to an argument file, since a test class path is longer
      * than some platforms allow a command line to be.
      */
-    private Process startApplication(int port, File log) {
+    private Process startApplication(int port, File log, String mainClass = ContextStoppedServerApplication.name) {
         File arguments = temp.resolve('application.args').toFile()
         arguments.text = [
                 '-cp',
                 System.getProperty('java.class.path'),
-                ContextStoppedServerApplication.name,
+                mainClass,
                 String.valueOf(port),
         ].collect { String argument -> quoted(argument) }.join('\n')
         Process application = new ProcessBuilder(

@@ -50,6 +50,7 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.MessageSource;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.AbstractResource;
@@ -279,6 +280,12 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
         }
 
         return (T) beans.get(name);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getBean(String name, ParameterizedTypeReference<T> requiredType) throws BeansException {
+        return (T) getBean(name, ResolvableType.forType(requiredType.getType()).toClass());
     }
 
     public <T> T getBean(Class<T> tClass) throws BeansException {
@@ -513,7 +520,7 @@ public class MockApplicationContext extends GroovyObjectSupport implements WebAp
     }
 
     @Override
-    public <T> ObjectProvider<T> getBeanProvider(org.springframework.core.ParameterizedTypeReference<T> requiredType) {
+    public <T> ObjectProvider<T> getBeanProvider(ParameterizedTypeReference<T> requiredType) {
         return getBeanProvider(ResolvableType.forType(requiredType.getType()));
     }
 }

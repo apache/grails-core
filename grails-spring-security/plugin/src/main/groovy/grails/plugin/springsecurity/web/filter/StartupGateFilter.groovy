@@ -30,16 +30,27 @@ import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.boot.context.event.ApplicationStartedEvent
 import org.springframework.context.ApplicationListener
+import org.springframework.http.HttpHeaders
 import org.springframework.web.filter.GenericFilterBean
 
 /**
  * Responds to every request with 503 Service Unavailable until the application has started,
  * that is, until the plugin has initialized and Spring Boot has published
  * <code>ApplicationStartedEvent</code>.
+ *
+ * <p>The response carries <code>Retry-After</code>, which is how a 503 says the unavailability
+ * is temporary (RFC 9110, section 15.6.4). A client can then tell this answer, which changes once
+ * the application has started, from a 503 the application gives for reasons of its own.</p>
  */
 @Slf4j
 @CompileStatic
 class StartupGateFilter extends GenericFilterBean implements ApplicationListener<ApplicationStartedEvent> {
+
+    /**
+     * How many seconds a rejected request is asked to wait before it is made again: one, since the
+     * gate is closed only while the application finishes starting.
+     */
+    private static final String RETRY_AFTER_SECONDS = '1'
 
     private boolean initialized
     private boolean started
@@ -66,7 +77,9 @@ class StartupGateFilter extends GenericFilterBean implements ApplicationListener
         if (!opened) {
             log.debug('Rejecting request to {}, the application has not started yet', ((HttpServletRequest) req).requestURI)
             // set the status rather than calling sendError() to avoid an error dispatch
-            ((HttpServletResponse) res).status = HttpServletResponse.SC_SERVICE_UNAVAILABLE
+            HttpServletResponse response = (HttpServletResponse) res
+            response.status = HttpServletResponse.SC_SERVICE_UNAVAILABLE
+            response.setHeader(HttpHeaders.RETRY_AFTER, RETRY_AFTER_SECONDS)
             return
         }
 

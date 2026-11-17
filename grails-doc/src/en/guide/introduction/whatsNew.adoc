@@ -24,7 +24,7 @@ This section covers all the new features introduced in Grails {grailsMajorVersio
 Grails {grailsMajorVersion} is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails {grailsMajorVersion}] section.
+For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section.
 Notable new features are included below.
 
 ==== Platform Baseline
@@ -70,12 +70,40 @@ dependencies {
 
 An application that keeps the default never ships the module. The same dependency is needed, whatever the application's own setting, for a library that was compiled with classic call sites, because Groovy 6 can load such a class only with the module: `org.testcontainers:testcontainers-spock` is one, so declare the module as `testRuntimeOnly` next to it.
 
-==== Spring Boot 4.1 and Spring Framework 7
+==== Spring Boot 4.2 and Spring Framework 7.1
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.
-This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.1 dependency management for Spring Security 7.1, Spring Data 2026.0 and Micrometer 1.17.
+This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.2 dependency management for Spring Security 7.2, Spring Data 2026.1 and Micrometer 1.18.
 
 The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
+For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
+The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
+
+Spring Boot 4.2 can switch metrics and spans to OpenTelemetry's semantic conventions:
+
+[source,yaml]
+----
+management:
+    observations:
+        conventions: open-telemetry
+----
+
+`http.server.requests` then becomes `http.server.request.duration`, tagged with `http.route` and `error.type` in place of `uri` and `exception`.
+In a Grails application `http.route` is `/controller/action`, not the pattern of the URL mapping, which keeps it low in cardinality.
+Spring Boot's https://docs.spring.io/spring-boot/reference/actuator/observability.html#actuator.observability.semantic-conventions[documentation] lists what else changes, such as the properties that customize meter names no longer taking effect.
+
+==== The HTTP QUERY Method
+
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:
+
+[source,groovy]
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+See xref:theWebLayer#mappingHTTP[Mapping to HTTP methods].
 
 ==== JSON Dates and Times Render as Spring Boot Renders Them
 
@@ -125,6 +153,11 @@ action throws is resolved first as Spring MVC resolves one a handler method thro
 of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's handler of
 `spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
 xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
+
+With `grails.exceptionresolver.problemDetails: true`, an exception no such method handles is written as a problem to a
+client that does not prefer HTML, with the translation Spring Framework 7.1 adds, which keeps the status and detail of an
+`ErrorResponse` or a `@ResponseStatus` exception and does not expose the message of an unexpected one. The application's
+error page stays for browsers, and for an exception a URL mapping names.
 
 An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
 `ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
@@ -578,6 +611,37 @@ deployment whose reverse proxy already sends these headers can set `grails.secur
 only explicitly configured headers on proxied requests. See the xref:security[Security] section of the user guide and
 the xref:upgrading#upgrading80x[upgrade guide] for details.
 
+==== Nonce-based Content Security Policy
+
+`grails.security.headers.content-security-policy.value` can name a per-request nonce with the `+{nonce}+` placeholder
+that Spring Security 7.2 introduced, so a policy can allow an inline script or style by nonce rather than with
+`'unsafe-inline'`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            content-security-policy:
+                enabled: true
+                value: "script-src 'self' 'nonce-{nonce}'"
+----
+
+A view renders the request's nonce with the new `<g:cspNonce/>` tag, as in `<script nonce="${g.cspNonce()}">`, and the
+`<g:javascript>` tag adds it to the inline script it writes. A controller or a service reads it with
+`grails.web.http.ContentSecurityPolicyNonce.nonceOf(request)`. The nonce is carried in the `_csp` request attribute,
+which Spring Security's nonce filter uses as well, so the header and the page carry the same nonce whichever
+generated it. See the xref:security[Security] section of the user guide.
+
+==== Logins Redirect to the Page the User Asked For
+
+Browsers and their tools request paths such as `/apple-touch-icon.png`, `/manifest.json` and
+`/.well-known/appspecific/com.chrome.devtools.json` on their own. With the Spring Security plugin, a denied request for
+one of them was saved like any other, so a login could redirect there instead of to the page the user asked for. As
+Spring Security 7.2's configuration DSL does, the plugin now leaves these requests out of the request cache. The list is
+the `grails.plugin.springsecurity.requestCache.ignoredPatterns` setting.
+
 ==== Agent Skills Published with Grails
 
 Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, `org.apache.grails.skills:grails-8-upgrade`, for upgrading an application from Grails 7, and `org.apache.grails.skills:grails-9-upgrade`, for upgrading an application from Grails 8. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
@@ -728,6 +792,9 @@ grails {
     }
 }
 ----
+
+An application that applies the `war` plugin, as a generated application does, is trained against the executable
+war it ships, `src/main/webapp` included, which Spring Boot 4.2 can extract.
 
 See the <<deploymentAotCache,Ahead-of-Time Caching>> section, which includes measured figures and the
 conditions under which a JVM will decline a cache.

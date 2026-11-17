@@ -67,6 +67,7 @@ abstract class TrainAotCacheTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract DirectoryProperty getApplicationDirectory()
 
+    /** The name of the extracted application's jar: the archive's own, which for a war is a jar's. */
     @Input
     abstract Property<String> getArchiveFileName()
 
@@ -271,22 +272,30 @@ abstract class TrainAotCacheTask extends DefaultTask {
      * the earlier and clearer of the two, but it is an INFO log an application is free to turn off
      * or reword; a port that accepts a connection is the application's own doing and cannot be
      * configured away while it is still an application worth training.</p>
+     *
+     * <p>Both come before its {@code ApplicationStartedEvent}, so a filter that holds requests until then, answering
+     * them with 503 and {@code Retry-After}, is waited for, up to the timeout. A 503 without {@code Retry-After} is the
+     * application's own answer, and is not.</p>
      */
     private void awaitStarted(Process process, File output) {
         long deadline = System.currentTimeMillis() + Duration.ofSeconds(startTimeoutSeconds.get()).toMillis()
         StartupLog log = new StartupLog(output)
+        boolean started = false
         while (System.currentTimeMillis() < deadline) {
             if (!process.isAlive()) {
                 throw new GradleException('The training run ended before it started serving.' +
                         whyItEnded(output) + " What it printed is in ${output}")
             }
-            if (log.saysItStarted()) {
-                return
-            }
-            if (serving()) {
+            started = log.saysItStarted() || serving()
+            if (started && !RunPort.answersNotReady(port.get())) {
                 return
             }
             Thread.sleep(250L)
+        }
+        if (started) {
+            // Its home page still says to come back after the whole of the timeout, which is longer than a start
+            // takes to finish, so the requests are its to answer.
+            return
         }
         throw new GradleException("The training run did not start within ${startTimeoutSeconds.get()}s. " +
                 "What it printed is in ${output}")

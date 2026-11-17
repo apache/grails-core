@@ -57,7 +57,7 @@ class FormContentFunctionalSpec extends Specification implements HttpClientSuppo
         json.pages == '1153'
 
         where:
-        httpMethod << ['PUT', 'PATCH', 'DELETE']
+        httpMethod << ['PUT', 'PATCH', 'DELETE', 'QUERY']
     }
 
     void 'a form-encoded POST body is parsed into request parameters'() {

@@ -51,4 +51,16 @@ class ExtractApplicationTaskSpec extends Specification {
         expect:
             declared.isEmpty()
     }
+
+    void 'the application extracted from #archive is #application'() {
+        expect: 'a jar keeps its name, and a war is written as a jar of the same name'
+            ExtractApplicationTask.applicationFileName(archive) == application
+
+        where:
+            archive           | application
+            'myapp-0.1.jar'   | 'myapp-0.1.jar'
+            'myapp-0.1.war'   | 'myapp-0.1.jar'
+            'MYAPP.WAR'       | 'MYAPP.jar'
+            'myapp.war.jar'   | 'myapp.war.jar'
+    }
 }

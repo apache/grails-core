@@ -18,7 +18,6 @@
  */
 package org.apache.grails.core.aot
 
-import org.springframework.aot.generate.ClassNameGenerator
 import org.springframework.aot.generate.DefaultGenerationContext
 import org.springframework.aot.generate.InMemoryGeneratedFiles
 import org.springframework.aot.hint.MemberCategory
@@ -36,6 +35,7 @@ import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import org.grails.core.DefaultGrailsServiceClass
 import org.grails.core.DefaultGrailsUrlMappingsClass
+import org.springframework.aot.generate.NameGenerator
 
 /**
  * Covers what the framework creates reflectively as it registers artefacts being creatable in an image:
@@ -64,7 +64,7 @@ class ArtefactReflectionBeanFactoryInitializationAotProcessorSpec extends Specif
         def contribution = new ArtefactReflectionBeanFactoryInitializationAotProcessor()
                 .processAheadOfTime(context.beanFactory)
         def generation = new DefaultGenerationContext(
-                new ClassNameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
+                new NameGenerator(ClassName.get('com.example', 'Hints')), new InMemoryGeneratedFiles())
         contribution.applyTo(generation, Mock(BeanFactoryInitializationCode))
         generation.runtimeHints
     }

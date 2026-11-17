@@ -106,6 +106,12 @@ grails:
 ---
 # The settings whose defaults later releases change, as an application that opts into them sets them
 grails:
+    mime:
+        disable:
+            accept:
+                header:
+                    userAgents:
+                        - WebKit
     web:
         rendering:
             json:
@@ -118,6 +124,7 @@ grails:
             jackson: true
     exceptionresolver:
         springHandlers: true
+        problemDetails: true
     controllers:
         responseBody: true
 spring:

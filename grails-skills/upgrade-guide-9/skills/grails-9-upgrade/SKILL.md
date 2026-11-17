@@ -352,6 +352,8 @@ The Grails HAL JSON renderers remain available through explicit renderer registr
 
 With `grails.exceptionresolver.springHandlers: true`, the `@ExceptionHandler` methods of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's `spring.mvc.problemdetails.enabled` handler among them, resolve the exceptions actions throw before the Grails exception resolver. An exception none of them handles is resolved as before. Grails 10 makes it the default, so scope `@ControllerAdvice` beans meant only for Spring MVC controllers by `assignableTypes`, `basePackages` or `annotations` before then.
 
+Do not turn on Spring Framework 7.1's `ProblemDetailsConfigurer.renderUnhandledExceptions` in a `WebMvcConfigurer`: it answers every exception of every action with a problem, a browser's included, ahead of the Grails exception resolver, so `"500"` URL mappings no longer apply. Set `grails.exceptionresolver.problemDetails: true` instead, which writes the same problems and leaves the error page to the clients that prefer HTML and to an exception a URL mapping names.
+
 ## Actions Can Return Spring MVC Responses
 
 - Whatever the settings, an action that returns a `ResponseEntity` or another `HttpEntity`, a `ProblemDetail`, an `ErrorResponse`, `HttpHeaders`, a `StreamingResponseBody` or a `ResponseBodyEmitter` has it written as Spring MVC writes a handler method's return value, where Grails 8 did not write it. An action that returns `null`, renders with `render`, `respond` or `redirect`, or forwards, is unaffected. Look for actions that return one of these types.
@@ -446,6 +448,15 @@ Grails no longer registers a character encoding filter of its own. Spring Boot's
 - A property source of lower precedence that sets the deeper key now answers it: with `a.b: x` in one source and `a.b.c: y` in a source of lower precedence, `getProperty('a.b.c')` answers `y`, where Grails 8 answered `x`, as a Spring `Environment` over the same sources does. `navigate('a', 'b', 'c')` answers `null`.
 - Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
 - Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; read the list as `server.ports`.
+
+## The Spring Security User Cache Stores Copies
+
+With `cacheUsers`, the Spring Security plugin's user cache stores users by value: each lookup gets a serialized copy, where Grails 8 handed out the cached instance. Erasing the password of a signed-in user no longer erases the cached one, so the cache is used on the next sign-in, and the session's user holds no password.
+
+- A custom `UserDetails` with a field that cannot be serialized is not cached: it is loaded on every sign-in, with a warning. Make the field `transient` or hold an id.
+- Code that changed a user read from `userCache` puts it back with `userCache.putUserInCache`.
+- `cacheConfig` on the `userCache` bean, a `MutableConfiguration` with `setStoreByValue(false)`, restores storing by reference.
+- In a native image, the plugin registers `User`, `GrailsUser` with a `Long` id and `SimpleGrantedAuthority` for serialization; a custom user class or id type needs metadata, which `traceNativeMetadata` records when the login form is in `forms`.
 
 ## Verification Checklist
 
