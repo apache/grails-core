@@ -152,6 +152,22 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
         response.redirectedUrl == 'https://other.example%C4%AF@frontend.example.com/?token=token-value'
     }
 
+    void 'a host outside US-ASCII matches only in its ASCII form: #allowedOrigin and #callback'() {
+        given:
+        grailsApplication.config.merge([(ALLOWED_CALLBACK_ORIGINS): [allowedOrigin]])
+        stubOauthFlow()
+
+        expect:
+        runOauthFlow(callback) == expectedUrl
+
+        where:
+        allowedOrigin                   | callback                                       || expectedUrl
+        'https://xn--bcher-kva.example' | 'https://xn--bcher-kva.example/welcome?token=' || 'https://xn--bcher-kva.example/welcome?token=token-value'
+        'https://xn--bcher-kva.example' | 'https://bücher.example/welcome?token='        || 'http://config.com/welcome#token=token-value'
+        'https://bücher.example'        | 'https://xn--bcher-kva.example/welcome?token=' || 'http://config.com/welcome#token=token-value'
+        'https://bücher.example'        | 'https://bücher.example/welcome?token='        || 'http://config.com/welcome#token=token-value'
+    }
+
     void 'an allowed IPv6 origin is compared by address: #callback'() {
         given:
         grailsApplication.config.merge([(ALLOWED_CALLBACK_ORIGINS): ['http://[::1]:8080', 'http://127.0.0.1:8080']])
