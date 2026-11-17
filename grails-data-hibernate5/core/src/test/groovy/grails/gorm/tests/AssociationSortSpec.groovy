@@ -18,8 +18,8 @@
  */
 package grails.gorm.tests
 
-import spock.lang.Requires
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -246,6 +246,25 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         new AssociationSortEmployee(name: 'e1', manager: managerOne, department: departmentX).save(failOnError: true)
         new AssociationSortEmployee(name: 'e2', manager: managerTwo, department: departmentY).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'an inner join requested for a nested path is not made through an alias that has the name of the first association'() {
+        given:
+        saveEmployees()
+        final departmentZ = new AssociationSortDepartment(name: 'Z dept', manager: AssociationSortEmployee.findByName('m1')).save(failOnError: true)
+        final managerThree = new AssociationSortEmployee(name: 'm3').save(failOnError: true)
+        new AssociationSortEmployee(name: 'e3', manager: managerThree, department: departmentZ).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final names = AssociationSortEmployee.createCriteria().list {
+            createAlias('department', 'd')
+            createAlias('d.manager', 'manager')
+            join('manager.department', JoinType.INNER)
+        }*.name.sort()
+
+        then: 'e3, whose own manager has no department, is left out'
+        names == ['e1', 'e2']
     }
 
     /**
