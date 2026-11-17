@@ -218,6 +218,50 @@ class ProjectCommandsSpec extends Specification {
         commandLine.subcommands.containsKey('url-mappings-report')
     }
 
+    void 'the manifest is written again when #deleted is deleted'() {
+        given: 'a manifest the build wrote, read once, which records the build files there'
+        File buildFile = new File(dir, deleted)
+        buildFile.text = 'a=b'
+        buildFile.setLastModified(System.currentTimeMillis() - 20_000)
+        writeManifest(URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        assert gradleInvocations() == []
+        assert new File(dir, 'build/grails/commands.inputs').readLines().contains(buildFile.absolutePath)
+        buildWrites(SECURITY_QUICKSTART)
+
+        when: 'the file is deleted, which leaves no file newer than the manifest'
+        assert buildFile.delete()
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain'] + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
+
+        and: 'the record now matches the files there, so the build is not run again'
+        !new File(dir, 'build/grails/commands.inputs').readLines().contains(buildFile.absolutePath)
+        ForgeCli.createCommandLine(context, false)
+        gradleInvocations().size() == 1
+
+        where:
+        deleted << ['gradle.properties', 'settings.gradle', 'dependencies.gradle', 'libs.versions.toml']
+    }
+
+    void 'the manifest is written again when a build file older than it is moved into the project'() {
+        given:
+        writeManifest(URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        buildWrites(SECURITY_QUICKSTART)
+
+        when: 'a file keeps the time it had elsewhere'
+        File moved = new File(dir, 'gradle.properties')
+        moved.text = 'a=b'
+        moved.setLastModified(manifest.lastModified() - 10_000)
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain'] + MANIFEST_TASK]
+    }
+
     void 'what the build writes for itself does not make the manifest outdated'() {
         given:
         writeManifest(URL_MAPPINGS_REPORT)

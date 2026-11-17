@@ -238,6 +238,8 @@ commands:
   scripts applied from there;
 * the files under `grails-app/commands`, including a command deleted from there, or the whole directory removed.
 
+A file of these deleted, or moved in with an older time, counts as a change too.
+
 So a plugin added to the build brings its commands the next time a project command is asked for. A
 change the Forge CLI cannot see, such as a new snapshot of a plugin, is picked up by running
 `./gradlew generateCommandManifest`.

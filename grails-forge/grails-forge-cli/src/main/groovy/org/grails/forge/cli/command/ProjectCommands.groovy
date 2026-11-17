@@ -49,6 +49,12 @@ class ProjectCommands {
     /** Kept next to the manifest when the build could not write it, so the build is not run again for nothing */
     static final String FAILED_PATH = 'build/grails/commands.failed'
 
+    /**
+     * Kept next to the manifest: the build files in the project and build root directories when the build
+     * was last run, so that one deleted since, which leaves nothing newer behind, is noticed
+     */
+    static final String BUILD_FILES_PATH = 'build/grails/commands.inputs'
+
     /** The newest version of the manifest's format this CLI reads */
     static final int FORMAT_VERSION = 1
 
@@ -128,6 +134,7 @@ class ProjectCommands {
         catch (IOException e) {
             problem = e.message
         }
+        record(buildFiles())
         if (problem == null && manifest.isFile()) {
             // the task is up to date when the classpath is, without writing the manifest again
             manifest.setLastModified(System.currentTimeMillis())
@@ -182,6 +189,15 @@ class ProjectCommands {
         if (lastRead == 0L) {
             return true
         }
+        List<String> buildFiles = buildFiles()
+        File recorded = new File(projectDir, BUILD_FILES_PATH)
+        if (!recorded.isFile()) {
+            // a manifest the project's own build wrote: its build files are taken to be those there now
+            record(buildFiles)
+        }
+        else if (recorded.readLines('UTF-8') != buildFiles) {
+            return true
+        }
         ([projectDir, gradle.rootDir] as LinkedHashSet<File>).any { File dir -> changedBuild(dir, lastRead) } ||
                 changedSources(lastRead)
     }
@@ -195,10 +211,29 @@ class ProjectCommands {
         sources.isDirectory() ? changed(sources, since) : sources.parentFile.lastModified() > since
     }
 
+    /**
+     * The build files directly in the project and build root directories, which a deleted one leaves no
+     * trace of; those under the build directories change the time of the directory that held them.
+     */
+    private List<String> buildFiles() {
+        ([projectDir, gradle.rootDir] as LinkedHashSet<File>).collectMany { File dir ->
+            (dir.listFiles() ?: new File[0]).findAll { File file -> buildFile(file) }*.absolutePath
+        }.sort()
+    }
+
+    private void record(List<String> buildFiles) {
+        File recorded = new File(projectDir, BUILD_FILES_PATH)
+        recorded.parentFile.mkdirs()
+        recorded.setText(buildFiles.collect { String path -> path + '\n' }.join(''), 'UTF-8')
+    }
+
+    private static boolean buildFile(File file) {
+        file.isFile() && BUILD_FILE_SUFFIXES.any { String suffix -> file.name.endsWith(suffix) }
+    }
+
     private static boolean changedBuild(File dir, long since) {
         dir.listFiles()?.any { File file ->
-            file.isFile() && BUILD_FILE_SUFFIXES.any { String suffix -> file.name.endsWith(suffix) } &&
-                    file.lastModified() > since
+            buildFile(file) && file.lastModified() > since
         } || BUILD_DIRS.any { String name -> changed(new File(dir, name), since) }
     }
 
