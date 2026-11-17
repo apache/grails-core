@@ -120,8 +120,17 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         associationPath = pathFromDeclaredAlias(associationPath)
         // the first alias of an association names the path itself, so a path that starts with it is that path; a
         // later alias is a join of its own, and a path that starts with it has to continue from that join
-        String pathFromAlias = startingAlias != null && !startingAlias.is(associationCriteriaMap[startingAlias.associationPath]) ?
-                writtenPath : null
+        String pathFromAlias = null
+        if (startingAlias != null) {
+            if (startingAlias.pathFromAlias != null) {
+                // the alias continues from a join that is not the first one of its path, so its own path continues
+                // from that join too, as r.leaf does after createAlias('c2.related', 'r'): c2.related.leaf
+                pathFromAlias = startingAlias.pathFromAlias + writtenPath.substring(writtenPath.indexOf('.'))
+            }
+            else if (!startingAlias.is(associationCriteriaMap[startingAlias.associationPath])) {
+                pathFromAlias = writtenPath
+            }
+        }
         PersistentProperty prop
         if (associationPath.contains('.')) {
             def tokens = associationPath.split(/\./)
@@ -183,9 +192,27 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
             return null
         }
         String head = associationPath.substring(0, dot)
-        for (Query.Criterion criterion in criteria) {
+        DetachedAssociationCriteria declared = aliasDeclaredIn(criteria, head)
+        for (int i = 0; declared == null && i < junctions.size(); i++) {
+            declared = aliasDeclaredIn(junctions[i].criteria, head)
+        }
+        declared
+    }
+
+    /**
+     * An alias belongs to the whole query, so one declared inside an {@code and}, {@code or} or {@code not} block,
+     * whether the block is still open or closed, is found as well.
+     */
+    private static DetachedAssociationCriteria aliasDeclaredIn(Collection<Query.Criterion> candidates, String head) {
+        for (Query.Criterion criterion in candidates) {
             if (criterion instanceof DetachedAssociationCriteria && ((DetachedAssociationCriteria) criterion).alias == head) {
                 return (DetachedAssociationCriteria) criterion
+            }
+            if (criterion instanceof Query.Junction) {
+                DetachedAssociationCriteria inner = aliasDeclaredIn(((Query.Junction) criterion).criteria, head)
+                if (inner != null) {
+                    return inner
+                }
             }
         }
         null
