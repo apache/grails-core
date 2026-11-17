@@ -1456,10 +1456,11 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 
 ==== 25. JLine 4
 
-Grails 9 manages JLine 4 (`org.jline:jline` 4.4.5), the version Groovy 6's `groovysh` is built on, in place of JLine 3. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages, and the JLine code in Grails itself compiled against JLine 4 unchanged.
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
 
 ===== Required Actions
 
-* Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4.
+* Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4. JLine 4 removed APIs that JLine 3 had deprecated, so code that uses them no longer compiles. For example, use `org.jline.builtins.Completers.FileNameCompleter` in place of `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()` and `outputEncoding()` in place of `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`. `TerminalBuilder.codepage(int)` and the `TerminalBuilder.PROP_JNA` and `PROP_JANSI` constants are gone too.
 * JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
-* A picocli command line that reads its input with JLine through picocli's `info.picocli:picocli-shell-jline3` gets JLine 4 from the Grails BOM, while that bridge is built for JLine 3. Use JLine's own picocli bridge, `org.jline:jline-picocli`, at the JLine version the Grails BOM manages.
+
+picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
