@@ -877,6 +877,9 @@ public class HibernateQuery extends Query {
                         hibernateQuery.offset(this.offset);
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
+                    // the aliases belong to the query, not to its criteria: a copy without them cannot resolve a
+                    // projection or a restriction that names one
+                    this.aliases.forEach(hibernateQuery::addAlias);
 
                     return hibernateQuery;
                 });

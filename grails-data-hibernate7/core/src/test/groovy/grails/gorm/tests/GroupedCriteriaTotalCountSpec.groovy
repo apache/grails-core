@@ -26,13 +26,21 @@ import spock.lang.Issue
 class GroupedCriteriaTotalCountSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(GroupedCountItem)
+        manager.registerDomainClasses(GroupedCountItem, GroupedTaggedItem)
     }
 
     void setup() {
         ['a', 'a', 'a', 'b', 'b', 'c'].eachWithIndex { String city, int i ->
             new GroupedCountItem(name: "item$i", city: city).save(failOnError: true)
         }
+        session.flush()
+        session.clear()
+    }
+
+    private void seedTags() {
+        new GroupedTaggedItem(name: 'one', tags: ['x', 'y']).save(failOnError: true)
+        new GroupedTaggedItem(name: 'two', tags: ['x']).save(failOnError: true)
+        ['three', 'four', 'five'].each { new GroupedTaggedItem(name: it, tags: ['z']).save(failOnError: true) }
         session.flush()
         session.clear()
     }
@@ -66,6 +74,45 @@ class GroupedCriteriaTotalCountSpec extends HibernateGormDatastoreSpec {
         results.totalCount == 2
     }
 
+    void "totalCount of a criteria grouped by the alias of a basic collection is the number of groups"() {
+        given: 'five items, six rows when they are joined to their tags, and three groups'
+        seedTags()
+
+        when:
+        def results = GroupedTaggedItem.createCriteria().list(max: 2) {
+            createAlias('tags', 't')
+            projections {
+                groupProperty('t')
+            }
+            order('t')
+        }
+
+        then:
+        results == ['x', 'y']
+        results.totalCount == 3
+    }
+
+    void "totalCount of a criteria that groups the alias of a basic collection with a row count is the number of groups"() {
+        given:
+        seedTags()
+
+        when:
+        def results = GroupedTaggedItem.createCriteria().list(max: 1) {
+            createAlias('tags', 't')
+            projections {
+                groupProperty('t')
+                rowCount()
+            }
+            order('t')
+        }
+
+        then: 'the first group holds two rows, and there are three groups'
+        results.size() == 1
+        results[0][0] == 'x'
+        results[0][1] == 2
+        results.totalCount == 3
+    }
+
     void "totalCount of an ungrouped criteria still counts the rows"() {
         when:
         def results = GroupedCountItem.createCriteria().list(max: 2) {
@@ -82,4 +129,11 @@ class GroupedCriteriaTotalCountSpec extends HibernateGormDatastoreSpec {
 class GroupedCountItem {
     String name
     String city
+}
+
+@Entity
+class GroupedTaggedItem {
+    String name
+
+    static hasMany = [tags: String]
 }
