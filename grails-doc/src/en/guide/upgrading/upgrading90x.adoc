@@ -1455,7 +1455,7 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 
 ==== 25. Unit Tests Run Domain Class Events for Every Data Source and Tenant
 
-In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither.
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 27 does not apply to them.
 
 ===== Required Actions
 
