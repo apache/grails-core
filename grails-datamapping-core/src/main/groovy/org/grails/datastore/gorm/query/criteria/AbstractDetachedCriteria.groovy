@@ -115,6 +115,17 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     }
 
     /**
+     * The class this criteria queries, which needs no datastore to be read. A criteria built for a subclass of the
+     * class a query declares is told apart from it by this.
+     *
+     * @return The class the criteria was created for
+     * @since 8.0.1
+     */
+    Class<T> getTargetClass() {
+        return this.targetClass
+    }
+
+    /**
      * Sets the root alias to be used for the query
      * @param alias The alias
      * @return The alias
