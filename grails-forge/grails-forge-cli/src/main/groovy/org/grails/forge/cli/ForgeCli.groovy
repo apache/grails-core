@@ -32,7 +32,10 @@ import org.grails.forge.cli.command.CreateInterceptorCommand
 import org.grails.forge.cli.command.CreateJobCommand
 import org.grails.forge.cli.command.CreateServiceCommand
 import org.grails.forge.cli.command.CreateTagLibCommand
+import org.grails.forge.cli.command.ProjectCommand
+import org.grails.forge.cli.command.ProjectCommands
 import org.grails.forge.io.ConsoleOutput
+import org.grails.forge.io.FileSystemOutputHandler
 
 /**
  * Runs the Forge CLI against the Grails application {@link Application} starts: builds the picocli
@@ -94,7 +97,13 @@ final class ForgeCli {
      */
     static int execute(ApplicationContext context, String... args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
-        return createCommandLine(context, noOpConsole).execute(args)
+        CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
+        // the commands of the project are read only when the command line may name one of them, so
+        // the Forge CLI's own commands never wait for the project's build
+        if (args.length == 0 || !commandLine.subcommands.containsKey(args[0])) {
+            addProjectCommands(commandLine)
+        }
+        return commandLine.execute(args)
     }
 
     /**
@@ -105,7 +114,17 @@ final class ForgeCli {
         new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER).start()
     }
 
+    /**
+     * Builds the command line with every command it offers in the current directory: the Forge CLI's
+     * own, and the commands of the Grails project there, if any.
+     */
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole) {
+        CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
+        addProjectCommands(commandLine)
+        return commandLine
+    }
+
+    private static CommandLine createForgeCommandLine(ApplicationContext context, boolean noOpConsole) {
         ForgeCommand root = context.getBean(ForgeCommand)
         CommandLine commandLine = new CommandLine(root, new GrailsPicocliFactory(context))
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
@@ -128,6 +147,26 @@ final class ForgeCli {
             }
         }
         return commandLine
+    }
+
+    /**
+     * Adds the commands of the Grails project in the current directory, which run through the project's
+     * build. A command named like one of the Forge CLI's own is left out: the Forge CLI's command runs.
+     */
+    private static void addProjectCommands(CommandLine commandLine) {
+        File projectDir
+        try {
+            projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
+        }
+        catch (IOException ignored) {
+            return
+        }
+        ConsoleOutput console = (ForgeCommand) commandLine.getCommand()
+        for (ProjectCommand command : new ProjectCommands(projectDir).load(console)) {
+            if (!commandLine.subcommands.containsKey(command.name)) {
+                commandLine.addSubcommand(command.name, command.commandSpec)
+            }
+        }
     }
 
 }
