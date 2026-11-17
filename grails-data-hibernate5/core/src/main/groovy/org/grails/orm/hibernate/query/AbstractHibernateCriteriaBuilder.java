@@ -21,12 +21,14 @@ package org.grails.orm.hibernate.query;
 
 import java.beans.PropertyDescriptor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import groovy.lang.Closure;
 import groovy.lang.DelegatesTo;
@@ -61,7 +63,9 @@ import org.hibernate.criterion.PropertyProjection;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.transform.ResultTransformer;
+import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
 
 import org.springframework.beans.BeanUtils;
@@ -69,7 +73,11 @@ import org.springframework.core.convert.ConversionService;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
+import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -144,6 +152,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * applied once the criteria are built, see {@link #applyRequestedJoinTypes()}.
      */
     private final Map<String, JoinType> requestedJoinTypes = new LinkedHashMap<>();
+    /**
+     * The orders that the criteria request, in the order of the requests. They are added once the
+     * criteria are built, see {@link #applyRequestedOrders()}.
+     */
+    private final List<RequestedOrder> requestedOrders = new ArrayList<>();
     protected static final String ALIAS = "_alias";
     protected ResultTransformer resultTransformer;
     protected int aliasCount;
@@ -693,8 +706,28 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      */
     public Criteria createAlias(String associationPath, String alias) {
-        aliasMap.put(associationPath, alias);
+        aliasMap.put(getWholeAssociationPath(associationPath), alias);
         return criteria.createAlias(associationPath, alias);
+    }
+
+    /**
+     * Returns the path of an association from the queried class. The path that an alias is created
+     * with can start with the alias of another join.
+     *
+     * @param associationPath The path that the alias is created with
+     * @return The path from the queried class
+     */
+    protected String getWholeAssociationPath(String associationPath) {
+        int firstDotPos = associationPath.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = associationPath.substring(0, firstDotPos);
+            for (Map.Entry<String, String> aliased : aliasMap.entrySet()) {
+                if (qualifier.equals(aliased.getValue())) {
+                    return aliased.getKey() + associationPath.substring(firstDotPos);
+                }
+            }
+        }
+        return associationPath;
     }
 
     /**
@@ -1458,9 +1491,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             throwRuntimeException(new IllegalArgumentException("Call to [order] with propertyName [" +
                     propertyName + "]not allowed here."));
         }
-        propertyName = calculatePropertyName(propertyName);
-        Order o = Order.asc(propertyName);
-        addOrderInternal(this.criteria, o);
+        requestOrder(propertyName, Order::asc);
         return this;
     }
 
@@ -1471,15 +1502,14 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Order instance
      */
     public org.grails.datastore.mapping.query.api.Criteria order(Order o) {
-        final Criteria criteria = this.criteria;
-        addOrderInternal(criteria, o);
+        if (criteria == null) {
+            throwRuntimeException(new IllegalArgumentException("Call to [order] not allowed here."));
+        }
+        requestedOrders.add(new RequestedOrder(o));
         return this;
     }
 
     private void addOrderInternal(Criteria criteria, Order o) {
-        if (criteria == null) {
-            throwRuntimeException(new IllegalArgumentException("Call to [order] not allowed here."));
-        }
         if (paginationEnabledList) {
             orderEntries.add(o);
         }
@@ -1490,27 +1520,112 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     @Override
     public org.grails.datastore.mapping.query.api.Criteria order(Query.Order o) {
-
-        final Criteria criteria = this.criteria;
-        final String property = o.getProperty();
-        addOrderInternal(criteria, o, property);
+        if (criteria == null) {
+            throwRuntimeException(new IllegalArgumentException("Call to [order] not allowed here."));
+        }
+        requestOrder(o.getProperty(), propertyName -> convertOrder(o, propertyName));
         return this;
     }
 
-    private void addOrderInternal(Criteria criteria, Query.Order o, String property) {
-        final int i = property.indexOf('.');
-        if (i == -1) {
-
-            Order order = convertOrder(o, property);
-            addOrderInternal(criteria, order);
+    /**
+     * Records an order that the criteria request. The order is added by {@link #applyRequestedOrders()},
+     * once the criteria are built: an order by a property of an association needs the join of the
+     * association, and which join that is, and whether a collection is fetched through it, depends on
+     * what the rest of the criteria request for the association, before or after the order.
+     *
+     * @param propertyName The property to order by
+     * @param orderFactory Creates the order for the property name that Hibernate resolves
+     */
+    private void requestOrder(String propertyName, Function<String, Order> orderFactory) {
+        String[] tokens = propertyName.split("\\.");
+        if (tokens.length == 1 || datastore == null || aliasMap.containsValue(tokens[0]) || isAssociationIdentifier(tokens)) {
+            // a property of the queried class, a path from an alias, or a path that needs no join
+            requestedOrders.add(new RequestedOrder(orderFactory.apply(calculatePropertyName(propertyName))));
         }
         else {
-            String sortHead = property.substring(0, i);
-            String sortTail = property.substring(i + 1);
-            createAliasIfNeccessary(sortHead, sortHead, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
-            final Criteria sub = aliasInstanceStack.get(aliasInstanceStack.size() - 1);
-            addOrderInternal(sub, o, sortTail);
+            requestedOrders.add(new RequestedOrder(tokens, orderFactory, targetClass, getAssociationPath(), getLastAlias()));
         }
+    }
+
+    /**
+     * Whether the path is the identifier of an association to a single instance whose foreign key the
+     * queried class has. Hibernate reads it from the foreign key, so the association is not joined for
+     * an order by it. A projection that groups by the same path, or is distinct on it, reads the foreign
+     * key as well, and a database only accepts an order by what such a projection selects. The foreign
+     * key of a one-to-one that the other class refers back with, such as a {@code hasOne}, is in the
+     * table of the other class, so such an association is joined.
+     */
+    private boolean isAssociationIdentifier(String[] tokens) {
+        if (tokens.length != 2) {
+            return false;
+        }
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        PersistentProperty property = entity != null ? entity.getPropertyByName(tokens[0]) : null;
+        if (!(property instanceof ToOne) || property instanceof Embedded) {
+            return false;
+        }
+        PersistentEntity associatedEntity = ((ToOne) property).getAssociatedEntity();
+        PersistentProperty identity = associatedEntity != null ? associatedEntity.getIdentity() : null;
+        if (identity == null || !identity.getName().equals(tokens[1])) {
+            return false;
+        }
+        Type type = ((SessionFactoryImplementor) sessionFactory).getMetamodel().entityPersister(targetClass.getName()).getPropertyType(tokens[0]);
+        return type instanceof ManyToOneType;
+    }
+
+    /**
+     * Adds the orders that the criteria request. This happens once the criteria are built and the
+     * join types that they request are applied, so that an order by a property of an association
+     * uses the join that the criteria have for the association, with its join type, and does not
+     * keep a collection from being fetched that the criteria ask to fetch, whether the order or the
+     * request came first.
+     */
+    private void applyRequestedOrders() {
+        for (RequestedOrder requested : requestedOrders) {
+            Order order = requested.order != null ? requested.order :
+                    requested.orderFactory.apply(calculateOrderPropertyName(requested));
+            addOrderInternal(criteria, order);
+        }
+        requestedOrders.clear();
+    }
+
+    /**
+     * Qualifies the property of an order with the alias that Hibernate resolves it through. A property
+     * of an association is resolved through the alias of the join of the association: a join that the
+     * criteria already have for the association is used, and an association that they do not join is
+     * joined for the order. With the <code>grails.gorm.leftJoinAssociationSort</code> setting it is
+     * joined with a left join, so that the order keeps the rows where the association is null, and
+     * without it with an inner join. A collection is always joined with an inner join: Hibernate would
+     * fetch it through a left join. An association
+     * after the first one on the path is joined through the alias of the join before it, so that
+     * Hibernate does not read the first association of the path as an alias of the same name.
+     */
+    private String calculateOrderPropertyName(RequestedOrder requested) {
+        String[] tokens = requested.tokens;
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(requested.targetClass.getName());
+        String associationPath = requested.associationPath;
+        String alias = requested.alias;
+        for (int i = 0; i < tokens.length - 1; i++) {
+            PersistentProperty property = entity != null ? entity.getPropertyByName(tokens[i]) : null;
+            if (!(property instanceof Association) || property instanceof Embedded) {
+                // the rest of the path is a component path or a property, which Hibernate resolves itself
+                String rest = String.join(".", Arrays.copyOfRange(tokens, i, tokens.length));
+                return alias != null ? alias + '.' + rest : rest;
+            }
+            String parentAlias = alias;
+            associationPath = associationPath.isEmpty() ? tokens[i] : associationPath + '.' + tokens[i];
+            alias = GrailsHibernateUtil.getJoinAlias(criteria, associationPath);
+            if (alias == null) {
+                aliasCount++;
+                alias = tokens[i] + ALIAS + aliasCount;
+                aliasMap.put(associationPath, alias);
+                String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
+                criteria.createAlias(joinPath, alias, property instanceof ToMany || !GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner()) ?
+                        org.hibernate.sql.JoinType.INNER_JOIN : org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+            }
+            entity = ((Association) property).getAssociatedEntity();
+        }
+        return alias + '.' + tokens[tokens.length - 1];
     }
 
     protected Order convertOrder(Query.Order o, String property) {
@@ -1542,20 +1657,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             throwRuntimeException(new IllegalArgumentException("Call to [order] with propertyName [" +
                     propertyName + "]not allowed here."));
         }
-        propertyName = calculatePropertyName(propertyName);
-        Order o;
-        if (direction.equals(ORDER_DESCENDING)) {
-            o = Order.desc(propertyName);
-        }
-        else {
-            o = Order.asc(propertyName);
-        }
-        if (paginationEnabledList) {
-            orderEntries.add(o);
-        }
-        else {
-            criteria.addOrder(o);
-        }
+        Function<String, Order> orderFactory = direction.equals(ORDER_DESCENDING) ? Order::desc : Order::asc;
+        requestOrder(propertyName, orderFactory);
         return this;
     }
 
@@ -1789,6 +1892,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 invokeClosureNode(args[0]);
             }
             applyRequestedJoinTypes();
+            applyRequestedOrders();
 
             if (resultTransformer != null) {
                 criteria.setResultTransformer(resultTransformer);
@@ -1831,8 +1935,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = listArguments;
-                    final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
-                    if (sort != null) {
+                    final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    // a map of sort properties is applied with the other arguments
+                    if (sortArgument instanceof String) {
+                        final String sort = (String) sortArgument;
                         boolean ignoreCase = true;
                         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
                         if (caseArg instanceof Boolean) {
@@ -1842,7 +1948,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         final String order = HibernateQueryConstants.ORDER_DESC.equalsIgnoreCase(orderParam) ?
                                 HibernateQueryConstants.ORDER_DESC : HibernateQueryConstants.ORDER_ASC;
                         int lastPropertyPos = sort.lastIndexOf('.');
-                        String associationForOrdering = lastPropertyPos >= 0 ? sort.substring(0, lastPropertyPos) : null;
+                        // the association path of the sort, also when the sort starts with an alias
+                        String associationForOrdering = lastPropertyPos >= 0 ? getWholeAssociationPath(sort.substring(0, lastPropertyPos)) : null;
                         if (associationForOrdering != null && aliasMap.containsKey(associationForOrdering)) {
                             addOrder(criteria, aliasMap.get(associationForOrdering) + "." + sort.substring(lastPropertyPos + 1),
                                     order, ignoreCase);
@@ -2097,6 +2204,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         criteriaClosure.setDelegate(this);
         criteriaClosure.call();
         applyRequestedJoinTypes();
+        applyRequestedOrders();
         return criteria;
     }
 
@@ -2188,6 +2296,39 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     public abstract Criteria createAlias(String associationPath, String alias, int joinType);
 
     protected abstract Class getClassForAssociationType(Attribute<?, ?> type);
+
+    /**
+     * An order that the criteria request, see {@link #applyRequestedOrders()}: either the order
+     * itself or, for a property of an association, the path of the property and where the order
+     * was requested, from which the order is made once the joins of the criteria are known.
+     */
+    private static final class RequestedOrder {
+
+        final Order order;
+        final String[] tokens;
+        final Function<String, Order> orderFactory;
+        final Class<?> targetClass;
+        final String associationPath;
+        final String alias;
+
+        RequestedOrder(Order order) {
+            this.order = order;
+            this.tokens = null;
+            this.orderFactory = null;
+            this.targetClass = null;
+            this.associationPath = null;
+            this.alias = null;
+        }
+
+        RequestedOrder(String[] tokens, Function<String, Order> orderFactory, Class<?> targetClass, String associationPath, String alias) {
+            this.order = null;
+            this.tokens = tokens;
+            this.orderFactory = orderFactory;
+            this.targetClass = targetClass;
+            this.associationPath = associationPath;
+            this.alias = alias;
+        }
+    }
 
     /**
      * instances of this class are pushed onto the logicalExpressionStack

@@ -76,16 +76,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
-    void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
-        when:
-        final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
-            like('name', '%First%')
-        }
-
-        then:
-        results*.name.sort() == TEAMS_WITH_A_CLUB
-    }
-
     @IgnoreIf({ instance.leftJoinSort })
     void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
         when:
@@ -881,6 +871,66 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         then:
         results.size() == 2
         results.totalCount == 4
+    }
+
+    void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
+        when:
+        final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+    }
+
+    void 'a criteria query ordered by an association applies the join type that #description for the association'() {
+        when:
+        final List<Team> results = query.call()
+
+        then: 'the order does not bring back the team without a club'
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        description                           | query
+        'join requests before the order'      | { Team.createCriteria().list { like('name', '%First%'); join('club', JoinType.INNER); order('club.name') } }
+        'join requests after the order'       | { Team.createCriteria().list { like('name', '%First%'); order('club.name'); join('club', JoinType.INNER) } }
+        'join requests with a right join'     | { Team.createCriteria().list { like('name', '%First%'); join('club', JoinType.RIGHT); order('club.name') } }
+        'the fetch argument requests'         | { Team.createCriteria().list(fetch: [club: JoinType.INNER]) { like('name', '%First%'); order('club.name') } }
+        'join requests in a paged list'       | { Team.createCriteria().list(max: 10) { like('name', '%First%'); join('club', JoinType.INNER); order('club.name') } }
+    }
+
+    void 'the total count and get of a criteria query ordered by an association apply an inner join that it requests'() {
+        when:
+        final results = Team.createCriteria().list(max: 2) {
+            like('name', '%First%')
+            join('club', JoinType.INNER)
+            order('club.name')
+        }
+        final unattached = Team.createCriteria().get {
+            eq('name', 'Unattached First Team')
+            join('club', JoinType.INNER)
+            order('club.name')
+        }
+
+        then:
+        results.size() == 2
+        results.totalCount == 4
+        unattached == null
+    }
+
+    void 'a criteria query ordered by a nested association applies an inner join that it requests #description'() {
+        when:
+        final results = Player.createCriteria().list(criteria)
+
+        then:
+        results*.name == ['Arsenal Player', 'Chelsea Player', 'MU Player']
+
+        where:
+        description                              | criteria
+        'for the path'                           | { join('team.club', JoinType.INNER); order('team.club.name') }
+        'for the path, after the order'          | { order('team.club.name'); join('team.club', JoinType.INNER) }
+        'inside the criteria of the association' | { team { join('club', JoinType.INNER); order('club.name') } }
     }
 
     void 'a criteria query joins a collection with the join type that join requests'() {

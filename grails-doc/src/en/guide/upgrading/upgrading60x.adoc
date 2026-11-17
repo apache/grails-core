@@ -1335,6 +1335,13 @@ The setting applies to `list`, to `find` and `findAll` with an example, to `find
 * A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
 * The setting is disabled by default in Grails 7 and in Grails 8.0, enabled by default as of Grails 8.1, and removed in Grails 9. It is listed with the other settings of this kind in link:resultSettings.html[Settings for Fixes That Change a Result].
 
+==== `order` in a criteria query sorts by a property of an association
+
+With GORM for Hibernate, `order` in a criteria query, as in `Book.createCriteria().list { order('author.name') }`, can now sort by a property of an association, also by a path through more than one association. It failed before, except when it was passed a `Query.Order`, which sorted by a property of the queried class instead. The association is joined as it is for the other sorts: with an inner join, which leaves out the instances whose association is `null`, or with a left join when the `grails.gorm.leftJoinAssociationSort` setting is enabled.
+
+* Inside the criteria of an association, as in `author { order(Query.Order.asc('name')) }`, an `order` that is passed a `Query.Order` now sorts by the property of that association, as an `order` by a property name does. It sorted by the property of the queried class that has the same name.
+* The `sort` argument of the `list` of a criteria query can also start with an alias that the criteria give an association, as in `Book.createCriteria().list(sort: 'a.name', max: 10) { createAlias('author', 'a') }`. Such a sort was ignored, and failed with a `ClassCastException` when it was an entry of a `Map` of sort properties.
+
 ==== A join type requested for an association is always applied
 
 With GORM for Hibernate, a where query, a detached criteria, a dynamic finder or a criteria query can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, with `join('author', JoinType.INNER)`, or, on a data service method that queries by its parameters, such as `Book find(String title)`, with `@Join(value = 'author', type = JoinType.INNER)`. In a where query, a detached criteria and a dynamic finder, the requested join type was only used when the query also had criteria on the association, and a criteria query never used it. The association was otherwise fetched with an outer join, whatever join type was requested, so the query also returned the instances whose association is `null`. As of Grails 7.0.18, a requested join type other than `JoinType.LEFT` is applied whether or not anything else in the query uses the association.
