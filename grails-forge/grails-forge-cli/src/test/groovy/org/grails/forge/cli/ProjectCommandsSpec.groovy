@@ -291,6 +291,20 @@ class ProjectCommandsSpec extends Specification {
         commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=RoleGroup']
     }
 
+    void 'an option value with equals signs in it is passed whole, as #given'() {
+        given:
+        writeManifest(SECURITY_QUICKSTART)
+
+        when:
+        ForgeCli.execute(context, (['s2-quickstart', 'com.example', 'User', 'Role'] + given) as String[])
+
+        then:
+        commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=a=b=c']
+
+        where:
+        given << [['--groupClassName', 'a=b=c'], ['--groupClassName=a=b=c']]
+    }
+
     void 'a command that describes no options is given the words in the order they were typed'() {
         given:
         writeManifest(declared)
