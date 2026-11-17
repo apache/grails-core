@@ -31,6 +31,7 @@ import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
@@ -237,7 +238,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     protected void firePreQueryEvent(Session session, Criteria criteria) {
-        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
+        HibernateQuery query = new HibernateQuery(criteria, persistentEntity)
+        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, query))
+        // makes the joins that criteria a listener added need, since the query itself is not executed
+        query.getHibernateCriteria()
     }
 
     @Override

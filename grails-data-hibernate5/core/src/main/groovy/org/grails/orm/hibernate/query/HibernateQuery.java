@@ -71,7 +71,18 @@ public class HibernateQuery extends AbstractHibernateQuery {
      * @return The hibernate criteria
      */
     public Criteria getHibernateCriteria() {
+        applyDeferredJoins();
         return this.criteria;
+    }
+
+    /**
+     * @return The hibernate detached criteria of a query that is used as a subquery. The joins of
+     * the subquery are made here, once its criteria have been added and the join types that it
+     * requests are known.
+     */
+    public DetachedCriteria getHibernateDetachedCriteria() {
+        applyDeferredJoins();
+        return this.detachedCriteria;
     }
 
     @Override
@@ -108,6 +119,7 @@ public class HibernateQuery extends AbstractHibernateQuery {
 
     @Override
     public Object clone() {
+        applyDeferredJoins();
         final CriteriaImpl impl = (CriteriaImpl) criteria;
         final HibernateSession hibernateSession = (HibernateSession) getSession();
         final GrailsHibernateTemplate hibernateTemplate = (GrailsHibernateTemplate) hibernateSession.getNativeInterface();

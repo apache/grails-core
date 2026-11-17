@@ -18,6 +18,8 @@
  */
 package grails.gorm.tests
 
+import spock.lang.Requires
+import spock.lang.IgnoreIf
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -26,8 +28,6 @@ import org.grails.datastore.mapping.query.Query
 import org.hibernate.FetchMode
 import org.hibernate.Hibernate
 import org.hibernate.criterion.Order
-import spock.lang.IgnoreIf
-import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
@@ -479,6 +479,21 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         final squad = new AssociationSortBagSquad(name: 'Squad').save(failOnError: true)
         new AssociationSortBagMember(name: 'Substitute', substituteSquad: squad).save(failOnError: true, flush: true)
         manager.session.clear()
+    }
+
+    void 'a projection of a property of an embedded component of an association uses the join of the association'() {
+        given:
+        final ground = new AssociationSortGround(name: 'Ground', address: new AssociationSortAddress(city: 'London')).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue', ground: ground).save(failOnError: true)
+        new AssociationSortVenue(name: 'Venue without a ground').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        AssociationSortVenue.where { name ==~ 'Venue%' }.property('ground.address.city').list() as Set == ['London', null] as Set
+
+        and: 'the sort leaves out the venue without a ground, unless the leftJoinAssociationSort setting is enabled'
+        AssociationSortVenue.where { name ==~ 'Venue%' }.list(sort: 'ground.address.city')*.name as Set ==
+                (leftJoinSort ? ['Venue', 'Venue without a ground'] : ['Venue']) as Set
     }
 
     void 'a criteria query ordered by the identifier of an association can be distinct on it or group by it'() {
