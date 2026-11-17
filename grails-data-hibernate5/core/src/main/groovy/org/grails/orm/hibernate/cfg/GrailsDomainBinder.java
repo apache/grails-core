@@ -3370,7 +3370,10 @@ public class GrailsDomainBinder implements MetadataContributor {
         if (columnLength != null) {
             column.setLength(columnLength.intValue());
         } else if (inListValues != null) {
-            column.setLength(getMaxSize(inListValues));
+            int longest = getMaxSize(inListValues);
+            if (longest > 0) {
+                column.setLength(longest);
+            }
         }
     }
 
@@ -3448,14 +3451,19 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     /**
-     * @return the maximum length of the strings in the specified list
+     * @return the maximum length of the allowed values in the specified list that are stored as text: a string, or
+     * the name of an enum constant. A value of another kind, as a list that is an allowed value of a collection,
+     * has no length of its own and is left out.
      */
     protected int getMaxSize(List<?> inListValues) {
         int maxSize = 0;
 
         for (Object inListValue : inListValues) {
-            String value = (String) inListValue;
-            maxSize = Math.max(value.length(), maxSize);
+            String value = inListValue instanceof Enum<?> constant ? constant.name() :
+                    inListValue instanceof CharSequence text ? text.toString() : null;
+            if (value != null) {
+                maxSize = Math.max(value.length(), maxSize);
+            }
         }
 
         return maxSize;

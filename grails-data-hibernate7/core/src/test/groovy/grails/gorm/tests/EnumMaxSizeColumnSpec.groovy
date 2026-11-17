@@ -26,7 +26,7 @@ import spock.lang.Issue
 class EnumMaxSizeColumnSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(EnumSizedThing)
+        manager.registerDomainClasses(EnumSizedThing, EnumListedThing)
     }
 
     void "an enum property with maxSize still stores and reads its value"() {
@@ -54,6 +54,21 @@ class EnumMaxSizeColumnSpec extends HibernateGormDatastoreSpec {
         then:
         lengths['string_field'] == 100
     }
+
+    void "an enum property with an inList of enum values stores and reads its value"() {
+        given:
+        new EnumListedThing(kind: EnumSizedKind.ONE).save(flush: true, failOnError: true)
+        session.clear()
+
+        expect:
+        EnumListedThing.findByKind(EnumSizedKind.ONE).kind == EnumSizedKind.ONE
+        EnumListedThing.count() == 1
+    }
+
+    void "an enum inList that does not allow a value rejects it"() {
+        expect:
+        !new EnumListedThing(kind: EnumSizedKind.TWO).validate()
+    }
 }
 
 enum EnumSizedKind { ONE, TWO }
@@ -66,5 +81,14 @@ class EnumSizedThing {
     static constraints = {
         stringField nullable: true, maxSize: 100
         enumField nullable: true, maxSize: 100
+    }
+}
+
+@Entity
+class EnumListedThing {
+    EnumSizedKind kind
+
+    static constraints = {
+        kind inList: [EnumSizedKind.ONE]
     }
 }
