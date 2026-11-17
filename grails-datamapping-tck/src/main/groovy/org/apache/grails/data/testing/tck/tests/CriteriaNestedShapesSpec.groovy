@@ -150,15 +150,6 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
         }*.code.sort() == ['L1', 'L2']
     }
 
-    /**
-     * A block that is a branch of an or keeps an inner join through a detached criteria on Hibernate 5, so an entity
-     * without the association drops out of the or; a criteria keeps a left join (see #16931). These shapes are checked
-     * through criteria only until that is merged up.
-     */
-    private static final Set<String> DETACHED_OR_BRANCH_SHAPES = [
-        'sire or dam.sire', 'dam.sire or sire', 'sire and dam.sire in an or of ands'
-    ] as Set
-
     /** the closure of a row takes no argument; a detached criteria hands its builder to the closure it builds from */
     private static List<String> detachedNames(Closure rows) {
         Closure adapted = { Object builder ->
@@ -178,7 +169,7 @@ class CriteriaNestedShapesSpec extends GrailsDataTckSpec {
         CriteriaAnimal.createCriteria().list(closure)*.name.sort() == expected
 
         and: 'through a detached criteria, which builds its joins another way'
-        shape in DETACHED_OR_BRANCH_SHAPES || detachedNames(closure) == expected
+        detachedNames(closure) == expected
 
         where:
         shape                                    | closure                                                                                        || expected
