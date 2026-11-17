@@ -148,12 +148,19 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String path, String alias, int joinType) {
-        String associationPath = withoutRoot(path);
-        if (redirectToExistingJoin(associationPath, alias)) {
+        String block = blockPath();
+        String written = withoutRoot(path);
+        String associationPath = redirectHead(written);
+        if (redirectToExistingJoin(block + associationPath, alias, block + written)) {
             return criteria;
         }
-        String absolute = absoluteAssociationPath(associationPath);
+        String absolute = absoluteAssociationPath(block + associationPath);
         String qualified = joinPrefix(associationPath, joinType);
+        String blockAlias = blockAliasOfPaths();
+        if (blockAlias != null && !aliasMap.containsValue(qualified.split("\\.")[0])) {
+            // inside a block the path is the one of the association of the block
+            qualified = blockAlias + '.' + qualified;
+        }
         aliasMap.put(absolute, alias);
         return criteria.createAlias(qualified, alias, JoinType.parse(joinType));
     }

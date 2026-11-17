@@ -42,6 +42,7 @@ import jakarta.persistence.metamodel.EntityType;
 
 import org.hibernate.Criteria;
 import org.hibernate.FetchMode;
+import org.hibernate.HibernateException;
 import org.hibernate.LockMode;
 import org.hibernate.Metamodel;
 import org.hibernate.Session;
@@ -62,7 +63,11 @@ import org.hibernate.criterion.PropertyProjection;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.criterion.Subqueries;
+import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.metadata.ClassMetadata;
 import org.hibernate.transform.ResultTransformer;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.ComponentType;
 import org.hibernate.type.Type;
 
 import org.springframework.beans.BeanUtils;
@@ -404,13 +409,18 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         }
         String lastAlias = getLastAlias();
         if (lastAlias != null) {
+            // a property that starts at an alias of the query is not a property of the block
+            String head = dot > 0 ? propertyName.substring(0, dot) : null;
+            if (head != null && aliasMap.containsValue(head)) {
+                return propertyName;
+            }
             return lastAlias + '.' + propertyName;
         }
 
         return propertyName;
     }
 
-    private String getLastAlias() {
+    protected String getLastAlias() {
         if (aliasStack.size() > 0) {
             return aliasStack.get(aliasStack.size() - 1).toString();
         }
@@ -652,6 +662,62 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 associationPath.substring(THIS_PREFIX.length()) : associationPath;
     }
 
+    private boolean pathsFromRoot;
+
+    /**
+     * Creates the alias of a path that is written from the root of the query, as the builder does for the blocks and
+     * properties it joins itself, whichever block the query is in.
+     */
+    protected Criteria createAliasFromRoot(String path, String alias, int joinType) {
+        boolean previous = pathsFromRoot;
+        pathsFromRoot = true;
+        try {
+            return createAlias(path, alias, joinType);
+        }
+        finally {
+            pathsFromRoot = previous;
+        }
+    }
+
+    /**
+     * The alias of the block that a path of {@code createAlias} is relative to, or {@code null} at the root or when
+     * the path is written from the root.
+     */
+    protected String blockAliasOfPaths() {
+        return pathsFromRoot ? null : getLastAlias();
+    }
+
+    /**
+     * The association path of the block the query is in, from the root, followed by a dot, or an empty string at the
+     * root: the keys of the alias map are paths from the root, whichever block a path is written in.
+     */
+    protected String blockPath() {
+        String blockAlias = blockAliasOfPaths();
+        if (blockAlias == null) {
+            return "";
+        }
+        for (Map.Entry<String, String> entry : aliasMap.entrySet()) {
+            if (entry.getValue().equals(blockAlias)) {
+                return entry.getKey() + '.';
+            }
+        }
+        return "";
+    }
+
+    /**
+     * A path whose first segment is an alias that only names the join of another alias is the path of that alias.
+     */
+    protected String redirectHead(String associationPath) {
+        int dot = associationPath.indexOf('.');
+        if (dot > 0) {
+            String redirected = aliasRedirects.get(associationPath.substring(0, dot));
+            if (redirected != null) {
+                return redirected + associationPath.substring(dot);
+            }
+        }
+        return associationPath;
+    }
+
     /**
      * Joins the associations that a dotted path goes through before its last one, when no alias of the query names
      * them, because a Hibernate criteria drops the join of a path that starts at an association it does not join.
@@ -663,31 +729,88 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         if (segments.length < 2 || aliasMap.containsValue(segments[0])) {
             return associationPath;
         }
+        String block = blockPath();
         PersistentEntity entity = datastore == null ? null : datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        ClassMetadata metadata = entity == null ? sessionFactory.getClassMetadata(targetClass) : null;
+        ComponentType component = null;
         String current = null;
         StringBuilder absolute = new StringBuilder();
         StringBuilder embedded = new StringBuilder();
         for (int i = 0; i < segments.length - 1; i++) {
             absolute.append(i == 0 ? "" : ".").append(segments[i]);
-            PersistentProperty property = entity == null ? null : entity.getPropertyByName(segments[i]);
-            if (property instanceof Embedded) {
+            boolean isEmbedded;
+            PersistentEntity nextEntity = null;
+            ClassMetadata nextMetadata = null;
+            ComponentType nextComponent = null;
+            if (entity != null) {
+                PersistentProperty property = entity.getPropertyByName(segments[i]);
+                isEmbedded = property instanceof Embedded;
+                if (isEmbedded) {
+                    nextEntity = ((Embedded) property).getAssociatedEntity();
+                }
+                else if (property instanceof Association) {
+                    nextEntity = ((Association) property).getAssociatedEntity();
+                }
+            }
+            else {
+                Type type = propertyType(metadata, component, segments[i]);
+                isEmbedded = type != null && type.isComponentType();
+                if (isEmbedded) {
+                    nextComponent = (ComponentType) type;
+                }
+                else {
+                    nextMetadata = associatedMetadata(type);
+                }
+            }
+            entity = nextEntity;
+            metadata = nextMetadata;
+            component = nextComponent;
+            if (isEmbedded) {
                 // a component is part of the path, and not a join: Hibernate cannot create a criteria on it
                 embedded.append(segments[i]).append('.');
-                entity = ((Embedded) property).getAssociatedEntity();
                 continue;
             }
-            String existing = aliasMap.get(absolute.toString());
+            String key = block + absolute;
+            String existing = aliasMap.get(key);
             if (existing == null) {
                 aliasCount++;
                 existing = segments[i] + ALIAS + aliasCount;
-                aliasMap.put(absolute.toString(), existing);
+                aliasMap.put(key, existing);
                 createAlias((current == null ? "" : current + '.') + embedded + segments[i], existing, joinType);
             }
             embedded.setLength(0);
             current = existing;
-            entity = property instanceof Association ? ((Association) property).getAssociatedEntity() : null;
         }
         return (current == null ? "" : current + '.') + embedded + segments[segments.length - 1];
+    }
+
+    private static Type propertyType(ClassMetadata metadata, ComponentType component, String name) {
+        try {
+            if (component != null) {
+                String[] names = component.getPropertyNames();
+                for (int i = 0; i < names.length; i++) {
+                    if (names[i].equals(name)) {
+                        return component.getSubtypes()[i];
+                    }
+                }
+                return null;
+            }
+            return metadata == null ? null : metadata.getPropertyType(name);
+        }
+        catch (HibernateException ignored) {
+            return null;
+        }
+    }
+
+    private ClassMetadata associatedMetadata(Type type) {
+        Type target = type;
+        if (target != null && target.isCollectionType()) {
+            target = ((CollectionType) target).getElementType((SessionFactoryImplementor) sessionFactory);
+        }
+        if (target != null && target.isEntityType()) {
+            return sessionFactory.getClassMetadata(((org.hibernate.type.EntityType) target).getAssociatedEntityName());
+        }
+        return null;
     }
 
     /**
@@ -714,10 +837,17 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return whether the alias was recorded as a name of the existing join
      */
     protected boolean redirectToExistingJoin(String associationPath, String alias) {
+        return redirectToExistingJoin(associationPath, alias, associationPath);
+    }
+
+    /**
+     * @param written the path as the caller wrote it, which a rejection names
+     */
+    protected boolean redirectToExistingJoin(String associationPath, String alias, String written) {
         String existing = aliasMap.get(absoluteAssociationPath(associationPath));
         if (existing != null && !existing.equals(alias)) {
             if (usedPropertyHeads.contains(alias)) {
-                throw new IllegalArgumentException("The alias [" + alias + "] for the association [" + associationPath +
+                throw new IllegalArgumentException("The alias [" + alias + "] for the association [" + written +
                         "] is used before it is declared, and a block of the query already joins that association: " +
                         "declare the alias before the criteria that use it");
             }
@@ -1405,7 +1535,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = aliasMap.get(propertyName);
             } else {
                 alias = propertyName + ALIAS;
-                createAlias(propertyName, alias);
+                createAliasFromRoot(propertyName, alias, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
                 aliasMap.put(propertyName, alias);
             }
             addToCriteria(Restrictions.in(alias + ".elements", values == null ? Collections.EMPTY_LIST : values));
@@ -1467,7 +1597,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = aliasMap.get(propertyName);
             } else {
                 alias = propertyName + ALIAS;
-                createAlias(propertyName, alias);
+                createAliasFromRoot(propertyName, alias, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
                 aliasMap.put(propertyName, alias);
             }
             addToCriteria(Restrictions.in(alias + ".elements", values));
@@ -2099,7 +2229,7 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             aliasCount++;
             newAlias = associationName + ALIAS + aliasCount;
             aliasMap.put(associationPath, newAlias);
-            aliasInstanceStack.add(createAlias(associationPath, newAlias, joinType));
+            aliasInstanceStack.add(createAliasFromRoot(associationPath, newAlias, joinType));
         }
         aliasStack.add(newAlias);
     }
