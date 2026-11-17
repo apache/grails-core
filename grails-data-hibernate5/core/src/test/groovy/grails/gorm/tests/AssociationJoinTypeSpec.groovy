@@ -76,34 +76,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
-    @IgnoreIf({ instance.leftJoinSort })
-    void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
-        when:
-        final List<Team> results = query.call()
-
-        then:
-        results*.name.sort() == TEAMS_WITH_A_CLUB
-        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
-
-        where:
-        api                  | query
-        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
-        'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
-        'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
-    }
-
-    @IgnoreIf({ instance.leftJoinSort })
-    void '#api sorted by an association does not find an instance without it when the fetch argument requests an inner join'() {
-        expect:
-        query.call() == expected
-
-        where:
-        api               | query                                                                                                            || expected
-        'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
-        'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
-        'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
-    }
-
     void 'a paged detached criteria keeps the alias of the queried class when the total is read'() {
         when:
         final results = new DetachedCriteria(Team, 't').eq('t.name', 'Arsenal First Team').list(max: 2)
@@ -341,6 +313,25 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         listed == [noses.last().id]
         updated == 1
         AssociationJoinTypeNose.findAllByFreckles(false)*.id == [noses.last().id]
+    }
+
+    void '#description applies an inner join requested for a collection of a basic type'() {
+        given:
+        new AssociationJoinTypePost(title: 'Tagged post', tags: ['x', 'y']).save(failOnError: true)
+        new AssociationJoinTypePost(title: 'Untagged post').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect: 'a fetched collection repeats the post for each element in some of the queries'
+        query.call()*.title.unique() == ['Tagged post']
+
+        where:
+        description           | query
+        'a where query'       | { AssociationJoinTypePost.where { title ==~ '%post' }.join('tags', JoinType.INNER).list() }
+        'the fetch argument'  | { AssociationJoinTypePost.where { title ==~ '%post' }.list(fetch: [tags: JoinType.INNER]) }
+        'a criteria query'    | { AssociationJoinTypePost.createCriteria().list { like('title', '%post'); join('tags', JoinType.INNER) } }
+        'a dynamic finder'    | { AssociationJoinTypePost.findAllByTitleLike('%post', [fetch: [tags: JoinType.INNER]]) }
+        'findAll by example'  | { AssociationJoinTypePost.findAll(new AssociationJoinTypePost(), [fetch: [tags: JoinType.INNER]]) }
+        'list'                | { AssociationJoinTypePost.list(fetch: [tags: JoinType.INNER]) }
     }
 
     void 'count and updateAll apply an inner join requested for a collection of a basic type'() {
@@ -1064,6 +1055,57 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results*.name.sort() == TEAMS_WITH_A_CLUB
+    }
+
+    void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        api                  | query
+        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
+        'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
+        'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
+    }
+
+    void '#api sorted by an association does not find an instance without it when the fetch argument requests an inner join'() {
+        expect:
+        query.call() == expected
+
+        where:
+        api               | query                                                                                                            || expected
+        'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
+        'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
+        'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
+    }
+
+    void '#api applies an inner join that the fetch argument requests for #path without a sort'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        expect:
+        query.call()*.name.unique().sort() == expected
+
+        where:
+        api                  | path               | query                                                                                         || expected
+        'findAll by example' | 'club'             | { Team.findAll(new Team(), [fetch: [club: JoinType.INNER]]) }                                || TEAMS_WITH_A_CLUB + 'Squad Team'
+        'list'               | 'club'             | { Team.list(fetch: [club: JoinType.INNER]) }                                                 || TEAMS_WITH_A_CLUB + 'Squad Team'
+        'findAllWhere'       | 'players'          | { Team.findAllWhere([name: 'Playerless First Team'], [fetch: [players: JoinType.INNER]]) }   || []
+        'list'               | 'players'          | { Team.list(fetch: [players: JoinType.INNER]) }                                              || (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+        'list'               | 'players.contract' | { Team.list(fetch: ['players.contract': JoinType.INNER]) }                                   || (TEAMS_WITH_PLAYERS + 'Squad Team').sort()
+    }
+
+    void 'the total count of a paged list counts the instances that an inner join the fetch argument requests leaves'() {
+        when:
+        final results = Team.list(max: 2, fetch: [club: JoinType.INNER])
+
+        then:
+        results.size() == 2
+        results.totalCount == TEAMS_WITH_A_CLUB.size()
     }
 
     void 'a join type requested for a property that is not an association is ignored'() {

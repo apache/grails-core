@@ -18,8 +18,8 @@
  */
 package grails.gorm.tests
 
-import spock.lang.Requires
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -660,6 +660,18 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
                 fetched == 'nothing' ? AssociationSortMixedSquad.list(sort: sort) : AssociationSortMixedSquad.list(sort: sort, fetch: [(fetched): 'join'])
             },
     ]
+
+    void 'the total of a list that fetches a collection counts each instance once when a sort joins another collection'() {
+        given:
+        saveSquadsToPage()
+
+        when:
+        final results = AssociationSortSquad.list(sort: 'players.name', max: 10, fetch: [reserves: 'join'])
+
+        then:
+        results*.name.sort() == ['First squad', 'Second squad']
+        results.totalCount == 2
+    }
 
     void 'the total of #api sorted by a collection counts the rows that it pages through'() {
         given:
