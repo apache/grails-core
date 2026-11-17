@@ -21,13 +21,17 @@ package org.grails.forge.cli.command
 import groovy.transform.CompileStatic
 
 /**
- * Runs Gradle for a project: through the project's Gradle wrapper, found in the project directory or
- * the build's root above it, or through {@code gradle} on the path when the project has no wrapper.
+ * Runs Gradle for a project through the Gradle wrapper of its build: the wrapper in the project
+ * directory, or the one in the root directory of the build the project belongs to, the first
+ * directory above it with a settings file. No wrapper outside the build is ever run, and neither is
+ * a {@code gradle} found on the path.
  */
 @CompileStatic
 class ProjectGradle {
 
     private static final boolean WINDOWS = System.getProperty('os.name', '').toLowerCase(Locale.ENGLISH).contains('win')
+
+    private static final List<String> SETTINGS_FILES = ['settings.gradle', 'settings.gradle.kts']
 
     private final File projectDir
     private final File wrapper
@@ -35,6 +39,13 @@ class ProjectGradle {
     ProjectGradle(File projectDir) {
         this.projectDir = projectDir
         this.wrapper = findWrapper(projectDir)
+    }
+
+    /**
+     * @return whether the project's build has a Gradle wrapper to run
+     */
+    boolean isAvailable() {
+        wrapper != null
     }
 
     /**
@@ -68,8 +79,10 @@ class ProjectGradle {
     }
 
     private int start(List<String> arguments, Closure<?> redirect) {
-        List<String> command = [wrapper?.path ?: (WINDOWS ? 'gradle.bat' : 'gradle'),
-                                '-p', projectDir.path, '-q', '--console=plain']
+        if (wrapper == null) {
+            throw new IOException("The build of ${projectDir} has no Gradle wrapper")
+        }
+        List<String> command = [wrapper.path, '-p', projectDir.path, '-q', '--console=plain']
         command.addAll(arguments)
         ProcessBuilder builder = new ProcessBuilder(command).directory(projectDir)
         redirect.call(builder)
@@ -84,10 +97,16 @@ class ProjectGradle {
 
     private static File findWrapper(File projectDir) {
         String name = WINDOWS ? 'gradlew.bat' : 'gradlew'
+        File own = new File(projectDir, name)
+        if (own.isFile()) {
+            return own
+        }
+        // the build's root is the first directory with a settings file, as Gradle finds it; a wrapper
+        // further up belongs to something else
         for (File dir = projectDir; dir != null; dir = dir.parentFile) {
-            File candidate = new File(dir, name)
-            if (candidate.isFile()) {
-                return candidate
+            if (SETTINGS_FILES.any { new File(dir, it).isFile() }) {
+                File rootWrapper = new File(dir, name)
+                return rootWrapper.isFile() ? rootWrapper : null
             }
         }
         null

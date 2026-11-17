@@ -200,9 +200,8 @@ This "grails-forge-cli.yml" configuration sets the default values for various as
 
 Inside a Grails project, the Grails Forge CLI also offers the commands of the application and of its
 plugins: the commands in `grails-app/commands` and those every plugin of the build brings with it, such
-as `s2-quickstart` from the Spring Security plugin or the `dbm-*` commands of database migration. They
-are listed in `grails-forge-cli --help`, and the interactive prompt completes their names, the options
-they declare and the values those options take:
+as `s2-quickstart` from the Spring Security plugin or the `dbm-*` commands of database migration. The
+interactive prompt completes their names, the options they declare and the values those options take:
 
 [source,shell]
 ----
@@ -221,9 +220,15 @@ The Forge CLI learns the commands from the project's build: the Grails Gradle pl
 `generateCommandManifest` task writes them to `build/grails/commands.json`. The Forge CLI runs the task
 when the file is missing, or older than the project's build files (`build.gradle`, `settings.gradle`,
 `gradle.properties` and `gradle/libs.versions.toml`) or its `grails-app/commands`, so a plugin added to
-the build brings its commands the next time a project command is asked for. Running one of the Forge
-CLI's own commands, such as `create-controller`, never runs the build. When the task fails, the Forge
-CLI says so and offers only its own commands; run `./gradlew generateCommandManifest` to see why.
+the build brings its commands the next time a project command is asked for. The build runs only when the
+interactive prompt starts or a command the Forge CLI does not have is named: its own commands, such as
+`create-controller`, and its options, such as `--help`, never run it. `grails-forge-cli --help` lists the
+project's commands from the file the build last wrote. When the task fails, the Forge CLI says so and
+offers only its own commands; run `./gradlew generateCommandManifest` to see why.
+
+The build runs through the Gradle wrapper of the project, or of the build it belongs to: the wrapper in
+the first directory above it with a `settings.gradle` file. A project whose build has no wrapper has no
+commands offered, and no `gradle` found on the path is run instead.
 
 A command that describes its arguments and options, as xref:commandLine#creatingCustomCommands[Creating Custom Commands]
 shows, has them checked and completed. A command that does not takes any arguments and options and

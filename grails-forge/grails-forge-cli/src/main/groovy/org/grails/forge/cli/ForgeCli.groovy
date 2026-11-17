@@ -98,10 +98,11 @@ final class ForgeCli {
     static int execute(ApplicationContext context, String... args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
         CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
-        // the commands of the project are read only when the command line may name one of them, so
-        // the Forge CLI's own commands never wait for the project's build
-        if (args.length == 0 || !commandLine.subcommands.containsKey(args[0])) {
-            addProjectCommands(commandLine)
+        // the project's build runs only when the command line names a command that is not the Forge CLI's:
+        // its own commands never wait for the build, and its options, such as --help, list the project's
+        // commands from a manifest the build already wrote
+        if (args.length > 0 && !commandLine.subcommands.containsKey(args[0])) {
+            addProjectCommands(commandLine, !args[0].startsWith('-'))
         }
         return commandLine.execute(args)
     }
@@ -120,7 +121,7 @@ final class ForgeCli {
      */
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole) {
         CommandLine commandLine = createForgeCommandLine(context, noOpConsole)
-        addProjectCommands(commandLine)
+        addProjectCommands(commandLine, true)
         return commandLine
     }
 
@@ -152,8 +153,10 @@ final class ForgeCli {
     /**
      * Adds the commands of the Grails project in the current directory, which run through the project's
      * build. A command named like one of the Forge CLI's own is left out: the Forge CLI's command runs.
+     *
+     * @param runBuild whether the project's build may run to update the commands
      */
-    private static void addProjectCommands(CommandLine commandLine) {
+    private static void addProjectCommands(CommandLine commandLine, boolean runBuild) {
         File projectDir
         try {
             projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
@@ -162,7 +165,7 @@ final class ForgeCli {
             return
         }
         ConsoleOutput console = (ForgeCommand) commandLine.getCommand()
-        for (ProjectCommand command : new ProjectCommands(projectDir).load(console)) {
+        for (ProjectCommand command : new ProjectCommands(projectDir).load(console, runBuild)) {
             if (!commandLine.subcommands.containsKey(command.name)) {
                 commandLine.addSubcommand(command.name, command.commandSpec)
             }

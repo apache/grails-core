@@ -193,6 +193,35 @@ class ProjectCommandsSpec extends Specification {
         commandLine.subcommands.containsKey('url-mappings-report')
     }
 
+    void '--help lists the commands the build already wrote, even when they are outdated, without running the build'() {
+        given:
+        writeManifest(SECURITY_QUICKSTART)
+        new File(dir, 'build.gradle').setLastModified(manifest.lastModified() + 10_000)
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        when:
+        int exitCode = ForgeCli.execute(context, '--help')
+
+        then:
+        exitCode == 0
+        output.toString().contains('s2-quickstart')
+        !output.toString().contains('url-mappings-report')
+        gradleInvocations() == []
+    }
+
+    void '--help without a manifest lists only the Forge CLI commands and runs no build'() {
+        given:
+        buildWrites(SECURITY_QUICKSTART)
+
+        when:
+        ForgeCli.execute(context, '--help')
+
+        then:
+        output.toString().contains('create-app')
+        !output.toString().contains('s2-quickstart')
+        gradleInvocations() == []
+    }
+
     void 'a project command runs through runCommand with its arguments, then its options'() {
         given:
         writeManifest(SECURITY_QUICKSTART)
@@ -304,18 +333,78 @@ class ProjectCommandsSpec extends Specification {
         complete(commandLine, 's2-create-persistent-token --format ').containsAll(['json', 'yaml'])
     }
 
+    void 'a project of a multi-project build runs the wrapper at the root of the build'() {
+        given: 'the project in a subdirectory of a build whose wrapper and settings are at its root'
+        File project = moveProjectInto('app')
+        new File(dir, 'settings.gradle').text = "include 'app'\n"
+        writeManifest(new File(project, 'build/grails/commands.json'), URL_MAPPINGS_REPORT)
+
+        when:
+        int exitCode = ForgeCli.execute(context, 'url-mappings-report')
+
+        then:
+        exitCode == 0
+        gradleInvocations() == [['-p', project.path, '-q', '--console=plain', 'runCommand', '-Pargs=url-mappings-report']]
+    }
+
+    void 'a wrapper above the root of the build is never run'() {
+        given: 'a project with a settings file of its own but no wrapper, inside a directory that has one'
+        File project = moveProjectInto('app')
+        new File(project, 'settings.gradle').text = ''
+        writeManifest(new File(project, 'build/grails/commands.json'), URL_MAPPINGS_REPORT)
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        !commandLine.subcommands.containsKey('url-mappings-report')
+        output.toString().contains('The build of the project has no Gradle wrapper, so its commands are not offered.')
+        gradleInvocations() == []
+    }
+
+    void 'a wrapper above a project without a settings file is never run'() {
+        given:
+        File project = moveProjectInto('app')
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        !commandLine.subcommands.containsKey('url-mappings-report')
+        gradleInvocations() == []
+        !new File(project, 'build/grails/commands.json').exists()
+    }
+
+    /**
+     * Moves the project into a subdirectory of the directory that keeps the Gradle wrapper, and makes
+     * it the current directory.
+     */
+    private File moveProjectInto(String name) {
+        File project = new File(dir, name)
+        assert project.mkdirs()
+        assert new File(dir, 'grails-app').renameTo(new File(project, 'grails-app'))
+        assert new File(dir, 'build.gradle').renameTo(new File(project, 'build.gradle'))
+        System.setProperty('user.dir', project.path)
+        project
+    }
+
     private void buildWrites(Map... commands) {
         new File(dir, 'manifest-source.json').text = JsonOutput.toJson([version: 1, commands: commands.toList()])
     }
 
     private void writeManifest(Map... commands) {
-        manifest.parentFile.mkdirs()
-        manifest.text = JsonOutput.toJson([version: 1, commands: commands.toList()])
-        manifest.setLastModified(System.currentTimeMillis() + 10_000)
+        writeManifest(manifest, commands)
     }
 
-    private List<List<String>> gradleInvocations() {
-        File log = new File(dir, 'gradle-invocations.txt')
+    private static void writeManifest(File file, Map... commands) {
+        file.parentFile.mkdirs()
+        file.text = JsonOutput.toJson([version: 1, commands: commands.toList()])
+        file.setLastModified(System.currentTimeMillis() + 10_000)
+    }
+
+    private List<List<String>> gradleInvocations(File wrapperDir = dir) {
+        File log = new File(wrapperDir, 'gradle-invocations.txt')
         if (!log.isFile()) {
             return []
         }
@@ -332,8 +421,8 @@ class ProjectCommandsSpec extends Specification {
         invocations
     }
 
-    private void writeGradleWrapper() {
-        File wrapper = new File(dir, 'gradlew')
+    private void writeGradleWrapper(File wrapperDir = dir) {
+        File wrapper = new File(wrapperDir, 'gradlew')
         wrapper.text = '''\
             #!/bin/sh
             dir=$(cd "$(dirname "$0")" && pwd)

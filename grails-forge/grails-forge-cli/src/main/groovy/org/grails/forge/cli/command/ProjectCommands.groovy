@@ -77,10 +77,29 @@ class ProjectCommands {
      * @return the commands, or none when the directory holds no Grails project or the build failed
      */
     List<ProjectCommand> load(ConsoleOutput console) {
+        load(console, true)
+    }
+
+    /**
+     * Reads the commands of the project.
+     *
+     * @param console where to say that the build is being run, and why the commands could not be read
+     * @param runBuild whether the manifest may be updated by running the build; when not, a manifest
+     * that is there is read as it is, and none means no commands
+     * @return the commands, or none when the directory holds no Grails project or the build failed
+     */
+    List<ProjectCommand> load(ConsoleOutput console, boolean runBuild) {
         if (!grailsProject) {
             return []
         }
+        if (!gradle.available) {
+            console.warning('The build of the project has no Gradle wrapper, so its commands are not offered.')
+            return []
+        }
         File manifest = new File(projectDir, MANIFEST_PATH)
+        if (!runBuild) {
+            return manifest.isFile() ? read(manifest, console) : []
+        }
         if (outdated(manifest)) {
             console.out('Reading the commands of the project from its build...')
             int exitCode = gradle.runSilently([MANIFEST_TASK])
