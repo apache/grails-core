@@ -258,11 +258,12 @@ public class CommandLineParser {
 
         arg = (arg.charAt(1) == '-' ? arg.substring(2, arg.length()) : arg.substring(1, arg.length())).trim();
 
-        if (arg.contains("=")) {
-            String[] split = arg.split("=");
-            String name = split[0].trim();
+        int equals = arg.indexOf('=');
+        if (equals >= 0) {
+            // the value is everything after the first equals sign, which may contain more of them
+            String name = arg.substring(0, equals).trim();
             validateOptionName(name);
-            String value = split[1].trim();
+            String value = arg.substring(equals + 1).trim();
             if (declaredOptions.containsKey(name)) {
                 cl.addDeclaredOption(name, declaredOptions.get(name), value);
             }

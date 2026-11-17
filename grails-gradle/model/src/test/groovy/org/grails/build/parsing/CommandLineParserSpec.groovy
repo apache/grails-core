@@ -406,4 +406,33 @@ class CommandLineParserSpec extends Specification {
         then:
             thrown ParseException
     }
+
+    void "An option value keeps every equals sign after the first, for #arguments"() {
+        when:
+        def parser = new CommandLineParser()
+        parser.addOption('filter', 'A declared option')
+        def cl = parser.parse(arguments as String[])
+
+        then:
+        cl.commandName == 'report'
+        cl.optionValue(name) == value
+        cl.remainingArgs == ['first']
+
+        where:
+        arguments                                    || name     | value
+        ['report', '--filter=a=b', 'first']          || 'filter' | 'a=b'
+        ['report', '--other=x=y=z', 'first']         || 'other'  | 'x=y=z'
+        ['report', '--filter==b', 'first']           || 'filter' | '=b'
+        ['report', '--filter=', 'first']             || 'filter' | ''
+        ['report', 'first', '--filter=url=/a?b=c']   || 'filter' | 'url=/a?b=c'
+    }
+
+    void "parseString keeps every equals sign of a quoted option value"() {
+        when:
+        def cl = new CommandLineParser().parseString("report '--filter=a=b c' first")
+
+        then:
+        cl.optionValue('filter') == 'a=b c'
+        cl.remainingArgs == ['first']
+    }
 }
