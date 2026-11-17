@@ -849,6 +849,14 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 
 The guide gives no setting that restores encrypted JWTs without a signature.
 
+## GORM for Hibernate: `list` sorts by every property of a sort map
+
+`list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of 7.0.18 it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`.
+
+- Search for `sort: [` in calls to `list`, and for a `sort` with more than one property in a `static mapping` block. The results of these calls are now sorted by every property.
+- To sort by one property, as before, pass that property alone.
+- An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
+
 # After the Upgrade
 
 ## Verification Checklist
