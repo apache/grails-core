@@ -18,9 +18,15 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.metamodel.Attribute;
+import jakarta.persistence.metamodel.EmbeddableType;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
 
@@ -50,12 +56,18 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
             throw new ConfigurationException("Cannot use property comparison criteria on non-existent property [" + c.getOtherProperty() + "] of class [" + className + "]");
         }
 
+        HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
+
+        if ((c instanceof Query.EqualsProperty || c instanceof Query.NotEqualsProperty) &&
+                unrelatedEntities(propertyPath, otherPropertyPath)) {
+            return compareIdentifiers(criteriaBuilder, (Path<?>) propertyPath, (Path<?>) otherPropertyPath,
+                    c instanceof Query.NotEqualsProperty);
+        }
+
         Expression<?> left = identifierIfCompared(propertyPath, otherPropertyPath);
         Expression<?> right = identifierIfCompared(otherPropertyPath, propertyPath);
         propertyPath = left;
         otherPropertyPath = right;
-
-        HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
 
         if (c instanceof Query.EqualsProperty) {
             return criteriaBuilder.equal(propertyPath, otherPropertyPath);
@@ -76,18 +88,88 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
 
     /**
      * An association compared with a value that is not an instance of it, such as {@code id == team.club},
-     * is compared by its identifier, as Hibernate 5 does.
+     * is compared by its identifier, as Hibernate 5 does. Two associations are compared as entities, whatever
+     * their classes: an identifier cannot be taken out of both when it is composite.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private static Expression<?> identifierIfCompared(Expression<?> expression, Expression<?> other) {
         if (expression instanceof Path<?> path &&
                 path.getModel() instanceof SingularAttribute<?, ?> attribute &&
                 attribute.getType() instanceof EntityType<?> entityType &&
+                !isEntityValued(other) &&
                 !path.getJavaType().isAssignableFrom(other.getJavaType()) &&
                 !other.getJavaType().isAssignableFrom(path.getJavaType())) {
             Class idType = entityType.getIdType().getJavaType();
             return path.get(entityType.getId(idType).getName());
         }
         return expression;
+    }
+
+    private static boolean isEntityValued(Expression<?> expression) {
+        return expression instanceof Path<?> path && (path.getModel() instanceof EntityType<?> ||
+                path.getModel() instanceof SingularAttribute<?, ?> attribute && attribute.getType() instanceof EntityType<?>);
+    }
+
+    private static EntityType<?> entityTypeOf(Expression<?> expression) {
+        if (expression instanceof Path<?> path) {
+            if (path.getModel() instanceof EntityType<?> entityType) {
+                return entityType;
+            }
+            if (path.getModel() instanceof SingularAttribute<?, ?> attribute && attribute.getType() instanceof EntityType<?> entityType) {
+                return entityType;
+            }
+        }
+        return null;
+    }
+
+    private static boolean unrelatedEntities(Expression<?> left, Expression<?> right) {
+        return entityTypeOf(left) != null && entityTypeOf(right) != null &&
+                !left.getJavaType().isAssignableFrom(right.getJavaType()) &&
+                !right.getJavaType().isAssignableFrom(left.getJavaType());
+    }
+
+    /**
+     * Hibernate does not compare two entities of classes that are not related, so two associations to such classes
+     * are compared by their identifiers, one part at a time: a generated identifier is one part, and a composite
+     * identifier has one part for each of its properties, paired in the order of their names. This is what
+     * Hibernate 5 does with the columns of the two foreign keys.
+     */
+    private static Predicate compareIdentifiers(HibernateCriteriaBuilder criteriaBuilder, Path<?> left, Path<?> right, boolean negate) {
+        List<Expression<?>> leftParts = identifierParts(left, entityTypeOf(left));
+        List<Expression<?>> rightParts = identifierParts(right, entityTypeOf(right));
+        if (leftParts.size() != rightParts.size()) {
+            throw new IllegalArgumentException("Cannot compare [" + left.getJavaType().getName() + "] with [" +
+                    right.getJavaType().getName() + "]: their identifiers have " + leftParts.size() + " and " +
+                    rightParts.size() + " properties");
+        }
+        List<Predicate> parts = new ArrayList<>();
+        for (int i = 0; i < leftParts.size(); i++) {
+            parts.add(negate ? criteriaBuilder.notEqual(leftParts.get(i), rightParts.get(i)) :
+                    criteriaBuilder.equal(leftParts.get(i), rightParts.get(i)));
+        }
+        Predicate[] predicates = parts.toArray(new Predicate[0]);
+        return negate ? criteriaBuilder.or(predicates) : criteriaBuilder.and(predicates);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static List<Expression<?>> identifierParts(Path<?> path, EntityType<?> entityType) {
+        List<Expression<?>> parts = new ArrayList<>();
+        if (entityType.hasSingleIdAttribute()) {
+            SingularAttribute<?, ?> id = entityType.getId((Class) entityType.getIdType().getJavaType());
+            Path<?> idPath = path.get(id.getName());
+            if (id.getType() instanceof EmbeddableType<?> embeddable) {
+                embeddable.getAttributes().stream().map(Attribute::getName).sorted()
+                        .forEach(name -> parts.add(idPath.get(name)));
+            }
+            else {
+                parts.add(idPath);
+            }
+        }
+        else {
+            // a composite identifier without an identifier class: its properties are the properties of the entity
+            entityType.getSingularAttributes().stream().filter(SingularAttribute::isId).map(Attribute::getName)
+                    .sorted(Comparator.naturalOrder()).forEach(name -> parts.add(path.get(name)));
+        }
+        return parts;
     }
 }
