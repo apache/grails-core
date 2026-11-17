@@ -15,14 +15,15 @@
 
 # An approval says nothing about the commits pushed after it, but GitHub keeps showing it unless the branch requires
 # pull requests, which the release branches do not: build changes and merges between them are pushed directly. This
-# workflow dismisses the approvals of a pull request whose changed files are no longer the ones that were approved. A
-# rebase, or a merge of the base branch, that leaves every file the pull request changes as it was keeps them.
+# workflow dismisses the approvals of a pull request that were given to another commit than its head. GitHub moves an
+# approval to the new head by itself after a push that leaves the diff of the pull request as it was, such as a rebase
+# or a merge of the base branch, so those approvals are kept.
 #
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
 # does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
 # workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
-# pull request: it only reads commit ids and the list of changed files through the API.
+# pull request: it only reads commit ids through the API.
 #
 # Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
 # asks to skip them ("[skip ci]" and its variants), nor for a pull request that conflicts with its base branch. So
@@ -60,48 +61,33 @@ jobs:
           # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # The files a commit changes from its merge base with the base branch, each with the id of its content: the
-          # same before and after a rebase, or a merge of the base branch, that leaves those files as they were. The
-          # content is compared rather than the diff, because a diff carries only three lines around a change: the
-          # same edit moved to another method with the same lines around it gives the same diff. The first line
-          # tells a commit that changes no file from one that cannot be compared: nothing is printed for an unknown
-          # commit, nor when the list reaches the 300 files the API serves at most. GitHub moves an approval to the
-          # new head by itself after a push that leaves the diff of the pull request as it was, also when the base
-          # branch changed one of its files, so the comparison only decides for an approval GitHub has not moved.
-          changed_files() {
-            local files
-            # A failed request prints the error it was answered with, which is not a list to compare.
-            if files=$(gh api "repos/$REPO/compare/$1...$2" --jq 'select(.files | length < 300) | "compared",
-              (.files | sort_by(.filename)[] | [.status, .filename, .previous_filename // "", .sha] | @tsv)' 2> /dev/null); then
-              echo "$files"
-            fi
-          }
           # The approvals given to another commit than the head, of every open pull request or of the ones whose head
-          # is the pushed commit. A review dismissed earlier is no longer an approval. One query serves a hundred
-          # pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
+          # is the pushed commit. A review dismissed earlier is no longer an approval. GitHub has already moved an
+          # approval to the head when the push left the diff of the pull request as it was, so an approval still at
+          # another commit was given to other changes. Nothing is compared here but the trees of the two commits: an
+          # approval is kept when its commit has the very tree of the head, which holds the content, the name and
+          # the mode of every file, and dismissed otherwise, also when either tree is unknown. One query serves a
+          # hundred pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
           gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
             query($owner: String!, $name: String!, $endCursor: String) {
               repository(owner: $owner, name: $name) {
                 pullRequests(states: OPEN, first: 100, after: $endCursor) {
                   pageInfo { hasNextPage endCursor }
                   nodes {
-                    number headRefOid baseRefOid
-                    reviews(states: APPROVED, first: 100) { nodes { databaseId author { login } commit { oid } } }
+                    number headRefOid
+                    commits(last: 1) { nodes { commit { oid tree { oid } } } }
+                    reviews(states: APPROVED, first: 100) { nodes { databaseId author { login } commit { oid tree { oid } } } }
                   }
                 }
               }
             }' --jq '.data.repository.pullRequests.nodes[] | select(env.SHA == "" or .headRefOid == env.SHA) | . as $pull
+              | ([.commits.nodes[].commit | select(.oid == $pull.headRefOid) | .tree.oid][0] // "-") as $tree
               | .reviews.nodes[] | select(.commit.oid != $pull.headRefOid)
-              | [$pull.number, $pull.headRefOid, $pull.baseRefOid, .databaseId, .author.login // "ghost", .commit.oid // "-"] | @tsv' > stale.tsv
-          last=
-          while IFS=$'\t' read -r number head base review login commit; do
-            if [[ "$number" != "$last" ]]; then
-              head_files=$(changed_files "$base" "$head")
-              last=$number
-            fi
-            # An approval is dismissed whenever the changed files cannot be shown to be the same.
-            if [[ -n "$head_files" && "$commit" != - && "$(changed_files "$base" "$commit")" == "$head_files" ]]; then
-              echo "#$number: approval of $login at ${commit:0:10} kept, the changed files are the same at ${head:0:10}"
+              | [$pull.number, $pull.headRefOid, .databaseId, .author.login // "ghost", .commit.oid // "-",
+                  (if $tree != "-" and .commit.tree.oid == $tree then "same" else "changed" end)] | @tsv' > stale.tsv
+          while IFS=$'\t' read -r number head review login commit tree; do
+            if [[ "$tree" == same ]]; then
+              echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} has the same files"
             elif [[ "$DRY_RUN" == true ]]; then
               echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
             elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
