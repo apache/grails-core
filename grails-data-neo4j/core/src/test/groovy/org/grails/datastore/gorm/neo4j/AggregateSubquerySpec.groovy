@@ -171,21 +171,21 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
     void "a comparison against a subquery that returns one null matches no row, as with no row"() {
         given:
         seed()
-        new AggSubPerson(firstName: 'Nobody').save(flush: true, failOnError: true)
+        new AggSubNode(firstName: 'Nobody').save(flush: true, failOnError: true)
         manager.session.clear()
 
         when: 'the age of the person whose age is not set is one null'
-        List<AggSubPerson> greater = AggSubPerson.createCriteria().list {
-            gt('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        List<AggSubNode> greater = AggSubNode.createCriteria().list {
+            gt('age', AggSubNode.where { firstName == 'Nobody' }.property('age'))
         }
-        List<AggSubPerson> equal = AggSubPerson.createCriteria().list {
-            eq('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        List<AggSubNode> equal = AggSubNode.createCriteria().list {
+            eq('age', AggSubNode.where { firstName == 'Nobody' }.property('age'))
         }
-        List<AggSubPerson> notEqual = AggSubPerson.createCriteria().list {
-            ne('age', AggSubPerson.where { firstName == 'Nobody' }.property('age'))
+        List<AggSubNode> notEqual = AggSubNode.createCriteria().list {
+            ne('age', AggSubNode.where { firstName == 'Nobody' }.property('age'))
         }
-        List<AggSubPerson> negated = AggSubPerson.createCriteria().list {
-            not { gt('age', AggSubPerson.where { firstName == 'Nobody' }.property('age')) }
+        List<AggSubNode> negated = AggSubNode.createCriteria().list {
+            not { gt('age', AggSubNode.where { firstName == 'Nobody' }.property('age')) }
         }
 
         then: 'not the rows whose age is missing, which a null test would have matched'
@@ -239,12 +239,90 @@ class AggregateSubquerySpec extends Neo4jGormDatastoreSpec {
         InvalidDataAccessResourceUsageException e = thrown()
         e.message.contains('Exists subquery form is not supported by Neo4jQuery')
     }
+
+    void "an association compared with an instance is compared as that association"() {
+        given:
+        AggSubNode homer = new AggSubNode(firstName: 'Homer', age: 45).save(failOnError: true)
+        AggSubNode bart = new AggSubNode(firstName: 'Bart', age: 10).save(failOnError: true)
+        new AggSubPet(name: 'Rex', owner: homer).save(failOnError: true)
+        new AggSubPet(name: 'Santa', owner: homer).save(failOnError: true)
+        new AggSubPet(name: 'Fido', owner: bart).save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        List<AggSubPet> found = AggSubPet.where { owner == homer }.list(sort: 'name')
+
+        then:
+        found*.name == ['Rex', 'Santa']
+    }
+
+    void "an association compared with a subquery that returns an association is compared as that association"() {
+        given: 'two pets share one owner, and a third has another'
+        AggSubNode homer = new AggSubNode(firstName: 'Homer', age: 45).save(failOnError: true)
+        AggSubNode bart = new AggSubNode(firstName: 'Bart', age: 10).save(failOnError: true)
+        new AggSubPet(name: 'Rex', owner: homer).save(failOnError: true)
+        new AggSubPet(name: 'Santa', owner: homer).save(failOnError: true)
+        new AggSubPet(name: 'Fido', owner: bart).save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        List<AggSubPet> found = AggSubPet.where {
+            owner == AggSubPet.where { name == 'Rex' }.property('owner')
+        }.list(sort: 'name')
+
+        then: 'the pets of the owner of Rex'
+        found*.name == ['Rex', 'Santa']
+    }
+
+    void "a negated list of values from a subquery with a null in it matches no row, as in SQL"() {
+        given:
+        new AggSubNode(firstName: 'Homer', age: 45).save(failOnError: true)
+        new AggSubNode(firstName: 'Bart', age: 10).save(failOnError: true)
+        new AggSubNode(firstName: 'Maggie').save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        List<AggSubNode> negated = AggSubNode.createCriteria().list {
+            not { inList('age', AggSubNode.where { firstName in ['Homer', 'Maggie'] }.property('age')) }
+        }
+        List<AggSubNode> twice = AggSubNode.createCriteria().list(sort: 'firstName') {
+            not { not { inList('age', AggSubNode.where { firstName in ['Homer', 'Maggie'] }.property('age')) } }
+        }
+
+        then: 'a null is unknown, so the negation is unknown for the rows that are not in the list, and so is its negation'
+        negated.isEmpty()
+        twice*.firstName == ['Homer']
+    }
+
+    void "a list of values from a subquery with a null in it matches the values that are not null"() {
+        given:
+        new AggSubNode(firstName: 'Homer', age: 45).save(failOnError: true)
+        new AggSubNode(firstName: 'Bart', age: 10).save(failOnError: true)
+        new AggSubNode(firstName: 'Maggie').save(failOnError: true)
+        manager.session.flush()
+        manager.session.clear()
+
+        when:
+        List<AggSubNode> found = AggSubNode.where {
+            age in AggSubNode.where { firstName in ['Homer', 'Maggie'] }.property('age')
+        }.list(sort: 'firstName')
+
+        then: 'the age of Maggie is null, which no node has'
+        found*.firstName == ['Homer']
+    }
 }
 
 @Entity
 class AggSubNode {
     String firstName
     Integer age
+
+    static constraints = {
+        age(nullable: true)
+    }
 }
 
 @Entity

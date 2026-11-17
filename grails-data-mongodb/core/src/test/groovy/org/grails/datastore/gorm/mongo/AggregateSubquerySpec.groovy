@@ -27,7 +27,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException
 class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.registerDomainClasses(AggSubPerson, AggSubCity)
+        manager.registerDomainClasses(AggSubPerson, AggSubCity, AggSubOwner, AggSubPet)
     }
 
     private void seed() {
@@ -291,6 +291,60 @@ class AggregateSubquerySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         InvalidDataAccessResourceUsageException e = thrown()
         e.message.contains('Exists subquery form is not supported by MongoQuery')
     }
+
+    void "an association compared with a subquery that returns an association is compared as that association"() {
+        given: 'two pets share one owner, and a third has another'
+        AggSubOwner homer = new AggSubOwner(name: 'Homer').save(flush: true, failOnError: true)
+        AggSubOwner bart = new AggSubOwner(name: 'Bart').save(flush: true, failOnError: true)
+        new AggSubPet(name: 'Rex', owner: homer).save(flush: true, failOnError: true)
+        new AggSubPet(name: 'Santa', owner: homer).save(flush: true, failOnError: true)
+        new AggSubPet(name: 'Fido', owner: bart).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        List<AggSubPet> found = AggSubPet.where {
+            owner == AggSubPet.where { name == 'Rex' }.property('owner')
+        }.list(sort: 'name')
+
+        then: 'the pets of the owner of Rex'
+        found*.name == ['Rex', 'Santa']
+    }
+
+    void "a negated list of values from a subquery with a null in it matches no row, as in SQL"() {
+        given:
+        new AggSubPerson(firstName: 'Homer', age: 45).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Bart', age: 10).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Maggie').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        List<AggSubPerson> negated = AggSubPerson.createCriteria().list {
+            not { inList('age', AggSubPerson.where { firstName in ['Homer', 'Maggie'] }.property('age')) }
+        }
+        List<AggSubPerson> twice = AggSubPerson.createCriteria().list(sort: 'firstName') {
+            not { not { inList('age', AggSubPerson.where { firstName in ['Homer', 'Maggie'] }.property('age')) } }
+        }
+
+        then: 'a null is unknown, so the negation is unknown for the rows that are not in the list, and so is its negation'
+        negated.isEmpty()
+        twice*.firstName == ['Homer']
+    }
+
+    void "a list of values from a subquery with a null in it matches the values that are not null"() {
+        given:
+        new AggSubPerson(firstName: 'Homer', age: 45).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Bart', age: 10).save(flush: true, failOnError: true)
+        new AggSubPerson(firstName: 'Maggie').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        List<AggSubPerson> found = AggSubPerson.where {
+            age in AggSubPerson.where { firstName in ['Homer', 'Maggie'] }.property('age')
+        }.list(sort: 'firstName')
+
+        then: 'the age of Maggie is null, which no person has'
+        found*.firstName == ['Homer']
+    }
 }
 
 @Entity
@@ -309,4 +363,15 @@ class AggSubAddress {
 @Entity
 class AggSubCity {
     String name
+}
+
+@Entity
+class AggSubOwner {
+    String name
+}
+
+@Entity
+class AggSubPet {
+    String name
+    AggSubOwner owner
 }
