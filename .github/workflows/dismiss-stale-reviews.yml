@@ -15,14 +15,14 @@
 
 # An approval says nothing about the commits pushed after it, but GitHub keeps showing it unless the branch requires
 # pull requests, which the release branches do not: build changes and merges between them are pushed directly. This
-# workflow dismisses the approvals of a pull request whose changes are no longer the ones that were approved. A
-# rebase, or a merge of the base branch, that leaves the changes of the pull request as they were keeps them.
+# workflow dismisses the approvals of a pull request whose changed files are no longer the ones that were approved. A
+# rebase, or a merge of the base branch, that leaves every file the pull request changes as it was keeps them.
 #
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
 # does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
 # workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
-# pull request: it only reads commit ids and diffs through the API.
+# pull request: it only reads commit ids and the list of changed files through the API.
 #
 # Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
 # asks to skip them ("[skip ci]" and its variants), nor for a pull request that conflicts with its base branch. So
@@ -60,14 +60,21 @@ jobs:
           # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # The id of the changes a commit makes to its merge base with the base branch: the same before and after a
-          # rebase, or a merge of the base branch, that changes nothing of the pull request. It is taken verbatim:
-          # the default id ignores all whitespace, so it would not tell "a b" from "ab". Empty when GitHub cannot
-          # serve the diff, which is the case for an unknown commit and for a diff over the size limit of the API.
-          # GitHub moves an approval to the new head by itself after such a push, so the comparison only decides for
-          # an approval it has not moved yet.
-          patch_id() {
-            gh api -H 'Accept: application/vnd.github.diff' "repos/$REPO/compare/$1...$2" 2> /dev/null | git patch-id --verbatim | cut -d ' ' -f 1 || true
+          # The files a commit changes from its merge base with the base branch, each with the id of its content: the
+          # same before and after a rebase, or a merge of the base branch, that leaves those files as they were. The
+          # content is compared rather than the diff, because a diff carries only three lines around a change: the
+          # same edit moved to another method with the same lines around it gives the same diff. The first line
+          # tells a commit that changes no file from one that cannot be compared: nothing is printed for an unknown
+          # commit, nor when the list reaches the 300 files the API serves at most. GitHub moves an approval to the
+          # new head by itself after a push that leaves the diff of the pull request as it was, also when the base
+          # branch changed one of its files, so the comparison only decides for an approval GitHub has not moved.
+          changed_files() {
+            local files
+            # A failed request prints the error it was answered with, which is not a list to compare.
+            if files=$(gh api "repos/$REPO/compare/$1...$2" --jq 'select(.files | length < 300) | "compared",
+              (.files | sort_by(.filename)[] | [.status, .filename, .previous_filename // "", .sha] | @tsv)' 2> /dev/null); then
+              echo "$files"
+            fi
           }
           # The approvals given to another commit than the head, of every open pull request or of the ones whose head
           # is the pushed commit. A review dismissed earlier is no longer an approval. One query serves a hundred
@@ -89,12 +96,12 @@ jobs:
           last=
           while IFS=$'\t' read -r number head base review login commit; do
             if [[ "$number" != "$last" ]]; then
-              head_id=$(patch_id "$base" "$head")
+              head_files=$(changed_files "$base" "$head")
               last=$number
             fi
-            # An approval is dismissed whenever the changes cannot be shown to be the same.
-            if [[ -n "$head_id" && "$commit" != - && "$(patch_id "$base" "$commit")" == "$head_id" ]]; then
-              echo "#$number: approval of $login at ${commit:0:10} kept, the changes are the same at ${head:0:10}"
+            # An approval is dismissed whenever the changed files cannot be shown to be the same.
+            if [[ -n "$head_files" && "$commit" != - && "$(changed_files "$base" "$commit")" == "$head_files" ]]; then
+              echo "#$number: approval of $login at ${commit:0:10} kept, the changed files are the same at ${head:0:10}"
             elif [[ "$DRY_RUN" == true ]]; then
               echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
             elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
