@@ -1593,10 +1593,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * Qualifies the property of an order with the alias that Hibernate resolves it through. A property
      * of an association is resolved through the alias of the join of the association: a join that the
      * criteria already have for the association is used, and an association that they do not join is
-     * joined for the order. With the <code>grails.gorm.leftJoinAssociationSort</code> setting it is
-     * joined with a left join, so that the order keeps the rows where the association is null, and
-     * without it with an inner join. A collection is always joined with an inner join: Hibernate would
-     * fetch it through a left join. An association
+     * joined for the order. Without the <code>grails.gorm.leftJoinAssociationSort</code> setting it is
+     * joined with an inner join. With the setting it is joined with a left join, so that the order
+     * keeps the rows where the association is null, and a collection is joined without being fetched,
+     * since a row limit would leave elements out of it, unless the query fetches it or another
+     * collection: see {@link GrailsHibernateUtil#keepsSortedCollectionUnfetched(Criteria, String)}. An association
      * after the first one on the path is joined through the alias of the join before it, so that
      * Hibernate does not read the first association of the path as an alias of the same name.
      */
@@ -1620,8 +1621,18 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 alias = tokens[i] + ALIAS + aliasCount;
                 aliasMap.put(associationPath, alias);
                 String joinPath = parentAlias != null ? parentAlias + '.' + tokens[i] : associationPath;
-                criteria.createAlias(joinPath, alias, property instanceof ToMany || !GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner()) ?
-                        org.hibernate.sql.JoinType.INNER_JOIN : org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                if (!GrailsHibernateUtil.isLeftJoinAssociationSort(property.getOwner())) {
+                    criteria.createAlias(joinPath, alias, org.hibernate.sql.JoinType.INNER_JOIN);
+                }
+                else {
+                    if (property instanceof ToMany) {
+                        GrailsHibernateUtil.checkSortedCollection(criteria, associationPath);
+                    }
+                    criteria.createAlias(joinPath, alias, org.hibernate.sql.JoinType.LEFT_OUTER_JOIN);
+                    if (property instanceof ToMany && GrailsHibernateUtil.keepsSortedCollectionUnfetched(criteria, associationPath)) {
+                        GrailsHibernateUtil.keepCollectionUnfetched(criteria, alias);
+                    }
+                }
             }
             entity = ((Association) property).getAssociatedEntity();
         }

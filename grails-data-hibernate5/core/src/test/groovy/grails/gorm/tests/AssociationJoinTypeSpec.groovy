@@ -18,12 +18,13 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
@@ -539,6 +540,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         joinType << [JoinType.INNER, JoinType.RIGHT]
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a join type requested for a collection fetches the collection when the query is sorted by it'() {
         when:
         final results = Team.where {
@@ -633,6 +635,27 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name == ['Squad Team']
         Hibernate.isInitialized(results.first().players)
         results.first().players.size() == 3
+    }
+
+    void 'a left join that #description requests for a collection that the query has criteria on does not fetch the collection'() {
+        given:
+        saveTeamWithAPlayerWithoutContract()
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name == ['Squad Team']
+
+        and: 'the criteria do not leave players out of the collection'
+        !Hibernate.isInitialized(results.first().players)
+        results.first().players.size() == 3
+
+        where:
+        description          | query
+        'the fetch argument' | { Team.where { players { name == 'Squad Player A' } }.list(fetch: [players: JoinType.LEFT]) }
+        'join'               | { Team.where { players { name == 'Squad Player A' } }.join('players', JoinType.LEFT).list() }
+        'join, with a sort'  | { Team.where { players { name == 'Squad Player A' } }.join('players', JoinType.LEFT).sort('players.name').list() }
     }
 
     void 'a join type that fetch requests is used for the join that the criteria of the query make'() {
@@ -924,6 +947,26 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         'inside the criteria of the association' | { team { join('club', JoinType.INNER); order('club.name') } }
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by a collection fetches the collection with the join type that #description'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name == expected
+
+        and: 'the collection is fetched'
+        results.every { Hibernate.isInitialized(it.players) }
+
+        where:
+        description                               | query                                                                                                                || expected
+        'join requests before the order'          | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.INNER); order('players.name') } }  || TEAMS_WITH_PLAYERS
+        'join requests after the order'           | { Team.createCriteria().list { like('name', '%First%'); order('players.name'); join('players', JoinType.INNER) } }  || TEAMS_WITH_PLAYERS
+        'join requests with a right join'         | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.RIGHT); order('players.name') } }  || TEAMS_WITH_PLAYERS
+        'join requests with a left join'          | { Team.createCriteria().list { like('name', '%First%'); join('players', JoinType.LEFT); order('players.name') } }   || ['Playerless First Team'] + TEAMS_WITH_PLAYERS
+        'the fetch argument requests'             | { Team.createCriteria().list(fetch: [players: JoinType.INNER]) { like('name', '%First%'); order('players.name') } } || TEAMS_WITH_PLAYERS
+    }
+
     void 'a criteria query joins a collection with the join type that join requests'() {
         when:
         final results = Team.createCriteria().list {
@@ -1150,6 +1193,50 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
      * | accept a missing element   | of the same class          | also those without an element     | holds its own elements        |
      * </pre>
      */
+    void 'a left join of a collection that criteria use, #description'() {
+        given:
+        saveSquads()
+
+        when:
+        final List<AssociationJoinTypeSquad> results = query.call()
+
+        then:
+        results*.name.unique().sort() == squads
+        results.every { !Hibernate.isInitialized(it."$filtered") }
+        fetched.every { String squadName, Map<String, List<String>> collections ->
+            final squad = results.find { it.name == squadName }
+            collections.every { String collection, List<String> elements ->
+                Hibernate.isInitialized(squad."$collection") && squad."$collection"*.name.sort() == elements
+            }
+        }
+
+        where:
+        description                                                  | query                                                                                                                                             | filtered   | squads            | fetched
+        'nothing else fetched'                                       | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).list() }                                        | 'players'  | ['Full']          | [:]
+        'fetching a collection of the same class'                    | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('reserves').list() }                       | 'players'  | ['Full']          | [Full: [reserves: ['Reserve']]]
+        'fetching a collection of the same class with the argument'  | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, reserves: 'join']) }                      | 'players'  | ['Full']          | [Full: [reserves: ['Reserve']]]
+        'fetching a collection of another class'                     | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list() }                       | 'players'  | ['Full']          | [Full: [trophies: ['Cup']]]
+        'fetching a collection that comes first in the entity'       | { AssociationJoinTypeSquad.where { reserves { kind == 'Reserve' } }.join('reserves', JoinType.LEFT).join('players').list() }                      | 'reserves' | ['Bench', 'Full'] | [Full: [players: ['Regular']], Bench: [players: []]]
+        'with criteria that accept a missing element'                | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).list() }                                             | 'players'  | ['Bench']         | [:]
+        'with criteria that accept a missing element, fetching more' | { AssociationJoinTypeSquad.where { players { kind == null } }.join('players', JoinType.LEFT).join('reserves').list() }                            | 'players'  | ['Bench']         | [Bench: [reserves: ['Bench reserve']]]
+        'sorted by a third collection, fetching another'             | { AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.join('players', JoinType.LEFT).join('trophies').list(sort: 'reserves.name') }  | 'players'  | ['Full']          | [Full: [trophies: ['Cup']]]
+    }
+
+    void 'a left join of a collection that criteria use loads a collection fetched through another collection after the query'() {
+        given:
+        saveSquads()
+
+        when:
+        final results = AssociationJoinTypeSquad.where { players { kind == 'Regular' } }.list(fetch: [players: JoinType.LEFT, 'reserves.medals': JoinType.LEFT])
+
+        then:
+        results*.name == ['Full']
+        !Hibernate.isInitialized(results.first().players)
+        Hibernate.isInitialized(results.first().reserves)
+        Hibernate.isInitialized(results.first().reserves.first().medals)
+        results.first().reserves.first().medals*.name == ['Gold']
+    }
+
     void 'find with a left join of a collection that criteria use returns the instance and loads the collection that it fetches'() {
         given:
         saveSquads()

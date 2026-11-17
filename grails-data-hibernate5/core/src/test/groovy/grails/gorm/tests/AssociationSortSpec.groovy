@@ -18,8 +18,8 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
 import spock.lang.Requires
+import spock.lang.IgnoreIf
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
@@ -506,6 +506,50 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a dynamic finder'          | { AssociationSortSquad.findAllByName('Squad', [sort: 'players.name', fetch: [reserves: 'join']]) }
     }
 
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a bag while it fetches another bag throws an exception, since Hibernate does not fetch two bags in a query'() {
+        given:
+        saveSquadWithASubstituteOnly()
+
+        when:
+        query.call()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains('[regulars]')
+        e.message.contains('[substitutes]')
+        e.message.contains('more than one bag')
+        e.message.contains('Declare both of them')
+
+        where:
+        api                         | query
+        'a where query'             | { AssociationSortBagSquad.where { name == 'Squad' }.join('substitutes').list(sort: 'regulars.name') }
+        'order in a criteria query' | { AssociationSortBagSquad.createCriteria().list { join('substitutes'); order('regulars.name') } }
+        'a paged criteria query'    | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { join('substitutes') } }
+        'findAll by example'        | { AssociationSortBagSquad.findAll(new AssociationSortBagSquad(), [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a dynamic finder'          | { AssociationSortBagSquad.findAllByName('Squad', [sort: 'regulars.name', fetch: [substitutes: 'join']]) }
+        'a list'                    | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: 'join']) }
+        'a paged list'              | { AssociationSortBagSquad.list(sort: 'regulars.name', max: 10, fetch: [substitutes: 'join']) }
+        'a list with a join type'   | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [substitutes: JoinType.LEFT]) }
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by an empty bag keeps the instance when the query fetches no other bag'() {
+        given:
+        saveSquadWithASubstituteOnly()
+
+        expect:
+        query.call()*.name.unique() == ['Squad']
+
+        where:
+        api                                         | query
+        'a where query'                             | { AssociationSortBagSquad.where { name == 'Squad' }.list(sort: 'regulars.name') }
+        'a where query that fetches the sorted bag' | { AssociationSortBagSquad.where { name == 'Squad' }.join('regulars').list(sort: 'regulars.name') }
+        'order in a criteria query'                 | { AssociationSortBagSquad.createCriteria().list { eq('name', 'Squad'); order('regulars.name') } }
+        'a list'                                    | { AssociationSortBagSquad.list(sort: 'regulars.name') }
+        'a list that fetches the sorted bag'        | { AssociationSortBagSquad.list(sort: 'regulars.name', fetch: [regulars: 'join']) }
+    }
+
     /**
      * A sort by a property of a collection, in a query that fetches another collection of the same class:
      *
@@ -522,6 +566,55 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * | a bag               | another bag       | UnsupportedOperationException: the rows repeat, the bag cannot tell |
      * </pre>
      */
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by #sort while it fetches #fetched: #outcome'() {
+        given: 'a full squad with two members in each collection, and a squad with a substitute only'
+        final full = new AssociationSortMixedSquad(name: 'Full squad').save(failOnError: true)
+        FETCHED_ELEMENTS.regulars.each { new AssociationSortMixedMember(name: it, squad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.substitutes.each { new AssociationSortMixedMember(name: it, substituteSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.reserves.each { new AssociationSortMixedMember(name: it, reserveSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.benched.each { new AssociationSortMixedMember(name: it, benchSquad: full).save(failOnError: true) }
+        FETCHED_ELEMENTS.lineup.each { full.addToLineup(new AssociationSortMixedMember(name: it)) }
+        full.save(failOnError: true)
+        final empty = new AssociationSortMixedSquad(name: 'Empty squad').save(failOnError: true)
+        new AssociationSortMixedMember(name: 'Lone substitute', substituteSquad: empty).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        List<AssociationSortMixedSquad> results = null
+        UnsupportedOperationException rejection = null
+        try {
+            results = query.call(sort, fetched)
+        }
+        catch (UnsupportedOperationException e) {
+            rejection = e
+        }
+
+        then:
+        (rejection != null) == (outcome == 'rejected')
+
+        and: 'otherwise every squad is returned, and a fetched collection holds its own elements'
+        outcome == 'rejected' || results*.name.unique().sort() == ['Empty squad', 'Full squad']
+        outcome == 'rejected' || fetched == 'nothing' || results.every { Hibernate.isInitialized(it."$fetched") }
+        outcome == 'rejected' || fetched == 'nothing' || results.find { it.name == 'Full squad' }."$fetched"*.name.sort() == FETCHED_ELEMENTS[fetched]
+
+        where:
+        [api, sort, fetched, outcome] << [
+                ['a where query', 'order in a criteria query', 'a list'],
+                [
+                        ['reserves.name', 'nothing', 'kept'],
+                        ['reserves.name', 'benched', 'kept'],
+                        ['reserves.name', 'lineup', 'kept'],
+                        ['lineup.name', 'reserves', 'kept'],
+                        ['reserves.name', 'regulars', 'rejected'],
+                        ['regulars.name', 'nothing', 'kept'],
+                        ['regulars.name', 'reserves', 'rejected'],
+                        ['regulars.name', 'substitutes', 'rejected'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        query = MIXED_QUERIES[api]
+    }
+
     void '#api that fetches the collection it sorts by is not rejected next to a bag, since the sort makes no join of its own'() {
         given:
         final squad = new AssociationSortMixedSquad(name: 'Squad').save(failOnError: true)
@@ -557,6 +650,47 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
      * leaves the rows of the query as they are. A list does not fetch what the mapping fetches, so its sort
      * joins the collection, and the rows of that join would repeat the elements of a bag that it fetches.
      */
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a #sorted that the mapping fetches while it fetches #fetched: #outcome'() {
+        given:
+        saveMappedSquads(squadClass)
+
+        when:
+        List<String> sortedNames = null
+        Map<String, List<List<String>>> sortedContents = null
+        UnsupportedOperationException rejection = null
+        try {
+            final results = query.call(squadClass, 'regulars.name', fetched)
+            sortedNames = results*.name.unique()
+            sortedContents = mappedSquadContents(results, fetched)
+        }
+        catch (UnsupportedOperationException e) {
+            rejection = e
+        }
+        manager.session.clear()
+
+        then:
+        (rejection != null) == (outcome == 'rejected')
+
+        and: 'otherwise the squads come in the order of the sort, with the collections that the query without the sort gives them'
+        outcome == 'rejected' || sortedNames == ['Small squad', 'Full squad']
+        outcome == 'rejected' || sortedContents == mappedSquadContents(query.call(squadClass, null, fetched), fetched)
+
+        where:
+        [api, sorted, fetched, queryOutcome, listOutcome] << [
+                MAPPED_FETCH_QUERIES.keySet(),
+                [
+                        ['bag', 'reserves', 'kept', 'kept'],
+                        ['bag', 'lineup', 'kept', 'kept'],
+                        ['bag', 'substitutes', 'rejected', 'rejected'],
+                        ['set', 'substitutes', 'kept', 'rejected'],
+                ]
+        ].combinations().collect { List row -> [row[0]] + row[1] }
+        squadClass = sorted == 'bag' ? AssociationSortMappedSquad : AssociationSortMappedSetSquad
+        outcome = api == 'a list' ? listOutcome : queryOutcome
+        query = MAPPED_FETCH_QUERIES[api]
+    }
+
     protected void saveMappedSquads(Class squadClass) {
         final full = squadClass.newInstance(name: 'Full squad')
         ['Regular B', 'Regular C'].each { full.addToRegulars(name: it) }
@@ -719,6 +853,51 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         fetch << ['join', JoinType.LEFT, JoinType.INNER]
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'the total of a list sorted through an association that it fetches keeps an instance without the association: #fetch'() {
+        given: 'an author whose publisher has two awards, and an author without a publisher'
+        saveAuthorAndCategories()
+        new AssociationSortAuthor(name: 'No publisher').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortAuthor.list(max: 10, sort: 'publisher.awards.title', fetch: [publisher: fetch])
+
+        then:
+        results.size() == rows
+        results.totalCount == rows
+
+        where:
+        fetch          || rows
+        'join'         || 3
+        JoinType.LEFT  || 3
+        JoinType.INNER || 2
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a collection while it fetches #fetched is rejected, since the bag is read from repeated rows'() {
+        given:
+        saveAuthorAndCategories()
+
+        when:
+        query.call()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains("[$fetched]")
+
+        where:
+        api                                 | fetched            | query
+        'a where query'                     | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query that joins the path' | 'publisher.awards' | { AssociationSortAuthor.where { name ==~ '%' }.join('publisher').join('publisher.awards').list(sort: 'books.title') }
+        'order in a criteria query'         | 'publisher.awards' | { AssociationSortAuthor.createCriteria().list { join('publisher'); join('publisher.awards'); order('books.title') } }
+        'a dynamic finder'                  | 'publisher.awards' | { AssociationSortAuthor.findAllByNameLike('%', [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'findAll by example'                | 'publisher.awards' | { AssociationSortAuthor.findAll(new AssociationSortAuthor(), [sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]]) }
+        'a list'                            | 'publisher.awards' | { AssociationSortAuthor.list(sort: 'books.title', fetch: ['publisher.awards': JoinType.LEFT]) }
+        'a where query on a self-reference' | 'parent.children'  | { AssociationSortCategory.where { name == 'Left' }.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+        'a list on a self-reference'        | 'parent.children'  | { AssociationSortCategory.list(sort: 'children.name', fetch: ['parent.children': JoinType.LEFT]) }
+    }
+
     void '#api that fetches a bag through an association holds each element once when no collection is sorted'() {
         given:
         saveAuthorAndCategories()
@@ -756,6 +935,28 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         'a paged criteria query sorted by the bag' | { AssociationSortBagSquad.createCriteria().list(sort: 'regulars.name', max: 10) { projections { property('name') }; join('substitutes') } } || ['Squad']
     }
 
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a collection while a mapping fetches a bag below the root is rejected'() {
+        given:
+        saveMappedAuthors()
+
+        when:
+        query.call()
+
+        then:
+        final UnsupportedOperationException e = thrown()
+        e.message.contains('[publisher.awards]')
+
+        where:
+        api                                                   | query
+        'a where query that fetches the association'          | { AssociationSortMappedAuthor.where { name ==~ '%' }.join('publisher').list(sort: 'books.title') }
+        'a where query with the fetch argument'               | { AssociationSortMappedAuthor.where { name ==~ '%' }.list(sort: 'books.title', fetch: [publisher: JoinType.LEFT]) }
+        'a where query whose mapping fetches the association' | { AssociationSortEagerAuthor.where { name ==~ '%' }.list(sort: 'books.title') }
+        'order in a criteria query'                           | { AssociationSortEagerAuthor.createCriteria().list { order('books.title') } }
+        'a dynamic finder'                                    | { AssociationSortEagerAuthor.findAllByNameLike('%', [sort: 'books.title']) }
+        'findAll by example'                                  | { AssociationSortEagerAuthor.findAll(new AssociationSortEagerAuthor(name: 'Eager'), [sort: 'books.title']) }
+    }
+
     void 'a bag that a mapping fetches below the root holds each element once #description'() {
         given:
         saveMappedAuthors()
@@ -779,6 +980,23 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         expect:
         AssociationSortEagerAuthor.list(sort: 'books.title')*.name.unique() == ['Eager']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void 'a sort by a collection comes to an end when a class fetches itself through its mapping'() {
+        given:
+        final first = new AssociationSortMappedNode(name: 'First').save(failOnError: true)
+        final second = new AssociationSortMappedNode(name: 'Second', next: first).save(failOnError: true)
+        first.next = second
+        first.save(failOnError: true)
+        new AssociationSortMappedLeaf(name: 'Leaf', node: first).save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = AssociationSortMappedNode.where { name ==~ '%' }.list(sort: 'leaves.name')
+
+        then:
+        results*.name.unique().sort() == ['First', 'Second']
     }
 
     protected void saveMappedAuthors() {
@@ -923,6 +1141,50 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         results.first().players.size() == 3
     }
 
+    @Requires({ instance.leftJoinSort })
+    void 'a criteria query ordered by a property of a collection fetches the collection when #description'() {
+        given:
+        saveSquad()
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.unique() == ['Squad']
+        results.every { Hibernate.isInitialized(it.players) }
+        results.first().players.size() == 3
+
+        where:
+        description                          | query
+        'join requests it before the order'  | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it after the order'   | { Team.createCriteria().list { eq('name', 'Squad'); order('players.name'); join('players') } }
+        'a fetch mode requests it'           | { Team.createCriteria().list { eq('name', 'Squad'); fetchMode('players', FetchMode.JOIN); order('players.name') } }
+        'the fetch argument requests it'     | { Team.createCriteria().list(fetch: [players: 'join']) { eq('name', 'Squad'); order('players.name') } }
+        'listDistinct requests it with join' | { Team.createCriteria().listDistinct { eq('name', 'Squad'); join('players'); order('players.name') } }
+        'join requests it for a Query.Order' | { Team.createCriteria().list { eq('name', 'Squad'); join('players'); order(Query.Order.asc('players.name')) } }
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a property of a collection fetches the collection when the fetch argument requests it'() {
+        given:
+        saveSquad()
+
+        when:
+        final Team team = query.call()
+
+        then:
+        team.name == 'Squad'
+        Hibernate.isInitialized(team.players)
+        team.players.size() == 3
+
+        where:
+        api                                | query
+        'a dynamic finder'                 | { Team.findAllByName('Squad', [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAll by example'               | { Team.findAll(new Team(name: 'Squad'), [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'findAllWhere'                     | { Team.findAllWhere([name: 'Squad'], [sort: 'players.name', fetch: [players: 'join']]).first() }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', fetch: [players: 'join']) { eq('name', 'Squad') }.first() }
+    }
+
     void 'list sorts by every property of the default sort of the mapping'() {
         given:
         [['Second', 'B'], ['First', 'B'], ['First', 'A'], ['Second', 'C']].each { String league, String name ->
@@ -932,6 +1194,26 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
 
         expect:
         AssociationSortLeague.list().collect { it.league + ' ' + it.name } == ['First B', 'First A', 'Second C', 'Second B']
+    }
+
+    @Requires({ instance.leftJoinSort })
+    void '#api sorted by a property of a collection keeps a team without players'() {
+        given:
+        new Team(club: Club.findByName('Arsenal'), name: 'Playerless First Team').save(failOnError: true, flush: true)
+
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        'Playerless First Team' in results*.name
+        results*.name - 'Playerless First Team' == ['Arsenal First Team', 'Chelsea First Team', 'MU First Team', 'Unattached First Team']
+
+        where:
+        api                                | query
+        'list'                             | { Team.list(sort: 'players.name') }
+        'a dynamic finder'                 | { Team.findAllByNameLike('%First%', [sort: 'players.name']) }
+        'findAll by example'               | { Team.findAll(new Team(), [sort: 'players.name']) }
+        'a criteria query with pagination' | { Team.createCriteria().list(sort: 'players.name', max: 10) { like('name', '%First%') } }
     }
 
     void '#api sorted by a property of a collection does not fetch the collection'() {

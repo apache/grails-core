@@ -92,6 +92,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
             Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+                    sessionFactory,
                     persistentEntity,
                     criteriaQuery,
                     queryRoot,
