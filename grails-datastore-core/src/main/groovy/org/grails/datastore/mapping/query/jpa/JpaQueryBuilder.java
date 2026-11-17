@@ -960,7 +960,65 @@ public class JpaQueryBuilder {
         if (head == null) {
             return criterion;
         }
-        return new ToOnePathCriterion(head, named.withProperty(path.substring(dot + 1)));
+        return new ToOnePathCriterion(head, headName, named.withProperty(path.substring(dot + 1)));
+    }
+
+    /**
+     * A property comparison whose left side is a property of a to-one association, as {@code owner.age}, in a
+     * DELETE or UPDATE statement. The left side is read on the association and the right side where it was written:
+     * a property of the queried entity stays that of the queried entity, and a property of the same association
+     * ({@code owner.height}) is read on the association, so
+     * {@code pet.owner.id IN (SELECT owner1.id FROM Owner owner1 WHERE owner1.age = pet.age)}.
+     */
+    private static int handleToOneComparisonAsSubquery(PersistentEntity entity, StringBuilder whereClause, String logicalName, int position,
+                                                       ToOnePathCriterion path, Query.PropertyComparisonCriterion comparison) {
+        Association<?> association = path.association;
+        if (association.getAssociatedEntity() == null || association.getAssociatedEntity().getIdentity() == null) {
+            throw new InvalidDataAccessResourceUsageException("Joins cannot be used in a DELETE or UPDATE operation");
+        }
+        PersistentEntity associated = association.getAssociatedEntity();
+        String identity = associated.getIdentity().getName();
+        String subqueryName = associated.getDecapitalizedName() + position;
+        String other = comparison.getOtherProperty();
+        String right;
+        if (other.startsWith(path.head + DOT)) {
+            String onAssociation = other.substring(path.head.length() + 1);
+            validateProperty(associated, onAssociation, comparison.getClass());
+            right = subqueryName + DOT + onAssociation;
+        }
+        else {
+            validateProperty(entity, other, comparison.getClass());
+            right = logicalName + DOT + other;
+        }
+        validateProperty(associated, comparison.getProperty(), comparison.getClass());
+        whereClause.append(logicalName).append(DOT).append(association.getName()).append(DOT).append(identity)
+                .append(" IN (SELECT ").append(subqueryName).append(DOT).append(identity)
+                .append(FROM_CLAUSE).append(associated.getName()).append(' ').append(subqueryName)
+                .append(" WHERE ").append(subqueryName).append(DOT).append(comparison.getProperty())
+                .append(propertyComparisonOperator(comparison)).append(right).append(CLOSE_BRACKET);
+        return position;
+    }
+
+    private static String propertyComparisonOperator(Query.PropertyComparisonCriterion comparison) {
+        if (comparison instanceof Query.EqualsProperty) {
+            return "=";
+        }
+        if (comparison instanceof Query.NotEqualsProperty) {
+            return "!=";
+        }
+        if (comparison instanceof Query.GreaterThanProperty) {
+            return ">";
+        }
+        if (comparison instanceof Query.GreaterThanEqualsProperty) {
+            return ">=";
+        }
+        if (comparison instanceof Query.LessThanProperty) {
+            return "<";
+        }
+        if (comparison instanceof Query.LessThanEqualsProperty) {
+            return "<=";
+        }
+        throw new InvalidDataAccessResourceUsageException("Queries of type " + comparison.getClass().getSimpleName() + " are not supported by this implementation");
     }
 
     /** The to-one associations of a DELETE or UPDATE criteria list that were given an alias with createAlias. */
@@ -978,10 +1036,12 @@ public class JpaQueryBuilder {
     /** A criterion on the property of a to-one association, read from a dotted path. */
     private static final class ToOnePathCriterion implements Query.Criterion {
         private final Association<?> association;
+        private final String head;
         private final Query.Criterion criterion;
 
-        private ToOnePathCriterion(Association<?> association, Query.Criterion criterion) {
+        private ToOnePathCriterion(Association<?> association, String head, Query.Criterion criterion) {
             this.association = association;
+            this.head = head;
             this.criterion = criterion;
         }
     }
@@ -1153,7 +1213,10 @@ public class JpaQueryBuilder {
 
             final String operator = criteria instanceof Query.Conjunction ? LOGICAL_AND : LOGICAL_OR;
             QueryHandler qh = queryHandlers.get(criterion.getClass());
-            if (criterion instanceof ToOnePathCriterion path) {
+            if (criterion instanceof ToOnePathCriterion path && path.criterion instanceof Query.PropertyComparisonCriterion comparison) {
+                position = handleToOneComparisonAsSubquery(entity, whereClause, logicalName, position, path, comparison);
+            }
+            else if (criterion instanceof ToOnePathCriterion path) {
                 position = handleToOneAsSubquery(q, whereClause, logicalName, position, parameters, conversionService,
                         path.association, new Query.Conjunction(), Collections.singletonList(path.criterion), hibernateCompatible);
             }
