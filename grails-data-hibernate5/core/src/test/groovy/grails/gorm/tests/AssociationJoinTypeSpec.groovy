@@ -66,6 +66,15 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
+    void 'a paged detached criteria keeps the alias of the queried class when the total is read'() {
+        when:
+        final results = new DetachedCriteria(Team, 't').eq('t.name', 'Arsenal First Team').list(max: 2)
+
+        then:
+        results*.name == ['Arsenal First Team']
+        results.totalCount == 1
+    }
+
     void 'a fetch mode that list requests replaces a join type that the query requested before'() {
         given:
         final query = Team.where {
