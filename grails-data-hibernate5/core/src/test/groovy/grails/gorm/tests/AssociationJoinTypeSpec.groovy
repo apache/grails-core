@@ -23,6 +23,7 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate
+import spock.lang.IgnoreIf
 
 import jakarta.persistence.criteria.JoinType
 
@@ -32,7 +33,16 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
     private static final List<String> TEAMS_WITH_PLAYERS = ['Arsenal First Team', 'Chelsea First Team', 'MU First Team', 'Unattached First Team']
     private static final List<String> ALL_TEAMS = (TEAMS_WITH_A_CLUB + 'Unattached First Team').sort()
 
+    /**
+     * Whether the specification runs with the {@code grails.gorm.leftJoinAssociationSort} setting, with which
+     * a sort by a property of an association joins the association with a left join
+     */
+    protected boolean isLeftJoinSort() {
+        false
+    }
+
     void setupSpec() {
+        manager.configuration['grails.gorm.leftJoinAssociationSort'] = leftJoinSort
         manager.domainClasses.addAll([Club, Team, Player, Contract, AssociationJoinTypeCategory, AssociationJoinTypeShelf, AssociationJoinTypeTag,
                                       AssociationJoinTypeFace, AssociationJoinTypeNose, AssociationJoinTypePost, AssociationJoinTypeAuthor,
                                       AssociationJoinTypeBook, AssociationJoinTypeSquad, AssociationJoinTypeSquadMember, AssociationJoinTypeTrophy, AssociationJoinTypeMedal,
@@ -52,18 +62,57 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         manager.session.clear()
     }
 
-    private static void savePlayer(String name, Team team) {
+    protected static void savePlayer(String name, Team team) {
         final player = new Player(name: name, team: team)
         player.contract = new Contract(salary: 1000G, player: player)
         player.save(failOnError: true, flush: true)
     }
 
-    private void saveTeamWithAPlayerWithoutContract() {
+    protected void saveTeamWithAPlayerWithoutContract() {
         final squad = new Team(club: Club.findByName('Arsenal'), name: 'Squad Team').save(failOnError: true)
         savePlayer('Squad Player A', squad)
         savePlayer('Squad Player B', squad)
         new Player(name: 'Squad Player without contract', team: squad).save(validate: false, flush: true)
         manager.session.clear()
+    }
+
+    @IgnoreIf({ instance.leftJoinSort })
+    void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
+        when:
+        final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
+            like('name', '%First%')
+        }
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+    }
+
+    @IgnoreIf({ instance.leftJoinSort })
+    void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
+        when:
+        final List<Team> results = query.call()
+
+        then:
+        results*.name.sort() == TEAMS_WITH_A_CLUB
+        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
+
+        where:
+        api                  | query
+        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
+        'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
+        'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
+    }
+
+    @IgnoreIf({ instance.leftJoinSort })
+    void '#api sorted by an association does not find an instance without it when the fetch argument requests an inner join'() {
+        expect:
+        query.call() == expected
+
+        where:
+        api               | query                                                                                                            || expected
+        'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
+        'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
+        'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
     }
 
     void 'a paged detached criteria keeps the alias of the queried class when the total is read'() {
@@ -88,7 +137,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         fetch << ['lazy', 'join']
     }
 
-    private void saveShelves() {
+    protected void saveShelves() {
         new AssociationJoinTypeShelf(name: 'First tagged shelf').addToTags(new AssociationJoinTypeTag(name: 'x')).save(failOnError: true)
         new AssociationJoinTypeShelf(name: 'First untagged shelf').save(failOnError: true)
         new AssociationJoinTypeShelf(name: 'Other shelf').addToTags(new AssociationJoinTypeTag(name: 'y')).save(failOnError: true, flush: true)
@@ -203,16 +252,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         results*.name == ['Arsenal Player']
     }
 
-    void 'a criteria query with an inner join that fetch requests returns the same rows with a sort'() {
-        when:
-        final results = Team.createCriteria().list(sort: 'club.name', fetch: [club: JoinType.INNER]) {
-            like('name', '%First%')
-        }
-
-        then:
-        results*.name.sort() == TEAMS_WITH_A_CLUB
-    }
-
     void 'a fetch that a criteria query requests for a collection is kept when it requests an inner join for an association of the collection'() {
         given:
         saveTeamWithAPlayerWithoutContract()
@@ -254,32 +293,6 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
 
         then:
         results*.name.sort() == TEAMS_WITH_A_CLUB
-    }
-
-    void '#api applies the inner join that the fetch argument requests to a sort by the association'() {
-        when:
-        final List<Team> results = query.call()
-
-        then:
-        results*.name.sort() == TEAMS_WITH_A_CLUB
-        results*.club*.name == ['Arsenal', 'Arsenal', 'Chelsea', 'Manchester United']
-
-        where:
-        api                  | query
-        'findAll by example' | { Team.findAll(new Team(), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }
-        'list'               | { Team.list(sort: 'club.name', fetch: [club: JoinType.INNER]) }
-        'a paged list'       | { Team.list(sort: 'club.name', max: 10, fetch: [club: JoinType.INNER]) }
-    }
-
-    void '#api sorted by an association does not find an instance without it when the fetch argument requests an inner join'() {
-        expect:
-        query.call() == expected
-
-        where:
-        api               | query                                                                                                            || expected
-        'findAllWhere'    | { Team.findAllWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }      || []
-        'findWhere'       | { Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name', fetch: [club: JoinType.INNER]]) }         || null
-        'find by example' | { Team.find(new Team(name: 'Unattached First Team'), [sort: 'club.name', fetch: [club: JoinType.INNER]]) }     || null
     }
 
     void 'a join type requested for a property that is not an association is ignored'() {
@@ -342,7 +355,7 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         names == ['Bench']
     }
 
-    private void saveSquads() {
+    protected void saveSquads() {
         final full = new AssociationJoinTypeSquad(name: 'Full').save(failOnError: true)
         new AssociationJoinTypeSquadMember(name: 'Regular', kind: 'Regular', squad: full).save(failOnError: true)
         final reserve = new AssociationJoinTypeSquadMember(name: 'Reserve', kind: 'Reserve', reserveSquad: full).save(failOnError: true)

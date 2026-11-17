@@ -863,6 +863,16 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 
 - Nothing needs to change. Search for code that catches the exception or builds a second query without the sort to count: it can call `count` on the sorted query.
 
+## GORM for Hibernate: setting for a sort by an association
+
+A sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join, so it leaves out the instances whose association is `null`, and `count` and the `totalCount` of a paged list do not count them. That is unchanged by default. 7.0.18 adds the `grails.gorm.leftJoinAssociationSort` setting, default `false`. Set to `true`, the association is joined with a left join and the sort keeps those instances.
+
+- Nothing needs to change to keep the previous results.
+- Search for `sort:` arguments and `.sort(` calls whose property contains a `.`, such as `sort: 'author.name'`. If the application expects every instance from such a query, set `grails.gorm.leftJoinAssociationSort: true` in `application.yml`.
+- With the setting, the instances without the association come first or last, depending on how the database sorts nulls. To leave them out of one query, add a criterion that the association is not `null`.
+- A sort by a property of a collection, such as `sort: 'books.title'`, joins the collection with an inner join with or without the setting.
+- The setting is enabled by default as of Grails 8.1 and removed in Grails 9.
+
 # After the Upgrade
 
 ## Verification Checklist
