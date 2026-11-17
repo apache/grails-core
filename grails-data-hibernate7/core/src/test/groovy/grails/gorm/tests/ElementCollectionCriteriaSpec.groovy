@@ -45,6 +45,36 @@ class ElementCollectionCriteriaSpec extends HibernateGormDatastoreSpec {
         EcContact.createCriteria().list { kinds { 'in'('elements', [EcKind.Phone, EcKind.None]) } }*.name.sort() == ['a', 'b']
     }
 
+    void "two restrictions in a block over a collection of enums apply to one element"() {
+        expect: 'no element is both of them, though the contact has one of each'
+        EcContact.createCriteria().list {
+            kinds {
+                eq('elements', EcKind.Email)
+                eq('elements', EcKind.Phone)
+            }
+        }.isEmpty()
+    }
+
+    void "an in and an eq in a block over a collection of enums apply to one element"() {
+        expect: 'the Phone element is in the list and is the one eq asks for'
+        EcContact.createCriteria().list {
+            kinds {
+                'in'('elements', [EcKind.Email, EcKind.Phone])
+                eq('elements', EcKind.Phone)
+            }
+        }*.name == ['a']
+
+        and: 'a contact with an Email element and a None element has no element that is both in the list and None'
+        new EcContact(name: 'c', kinds: [EcKind.Email, EcKind.None]).save(flush: true)
+        session.clear()
+        EcContact.createCriteria().list {
+            kinds {
+                'in'('elements', [EcKind.Email, EcKind.Phone])
+                eq('elements', EcKind.None)
+            }
+        }.isEmpty()
+    }
+
     void "the block combines with other criteria"() {
         expect:
         EcContact.createCriteria().list {

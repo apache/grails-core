@@ -209,6 +209,7 @@ public class CriteriaMethodInvoker {
                 callable.setDelegate(restrictions);
                 callable.setResolveStrategy(Closure.DELEGATE_ONLY);
                 callable.call();
+                restrictions.apply();
                 return name;
             }
 
@@ -421,6 +422,9 @@ public class CriteriaMethodInvoker {
 
         private final HibernateQuery query;
         private final String collection;
+        // The values one element of the collection may have: every restriction of the block is a test of the same
+        // element, as in Hibernate 5, so the restrictions narrow one set and no element has to be found for each.
+        private java.util.Set<Object> allowed;
 
         private ElementCollectionRestrictions(HibernateQuery query, String collection) {
             this.query = query;
@@ -433,7 +437,20 @@ public class CriteriaMethodInvoker {
 
         public Object in(String property, Collection<?> values) {
             requireElements(property);
-            return query.in(collection, new java.util.ArrayList<>(values));
+            if (allowed == null) {
+                allowed = new java.util.LinkedHashSet<>(values);
+            }
+            else {
+                allowed.retainAll(values);
+            }
+            return this;
+        }
+
+        /** Adds the restriction of the block to the query: an element that is one of the values left. */
+        private void apply() {
+            if (allowed != null) {
+                query.in(collection, new java.util.ArrayList<>(allowed));
+            }
         }
 
         public Object inList(String property, Collection<?> values) {

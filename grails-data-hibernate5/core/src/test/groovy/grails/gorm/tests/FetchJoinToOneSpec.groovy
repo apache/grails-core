@@ -66,6 +66,24 @@ class FetchJoinToOneSpec extends HibernateGormDatastoreSpec {
         statements() - before <= 2
     }
 
+    void "the total count of a paged list does not fetch the join-mapped association"() {
+        when:
+        def flights = FjFlight.list(max: 2)
+
+        then: 'the page holds two flights, and the count counts the three, without a fetch in it'
+        flights.size() == 2
+        flights.totalCount == 3
+    }
+
+    void "the total count of a paged criteria does not fetch the join-mapped association"() {
+        when:
+        def flights = FjFlight.createCriteria().list(max: 2) { }
+
+        then:
+        flights.size() == 2
+        flights.totalCount == 3
+    }
+
     void "an association without fetch join stays lazy"() {
         when:
         long before = statements()
