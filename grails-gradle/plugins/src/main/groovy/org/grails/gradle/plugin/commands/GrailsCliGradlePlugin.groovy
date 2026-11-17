@@ -105,6 +105,15 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     /** The internal probe configuration used to detect companion `-cli` modules */
     public static final String GRAILS_CLI_DETECT_CONFIGURATION = 'grailsCliDetect'
 
+    /**
+     * The task that writes the commands {@code runCommand} can run to {@link #COMMAND_MANIFEST_PATH},
+     * which the Grails Forge CLI reads to offer them.
+     */
+    public static final String COMMAND_MANIFEST_TASK = 'generateCommandManifest'
+
+    /** Where {@link #COMMAND_MANIFEST_TASK} writes the commands, relative to the build directory */
+    public static final String COMMAND_MANIFEST_PATH = 'grails/commands.json'
+
     @Override
     void apply(Project project) {
         // self-sufficient when applied standalone: the auto-provisioning behavior is configured
@@ -122,6 +131,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         configureRunScript(project)
 
         configureRunCommand(project)
+
+        configureCommandManifest(project)
     }
 
     /**
@@ -604,6 +615,27 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         it.args(args)
                     }
 
+                }
+            }
+        }
+    }
+
+    /**
+     * Registers {@link #COMMAND_MANIFEST_TASK}, which describes the commands of {@code runCommand}'s
+     * classpath without starting the application.
+     */
+    @CompileDynamic
+    protected void configureCommandManifest(Project project) {
+        if (!project.tasks.names.contains(COMMAND_MANIFEST_TASK)) {
+            def manifestTask = project.tasks.register(COMMAND_MANIFEST_TASK, ApplicationCommandManifestTask)
+            manifestTask.configure {
+                it.description = 'Writes the Grails commands of the application, which the Grails Forge CLI offers'
+                it.manifestFile.convention(project.layout.buildDirectory.file(COMMAND_MANIFEST_PATH))
+            }
+            project.afterEvaluate {
+                manifestTask.configure {
+                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
                 }
             }
         }

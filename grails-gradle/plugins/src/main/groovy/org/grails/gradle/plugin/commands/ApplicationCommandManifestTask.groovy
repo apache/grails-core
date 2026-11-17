@@ -1,0 +1,67 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.gradle.plugin.commands
+
+import groovy.transform.CompileStatic
+
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
+
+import javax.inject.Inject
+
+/**
+ * Writes the commands the application can run with {@code runCommand}, with their descriptions,
+ * arguments and options, to a JSON file. Command line tools such as the Grails Forge CLI read the file
+ * to offer those commands and complete them without loading the application's classpath themselves.
+ *
+ * <p>Runs on the classpath {@code runCommand} uses, so the file lists exactly the commands
+ * {@code runCommand} can run. The task is up to date while that classpath is unchanged.</p>
+ *
+ * @since 9.0
+ */
+@CompileStatic
+@DisableCachingByDefault(because = 'Reading the command metadata is cheaper than restoring it from the build cache')
+abstract class ApplicationCommandManifestTask extends JavaExec {
+
+    /** The class in the {@code grails-core-cli} artifact that writes the file */
+    public static final String MANIFEST_WRITER_CLASS = 'org.apache.grails.core.cli.ApplicationCommandManifestWriter'
+
+    @Inject
+    ApplicationCommandManifestTask() {
+        mainClass.set(MANIFEST_WRITER_CLASS)
+    }
+
+    /**
+     * @return the JSON file the commands are written to
+     */
+    @OutputFile
+    abstract RegularFileProperty getManifestFile()
+
+    @Override
+    @TaskAction
+    void exec() {
+        // the file is the task's output, so it is given to the writer here rather than as an
+        // argument input, which would make the absolute path part of the task's inputs
+        args(manifestFile.get().asFile.absolutePath)
+        super.exec()
+    }
+}
