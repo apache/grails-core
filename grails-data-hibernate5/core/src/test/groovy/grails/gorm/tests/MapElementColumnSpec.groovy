@@ -30,14 +30,15 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 /**
- * The element column of a basic collection takes the length that the mapping gives the property: a map of values gets
- * the same length as a list of values, and as a plain string property.
+ * The element column of a basic collection takes the type that the mapping gives the property: {@code type: 'text'}
+ * maps the elements of a map and of a list as text. {@code maxSize} of a collection bounds the number of its
+ * elements, and {@code inList} lists whole collections, so neither gives the column of its elements a length.
  */
 @Issue('https://github.com/apache/grails-core/issues/16897')
 class MapElementColumnSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
-            MapEltPlain, MapEltText, MapEltMaxSize, MapEltJoinColumn, ListEltText, ListEltMaxSize
+            MapEltPlain, MapEltText, MapEltMaxSize, MapEltJoinColumn, ListEltText, ListEltMaxSize, ListEltInList
     )
 
     private Column elementColumn(Class<?> type, String property) {
@@ -55,14 +56,30 @@ class MapElementColumnSpec extends Specification {
     }
 
     @Unroll
-    void "maxSize gives the element column of a #label the length it gives a string property"() {
+    void "maxSize of a #label bounds its size and leaves the length of its element column"() {
         expect:
-        elementColumn(type, 'body').length == 500
+        elementColumn(type, 'body').length == Column.DEFAULT_LENGTH
 
         where:
         label  | type
         'map'  | MapEltMaxSize
         'list' | ListEltMaxSize
+    }
+
+    void "a list that is within maxSize is saved, whatever the length of its element"() {
+        when: 'one element of six characters, with maxSize 2: the number of elements is within it'
+        ListEltMaxSize saved = null
+        ListEltMaxSize.withNewTransaction {
+            saved = new ListEltMaxSize(body: ['abcdef']).save(failOnError: true)
+        }
+
+        then:
+        saved.id != null
+    }
+
+    void "an inList of lists is not an allowed value of the length of the elements"() {
+        expect: 'the mapping was built with an inList whose allowed values are lists, and the column keeps its length'
+        elementColumn(ListEltInList, 'body').length == Column.DEFAULT_LENGTH
     }
 
     @Unroll
@@ -108,7 +125,7 @@ class MapEltMaxSize {
     Map<String, String> body
 
     static constraints = {
-        body maxSize: 500
+        body maxSize: 2
     }
 }
 
@@ -135,6 +152,15 @@ class ListEltMaxSize {
     static hasMany = [body: String]
 
     static constraints = {
-        body maxSize: 500
+        body maxSize: 2
+    }
+}
+
+@Entity
+class ListEltInList {
+    static hasMany = [body: String]
+
+    static constraints = {
+        body inList: [['a'], ['b']]
     }
 }
