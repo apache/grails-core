@@ -38,6 +38,7 @@ import org.apache.catalina.Context
 import org.apache.catalina.startup.Tomcat
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
 
@@ -96,6 +97,7 @@ class StartupProgressSpec extends Specification {
      * This feature's own directory for the file the recording browser writes. Named after the port, a file
      * shared by the spec was still there when a later feature drew a port an earlier one had opened a browser on.
      */
+    @TempDir
     File openedDir
 
     PollingConditions conditions = new PollingConditions(timeout: 30, delay: 0.05)
@@ -132,7 +134,6 @@ class StartupProgressSpec extends Specification {
 
     void setup() {
         port = freePort()
-        openedDir = Files.createTempDirectory(browserDir.toPath(), 'feature').toFile()
         Gates.reset(port)
         standardError = System.err
         System.setErr(new PrintStream(new Tee(standardError, log), true, 'UTF-8'))
