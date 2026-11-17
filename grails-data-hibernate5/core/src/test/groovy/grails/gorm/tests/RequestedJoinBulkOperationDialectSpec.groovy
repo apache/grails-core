@@ -55,6 +55,69 @@ class RequestedJoinBulkOperationDialectSpec extends Specification {
         datastore
     }
 
+    void 'with #dialect.simpleName, #operation #outcome an inner join requested for an association to the queried class itself'() {
+        given:
+        final datastore = createDatastore(dialect)
+
+        when:
+        Number affected = null
+        UnsupportedOperationException rejected = null
+        final names = BulkJoinCategory.withTransaction {
+            try {
+                final query = BulkJoinCategory.where { name ==~ '%category' }.join('parent', JoinType.INNER)
+                affected = operation == 'updateAll' ? query.updateAll(name: 'Updated') : query.deleteAll()
+            }
+            catch (UnsupportedOperationException e) {
+                rejected = e
+            }
+            BulkJoinCategory.list()*.name.sort()
+        }
+
+        then:
+        (rejected == null) == supported
+        affected == (supported ? 1 : null)
+        names == expected
+
+        and: 'the message names the association'
+        supported || rejected.message.contains('[parent]')
+
+        cleanup:
+        datastore?.close()
+
+        where:
+        dialect           | operation   | supported || expected
+        H2Dialect         | 'updateAll' | true      || ['Root category', 'Updated']
+        MariaDB103Dialect | 'updateAll' | true      || ['Root category', 'Updated']
+        MySQL8Dialect     | 'updateAll' | false     || ['Child category', 'Root category']
+        MySQL57Dialect    | 'updateAll' | false     || ['Child category', 'Root category']
+        MariaDBDialect    | 'updateAll' | false     || ['Child category', 'Root category']
+        MySQL8Dialect     | 'deleteAll' | false     || ['Child category', 'Root category']
+
+        outcome = supported ? 'applies' : 'rejects'
+    }
+
+    void 'with #dialect.simpleName, updateAll applies an inner join requested for #description'() {
+        given:
+        final datastore = createDatastore(dialect)
+
+        when:
+        final names = BulkJoinProduct.withTransaction {
+            BulkJoinProduct.where { name ==~ '%product' }.join(path, JoinType.INNER).updateAll(name: 'Updated')
+            (BulkJoinProduct.list()*.name - 'Updated').sort()
+        }
+
+        then:
+        names == unchanged
+
+        cleanup:
+        datastore?.close()
+
+        where:
+        dialect       | path              | description                                        || unchanged
+        MySQL8Dialect | 'category'        | 'an association to another class'                  || ['Uncategorized product']
+        MySQL8Dialect | 'category.parent' | 'a path that does not lead to the queried class'   || ['Top product', 'Uncategorized product']
+    }
+
     void 'with #dialect.simpleName, criteria on the association restrict updateAll where the join is rejected'() {
         given:
         final datastore = createDatastore(dialect)

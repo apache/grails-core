@@ -18,9 +18,9 @@
  */
 package grails.gorm.tests
 
-import grails.gorm.DetachedCriteria
-import spock.lang.IgnoreIf
 import spock.lang.Requires
+import spock.lang.IgnoreIf
+import grails.gorm.DetachedCriteria
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.hibernate.Hibernate

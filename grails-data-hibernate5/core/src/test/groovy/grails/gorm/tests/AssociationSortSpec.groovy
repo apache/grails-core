@@ -18,8 +18,8 @@
  */
 package grails.gorm.tests
 
-import spock.lang.IgnoreIf
 import spock.lang.Requires
+import spock.lang.IgnoreIf
 import grails.gorm.DetachedCriteria
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
