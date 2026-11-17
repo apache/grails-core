@@ -34,6 +34,7 @@ import org.jline.terminal.TerminalBuilder
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
 
+import org.grails.build.parsing.CommandLineParser
 import org.grails.forge.cli.command.CreateAppCommand
 import spock.lang.AutoCleanup
 import spock.lang.IgnoreIf
@@ -182,6 +183,41 @@ class ProjectCommandsSpec extends Specification {
         commandLine.subcommands.containsKey('s2-quickstart')
     }
 
+    void 'the manifest is written again when the commands directory is removed with the last command'() {
+        given:
+        File command = new File(dir, 'grails-app/commands/example/HelloCommand.groovy')
+        command.parentFile.mkdirs()
+        command.text = 'class HelloCommand {}'
+        writeManifest(URL_MAPPINGS_REPORT)
+        [command, command.parentFile, command.parentFile.parentFile, new File(dir, 'grails-app'), dir].each {
+            it.setLastModified(manifest.lastModified() - 10_000)
+        }
+        buildWrites(SECURITY_QUICKSTART)
+
+        when: 'the directory is deleted, which changes only grails-app'
+        assert new File(dir, 'grails-app/commands').deleteDir()
+        new File(dir, 'grails-app').setLastModified(manifest.lastModified() + 10_000)
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [['-p', dir.path, '-q', '--console=plain'] + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('s2-quickstart')
+    }
+
+    void 'a project without a commands directory does not run the build while nothing changed'() {
+        given:
+        assert new File(dir, 'grails-app/commands').deleteDir()
+        writeManifest(URL_MAPPINGS_REPORT)
+        [new File(dir, 'grails-app'), dir].each { it.setLastModified(manifest.lastModified() - 10_000) }
+
+        when:
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == []
+        commandLine.subcommands.containsKey('url-mappings-report')
+    }
+
     void 'what the build writes for itself does not make the manifest outdated'() {
         given:
         writeManifest(URL_MAPPINGS_REPORT)
@@ -300,6 +336,13 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         commandArguments() == ['s2-quickstart', 'com.example', 'User', 'Role', '--groupClassName=a=b=c']
+
+        and: 'the parser runCommand reads them with gives the command the whole value'
+        with(new CommandLineParser().parse(commandArguments() as String[])) {
+            commandName == 's2-quickstart'
+            remainingArgs == ['com.example', 'User', 'Role']
+            optionValue('groupClassName') == 'a=b=c'
+        }
 
         where:
         given << [['--groupClassName', 'a=b=c'], ['--groupClassName=a=b=c']]

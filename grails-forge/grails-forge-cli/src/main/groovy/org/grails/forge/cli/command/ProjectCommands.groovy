@@ -183,7 +183,16 @@ class ProjectCommands {
             return true
         }
         ([projectDir, gradle.rootDir] as LinkedHashSet<File>).any { File dir -> changedBuild(dir, lastRead) } ||
-                changed(new File(projectDir, COMMAND_SOURCES), lastRead)
+                changedSources(lastRead)
+    }
+
+    /**
+     * Whether the commands of the application changed. When their directory is gone, {@code grails-app},
+     * which every project has, changed when it was removed.
+     */
+    private boolean changedSources(long since) {
+        File sources = new File(projectDir, COMMAND_SOURCES)
+        sources.isDirectory() ? changed(sources, since) : sources.parentFile.lastModified() > since
     }
 
     private static boolean changedBuild(File dir, long since) {
