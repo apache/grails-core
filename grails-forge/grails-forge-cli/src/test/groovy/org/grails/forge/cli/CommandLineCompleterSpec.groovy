@@ -63,7 +63,7 @@ class CommandLineCompleterSpec extends Specification {
 
     void 'an option typed after a command is completed from that command, not the root command'() {
         when:
-        List<String> offered = complete('create-app --pro')
+        List<String> offered = complete('create-app --fe')
 
         then:
         offered.containsAll(['--features', '--servlet', '--jdk', '--gorm'])

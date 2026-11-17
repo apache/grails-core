@@ -21,6 +21,7 @@ import java.nio.file.Path
 
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.util.environment.RestoreSystemProperties
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -28,21 +29,15 @@ import grails.core.GrailsApplication
 /**
  * Starts the Groovy shell {@code grails shell} opens, on the class path the console module ships.
  */
+@RestoreSystemProperties
 class GroovyshApplicationContextSpec extends Specification {
 
     @TempDir
     Path userHome
 
-    String originalUserHome
-
     void setup() {
         // groovysh keeps its history and settings under the user's home directory
-        originalUserHome = System.getProperty('user.home')
         System.setProperty('user.home', userHome.toString())
-    }
-
-    void cleanup() {
-        System.setProperty('user.home', originalUserHome)
     }
 
     void 'the shell starts with the application in its binding and ends when its input ends'() {

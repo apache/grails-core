@@ -65,7 +65,7 @@ class InteractiveShell {
             Terminal terminal = TerminalBuilder.terminal()
             LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
-                    .completer(new CommandLineCompleter(commandLine.getCommandSpec()))
+                    .completer(new CommandLineCompleter(commandLine.commandSpec))
                     .parser(new DefaultParser())
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
                     .build()
