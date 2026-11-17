@@ -195,6 +195,43 @@ features:
 
 This "grails-forge-cli.yml" configuration sets the default values for various aspects of the Grails web application, including the application type, default package, test framework, source language, build tool, GORM implementation, servlet implementation, and a list of enabled features.
 
+[[projectCommands]]
+=== Commands of the Project
+
+Inside a Grails project, the Grails Forge CLI also offers the commands of the application and of its
+plugins: the commands in `grails-app/commands` and those every plugin of the build brings with it, such
+as `s2-quickstart` from the Spring Security plugin or the `dbm-*` commands of database migration. They
+are listed in `grails-forge-cli --help`, and the interactive prompt completes their names, the options
+they declare and the values those options take:
+
+[source,shell]
+----
+$ grails-forge-cli
+grails> s2-<TAB>
+s2-create-persistent-token   s2-create-role-hierarchy-entry   s2-quickstart
+grails> s2-quickstart com.example User Role --<TAB>
+--groupClassName   --help   --salt   --uiOnly
+----
+
+Each command shows its usage with `--help`, and runs through the project's `runCommand` Gradle task,
+as `./gradlew runCommand -Pargs="s2-quickstart com.example User Role"` would run it. The Forge CLI's own
+commands keep their name: a project command named like one of them is not offered.
+
+The Forge CLI learns the commands from the project's build: the Grails Gradle plugin's
+`generateCommandManifest` task writes them to `build/grails/commands.json`. The Forge CLI runs the task
+when the file is missing, or older than the project's build files (`build.gradle`, `settings.gradle`,
+`gradle.properties` and `gradle/libs.versions.toml`) or its `grails-app/commands`, so a plugin added to
+the build brings its commands the next time a project command is asked for. Running one of the Forge
+CLI's own commands, such as `create-controller`, never runs the build. When the task fails, the Forge
+CLI says so and offers only its own commands; run `./gradlew generateCommandManifest` to see why.
+
+A command that describes its arguments and options, as xref:commandLine#creatingCustomCommands[Creating Custom Commands]
+shows, has them checked and completed. A command that does not takes any arguments and options and
+passes them on unchanged.
+
+The `grails` command of an SDKMAN! installation starts the profile CLI by default. Start the Forge CLI
+with `grails-forge-cli`, with `grails -t forge`, or by default with `GRAILS_PREFERRED_SHELL=forge`.
+
 === Grails Default Package Configuration
 
 The project's default package is determined based on the project's name. For instance, running the following command:
