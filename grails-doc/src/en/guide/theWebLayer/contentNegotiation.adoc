@@ -347,7 +347,7 @@ type is configured for in the first configured format
 |Dropped: such a request, and one whose `Accept` header Spring cannot read, is not acceptable.
 |===
 
-Section 22 of xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9] lists how each answer changes.
+Section 25 of xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9] lists how each answer changes.
 
 ==== Testing Content Negotiation
 
