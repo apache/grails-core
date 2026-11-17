@@ -20,6 +20,8 @@ package org.grails.gradle.plugin.commands
 
 import java.util.jar.JarFile
 
+import groovy.json.JsonException
+import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -36,6 +38,7 @@ import org.gradle.api.artifacts.component.ModuleComponentIdentifier
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
+import org.gradle.api.file.Directory
 import org.gradle.api.file.FileCollection
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.JavaExec
@@ -113,6 +116,24 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
 
     /** Where {@link #COMMAND_MANIFEST_TASK} writes the commands, relative to the build directory */
     public static final String COMMAND_MANIFEST_PATH = 'grails/commands.json'
+
+    /**
+     * Set this project property to the path of a file, relative to the project directory, to have
+     * {@link #COMMAND_MANIFEST_TASK} write the commands there instead of {@link #COMMAND_MANIFEST_PATH}.
+     */
+    public static final String COMMAND_MANIFEST_PROPERTY = 'grailsCommandManifest'
+
+    /**
+     * The project property with the arguments of a command task, such as {@code runCommand}, as one
+     * command line that is split into arguments as a shell would.
+     */
+    public static final String ARGS_PROPERTY = 'args'
+
+    /**
+     * The project property with the path of a JSON file holding the arguments of a command task as an
+     * array of strings, each passed on unchanged. They follow those of {@link #ARGS_PROPERTY}.
+     */
+    public static final String ARGS_FILE_PROPERTY = 'argsFile'
 
     @Override
     void apply(Project project) {
@@ -392,6 +413,40 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * @param taskName the name of the task that requires the main class
      * @return the name of the main class
      */
+    /**
+     * Returns the arguments a command task passes to its command: those of {@link #ARGS_PROPERTY}, split
+     * as a shell would, then those of the file {@link #ARGS_FILE_PROPERTY} names, unchanged.
+     *
+     * @param project the project the command task belongs to
+     * @return the arguments, empty when neither property is set
+     */
+    static List<String> commandArguments(Project project) {
+        List<String> arguments = []
+        def args = project.findProperty(ARGS_PROPERTY)
+        if (args) {
+            arguments.addAll(CommandLineParser.translateCommandline(args as String))
+        }
+        def argsFile = project.findProperty(ARGS_FILE_PROPERTY)
+        if (argsFile) {
+            String content = project.providers.fileContents(project.layout.projectDirectory.file(argsFile as String)).asText.orNull
+            if (content == null) {
+                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, does not exist.")
+            }
+            Object parsed
+            try {
+                parsed = new JsonSlurper().parseText(content)
+            }
+            catch (JsonException e) {
+                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, is not JSON: ${e.message}", e)
+            }
+            if (!(parsed instanceof List) || ((List) parsed).any { !(it instanceof String) }) {
+                throw new GradleException("The file of the '${ARGS_FILE_PROPERTY}' property, ${argsFile}, must hold a JSON array of strings.")
+            }
+            arguments.addAll((List<String>) parsed)
+        }
+        arguments
+    }
+
     @PackageScope
     static String requireMainClass(Provider<String> mainClass, String taskName) {
         def mainClassName = mainClass.orNull
@@ -433,11 +488,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         it.classpath = fileCollection
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-                        List<Object> args = []
-                        def otherArgs = project.findProperty('args')
-                        if (otherArgs) {
-                            args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                        }
+                        List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
 
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -569,11 +620,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
-                    List<Object> args = []
-                    def otherArgs = project.findProperty('args')
-                    if (otherArgs) {
-                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                    }
+                    List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -602,11 +649,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     // with Grails' plugin management and bean wiring when running CLI commands via Gradle
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
-                    List<Object> args = []
-                    def otherArgs = project.findProperty('args')
-                    if (otherArgs) {
-                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                    }
+                    List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -628,9 +671,13 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     protected void configureCommandManifest(Project project) {
         if (!project.tasks.names.contains(COMMAND_MANIFEST_TASK)) {
             def manifestTask = project.tasks.register(COMMAND_MANIFEST_TASK, ApplicationCommandManifestTask)
+            // the configuration cache cannot keep the project, so the mapping holds only its directory
+            Directory projectDirectory = project.layout.projectDirectory
             manifestTask.configure {
                 it.description = 'Writes the Grails commands of the application, which the Grails Forge CLI offers'
-                it.manifestFile.convention(project.layout.buildDirectory.file(COMMAND_MANIFEST_PATH))
+                it.manifestFile.convention(project.providers.gradleProperty(COMMAND_MANIFEST_PROPERTY)
+                        .map { String path -> projectDirectory.file(path) }
+                        .orElse(project.layout.buildDirectory.file(COMMAND_MANIFEST_PATH)))
             }
             project.afterEvaluate {
                 manifestTask.configure {

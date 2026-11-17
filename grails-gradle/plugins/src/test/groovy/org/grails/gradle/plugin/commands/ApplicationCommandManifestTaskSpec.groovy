@@ -66,6 +66,20 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         read(runner.projectDir.toPath().resolve('app/build/grails/commands.json')).runtimeMarker == 'changed'
     }
 
+    void 'the manifest is written where the grailsCommandManifest property says'() {
+        given:
+        def runner = setupTestResourceProject('command-manifest')
+        Path manifest = runner.projectDir.toPath().resolve('app/elsewhere/commands.json')
+
+        when:
+        def result = executeTask(':app:generateCommandManifest', ['-PgrailsCommandManifest=elsewhere/commands.json'])
+
+        then:
+        assertTaskSuccess('generateCommandManifest', result)
+        Path.of(read(manifest).file).toRealPath() == manifest.toRealPath()
+        !runner.projectDir.toPath().resolve('app/build/grails/commands.json').toFile().exists()
+    }
+
     private static Map<String, String> read(Path file) {
         file.toFile().readLines().collectEntries { String line ->
             int separator = line.indexOf('=')
