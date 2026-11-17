@@ -19,16 +19,23 @@
 # rebase, or a merge of the base branch, that leaves the changes of the pull request as they were keeps them.
 #
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
-# to the pull request. It reacts to the Code Style workflow being requested for one, which every push to a pull
-# request does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run
-# uses the workflow file of the default branch and a token of this repository, and it never checks out or runs
-# anything of the pull request: it only reads commit ids and diffs through the API. A manual run looks at every open
-# pull request, and only reports what it would dismiss unless its dry-run input is cleared.
+# to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
+# does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
+# workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
+# pull request: it only reads commit ids and diffs through the API.
+#
+# Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
+# asks to skip them ("[skip ci]" and its variants), nor for a pull request that conflicts with its base branch. So
+# the workflow also looks at every open pull request once an hour, which bounds how long an approval can outlive
+# such a push. A manual run looks at every open pull request too, and only reports what it would dismiss unless its
+# dry-run input is cleared.
 name: "Dismiss Stale Reviews"
 on:
   workflow_run:
     workflows: [ "Code Style" ]
     types: [ requested ]
+  schedule:
+    - cron: '17 * * * *' # hourly, for the pushes that request no Code Style run
   workflow_dispatch:
     inputs:
       dry-run:
@@ -41,7 +48,7 @@ permissions:
 jobs:
   dismiss:
     name: "Dismiss Stale Reviews"
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'pull_request' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request' }}
     runs-on: ubuntu-slim
     timeout-minutes: 10
     steps:
@@ -50,38 +57,51 @@ jobs:
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run }}
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
-          # Empty on a manual run, which looks at every open pull request.
+          # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           # The id of the changes a commit makes to its merge base with the base branch: the same before and after a
-          # rebase, or a merge of the base branch, that changes nothing of the pull request. Empty when GitHub cannot
+          # rebase, or a merge of the base branch, that changes nothing of the pull request. It is taken verbatim:
+          # the default id ignores all whitespace, so it would not tell "a b" from "ab". Empty when GitHub cannot
           # serve the diff, which is the case for an unknown commit and for a diff over the size limit of the API.
           # GitHub moves an approval to the new head by itself after such a push, so the comparison only decides for
           # an approval it has not moved yet.
           patch_id() {
-            gh api -H 'Accept: application/vnd.github.diff' "repos/$REPO/compare/$1...$2" 2> /dev/null | git patch-id --stable | cut -d ' ' -f 1 || true
+            gh api -H 'Accept: application/vnd.github.diff' "repos/$REPO/compare/$1...$2" 2> /dev/null | git patch-id --verbatim | cut -d ' ' -f 1 || true
           }
-          # Every open pull request, or the ones whose head is the pushed commit, as its number, head and base commit.
-          gh api --paginate "repos/$REPO/pulls?state=open&per_page=100" \
-            --jq '.[] | select(env.SHA == "" or .head.sha == env.SHA) | [.number, .head.sha, .base.sha] | @tsv' > pulls.tsv
-          while IFS=$'\t' read -r number head base; do
-            # The approvals given to another commit than the head. A review dismissed earlier is no longer one.
-            HEAD_SHA="$head" gh api --paginate "repos/$REPO/pulls/$number/reviews?per_page=100" \
-              --jq '.[] | select(.state == "APPROVED" and .commit_id != env.HEAD_SHA) | [.id, .user.login, .commit_id // "-"] | @tsv' > reviews.tsv
-            [[ -s reviews.tsv ]] || continue
-            head_id=$(patch_id "$base" "$head")
-            while IFS=$'\t' read -r review login commit; do
-              # An approval is dismissed whenever the changes cannot be shown to be the same.
-              if [[ -n "$head_id" && "$commit" != - && "$(patch_id "$base" "$commit")" == "$head_id" ]]; then
-                echo "#$number: approval of $login at ${commit:0:10} kept, the changes are the same at ${head:0:10}"
-              elif [[ "$DRY_RUN" == true ]]; then
-                echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
-              elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
-                -f message="Dismissed automatically: the pull request changed after this approval, from ${commit:0:10} to ${head:0:10}." > /dev/null; then
-                echo "#$number: approval of $login at ${commit:0:10} dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
-              else
-                # Another run may have dismissed it first, which is the outcome wanted anyway.
-                echo "::warning title=Review not dismissed::Could not dismiss review $review of $login on pull request #$number"
-              fi
-            done < reviews.tsv
-          done < pulls.tsv
+          # The approvals given to another commit than the head, of every open pull request or of the ones whose head
+          # is the pushed commit. A review dismissed earlier is no longer an approval. One query serves a hundred
+          # pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
+          gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
+            query($owner: String!, $name: String!, $endCursor: String) {
+              repository(owner: $owner, name: $name) {
+                pullRequests(states: OPEN, first: 100, after: $endCursor) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes {
+                    number headRefOid baseRefOid
+                    reviews(states: APPROVED, first: 100) { nodes { databaseId author { login } commit { oid } } }
+                  }
+                }
+              }
+            }' --jq '.data.repository.pullRequests.nodes[] | select(env.SHA == "" or .headRefOid == env.SHA) | . as $pull
+              | .reviews.nodes[] | select(.commit.oid != $pull.headRefOid)
+              | [$pull.number, $pull.headRefOid, $pull.baseRefOid, .databaseId, .author.login // "ghost", .commit.oid // "-"] | @tsv' > stale.tsv
+          last=
+          while IFS=$'\t' read -r number head base review login commit; do
+            if [[ "$number" != "$last" ]]; then
+              head_id=$(patch_id "$base" "$head")
+              last=$number
+            fi
+            # An approval is dismissed whenever the changes cannot be shown to be the same.
+            if [[ -n "$head_id" && "$commit" != - && "$(patch_id "$base" "$commit")" == "$head_id" ]]; then
+              echo "#$number: approval of $login at ${commit:0:10} kept, the changes are the same at ${head:0:10}"
+            elif [[ "$DRY_RUN" == true ]]; then
+              echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
+            elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
+              -f message="Dismissed automatically: the pull request changed after this approval, from ${commit:0:10} to ${head:0:10}." > /dev/null; then
+              echo "#$number: approval of $login at ${commit:0:10} dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              # Another run may have dismissed it first, which is the outcome wanted anyway.
+              echo "::warning title=Review not dismissed::Could not dismiss review $review of $login on pull request #$number"
+            fi
+          done < stale.tsv
