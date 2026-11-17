@@ -24,6 +24,7 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
@@ -91,6 +92,12 @@ class StartupProgressSpec extends Specification {
     @Shared
     File browserDir
 
+    /**
+     * This feature's own directory for the file the recording browser writes. Named after the port, a file
+     * shared by the spec was still there when a later feature drew a port an earlier one had opened a browser on.
+     */
+    File openedDir
+
     PollingConditions conditions = new PollingConditions(timeout: 30, delay: 0.05)
 
     int port
@@ -125,6 +132,7 @@ class StartupProgressSpec extends Specification {
 
     void setup() {
         port = freePort()
+        openedDir = Files.createTempDirectory(browserDir.toPath(), 'feature').toFile()
         Gates.reset(port)
         standardError = System.err
         System.setErr(new PrintStream(new Tee(standardError, log), true, 'UTF-8'))
@@ -350,7 +358,7 @@ class StartupProgressSpec extends Specification {
         Gates.beanFailure = 'database is down'
 
         when: 'the application starts without details, asked to open a browser'
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
         start(['grails.startup.progress.enabled': true, 'grails.startup.progress.showDetails': false,
                'grails.startup.progress.openBrowser': true] + browser(opened))
 
@@ -523,7 +531,7 @@ class StartupProgressSpec extends Specification {
     void 'opens a browser on the progress page as soon as the page is served, and only once'() {
         given: 'a bean that takes its time to create'
         Gates.beanCreation = new CountDownLatch(1)
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
 
         when: 'the application starts asked to open a browser'
         start(['grails.startup.progress.enabled': true, 'grails.startup.progress.openBrowser': true] + browser(opened))
@@ -547,7 +555,7 @@ class StartupProgressSpec extends Specification {
     void 'opens a browser on the application once it is ready when the progress page is not served'() {
         given: 'a bean that takes its time to create'
         Gates.beanCreation = new CountDownLatch(1)
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
 
         when: 'the application starts without the page but asked to open a browser'
         start(['grails.startup.progress.enabled': false, 'grails.startup.progress.openBrowser': true] + browser(opened))
@@ -571,7 +579,7 @@ class StartupProgressSpec extends Specification {
     void 'does not open another browser when the application starts again in the same JVM'() {
         given: 'an application that opened a browser, which signed in, when it started'
         Gates.beanCreation = new CountDownLatch(1)
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
         startSignedIn('grails.startup.progress.enabled': true)
         Gates.beanCreation.countDown()
         runner.join(30_000)
@@ -601,7 +609,7 @@ class StartupProgressSpec extends Specification {
     void 'shows the details of the start only to a browser signed in with the address in the log'() {
         given: 'a bean that takes its time to create'
         Gates.beanCreation = new CountDownLatch(1)
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
 
         when: 'the application starts with details, asked to open a browser'
         start(['grails.startup.progress.enabled': true, 'grails.startup.progress.showDetails': true,
@@ -667,7 +675,7 @@ class StartupProgressSpec extends Specification {
 
     void 'does not open a browser unless asked to'() {
         given:
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
 
         when: 'the application starts with a browser command but not asked to open it'
         start(['grails.startup.progress.enabled': true] + browser(opened))
@@ -960,7 +968,7 @@ class StartupProgressSpec extends Specification {
      * it was opened on, as a browser does.
      */
     private void startSignedIn(Map<String, Object> properties) {
-        File opened = new File(browserDir, "opened-${port}.txt")
+        File opened = new File(openedDir, 'opened.txt')
         start(['grails.startup.progress.showDetails': true, 'grails.startup.progress.openBrowser': true] + browser(opened) + properties)
         signIn(awaitOpened(opened))
     }
@@ -1117,6 +1125,13 @@ class StartupProgressSpec extends Specification {
     }
 
     /**
+     * The ports features have drawn in this JVM. A browser is opened once per address for the life of the JVM,
+     * and the address is the port, so a feature that drew a port an earlier one had opened a browser on would
+     * get no browser.
+     */
+    private static final Set<Integer> PORTS_DRAWN = ConcurrentHashMap.newKeySet()
+
+    /**
      * A port nothing listens on. The application binds every address, which succeeds even when another process
      * listens on the port on the loopback address alone, and that process then answers this spec's requests to
      * localhost, so a port held there is not free.
@@ -1127,7 +1142,7 @@ class StartupProgressSpec extends Specification {
             try (ServerSocket socket = new ServerSocket(0)) {
                 candidate = socket.localPort
             }
-            if (isFreeOnLoopback(candidate)) {
+            if (isFreeOnLoopback(candidate) && PORTS_DRAWN.add(candidate)) {
                 return candidate
             }
         }
