@@ -212,6 +212,16 @@ Now you can run the `greet` command with arguments and options:
 ./gradlew runCommand -Pargs="greet Alice --loud"
 ----
 
+`args` is split into words as a shell would split it. A tool that passes arguments it cannot quote for
+every shell can put them in a JSON file as an array of strings and name it with `argsFile`, a path
+relative to the project directory. Each is passed on unchanged, after those of `args`:
+
+[source,shell]
+----
+echo '["greet", "Alice and Bob"]' > greet-args.json
+./gradlew runCommand -PargsFile=greet-args.json
+----
+
 This allows you to create more versatile and interactive custom commands for your Grails application.
 
 **Describing Arguments and Options**
@@ -251,13 +261,24 @@ class GreetCommand implements GrailsApplicationCommand {
 }
 ----
 
-An argument is required unless it declares `required = false`. An option is given as `--name=value`, or
-as `--name` when it is a `flag`. `values` lists the values offered when the argument or option is
-completed. The annotations only describe the command: it still reads its arguments and options from the
+An argument is required unless it declares `required = false`. An option is given as `--name value` or
+`--name=value`, or as `--name` when it is a `flag`. `values` lists the values offered when the argument
+or option is completed, in either form:
+
+[source,shell]
+----
+grails> greet Alice --language <TAB>
+de   en   fr
+grails> greet Alice --language=<TAB>
+--language=de   --language=en   --language=fr
+----
+
+The Forge CLI passes a declared option on as `--name=value`, after the arguments. The annotations only describe the command: it still reads its arguments and options from the
 command line as before.
 
 A command that declares no `@CommandArgument` takes any arguments, and one that declares no
-`@CommandOption` takes any options, so a command without the annotations works as it always has.
+`@CommandOption` takes any options and is given its command line in the order it was typed, so a command
+without the annotations works as it always has.
 
 In summary, creating custom commands in Grails using the `GrailsApplicationCommand` trait is a powerful way to extend your application's functionality beyond the web interface. You can define the command's name, description, and logic, and then execute it from the command line, optionally passing arguments and options as needed.
 
