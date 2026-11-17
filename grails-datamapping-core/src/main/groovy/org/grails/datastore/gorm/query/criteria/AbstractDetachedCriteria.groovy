@@ -62,6 +62,12 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected Closure lazyQuery
     protected String alias
     protected String connectionName = ConnectionSource.DEFAULT
+
+    /**
+     * Whether the connection was chosen with {@link #withConnection}, as opposed to taken from the criteria that
+     * holds this one as a subquery. Only a connection that was not chosen follows the criteria that holds it.
+     */
+    protected boolean connectionExplicit = false
     protected Map<String, DetachedAssociationCriteria> associationCriteriaMap = [:]
 
     ProjectionList projectionList = new DetachedProjections(projections)
@@ -214,6 +220,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
                 criterion.value = buildQueryableCriteria((Closure) criterion.value)
             }
         }
+        criterion = onConnection(criterion, connectionName)
         if (junctions)  {
             junctions[-1].add(criterion)
         }
@@ -863,9 +870,72 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
      */
 
     AbstractDetachedCriteria<T> withConnection(String name) {
+        AbstractDetachedCriteria newCriteria = switchConnection(name)
+        newCriteria.connectionExplicit = true
+        return newCriteria
+    }
+
+    private AbstractDetachedCriteria switchConnection(String name) {
         AbstractDetachedCriteria newCriteria = this.clone()
         newCriteria.connectionName = name
+        newCriteria.@criteria = new ArrayList<Query.Criterion>(newCriteria.@criteria.collect { Query.Criterion c -> onConnection(c, name) })
         return newCriteria
+    }
+
+    /**
+     * A subquery whose connection was not chosen with {@link #withConnection} takes the connection of the criteria
+     * that holds it, back to the default connection as well: a datastore that runs the subquery by itself, as MongoDB
+     * and Neo4j do, then reads the same connection as the outer query. A subquery built with its own connection,
+     * the default one included, keeps it. The criterion given is not changed; a copy is returned when a subquery
+     * moves.
+     */
+    private static Query.Criterion onConnection(Query.Criterion criterion, String name) {
+        if (criterion instanceof Query.Junction) {
+            Query.Junction junction = (Query.Junction) criterion
+            List<Query.Criterion> moved = junction.criteria.collect { Query.Criterion c -> onConnection(c, name) }
+            if ((0..<moved.size()).every { int i -> moved[i].is(junction.criteria[i]) }) {
+                return criterion
+            }
+            Query.Junction copy = junction instanceof Query.Disjunction ? new Query.Disjunction() :
+                    junction instanceof Query.Negation ? new Query.Negation() : new Query.Conjunction()
+            moved.each { Query.Criterion c -> copy.add(c) }
+            return copy
+        }
+        if (criterion instanceof Query.In && ((Query.In) criterion).subquery != null) {
+            Query.In inList = (Query.In) criterion
+            QueryableCriteria moved = onConnection(inList.subquery, name)
+            return moved.is(inList.subquery) ? criterion : new Query.In(inList.property, moved)
+        }
+        if (criterion instanceof Query.NotIn) {
+            Query.NotIn notIn = (Query.NotIn) criterion
+            QueryableCriteria moved = onConnection(notIn.subquery, name)
+            return moved.is(notIn.subquery) ? criterion : new Query.NotIn(notIn.property, moved)
+        }
+        if (criterion instanceof Query.PropertyCriterion && ((Query.PropertyCriterion) criterion).value instanceof QueryableCriteria) {
+            Query.PropertyCriterion comparison = (Query.PropertyCriterion) criterion
+            QueryableCriteria moved = onConnection((QueryableCriteria) comparison.value, name)
+            if (moved.is(comparison.value)) {
+                return criterion
+            }
+            return comparison instanceof Query.Equals ? new Query.Equals(comparison.property, moved) :
+                    comparison instanceof Query.NotEquals ? new Query.NotEquals(comparison.property, moved) :
+                    comparison instanceof Query.GreaterThan ? new Query.GreaterThan(comparison.property, moved) :
+                    comparison instanceof Query.GreaterThanEquals ? new Query.GreaterThanEquals(comparison.property, moved) :
+                    comparison instanceof Query.LessThan ? new Query.LessThan(comparison.property, moved) :
+                    comparison instanceof Query.LessThanEquals ? new Query.LessThanEquals(comparison.property, moved) :
+                    criterion
+        }
+        return criterion
+    }
+
+    private static QueryableCriteria onConnection(QueryableCriteria subquery, String name) {
+        if (subquery instanceof AbstractDetachedCriteria) {
+            AbstractDetachedCriteria detached = (AbstractDetachedCriteria) subquery
+            if (!detached.connectionExplicit && detached.connectionName != name) {
+                return (QueryableCriteria) (Object) detached.switchConnection(name)
+            }
+        }
+        return subquery
     }
 
     @Override
@@ -883,6 +953,7 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
         criteria.@joinTypes = new HashMap<>(this.joinTypes)
         criteria.@junctions = new ArrayList(this.junctions)
         criteria.@connectionName = this.connectionName
+        criteria.@connectionExplicit = this.connectionExplicit
         criteria.@lazyQuery = this.lazyQuery
         criteria.@associationCriteriaMap = new LinkedHashMap<>(this.associationCriteriaMap)
         return criteria
