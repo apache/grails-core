@@ -35,6 +35,7 @@ import org.grails.plugins.codecs.HTMLCodec
 import org.springframework.web.context.request.RequestContextHolder
 
 import spock.lang.Issue
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -367,6 +368,10 @@ class StreamCharBufferSpec extends Specification {
     
     @Unroll
     @Issue("GRAILS-11505")
+    @PendingFeatureIf(
+            value = { !data.callSize && !data.callFlush },
+            reason = 'Without a prior size() call, which has side effects, the unflushed (1) write already shows up in the encoded sub-buffer, see #17020'
+    )
     def "should support multiple levels of encoded subbuffers - #callSize #callFlush"(boolean callSize, boolean callFlush) {
         given:
             def scb = createSubBuffer { out ->
@@ -393,8 +398,8 @@ class StreamCharBufferSpec extends Specification {
                 assert scb2.toString() == '\\u003c1\\u003e - Hello\\u003b\\u00281\\u0029'
                 assert scb2.size() == 40
             } else {
-                scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
-                scb2.size() == 27
+                assert scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
+                assert scb2.size() == 27
             }
             scb.toString() == '<1> - Hello;(1)'
         where:
