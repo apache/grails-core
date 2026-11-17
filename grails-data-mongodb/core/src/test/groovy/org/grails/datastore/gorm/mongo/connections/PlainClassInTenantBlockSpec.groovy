@@ -116,6 +116,16 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         documentsIn('plainClassFooDb', PlainMongoNote) == 0
     }
 
+    void 'a plain class flushed in a @Transactional method inside a tenant block stays when the method then fails'() {
+        when: 'the flush writes to the default database at once, outside the tenant\'s transaction'
+        Tenants.withId('foo') { new TransactionalNoteWriter().flushPlainAndFail('flushed') }
+
+        then:
+        thrown(IllegalStateException)
+        documentsIn('plainClassDefaultDb', PlainMongoNote) == 2
+        documentsIn('plainClassFooDb', PlainMongoNote) == 0
+    }
+
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
         Datastore foo = datastore.getDatastoreForConnection('foo')
@@ -175,6 +185,12 @@ class TransactionalNoteWriter {
     @Transactional
     void savePlainAndFail(String text) {
         new PlainMongoNote(text: text).save()
+        throw new IllegalStateException('rolled back')
+    }
+
+    @Transactional
+    void flushPlainAndFail(String text) {
+        new PlainMongoNote(text: text).save(flush: true)
         throw new IllegalStateException('rolled back')
     }
 

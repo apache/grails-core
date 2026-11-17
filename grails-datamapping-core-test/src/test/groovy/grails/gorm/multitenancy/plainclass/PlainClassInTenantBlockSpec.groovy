@@ -118,6 +118,22 @@ class PlainClassInTenantBlockSpec extends Specification {
         mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a plain class flushed in a @Transactional method inside a tenant block stays when the method then fails'() {
+        given:
+        startDatastore(mode)
+
+        when: 'the flush writes to the default datastore at once, outside the tenant\'s transaction'
+        Tenants.withId('foo') { new TransactionalPlainNoteWriter().flushAndFail('flushed') }
+
+        then:
+        thrown(IllegalStateException)
+        PlainNote.withTransaction { PlainNote.list()*.text } == ['seed', 'flushed']
+
+        where:
+        mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
+    }
+
     static final Map<String, Closure<Boolean>> OPERATIONS = [
             'count'                     : { PlainClassInTenantBlockSpec spec -> PlainNote.count() == 1 },
             'list'                      : { PlainClassInTenantBlockSpec spec -> PlainNote.list()*.text == ['seed'] },
@@ -178,6 +194,12 @@ class TransactionalPlainNoteWriter {
     @Transactional
     void saveAndFail(String text) {
         new PlainNote(text: text).save()
+        throw new IllegalStateException('rolled back')
+    }
+
+    @Transactional
+    void flushAndFail(String text) {
+        new PlainNote(text: text).save(flush: true)
         throw new IllegalStateException('rolled back')
     }
 }
