@@ -70,4 +70,18 @@ public interface QueryableCriteria<T> extends Criteria {
         return this;
     }
 
+    /**
+     * @return The default maximum number of results set with {@code max(int)}, or null when none was set
+     */
+    default Integer getDefaultMax() {
+        return null;
+    }
+
+    /**
+     * @return The default offset set with {@code offset(int)}, or null when none was set
+     */
+    default Integer getDefaultOffset() {
+        return null;
+    }
+
 }

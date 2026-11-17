@@ -323,27 +323,30 @@ class HibernateCriteriaBuilderSqlRestrictionSpec extends Specification {
     }
 
     @Rollback
-    void 'a batch operation on a detached criteria does not support a condition'() {
+    void 'a batch operation on a detached criteria applies a condition'() {
         given:
         saveBooks()
         DetachedCriteria<SqlRestrictionBook> longBooks = new DetachedCriteria(SqlRestrictionBook).build {
             sqlRestriction('{alias}.pages > ?', [200])
         }
+        DetachedCriteria<SqlRestrictionBook> shortBooks = new DetachedCriteria(SqlRestrictionBook).build {
+            sqlRestriction('{alias}.pages < ?', [10])
+        }
 
         when:
-        longBooks.updateAll(pages: 1)
+        long updated = longBooks.updateAll(pages: 1)
 
         then:
-        InvalidDataAccessResourceUsageException updateFailure = thrown()
-        updateFailure.message.contains('SqlRestriction')
+        updated == 2
 
         when:
-        longBooks.deleteAll()
+        long shortened = shortBooks.updateAll(pages: 5)
+        SqlRestrictionBook.withSession { it.clear() }
 
         then:
-        InvalidDataAccessResourceUsageException deleteFailure = thrown()
-        deleteFailure.message.contains('SqlRestriction')
-        SqlRestrictionBook.list()*.pages.sort() == [120, 250, 412]
+        shortened == 2
+        SqlRestrictionBook.countByPages(5) == 2
+        SqlRestrictionBook.countByPages(120) == 1
     }
 
     @Rollback
