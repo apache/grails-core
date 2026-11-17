@@ -26,6 +26,7 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.core.Datastore
@@ -86,6 +87,35 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         'save'                       | { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'saved').save(flush: true) && spec.documentsIn('plainClassDefaultDb', PlainMongoNote) == 2 && spec.documentsIn('plainClassFooDb', PlainMongoNote) == 0 }
     }
 
+    @Unroll
+    void '#write inside a tenant block writes #expected'() {
+        when:
+        Tenants.withId('foo') { action.call(this) }
+
+        then: 'counted without GORM'
+        documentsIn('plainClassDefaultDb', type) == (type == PlainMongoNote ? 1 : 0) + (expected == 'to the default database' ? 1 : 0)
+        documentsIn('plainClassFooDb', type) == (expected == 'to the tenant\'s database' ? 1 : 0)
+
+        where:
+        write                                                        | type            | expected                    | action
+        'a data service save of a plain class'                       | PlainMongoNote  | 'to the default database'   | { PlainClassInTenantBlockSpec spec -> spec.datastore.getService(PlainMongoNoteService).save(new PlainMongoNote(text: 'service')) }
+        'a save of a plain class in a @Transactional method'         | PlainMongoNote  | 'to the default database'   | { PlainClassInTenantBlockSpec spec -> new TransactionalNoteWriter().savePlain('transactional') }
+        'a save of a plain class in withTransaction'                 | PlainMongoNote  | 'to the default database'   | { PlainClassInTenantBlockSpec spec -> PlainMongoNote.withTransaction { new PlainMongoNote(text: 'block').save() } }
+        'a data service save of a multi-tenant class'                | TenantMongoNote | 'to the tenant\'s database' | { PlainClassInTenantBlockSpec spec -> spec.datastore.getService(TenantMongoNoteService).save(new TenantMongoNote(text: 'service')) }
+        'a save of a multi-tenant class in a @Transactional method'  | TenantMongoNote | 'to the tenant\'s database' | { PlainClassInTenantBlockSpec spec -> new TransactionalNoteWriter().saveTenant('transactional') }
+        'a save of a multi-tenant class in withTransaction'          | TenantMongoNote | 'to the tenant\'s database' | { PlainClassInTenantBlockSpec spec -> TenantMongoNote.withTransaction { new TenantMongoNote(text: 'block').save() } }
+    }
+
+    void 'a @Transactional method that saves a plain class inside a tenant block and then fails writes nothing'() {
+        when:
+        Tenants.withId('foo') { new TransactionalNoteWriter().savePlainAndFail('rolled back') }
+
+        then:
+        thrown(IllegalStateException)
+        documentsIn('plainClassDefaultDb', PlainMongoNote) == 1
+        documentsIn('plainClassFooDb', PlainMongoNote) == 0
+    }
+
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
         Datastore foo = datastore.getDatastoreForConnection('foo')
@@ -125,4 +155,31 @@ class TenantMongoNote implements MultiTenant<TenantMongoNote> {
 interface PlainMongoNoteService {
 
     Number count()
+
+    PlainMongoNote save(PlainMongoNote note)
+}
+
+@Service(TenantMongoNote)
+interface TenantMongoNoteService {
+
+    TenantMongoNote save(TenantMongoNote note)
+}
+
+class TransactionalNoteWriter {
+
+    @Transactional
+    void savePlain(String text) {
+        new PlainMongoNote(text: text).save()
+    }
+
+    @Transactional
+    void savePlainAndFail(String text) {
+        new PlainMongoNote(text: text).save()
+        throw new IllegalStateException('rolled back')
+    }
+
+    @Transactional
+    void saveTenant(String text) {
+        new TenantMongoNote(text: text).save()
+    }
 }

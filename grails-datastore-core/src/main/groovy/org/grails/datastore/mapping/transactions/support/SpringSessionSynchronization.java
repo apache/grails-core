@@ -74,7 +74,11 @@ public class SpringSessionSynchronization implements TransactionSynchronization 
     }
 
     public void beforeCommit(boolean readOnly) throws DataAccessException {
-        // do nothing
+        // A session opened for the transaction, rather than bound before it, is flushed with it: the transaction's own
+        // manager may belong to another datastore and would not flush it otherwise.
+        if (newSession && !readOnly) {
+            getCurrentSession().flush();
+        }
     }
 
     public void beforeCompletion() {

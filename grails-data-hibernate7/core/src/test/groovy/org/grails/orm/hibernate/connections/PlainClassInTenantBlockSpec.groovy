@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate.connections
 
+import groovy.sql.Sql
+
 import org.hibernate.dialect.H2Dialect
 import spock.lang.AutoCleanup
 import spock.lang.Specification
@@ -86,6 +88,20 @@ class PlainClassInTenantBlockSpec extends Specification {
         PlainHibernateNote.withNewTransaction { PlainHibernateNote.list()*.text.sort() } == ['saved', 'seed']
     }
 
+    @Unroll
+    void '#write of a plain class inside a tenant block writes to the default database'() {
+        when:
+        Tenants.withId('foo') { action.call(this) }
+
+        then:
+        PlainHibernateNote.withNewTransaction { PlainHibernateNote.list()*.text.sort() } == ['saved', 'seed']
+
+        where:
+        write                          | action
+        'a data service save'          | { PlainClassInTenantBlockSpec spec -> spec.datastore.getService(PlainHibernateNoteService).save(new PlainHibernateNote(text: 'saved')) }
+        'a save in its withTransaction' | { PlainClassInTenantBlockSpec spec -> PlainHibernateNote.withTransaction { new PlainHibernateNote(text: 'saved').save() } }
+    }
+
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
         Datastore foo = datastore.getDatastoreForConnection('foo')
@@ -95,7 +111,15 @@ class PlainClassInTenantBlockSpec extends Specification {
 
         then:
         Tenants.withId('foo') { TenantHibernateNote.withTransaction { TenantHibernateNote.count() } } == 1
+        rowsInDefaultDatabase('tenant_hibernate_note') == 0
         Tenants.withId('foo') { GormEnhancer.findDatastore(TenantHibernateNote) }.is(foo)
+    }
+
+    /**
+     * @return the rows of the table in the default database, read with JDBC, so that GORM's routing cannot decide it
+     */
+    long rowsInDefaultDatabase(String table) {
+        new Sql(datastore.dataSource).withCloseable { Sql sql -> sql.firstRow('select count(*) as c from ' + table).c as long }
     }
 }
 
@@ -115,4 +139,7 @@ class TenantHibernateNote implements MultiTenant<TenantHibernateNote> {
 interface PlainHibernateNoteService {
 
     Number count()
+
+    PlainHibernateNote save(PlainHibernateNote note)
 }
+

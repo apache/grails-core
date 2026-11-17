@@ -27,6 +27,7 @@ import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.Tenants
 import grails.gorm.services.Service
+import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
@@ -101,6 +102,22 @@ class PlainClassInTenantBlockSpec extends Specification {
         mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a @Transactional method that saves a plain class inside a tenant block and then fails writes nothing'() {
+        given:
+        startDatastore(mode)
+
+        when:
+        Tenants.withId('foo') { new TransactionalPlainNoteWriter().saveAndFail('rolled back') }
+
+        then:
+        thrown(IllegalStateException)
+        PlainNote.withTransaction { PlainNote.list()*.text } == ['seed']
+
+        where:
+        mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
+    }
+
     static final Map<String, Closure<Boolean>> OPERATIONS = [
             'count'                     : { PlainClassInTenantBlockSpec spec -> PlainNote.count() == 1 },
             'list'                      : { PlainClassInTenantBlockSpec spec -> PlainNote.list()*.text == ['seed'] },
@@ -109,6 +126,14 @@ class PlainClassInTenantBlockSpec extends Specification {
             'a data service'            : { PlainClassInTenantBlockSpec spec -> spec.datastore.getService(PlainNoteService).count() == 1 },
             'withSession'               : { PlainClassInTenantBlockSpec spec -> PlainNote.withSession { Session s -> s.datastore }.is(spec.datastore) },
             'GormEnhancer.findDatastore': { PlainClassInTenantBlockSpec spec -> GormEnhancer.findDatastore(PlainNote).is(spec.datastore) },
+            'a data service save'       : { PlainClassInTenantBlockSpec spec ->
+                PlainNote saved = spec.datastore.getService(PlainNoteService).save(new PlainNote(text: 'service'))
+                spec.holder(PlainNote, saved.id).is(spec.datastore)
+            },
+            'a @Transactional save'     : { PlainClassInTenantBlockSpec spec ->
+                PlainNote saved = new TransactionalPlainNoteWriter().save('transactional')
+                spec.holder(PlainNote, saved.id).is(spec.datastore)
+            },
             'save'                      : { PlainClassInTenantBlockSpec spec ->
                 PlainNote saved = PlainNote.withTransaction { new PlainNote(text: 'saved').save(flush: true) }
                 spec.holder(PlainNote, saved.id).is(spec.datastore)
@@ -139,4 +164,20 @@ class TenantNote implements MultiTenant<TenantNote> {
 interface PlainNoteService {
 
     Number count()
+
+    PlainNote save(PlainNote note)
+}
+
+class TransactionalPlainNoteWriter {
+
+    @Transactional
+    PlainNote save(String text) {
+        new PlainNote(text: text).save()
+    }
+
+    @Transactional
+    void saveAndFail(String text) {
+        new PlainNote(text: text).save()
+        throw new IllegalStateException('rolled back')
+    }
 }

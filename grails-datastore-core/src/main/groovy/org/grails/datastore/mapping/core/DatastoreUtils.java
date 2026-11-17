@@ -321,6 +321,17 @@ public abstract class DatastoreUtils {
     }
 
     /**
+     * Opens a session of a datastore that has none while a transaction is running, which is then a transaction of
+     * another datastore, and binds it for the rest of that transaction: the transaction flushes it before it commits
+     * and closes it when it completes. Without this, a save made through a datastore the transaction does
+     * not belong to, such as a class that is not multi-tenant saved inside a tenant block, ran in a session that was
+     * closed unflushed as soon as the call returned.
+     */
+    private static Session joinRunningTransaction(Datastore datastore) {
+        return doGetSession(datastore, true);
+    }
+
+    /**
      * Execute the callback in the current session if it exists, or create a new one and close it otherwise.
      * @param <T> the return type
      * @param datastore the datastore
@@ -329,6 +340,9 @@ public abstract class DatastoreUtils {
      */
     public static <T> T execute(final Datastore datastore, final SessionCallback<T> callback) {
         boolean existing = datastore.hasCurrentSession();
+        if (!existing && TransactionSynchronizationManager.isSynchronizationActive()) {
+            return callback.doInSession(joinRunningTransaction(datastore));
+        }
         Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             return callback.doInSession(session);
@@ -347,6 +361,10 @@ public abstract class DatastoreUtils {
      */
     public static void execute(final Datastore datastore, final VoidSessionCallback callback) {
         boolean existing = datastore.hasCurrentSession();
+        if (!existing && TransactionSynchronizationManager.isSynchronizationActive()) {
+            callback.doInSession(joinRunningTransaction(datastore));
+            return;
+        }
         Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             callback.doInSession(session);
