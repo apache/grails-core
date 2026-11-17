@@ -174,7 +174,7 @@ With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, 
 `ResponseEntity` it returns. See xref:theWebLayer#springFormatNegotiation[Resolving Formats with Spring MVC Content
 Negotiation].
 
-See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11, 13 to 16 and 22.
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11, 13 to 16 and 25.
 
 ==== Hibernate 7 Criteria Queries Can Be Extended
 
