@@ -646,7 +646,7 @@ class Neo4jQuery extends Query {
 
     private static Collection convertEnumsInList(Collection collection) {
         collection.collect {
-            it.getClass().isEnum() ? it.toString() : it
+            it != null && it.getClass().isEnum() ? it.toString() : it
         }
     }
 

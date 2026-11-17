@@ -25,7 +25,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.FetchType;
 import jakarta.persistence.FlushModeType;
@@ -740,11 +742,11 @@ public abstract class Query implements Cloneable, Serializable {
             throw unsupportedSubquery(criterion.getClass().getSimpleName());
         }
         if (criterion instanceof In in && in.getSubquery() != null) {
-            return new In(in.getProperty(), subqueryValues(in.getSubquery()));
+            return membership(in.getProperty(), subqueryValues(in.getSubquery()), negated);
         }
         if (criterion instanceof NotIn notIn) {
             Negation negation = new Negation();
-            negation.add(new In(notIn.getProperty(), subqueryValues(notIn.getSubquery())));
+            negation.add(membership(notIn.getProperty(), subqueryValues(notIn.getSubquery()), !negated));
             return negation;
         }
         if (criterion instanceof SubqueryCriterion) {
@@ -787,7 +789,8 @@ public abstract class Query implements Cloneable, Serializable {
                         property.getProperty() + "' returned " + rows.size() +
                         " rows, but a comparison needs exactly one value");
             }
-            Object value = rows.get(0);
+            // an entity is compared by its identifier, as it is when it is given as the value of the comparison
+            Object value = resolveIdIfEntity(rows.get(0));
             if (criterion instanceof Equals) {
                 return new Equals(property.getProperty(), value);
             }
@@ -808,9 +811,29 @@ public abstract class Query implements Cloneable, Serializable {
         return criterion;
     }
 
+    /**
+     * The test that a value is one of the values a subquery selected. A null among them is never equal to a value,
+     * as in SQL, so it adds no match, which a store that matches a missing value with a null in a list has to be
+     * told. It also makes the test unknown, not false, for every value that is not in the list, and so its negation
+     * as well: a criterion that matches every row stands for it inside an odd number of negations, so that the
+     * negation matches none.
+     */
+    private Criterion membership(String property, Collection<?> values, boolean negated) {
+        if (values.stream().noneMatch(Objects::isNull)) {
+            return new In(property, values);
+        }
+        if (!negated) {
+            return new In(property, values.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+        }
+        Negation every = new Negation();
+        every.add(new In(property, Collections.emptyList()));
+        return every;
+    }
+
     private Collection<?> subqueryValues(QueryableCriteria<?> subquery) {
         List<?> rows = subquery.list();
-        return rows == null ? Collections.emptyList() : rows;
+        // a store may return a list that loads its elements when it is first read: a copy has all of them
+        return rows == null ? Collections.emptyList() : new ArrayList<>(rows);
     }
 
     private InvalidDataAccessResourceUsageException unsupportedSubquery(String form) {
