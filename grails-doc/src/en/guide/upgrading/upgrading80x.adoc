@@ -4973,18 +4973,10 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
 
-==== 94. Cache Annotations Use `grailsCacheManager` When Another Cache Manager Is Defined
+==== 94. A Second Cache Manager No Longer Stops a Cached Application From Starting
 
-Grails 8.0.0 injected the cache manager the cache annotations use by type. An application context with a second `CacheManager` beside the plugin's `grailsCacheManager` therefore failed to start unless one of them was marked primary, and that is what happens when the Spring Security plugin's `cacheUsers` is set. Grails now chooses the cache manager this way:
+The cache annotations receive their cache manager by type. Grails 8.0.0 failed to start when the application context had a second `CacheManager` beside the plugin's `grailsCacheManager` and neither was marked primary, which is what happens when the Spring Security plugin's `cacheUsers` is set. Spring now uses `grailsCacheManager` there. Where one of them is marked primary, Spring uses that one, as before, and with caching turned off (`grails.cache.enabled: false`) nothing changes. This applies to classes compiled against Grails 8.0.0 too, so plugins need not be recompiled.
 
-* The bean named `grailsCacheManager` comes first.
-* Where there is none, as when `grails.cache.enabled` is `false`, it is the cache manager Spring would inject: the only one, or the one marked primary.
-* Where Spring cannot choose one, the class does not cache, and a warning gives Spring's reason. Grails 8.0.0 failed to start in that case.
+One case changes: a cache manager with a `@Priority`, not marked primary, beside `grailsCacheManager`. The annotations used it in 8.0.0, and now use `grailsCacheManager`. Mark it primary to keep caching with it.
 
-Where the cache manager has no cache of the name an annotation gives, as a `JCacheCacheManager` has none it was not configured with, the method now runs uncached, and a warning names the class and the cache once. Grails 8.0.0 failed with a `NullPointerException` on each call. This applies to classes compiled against this version.
-
-In an application that marked a cache manager of its own primary, or gave it a priority, next to `grailsCacheManager`, the cache annotations used that cache manager. They now use `grailsCacheManager`, and Grails logs once, at INFO level, that it passed the preferred one over. To keep caching with another cache manager, define it as the `grailsCacheManager` bean. It has to implement `GrailsCacheManager`, as the cache tags and the plugin's startup use it too.
-
-A cached class in a plugin compiled against Grails 8.0.0 keeps injecting its cache manager by type until the plugin is compiled against a later version. Until then, next to a second cache manager, such as the one `cacheUsers` defines, that class still fails to be created as it did with 8.0.0, unless one of the two is marked primary or has a priority.
-
-The other way round, a plugin with cached classes compiled against this version needs the cache plugin of this version at runtime too: with that of 8.0.0, Spring fails to create those classes as beans, as they call a method of the cache plugin that 8.0.0 does not have. Such a plugin declares `grailsVersion = '8.0.1 > *'`, so that Grails warns at startup when it runs on an earlier version.
+Where the cache manager has no cache of the name an annotation gives, as a `JCacheCacheManager` has none it was not configured with, the annotated method now runs uncached, and a warning names the class and the cache once. Grails 8.0.0 failed with a `NullPointerException` on each call. This applies to classes compiled against this version.

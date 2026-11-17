@@ -175,18 +175,6 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
-    void 'with caching disabled and several cache managers, none named grailsCacheManager, none is used'() {
-        given:
-        AnnotationConfigApplicationContext context = buildContext(['grails.cache.enabled': 'false'], null,
-                [cacheManager: new ConcurrentMapCacheManager(), otherCacheManager: new ConcurrentMapCacheManager()])
-
-        expect: 'the context still starts'
-        context.getBean(CacheAware).grailsCacheManager == null
-
-        cleanup:
-        context.close()
-    }
-
     void 'with caching disabled and several cache managers, the one marked primary is used, as Spring chose it before'() {
         given:
         CacheManager primary = new ConcurrentMapCacheManager()
@@ -200,14 +188,14 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
-    void 'the Grails cache manager is used over another cache manager marked primary'() {
+    void 'a cache manager marked primary beside the Grails one is still used, as in 8.0.0'() {
         given: 'an application\'s own cache manager, marked primary'
-        AnnotationConfigApplicationContext context = buildContext([:], null,
-                [cacheManager: new ConcurrentMapCacheManager()], 'cacheManager')
+        CacheManager primary = new ConcurrentMapCacheManager()
+        AnnotationConfigApplicationContext context = buildContext([:], null, [cacheManager: primary], 'cacheManager')
 
-        expect: 'the one the plugin creates its caches in, and its tag library uses'
-        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
-        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        expect: 'Spring chooses as it did; the name is only taken where it cannot'
+        context.getBean(CacheAware).grailsCacheManager.is(primary)
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(primary)
 
         cleanup:
         context.close()

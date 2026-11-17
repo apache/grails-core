@@ -575,6 +575,12 @@ Check plugin compatibility before treating a Grails 8 runtime failure as an appl
 - A plugin referencing the removed `grails.gorm.annotation.AutoTimestamp` can fail even if the application does not use that annotation. Upgrade the plugin or fix its optional annotation lookup; adding application mocks does not fix the class-linkage error. Plugins doing configuration work in `doWithSpring` must use the supplied `grailsApplication` and avoid prematurely instantiating Spring Security services during bean registration.
 - Check the Grails issue tracker and each plugin release notes before upgrading plugin-dependent applications.
 
+### Cache Plugin Beside Another Cache Manager
+
+- From Grails 8.0.1, a second `CacheManager` beside the cache plugin's `grailsCacheManager`, such as the one the Spring Security plugin defines with `cacheUsers`, no longer stops a cached application from starting: where neither is marked primary, Spring uses `grailsCacheManager`, also for classes compiled against 8.0.0. A primary cache manager is still used, and nothing changes with `grails.cache.enabled: false`.
+- A cache manager with a `@Priority`, not marked primary, beside `grailsCacheManager` was used by the cache annotations in 8.0.0 and no longer is. Mark it primary to keep caching with it.
+- A cache manager without a cache of an annotation's name, such as a `JCacheCacheManager` the cache was not configured in, made every call fail with a `NullPointerException`. Classes compiled against 8.0.1 run uncached there, with one warning naming the class and the cache.
+
 ### Custom CSRF / Synchronizer-Token Holders
 
 - Audit subclasses of `SynchronizerTokensHolder`: `withForm` now validates and consumes tokens through `isValidAndResetToken(url, token)`. Overriding only `resetToken` no longer preserves an application's reusable AJAX/session token. The characteristic failure is that the first AJAX POST succeeds, then later requests fail CSRF validation because the token URL has disappeared from the holder.
