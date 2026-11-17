@@ -72,10 +72,10 @@ class GrailsStartupProgressSpec extends ApplicationContextSpec implements Comman
         then: 'the property bootRun hands to the application is set in the project, where a developer can override it'
         gradleProperties.readLines().contains('grails.startup.progress.openBrowser=true')
 
-        and: 'the comment above it says how to turn it off without changing the application'
+        and: 'the comment above it says how to turn it off for everyone, and for one developer without changing the application'
         gradleProperties.contains('''\
-            # Opens a browser on the startup progress page under bootRun. To turn it off for yourself,
-            # set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false
+            # Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;
+            # for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false
             grails.startup.progress.openBrowser=true
             '''.stripIndent())
 

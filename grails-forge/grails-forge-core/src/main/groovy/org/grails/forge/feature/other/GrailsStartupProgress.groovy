@@ -65,8 +65,8 @@ class GrailsStartupProgress implements Feature {
                 .implementation())
         // bootRun hands every grails.startup.progress.* Gradle property to the application; the project's
         // gradle.properties ranks below ~/.gradle/gradle.properties and -P, so a developer can still say no
-        generatorContext.getBuildProperties().addComment(' Opens a browser on the startup progress page under bootRun. To turn it off for yourself,')
-        generatorContext.getBuildProperties().addComment(' set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -P' + OPEN_BROWSER + '=false')
+        generatorContext.getBuildProperties().addComment(' Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;')
+        generatorContext.getBuildProperties().addComment(' for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -P' + OPEN_BROWSER + '=false')
         generatorContext.getBuildProperties().put(OPEN_BROWSER, 'true')
     }
 
