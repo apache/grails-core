@@ -25,6 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.AllConnectionsTimestampNote
 import org.apache.grails.data.testing.tck.domains.DefaultConnectionTimestampNote
 import org.apache.grails.data.testing.tck.domains.SecondaryConnectionTimestampNote
+import org.apache.grails.data.testing.tck.domains.TimestampNoteConnectionService
 
 /**
  * Every connection has an auto-timestamp listener of its own, and a domain class answers with the listener of the
@@ -55,6 +56,21 @@ class AutoTimestampEventListenerMultiDataSourceSpec extends GrailsDataTckSpec {
         !defaultListener.is(secondaryListener)
         DefaultConnectionTimestampNote.autoTimestampEventListener.is(defaultListener)
         AllConnectionsTimestampNote.secondary.withTransaction { AllConnectionsTimestampNote.autoTimestampEventListener }.is(secondaryListener)
+    }
+
+    void 'a method transactional on a connection answers with that connection\'s listener'() {
+        given:
+        TimestampNoteConnectionService service = manager.getServiceForConnection(TimestampNoteConnectionService, 'secondary')
+        def secondaryListener = AllConnectionsTimestampNote.secondary.autoTimestampEventListener
+
+        when:
+        AllConnectionsTimestampNote note = service.saveWithoutTimestamps('transactional', PAST)
+
+        then:
+        service.listener().is(secondaryListener)
+        !service.listener().is(AllConnectionsTimestampNote.autoTimestampEventListener)
+        AllConnectionsTimestampNote.secondary.withNewTransaction { AllConnectionsTimestampNote.secondary.get(note.id).dateCreated } == PAST
+        AllConnectionsTimestampNote.secondary.withNewTransaction { AllConnectionsTimestampNote.secondary.get(note.id).lastUpdated } == PAST
     }
 
     void 'the listener of each domain class turns off the timestamps of its own saves'() {
