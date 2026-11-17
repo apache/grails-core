@@ -18,7 +18,9 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import grails.gorm.DetachedCriteria
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
@@ -31,7 +33,7 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  * performed transactions in the last 10 days OR have been recently created". An entity without the association is
  * therefore found by the other branch, and a branch that is an association block still asks for an associated
  * entity. MongoDB has no association blocks. Neo4j is skipped until its fix, #16836, is merged; that change removes
- * the skip.
+ * the skip. A join type given to a block is a Hibernate argument, so the rows that give one run on Hibernate only.
  */
 @IgnoreIf({ System.getProperty('mongodb.gorm.suite') == 'true' || System.getProperty('neo4j.gorm.suite') == 'true' })
 class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
@@ -42,12 +44,20 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         new TestEntity(name: 'orphan').save(flush: true)
     }
 
+    /** the rows an entry point returns for the same block: criteria, and a detached criteria built from it */
+    private static Map<String, List<String>> through(Class domain, String property, Closure body) {
+        [
+            criteria: domain.withCriteria(body).collect { it[property] }.sort(),
+            detached: new DetachedCriteria(domain).build(body).list().collect { it[property] }.sort()
+        ]
+    }
+
     void 'an association block in or keeps the entities without the association that another branch matches'() {
         given:
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 child { eq('name', 'kid') }
                 eq('name', 'orphan')
@@ -55,7 +65,9 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found*.name.sort() == ['orphan', 'with']
+        found.criteria == ['orphan', 'with']
+        and:
+        found.detached == ['orphan', 'with']
     }
 
     void 'an association block in or finds the entities with the association when no other branch matches'() {
@@ -63,7 +75,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 child { eq('name', 'kid') }
                 eq('name', 'nobody')
@@ -71,7 +83,9 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found*.name == ['with']
+        found.criteria == ['with']
+        and:
+        found.detached == ['with']
     }
 
     void 'a null test in an association block in or does not match the entities without the association'() {
@@ -79,7 +93,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 child { isNull('name') }
                 eq('name', 'nobody')
@@ -87,7 +101,9 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found.isEmpty()
+        found.criteria == []
+        and:
+        found.detached == []
     }
 
     void 'an empty association block in or still requires an associated entity'() {
@@ -95,7 +111,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 child {}
                 eq('name', 'orphan')
@@ -103,7 +119,9 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then: 'the block adds no branch, and the entity without an associated entity is left out, as it always was'
-        found.isEmpty()
+        found.criteria == []
+        and:
+        found.detached == []
     }
 
     void 'a block outside or that follows a block in or still requires an associated entity'() {
@@ -111,7 +129,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 child { eq('name', 'kid') }
                 eq('name', 'orphan')
@@ -120,7 +138,95 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found.isEmpty()
+        found.criteria == []
+        and:
+        found.detached == []
+    }
+
+    void 'a where query on an association property in an or keeps the entities without the association that another branch matches'() {
+        given:
+        createEntities()
+
+        when:
+        def found = TestEntity.where { child.name == 'kid' || name == 'orphan' }.list()*.name.sort()
+
+        then:
+        found == ['orphan', 'with']
+    }
+
+    @Requires({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    void 'an explicit inner join after an or keeps the inner join, and an entity without the association is left out'() {
+        given:
+        createEntities()
+
+        when:
+        def found = through(TestEntity, 'name') {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            child(0) {}
+        }
+
+        then:
+        found.criteria == ['with']
+        and:
+        found.detached == ['with']
+    }
+
+    @Requires({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    void 'an explicit inner join with a criterion after an or keeps the inner join'() {
+        given:
+        createEntities()
+
+        when:
+        def found = through(TestEntity, 'name') {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            child(0) { eq('name', 'kid') }
+        }
+
+        then:
+        found.criteria == ['with']
+        and:
+        found.detached == ['with']
+    }
+
+    @Requires({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    void 'an explicit left join after an or is kept as the caller named it'() {
+        given:
+        createEntities()
+
+        when:
+        def found = through(TestEntity, 'name') {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            child(1) { isNull('name') }
+        }
+
+        then: 'the left join is the caller\'s, and a null test in it matches the entity that has no associated entity; a detached criteria takes an alias there, not a join type, so only criteria is checked'
+        found.criteria == ['orphan']
+    }
+
+    @Requires({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    void 'an explicit inner join inside or is kept, and an entity without the association is left out of that branch'() {
+        given:
+        createEntities()
+
+        when:
+        def found = through(TestEntity, 'name') {
+            or {
+                child(0) { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+        }
+
+        then: 'a detached criteria takes an alias there, not a join type, so only criteria is checked'
+        found.criteria == ['with']
     }
 
     void 'a block nested in and inside or still requires an associated entity'() {
@@ -128,7 +234,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             or {
                 and {
                     child { isNull('name') }
@@ -138,7 +244,9 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found.isEmpty()
+        found.criteria == []
+        and:
+        found.detached == []
     }
 
     void 'an association block outside or still excludes the entities without the association'() {
@@ -146,12 +254,14 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         createEntities()
 
         when:
-        def found = TestEntity.withCriteria {
+        def found = through(TestEntity, 'name') {
             child { eq('name', 'kid') }
         }
 
         then:
-        found*.name == ['with']
+        found.criteria == ['with']
+        and:
+        found.detached == ['with']
     }
 
     void 'a to-many association block in or keeps the entities without any'() {
@@ -165,7 +275,7 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         other.save(flush: true)
 
         when:
-        def found = Person.withCriteria {
+        def found = through(Person, 'firstName') {
             or {
                 pets { eq('name', 'rex') }
                 eq('firstName', 'Barney')
@@ -173,6 +283,8 @@ class CriteriaOrAssociationBlockSpec extends GrailsDataTckSpec {
         }
 
         then:
-        found*.firstName.sort() == ['Barney', 'Fred']
+        found.criteria == ['Barney', 'Fred']
+        and:
+        found.detached == ['Barney', 'Fred']
     }
 }
