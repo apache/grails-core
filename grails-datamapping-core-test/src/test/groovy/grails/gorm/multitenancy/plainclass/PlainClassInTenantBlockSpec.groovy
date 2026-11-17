@@ -119,6 +119,21 @@ class PlainClassInTenantBlockSpec extends Specification {
     }
 
     @Unroll
+    void 'with #mode multi-tenancy, a plain class saved in a @Transactional method inside a tenant block survives a new transaction before the commit'() {
+        given:
+        startDatastore(mode)
+
+        when: 'the method starts a new transaction while the save is still pending'
+        Tenants.withId('foo') { new TransactionalPlainNoteWriter().saveThenNewTransaction('kept') }
+
+        then:
+        PlainNote.withTransaction { PlainNote.list()*.text } == ['seed', 'kept']
+
+        where:
+        mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
+    }
+
+    @Unroll
     void 'with #mode multi-tenancy, a plain class flushed in a @Transactional method inside a tenant block stays when the method then fails'() {
         given:
         startDatastore(mode)
@@ -195,6 +210,12 @@ class TransactionalPlainNoteWriter {
     void saveAndFail(String text) {
         new PlainNote(text: text).save()
         throw new IllegalStateException('rolled back')
+    }
+
+    @Transactional
+    void saveThenNewTransaction(String text) {
+        new PlainNote(text: text).save()
+        TenantNote.withNewTransaction { new TenantNote(text: 'inner').save() }
     }
 
     @Transactional
