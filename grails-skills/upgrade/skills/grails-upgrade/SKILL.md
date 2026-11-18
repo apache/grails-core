@@ -64,6 +64,35 @@ Check the compiler output for two warnings:
 
 The guide gives no setting that restores the previous behavior. Use typed properties, `bindable: true`, and explicit `include` lists.
 
+The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins.
+
+- New setting: `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, a list of origins. An origin is the scheme, host and port of a URL. When the setting is missing, every `callback` URL is ignored.
+- The plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin is listed in the setting and the URL has a path, a query or a fragment after the host. For any other `callback` URL it redirects to the `frontendCallbackUrl`, as it does without the parameter.
+- The URL is checked when the login starts and again when it completes. A new login drops the `callback` URL of an earlier login that was not completed.
+- Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+Search frontend code and API clients for requests to `/oauth/authenticate/` that pass a `callback` parameter. If the application uses the parameter, list the origins of its frontend:
+
+```groovy
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+```
+
+Encrypted JWTs of the Spring Security REST plugin are signed.
+
+As of 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key. It accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+Search the configuration for `useEncryptedJwt`. If it is enabled, check each point:
+
+- Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+- An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. Search for `RSAKeyProvider` implementations and confirm that each provides the private key and the public key.
+- The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated.
+- Use the key pair for these tokens only. The plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+- Search for `JwtService.parse`, `accessTokenJwt` and `com.nimbusds.jwt.EncryptedJWT`. For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+- With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+- An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+The guide gives no setting that restores encrypted JWTs without a signature.
+
 ### 7.0.11
 
 Generated `application.yml` files no longer contain several properties.
@@ -117,6 +146,7 @@ Enum JSON and XML serialization can use a simple format.
 
 - New settings: `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`. Set them to `simple` to opt in. The default remains the legacy format.
 - The legacy marshallers `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` are deprecated for removal since 7.0.2. Search the application for references to them.
+- Deprecation timeline: in 7.0.2 the legacy `EnumMarshaller` is deprecated and remains the default, and `SimpleEnumMarshaller` is available through the settings. In Grails 8.0 `SimpleEnumMarshaller` becomes the default and the legacy `EnumMarshaller` classes are removed. Clients that read the legacy structure have to change before an upgrade to Grails 8.0.
 
 Legacy output, still the default:
 
@@ -803,4 +833,5 @@ Run verification through public application behavior, not only compilation.
 - With multi-tenancy, exercise code that runs without a tenant, lookups by id across tenants, and the tenant resolver in development.
 - Exercise binding of command objects, nested `Validateable` objects and entities compiled outside `grails-app/domain`, with both allowed and protected properties.
 - Run the functional tests with a container runtime available when they extend `ContainerGebSpec`.
+- With the Spring Security REST plugin, exercise an OAuth login that passes a `callback` parameter, and with encrypted JWTs a login, a token refresh and a request with a token issued before the upgrade, which must be rejected.
 - With Micronaut, confirm that the build applies `grails-micronaut-bom` as `enforcedPlatform` and that `java -jar` starts the packaged application.
