@@ -582,6 +582,18 @@ class ProjectCommandsSpec extends Specification {
         commandArguments() == ['url-mappings-report'] + arguments
     }
 
+    void 'the file that passes the arguments, which can hold a password, is readable by its owner only, and removed after the command'() {
+        given:
+        writeManifest(URL_MAPPINGS_REPORT)
+
+        when:
+        ForgeCli.execute(context, ['url-mappings-report', 'secret'] as String[])
+
+        then:
+        gradleInvocations().last().contains('argsFileMode:-rw-------')
+        !new File(argumentsFile()).exists()
+    }
+
     void '-D sets a system property of the command, passed among its arguments as runCommand reads it, not on the command line of Gradle'() {
         given:
         writeManifest(SECURITY_QUICKSTART, URL_MAPPINGS_REPORT)
@@ -1015,7 +1027,9 @@ class ProjectCommandsSpec extends Specification {
             for argument in "$@"; do [ "$previous" = '-p' ] && project=$argument; previous=$argument; done
             { for argument in "$@"; do
                 printf '%s\\n' "$argument"
-                case "$argument" in -PargsFile=*) printf 'argsFile:%s\\n' "$(cat "${argument#-PargsFile=}")";; esac
+                case "$argument" in -PargsFile=*)
+                  printf 'argsFile:%s\\n' "$(cat "${argument#-PargsFile=}")"
+                  printf 'argsFileMode:%s\\n' "$(ls -l "${argument#-PargsFile=}" | cut -c1-10)";; esac
               done; echo '--'; } >> "$dir/gradle-invocations.txt"
             case " $* " in
               *" generateCommandManifest "*)

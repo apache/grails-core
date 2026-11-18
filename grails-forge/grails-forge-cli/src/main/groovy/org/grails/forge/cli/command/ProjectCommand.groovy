@@ -18,6 +18,9 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.Callable
 
 import groovy.json.JsonOutput
@@ -92,13 +95,14 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
     Integer call() throws Exception {
         List<String> commandArguments = [name]
         commandArguments.addAll(givenArguments())
-        File argumentsFile = File.createTempFile('grails-command-arguments', '.json')
+        // only its owner can read it, where the file system allows that, since the arguments can hold a password
+        Path argumentsFile = Files.createTempFile('grails-command-arguments', '.json')
         try {
-            argumentsFile.setText(JsonOutput.toJson(commandArguments), 'UTF-8')
-            return gradle.run([RUN_COMMAND_TASK, "-P${ARGS_FILE_PROPERTY}=${argumentsFile.absolutePath}".toString()])
+            Files.writeString(argumentsFile, JsonOutput.toJson(commandArguments), StandardCharsets.UTF_8)
+            return gradle.run([RUN_COMMAND_TASK, "-P${ARGS_FILE_PROPERTY}=${argumentsFile.toAbsolutePath()}".toString()])
         }
         finally {
-            argumentsFile.delete()
+            Files.deleteIfExists(argumentsFile)
         }
     }
 
