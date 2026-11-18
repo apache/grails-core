@@ -1649,6 +1649,12 @@ public class GrailsDomainBinder implements MetadataContributor {
         boolean tablePerSubclass = m != null && !isTablePerHierarchy(parent.getMappedClass(), m) && !m.isTablePerConcreteClass();
         boolean tablePerConcreteClass = m != null && m.isTablePerConcreteClass();
         final String fullName = sub.getName();
+        // A formula property is derived whatever the strategy: a joined or union subclass would otherwise bind it as a
+        // column of its own table, which holds no value for it.
+        Mapping subMapping = getMapping(sub);
+        if (subMapping != null) {
+            configureDerivedProperties(sub, subMapping);
+        }
         if (tablePerSubclass) {
             subClass = new JoinedSubclass(parent, this.metadataBuildingContext);
         }
@@ -1660,14 +1666,9 @@ public class GrailsDomainBinder implements MetadataContributor {
             // set the descriminator value as the name of the class. This is the
             // value used by Hibernate to decide what the type of the class is
             // to perform polymorphic queries
-            Mapping subMapping = getMapping(sub);
             DiscriminatorConfig discriminatorConfig = subMapping != null ? subMapping.getDiscriminator() : null;
 
             subClass.setDiscriminatorValue(discriminatorConfig != null && discriminatorConfig.getValue() != null ? discriminatorConfig.getValue() : fullName);
-
-            if (subMapping != null) {
-                configureDerivedProperties(sub, subMapping);
-            }
         }
         Integer bs = (m == null) ? null : m.getBatchSize();
         if (bs != null) {

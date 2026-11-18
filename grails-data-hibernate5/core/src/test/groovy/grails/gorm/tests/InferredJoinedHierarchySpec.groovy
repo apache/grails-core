@@ -30,7 +30,8 @@ import spock.lang.Issue
 class InferredJoinedHierarchySpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
-        manager.registerDomainClasses(InferredRoot, InferredJoinedChild, InferredPlainChild, InferredGrandChild)
+        manager.registerDomainClasses(InferredRoot, InferredJoinedChild, InferredPlainChild, InferredGrandChild,
+                InferredFormulaRoot, InferredFormulaChild, UnionFormulaRoot, UnionFormulaChild)
     }
 
     void "a subclass of an unconfigured child follows the joined strategy inferred for the abstract base class"() {
@@ -49,6 +50,24 @@ class InferredJoinedHierarchySpec extends HibernateGormDatastoreSpec {
         def current = manager.hibernateDatastore.sessionFactory.currentSession
         (current.createNativeQuery("select count(*) from information_schema.columns where upper(table_name) = 'INFERRED_ROOT' and upper(column_name) = 'CLASS'").uniqueResult() as int) == 0
         (current.createNativeQuery("select count(*) from information_schema.tables where upper(table_name) = 'INFERRED_GRAND_CHILD'").uniqueResult() as int) == 1
+    }
+
+    void "a formula property of a joined subclass is computed and not stored as a column"() {
+        given:
+        new InferredFormulaChild(amount: 7).save(flush: true, failOnError: true)
+        session.clear()
+
+        expect: 'the value read is the formula of the amount, which no column holds'
+        InferredFormulaChild.list()*.doubled == [14]
+    }
+
+    void "a formula property of a union subclass is computed and not stored as a column"() {
+        given:
+        new UnionFormulaChild(amount: 7).save(flush: true, failOnError: true)
+        session.clear()
+
+        expect:
+        UnionFormulaChild.list()*.doubled == [14]
     }
 }
 
@@ -74,4 +93,39 @@ class InferredPlainChild extends InferredRoot {
 @Entity
 class InferredGrandChild extends InferredPlainChild {
     String grandValue
+}
+
+@Entity
+abstract class InferredFormulaRoot {
+    Long id
+}
+
+@Entity
+class InferredFormulaChild extends InferredFormulaRoot {
+    Integer amount
+    Integer doubled
+
+    static mapping = {
+        tablePerHierarchy false
+        doubled formula: 'amount * 2'
+    }
+}
+
+@Entity
+abstract class UnionFormulaRoot {
+    Long id
+
+    static mapping = {
+        tablePerConcreteClass true
+    }
+}
+
+@Entity
+class UnionFormulaChild extends UnionFormulaRoot {
+    Integer amount
+    Integer doubled
+
+    static mapping = {
+        doubled formula: 'amount * 2'
+    }
 }
