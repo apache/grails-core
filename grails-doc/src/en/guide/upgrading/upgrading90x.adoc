@@ -24,16 +24,21 @@ This guide outlines the changes introduced in Grails 9 and the steps required to
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-9-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 9 release.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM does not manage it:
+While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM manages the upgrade skill of Grails 8:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:{version}'
 ----
 ====
+
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-9-0-0-M1]]
+=== Grails 9.0.0-M1
 
 ==== 1. Groovy 6
 

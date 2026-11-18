@@ -27,7 +27,7 @@ version = projectVersion
 group = 'org.apache.grails.skills'
 
 ext {
-    pomArtifactId = 'grails-9-upgrade'
-    pomTitle = 'Apache Grails® 9 Upgrade Agent Skill'
-    pomDescription = 'Agent Skill that guides AI coding agents upgrading Apache Grails® applications from Grails 8.x to Grails 9.'
+    pomArtifactId = 'grails-upgrade'
+    pomTitle = 'Apache Grails® Upgrade Agent Skill'
+    pomDescription = 'Agent Skill that guides AI coding agents upgrading Apache Grails® applications to this release, from the previous major version and from earlier releases of the same one.'
 }
