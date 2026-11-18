@@ -99,6 +99,7 @@ references:
   - purl: pkg:maven/org.apache.grails.i18n/grails-i18n
   - purl: pkg:maven/org.apache.grails.skills/grails-8-upgrade
   - purl: pkg:maven/org.apache.grails.skills/grails-developer
+  - purl: pkg:maven/org.apache.grails.skills/grails-upgrade
   - purl: pkg:maven/org.apache.grails.views/grails-gsp-core
   - purl: pkg:maven/org.apache.grails.views/grails-views-core
   - purl: pkg:maven/org.apache.grails.views/grails-views-gson
