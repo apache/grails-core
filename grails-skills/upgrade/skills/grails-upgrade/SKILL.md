@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: Guide for upgrading Grails applications to and within Grails 7, from Grails 6 and between Grails 7.x releases, covering Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, and multi-tenancy behavior changes
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
 license: Apache-2.0
 ---
 
@@ -13,7 +13,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 ## What I Do
 
 - Guide upgrades of Grails applications from Grails 6 to Grails 7.
-- Guide upgrades between releases of the Grails 7 line, with one section per release that changed something an application can notice.
+- Guide upgrades between releases of the Grails 7 line, with one part per release that changed something an application can notice.
 - Turn the "Upgrading from Grails 6 to Grails 7" chapter of the Grails user guide into ordered steps for an agent working in an application's source tree.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
@@ -28,137 +28,21 @@ Activate this skill when:
 
 ## Which Parts Apply
 
+The base version of this skill is Grails 6. After this section the skill has one part per release, in ascending order, each under a heading such as "Grails 7.0.0", and a last part, "After the Upgrade". A change sits in the part of the first release that carried it, as in the upgrade guide. A change that adds a configuration setting names the setting and its default.
+
 1. Read the application's current Grails version from `grailsVersion` in `gradle.properties`.
-2. Establish the target Grails 7 version.
-3. If the current version is Grails 6, apply "Upgrading from Grails 6 to Grails 7", then every release section of "Changes Within Grails 7 Releases" up to and including the target version.
-4. If the current version is already Grails 7, apply every release section of "Changes Within Grails 7 Releases" that is newer than the current version, up to and including the target version.
-5. Finish with the "Verification Checklist".
+2. Establish the target version. This skill covers targets up to Grails 7.0.18.
+3. Apply the part of every release after the application's current version, up to and including the target version, in ascending order.
+4. An application on Grails 6 starts at "Grails 7.0.0" and applies every part from there up to and including the target version. An application on Grails 5 or earlier first upgrades to the last Grails 6 release.
+5. Finish with "After the Upgrade".
+
+These releases have no upgrade notes and therefore no part: 7.0.1, 7.0.3, 7.0.4, 7.0.5, 7.0.7, 7.0.8, 7.0.9, 7.0.10, 7.0.12 and 7.0.15.
+
+If an application that is already on Grails 7 shows a behavior described under "Grails 7.0.0", treat that part as applying to it too.
 
 The upgrade guide chapter of the target version is the source of truth. Where this skill writes `<groovyVersion>` or `<gradleVersion>`, take the value from that chapter.
 
-## Changes Within Grails 7 Releases
-
-An entry is listed under the release that first carried the change. A change that adds a configuration setting names the setting and its default. A release without a section here has no change attributed to it by the upgrade guide.
-
-The guide does not name a release for every change made after 7.0.0. It attributes the BOM property renames only to "later versions" of Grails 7; they are described under "Grails BOM" below. If an application that is already on Grails 7 shows a behavior described under "Upgrading from Grails 6 to Grails 7", treat that section as applying to it too.
-
-### 7.0.18
-
-Data binding white lists apply wherever a class is compiled.
-
-Grails generates a list of bindable properties for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields. As of 7.0.18 the list is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
-
-Search the application, its plugins and its shared modules for:
-
-- Command objects compiled apart from the controller that binds them (in a plugin or a shared module), `Validateable` objects bound as a nested property, and command objects declared inside another class. They are now bound by their `bindable` constraints and their `transients`. Their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
-- GORM entities compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module. They now get the list a domain class in `grails-app/domain` gets and are bound by the same rules. `bindData` no longer binds their `id`, `version`, `dateCreated` and `lastUpdated`. Previously such a class was bound without restriction, its `id` and `version` included.
-- `bindData` calls with an `exclude` list and no `include` list, including the `bindData(target, source, List excludes)` overloads. The generated list now stays in effect and the excluded properties are removed from it. Previously the generated list was set aside, so that only the excluded properties were kept out. An empty `include` list still binds every property that is not excluded.
-- Binding into a lazily loaded association, as `book.properties = params` binds nested `author` parameters into the book's author. The data is now bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
-- Properties of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object. They are never bound from request data, whatever a generated list names.
-- Classes that get the list and implement `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache. The list is carried as a new `public static final` field, so the class gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
-
-Check the compiler output for two warnings:
-
-- A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the list of the subclass is derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 7.0.18 or later.
-- A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
-
-The guide gives no setting that restores the previous behavior. Use typed properties, `bindable: true`, and explicit `include` lists.
-
-### 7.0.11
-
-Generated `application.yml` files no longer contain several properties.
-
-From 7.0.11 onwards, `grails-shell-cli`, `grails-forge-cli` and the Grails Forge website (https://start.grails.org) leave these properties out of a generated `application.yml`:
-
-```yaml
-grails:
-  controllers:
-    defaultScope: singleton # already framework default
-  converters:
-    encoding: UTF-8 # already framework default
-  mime:
-    disable:
-      accept:
-        header:
-          userAgents: # already framework default
-            - Gecko
-            - WebKit
-            - Presto
-            - Trident
-  urlmapping:
-    cache:
-      maxsize: 1000 # Attention! framework default: 5000
-  views:
-    default:
-      codec: html # redundant because GSP expressions already default to html encoding
-    gsp:
-      codecs:
-        expression: html # already framework default
-        taglib: none # already framework default
-        staticparts: none # already framework default
-```
-
-- An existing application is not changed by this. The entries matter when comparing the application with a freshly generated one.
-- Most entries restate framework defaults. Removing them does not change behavior.
-- `grails.urlmapping.cache.maxsize` is the exception. Older generated applications set it to `1000`; the framework default is `5000`. Keep the property to keep the older cache size.
-- Search `application.yml` for these keys. Keep any that the application sets to a custom value.
-
-### 7.0.4
-
-BOM version properties restored.
-
-- The initial 7.0.0 release did not populate the version properties of the Grails BOM correctly. The 7.0.4 release restored them, with inconsistent and duplicated names.
-- Later Grails 7 versions renamed and consolidated the properties. The guide does not say which release. Apply the renames listed under "Grails BOM" when the target version uses the new names.
-- Search `gradle.properties` and the build files for properties ending in `.version` that override a BOM version, and check each name against the BOM reference of the target version.
-
-### 7.0.2
-
-Enum JSON and XML serialization can use a simple format.
-
-- New settings: `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`. Set them to `simple` to opt in. The default remains the legacy format.
-- The legacy marshallers `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` are deprecated for removal since 7.0.2. Search the application for references to them.
-
-Legacy output, still the default:
-
-```json
-{
-  "stage": {
-    "enumType": "com.example.ChallengeStage",
-    "name": "SUBMIT"
-  }
-}
-```
-
-```xml
-<stage enumType="com.example.ChallengeStage">SUBMIT</stage>
-```
-
-Simple output, produced by `SimpleEnumMarshaller`:
-
-```json
-{
-  "stage": "SUBMIT"
-}
-```
-
-```xml
-<stage>SUBMIT</stage>
-```
-
-The legacy format is asymmetric: a client posts `"stage":"SUBMIT"` and receives the object structure. The simple format returns what was posted. To opt in:
-
-```yaml
-grails:
-  converters:
-    json:
-      enum:
-        format: simple
-    xml:
-      enum:
-        format: simple
-```
-
-Leave the settings out to keep the previous output. Check API clients and tests that read enum values before opting in.
+# Grails 7.0.0
 
 ## Upgrading from Grails 6 to Grails 7
 
@@ -223,63 +107,8 @@ dependencies {
 
 - Override a BOM version by setting the associated Gradle property. The properties are listed in the "Grails BOM" reference of the target version's documentation. Variant BOMs exist for Hibernate 5 and for Micronaut, each with its own reference page.
 - The Spring Dependency Management plugin is still used by default. It can be disabled with the `springDependencyManagement` property of the `grails` extension.
-- All published Grails projects keep separate properties, so their versions can be overridden individually.
 
-BOM property names changed during the Grails 7 line (see the 7.0.4 release section). When the application overrides BOM versions, search `gradle.properties` and the build files for the old names below.
-
-Dotted duplicates of third-party properties were removed. Only the hyphenated form is kept:
-
-| Removed | Kept |
-|---------|------|
-| `asset.pipeline.gradle.version` | `asset-pipeline-gradle.version` |
-| `byte.buddy.version` | `byte-buddy.version` |
-| `commons.text.version` | `commons-text.version` |
-| `directory.watcher.version` | `directory-watcher.version` |
-| `grails.publish.version` | `grails-publish-plugin.version` |
-| `javaparser.core.version` | `javaparser-core.version` |
-| `bootstrap.icons.version` | `bootstrap-icons.version` |
-| `commons.codec.version` | `commons-codec.version` |
-| `geb.spock.version` | `geb-spock.version` |
-| `asset.pipeline.bom.version` | `asset-pipeline-bom.version` |
-
-The guide also lists these pairs as duplicates with slightly different names and equal values: `spock.version` / `spock.bom.version`, `jackson.version` / `jackson.bom.version`, `groovy.version` / `groovy.bom.version`, `selenium.version` / `selenium.bom.version`. All dotted variants were removed. Check the BOM reference for the name that remains.
-
-Grails-specific properties use hyphens instead of dots. For example, `grails.async.version` became `grails-async.version` and `grails.data.hibernate5.version` became `grails-data-hibernate5.version`.
-
-Profile properties gained the `grails-profile` prefix:
-
-| Old property | New property |
-|--------------|--------------|
-| `base.version` | `grails-profile-base.version` |
-| `plugin.version` | `grails-profile-plugin.version` |
-| `profile.version` | `grails-profile-profile.version` |
-| `rest.api.version` | `grails-profile-rest-api.version` |
-| `rest.api.plugin.version` | `grails-profile-rest-api-plugin.version` |
-| `web.version` | `grails-profile-web.version` |
-| `web.plugin.version` | `grails-profile-web-plugin.version` |
-
-Groups of related properties were consolidated or renamed:
-
-| Old properties | Property to use |
-|----------------|-----------------|
-| `liquibase.version`, `liquibase.cdi.version`, `liquibase.core.version`, `liquibase5.hibernate.version`, `liquibase.hibernate5.version` | `liquibase-hibernate5.version` |
-| `bson.version`, `mongodb.driver.core.version`, `mongodb.driver.sync.version`, `bson.record.codec.version` | `mongodb.version` |
-| `spring.boot.starter.sitemesh.version` | `starter-sitemesh.version` |
-| `ant.junit.version` | `ant.version` |
-| `spring.boot.cli.version`, `spring.boot.gradle.plugin.version`, `spring.boot.dependencies.version` | `spring-boot.version` |
-| `asciidoctor.gradle.jvm.version` | `asciidoctor-gradle-jvm.version` |
-
-The `spring-boot-dependencies` BOM import now uses `${spring-boot.version}`. Other imported BOMs also use a single property name each.
-
-The RxJava property values were wrong and are fixed:
-
-| Property | Group | Was | Is |
-|----------|-------|-----|----|
-| `rxjava.version` | `io.reactivex` (RxJava 1.x) | 3.1.11 | 1.3.8 |
-| `rxjava2.version` | `io.reactivex.rxjava2` (RxJava 2.x) | 3.1.11 | 2.2.21 |
-| `rxjava3.version` | `io.reactivex.rxjava3` (RxJava 3.x) | 3.1.11 | 3.1.11 |
-
-The rework also removed properties of non-published projects and fixed invalid versions for properties used by asciidoctor.
+BOM property names changed during the Grails 7 line. See "Grails 7.0.6".
 
 ### 5. Coordinate changes
 
@@ -383,7 +212,7 @@ Reproducible builds: Grails applications can now be built reproducibly.
 Generate a new Grails 7 application with https://start.grails.org/ and compare it with the application. Apply the differences to the Gradle files and the configuration.
 
 - Several Gradle configurations that were previously required are now defaults of the Grails Gradle plugins. Remove them from the application where the generated application does not have them.
-- Generated configuration files changed during the Grails 7 line. See the 7.0.11 release section before removing properties from `application.yml`.
+- Generated configuration files changed during the Grails 7 line. See "Grails 7.0.11" before removing properties from `application.yml`.
 - The generated `Bootstrap` class no longer includes `servletContext`. If `init` needs it, inject it:
 
 ```groovy
@@ -483,16 +312,6 @@ dependencies {
 
 - Only Micronaut 4.9.2 or higher is supported.
 - Remove the `micronautPlatformVersion` Gradle property. `grails-micronaut-bom` pins the Micronaut platform version.
-- The Grails Gradle Plugin fails at configuration time if `grails-micronaut` is detected and `grails-micronaut-bom` is not applied as `enforcedPlatform`. The reason: the Micronaut platform manages its own versions of libraries such as `javaparser-core`, and without an enforced BOM Gradle's highest-version-wins resolution lets them override `grails-bom` versions, which leads to binary incompatibilities at runtime.
-- Do not apply `enforcedPlatform` to a project without Micronaut. It would force `grails-bom` versions over Spring's managed defaults.
-- The Micronaut auto-setup, which performs this validation and other Micronaut-specific configuration, is on by default. It can be disabled when a project deliberately deviates from the recommended setup. This is not recommended:
-
-```groovy
-grails {
-    micronautAutoSetup = false // not recommended
-}
-```
-
 - Groovy classes annotated with `@Singleton`, `@Factory`, `@ConfigurationProperties` and similar are processed automatically. The Grails Gradle Plugin configures `micronaut-inject-groovy` on `compileOnlyApi`.
 - Search for Java source files with Micronaut annotations such as `@Singleton` or `@Factory`. For those, add the annotation processor by hand. It is not configured automatically because it is incompatible with Groovy incremental compilation. For projects that mix Java and Groovy Micronaut beans, consider separate source sets or modules:
 
@@ -506,6 +325,8 @@ dependencies {
 
 - The Grails Gradle Plugin sets the `bootJar` and `bootWar` tasks to the `CLASSIC` loader implementation when `grails-micronaut` is detected. `java -jar` execution needs it. Remove an explicit `loaderImplementation` setting from `build.gradle`.
 - Spring Boot DevTools does not work with the Micronaut integration (https://github.com/micronaut-projects/micronaut-spring/issues/769).
+
+As of Grails 7.0.11 the build fails when `grails-micronaut-bom` is not applied as `enforcedPlatform`. See "Grails 7.0.11".
 
 ### 12. Hibernate, Ehcache and H2
 
@@ -619,7 +440,7 @@ Rules of the new output:
 
 Search the application for domain classes, command objects and JSON views that render these types, and for tests and API clients that read them. Clients that parsed epoch milliseconds or object structures must parse the ISO-8601 string, for example with `Instant.parse()`, `LocalDate.parse()`, `LocalDateTime.parse()`, `OffsetDateTime.parse()` or `ZonedDateTime.parse()`.
 
-Enum rendering in JSON and XML has an opt-in simple format. See the 7.0.2 release section.
+Enum rendering in JSON and XML has an opt-in simple format. See "Grails 7.0.2".
 
 ### 16. GORM for MongoDB
 
@@ -635,65 +456,208 @@ db.Example.updateMany(
 );
 ```
 
-`Map` criterion values that contain `$` keys are rejected. `findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression, not as a value.
+### 17. Functional tests with Geb
 
-- Maps without such keys are still sent as literal subdocument comparisons. Exact matches on `Map` properties, dotted paths and array elements are unchanged. Geospatial criteria are exempt.
-- Search for code that passes an operator document through a criteria value on purpose. Change it to the native `find(Bson)` API.
+The Grails Geb plugin now provides test fixtures for containerized browser testing. This is the recommended way to write functional tests in Grails 7, and it requires a container runtime.
 
-### 17. Interceptor URI matching
+- To adopt it, extend `ContainerGebSpec` instead of `GebSpec`. A container with a browser that can reach the application under test is started automatically when the integration tests run. It is provided by Testcontainers. No further configuration is needed.
+- Supported container runtimes include Docker Desktop, OrbStack (macOS only), Rancher Desktop, Podman Desktop, and Colima (macOS and Linux).
+- The previous method with WebDriver binaries remains supported for backward compatibility. Matching driver and browser versions can be difficult.
 
-Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the path that URL mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed, and the context path is stripped before the pattern is applied. Previously the raw request URI was matched, so an encoded (`/%61dmin/users`) or matrix-parameter (`/admin;x=1/users`) request could reach a controller without triggering an interceptor declared for `/admin/**`. Interceptors matched by controller, action or namespace are unaffected.
+Also update tests for the changes listed in other steps: `DataTest#dataStore` is now `DataTest#datastore`, test dependencies are no longer on the production classpath, `Test` tasks have no default JVM arguments, and H2 is stricter about reserved keywords.
 
-Search the interceptors for `uri:` and review each match for these changes:
+# Grails 7.0.2
 
-- An interceptor that combines `match(uri:)` with an exclusion (`excludes(uri:)`, `excludes(controller:)`, `excludes(action:)` or a closure) now runs under a non-root context path such as `server.servlet.context-path=/app`. Earlier, that shape never matched there, because the exclusion check required the pattern to match both the context-prefixed and the context-relative request URI, which a pattern such as `/api/**` cannot do. `matchAll()` with exclusions, `match(controller:)` and other name-based matchers, `match(uri:)` without an exclusion, and patterns that match both forms such as `/**` were not affected. Expect such an interceptor to start executing.
-- Patterns are matched against the path within the application only. `match(uri: '/*/*')` no longer matches `/app/save` under the context path `/app`. Patterns that begin with the context path, such as `match(uri: '/app/admin/**')`, are still accepted for backwards compatibility.
-- During a `<g:include>` or a `RequestDispatcher` include, `uri` matchers see the included path, not the URI of the outer request. This is consistent with `match(controller:)` matchers, which already matched the included controller.
-- Custom `grails.interceptors.Matcher` implementations receive the canonical path. The `uri` argument of `doesMatch` is the decoded, application-relative path without matrix parameters.
+## Enum JSON and XML serialization
 
-The Spring Security plugin applies the same canonicalization when it matches `ipRestrictions` patterns. An encoded or matrix-parameter variant of a restricted path is subject to the same restriction as the plain path.
+Enum JSON and XML serialization can use a simple format.
 
-Details of the canonical form:
+- New settings: `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`. Set them to `simple` to opt in. The default remains the legacy format.
+- The legacy marshallers `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` are deprecated for removal since 7.0.2. Search the application for references to them.
+- Deprecation timeline: in 7.0.2 the legacy `EnumMarshaller` is deprecated and remains the default, and `SimpleEnumMarshaller` is available through the settings. In Grails 8.0 `SimpleEnumMarshaller` becomes the default and the legacy `EnumMarshaller` classes are removed. Clients that read the legacy structure have to change before an upgrade to Grails 8.0.
 
-- Path parameters are removed from each segment before percent-decoding, so an encoded semicolon (`%3B`) is a literal character and not a parameter delimiter.
-- Percent-encoded unreserved characters such as `%61` are decoded. The path is decoded exactly once.
-- The context path is compared case-insensitively.
+Legacy output, still the default:
 
-### 18. Multi-tenancy with DISCRIMINATOR mode
+```json
+{
+  "stage": {
+    "enumType": "com.example.ChallengeStage",
+    "name": "SUBMIT"
+  }
+}
+```
 
-Only `Tenants.withoutId` and `@WithoutTenant` run without a tenant. A tenant id of `DEFAULT` is a tenant id like any other, whether a `TenantResolver` returns it or it is passed to `Tenants.withId`. Queries return the instances of the tenant `DEFAULT`, and a saved instance gets the tenant id `DEFAULT`.
+```xml
+<stage enumType="com.example.ChallengeStage">SUBMIT</stage>
+```
 
-Search the application for `TenantResolver` implementations, `SubDomainTenantResolver`, `FixedTenantResolver`, `Tenants.` calls, and the `@CurrentTenant` and `@WithoutTenant` annotations. Then check:
+Simple output, produced by `SimpleEnumMarshaller`:
 
-- Code that relied on a resolver returning `DEFAULT` to work with every tenant must run inside `Tenants.withoutId` or in a method annotated with `@WithoutTenant`. Examples are `SubDomainTenantResolver` on `localhost` during development, and `new FixedTenantResolver()`.
-- With GORM for MongoDB and GORM's in-memory datastore, queries inside `Tenants.withoutId` still return only the instances of the tenant `DEFAULT`. There, `Tenants.withoutId` only lets a saved instance keep the tenant id that is set on it.
-- With a tenant id property that is not a `String`, such as a `Long`, a tenant id of `DEFAULT` now fails. A save throws a `TenantException`, and a query with GORM for Hibernate throws an `IllegalArgumentException`. Have the resolver return a tenant id of the property's type.
-- Inside `Tenants.withoutId`, `Tenants.currentId()` returns `DEFAULT`, and `Tenants.withCurrent` and `@CurrentTenant` keep running without a tenant. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
-- A `TenantResolver` that returns `null` now causes a `TenantNotFoundException`, as a resolver that finds no tenant does. This applies in every multi-tenancy mode.
-- The `DATABASE` and `SCHEMA` modes are otherwise unchanged.
+```json
+{
+  "stage": "SUBMIT"
+}
+```
 
-GORM for Hibernate, additional changes:
+```xml
+<stage>SUBMIT</stage>
+```
 
-- A collection of a multi-tenant entity is restricted to the current tenant when it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association.
-- `load` and `proxy` of a multi-tenant entity run a query, as `get` does. Like `get`, they return `null` when no instance is found, instead of a proxy that fails when it is used. Search for `load(` and `proxy(` calls on multi-tenant entities and handle `null`.
-- A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own.
-- Loading such a collection lazily without a current tenant, outside `Tenants.withoutId`, throws `TenantNotFoundException`.
-- Before a query on an entity that is not multi-tenant but has a collection of a multi-tenant entity, directly or through its associations, GORM calls the `TenantResolver` and activates the filter for the current tenant, so that a collection the query fetches by join is restricted. When there is no current tenant, because the resolver throws a `TenantNotFoundException` or returns `null`, such a query runs as before. Any other exception from the resolver fails the query.
-- A query that the resolver itself runs on an entity that is not multi-tenant does not call the resolver again. A query on a multi-tenant entity does, so a resolver must not run one.
+The legacy format is asymmetric: a client posts `"stage":"SUBMIT"` and receives the object structure. The simple format returns what was posted. To opt in:
 
-GORM for MongoDB and GORM's in-memory datastore used by unit tests, lookups by id:
+```yaml
+grails:
+  converters:
+    json:
+      enum:
+        format: simple
+    xml:
+      enum:
+        format: simple
+```
 
-- `get`, `read`, `exists`, `getAll`, `load` and `proxy` are now restricted to the current tenant, as queries and dynamic finders already were. Previously they looked an instance up by its id alone and returned an instance of another tenant. GORM for Hibernate already restricted `get`, `read`, `exists` and `getAll`.
-- The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
-- Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
-- Inside `Tenants.withoutId { }` a lookup by id is not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. A tenant id of `DEFAULT` restricts a lookup by id to that tenant.
-- A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
+Leave the settings out to keep the previous output. Check API clients and tests that read enum values before opting in.
 
-Unit tests that look up instances across tenants need the same changes as application code.
+# Grails 7.0.6
 
-### 19. Spring Security plugins
+## BOM property changes
 
-The Spring Security plugins (Core, ACL, CAS, LDAP, OAuth2, REST and UI) are part of Grails core as of Grails 7. This step covers an application coming from plugin versions 5.x or 6.x with Spring Security 5.8.x, moving to Spring Security 6.x.
+BOM version properties restored.
+
+- The initial 7.0.0 release did not populate the version properties of the Grails BOM correctly. The 7.0.4 release restored them, with inconsistent and duplicated names.
+- Later Grails 7 versions renamed and consolidated the properties. The guide lists the renames under Grails 7.0.6. They follow below.
+- Search `gradle.properties` and the build files for properties ending in `.version` that override a BOM version, and check each name against the BOM reference of the target version.
+
+BOM property names changed during the Grails 7 line. When the application overrides BOM versions, search `gradle.properties` and the build files for the old names below.
+
+Dotted duplicates of third-party properties were removed. Only the hyphenated form is kept:
+
+| Removed | Kept |
+|---------|------|
+| `asset.pipeline.gradle.version` | `asset-pipeline-gradle.version` |
+| `byte.buddy.version` | `byte-buddy.version` |
+| `commons.text.version` | `commons-text.version` |
+| `directory.watcher.version` | `directory-watcher.version` |
+| `grails.publish.version` | `grails-publish-plugin.version` |
+| `javaparser.core.version` | `javaparser-core.version` |
+| `bootstrap.icons.version` | `bootstrap-icons.version` |
+| `commons.codec.version` | `commons-codec.version` |
+| `geb.spock.version` | `geb-spock.version` |
+| `asset.pipeline.bom.version` | `asset-pipeline-bom.version` |
+
+The guide also lists these pairs as duplicates with slightly different names and equal values: `spock.version` / `spock.bom.version`, `jackson.version` / `jackson.bom.version`, `groovy.version` / `groovy.bom.version`, `selenium.version` / `selenium.bom.version`. All dotted variants were removed. Check the BOM reference for the name that remains.
+
+Grails-specific properties use hyphens instead of dots. For example, `grails.async.version` became `grails-async.version` and `grails.data.hibernate5.version` became `grails-data-hibernate5.version`.
+
+Profile properties gained the `grails-profile` prefix:
+
+| Old property | New property |
+|--------------|--------------|
+| `base.version` | `grails-profile-base.version` |
+| `plugin.version` | `grails-profile-plugin.version` |
+| `profile.version` | `grails-profile-profile.version` |
+| `rest.api.version` | `grails-profile-rest-api.version` |
+| `rest.api.plugin.version` | `grails-profile-rest-api-plugin.version` |
+| `web.version` | `grails-profile-web.version` |
+| `web.plugin.version` | `grails-profile-web-plugin.version` |
+
+Groups of related properties were consolidated or renamed:
+
+| Old properties | Property to use |
+|----------------|-----------------|
+| `liquibase.version`, `liquibase.cdi.version`, `liquibase.core.version`, `liquibase5.hibernate.version`, `liquibase.hibernate5.version` | `liquibase-hibernate5.version` |
+| `bson.version`, `mongodb.driver.core.version`, `mongodb.driver.sync.version`, `bson.record.codec.version` | `mongodb.version` |
+| `spring.boot.starter.sitemesh.version` | `starter-sitemesh.version` |
+| `ant.junit.version` | `ant.version` |
+| `spring.boot.cli.version`, `spring.boot.gradle.plugin.version`, `spring.boot.dependencies.version` | `spring-boot.version` |
+| `asciidoctor.gradle.jvm.version` | `asciidoctor-gradle-jvm.version` |
+
+The `spring-boot-dependencies` BOM import now uses `${spring-boot.version}`. Other imported BOMs also use a single property name each.
+
+The RxJava property values were wrong and are fixed:
+
+| Property | Group | Was | Is |
+|----------|-------|-----|----|
+| `rxjava.version` | `io.reactivex` (RxJava 1.x) | 3.1.11 | 1.3.8 |
+| `rxjava2.version` | `io.reactivex.rxjava2` (RxJava 2.x) | 3.1.11 | 2.2.21 |
+| `rxjava3.version` | `io.reactivex.rxjava3` (RxJava 3.x) | 3.1.11 | 3.1.11 |
+
+The rework also removed properties of non-published projects and fixed invalid versions for properties used by asciidoctor.
+
+- All published Grails projects keep separate properties, so their versions can be overridden individually.
+
+# Grails 7.0.11
+
+## Generated configuration files
+
+Generated `application.yml` files no longer contain several properties.
+
+From 7.0.11 onwards, `grails-shell-cli`, `grails-forge-cli` and the Grails Forge website (https://start.grails.org) leave these properties out of a generated `application.yml`:
+
+```yaml
+grails:
+  controllers:
+    defaultScope: singleton # already framework default
+  converters:
+    encoding: UTF-8 # already framework default
+  mime:
+    disable:
+      accept:
+        header:
+          userAgents: # already framework default
+            - Gecko
+            - WebKit
+            - Presto
+            - Trident
+  urlmapping:
+    cache:
+      maxsize: 1000 # Attention! framework default: 5000
+  views:
+    default:
+      codec: html # redundant because GSP expressions already default to html encoding
+    gsp:
+      codecs:
+        expression: html # already framework default
+        taglib: none # already framework default
+        staticparts: none # already framework default
+```
+
+- An existing application is not changed by this. The entries matter when comparing the application with a freshly generated one.
+- Most entries restate framework defaults. Removing them does not change behavior.
+- `grails.urlmapping.cache.maxsize` is the exception. Older generated applications set it to `1000`; the framework default is `5000`. Keep the property to keep the older cache size.
+- Search `application.yml` for these keys. Keep any that the application sets to a custom value.
+
+## Micronaut needs grails-micronaut-bom as an enforced platform
+
+For an application that uses Micronaut, as set up in step 11 of "Grails 7.0.0":
+
+- The Grails Gradle Plugin fails at configuration time if `grails-micronaut` is detected and `grails-micronaut-bom` is not applied as `enforcedPlatform`. The reason: the Micronaut platform manages its own versions of libraries such as `javaparser-core`, and without an enforced BOM Gradle's highest-version-wins resolution lets them override `grails-bom` versions, which leads to binary incompatibilities at runtime.
+- Do not apply `enforcedPlatform` to a project without Micronaut. It would force `grails-bom` versions over Spring's managed defaults.
+- The Micronaut auto-setup, which performs this validation and other Micronaut-specific configuration, is on by default. It can be disabled when a project deliberately deviates from the recommended setup. This is not recommended:
+
+```groovy
+grails {
+    micronautAutoSetup = false // not recommended
+}
+```
+
+# Grails 7.0.13
+
+## The stop-app command
+
+The interactive CLI `stop-app` command no longer stops an application through JMX or the Spring Boot Actuator `/actuator/shutdown` endpoint. `run-app` records the application's process id in `build/run-app.pid`, and `stop-app` reads that file and stops the process.
+
+- Search scripts for `stop-app --host` and `stop-app --port`. The `--host` and `--port` options are removed. Drop them.
+- `stop-app` only stops an application that was started with `run-app` for the same project. It can be invoked from interactive mode or from a separate terminal.
+- On Linux and macOS the application is shut down gracefully, the equivalent of `SIGTERM`, so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
+- Every `bootRun` invocation, including a direct `./gradlew bootRun`, writes `build/run-app.pid` while the application runs and removes it when the application stops.
+- `stop-app` always looks for the PID file under the conventional `build` directory. A customized Gradle build directory (`layout.buildDirectory`) is not supported by `stop-app`.
+
+# Grails 7.0.14
+
+## Spring Security plugins
+
+The Spring Security plugins (Core, ACL, CAS, LDAP, OAuth2, REST and UI) are part of Grails core as of Grails 7. This section covers an application coming from plugin versions 5.x or 6.x with Spring Security 5.8.x, moving to Spring Security 6.x.
 
 Update the dependencies in `build.gradle`. Remove the version; the Grails BOM manages it.
 
@@ -729,7 +693,9 @@ Also check for:
 
 The `grails.plugin.springsecurity.*` configuration namespace is unchanged. Existing security configuration in `application.groovy` or `application.yml` should work without modification after the dependency update.
 
-### 20. Quartz plugin
+# Grails 7.0.16
+
+## Quartz plugin
 
 The Quartz plugin is part of Grails core as of Grails 7.
 
@@ -766,25 +732,124 @@ class MyJob {
 }
 ```
 
-### 21. The stop-app command
+# Grails 7.0.17
 
-The interactive CLI `stop-app` command no longer stops an application through JMX or the Spring Boot Actuator `/actuator/shutdown` endpoint. `run-app` records the application's process id in `build/run-app.pid`, and `stop-app` reads that file and stops the process.
+## GORM for MongoDB: Map criterion values with `$` keys
 
-- Search scripts for `stop-app --host` and `stop-app --port`. The `--host` and `--port` options are removed. Drop them.
-- `stop-app` only stops an application that was started with `run-app` for the same project. It can be invoked from interactive mode or from a separate terminal.
-- On Linux and macOS the application is shut down gracefully, the equivalent of `SIGTERM`, so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
-- Every `bootRun` invocation, including a direct `./gradlew bootRun`, writes `build/run-app.pid` while the application runs and removes it when the application stops.
-- `stop-app` always looks for the PID file under the conventional `build` directory. A customized Gradle build directory (`layout.buildDirectory`) is not supported by `stop-app`.
+`Map` criterion values that contain `$` keys are rejected. `findWhere`, `findAllWhere`, criteria queries, the `where` DSL and dynamic finders throw `InvalidDataAccessResourceUsageException` when a `Map` passed as a criterion value contains a key starting with `$` at any level, on any property type including enums. MongoDB interprets such a value document as an operator expression, not as a value.
 
-### 22. Functional tests with Geb
+- Maps without such keys are still sent as literal subdocument comparisons. Exact matches on `Map` properties, dotted paths and array elements are unchanged. Geospatial criteria are exempt.
+- Search for code that passes an operator document through a criteria value on purpose. Change it to the native `find(Bson)` API.
 
-The Grails Geb plugin now provides test fixtures for containerized browser testing. This is the recommended way to write functional tests in Grails 7, and it requires a container runtime.
+# Grails 7.0.18
 
-- To adopt it, extend `ContainerGebSpec` instead of `GebSpec`. A container with a browser that can reach the application under test is started automatically when the integration tests run. It is provided by Testcontainers. No further configuration is needed.
-- Supported container runtimes include Docker Desktop, OrbStack (macOS only), Rancher Desktop, Podman Desktop, and Colima (macOS and Linux).
-- The previous method with WebDriver binaries remains supported for backward compatibility. Matching driver and browser versions can be difficult.
+## Interceptor URI matching
 
-Also update tests for the changes listed in other steps: `DataTest#dataStore` is now `DataTest#datastore`, test dependencies are no longer on the production classpath, `Test` tasks have no default JVM arguments, and H2 is stricter about reserved keywords.
+Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the path that URL mappings route on: percent escapes are decoded, matrix parameters (`;name=value`) are removed, and the context path is stripped before the pattern is applied. Previously the raw request URI was matched, so an encoded (`/%61dmin/users`) or matrix-parameter (`/admin;x=1/users`) request could reach a controller without triggering an interceptor declared for `/admin/**`. Interceptors matched by controller, action or namespace are unaffected.
+
+Search the interceptors for `uri:` and review each match for these changes:
+
+- An interceptor that combines `match(uri:)` with an exclusion (`excludes(uri:)`, `excludes(controller:)`, `excludes(action:)` or a closure) now runs under a non-root context path such as `server.servlet.context-path=/app`. Earlier, that shape never matched there, because the exclusion check required the pattern to match both the context-prefixed and the context-relative request URI, which a pattern such as `/api/**` cannot do. `matchAll()` with exclusions, `match(controller:)` and other name-based matchers, `match(uri:)` without an exclusion, and patterns that match both forms such as `/**` were not affected. Expect such an interceptor to start executing.
+- Patterns are matched against the path within the application only. `match(uri: '/*/*')` no longer matches `/app/save` under the context path `/app`. Patterns that begin with the context path, such as `match(uri: '/app/admin/**')`, are still accepted for backwards compatibility.
+- During a `<g:include>` or a `RequestDispatcher` include, `uri` matchers see the included path, not the URI of the outer request. This is consistent with `match(controller:)` matchers, which already matched the included controller.
+- Custom `grails.interceptors.Matcher` implementations receive the canonical path. The `uri` argument of `doesMatch` is the decoded, application-relative path without matrix parameters.
+
+The Spring Security plugin applies the same canonicalization when it matches `ipRestrictions` patterns. An encoded or matrix-parameter variant of a restricted path is subject to the same restriction as the plain path.
+
+Details of the canonical form:
+
+- Path parameters are removed from each segment before percent-decoding, so an encoded semicolon (`%3B`) is a literal character and not a parameter delimiter.
+- Percent-encoded unreserved characters such as `%61` are decoded. The path is decoded exactly once.
+- The context path is compared case-insensitively.
+
+## Multi-tenancy with DISCRIMINATOR mode
+
+Only `Tenants.withoutId` and `@WithoutTenant` run without a tenant. A tenant id of `DEFAULT` is a tenant id like any other, whether a `TenantResolver` returns it or it is passed to `Tenants.withId`. Queries return the instances of the tenant `DEFAULT`, and a saved instance gets the tenant id `DEFAULT`.
+
+Search the application for `TenantResolver` implementations, `SubDomainTenantResolver`, `FixedTenantResolver`, `Tenants.` calls, and the `@CurrentTenant` and `@WithoutTenant` annotations. Then check:
+
+- Code that relied on a resolver returning `DEFAULT` to work with every tenant must run inside `Tenants.withoutId` or in a method annotated with `@WithoutTenant`. Examples are `SubDomainTenantResolver` on `localhost` during development, and `new FixedTenantResolver()`.
+- With GORM for MongoDB and GORM's in-memory datastore, queries inside `Tenants.withoutId` still return only the instances of the tenant `DEFAULT`. There, `Tenants.withoutId` only lets a saved instance keep the tenant id that is set on it.
+- With a tenant id property that is not a `String`, such as a `Long`, a tenant id of `DEFAULT` now fails. A save throws a `TenantException`, and a query with GORM for Hibernate throws an `IllegalArgumentException`. Have the resolver return a tenant id of the property's type.
+- Inside `Tenants.withoutId`, `Tenants.currentId()` returns `DEFAULT`, and `Tenants.withCurrent` and `@CurrentTenant` keep running without a tenant. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
+- A `TenantResolver` that returns `null` now causes a `TenantNotFoundException`, as a resolver that finds no tenant does. This applies in every multi-tenancy mode.
+- The `DATABASE` and `SCHEMA` modes are otherwise unchanged.
+
+GORM for Hibernate, additional changes:
+
+- A collection of a multi-tenant entity is restricted to the current tenant when it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association.
+- `load` and `proxy` of a multi-tenant entity run a query, as `get` does. Like `get`, they return `null` when no instance is found, instead of a proxy that fails when it is used. Search for `load(` and `proxy(` calls on multi-tenant entities and handle `null`.
+- A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own.
+- Loading such a collection lazily without a current tenant, outside `Tenants.withoutId`, throws `TenantNotFoundException`.
+- Before a query on an entity that is not multi-tenant but has a collection of a multi-tenant entity, directly or through its associations, GORM calls the `TenantResolver` and activates the filter for the current tenant, so that a collection the query fetches by join is restricted. When there is no current tenant, because the resolver throws a `TenantNotFoundException` or returns `null`, such a query runs as before. Any other exception from the resolver fails the query.
+- A query that the resolver itself runs on an entity that is not multi-tenant does not call the resolver again. A query on a multi-tenant entity does, so a resolver must not run one.
+
+GORM for MongoDB and GORM's in-memory datastore used by unit tests, lookups by id:
+
+- `get`, `read`, `exists`, `getAll`, `load` and `proxy` are now restricted to the current tenant, as queries and dynamic finders already were. Previously they looked an instance up by its id alone and returned an instance of another tenant. GORM for Hibernate already restricted `get`, `read`, `exists` and `getAll`.
+- The id of another tenant's instance is treated like an id that does not exist: `get` and `read` return `null`, `exists` returns `false`, `getAll` returns `null` in its place, and the proxy returned by `load` or `proxy` throws when it is initialized.
+- Without a current tenant, these methods throw `TenantNotFoundException`, as a query does. `getAll` without ids still returns an empty list.
+- Inside `Tenants.withoutId { }` a lookup by id is not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. A tenant id of `DEFAULT` restricts a lookup by id to that tenant.
+- A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
+
+Unit tests that look up instances across tenants need the same changes as application code.
+
+## Data binding white lists
+
+Data binding white lists apply wherever a class is compiled.
+
+Grails generates a list of bindable properties for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields. As of 7.0.18 the list is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
+
+Search the application, its plugins and its shared modules for:
+
+- Command objects compiled apart from the controller that binds them (in a plugin or a shared module), `Validateable` objects bound as a nested property, and command objects declared inside another class. They are now bound by their `bindable` constraints and their `transients`. Their dynamically typed properties, declared with `def` or as `Object`, are no longer bound by default. Declare a type for such a property, or mark it `bindable: true`.
+- GORM entities compiled outside `grails-app/domain`, such as an `@Entity` class in `src/main/groovy` or in a shared module. They now get the list a domain class in `grails-app/domain` gets and are bound by the same rules. `bindData` no longer binds their `id`, `version`, `dateCreated` and `lastUpdated`. Previously such a class was bound without restriction, its `id` and `version` included.
+- `bindData` calls with an `exclude` list and no `include` list, including the `bindData(target, source, List excludes)` overloads. The generated list now stays in effect and the excluded properties are removed from it. Previously the generated list was set aside, so that only the excluded properties were kept out. An empty `include` list still binds every property that is not excluded.
+- Binding into a lazily loaded association, as `book.properties = params` binds nested `author` parameters into the book's author. The data is now bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
+- Properties of type `org.springframework.validation.Errors`, such as the `errors` property of a domain class or of a `Validateable` object. They are never bound from request data, whatever a generated list names.
+- Classes that get the list and implement `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache. The list is carried as a new `public static final` field, so the class gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
+
+Check the compiler output for two warnings:
+
+- A class compiled against an already compiled parent takes the parent's bindable properties from the compiled parent. When the parent was compiled by an earlier version of Grails, or without the data binding library on its compile classpath, the compiler warns that the list of the subclass is derived from the parent's bytecode and asks for the parent to be recompiled. Recompile the plugin or module that holds the parent with Grails 7.0.18 or later.
+- A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+The guide gives no setting that restores the previous behavior. Use typed properties, `bindable: true`, and explicit `include` lists.
+
+## OAuth `callback` parameter of the Spring Security REST plugin
+
+The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins.
+
+- New setting: `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, a list of origins. An origin is the scheme, host and port of a URL. When the setting is missing, every `callback` URL is ignored.
+- The plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin is listed in the setting and the URL has a path, a query or a fragment after the host. For any other `callback` URL it redirects to the `frontendCallbackUrl`, as it does without the parameter.
+- The URL is checked when the login starts and again when it completes. A new login drops the `callback` URL of an earlier login that was not completed.
+- Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+Search frontend code and API clients for requests to `/oauth/authenticate/` that pass a `callback` parameter. If the application uses the parameter, list the origins of its frontend:
+
+```groovy
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+```
+
+## Encrypted JWTs of the Spring Security REST plugin
+
+Encrypted JWTs of the Spring Security REST plugin are signed.
+
+As of 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key. It accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+Search the configuration for `useEncryptedJwt`. If it is enabled, check each point:
+
+- Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+- An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. Search for `RSAKeyProvider` implementations and confirm that each provides the private key and the public key.
+- The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated.
+- Use the key pair for these tokens only. The plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+- Search for `JwtService.parse`, `accessTokenJwt` and `com.nimbusds.jwt.EncryptedJWT`. For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+- With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+- An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+The guide gives no setting that restores encrypted JWTs without a signature.
+
+# After the Upgrade
 
 ## Verification Checklist
 
@@ -796,11 +861,12 @@ Run verification through public application behavior, not only compilation.
 - `./gradlew build` succeeds, including the tests. A failure of `FindMainTask` means no `Application` class was found.
 - The compiler output contains no data binding warning that asks for a parent class or a command object to be recompiled.
 - No application source imports a `javax.` package that moved to `jakarta.`.
-- The application starts without `NoClassDefFoundError` or `ClassNotFoundException`. For the Hibernate second-level cache and for Quartz, see steps 12 and 20.
+- The application starts without `NoClassDefFoundError` or `ClassNotFoundException`. For the Hibernate second-level cache and for Quartz, see step 12 of "Grails 7.0.0" and "Grails 7.0.16".
 - URL mappings resolve as before. Incorrect resolution can mean that the compile configuration tasks did not run or were cached incorrectly.
 - Exercise pages that use layouts, multipart uploads with many parts, and JSON and XML endpoints that render dates, times and enums. Compare the output with what API clients expect.
 - Exercise requests that interceptors with `uri` matching should and should not intercept, with the deployed context path, including encoded and matrix-parameter variants of a protected path.
 - With multi-tenancy, exercise code that runs without a tenant, lookups by id across tenants, and the tenant resolver in development.
 - Exercise binding of command objects, nested `Validateable` objects and entities compiled outside `grails-app/domain`, with both allowed and protected properties.
 - Run the functional tests with a container runtime available when they extend `ContainerGebSpec`.
+- With the Spring Security REST plugin, exercise an OAuth login that passes a `callback` parameter, and with encrypted JWTs a login, a token refresh and a request with a token issued before the upgrade, which must be rejected.
 - With Micronaut, confirm that the build applies `grails-micronaut-bom` as `enforcedPlatform` and that `java -jar` starts the packaged application.
