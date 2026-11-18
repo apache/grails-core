@@ -262,50 +262,6 @@ class DatastoreTransactionManagerSpec extends Specification {
         1 * transaction.commit()
     }
 
-    void "a transaction begun inside a transaction of another datastore runs in a session of its own, not the one joined to that transaction"() {
-        given: 'a transaction of another datastore'
-        Datastore otherDatastore = Mock(Datastore)
-        Session otherSession = Mock(Session)
-        Transaction otherTransaction = Mock(Transaction)
-        otherDatastore.connect() >> otherSession
-        otherSession.getDatastore() >> otherDatastore
-        otherSession.beginTransaction(_ as TransactionDefinition) >> otherTransaction
-        otherTransaction.isActive() >> true
-        otherSession.disconnect() >> { TransactionSynchronizationManager.unbindResourceIfPossible(otherDatastore) }
-        DatastoreTransactionManager otherManager = new DatastoreTransactionManager(datastore: otherDatastore)
-
-        and: 'a session of its own for the transaction begun inside'
-        Session innerSession = Mock(Session)
-        Transaction innerTransaction = Mock(Transaction)
-        innerSession.getDatastore() >> datastore
-        innerSession.beginTransaction(_ as TransactionDefinition) >> innerTransaction
-        innerTransaction.isActive() >> true
-        Session boundInside = null
-        Session boundAfter = null
-
-        when: 'a session of this datastore has joined the other transaction when this datastore begins one'
-        new TransactionTemplate(otherManager).execute {
-            DatastoreUtils.execute(datastore, { Session joined -> } as VoidSessionCallback)
-            new TransactionTemplate(transactionManager).execute {
-                boundInside = (TransactionSynchronizationManager.getResource(datastore) as SessionHolder).session
-            }
-            boundAfter = (TransactionSynchronizationManager.getResource(datastore) as SessionHolder).session
-        }
-
-        then: 'the inner transaction opened, committed and closed a session of its own'
-        2 * datastore.connect() >>> [session, innerSession]
-        boundInside.is(innerSession)
-        1 * innerSession.flush()
-        1 * innerTransaction.commit()
-        1 * innerSession.disconnect() >> { TransactionSynchronizationManager.unbindResourceIfPossible(datastore) }
-
-        and: 'the joined session began no transaction, and was bound again and flushed when the other transaction committed'
-        0 * session.beginTransaction(_)
-        boundAfter.is(session)
-        1 * session.flush()
-        1 * otherTransaction.commit()
-    }
-
     void "a session left bound when a suspended transaction resumes is closed, and the transaction resumes on its own"() {
         given:
         Session leftover = Mock(Session)

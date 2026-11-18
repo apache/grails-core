@@ -1459,15 +1459,17 @@ With a database or a schema per tenant, a domain class that does not implement `
 
 In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `save`, `get`, `list` and `count` already used the default database, while `where` queries and data service methods did not work, because the tenant's session factory does not map the class; they now use the default database too.
 
-Writes inside the block commit in the default datastore:
+Writes of such a class inside the block go to the default datastore, so they run in a transaction of that datastore:
 
 * A data service of such a class runs its transactions in its own datastore, not the tenant's.
-* A save of such a class inside a transaction of another datastore, such as a method annotated `@Transactional` that runs in the tenant's transaction, joins that transaction: its session is flushed when the transaction commits, and changes not yet flushed are discarded when it rolls back. A save with `flush: true`, or a query that flushes the session, writes to the class's datastore at once, outside the tenant's transaction, so its write stays when that transaction rolls back. This applies to GORM for MongoDB and the in-memory datastore.
-* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back. It neither writes nor discards the changes the tenant's transaction holds. With GORM for Hibernate, such a save still fails, as in Grails 8, because Hibernate flushes only in a transaction of its own; save the class through its data service or inside its own `withTransaction` block.
+* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back.
+* A write of such a class inside the tenant's transaction but outside a transaction of its own datastore, such as a `save()` in a method annotated `@Transactional` that runs in the tenant's transaction, now fails with an `IllegalTransactionStateException`. In Grails 8 the tenant's transaction wrote it to the tenant's database. The tenant's transaction cannot commit or roll back a write to another datastore, so the write would otherwise be lost, or written although the tenant's transaction rolled back. This applies to `save`, `insert`, `delete`, `saveAll` and `deleteAll` without `flush: true`, with GORM for MongoDB and the in-memory datastore of unit tests. With GORM for Hibernate, such a save already failed in Grails 8 and still does.
 
 ===== Required Actions
 
 For most applications **no changes are required**.
+
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` also works: it writes at once, and the write stays when the tenant's transaction rolls back.
 
 With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
 

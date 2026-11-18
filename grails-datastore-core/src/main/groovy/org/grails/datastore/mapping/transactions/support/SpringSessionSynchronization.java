@@ -57,11 +57,9 @@ public class SpringSessionSynchronization implements TransactionSynchronization 
     }
 
     public void suspend() {
-        // The session is only set aside while an inner transaction runs and is bound again by resume(), so it keeps
-        // its pending changes: disconnecting it here cleared them, and a save not yet flushed was lost when the outer
-        // transaction committed.
         if (holderActive) {
             TransactionSynchronizationManager.unbindResource(datastore);
+            getCurrentSession().disconnect();
         }
     }
 
@@ -76,11 +74,7 @@ public class SpringSessionSynchronization implements TransactionSynchronization 
     }
 
     public void beforeCommit(boolean readOnly) throws DataAccessException {
-        // A session opened for the transaction, rather than bound before it, is flushed with it: the transaction's own
-        // manager may belong to another datastore and would not flush it otherwise.
-        if (newSession && !readOnly) {
-            getCurrentSession().flush();
-        }
+        // do nothing
     }
 
     public void beforeCompletion() {
