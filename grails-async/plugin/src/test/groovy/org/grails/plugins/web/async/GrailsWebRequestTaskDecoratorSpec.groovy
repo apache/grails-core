@@ -34,6 +34,8 @@ import jakarta.servlet.http.HttpServletRequestWrapper
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.servlet.http.Part
 
+import org.springframework.mock.web.DelegatingServletInputStream
+import org.springframework.mock.web.DelegatingServletOutputStream
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
@@ -719,6 +721,54 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
         !task.alive
         seen.during == 'locked value'
         seen.after.message == "$COMPLETED request"
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'what #getter returns as the request completes without waiting for the call is detached, and the task does not keep the live one'() {
+        given:
+        MockServletContext servletContext = new MockServletContext()
+        BlockingStreams blocking = new BlockingStreams()
+        BlockingStreamRequest live = new BlockingStreamRequest(blocking)
+        TaskRequestListener listener = new TaskRequestListener(Duration.ofMillis(500))
+        listener.requestInitialized(new ServletRequestEvent(servletContext, live))
+        GrailsWebMockUtil.bindMockWebRequest(servletContext, live, new BlockingStreamResponse(blocking))
+        Map seen = [:]
+        Runnable decorated = new GrailsWebRequestTaskDecorator().decorate {
+            seen.request = GrailsWebRequest.lookup().currentRequest
+            seen.response = GrailsWebRequest.lookup().currentResponse
+            seen.stream = seen[target]."$getter"()
+            seen.use = failureOf { use(seen.stream) }
+        }
+        RequestContextHolder.resetRequestAttributes()
+
+        when: 'the request completes, giving up waiting for the call, and then the call returns'
+        Thread task = Thread.start { decorated.run() }
+        assert blocking.entered.await(10, TimeUnit.SECONDS)
+        Thread completing = Thread.start {
+            listener.requestDestroyed(new ServletRequestEvent(servletContext, live))
+        }
+        completing.join(5000)
+        assert !completing.alive
+        blocking.release.countDown()
+        task.join(10000)
+        for (int i = 0; i < 50 && blocking.returned.get() != null; i++) {
+            System.gc()
+            Thread.sleep(20)
+        }
+
+        then: 'the task cannot use what it got, and its request and response no longer hold the live one'
+        !task.alive
+        blocking.calls == 1
+        seen.request != null && seen.response != null
+        seen.use.message == "$COMPLETED $failed"
+        blocking.returned.get() == null
+
+        where:
+        getter            | target     | failed            | use
+        'getInputStream'  | 'request'  | 'request body'    | { ServletInputStream stream -> stream.read() }
+        'getReader'       | 'request'  | 'request body'    | { BufferedReader reader -> reader.readLine() }
+        'getOutputStream' | 'response' | 'response output' | { ServletOutputStream stream -> stream.write(1) }
+        'getWriter'       | 'response' | 'response output' | { PrintWriter writer -> writer.print('late') }
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15851')
@@ -1527,6 +1577,62 @@ class GrailsWebRequestTaskDecoratorSpec extends Specification {
                 return 'slow value'
             }
             return super.getAttribute(name)
+        }
+    }
+
+    // Hands out a body stream, reader, output stream or writer only once released, kept by nothing but the caller
+    static class BlockingStreams {
+
+        final CountDownLatch entered = new CountDownLatch(1)
+        final CountDownLatch release = new CountDownLatch(1)
+        volatile WeakReference<Object> returned = new WeakReference<>(null)
+        volatile int calls
+
+        public <T> T hand(Closure<T> make) {
+            calls++
+            entered.countDown()
+            release.await(10, TimeUnit.SECONDS)
+            T made = make.call()
+            returned = new WeakReference<Object>(made)
+            return made
+        }
+    }
+
+    static class BlockingStreamRequest extends MockHttpServletRequest {
+
+        final BlockingStreams blocking
+
+        BlockingStreamRequest(BlockingStreams blocking) {
+            this.blocking = blocking
+        }
+
+        @Override
+        ServletInputStream getInputStream() {
+            return blocking.hand { new DelegatingServletInputStream(new ByteArrayInputStream('body'.bytes)) }
+        }
+
+        @Override
+        BufferedReader getReader() {
+            return blocking.hand { new BufferedReader(new StringReader('body')) }
+        }
+    }
+
+    static class BlockingStreamResponse extends MockHttpServletResponse {
+
+        final BlockingStreams blocking
+
+        BlockingStreamResponse(BlockingStreams blocking) {
+            this.blocking = blocking
+        }
+
+        @Override
+        ServletOutputStream getOutputStream() {
+            return blocking.hand { new DelegatingServletOutputStream(new ByteArrayOutputStream()) }
+        }
+
+        @Override
+        PrintWriter getWriter() {
+            return blocking.hand { new PrintWriter(new StringWriter()) }
         }
     }
 

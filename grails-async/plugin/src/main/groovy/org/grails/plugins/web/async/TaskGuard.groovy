@@ -59,7 +59,8 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
 
     private final TaskRequestLifecycle lifecycle
     private final String what
-    // The guarded stream, reader or writer of each the live object returned, so a task asking again gets the same
+    // The guarded stream, reader or writer of each the live object returned, so a task asking again gets the same,
+    // while the request is live
     private final Map<Object, Object> guarded = new IdentityHashMap<>()
     private volatile Object live
 
@@ -109,7 +110,12 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
     void replace(Object replacement) {
         lifecycle.enter(live, what)
         try {
-            live = replacement
+            synchronized (guarded) {
+                // The request may have completed without waiting for this call, and a detached guard keeps nothing
+                if (live != null) {
+                    live = replacement
+                }
+            }
         }
         finally {
             lifecycle.exit()
@@ -118,8 +124,8 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
 
     @Override
     void detach() {
-        live = null
         synchronized (guarded) {
+            live = null
             guarded.clear()
         }
     }
@@ -191,6 +197,11 @@ final class TaskGuard implements InvocationHandler, TaskRequestLifecycle.Detacha
         if (result instanceof ServletInputStream || result instanceof BufferedReader ||
                 result instanceof ServletOutputStream || result instanceof PrintWriter) {
             synchronized (guarded) {
+                if (live == null) {
+                    // The request completed without waiting for the call, and detaching cleared what was kept, so
+                    // the task gets one detached already, and nothing keeps the live one
+                    return TaskStreams.guard(lifecycle, result, what)
+                }
                 Object existing = guarded.get(result)
                 if (existing == null) {
                     existing = TaskStreams.guard(lifecycle, result, what)
