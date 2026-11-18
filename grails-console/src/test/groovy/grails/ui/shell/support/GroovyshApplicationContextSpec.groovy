@@ -19,6 +19,9 @@ package grails.ui.shell.support
 
 import java.nio.file.Path
 
+import org.apache.groovy.groovysh.GroovyshOptions
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.util.environment.RestoreSystemProperties
@@ -41,18 +44,30 @@ class GroovyshApplicationContextSpec extends Specification {
     }
 
     void 'the shell starts with the application in its binding and ends when its input ends'() {
-        given: 'an application context with a Grails application, as grails shell starts it'
-        def context = new GroovyshApplicationContext()
+        given: 'a terminal whose input is empty, so the shell never waits for the console of an IDE'
+        ByteArrayOutputStream output = new ByteArrayOutputStream()
+        Terminal terminal = TerminalBuilder.builder().system(false).dumb(true)
+                .streams(new ByteArrayInputStream(new byte[0]), output).build()
+
+        and: 'an application context with a Grails application, as grails shell starts it'
+        def context = new GroovyshApplicationContext() {
+            @Override
+            protected GroovyshOptions.Builder shellOptions() {
+                super.shellOptions().terminal(terminal)
+            }
+        }
         context.registerBean(GrailsApplication.APPLICATION_ID, GrailsApplication, { new DefaultGrailsApplication() })
 
-        when: 'the context refreshes, which starts the shell on the test JVM terminal'
+        when: 'the context refreshes, which starts the shell'
         context.refresh()
 
-        then: 'the shell runs and returns without a JLine class missing from the class path'
+        then: 'the shell runs on that terminal and returns without a JLine class missing from the class path'
         noExceptionThrown()
         context.active
+        output.toString('UTF-8').contains('groovy> ')
 
         cleanup:
         context.close()
+        terminal.close()
     }
 }
