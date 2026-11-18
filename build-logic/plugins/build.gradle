@@ -93,5 +93,9 @@ gradlePlugin {
             id = 'org.apache.grails.buildsrc.dependency-validator'
             implementationClass = 'org.apache.grails.buildsrc.GrailsDependencyValidatorPlugin'
         }
+        register('agentSkillsPlugin') {
+            id = 'org.apache.grails.buildsrc.agent-skills'
+            implementationClass = 'org.apache.grails.buildsrc.AgentSkillsPlugin'
+        }
     }
 }

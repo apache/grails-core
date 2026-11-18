@@ -566,14 +566,14 @@ To learn more about development reloading options, please see the link:gettingSt
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
         use_query_cache: false
         region:
-        factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+            factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
 ----
 
 If your application sets `hibernate.cache.region.factory_class` to `org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` it will add the `non-jakarta` version of `hibernate-core` to your classpath which will cause `NoClassDefFoundError` and `ClassNotFoundException` errors.
@@ -583,8 +583,8 @@ You will need to change it to `jcache` and add the Ehcache dependency as follows
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
