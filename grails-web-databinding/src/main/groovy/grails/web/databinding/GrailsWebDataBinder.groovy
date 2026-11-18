@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.MessageSource
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.BindingResult
+import org.springframework.validation.Errors
 import org.springframework.validation.FieldError
 import org.springframework.validation.ObjectError
 
@@ -243,8 +244,16 @@ class GrailsWebDataBinder extends SimpleDataBinder {
         populateErrors(object, bindingResult)
     }
 
+    /**
+     * A property that holds the validation result of the object, as the {@code errors} of a Validateable class or
+     * of a domain class does, is never bound, whatever the white list says: a class compiled before the white list
+     * left such a property out still names it there.
+     */
     @Override
     protected boolean isOkToBind(MetaProperty property, List whiteList, List blackList) {
+        if (property.type != null && Errors.isAssignableFrom(property.type)) {
+            return false
+        }
         boolean allowed = super.isOkToBind(property, whiteList, blackList)
         if (!allowed && DataBindingUtils.isGeneratedBindingIncludeList(whiteList) &&
                 super.isOkToBind(property, null, blackList) &&
@@ -584,10 +593,13 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                     // target map in place (supports getter-only Map properties).
                     if (listener == null || listener.beforeBinding(obj, propName, val, errors) != false) {
                         try {
+                            // Map.put rather than boundMap[key] = ...: on Groovy 5 a String subscript on a
+                            // Map resolves as property access, so a key such as "properties" would throw
+                            // ReadOnlyPropertyException instead of storing the entry.
                             Map boundMap = new LinkedHashMap()
                             ((Map) val).each { key, item ->
                                 if (item == null || referencedType.isAssignableFrom(item.getClass())) {
-                                    boundMap[key] = item
+                                    boundMap.put(key, item)
                                 } else if (item instanceof Map || item instanceof DataBindingSource) {
                                     def instance
                                     if (isDomainClass(referencedType)) {
@@ -605,10 +617,10 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                                         bindNested(instance, itemBindingSource, nestedIncludeList, listener)
                                     }
                                     if (instance != null) {
-                                        boundMap[key] = instance
+                                        boundMap.put(key, instance)
                                     }
                                 } else {
-                                    boundMap[key] = convert(referencedType, item)
+                                    boundMap.put(key, convert(referencedType, item))
                                 }
                             }
                             Map map = initializeMap(obj, propName)
@@ -795,7 +807,7 @@ class GrailsWebDataBinder extends SimpleDataBinder {
                             def persistedInstance = getPersistentInstance(referencedType, idValue)
                             if (persistedInstance != null) {
                                 if (map.size() < autoGrowCollectionLimit || map.containsKey(indexedPropertyReferenceDescriptor.index)) {
-                                    map[indexedPropertyReferenceDescriptor.index] = persistedInstance
+                                    map.put(indexedPropertyReferenceDescriptor.index, persistedInstance)
                                     if (val instanceof Map) {
                                         bind(persistedInstance, new SimpleMapDataBindingSource(val), listener)
                                     } else if (val instanceof DataBindingSource) {

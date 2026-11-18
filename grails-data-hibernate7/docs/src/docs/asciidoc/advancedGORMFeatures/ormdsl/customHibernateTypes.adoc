@@ -68,6 +68,96 @@ class Measurement {
 }
 ----
 
+=== Composite User Types
+
+A type that spans several columns implements `org.hibernate.usertype.CompositeUserType` instead of `UserType`. Hibernate maps it like an embeddable: the `embeddable()` method of the user type names a class whose persistent attributes describe the columns, one column per attribute. The attributes are indexed in the alphabetical order of their names, and that index is what `getPropertyValue(value, index)` receives and what `instantiate(values)` reads from. The embeddable class may be the value class itself, when its attributes match the columns, or a separate class or record that only serves as metadata. Its attributes are the components of a record, or otherwise its fields and its readable properties, whether or not they have a setter, less the static and `transient` ones and the names listed in a static `transients` property; a computed getter that is not a column belongs in `transients`. Hibernate never instantiates the embeddable class or writes to it: it reads a value through `getPropertyValue(value, index)` and rebuilds one through `instantiate(values)`, so an immutable value class, or a class with private fields and no accessors, works as well.
+
+[source,groovy]
+----
+import groovy.transform.EqualsAndHashCode
+import org.hibernate.HibernateException
+import org.hibernate.metamodel.spi.ValueAccess
+import org.hibernate.usertype.CompositeUserType
+
+@EqualsAndHashCode
+class MonetaryAmount implements Serializable {
+    BigDecimal value
+    Currency currency
+}
+
+class MonetaryAmountType implements CompositeUserType<MonetaryAmount> {
+
+    @Override
+    Object getPropertyValue(MonetaryAmount component, int property) {
+        switch (property) {
+            case 0: return component.currency      // <1>
+            case 1: return component.value
+            default: throw new HibernateException("Unknown property index ${property}")
+        }
+    }
+
+    @Override
+    MonetaryAmount instantiate(ValueAccess values) {
+        Currency currency = values.getValue(0, Currency)
+        BigDecimal value = values.getValue(1, BigDecimal)
+        currency == null && value == null ? null : new MonetaryAmount(value: value, currency: currency)
+    }
+
+    @Override
+    Class<?> embeddable() { MonetaryAmount }       // <2>
+
+    @Override
+    Class<MonetaryAmount> returnedClass() { MonetaryAmount }
+
+    @Override
+    boolean isMutable() { false }
+
+    @Override
+    MonetaryAmount deepCopy(MonetaryAmount value) { value }
+
+    @Override
+    boolean equals(MonetaryAmount x, MonetaryAmount y) { x == y }
+
+    @Override
+    int hashCode(MonetaryAmount x) { x == null ? 0 : x.hashCode() }
+
+    @Override
+    Serializable disassemble(MonetaryAmount value) { value }
+
+    @Override
+    MonetaryAmount assemble(Serializable cached, Object owner) { (MonetaryAmount) cached }
+
+    @Override
+    MonetaryAmount replace(MonetaryAmount detached, MonetaryAmount managed, Object owner) { detached }
+}
+----
+<1> The indexes follow the alphabetical order of the attribute names of the `embeddable()` class: `currency` is 0 and `value` is 1.
+<2> The class whose attributes describe the columns, here the value class itself.
+
+Map the property with `type` and list its columns in the same alphabetical attribute order:
+
+[source,groovy]
+----
+class Payment {
+    MonetaryAmount amount
+
+    static mapping = {
+        amount type: MonetaryAmountType, {
+            column name: 'currency', sqlType: 'char(3)'   // <1>
+            column name: 'amount'                         // <2>
+        }
+    }
+}
+----
+<1> The first column holds the first attribute in alphabetical order, `currency`.
+<2> The second column holds `value`.
+
+Without a column list, each column is named after the property and the attribute, here `amount_currency` and `amount_value`. A list shorter than the attributes leaves the remaining attributes with those names, and a longer list is a mapping error. The `nullable` constraint of the property applies to every column. The other constraints of the property, such as `maxSize`, `min`, `max` and `scale`, describe the whole value and are checked by validation; they are not applied to the columns. Each column takes its `length`, `precision` and `scale` from its own entry in the column list, and a numeric column without a `precision` gets the default precision of the dialect, as a numeric property without constraints does. The `unique` constraint applies to the whole value: the schema gets one unique key across all the columns of the property, together with the columns of the other properties of its group, as in `amount unique: 'reference'`, so two amounts in the same currency are still distinct values. A group that names a composite user type property, whether it is the group of another composite property, as in `amount unique: 'fee'`, or of a plain one, as in `reference unique: 'amount'`, spans every column of that property as well.
+
+Queries, criteria and dynamic finders that compare the whole property, such as `Payment.findAllByAmount(amount)`, take an instance of the value class that `returnedClass()` names, whichever class `embeddable()` names. A query can also reach a single attribute by its name in the `embeddable()` class, as in `where p.amount.currency = :currency`. The value class can be any class, an enum included: an enum property whose `type` names a composite user type is stored in the columns of that type rather than as an enum column.
+
+A composite user type can be <<_global_user_type_mapping,registered for its value class>> with `user-type` like a `UserType`; each property then supplies its columns in its own mapping. A `type` in the mapping of a property wins over the registration, so `amount type: 'serializable'` keeps that property in one serialized column. `typeParams` apply to `UserType` implementations only: Hibernate instantiates a composite user type itself and passes it no parameters. It creates the type through its default constructor, or, when the `hibernate.cdi.extensions` setting is enabled, through the configured bean container, which may inject it.
+
 === Global User Type Mapping
 
 Use `user-type` to register a user type for a Java type, so that every property of that type uses it without a per-property `type`. Registered in a domain class's `mapping` block, it applies to the properties of that class:
@@ -97,4 +187,4 @@ grails.gorm.default.mapping = {
 
 A `type` set on an individual property takes precedence over a registered user type.
 
-TIP: A Hibernate 7 `UserType` must implement `getSqlType()`, `returnedClass()`, `deepCopy()`, and `isMutable()`, and usually overrides `nullSafeGet()` and `nullSafeSet()` to convert between the column value and the Java type. Prefer Hibernate's `CompositeUserType` for multi-column mappings.
+TIP: A Hibernate 7 `UserType` must implement `getSqlType()`, `returnedClass()`, `deepCopy()`, and `isMutable()`, and usually overrides `nullSafeGet()` and `nullSafeSet()` to convert between the column value and the Java type. A type that spans several columns is a <<_composite_user_types,composite user type>>.

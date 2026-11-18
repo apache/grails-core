@@ -22,6 +22,18 @@ under the License.
 
 There are a few different approaches to configuring filter chains.
 
+=== Requests that arrive before startup
+
+While the application is starting, the plugin responds to every request with `503 Service Unavailable`. That includes a request for a static resource. Requests are allowed through only after both of these have happened, in either order: the plugin has finished `doWithApplicationContext()`, and Spring Boot has published `ApplicationStartedEvent`.
+
+The property is `grails.plugin.springsecurity.rejectRequestsDuringStartup`. It defaults to `true`. Set it to `false` to let requests through during startup:
+
+[source,groovy]
+.Listing {counter:listing}. Disabling `rejectRequestsDuringStartup`
+----
+grails.plugin.springsecurity.rejectRequestsDuringStartup = false
+----
+
 === Default Approach to Configuring Filter Chains
 The default is to use configuration attributes to determine which extra filters to use (for example, Basic Auth, Switch User, etc.) and add these to the "`core`" filters. For example, setting `grails.plugin.springsecurity.useSwitchUserFilter = true` adds `switchUserProcessingFilter` to the filter chain (and in the correct order). The filter chain built here is applied to all URLs. If you need more flexibility, you can use `filterChain.chainMap` as discussed in *chainMap* below.
 

@@ -38,6 +38,8 @@ import org.hibernate.boot.Metadata;
 import org.hibernate.boot.SchemaAutoTooling;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
+import org.hibernate.event.service.spi.EventListenerRegistry;
+import org.hibernate.event.spi.EventType;
 import org.hibernate.integrator.spi.Integrator;
 import org.hibernate.integrator.spi.IntegratorService;
 import org.hibernate.service.ServiceRegistry;
@@ -96,6 +98,7 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSource;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceFactory;
 import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
 import org.grails.orm.hibernate.event.listener.HibernateEventListener;
+import org.grails.orm.hibernate.multitenancy.MultiTenantCollectionEventListener;
 import org.grails.orm.hibernate.multitenancy.MultiTenantEventListener;
 import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor;
 
@@ -143,6 +146,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
         interceptor.setDatastore(this);
         interceptor.setEventPublisher(eventPublisher);
         registerEventListeners(this.eventPublisher);
+        registerTenantFilterListeners();
         configureValidatorRegistry(settings, mappingContext);
         this.mappingContext.addMappingContextListener(new MappingContext.Listener() {
             @Override
@@ -410,6 +414,19 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             eventPublisher.addApplicationListener(new MultiTenantEventListener());
         }
         eventPublisher.addApplicationListener(eventTriggeringInterceptor);
+    }
+
+    /**
+     * With DISCRIMINATOR multi-tenancy, registers the Hibernate listener that sets the tenant filter before Hibernate
+     * initializes a collection of a multi-tenant entity.
+     */
+    protected void registerTenantFilterListeners() {
+        if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            EventListenerRegistry listenerRegistry = ((SessionFactoryImplementor) getSessionFactory())
+                    .getServiceRegistry()
+                    .getService(EventListenerRegistry.class);
+            listenerRegistry.prependListeners(EventType.INIT_COLLECTION, new MultiTenantCollectionEventListener(this));
+        }
     }
 
     protected void configureValidatorRegistry(HibernateConnectionSourceSettings settings, HibernateMappingContext mappingContext) {

@@ -46,7 +46,7 @@ jobs:
     permissions:
       contents: write  #  to create release & upload wrapper
       issues: write  #  to modify milestones
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -93,7 +93,7 @@ jobs:
           echo "${GPG_KEY}" | gpg --batch --import
           gpg --list-keys
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -292,7 +292,7 @@ jobs:
     needs: publish
     permissions:
       contents: write
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -434,7 +434,7 @@ jobs:
   upload:
     name: "Upload Distributions to dist.apache.org"
     needs: [ publish, source ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
     env:
@@ -677,7 +677,7 @@ jobs:
     environment: release
     name: "VOTE SUCCEEDED - Release Artifacts"
     needs: [ publish, source, upload ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -767,7 +767,7 @@ jobs:
     environment: docs
     name: "VOTE SUCCEEDED - Publish Documentation"
     needs: [ publish, source, upload, release ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     steps:
       - name: "📝 Establish release version"
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
@@ -825,7 +825,7 @@ jobs:
   sdkman:
     environment: sdkman
     name: "VOTE SUCCEEDED - Release to SDKMAN!"
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     needs: [ publish, source, upload, release ]
     steps:
       - name: "📝 Establish release version"
@@ -841,7 +841,7 @@ jobs:
         with:
           ref: ${{ env.TAG }}
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -893,7 +893,7 @@ jobs:
     name: "VOTE SUCCEEDED - Close Release"
     environment: release
     needs: [ publish, source, upload, release, docs, sdkman ]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     permissions:
       contents: write # required for gradle.properties revert
       issues: write # required for milestone closing

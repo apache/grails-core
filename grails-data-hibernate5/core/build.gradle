@@ -79,6 +79,7 @@ dependencies {
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
 
+    testCompileOnly 'org.junit.platform:junit-platform-launcher' // TestExecutionListener, for GrailsDataTckManagerSpec
     testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.hibernate:hibernate-ehcache', {

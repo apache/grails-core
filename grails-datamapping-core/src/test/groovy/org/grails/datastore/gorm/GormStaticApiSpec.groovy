@@ -22,12 +22,16 @@ import groovy.transform.CompileStatic
 
 import jakarta.persistence.LockModeType
 
+import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
 import grails.gorm.api.GormAllOperations
 import grails.gorm.api.GormInstanceOperations
 import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -645,6 +649,48 @@ class GormStaticApiSpec extends Specification {
         api.getAll()*.name.sort() == ['one', 'two']
     }
 
+    void "getAll with iterable ids passes them to getAll with an array of ids, so that a subclass overrides both"() {
+        given:
+        def api = new GetAllRecordingGormStaticApi(GormStaticApiThing, datastore)
+
+        when:
+        api.getAll([1L, 2L])
+
+        then:
+        api.requestedIds == [[1L, 2L]]
+    }
+
+    void "get/read/load/exists/getAll find an instance of a multi-tenant entity for the current tenant only in DISCRIMINATOR mode"() {
+        given:
+        def tenantDatastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(
+                        [(Settings.SETTING_MULTI_TENANCY_MODE): MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR]),
+                new DefaultApplicationEventPublisher(), GormStaticApiTenantThing)
+        def api = new GormStaticApi(GormStaticApiTenantThing, tenantDatastore, [])
+        Serializable ownId = Tenants.withId(tenantDatastore, 'own') {
+            new GormStaticApiTenantThing(name: 'own').save(flush: true).id
+        }
+        Serializable otherId = Tenants.withId(tenantDatastore, 'other') {
+            new GormStaticApiTenantThing(name: 'other').save(flush: true).id
+        }
+
+        expect:
+        Tenants.withId(tenantDatastore, 'own') {
+            api.withNewSession {
+                [api.get(ownId)?.name, api.get(otherId), api.read(otherId), api.exists(otherId),
+                 api.getAll(otherId, ownId)*.name, api.getAll([ownId, otherId])*.name, api.load(ownId).name]
+            }
+        } == ['own', null, null, false, [null, 'own'], ['own', null], 'own']
+
+        and: 'inside withoutId a lookup by id is not restricted to a tenant'
+        Tenants.withoutId(tenantDatastore) {
+            api.withNewSession { [api.get(ownId)?.name, api.get(otherId)?.name] }
+        } == ['own', 'other']
+
+        cleanup:
+        tenantDatastore?.close()
+    }
+
     void "list and list(Map) support the max parameter via a paged result list"() {
         given:
         def api = new GormStaticApi(GormStaticApiThing, datastore, [])
@@ -1081,7 +1127,44 @@ class GormStaticApiSpec extends Specification {
         api.withId(ConnectionSource.DEFAULT) { Session session -> 'ran' } == 'ran'
     }
 
-    void "withoutId delegates to withId with the DEFAULT connection"() {
+    void "withoutId runs without a tenant id for a multi-tenant datastore"() {
+        given:
+        def mappingContext = datastore.mappingContext
+        def multiTenantDs = Stub(MultiTenantCapableDatastore) {
+            getMappingContext() >> mappingContext
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+        }
+        def registry = new GormRegistry()
+        registry.registerEntityDatastore(GormStaticApiThing.name, ConnectionSource.DEFAULT, multiTenantDs)
+        def api = new GormStaticApi(GormStaticApiThing, mappingContext, [], null, ConnectionSource.DEFAULT, registry)
+
+        expect:
+        api.withoutId { Tenants.isWithoutId(multiTenantDs) }
+        !Tenants.isWithoutId(multiTenantDs)
+    }
+
+    void "withoutId passes a closure with parameters the tenant id and the session, as withId does"() {
+        given:
+        def mappingContext = datastore.mappingContext
+        def session = Stub(Session)
+        def multiTenantDs = Stub(MultiTenantCapableDatastore) {
+            getMappingContext() >> mappingContext
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+            withSession(_) >> { Closure body -> body.call(session) }
+        }
+        def registry = new GormRegistry()
+        registry.registerEntityDatastore(GormStaticApiThing.name, ConnectionSource.DEFAULT, multiTenantDs)
+        def api = new GormStaticApi(GormStaticApiThing, mappingContext, [], null, ConnectionSource.DEFAULT, registry)
+
+        expect:
+        api.withoutId { Serializable tenantId -> [tenantId, Tenants.isWithoutId(multiTenantDs)] } ==
+                [ConnectionSource.DEFAULT, true]
+        api.withoutId { Serializable tenantId, Session s -> [tenantId, s, Tenants.isWithoutId(multiTenantDs)] } ==
+                [ConnectionSource.DEFAULT, session, true]
+        !Tenants.isWithoutId(multiTenantDs)
+    }
+
+    void "withoutId delegates to withId with the DEFAULT connection for a datastore that is not multi-tenant"() {
         given:
         def mappingContext = datastore.mappingContext
         def plainDs = Stub(Datastore) {
@@ -1117,6 +1200,32 @@ class GormStaticApiSpec extends Specification {
 class GormStaticApiThing {
 
     String name
+}
+
+@Entity
+class GormStaticApiTenantThing implements MultiTenant<GormStaticApiTenantThing> {
+
+    String name
+    String tenantId
+}
+
+/**
+ * A static api that records the ids that {@code getAll(Serializable...)} is called with, so that
+ * {@code getAll(Iterable)} can be verified to pass its ids on to it.
+ */
+class GetAllRecordingGormStaticApi<D> extends GormStaticApi<D> {
+
+    List<List<Serializable>> requestedIds = []
+
+    GetAllRecordingGormStaticApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore, [])
+    }
+
+    @Override
+    List<D> getAll(Serializable... ids) {
+        requestedIds << ids.toList()
+        return []
+    }
 }
 
 /**

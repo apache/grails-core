@@ -18,7 +18,11 @@
  */
 package org.grails.datastore.mapping.dirty.checking
 
+import java.beans.Introspector
+
+import groovy.transform.CompileStatic
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * The DirtyChecking* wrappers are the only change-detection interception-based stores have
@@ -482,6 +486,107 @@ class DirtyCheckingCollectionSpec extends Specification {
         then:
         joined == 'a,b'
         !owner.hasChanged()
+    }
+
+    @Unroll
+    def "a wrapped Map entry named #name, like one of the wrapper's own accessors, is read as the entry"() {
+        given: 'an entry whose key Groovy 5 would resolve to the accessor of the wrapper'
+        def owner = new CollectionOwner()
+        def map = new DirtyCheckingMap([(name): 'entry'], owner, 'attrs')
+
+        expect: 'every read form reaches the entry, as it does on the plain map'
+        map.get(name) == 'entry'
+        map[name] == 'entry'
+        map."$name" == 'entry'
+        StaticMapAccess.read(map, name) == 'entry'
+        StaticMapAccess.readAsObject(map, name) == 'entry'
+
+        and: 'the accessor itself is still reachable as a method'
+        map.getParent().is(owner)
+        map.getProperty() == 'attrs'
+        map.getTarget() == [(name): 'entry']
+        map.getOriginalSize() == 1
+        !map.isAssigned()
+
+        where:
+        name << ['target', 'parent', 'property', 'originalSize', 'assigned']
+    }
+
+    @Unroll
+    def "writing a wrapped Map entry named #name stores the entry and marks the parent dirty"() {
+        given:
+        def owner = new CollectionOwner()
+        def map = new DirtyCheckingMap([:], owner, 'attrs')
+        owner.trackChanges()
+
+        when: 'the entry is written through the subscript form'
+        map[name] = 'subscript'
+
+        then:
+        map.get(name) == 'subscript'
+        owner.hasChanged('attrs')
+
+        when: 'through the dotted form'
+        map."$name" = 'dotted'
+
+        then:
+        map.get(name) == 'dotted'
+
+        when: 'and from statically compiled code'
+        StaticMapAccess.write(map, name, 'static')
+
+        then:
+        map.get(name) == 'static'
+        map.size() == 1
+
+        where:
+        name << ['target', 'parent', 'property', 'originalSize', 'assigned']
+    }
+
+    def 'a wrapped Map resolves every other name as the wrapped map does'() {
+        given:
+        def owner = new CollectionOwner()
+        def map = new DirtyCheckingMap([a: 1], owner, 'attrs')
+        owner.trackChanges()
+
+        expect: 'an ordinary entry, a missing entry, and the universal metaClass property'
+        map.a == 1
+        map['a'] == 1
+        map.missing == null
+        map.metaClass instanceof MetaClass
+
+        when: 'an ordinary entry is written through property syntax'
+        map.b = 2
+
+        then:
+        map.get('b') == 2
+        owner.hasChanged('attrs')
+    }
+
+    def 'the names the wrapper intercepts are exactly the bean properties it declares'() {
+        given: 'the readable bean properties of the wrapper, less those every Groovy object has'
+        def declared = Introspector.getBeanInfo(DirtyCheckingMap).propertyDescriptors*.name - ['class', 'empty', 'metaClass']
+        def owner = new CollectionOwner()
+
+        expect: 'each one reads as the entry, so a field added to the wrapper must also be intercepted'
+        declared.toSorted() == ['assigned', 'originalSize', 'parent', 'property', 'target']
+        declared.every { String name -> new DirtyCheckingMap([(name): 'entry'], owner, 'attrs')[name] == 'entry' }
+    }
+}
+
+@CompileStatic
+class StaticMapAccess {
+
+    static Object read(DirtyCheckingMap map, String key) {
+        map[key]
+    }
+
+    static Object readAsObject(DirtyCheckingMap map, Object key) {
+        map[key]
+    }
+
+    static void write(DirtyCheckingMap map, String key, Object value) {
+        map[key] = value
     }
 }
 

@@ -121,13 +121,15 @@ public final class BindingIncludeLists {
                 // target's constraints and would otherwise run on every bind of a cached class.
                 final List runtimeBindableNames = denyByDefault ? bindablePropertyNames(type) : null;
                 includeList = runtimeBindableNames;
-                // Compatibility metadata describes its declaring class, not an unenhanced subclass.
-                // Match Grails 7's class-local lookup so a parent's generated list cannot hide new properties.
-                final Field legacyWhiteListField = getPublicDeclaredField(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST);
+                // The fields are public and static, so they are found on the type or on the nearest superclass
+                // that has them. Since every class that extends one with include lists gets its own, a type
+                // without them whose superclass has them is a proxy of some kind, or was compiled without the
+                // data binding library; the superclass's lists are the safe choice for either.
+                final Field legacyWhiteListField = getPublicField(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST);
                 final Field defaultWhiteListField = denyByDefault ?
                         getPairedField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST,
                                 DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST) :
-                        getPublicDeclaredField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
+                        getPublicField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST);
                 if (!denyByDefault) {
                     includeList = getStaticListFieldValue(legacyWhiteListField);
                     if (includeList == null) {
@@ -151,12 +153,22 @@ public final class BindingIncludeLists {
                     includeListCache.put(type, includeList == null ? NO_BINDING_INCLUDE_LIST : includeList);
                 }
             }
-        } catch (Exception e) {
+        } catch (IllegalAccessException e) {
+            // nothing is bound, and the caller sees why
+            throw new IllegalStateException("The data binding include list of [" + type.getName() + "] could not be read", e);
         }
         if (denyByDefault) {
             includeList = asGenerated(includeList);
         }
         return includeList;
+    }
+
+    /**
+     * Whether a type declares an include list of its own, as every class Grails gives one does.
+     */
+    public static boolean declaresIncludeList(final Class type) {
+        return getPublicDeclaredField(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST) != null ||
+                getPublicDeclaredField(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST) != null;
     }
 
     /**
@@ -401,6 +413,15 @@ public final class BindingIncludeLists {
             currentClass = currentClass.getSuperclass();
         }
         return null;
+    }
+
+    /** A public field of the class or of the nearest superclass that declares it. */
+    private static Field getPublicField(final Class objectClass, final String fieldName) {
+        try {
+            return objectClass.getField(fieldName);
+        } catch (NoSuchFieldException ignored) {
+            return null;
+        }
     }
 
     private static Field getPublicDeclaredField(final Class objectClass, final String fieldName) {

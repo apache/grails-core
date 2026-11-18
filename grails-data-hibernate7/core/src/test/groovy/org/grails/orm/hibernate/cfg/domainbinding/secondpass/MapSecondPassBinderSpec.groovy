@@ -30,6 +30,7 @@ import org.hibernate.boot.spi.MetadataBuildingContext
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.CompositeUserTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ForeignKeyOneToOneBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ManyToOneBinder
@@ -82,6 +83,7 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         ColumnNameForPropertyAndPathFetcher columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover)
         CollectionHolder collectionHolder = new CollectionHolder(metadataBuildingContext)
         SimpleValueBinder simpleValueBinder = new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
+        CompositeUserTypeBinder compositeUserTypeBinder = new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment)
         EnumTypeBinder enumTypeBinderToUse = new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy)
         SimpleValueColumnFetcher simpleValueColumnFetcher = new SimpleValueColumnFetcher()
         CompositeIdentifierToManyToOneBinder compositeIdentifierToManyToOneBinder = new CompositeIdentifierToManyToOneBinder(
@@ -118,17 +120,14 @@ class MapSecondPassBinderSpec extends HibernateGormDatastoreSpec {
         )
 
         GrailsPropertyBinder propertyBinder = new GrailsPropertyBinder(
-
-
                 enumTypeBinderToUse,
                 componentBinder,
                 collectionBinder,
-                simpleValueBinder
-                ,
+                simpleValueBinder,
+                compositeUserTypeBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 foreignKeyOneToOneBinder
-
         )
         CompositeIdBinder compositeIdBinder = new CompositeIdBinder(metadataBuildingContext, componentUpdater, propertyBinder)
         PropertyBinder propertyBinderHelper = new PropertyBinder()

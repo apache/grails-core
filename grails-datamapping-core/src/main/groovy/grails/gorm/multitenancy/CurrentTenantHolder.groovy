@@ -35,6 +35,13 @@ class CurrentTenantHolder {
     }
 
     /**
+     * The tenant id bound by {@link #withoutTenant(Datastore, Closure)}. It is an instance of its own, so that running
+     * without a tenant id can be told apart from a tenant id that only equals {@link ConnectionSource#DEFAULT}. It never
+     * leaves this class: {@link #get(Datastore)} and {@link #get()} return {@link ConnectionSource#DEFAULT} in its place.
+     */
+    private static final String WITHOUT_TENANT = new String(ConnectionSource.DEFAULT)
+
+    /**
      * Obtain the tenant bound to the current thread, irrespective of datastore.
      *
      * Prefer {@link #get(Datastore)}. A thread can hold a different tenant for each datastore, and only
@@ -50,7 +57,7 @@ class CurrentTenantHolder {
         if (map.isEmpty()) {
             return null
         }
-        Set<Serializable> boundTenants = new LinkedHashSet<>(map.values())
+        Set<Serializable> boundTenants = new LinkedHashSet<>(map.values().collect { Serializable tenantId -> visible(tenantId) })
         if (boundTenants.size() > 1) {
             throw new TenantException("Cannot resolve a single current tenant: ${boundTenants} are bound on this thread for different datastores. Use get(Datastore) to select the tenant of the datastore being operated on.")
         }
@@ -58,15 +65,32 @@ class CurrentTenantHolder {
     }
 
     /**
-     * @return Obtain the current tenant
+     * @return Obtain the current tenant, {@link ConnectionSource#DEFAULT} inside
+     * {@link #withoutTenant(Datastore, Closure)}
      */
     static Serializable get(Datastore datastore) {
+        visible(bound(datastore))
+    }
+
+    /**
+     * @param datastore The datastore
+     * @return Whether the current thread runs inside {@link #withoutTenant(Datastore, Closure)} for the datastore
+     */
+    static boolean isWithoutTenant(Datastore datastore) {
+        bound(datastore).is(WITHOUT_TENANT)
+    }
+
+    private static Serializable bound(Datastore datastore) {
         def map = currentTenantThreadLocal.get()
         def tenantId = map.get(datastore)
         if (tenantId == null) {
             tenantId = map.get(datastore.getClass())
         }
         return tenantId
+    }
+
+    private static Serializable visible(Serializable tenantId) {
+        tenantId.is(WITHOUT_TENANT) ? ConnectionSource.DEFAULT : tenantId
     }
 
     /**
@@ -135,7 +159,7 @@ class CurrentTenantHolder {
     static <T> T withoutTenant(Datastore datastore, Closure<T> callable) {
         def previous = currentTenantThreadLocal.get().get(datastore)
         try {
-            set(datastore, (Serializable) ConnectionSource.DEFAULT)
+            set(datastore, (Serializable) WITHOUT_TENANT)
             callable.call()
         } finally {
             if (previous == null) {

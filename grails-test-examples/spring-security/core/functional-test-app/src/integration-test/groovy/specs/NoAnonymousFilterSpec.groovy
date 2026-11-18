@@ -19,16 +19,9 @@
 
 package specs
 
-import java.net.http.HttpClient
-
-import org.apache.grails.testing.http.client.HttpClientSupport
-import org.springframework.beans.factory.annotation.Autowired
 import spock.lang.IgnoreIf
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
-import com.testapp.TestDataService
 import grails.testing.mixin.integration.Integration
 
 /**
@@ -39,22 +32,9 @@ import grails.testing.mixin.integration.Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'noAnonymous' })
 @Issue('https://github.com/apache/grails-core/issues/16632')
 @Integration(applicationClass = functional.test.app.Application)
-class NoAnonymousFilterSpec extends Specification implements HttpClientSupport {
+class NoAnonymousFilterSpec extends AbstractHttpClientSecuritySpec {
 
     private static final String BASIC_CHALLENGE = 'Basic realm="Grails Spring Security Basic Test Realm"'
-
-    @Autowired
-    TestDataService testDataService
-
-    @Shared
-    private boolean usersAdded
-
-    void setup() {
-        if (!usersAdded) {
-            testDataService.addTestUsers()
-            usersAdded = true
-        }
-    }
 
     void 'a request without credentials to the Basic Auth chain is challenged with 401'() {
         when:
@@ -67,7 +47,7 @@ class NoAnonymousFilterSpec extends Specification implements HttpClientSupport {
 
     void 'a request without credentials to the form login chain is redirected to the login page'() {
         when:
-        def response = http([:], '/secureAnnotated', newHttpClientWith { followRedirects(HttpClient.Redirect.NEVER) })
+        def response = http([:], '/secureAnnotated', withoutRedirects())
 
         then:
         response.statusCode() == 302
@@ -97,9 +77,5 @@ class NoAnonymousFilterSpec extends Specification implements HttpClientSupport {
 
         then:
         response.statusCode() == 200
-    }
-
-    private static String basic(String username, String password) {
-        'Basic ' + "$username:$password".bytes.encodeBase64()
     }
 }

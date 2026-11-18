@@ -18,6 +18,9 @@
  */
 package org.grails.plugins.i18n
 
+import java.net.URL
+import java.net.URLClassLoader
+
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.bootstrap.DefaultBootstrapContext
 import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor
@@ -29,6 +32,8 @@ import org.springframework.mock.env.MockEnvironment
 import org.apache.grails.core.plugins.PluginDiscovery
 import org.apache.grails.core.plugins.PluginInfo
 import org.apache.grails.core.plugins.PluginUtils
+import org.grails.config.NavigableMap
+import org.grails.config.NavigableMapPropertySource
 import org.grails.plugins.i18n.fixtures.AlphaPluginGrailsPlugin
 import org.grails.plugins.i18n.fixtures.BetaPluginGrailsPlugin
 
@@ -116,6 +121,62 @@ locales=fr
 
         then: 'neither side is discarded, and the declared value outranks the discovered one'
         environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) == 'config/i18n/custom,messages'
+    }
+
+    void 'declared base names in #format form stay ahead of discovered bundles'() {
+        given: 'Grails configuration exposes non-empty lists through indexed properties'
+        NavigableMap config = new NavigableMap()
+        config.merge([spring: [messages: [basename: declared]]], false)
+        MockEnvironment environment = new MockEnvironment()
+        environment.propertySources.addLast(new NavigableMapPropertySource('application', config))
+
+        when:
+        new I18nEnvironmentPostProcessor(bootstrapContext)
+                .postProcessEnvironment(environment, applicationUsing(getClass().classLoader))
+
+        then: 'the declared order is preserved before the discovered application bundle'
+        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) ==
+                'config/i18n/custom,config/i18n/other,messages'
+
+        where:
+        format             | declared
+        'list'             | [' config/i18n/custom ', '', 'config/i18n/other', 'config/i18n/custom']
+        'comma-separated'  | ' config/i18n/custom , , config/i18n/other,config/i18n/custom '
+    }
+
+    void 'indexed basename entries in a map property source stay ahead of discovered bundles'() {
+        given:
+        MockEnvironment environment = new MockEnvironment()
+        environment.propertySources.addLast(new MapPropertySource('application', [
+                (I18nEnvironmentPostProcessor.BASENAME_PROPERTY + '[0]'): 'config/i18n/custom',
+                (I18nEnvironmentPostProcessor.BASENAME_PROPERTY + '[1]'): 'config/i18n/other'
+        ]))
+
+        when:
+        new I18nEnvironmentPostProcessor(bootstrapContext)
+                .postProcessEnvironment(environment, applicationUsing(getClass().classLoader))
+
+        then:
+        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY) ==
+                'config/i18n/custom,config/i18n/other,messages'
+    }
+
+    void 'declared base names are published when no descriptor is found'() {
+        given: 'indexed keys are not themselves spring.messages.basename, so only composition publishes that property'
+        MockEnvironment environment = new MockEnvironment()
+        environment.propertySources.addLast(new MapPropertySource('application.yml', [
+                (I18nEnvironmentPostProcessor.BASENAME_PROPERTY + '[0]'): 'config/i18n/custom',
+                (I18nEnvironmentPostProcessor.BASENAME_PROPERTY + '[1]'): 'config/i18n/other'
+        ]))
+        ClassLoader empty = new URLClassLoader([] as URL[], null)
+
+        when:
+        new I18nEnvironmentPostProcessor(bootstrapContext)
+                .postProcessEnvironment(environment, applicationUsing(empty))
+
+        then:
+        environment.getProperty(I18nEnvironmentPostProcessor.BASENAME_PROPERTY, 'messages') ==
+                'config/i18n/custom,config/i18n/other'
     }
 
     void 'plugin base names follow reverse topological order, not load order'() {

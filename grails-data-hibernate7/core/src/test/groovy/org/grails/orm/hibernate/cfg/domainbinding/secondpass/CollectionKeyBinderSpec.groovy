@@ -62,7 +62,7 @@ class CollectionKeyBinderSpec extends HibernateGormDatastoreSpec {
         def je = gdb.getJdbcEnvironment()
         def svb = new SimpleValueBinder(mbc, ns, je)
         def citmto = new CompositeIdentifierToManyToOneBinder(mbc.getMetadataCollector(), new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(), ns, new org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher(ns), new org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover(), svb)
-        def botml = new BidirectionalOneToManyLinker(new GrailsPropertyResolver())
+        def botml = new BidirectionalOneToManyLinker(new GrailsPropertyResolver(), Mock(CompositeIdentifierToManyToOneBinder))
         def dkvb = new DependentKeyValueBinder(svb, citmto)
         def svcb = new SimpleValueColumnBinder()
         def pkvc = new PrimaryKeyValueCreator(mbc)

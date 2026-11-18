@@ -53,6 +53,27 @@ dependencies {
 }
 ----
 
+[NOTE]
+====
+The Swagger UI starter brings in the `org.webjars:swagger-ui` webjar. In an application that uses the
+asset pipeline, `assetCompile` processes every webjar on the runtime classpath, and it fails on the Swagger
+UI bundles, which use private class fields that its JavaScript minifier, Closure Compiler, does not support
+yet (https://github.com/google/closure-compiler/issues/4286[google/closure-compiler#4286]). springdoc serves
+Swagger UI straight from the webjar, so leave it out of the asset pipeline, as an application generated with
+the `openapi` feature does from Grails 8.0.1. An application generated with 8.0.0 needs the line added:
+
+[source,groovy]
+.build.gradle
+----
+assets {
+    excludes = [
+            // ...
+            'webjars/swagger-ui/**',
+    ]
+}
+----
+====
+
 ==== Generating the Description at Build Time
 
 [source,shell]

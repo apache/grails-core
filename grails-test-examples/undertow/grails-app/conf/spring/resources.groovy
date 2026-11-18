@@ -19,6 +19,7 @@
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 
+import undertowapp.SpringMvcHandlers
 import undertowapp.StaticInitFailureFilter
 
 beans = {
@@ -26,4 +27,5 @@ beans = {
         filter = new StaticInitFailureFilter()
         urlPatterns = ['/staticInitFailure/*']
     }
+    springMvcHandlers(SpringMvcHandlers)
 }

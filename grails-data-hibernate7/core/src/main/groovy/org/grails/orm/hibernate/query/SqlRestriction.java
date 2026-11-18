@@ -28,7 +28,13 @@ import org.grails.datastore.mapping.query.Query;
  * Criterion that restricts the results with a native SQL condition, created by {@code sqlRestriction} in a
  * criteria query. In the SQL, {@code {alias}} stands for the table alias of the queried entity, and each
  * {@code ?} outside a string literal, a quoted identifier and a comment for one of the values, which are bound
- * as parameters.
+ * as parameters. The SQL is read in the {@link SqlSyntax} of the database: {@link #of} checks the placeholders
+ * against the values when the restriction is created, and the query that renders it checks them again.
+ *
+ * <p>The canonical constructor checks that the SQL and the values are not {@code null} and copies the values, but does
+ * not count the placeholders, because the count depends on the syntax of the database, which a restriction built
+ * without a connection does not know. The count is checked where the SQL is rendered, on the connection the query
+ * runs on, and earlier by {@link #of(String, List, SqlSyntax)} where the connection is known.</p>
  *
  * @param sql the SQL condition
  * @param values the values of the {@code ?} placeholders, in order
@@ -50,84 +56,27 @@ public record SqlRestriction(String sql, List<?> values) implements Query.Criter
             }
             copy.add(value instanceof CharSequence ? value.toString() : value);
         }
-        int placeholders = placeholderIndexes(sql).size();
-        if (placeholders != copy.size()) {
-            throw new IllegalArgumentException("The SQL of a sqlRestriction has " + placeholders +
-                    " ? placeholders but " + copy.size() + " values: " + sql);
-        }
         values = Collections.unmodifiableList(copy);
     }
 
     /**
-     * Returns the indexes of the {@code ?} placeholders in the SQL. A {@code ?} in a string literal, a quoted
-     * identifier, a line comment or a block comment is not a placeholder.
+     * Creates the restriction, checking that the SQL, read in the syntax of the database, has one {@code ?}
+     * placeholder per value. A {@code ?} in a string literal, a quoted identifier, a line comment or a block comment
+     * is not a placeholder; nor is one in a bracket identifier where the syntax has them.
+     *
+     * @param sql the SQL condition
+     * @param values the values of the {@code ?} placeholders, in order, none of them {@code null}
+     * @param syntax the syntax of the database's native SQL
+     * @throws IllegalArgumentException if the SQL is {@code null}, a value is {@code null}, or the number of
+     *     placeholders differs from the number of values
      */
-    static List<Integer> placeholderIndexes(String sql) {
-        List<Integer> placeholders = new ArrayList<>();
-        scan(sql, placeholders);
-        return placeholders;
-    }
-
-    /**
-     * Returns whether the SQL ends in a line comment, which would comment out anything appended to it on the same
-     * line.
-     */
-    static boolean endsInLineComment(String sql) {
-        return scan(sql, new ArrayList<>());
-    }
-
-    private static boolean scan(String sql, List<Integer> placeholders) {
-        int length = sql.length();
-        int i = 0;
-        while (i < length) {
-            char c = sql.charAt(i);
-            if (c == '\'' || c == '"' || c == '`') {
-                i = skipQuoted(sql, i, c);
-            } else if (c == '-' && sql.startsWith("--", i)) {
-                int end = endOfLine(sql, i);
-                if (end == length) {
-                    return true;
-                }
-                i = end;
-            } else if (c == '/' && sql.startsWith("/*", i)) {
-                int end = sql.indexOf("*/", i + 2);
-                i = end == -1 ? length : end + 2;
-            } else {
-                if (c == '?') {
-                    placeholders.add(i);
-                }
-                i++;
-            }
+    public static SqlRestriction of(String sql, List<?> values, SqlSyntax syntax) {
+        SqlRestriction restriction = new SqlRestriction(sql, values);
+        int placeholders = SqlText.of(sql, syntax).plainIndexes('?').size();
+        if (placeholders != restriction.values().size()) {
+            throw new IllegalArgumentException("The SQL of a sqlRestriction has " + placeholders +
+                    " ? placeholders but " + restriction.values().size() + " values: " + sql);
         }
-        return false;
-    }
-
-    /**
-     * Returns the index after the quoted text starting at {@code start}, where a doubled quote stands for the quote
-     * itself.
-     */
-    static int skipQuoted(String sql, int start, char quote) {
-        int i = start + 1;
-        while (i < sql.length()) {
-            if (sql.charAt(i) == quote) {
-                if (i + 1 < sql.length() && sql.charAt(i + 1) == quote) {
-                    i += 2;
-                    continue;
-                }
-                return i + 1;
-            }
-            i++;
-        }
-        return i;
-    }
-
-    static int endOfLine(String sql, int start) {
-        for (int i = start; i < sql.length(); i++) {
-            char c = sql.charAt(i);
-            if (c == '\n' || c == '\r') {
-                return i;
-            }
-        }
-        return sql.length();
+        return restriction;
     }
 }

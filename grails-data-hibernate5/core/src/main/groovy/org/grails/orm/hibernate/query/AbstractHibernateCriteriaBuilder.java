@@ -66,7 +66,6 @@ import org.hibernate.type.Type;
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.ConversionService;
 
-import grails.gorm.MultiTenant;
 import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -163,8 +162,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
     public void setDatastore(AbstractHibernateDatastore datastore) {
         this.datastore = datastore;
-        if (MultiTenant.class.isAssignableFrom(targetClass) && datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
-            datastore.enableMultiTenancyFilter();
+        if (datastore.getMultiTenancyMode() == MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR) {
+            PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+            if (entity != null) {
+                datastore.enableMultiTenancyFilter(entity);
+            }
         }
     }
 

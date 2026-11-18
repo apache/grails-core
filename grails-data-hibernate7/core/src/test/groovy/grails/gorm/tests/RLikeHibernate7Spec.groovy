@@ -19,35 +19,28 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.testcontainers.mariadb.MariaDBContainer
-import org.testcontainers.mysql.MySQLContainer
-import org.testcontainers.postgresql.PostgreSQLContainer
-import org.testcontainers.oracle.OracleContainer
 import org.testcontainers.spock.Testcontainers
+import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Unroll
 
-import java.time.Duration
 
 @Testcontainers
 @Requires({ isDockerAvailable() })
 class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
 
-    @Shared postgres = new PostgreSQLContainer("postgres:16")
-    @Shared mysql = new MySQLContainer("mysql:8.0")
-    @Shared mariadb = new MariaDBContainer("mariadb:10.11")
-    // slim-faststart ships native ARM64 + x86_64 images and typically reports ready in ~15s,
-    // but the default 60s Testcontainers timeout has been too tight on loaded/emulated CI
-    // runners (testcontainers/testcontainers-java#9057) - a generous explicit timeout avoids
-    // that without slowing down the common case.
-    @Shared oracle = new OracleContainer("gvenzl/oracle-free:slim-faststart")
-            .withStartupTimeout(Duration.ofMinutes(3))
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
+    @Shared db2 = DatabaseContainers.DB2
 
     void setupSpec() {
         manager.registerDomainClasses(RlikeFoo)
     }
 
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
     void "test rlike works with #db"() {
         given:
         if (container != null && !container.isRunning()) {
@@ -92,6 +85,43 @@ class RLikeHibernate7Spec extends HibernateGormDatastoreSpec {
         "MySQL"      | mysql
         "MariaDB"    | mariadb
         "Oracle"     | oracle
+        "DB2"        | db2
+    }
+
+    @IgnoreIf({ data.db == 'DB2' && System.getProperty('os.arch') in ['aarch64', 'arm64'] })
+    void "test rlike on #db matches #expected of Alice, alice and bob for the pattern ^al.*"() {
+        given:
+        if (container != null && !container.isRunning()) {
+            container.start()
+        }
+        manager.destroy()
+        manager.grailsConfig = [
+                'dataSource.url'                     : container?.jdbcUrl ?: "jdbc:h2:mem:rlikeCaseDB;LOCK_TIMEOUT=10000",
+                'dataSource.driverClassName'         : container?.driverClassName ?: "org.h2.Driver",
+                'dataSource.username'                : container?.username ?: "sa",
+                'dataSource.password'                : container?.password ?: "",
+                'dataSource.dbCreate'                : 'create-drop',
+                'hibernate.id.new_generator_mappings': 'true'
+        ]
+        manager.setup(this.class)
+        ['Alice', 'alice', 'bob'].each { new RlikeFoo(name: it).save() }
+        RlikeFoo.withSession { it.flush() }
+
+        when: 'the pattern is matched'
+        manager.session.clear()
+        List<String> names = RlikeFoo.findAllByNameRlike('^al.*')*.name.sort()
+
+        then: 'whether case matters follows the database: PostgreSQL matches with ~, which is case-sensitive, and MySQL and MariaDB follow the collation (Hibernate 5 renders ~*, see #16882)'
+        names == expected
+
+        where:
+        db           | container || expected
+        "H2"         | null      || ['alice']
+        "Postgres"   | postgres  || ['alice']
+        "MySQL"      | mysql     || ['Alice', 'alice']
+        "MariaDB"    | mariadb   || ['Alice', 'alice']
+        "Oracle"     | oracle    || ['alice']
+        "DB2"        | db2       || ['alice']
     }
 }
 

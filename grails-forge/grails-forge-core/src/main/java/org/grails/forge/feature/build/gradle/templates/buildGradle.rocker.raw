@@ -141,7 +141,10 @@ assets {
     excludes = [
             'webjars/jquery/**',
             'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**'
+            'webjars/bootstrap-icons/**',
+@if (features.contains("openapi")) {
+            'webjars/swagger-ui/**',
+}
     ]
     includes = [
             'webjars/jquery/*/dist/jquery.js',

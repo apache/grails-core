@@ -18,12 +18,17 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.binder;
 
+import java.util.List;
+import java.util.Map;
+
 import org.hibernate.boot.spi.InFlightMetadataCollector;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.OneToMany;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.grails.orm.hibernate.cfg.ColumnConfig;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.orm.hibernate.cfg.JoinTable;
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
@@ -48,6 +53,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPass;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.MapSecondPassBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.PrimaryKeyValueCreator;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SetSecondPass;
+import org.grails.orm.hibernate.cfg.domainbinding.secondpass.SharedJoinTableUniqueKeyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.ToManyEntityMultiTenantFilterBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.secondpass.UnidirectionalOneToManyInverseValuesBinder;
@@ -64,6 +70,8 @@ import org.grails.orm.hibernate.cfg.domainbinding.util.TableForManyCalculator;
  */
 @SuppressWarnings("PMD.DataflowAnomalyAnalysis")
 public class CollectionBinder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(CollectionBinder.class);
 
     private final MetadataBuildingContext metadataBuildingContext;
     private final CollectionHolder collectionHolder;
@@ -92,12 +100,12 @@ public class CollectionBinder {
         this.collectionHolder = collectionHolder;
         this.mappings = mappings;
         this.tableForManyCalculator = tableForManyCalculator;
-        GrailsPropertyResolver grailsPropertyResolver = new GrailsPropertyResolver();
-        CollectionForPropertyConfigBinder collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
+        var grailsPropertyResolver = new GrailsPropertyResolver();
+        var collectionForPropertyConfigBinder = new CollectionForPropertyConfigBinder();
         UnidirectionalOneToManyInverseValuesBinder unidirectionalOneToManyInverseValuesBinder =
                 new UnidirectionalOneToManyInverseValuesBinder(metadataBuildingContext);
         var simpleValueColumnBinder = new SimpleValueColumnBinder();
-        CollectionWithJoinTableBinder collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
+        var collectionWithJoinTableBinder = new CollectionWithJoinTableBinder(
                 namingStrategy,
                 unidirectionalOneToManyInverseValuesBinder,
                 compositeIdentifierToManyToOneBinder,
@@ -112,7 +120,7 @@ public class CollectionBinder {
                         new ColumnConfigToColumnBinder()));
         this.collectionSecondPassBinder = new CollectionSecondPassBinder(
                 new CollectionKeyColumnUpdater(new CollectionKeyBinder(
-                        new BidirectionalOneToManyLinker(grailsPropertyResolver),
+                        new BidirectionalOneToManyLinker(grailsPropertyResolver, compositeIdentifierToManyToOneBinder),
                         new DependentKeyValueBinder(simpleValueBinder, compositeIdentifierToManyToOneBinder),
                         simpleValueColumnBinder,
                         new PrimaryKeyValueCreator(metadataBuildingContext))),
@@ -121,7 +129,8 @@ public class CollectionBinder {
                 new BidirectionalMapElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
                 new ManyToOneElementBinder(manyToOneBinder, collectionForPropertyConfigBinder),
                 new HibernateToManyEntityOrderByBinder(),
-                new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy))
+                new ToManyEntityMultiTenantFilterBinder(new DefaultColumnNameFetcher(namingStrategy)),
+                new SharedJoinTableUniqueKeyBinder(metadataBuildingContext)
         );
         this.listSecondPassBinder = new ListSecondPassBinder(
                 metadataBuildingContext, namingStrategy, collectionSecondPassBinder, simpleValueColumnBinder, mappings);
@@ -159,7 +168,7 @@ public class CollectionBinder {
     }
 
     private void bindOneToManyElement(HibernateToManyEntityProperty property, Collection collection) {
-        OneToMany oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
+        var oneToMany = new OneToMany(metadataBuildingContext, collection.getOwner());
         oneToMany.setReferencedEntityName(property.getHibernateAssociatedEntity().getName());
         oneToMany.setIgnoreNotFound(true);
         collection.setElement(oneToMany);
@@ -194,9 +203,9 @@ public class CollectionBinder {
             inherited.setCatalog(owner.getCatalog());
         }
         if ((inherited.getKeys() == null || inherited.getKeys().isEmpty()) && owner.getColumn() != null) {
-            inherited.setKeys(java.util.List.of(owner.getColumn()));
+            inherited.setKeys(List.of(owner.getColumn()));
         }
-        java.util.List<ColumnConfig> ownerKeys = owner.getKeys();
+        var ownerKeys = owner.getKeys();
         if (inherited.getColumn() == null && ownerKeys != null && ownerKeys.size() == 1) {
             inherited.setColumn(ownerKeys.get(0));
         }
@@ -212,6 +221,40 @@ public class CollectionBinder {
         collection.setCollectionTable(
                 mappings.addTable(schemaName, catalogName, tableName, null, false, metadataBuildingContext, false));
         collection.setInverse(property.isBidirectional() && !property.isOwningSide());
+        if (collection.isInverse()) {
+            warnIfManyToManyHasNoOwningSide(property);
+        }
+    }
+
+    /**
+     * A bidirectional many-to-many is written by its owning side, which {@code belongsTo} designates. When neither
+     * side declares {@code belongsTo}, both sides are inverse and the relationship is never stored, so warn about it
+     * once per relationship. A Map-valued side is never inverse once its second pass has run, because
+     * {@code MapSecondPassBinder} makes it write the join table, so a relationship with a Map on either side is
+     * stored and gets no warning. A circular many-to-many, whose two properties are on the same class, is warned about
+     * as well, because it loses data the same way; its two sides tie on the owner name, so the property names decide
+     * which side warns.
+     */
+    private void warnIfManyToManyHasNoOwningSide(HibernateToManyProperty property) {
+        if (!(property instanceof HibernateManyToManyProperty manyToMany) ||
+                !manyToMany.isBidirectional()) {
+            return;
+        }
+        Association<?> otherSide = manyToMany.getInverseSide();
+        if (otherSide == null || otherSide.isOwningSide() ||
+                Map.class.isAssignableFrom(manyToMany.getType()) || Map.class.isAssignableFrom(otherSide.getType())) {
+            return;
+        }
+        int byOwner = manyToMany.getOwner().getName().compareTo(otherSide.getOwner().getName());
+        if (byOwner > 0 || byOwner == 0 && manyToMany.getName().compareTo(otherSide.getName()) > 0) {
+            return;
+        }
+        LOG.warn("Neither side of the many-to-many between [{}.{}] and [{}.{}] declares belongsTo, so the relationship " +
+                "is not stored. Declare belongsTo on the owned side, for example in {}: static belongsTo = {}",
+                manyToMany.getOwner().getName(), manyToMany.getName(),
+                otherSide.getOwner().getName(), otherSide.getName(),
+                otherSide.getOwner().getJavaClass().getSimpleName(),
+                manyToMany.getOwner().getJavaClass().getSimpleName());
     }
 
     private void registerSecondPass(HibernateToManyProperty property, Collection collection) {

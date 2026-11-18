@@ -24,6 +24,8 @@ on:
       - 'build-logic/plugins/src/main/groovy/org/apache/grails/buildsrc/ValidateActionsTask.groovy'
       - 'build-logic/plugins/src/main/groovy/org/apache/grails/buildsrc/GrailsValidateActionsPlugin.groovy'
   pull_request:
+    # ready_for_review is not a default type: a draft runs nothing until it is ready or labelled "run ci".
+    types: [ opened, synchronize, reopened, ready_for_review ]
     paths:
       - '.github/workflows/**'
       - 'build-logic/plugins/src/main/groovy/org/apache/grails/buildsrc/ValidateActionsTask.groovy'
@@ -40,12 +42,16 @@ concurrency:
 jobs:
   validate:
     name: "Validate Actions"
+    if: >-
+      github.event_name != 'pull_request'
+      || (!contains(github.event.pull_request.labels.*.name, 'no ci')
+          && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
     runs-on: ubuntu-24.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1
       - name: "☕️ Setup JDK"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: liberica
           java-version: 21
