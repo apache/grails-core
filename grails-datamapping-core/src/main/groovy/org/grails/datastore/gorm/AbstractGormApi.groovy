@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.VoidSessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -80,6 +81,34 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
 
     private List<Method> methods
     private List<Method> extendedMethods
+
+    /**
+     * Runs the callable on the connection this API names, so that what it asks of the connection, such as the
+     * {@code unique} constraint's query, goes to the connection a save or a validation names and not to the connection
+     * block around it. An API of the default connection follows the block, as it always did.
+     */
+    protected <T1> T1 inConnection(Closure<T1> callable) {
+        String connection = connectionName()
+        if (connection == null || ConnectionSource.DEFAULT == connection) {
+            return callable.call()
+        }
+        return GormRegistry.withConnectionScope(persistentClass, connection, callable)
+    }
+
+    /**
+     * The connection this API names: its qualifier when that is a connection, else the connection the datastore it is
+     * for was built for, which is how the API of a connection is made, or {@code null} when it names none.
+     */
+    private String connectionName() {
+        Datastore current = getDatastore()
+        if (ConnectionSource.DEFAULT != qualifier && ConnectionSourceNameResolver.isConnectionSourceName(current, qualifier)) {
+            return qualifier
+        }
+        if (current instanceof ConnectionSourcesProvider) {
+            return ((ConnectionSourcesProvider) current).getConnectionSources()?.getDefaultConnectionSource()?.getName()
+        }
+        return null
+    }
 
     AbstractGormApi(Class<D> persistentClass, Datastore datastore) {
         this(persistentClass, datastore, (GormRegistry) null)

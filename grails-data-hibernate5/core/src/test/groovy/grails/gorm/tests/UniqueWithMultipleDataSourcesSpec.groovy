@@ -26,7 +26,6 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.dialect.H2Dialect
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -56,19 +55,18 @@ class UniqueWithMultipleDataSourcesSpec extends Specification {
     PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
-    @Ignore
     @Issue('https://github.com/apache/grails-core/issues/10481')
-    void "test multiple data sources and unique constraint"() {
-        when:
+    void "a value that is unique on its own connection does not conflict with the same value on another"() {
+        when: 'the value is saved on the default connection, and the same value on the second'
         Abc abc = new Abc(temp: "testing")
-        abc.save()
+        abc.save(flush: true)
 
         Abc abc1 = new Abc(temp: "testing")
-        Abc.second.withNewSession {
-            abc1.second.save()
+        Abc.second.withNewTransaction {
+            abc1.second.save(flush: true)
         }
 
-        then:
+        then: 'the unique check of the second save looks at the second connection only'
         !abc1.hasErrors()
     }
 }

@@ -638,6 +638,19 @@ class GormRegistry {
     }
 
     /**
+     * The connection the unqualified operations on the entity are routed to on this thread: that of the innermost
+     * {@link #withConnectionScope} block applying to it, else the default connection.
+     *
+     * @param entity The entity
+     * @return The name of the connection
+     * @since 8.0.1
+     */
+    static String currentConnection(Class entity) {
+        String scoped = scopedConnection(instance.normalizeEntityKey(entity))
+        return scoped != null ? scoped : ConnectionSource.DEFAULT
+    }
+
+    /**
      * @return the connection that the innermost {@link #withConnectionScope} block applying to the entity routes
      * its unqualified operations to, or {@code null} when none is running for it on this thread
      */

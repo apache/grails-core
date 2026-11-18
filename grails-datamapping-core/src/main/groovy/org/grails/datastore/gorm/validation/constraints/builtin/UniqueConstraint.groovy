@@ -94,7 +94,9 @@ class UniqueConstraint extends AbstractConstraint {
         }
 
         // Re-create the detached criteria based on the new constraint class
-        detachedCriteria = new DetachedCriteria(constraintClass)
+        // The check runs on the connection the unqualified calls here are routed to: inside a connection block that of
+        // the block, else the default connection
+        detachedCriteria = new DetachedCriteria(constraintClass).withConnection(GormRegistry.currentConnection(constraintClass))
 
         if (targetEntity == null) {
             throw new IllegalStateException("Cannot validate object [$target]. It is not a persistent entity")

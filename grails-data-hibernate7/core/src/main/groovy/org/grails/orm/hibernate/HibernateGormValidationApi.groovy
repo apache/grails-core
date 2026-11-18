@@ -73,6 +73,10 @@ class HibernateGormValidationApi<D> extends GormValidationApi<D> {
     }
 
     boolean validate(D instance, List validatedFieldsList, Map arguments = Collections.emptyMap()) {
+        return inConnection { validateInConnection(instance, validatedFieldsList, arguments) }
+    }
+
+    private boolean validateInConnection(D instance, List validatedFieldsList, Map arguments) {
         Errors errors = setupErrorsProperty(instance)
 
         Validator validator = getValidator()
