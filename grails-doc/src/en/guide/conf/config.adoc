@@ -53,6 +53,35 @@ For example:
 my.tmp.dir = "${userHome}/.grails/tmp"
 ----
 
+=== Profile-specific YAML Documents
+
+Use `spring.config.activate.on-profile` to load a YAML document only when its profile condition matches. Grails evaluates these conditions against the comma-separated profiles in the JVM's `spring.profiles.active` system property. For example, `-Dspring.profiles.active=dev,alpha` activates both `dev` and `alpha`; whitespace around each name is ignored.
+
+NOTE: Only the `spring.profiles.active` system property is considered when selecting YAML documents. Profiles activated any other way, such as with the `SPRING_PROFILES_ACTIVE` environment variable, the `--spring.profiles.active` command-line argument, or the name of the Grails environment, which Grails also activates as a profile at startup, do not affect document selection. For example, with `SPRING_PROFILES_ACTIVE=prod` and no `spring.profiles.active` system property, a document whose selector is `'!prod'` is still loaded.
+
+Conditions support a single profile name or Spring profile expressions using `|` (OR), `&` (AND), `!` (NOT), and parentheses. When combining `&` and `|` in one expression, use parentheses to make the grouping explicit. Quote expressions in YAML, especially those beginning with `!`.
+
+A selector can list alternatives separated by commas, such as `'dev,test'`, or as a YAML sequence, such as `on-profile: [dev, test]`. The document is loaded when any alternative matches, and each alternative can be a profile expression. Missing, empty, and whitespace-only selectors impose no profile restriction. Blank alternatives are ignored, so a list restricts the document unless all of its alternatives are blank. Leading and trailing whitespace around a selector or alternative is ignored.
+
+[source,yaml]
+----
+sample:
+    message: Default message
+---
+spring:
+    config:
+        activate:
+            on-profile: '(dev | test) & !prod'
+sample:
+    message: Development or test message
+----
+
+With `-Dspring.profiles.active=dev,alpha`, the second document overrides `sample.message`. With `-Dspring.profiles.active=dev,prod`, it does not. A negated condition such as `'!prod'` also matches when the system property specifies no profiles.
+
+The legacy `spring.profiles` document selector supports the same expressions and retains case-insensitive profile-name matching for compatibility. The modern `spring.config.activate.on-profile` selector is case-sensitive. Both nested YAML keys and dotted keys are supported. If a document declares both selectors, both conditions must match. Settings such as `spring.profiles.active` and `spring.profiles.include` are not document selectors. Once a document is selected, its selectors are removed from the loaded configuration, so they are not evaluated again at startup and are not available as configuration values.
+
+Groovy configuration files (`application.groovy` and `runtime.groovy`) do not support document-level Spring profile selectors. Assignments such as `spring.profiles = 'prod'` or `spring.config.activate.'on-profile' = 'prod'` are retained as configuration data and do not conditionally exclude the file or its settings. For conditional Groovy configuration, use `environments` blocks selected by the Grails environment, as described in <<environments,Per Environment Configuration>>.
+
 
 === Accessing Configuration with GrailsApplication
 
@@ -96,6 +125,8 @@ class MyController {
 
 Notice that the `Config` instance is a merged configuration based on Spring's {springapi}org/springframework/context/annotation/PropertySource.html[PropertySource] concept and reads configuration from the environment, system properties and the local application configuration merging them into a single object.
 
+The `Config.merge(Map)` method merges the supplied values into the runtime configuration. Spring profile conditions such as `spring.config.activate.on-profile` are evaluated when YAML documents are loaded, not when an already-loaded configuration is copied or merged. Restoring a configuration snapshot therefore preserves its values even if the JVM's `spring.profiles.active` system property has changed since the snapshot was created. Merging configuration does not change the active profiles of the Spring application context.
+
 `GrailsApplication` can be easily injected into services and other Grails artifacts:
 
 [source,groovy]
@@ -111,6 +142,82 @@ class MyService {
     }
 }
 ----
+
+=== Placeholders in YAML Lists
+
+YAML list elements can contain Spring property placeholders, including environment variables and default values.
+These placeholders are resolved when the list is bound to a Spring Boot `@ConfigurationProperties` bean. For example:
+
+[source,yaml]
+----
+grails:
+    cors:
+        enabled: true
+        allowedOrigins:
+            - https://static.example.com
+            - "${CORS_ALLOWED_ORIGIN:https://default.example.com}"
+----
+
+The second allowed origin is the value of `CORS_ALLOWED_ORIGIN`, or `https://default.example.com` when that variable
+is not set. Each element is resolved independently; the list does not need to be written as a comma-separated string.
+
+To read a whole list, use `grailsApplication.config.getProperty('grails.cors.allowedOrigins', List)` or bind it with
+`@ConfigurationProperties`. Spring's `Environment` exposes non-empty YAML lists through indexed properties such as
+`grails.cors.allowedOrigins[0]`. A list nested in a list uses one index per level, such as `app.groups[0][1]`.
+
+The list itself is not a property of the `Environment`, so `environment.getProperty('grails.cors.allowedOrigins')`
+returns `null`, as in a plain Spring Boot application. A `@Value('${grails.cors.allowedOrigins}')` placeholder, or any
+other `${...}` placeholder that names a list of plain values, still reads it: it resolves to the elements of the list
+joined by commas, with the placeholders in the elements resolved, and Spring converts that value to the `List` or array
+the placeholder is injected into. The list is read as `@ConfigurationProperties` binding reads it, from the property
+source of the highest priority that sets it, and its name is matched as that binding matches it, so
+`${grails.cors.allowed-origins}` reads the same list. A value set under the name of the list itself, in any property
+source, is used instead of the list. The conversion splits an element that contains a comma in two, so bind a list
+whose elements can contain commas.
+
+A placeholder that names a list of objects has nothing to resolve to. Grails leaves a placeholder it cannot resolve as
+written, so the injection point receives the placeholder text, or the placeholder's default when it has one. Bind such
+a list, or read it through `grailsApplication.config`.
+
+=== Configuration Metadata
+
+Grails framework modules publish standard Spring Boot configuration metadata in
+`META-INF/spring-configuration-metadata.json`. IDEs use this metadata for key completion, types, descriptions, defaults,
+and value hints. The Grails configuration report command and the
+link:../ref/Configuration/Application%20Properties.html[Application Properties reference] use its property and group
+entries.
+
+The configuration report includes the properties of the Grails namespaces, `grails.`, `dataSource.` and `hibernate.`,
+from all metadata on the classpath. A Grails plugin can publish metadata for its own namespace in the same way, and the
+report includes all of the properties a plugin documents, each group in its own section. This also applies to a plugin
+that is on the classpath as the output directories of its Gradle build instead of a JAR, such as a plugin project that
+runs the report itself, as long as it uses the default output directories for its classes and resources. The metadata
+of other libraries, such as Spring Boot, is left out of the report.
+
+For configuration classes written in Groovy, Grails collects metadata with a compiler AST transformation. The
+transformation writes the metadata of each `@ConfigurationProperties` class to its own build-time file next to the
+compiled classes, and the build merges those files after compilation. Nothing is added to the compiled classes, and
+the per-class files are not packaged. Java configuration classes are inspected from their compiled bytecode. This
+avoids Java annotation processing on Groovy sources, which would interfere with incremental Groovy compilation.
+
+Some plugins, such as Spring Security, declare their defaults in a Groovy configuration script rather than in a
+configuration class. The published metadata covers those settings as well. The script is read without being executed:
+a literal value becomes the documented default, while a value that comes from a method call, an environment block, or
+another dynamic expression is listed without a default, because its result depends on where the application runs.
+
+The generated metadata describes bindable fields and bean properties. A module can also provide
+`META-INF/additional-spring-configuration-metadata.json` for descriptions, hints, legacy or indirect properties, and
+other details that cannot be derived safely from bytecode or static DSL syntax. Curated values override generated values
+for the same property. The module build merges all generated and curated entries into the single standard
+`META-INF/spring-configuration-metadata.json` resource published in the module JAR.
+
+Generated types follow the Spring Boot convention of naming primitives by their wrapper, for example
+`java.lang.Boolean`. Properties contributed by a Groovy `@Delegate` field are generated when the delegate is compiled
+by the same module; otherwise the build asks for them to be described in the curated metadata.
+
+Only compile-time constant Groovy initializers are emitted as generated defaults. Defaults calculated by constructors,
+method calls, environment checks, system properties, or other dynamic expressions are intentionally omitted unless a
+curated metadata overlay supplies an authoritative value.
 
 === GrailsConfigurationAware Interface
 

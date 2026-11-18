@@ -341,7 +341,22 @@ class HibernateMappingFactorySpec extends HibernateGormDatastoreSpec {
         ctx.addPersistentEntity(MappingFactoryBadGeneratorEntity)
 
         then:
-        thrown(DatastoreConfigurationException)
+        DatastoreConfigurationException e = thrown()
+        e.message == "Invalid id generation strategy for entity [${MappingFactoryBadGeneratorEntity.name}]: notAValidGeneratorOrClassName"
+    }
+
+    void "createIdentityMapping resolves generator #generatorName to #expected"() {
+        when:
+        PersistentEntity entity = new HibernateMappingContext().addPersistentEntity(entityClass)
+
+        then:
+        entity.mapping.identifier.generator == expected
+
+        where:
+        entityClass                             || generatorName | expected
+        MappingFactoryMixedCaseGeneratorEntity  || 'Sequence'    | ValueGenerator.SEQUENCE
+        MappingFactoryTableGeneratorEntity      || 'table'       | ValueGenerator.CUSTOM
+        MappingFactoryUpperCaseTableEntity      || 'TABLE'       | ValueGenerator.CUSTOM
     }
 
     void "createIdentityMapping returns AUTO for composite identity entity"() {
@@ -505,6 +520,30 @@ class MappingFactoryBadGeneratorEntity implements HibernateEntity<MappingFactory
     String name
     static mapping = {
         id generator: 'notAValidGeneratorOrClassName'
+    }
+}
+
+@Entity
+class MappingFactoryMixedCaseGeneratorEntity implements HibernateEntity<MappingFactoryMixedCaseGeneratorEntity> {
+    String name
+    static mapping = {
+        id generator: 'Sequence'
+    }
+}
+
+@Entity
+class MappingFactoryTableGeneratorEntity implements HibernateEntity<MappingFactoryTableGeneratorEntity> {
+    String name
+    static mapping = {
+        id generator: 'table'
+    }
+}
+
+@Entity
+class MappingFactoryUpperCaseTableEntity implements HibernateEntity<MappingFactoryUpperCaseTableEntity> {
+    String name
+    static mapping = {
+        id generator: 'TABLE'
     }
 }
 

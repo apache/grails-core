@@ -73,12 +73,12 @@ tasks.named('processAot') {
 An AOT-processed application registers the same beans as a normal one. The difference is the annotation-processing infrastructure it no longer needs, since the work those components do has already been done:
 
 * `internalConfigurationAnnotationProcessor`
-* `internalAutowiredAnnotationProcessor`
-* `internalCommonAnnotationProcessor`
 * Spring Boot's shared metadata reader factory
 * Grails' own configuration class post-processor
 
 Application beans, plugin beans and auto-configuration beans are all present as usual.
+
+The two processors that inject through annotations, `internalAutowiredAnnotationProcessor` and `internalCommonAnnotationProcessor`, are registered again as the application starts, for the annotated members the generated code could not see: those of a bean a plugin registers at runtime, and those of a bean declared as an interface and built by a supplier, as the link generator is. A bean the generated code created is still injected and initialized once: the processors inject it only through the members the type its definition declares does not have.
 
 
 === Limitations

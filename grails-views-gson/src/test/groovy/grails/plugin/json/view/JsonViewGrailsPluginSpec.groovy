@@ -18,6 +18,7 @@
  */
 package grails.plugin.json.view
 
+import groovy.json.JsonSlurper
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.context.support.GenericApplicationContext
@@ -65,5 +66,21 @@ class JsonViewGrailsPluginSpec extends Specification {
     void "the mvc view resolver delegates to the smart view resolver"() {
         expect:
         beanFactory.getBean('jsonViewResolver', GenericGroovyTemplateViewResolver) != null
+    }
+
+    void "configuration metadata includes generator settings as an explicit nested property"() {
+        when: 'the published metadata of this module is read from the classpath'
+        Map metadata = getClass().classLoader.getResources('META-INF/spring-configuration-metadata.json').toList()
+                .collect { URL url -> new JsonSlurper().parse(url) as Map }
+                .find { Map candidate -> candidate.get('groups').any { it.name == 'grails.views.json' } }
+
+        then:
+        metadata.get('groups').any { it.name == 'grails.views.json.generator' }
+        metadata.get('properties')*.get('name').containsAll([
+                'grails.views.json.generator.dateFormat',
+                'grails.views.json.generator.escapeUnicode',
+                'grails.views.json.generator.locale',
+                'grails.views.json.generator.timeZone'
+        ])
     }
 }

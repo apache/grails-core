@@ -65,6 +65,8 @@ Arguments:
 
 If no `include` list is supplied, `bindData` uses the target class default binding behavior.  By default, statically typed instance properties bind for compatibility unless they are marked `bindable: false`.  Existing `bindable: true` declarations and explicit `include` lists continue to bind exactly the properties they name without configuration changes.  An empty `include` list binds no properties.
 
+In compatibility mode, a command subclass's own properties remain bindable when the subclass is constructed dynamically, even if only its superclass is declared as a controller action parameter. Declaring a superclass as an action parameter does not restrict such a subclass to the superclass's properties. Inherited and locally declared `bindable: false` constraints still apply, including when the subclass inherits `Validateable` from its superclass instead of implementing it itself. In secure mode, the `bindable: true` constraints the subclass declares are honored in the same way. A proxy of a domain class, such as one returned by `load()`, is not treated as such a subclass: it binds exactly as the domain class does, so `id` and `version` are not bound.
+
 In compatibility mode, supplying only `exclude` binds all other eligible properties without intersecting them with the generated allowlist.  In secure mode, the generated allowlist is still applied when only `exclude` is supplied.
 
 For typed `Map` properties, each value is converted to the declared generic value type.  Conversion failures are recorded as binding errors and binding listeners are notified.

@@ -19,15 +19,11 @@
 package org.grails.datastore.gorm
 
 import groovy.transform.CompileStatic
-import org.grails.datastore.gorm.finders.CountByFinder
-import org.grails.datastore.gorm.finders.FindAllByBooleanFinder
-import org.grails.datastore.gorm.finders.FindAllByFinder
-import org.grails.datastore.gorm.finders.FindByBooleanFinder
-import org.grails.datastore.gorm.finders.FindByFinder
+import org.grails.datastore.gorm.finders.CountFinder
 import org.grails.datastore.gorm.finders.FinderMethod
-import org.grails.datastore.gorm.finders.FindOrCreateByFinder
-import org.grails.datastore.gorm.finders.FindOrSaveByFinder
 import org.grails.datastore.gorm.finders.ListOrderByFinder
+import org.grails.datastore.gorm.finders.ListResultFinder
+import org.grails.datastore.gorm.finders.SingleResultFinder
 import org.grails.datastore.mapping.model.MappingContext
 
 /**
@@ -71,13 +67,13 @@ class DefaultGormApiFactory implements GormApiFactory {
 
     @Override
     List<FinderMethod> createDynamicFinders(DatastoreResolver datastoreResolver, MappingContext mappingContext) {
-        [new FindOrCreateByFinder(datastoreResolver, mappingContext),
-         new FindOrSaveByFinder(datastoreResolver, mappingContext),
-         new FindByFinder(datastoreResolver, mappingContext),
-         new FindAllByFinder(datastoreResolver, mappingContext),
-         new FindAllByBooleanFinder(datastoreResolver, mappingContext),
-         new FindByBooleanFinder(datastoreResolver, mappingContext),
-         new CountByFinder(datastoreResolver, mappingContext),
+        [SingleResultFinder.findOrCreateBy(datastoreResolver, mappingContext),
+         SingleResultFinder.findOrSaveBy(datastoreResolver, mappingContext),
+         SingleResultFinder.findBy(datastoreResolver, mappingContext),
+         ListResultFinder.findAllBy(datastoreResolver, mappingContext),
+         ListResultFinder.findAllByBoolean(datastoreResolver, mappingContext),
+         SingleResultFinder.findByBoolean(datastoreResolver, mappingContext),
+         CountFinder.countBy(datastoreResolver, mappingContext),
          new ListOrderByFinder(datastoreResolver, mappingContext)] as List<FinderMethod>
     }
 }

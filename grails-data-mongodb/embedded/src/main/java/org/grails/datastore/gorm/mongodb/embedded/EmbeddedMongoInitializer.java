@@ -18,6 +18,9 @@
  */
 package org.grails.datastore.gorm.mongodb.embedded;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -36,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.aot.AbstractAotProcessor;
+import org.springframework.context.support.DefaultLifecycleProcessor;
 import org.springframework.core.SpringProperties;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
@@ -49,6 +53,12 @@ import org.springframework.util.ClassUtils;
  * <p>This is an {@link ApplicationContextInitializer} rather than an auto configuration
  * because the URL has to be in the {@code Environment} before the datastore bean that
  * reads it is created.
+ *
+ * <p>A process that Spring checkpoints as the context refreshes ({@code spring.context.checkpoint=onRefresh}),
+ * or that exits then ({@code spring.context.exit=onRefresh}), gets its URL here all the same, but the server
+ * is started by the application context, with the lifecycle beans, rather than now. CRaC refuses to checkpoint
+ * a process holding the server's socket, and Spring exits by halting the JVM, which would leave a {@code mongod}
+ * this started running.
  *
  * <p>Asked for by the URL, the way an in-memory SQL database is. An application names the
  * embedded server where it would otherwise name a host, and the environment that wants one says
@@ -207,7 +217,12 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
             return;
         }
 
+        boolean startedWithTheContext = startsWithTheContext();
         int port = resolvePort(environment, asked.group(1));
+        if (port == 0 && startedWithTheContext) {
+            // The url is published before the server binds, so it has to name the port it will bind.
+            port = freePort();
+        }
         String database = resolveDatabase(asked.group(2));
 
         EmbeddedMongoSettings settings = settings(environment, port);
@@ -225,16 +240,24 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
             // anything else holding the port makes the start below fail with an error that
             // says so, rather than publishing a MongoDB url pointing at an unrelated service.
             //
-            if (!started.running().isRunning()) {
+            if (!started.running().isRunning() && !startedWithTheContext) {
                 // Started again here rather than left to the lifecycle bean, which Spring starts
-                // only once the context has refreshed: a datastore builds its indexes as it is
-                // constructed, which happens while beans are still being created, and a url
-                // published for a server that is not listening fails there first.
+                // only once the context has refreshed: anything that talks to MongoDB while beans
+                // are still being created - a client Spring Boot builds, a bean that queries as it
+                // is initialized - would find nothing listening at the url published for it.
                 started.running().restart();
             }
             url = "mongodb://" + started.running().getHost() + ":" + started.running().getPort() +
                     "/" + database;
             log.info("Reusing the embedded MongoDB this JVM already started at {}", url);
+        }
+        else if (startedWithTheContext) {
+            StartedWithTheContext server = new StartedWithTheContext(backend, settings);
+            STARTED.put(port, new StartedServer(server, settings, backend.getName()));
+            stopEverythingAtExit();
+            url = "mongodb://" + server.getHost() + ":" + server.getPort() + "/" + database;
+            log.info("The embedded MongoDB at {} will be started by the application context, using the {} backend, " +
+                    "since the process is checkpointed or exits as the context refreshes", url, backend.getName());
         }
         else {
             url = start(backend, settings, database);
@@ -262,28 +285,54 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      * enabling this was meant to replace.
      */
     private String start(EmbeddedMongoBackend backend, EmbeddedMongoSettings settings, String database) {
-        int port = settings.getPort();
+        RunningEmbeddedMongo running = startServer(backend, settings);
 
-        RunningEmbeddedMongo running;
+        STARTED.put(settings.getPort(), new StartedServer(running, settings, backend.getName()));
+        stopEverythingAtExit();
+
+        String url = "mongodb://" + running.getHost() + ":" + running.getPort() + "/" + database;
+        log.info("Embedded MongoDB started at {} using the {} backend", url, backend.getName());
+        return url;
+    }
+
+    private static RunningEmbeddedMongo startServer(EmbeddedMongoBackend backend, EmbeddedMongoSettings settings) {
         try {
-            running = backend.start(settings);
+            return backend.start(settings);
         }
         catch (IllegalStateException ex) {
             throw ex;
         }
         catch (Exception ex) {
             throw new IllegalStateException("Failed to start the " + backend.getName() +
-                    " embedded MongoDB on port " + port + ", which something else may already be using. " +
+                    " embedded MongoDB on port " + settings.getPort() + ", which something else may already be using. " +
                     "Name a free port as mongodb://" + EMBEDDED_HOST + ":<port>/<database>, or name a host " +
                     "instead of " + EMBEDDED_HOST + " to use an external MongoDB.", ex);
         }
+    }
 
-        STARTED.put(port, new StartedServer(running, settings, backend.getName()));
-        stopEverythingAtExit();
+    /**
+     * Whether Spring is to checkpoint the process as the context refreshes, or to exit then, rather than to start
+     * the context's lifecycle beans first. Either way nothing may be listening by then: CRaC refuses to checkpoint a
+     * process holding the server's socket, and Spring exits by halting the JVM, which runs no shutdown hook to stop a
+     * mongod it started. So the server is started by the application context instead, after the checkpoint is
+     * restored - and, for a process that exits there, never.
+     */
+    private static boolean startsWithTheContext() {
+        return onRefresh(DefaultLifecycleProcessor.CHECKPOINT_PROPERTY_NAME) ||
+                onRefresh(DefaultLifecycleProcessor.EXIT_PROPERTY_NAME);
+    }
 
-        String url = "mongodb://" + running.getHost() + ":" + running.getPort() + "/" + database;
-        log.info("Embedded MongoDB started at {} using the {} backend", url, backend.getName());
-        return url;
+    private static boolean onRefresh(String propertyName) {
+        return DefaultLifecycleProcessor.ON_REFRESH_VALUE.equalsIgnoreCase(SpringProperties.getProperty(propertyName));
+    }
+
+    private static int freePort() {
+        try (ServerSocket socket = new ServerSocket(0, 1, InetAddress.getByName("localhost"))) {
+            return socket.getLocalPort();
+        }
+        catch (IOException ex) {
+            throw new IllegalStateException("Could not find a free port for the embedded MongoDB", ex);
+        }
     }
 
     private EmbeddedMongoSettings settings(ConfigurableEnvironment environment, int port) {
@@ -447,6 +496,69 @@ public class EmbeddedMongoInitializer implements ApplicationContextInitializer<C
      * constructor should not change to carry it.
      */
     private record StartedServer(RunningEmbeddedMongo running, EmbeddedMongoSettings settings, String backend) {
+    }
+
+    /**
+     * A server that is not started until the application context starts {@link EmbeddedMongoLifecycle}. It answers
+     * for the server it starts, and until then for the one it will: the url names its port before it is bound.
+     */
+    private static final class StartedWithTheContext implements RunningEmbeddedMongo {
+
+        private static final String HOST = "localhost";
+
+        private final EmbeddedMongoBackend backend;
+
+        private final EmbeddedMongoSettings settings;
+
+        private volatile RunningEmbeddedMongo server;
+
+        private StartedWithTheContext(EmbeddedMongoBackend backend, EmbeddedMongoSettings settings) {
+            this.backend = backend;
+            this.settings = settings;
+        }
+
+        @Override
+        public String getHost() {
+            RunningEmbeddedMongo started = this.server;
+            return started != null ? started.getHost() : HOST;
+        }
+
+        @Override
+        public int getPort() {
+            return this.settings.getPort();
+        }
+
+        /**
+         * A server that was never started has nothing to stop, which is all a shutdown hook finds of one in a
+         * process that exited as its context refreshed.
+         */
+        @Override
+        public synchronized void stop() {
+            if (this.server != null) {
+                this.server.stop();
+            }
+        }
+
+        @Override
+        public boolean isRunning() {
+            RunningEmbeddedMongo started = this.server;
+            return started != null && started.isRunning();
+        }
+
+        /**
+         * Starts the server the first time, and binds it again on the same port after that.
+         */
+        @Override
+        public synchronized void restart() {
+            if (this.server == null) {
+                this.server = startServer(this.backend, this.settings);
+                log.info("Embedded MongoDB started at {}:{} using the {} backend", this.server.getHost(),
+                        this.server.getPort(), this.backend.getName());
+            }
+            else {
+                this.server.restart();
+            }
+        }
     }
 
 }

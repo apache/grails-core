@@ -19,17 +19,18 @@
 package org.grails.web.converters.marshaller.json;
 
 import java.text.Format;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
+import org.grails.web.json.JsonDateFormat;
 
 /**
  * JSON ObjectMarshaller which converts a Date Object to an RFC 3339 / ISO 8601
- * UTC instant string (e.g. {@code 2024-06-15T14:30:45.123Z}).
+ * UTC instant string with millisecond precision (e.g. {@code 2024-06-15T14:30:45.123Z}),
+ * the same as Spring Boot's default Jackson rendering. See {@link JsonDateFormat}.
  *
  * @author Siegfried Puchbauer
  * @since 1.1
@@ -47,7 +48,7 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
     }
 
     /**
-     * Default constructor — uses {@link DateTimeFormatter#ISO_INSTANT}.
+     * Default constructor — uses {@link JsonDateFormat}.
      */
     public DateMarshaller() {
         this(null);
@@ -62,7 +63,7 @@ public class DateMarshaller implements ObjectMarshaller<JSON> {
             Date date = (Date) object;
             String formatted = legacyFormatter != null ?
                     legacyFormatter.format(date) :
-                    DateTimeFormatter.ISO_INSTANT.format(date.toInstant());
+                    JsonDateFormat.format(date.getTime());
             converter.getWriter().value(formatted);
         }
         catch (JSONException e) {

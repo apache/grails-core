@@ -26,11 +26,12 @@
 
 settingsEvaluated { settings ->
     settings.pluginManager.withPlugin('com.gradle.develocity') {
-        def isAuthenticated = System.getenv('GRAILS_DEVELOCITY_ACCESS_KEY') != null
+        def isAuthenticated = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 
         // 'develocity' is the DSL extension registered by the plugin on Settings.
         settings.develocity {
             server = 'https://develocity.apache.org'
+            projectId = 'grails'
 
             buildScan {
                 // Tag the build for visibility on develocity.apache.org. Groovy's own

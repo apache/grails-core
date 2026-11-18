@@ -124,7 +124,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
 
-        if (mapWithValue != null && (mapWithValue != ('hibernate') || mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
+        if (mapWithValue != null && mapWithValue != 'hibernate' && mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY) {
             return
         }
 
@@ -184,7 +184,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         nextManagedEntityField
                 .addAnnotation(transientAnnotationNode)
 
-        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, constX(-1))
+        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, null)
         instanceIdField
                 .addAnnotation(transientAnnotationNode)
 

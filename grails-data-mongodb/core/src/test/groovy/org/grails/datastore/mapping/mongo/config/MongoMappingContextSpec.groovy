@@ -19,6 +19,7 @@
 package org.grails.datastore.mapping.mongo.config
 
 import grails.gorm.annotation.Entity
+import org.grails.datastore.mapping.model.ValueGenerator
 import org.grails.datastore.mapping.mongo.connections.MongoConnectionSourceSettings
 import spock.lang.Specification
 
@@ -81,6 +82,16 @@ class MongoMappingContextSpec extends Specification {
         'long'         || Long
         'native'       || String
     }
+
+    void "an identifier mapped with a generator class name resolves to CUSTOM and keeps the name"() {
+        when:
+        def entity = new MongoMappingContext(new MongoConnectionSourceSettings())
+                .addPersistentEntity(CustomGeneratorMongoEntity)
+
+        then:
+        entity.mapping.identifier.generator == ValueGenerator.CUSTOM
+        entity.mapping.identifier.mappedForm.generator == 'example.CustomIdentifierGenerator'
+    }
 }
 
 @Entity
@@ -110,4 +121,14 @@ class WildcardMongoEntity {
 class PortableMongoIdentityEntity {
     Serializable id
     String name
+}
+
+@Entity
+class CustomGeneratorMongoEntity {
+    String id
+    String name
+
+    static mapping = {
+        id generator: 'example.CustomIdentifierGenerator'
+    }
 }

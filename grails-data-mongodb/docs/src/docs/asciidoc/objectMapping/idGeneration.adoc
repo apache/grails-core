@@ -126,9 +126,9 @@ p.save()
 
 ==== Decoupling the Declared Type from the Storage Type
 
-When a domain declares `String id`, GORM by default writes `_id` as a BSON `String`. This is convenient in application code — HTTP controllers return clean JSON, URLs embed ids directly, and you never need `new ObjectId(...)` at call sites — but it gives up the native `ObjectId` benefits at the storage layer (12-byte index entries vs. 24-byte hex strings, embedded creation timestamp, etc.).
+A domain that declares `String id` is convenient in application code — HTTP controllers return clean JSON, URLs embed ids directly, and you never need `new ObjectId(...)` at call sites. Writing `_id` as a BSON `String` to match would give up the native `ObjectId` benefits at the storage layer (12-byte index entries vs. 24-byte hex strings, embedded creation timestamp, etc.).
 
-You can get both using the `storedAs` mapping option. The domain sees a `String id` (hex form), but `_id` on disk is a BSON `ObjectId`:
+The `storedAs` mapping option decouples the two, so you get both: the domain sees a `String id` (hex form), while `_id` on disk is a BSON `ObjectId`. As of Grails 8.0.0 this is the default for any `String id` that declares no `storedAs` of its own — the mapping below is what that default applies for you, and is only needed to be explicit or to override a global `defaultStoredAs: string`:
 
 [source,groovy]
 ----
@@ -154,17 +154,21 @@ This is especially useful when migrating a legacy `ObjectId id` domain to `Strin
 
 ===== Global Default
 
-You can opt in globally with an `application.yml` setting, which applies to every domain declaring `String id` that does not specify its own `storedAs`:
+As of Grails 8.0.0 this is the *default*: every domain declaring `String id` that does not specify its own `storedAs` stores `_id` as a BSON `ObjectId`. No configuration is required to get the behavior described above.
+
+To opt the whole application back out — for example an existing application whose data already holds BSON String `_id` values — pin the previous default in `application.yml`:
 
 [source,yaml]
 ----
 grails:
   mongodb:
     stringIds:
-      defaultStoredAs: objectid
+      defaultStoredAs: string
 ----
 
-Valid values are `string` (current default, BSON String) and `objectid` (BSON ObjectId). Unrecognized values fall back to the default with a warning logged at startup.
+Valid values are `objectid` (BSON ObjectId, the default) and `string` (BSON String, the pre-8.0.0 default). Unrecognized values fall back to the default with a warning logged at startup.
+
+WARNING: This default changed in 8.0.0. An application upgrading from 7.x with existing `String id` data is reading and writing BSON String `_id` values; on 8.0.0 those documents are no longer matched by id lookups unless you either migrate the stored `_id` values to `ObjectId` or set `defaultStoredAs: string` above.
 
 Per-domain `storedAs` always wins over the global default. Domains using a natural string key (slug, email, UUID) should opt out explicitly:
 

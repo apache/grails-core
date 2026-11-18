@@ -1,0 +1,123 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.OutputFile
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.compile.GroovyCompile
+
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    bom = null
+    cliAutoProvision = false
+    starImports = ['java.util.concurrent.atomic']
+}
+
+dependencies {
+    implementation localGroovy()
+}
+
+@CacheableTask
+abstract class GenUserScript extends DefaultTask {
+    @Input abstract Property<String> getImportedType()
+    @OutputFile abstract RegularFileProperty getOutputFile()
+
+    @TaskAction
+    void generate() {
+        outputFile.get().asFile.parentFile.mkdirs()
+        outputFile.get().asFile.text = """
+            withConfig(configuration) {
+                imports {
+                    alias 'ImportedType', '${importedType.get()}'
+                }
+            }
+        """
+    }
+}
+
+def importedTypeName = providers.gradleProperty('importedType').orElse('java.nio.file.Path')
+def userScript = layout.buildDirectory.file('user-config.groovy')
+
+def genUserScript
+if (providers.gradleProperty('adHocProducer').isPresent()) {
+    // The shape most Grails 7 builds used: an untyped task that declares the script with outputs.file.
+    genUserScript = tasks.register('generateUserConfigScript') {
+        inputs.property('importedType', importedTypeName)
+        outputs.file(userScript)
+        doLast {
+            def script = userScript.get().asFile
+            script.parentFile.mkdirs()
+            script.text = """
+                withConfig(configuration) {
+                    imports {
+                        alias 'ImportedType', '${importedTypeName.get()}'
+                    }
+                }
+            """
+        }
+    }
+} else {
+    genUserScript = tasks.register('generateUserConfigScript', GenUserScript) {
+        importedType.set(importedTypeName)
+        outputFile.set(userScript)
+    }
+}
+
+if (providers.gradleProperty('additionalDependency').isPresent()) {
+    def preparation = tasks.register('prepareCompilation') {
+        // Copying every compile dependency onto script preparation would create a cycle here.
+        dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+        def unrelatedOutput = layout.buildDirectory.file('unrelated-config.groovy')
+        outputs.file(unrelatedOutput)
+        doLast {
+            unrelatedOutput.get().asFile.text = '// Not the configured compiler script'
+            println 'ADDITIONAL_COMPILE_DEPENDENCY=ran'
+        }
+    }
+    tasks.named('compileGroovy', GroovyCompile) {
+        dependsOn preparation
+    }
+}
+
+tasks.named('compileGroovy', GroovyCompile) {
+    if (providers.gradleProperty('uncachedCompilation').isPresent()) {
+        outputs.cacheIf { false }
+    }
+    if (providers.gradleProperty('plainFile').isPresent()) {
+        // The plugin matches this file against the compile dependency's declared output.
+        dependsOn genUserScript
+        groovyOptions.configurationScript = file('build/user-config.groovy')
+    } else if (providers.gradleProperty('adHocProducer').isPresent()) {
+        groovyOptions.configurationScriptFile.fileProvider(genUserScript.map { it.outputs.files.singleFile })
+    } else {
+        groovyOptions.configurationScriptFile.set(genUserScript.flatMap { it.outputFile })
+    }
+}
+
+tasks.register('verifyCompilation', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass.set('example.ConfiguredType')
+}

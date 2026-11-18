@@ -30,3 +30,15 @@ In compatibility mode, a `bindData` call that supplies only `exclude` continues 
 Values of typed `Map` properties are converted to the declared value type.  Conversion failures are added to the binding errors and data binding listeners receive the corresponding events.
 
 The values `true`, `false`, `'true'`, and `'false'` are accepted for `grails.databinding.denyByDefault`, ignoring case and surrounding whitespace for strings.  An unrecognised value logs a warning and enables secure deny-by-default binding.
+
+=== XML Parsing Defaults
+
+XML that Grails parses on an application's behalf is read with external entity expansion, external DTD retrieval and DTD grammar loading disabled.  This closes the XXE vector: an entity that points at a file on disk contributes nothing to the parsed document, and a DTD that a document names is skipped rather than fetched.
+
+How a `DOCTYPE` declaration is treated depends on where the document comes from.
+
+Request bodies are refused if they declare one.  An `application/xml`, `text/xml` or `application/hal+xml` request body, or a string passed to `XML.parse`, that carries a `DOCTYPE` is rejected rather than bound: binding fails with the `invalidRequestBody` error code and the target is left unpopulated.  This is stricter than blocking external entities, because a body whose `DOCTYPE` is entirely internal and harmless is refused too, and there is no setting that relaxes it.  A client that sends a declaration, which is unusual for an API payload, needs to omit it.
+
+Descriptors that Grails reads from the classpath may declare one.  JSP tag library descriptors and `web.xml` are trusted input and routinely carry a `DOCTYPE`; `jakarta.servlet.jsp.jstl` ships several such descriptors, among them `c-1_0-rt.tld`, which the default `grails.gsp.tldScanPattern` scans.  These are parsed with the declaration permitted and the entity and DTD hardening above still in force, so the DTD a descriptor names is never retrieved.  The same applies to `response.xml` in a controller unit test, whose document is the controller's own output.
+
+The plugin descriptor `grails-plugin.xml` is the exception among the descriptors.  Grails generates it during compilation and never writes a `DOCTYPE`, so both the compiler that rewrites it and the plugin discovery that reads it back use the strict parser.  A descriptor that has been hand-edited to add a declaration is refused: at compile time it is discarded and regenerated, and at runtime the plugin it describes is skipped.

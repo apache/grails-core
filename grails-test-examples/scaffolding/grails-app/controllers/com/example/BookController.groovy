@@ -21,12 +21,6 @@ package com.example
 import grails.plugin.scaffolding.RestfulServiceController
 import grails.plugin.scaffolding.annotation.Scaffold
 
-/**
- * The one scaffolded controller of this application whose views can be precompiled: the two
- * named UserController share a view directory and scaffold a domain apiece, so theirs are
- * expanded per request. This one's are written by the build and compiled with the rest, which
- * is what holds a scaffolded page to compiling statically.
- */
 @Scaffold(RestfulServiceController<Book>)
 class BookController {
 }

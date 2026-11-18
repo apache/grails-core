@@ -30,6 +30,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.types.TenantId
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.springframework.context.ApplicationEvent
@@ -42,12 +43,12 @@ import spock.lang.Unroll
  * {@code GormRegistry.getInstance().getApiResolver().findDatastore}, {@code supportsSourceType}
  * now compares against the listener's own bound datastore class rather than a fixed type, a new
  * {@code isValidSource} instance-equality guard replaced the old {@code supportsEventType} check,
- * a {@code ConnectionSource.DEFAULT} + numeric-typed-tenant-id coercion to {@code 0L} was added to
- * both the query and insert/update paths, and inserts now prefer an already-set entity property
- * over the resolved tenant id). Modeled directly on the equivalent, already-established
- * {@code org.grails.orm.hibernate.multitenancy.MultiTenantEventListenerSpec} in grails-data-hibernate7,
- * which exercises the sibling class's public {@code onApplicationEvent}/{@code supportsEventType}/
- * {@code supportsSourceType} contract the same way.
+ * inside {@code withoutTenant} a numeric tenant id is coerced to {@code 0L} on both the query and
+ * insert/update paths, and a tenant id already set on the entity is kept only inside
+ * {@code withoutTenant}). Modeled directly on the equivalent,
+ * already-established {@code org.grails.orm.hibernate.multitenancy.MultiTenantEventListenerSpec}
+ * in grails-data-hibernate7, which exercises the sibling class's public
+ * {@code onApplicationEvent}/{@code supportsEventType}/{@code supportsSourceType} contract the same way.
  */
 class MultiTenantEventListenerSpec extends Specification {
 
@@ -148,7 +149,23 @@ class MultiTenantEventListenerSpec extends Specification {
         1 * query.eq('tenantId', 'tenant1')
     }
 
-    void "onApplicationEvent PreQueryEvent coerces a DEFAULT connection source id to 0L for a numeric tenant id"() {
+    void "onApplicationEvent PreQueryEvent coerces the tenant id to 0L for a numeric tenant id inside withoutTenant"() {
+        given:
+        def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> Long }
+        def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
+        def query = Mock(Query) { getEntity() >> entity }
+        def event = new PreQueryEvent(boundDatastore, query)
+
+        when:
+        CurrentTenantHolder.withoutTenant(boundDatastore) {
+            listener.onApplicationEvent(event)
+        }
+
+        then:
+        1 * query.eq('tenantId', 0L)
+    }
+
+    void "onApplicationEvent PreQueryEvent does not coerce a bound DEFAULT connection source id for a numeric tenant id"() {
         given:
         def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> Long }
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
@@ -161,7 +178,8 @@ class MultiTenantEventListenerSpec extends Specification {
         }
 
         then:
-        1 * query.eq('tenantId', 0L)
+        1 * query.eq('tenantId', ConnectionSource.DEFAULT)
+        0 * query.eq('tenantId', 0L)
     }
 
     void "onApplicationEvent PreQueryEvent does not coerce a DEFAULT connection source id for a non-numeric tenant id"() {
@@ -180,7 +198,7 @@ class MultiTenantEventListenerSpec extends Specification {
         1 * query.eq('tenantId', ConnectionSource.DEFAULT)
     }
 
-    void "onApplicationEvent PreQueryEvent does not filter when there is no current tenant"() {
+    void "onApplicationEvent PreQueryEvent fails when the tenant resolver returns null"() {
         given:
         def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> String }
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
@@ -194,6 +212,7 @@ class MultiTenantEventListenerSpec extends Specification {
         listener.onApplicationEvent(event)
 
         then:
+        thrown(TenantNotFoundException)
         0 * query.eq(_, _)
     }
 
@@ -249,27 +268,49 @@ class MultiTenantEventListenerSpec extends Specification {
         eventType << [ValidationEvent, PreInsertEvent, PreUpdateEvent]
     }
 
-    void "onApplicationEvent PreInsertEvent prefers an already-set entity property over the resolved tenant id"() {
+    @Unroll
+    void "onApplicationEvent #eventType.simpleName replaces a tenant id already set on the entity with the current tenant id"() {
         given:
         def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> String }
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
-        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> 'already_set_tenant' }
-        def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
+        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> 'another_tenant' }
+        def event = eventType.getConstructor(Datastore, PersistentEntity, EntityAccess)
+                .newInstance(boundDatastore, entity, entityAccess)
 
         when:
-        CurrentTenantHolder.withTenant(boundDatastore, 'resolved_tenant') {
+        CurrentTenantHolder.withTenant(boundDatastore, 'current_tenant') {
             listener.onApplicationEvent(event)
         }
 
-        then: "the pre-existing property value wins over the resolved current tenant id"
-        1 * entityAccess.setProperty('tenantId', 'already_set_tenant')
+        then:
+        1 * entityAccess.setProperty('tenantId', 'current_tenant')
+        0 * entityAccess.setProperty('tenantId', 'another_tenant')
+
+        where:
+        eventType << [ValidationEvent, PreInsertEvent, PreUpdateEvent]
     }
 
-    void "onApplicationEvent PreInsertEvent coerces a DEFAULT connection source id to 0L for a numeric tenant id"() {
+    void "onApplicationEvent PreInsertEvent keeps a tenant id already set on the entity inside withoutTenant"() {
         given:
         def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> Long }
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
-        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> null }
+        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> 55L }
+        def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
+
+        when:
+        CurrentTenantHolder.withoutTenant(boundDatastore) {
+            listener.onApplicationEvent(event)
+        }
+
+        then:
+        1 * entityAccess.setProperty('tenantId', 55L)
+    }
+
+    void "onApplicationEvent PreInsertEvent replaces a tenant id already set on the entity when the DEFAULT connection source is bound as the tenant id"() {
+        given:
+        def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> String }
+        def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
+        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> 'another_tenant' }
         def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
 
         when:
@@ -278,10 +319,44 @@ class MultiTenantEventListenerSpec extends Specification {
         }
 
         then:
+        1 * entityAccess.setProperty('tenantId', ConnectionSource.DEFAULT)
+        0 * entityAccess.setProperty('tenantId', 'another_tenant')
+    }
+
+    void "onApplicationEvent PreInsertEvent coerces the tenant id to 0L for a numeric tenant id inside withoutTenant"() {
+        given:
+        def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> Long }
+        def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
+        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> null }
+        def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
+
+        when:
+        CurrentTenantHolder.withoutTenant(boundDatastore) {
+            listener.onApplicationEvent(event)
+        }
+
+        then:
         1 * entityAccess.setProperty('tenantId', 0L)
     }
 
-    void "onApplicationEvent PreInsertEvent does not set a property when there is no current tenant"() {
+    void "onApplicationEvent PreInsertEvent does not coerce a bound DEFAULT connection source id for a numeric tenant id"() {
+        given:
+        def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> Long }
+        def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
+        def entityAccess = Mock(EntityAccess) { getProperty('tenantId') >> 7L }
+        def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
+
+        when:
+        CurrentTenantHolder.withTenant(boundDatastore, ConnectionSource.DEFAULT) {
+            listener.onApplicationEvent(event)
+        }
+
+        then:
+        1 * entityAccess.setProperty('tenantId', ConnectionSource.DEFAULT)
+        0 * entityAccess.setProperty('tenantId', 0L)
+    }
+
+    void "onApplicationEvent PreInsertEvent fails when the tenant resolver returns null"() {
         given:
         def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> String }
         def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
@@ -295,6 +370,26 @@ class MultiTenantEventListenerSpec extends Specification {
         listener.onApplicationEvent(event)
 
         then:
+        thrown(TenantNotFoundException)
+        0 * entityAccess.setProperty(_, _)
+    }
+
+    void "onApplicationEvent PreInsertEvent rethrows a TenantNotFoundException from the tenant resolver unwrapped"() {
+        given:
+        def tenantId = Mock(TenantId) { getName() >> 'tenantId'; getType() >> String }
+        def entity = Mock(PersistentEntity) { isMultiTenant() >> true; getTenantId() >> tenantId }
+        def entityAccess = Mock(EntityAccess)
+        def event = new PreInsertEvent(boundDatastore, entity, entityAccess)
+        boundDatastore.getTenantResolver() >> Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) {
+            resolveTenantIdentifier() >> { throw new TenantNotFoundException('no tenant') }
+        }
+
+        when:
+        listener.onApplicationEvent(event)
+
+        then:
+        def e = thrown(TenantNotFoundException)
+        e.message == 'no tenant'
         0 * entityAccess.setProperty(_, _)
     }
 

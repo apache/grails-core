@@ -191,10 +191,8 @@ class IOUtils extends SpringIOUtils {
         def pathToClassFile = '/' + targetClass.name.replace('.', '/') + '.class'
         def classRes = targetClass.getResource(pathToClassFile)
         if (classRes) {
-            String rootPath = classRes.toString() - pathToClassFile
-            if (rootPath.endsWith(BuildSettings.BUILD_CLASSES_PATH)) {
-                rootPath = rootPath.replace('/build/classes/groovy/', '/build/resources/')
-            }
+            String rootPath = resourcesRootFor(classRes.toString() - pathToClassFile,
+                    BuildSettings.BUILD_CLASSES_PATH, BuildSettings.BUILD_RESOURCES_PATH)
 
             if (!rootPath.endsWith('/')) {
                 rootPath = "$rootPath/"
@@ -235,13 +233,29 @@ class IOUtils extends SpringIOUtils {
         def pathToClassFile = '/' + targetClass.name.replace('.', '/') + '.class'
         def classRes = targetClass.getResource(pathToClassFile)
         if (classRes) {
-            def rootPath = classRes.toString() - pathToClassFile
-            if (rootPath.endsWith(BuildSettings.BUILD_CLASSES_PATH)) {
-                rootPath = rootPath.replace('/build/classes/groovy/', '/build/resources/')
-            }
+            def rootPath = resourcesRootFor(classRes.toString() - pathToClassFile,
+                    BuildSettings.BUILD_CLASSES_PATH, BuildSettings.BUILD_RESOURCES_PATH)
             return new URL("$rootPath$path")
         }
         return null
+    }
+
+    /**
+     * The resources root that goes with a class root in a build: one ending in the build's classes path
+     * ({@code .../build/classes/groovy/main}, or wherever {@link BuildSettings#PROJECT_CLASSES_DIR} puts it) gives the
+     * same directory with the build's resources path ({@code .../build/resources/main}, or wherever
+     * {@link BuildSettings#PROJECT_RESOURCES_DIR} puts it). Any other root, such as a JAR's, is returned unchanged.
+     *
+     * @param classRoot the class root, as a URL string
+     * @param classesPath the build's classes path, relative to its project
+     * @param resourcesPath the build's resources path, relative to its project
+     * @return the resources root, or {@code classRoot} itself
+     */
+    static String resourcesRootFor(String classRoot, String classesPath, String resourcesPath) {
+        if (!classRoot.endsWith('/' + classesPath)) {
+            return classRoot
+        }
+        classRoot.substring(0, classRoot.length() - classesPath.length()) + resourcesPath
     }
 
     @Memoized

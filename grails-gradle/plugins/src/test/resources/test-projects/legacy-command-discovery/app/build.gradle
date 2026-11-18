@@ -8,8 +8,9 @@ dependencies {
 }
 
 tasks.register('inspectLegacyCommandTask') {
+    def taskNames = providers.provider { tasks.names as List<String> }
     doLast {
-        println "LEGACY_COMMAND_TASK_PRESENT=${tasks.names.contains('helloLegacyApp')}"
-        println "RUN_COMMAND_TASK_PRESENT=${tasks.names.contains('runCommand')}"
+        println "LEGACY_COMMAND_TASK_PRESENT=${taskNames.get().contains('helloLegacyApp')}"
+        println "RUN_COMMAND_TASK_PRESENT=${taskNames.get().contains('runCommand')}"
     }
 }

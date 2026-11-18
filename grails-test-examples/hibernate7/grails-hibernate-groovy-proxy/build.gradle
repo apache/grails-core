@@ -39,6 +39,7 @@ dependencies {
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
     runtimeOnly 'org.springframework.boot:spring-boot-starter-logging'
+    runtimeOnly 'org.springframework.boot:spring-boot-starter-tomcat'
 
     testImplementation 'org.apache.grails.testing:grails-testing-support-core'
 

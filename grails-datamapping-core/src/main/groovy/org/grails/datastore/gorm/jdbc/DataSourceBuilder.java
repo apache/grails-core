@@ -26,6 +26,8 @@ import java.util.Properties;
 
 import javax.sql.DataSource;
 
+import org.jspecify.annotations.NonNull;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -35,7 +37,6 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 
 /**
  * NOTE: Forked from Spring Boot logic to avoid hard dependency on Boot.
- *
  * Convenience class for building a {@link DataSource} with common implementations and
  * properties. If Tomcat, HikariCP or Commons DBCP are on the classpath one of them will
  * be selected (in that order with Tomcat first). In the interest of a uniform interface,
@@ -46,7 +47,6 @@ import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
  *
  * @author Dave Syer
  * @author Graeme Rocher
- *
  * @since 1.1.0
  */
 public class DataSourceBuilder {
@@ -61,9 +61,9 @@ public class DataSourceBuilder {
 
     private Class<? extends DataSource> type;
 
-    private ClassLoader classLoader;
+    private final ClassLoader classLoader;
 
-    private Map<String, String> properties = new HashMap<>();
+    private final Map<String, String> properties = new HashMap<>();
     private boolean pooled = true;
     private boolean readOnly = false;
 
@@ -136,24 +136,23 @@ public class DataSourceBuilder {
      * <p>When dbProperties originate from YAML configuration, the keys are already flat
      * strings and are simply converted to a Properties object.</p>
      */
+    @SuppressWarnings("unchecked")
     private void coerceDbProperties(String keyname) {
-        Map propertiesMap = this.properties;
+        Map<String, Object> propertiesMap = (Map<String, Object>) (Map<?, ?>) this.properties;
         Object dbPropertiesObject = propertiesMap.get(keyname);
-        if (dbPropertiesObject instanceof Map) {
-            Map dbProperties = (Map) dbPropertiesObject;
+        if (dbPropertiesObject instanceof Map<?, ?> dbProperties) {
             Properties properties = new Properties();
             flattenMap("", dbProperties, properties);
             propertiesMap.put(keyname, properties);
         }
     }
 
-    @SuppressWarnings("unchecked")
     private void flattenMap(String prefix, Map<?, ?> map, Properties target) {
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             String key = prefix.isEmpty() ? entry.getKey().toString() : prefix + "." + entry.getKey().toString();
             Object value = entry.getValue();
-            if (value instanceof Map) {
-                flattenMap(key, (Map<?, ?>) value, target);
+            if (value instanceof Map<?, ?> nestedMap) {
+                flattenMap(key, nestedMap, target);
             } else if (value != null) {
                 target.put(key, value.toString());
             }
@@ -228,7 +227,7 @@ public class DataSourceBuilder {
     protected static class ReadOnlyDriverManagerDataSource extends DriverManagerDataSource {
 
         @Override
-        protected Connection getConnectionFromDriverManager(final String url, final Properties props) throws SQLException {
+        protected @NonNull Connection getConnectionFromDriverManager(@NonNull final String url, @NonNull final Properties props) throws SQLException {
             Connection connection = super.getConnectionFromDriverManager(url, props);
             connection.setReadOnly(true);
             return connection;

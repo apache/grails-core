@@ -208,6 +208,18 @@ or `$text` query it ran. Naming a `backend` whose library is not on the classpat
 restart rather than handing back the server already listening, which is what that
 configuration does when nothing is running yet.
 
+==== Checkpointing as the context refreshes
+
+The server is normally started as soon as the application context is initialized, so that
+anything talking to MongoDB while beans are still being created finds it listening. An
+application checkpointed with CRaC as its context refreshes (`-Dspring.context.checkpoint=onRefresh`),
+or one that exits there (`-Dspring.context.exit=onRefresh`, as a run that trains a class data
+sharing archive does), has its URL published all the same, but its server is started with the
+application context's lifecycle beans, ahead of the datastore. A checkpoint cannot contain the
+server's listening socket, and a JVM halted as its context refreshes would leave a flapdoodle
+`mongod` running. A URL that asks for port `0` is given a free port when it is published,
+since the server binds later.
+
 ==== Outside Grails
 
 The module is plain Java and knows nothing about Grails beyond the default property name,

@@ -18,13 +18,14 @@
  */
 package org.grails.config;
 
+import java.util.AbstractMap;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -37,7 +38,15 @@ import grails.util.GrailsStringUtils;
 import org.grails.core.exceptions.GrailsConfigurationException;
 
 /**
- * A {@link Config} composed of other Configs
+ * A {@link Config} composed of other Configs. A lookup answers from the first config, in order of precedence,
+ * that has the key, and the {@link Map} views, {@link #flatten()} and {@link #toProperties()} resolve a key
+ * shared by several configs the same way, so each key appears once with its highest-precedence value.
+ * <p>
+ * One case differs: {@link #toProperties()} combines the names each config exports, and a config leaves out the
+ * dotted name that only repeats one of its own bracketed names; {@link #flatten()} combines the maps the configs
+ * store, which never hold that dotted name. So when a higher config spells a property in brackets,
+ * {@code app.routes[k]}, and a lower one dotted, {@code app.routes.k}, the dotted name keeps the lower value there,
+ * while {@link #getProperty(String)} answers the higher one.
  *
  * @author Graeme Rocher
  * @since 3.0
@@ -69,8 +78,9 @@ public class CompositeConfig implements Config {
     @Deprecated
     public Map<String, Object> flatten() {
         Map<String, Object> flattened = new LinkedHashMap<>();
-        for (Config c : configs) {
-            flattened.putAll(c.flatten());
+        Iterator<Config> lowestPrecedenceFirst = configs.descendingIterator();
+        while (lowestPrecedenceFirst.hasNext()) {
+            flattened.putAll(lowestPrecedenceFirst.next().flatten());
         }
         return flattened;
     }
@@ -78,8 +88,9 @@ public class CompositeConfig implements Config {
     @Override
     public Properties toProperties() {
         Properties properties = new Properties();
-        for (Config c : configs) {
-            properties.putAll(c.toProperties());
+        Iterator<Config> lowestPrecedenceFirst = configs.descendingIterator();
+        while (lowestPrecedenceFirst.hasNext()) {
+            properties.putAll(lowestPrecedenceFirst.next().toProperties());
         }
         return properties;
     }
@@ -100,6 +111,11 @@ public class CompositeConfig implements Config {
 
     @Override
     public Object getAt(Object key) {
+        for (Config c : configs) {
+            if (c.containsKey(key)) {
+                return c.getAt(key);
+            }
+        }
         for (Config c : configs) {
             Object v = c.getAt(key);
             if (v != null) return v;
@@ -123,11 +139,7 @@ public class CompositeConfig implements Config {
 
     @Override
     public int size() {
-        int size = 0;
-        for (Config config : configs) {
-            size += config.size();
-        }
-        return size;
+        return keySet().size();
     }
 
     @Override
@@ -150,14 +162,21 @@ public class CompositeConfig implements Config {
 
     @Override
     public boolean containsValue(Object value) {
-        for (Config config : configs) {
-            if (config.containsValue(value)) return true;
-        }
-        return false;
+        return values().contains(value);
     }
 
+    /**
+     * The value of the highest precedence config that has the key. A config answers a key it does not have with a
+     * navigator for the keys below it, so a config is only asked when it has the key, and the first answer of any
+     * config is returned only when none has it.
+     */
     @Override
     public Object get(Object key) {
+        for (Config config : configs) {
+            if (config.containsKey(key)) {
+                return config.get(key);
+            }
+        }
         for (Config config : configs) {
             Object v = config.get(key);
             if (v != null) return v;
@@ -192,27 +211,27 @@ public class CompositeConfig implements Config {
 
     @Override
     public Set<String> keySet() {
-        Set<String> entries = new HashSet<>();
+        Set<String> keys = new LinkedHashSet<>();
         for (Config config : configs) {
-            entries.addAll(config.keySet());
+            keys.addAll(config.keySet());
         }
-        return entries;
+        return keys;
     }
 
     @Override
     public Collection<Object> values() {
         Collection<Object> values = new ArrayList<>();
-        for (Config config : configs) {
-            values.addAll(config.values());
+        for (String key : keySet()) {
+            values.add(get(key));
         }
         return values;
     }
 
     @Override
     public Set<Map.Entry<String, Object>> entrySet() {
-        Set<Map.Entry<String, Object>> entries = new HashSet<>();
-        for (Config config : configs) {
-            entries.addAll(config.entrySet());
+        Set<Map.Entry<String, Object>> entries = new LinkedHashSet<>();
+        for (String key : keySet()) {
+            entries.add(new AbstractMap.SimpleImmutableEntry<>(key, get(key)));
         }
         return entries;
     }

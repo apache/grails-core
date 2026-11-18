@@ -43,7 +43,7 @@ class Page extends Content {
 }
 ----
 
-By default all three classes are stored in a single `content` table (table-per-hierarchy). GORM uses a `class` discriminator column to distinguish rows.
+By default all three classes are stored in a single `content` table (table-per-hierarchy). GORM uses a `class` discriminator column that stores the fully qualified class name of each row to distinguish rows.
 
 === Querying the Hierarchy
 

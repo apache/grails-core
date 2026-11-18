@@ -24,6 +24,7 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.AttributeExpression
+import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
@@ -288,34 +289,24 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
                 }
             }
 
+            // PlatformTransactionManager tenantTransactionManager = GormRegistry.getInstance().findCurrentTenantTransactionManager()
+            // or, given a datastore attribute, GormRegistry.getInstance().findCurrentTenantTransactionManagerByType(X)
+            // if (tenantTransactionManager != null) return tenantTransactionManager
+            // The tenant is the one bound for the default datastore, or for the datastore of the attribute: the thread
+            // can hold a different one for each datastore.
+            Expression datastoreAttribute = annotationNode.getMember('datastore')
+            Expression tenantTransactionManagerLookupExpr = datastoreAttribute instanceof ClassExpression ?
+                    callX(registryExpr, 'findCurrentTenantTransactionManagerByType', classX(((ClassExpression) datastoreAttribute).type.plainNodeReference)) :
+                    callX(registryExpr, 'findCurrentTenantTransactionManager')
             BlockStatement getterBody = new BlockStatement()
-            ClassNode currentTenantHolderClassNode = make(grails.gorm.multitenancy.CurrentTenantHolder)
-            ClassNode connectionSourceClassNode = make(org.grails.datastore.mapping.core.connections.ConnectionSource)
-            VariableExpression tenantIdVar = varX('tenantId', make(Serializable))
+            VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
             getterBody.addStatement(
-                declS(tenantIdVar, callX(classX(currentTenantHolderClassNode), 'get'))
+                declS(tenantTransactionManagerVar, tenantTransactionManagerLookupExpr)
             )
-            
-            BlockStatement ifTenantActiveBody = new BlockStatement()
-            VariableExpression tmVar = varX('tm', transactionManagerClassNode)
-            ifTenantActiveBody.addStatement(
-                declS(tmVar, callX(registryExpr, 'findSingleTransactionManager', callX(tenantIdVar, 'toString')))
-            )
-            ifTenantActiveBody.addStatement(
-                ifS(notNullX(tmVar), returnS(tmVar))
-            )
-            
             getterBody.addStatement(
-                ifS(
-                    notNullX(tenantIdVar),
-                    ifElseS(
-                        callX(callX(tenantIdVar, 'toString'), 'equals', propX(classX(connectionSourceClassNode), 'DEFAULT')),
-                        new org.codehaus.groovy.ast.stmt.EmptyStatement(),
-                        ifTenantActiveBody
-                    )
-                )
+                ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
             )
-            
+
             getterBody.addStatement(
                 ifElseS(notNullX(tmFieldExpr), returnS(tmFieldExpr), returnS(transactionManagerLookupExpr))
             )
@@ -382,17 +373,18 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
         )
 
         // GrailsTransactionTemplate $transactionTemplate
-        //           = new GrailsTransactionTemplate($transactionManager, $transactionAttribute )
+        //           = new GrailsTransactionTemplate($transactionManager, $transactionAttribute[, connection])
+        // Given the connection, the template routes the calls made on its domain classes inside the method to it.
         final ClassNode transactionTemplateClassNode = make(GrailsTransactionTemplate)
         final VariableExpression transactionTemplateVar = varX('$transactionTemplate', transactionTemplateClassNode)
+        Expression transactionTemplateArgs = hasDataSourceProperty ?
+                args(transactionManagerVar, transactionAttributeVar, castX(make(String), connectionName)) :
+                args(transactionManagerVar, transactionAttributeVar)
 
         newMethodBody.addStatement(
             declS(
                 transactionTemplateVar,
-                ctorX(transactionTemplateClassNode, args(
-                    transactionManagerVar,
-                    transactionAttributeVar
-                ))
+                ctorX(transactionTemplateClassNode, transactionTemplateArgs)
             )
         )
 
@@ -482,6 +474,19 @@ class TransactionalTransform extends AbstractDatastoreMethodDecoratingTransforma
     @Override
     protected boolean hasLocalAnnotation(MethodNode amd, AnnotationNode classAnnotation) {
         return findAnnotation(amd, Transactional) != null || findAnnotation(amd, ReadOnly) != null || findAnnotation(amd, Rollback) != null
+    }
+
+    /**
+     * A method annotated with {@link NotTransactional} opts out of the transaction that a class-level
+     * {@link Transactional}, {@link ReadOnly} or {@link Rollback} annotation would otherwise weave
+     * around it, so it must not be decorated.
+     *
+     * @param md The method node
+     * @return True if the method should be left undecorated
+     */
+    @Override
+    protected boolean hasExcludedAnnotation(MethodNode md) {
+        return super.hasExcludedAnnotation(md) || findAnnotation(md, NotTransactional) != null
     }
 
     @Override

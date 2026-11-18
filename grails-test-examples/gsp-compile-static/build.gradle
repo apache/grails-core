@@ -50,6 +50,20 @@ tasks.named('integrationTest') {
     dependsOn tasks.named('compileGroovyPages')
 }
 
+// Every generated application starts from the web profile's welcome page, and nothing else compiles it
+// statically, so it is staged beside this application's own pages and compiled with them. The forge copy
+// is pinned to the profile copy by GrailsGspSpec, so compiling one covers both.
+def stageViewsWithWelcomePage = tasks.register('stageViewsWithWelcomePage', Sync) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    into layout.buildDirectory.dir('generated/views-with-welcome-page')
+    from layout.projectDirectory.dir('grails-app/views')
+    from rootProject.layout.projectDirectory.file('grails-profiles/web/skeleton/grails-app/views/index.gsp')
+}
+tasks.named('compileGroovyPages') {
+    source = layout.buildDirectory.dir('generated/views-with-welcome-page').get()
+    dependsOn stageViewsWithWelcomePage
+}
+
 apply {
     from rootProject.layout.projectDirectory.file('gradle/functional-test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')

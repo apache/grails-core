@@ -199,18 +199,20 @@ class TagLibraryIndexIncrementalSpec extends Specification {
 
     private void writeSettings() {
         String repo = System.getProperty('grails.e2e.localMavenRepo')
+        String pluginRepositories = System.getProperty('grails.e2e.pluginRepositories')
         new File(projectDir, 'settings.gradle').text = """
             pluginManagement {
+                apply from: file('${pluginRepositories.replace('\\\\', '/')}')
                 repositories {
                     maven { url = uri('${repo.replace('\\\\', '/')}') }
-                    gradlePluginPortal()
-                    mavenCentral()
+                    configurePluginRepositories(delegate)
                 }
             }
             dependencyResolutionManagement {
                 repositories {
                     maven { url = uri('${repo.replace('\\\\', '/')}') }
-                    mavenCentral()
+                    // the snapshots of the libraries Grails also works on, such as the asset pipeline
+                    configurePluginRepositories(delegate)
                 }
             }
             rootProject.name = 'taglib-index-incremental-app'

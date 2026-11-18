@@ -177,6 +177,135 @@ class SourceResolvedIndexGeneratorSpec extends Specification {
         descriptor('StarredTagLib').tags == 'show'
     }
 
+    void 'a nested class this project declares is read from its outer class\'s source'() {
+        given: 'the compiler asks for it by its binary name, which no source file is named after'
+        appSource('com/example/Connection.groovy', '''
+            package com.example
+            class Connection {
+                static class Subscription {
+                    String stream
+                }
+            }
+        ''')
+        appSource('com/example/Channels.groovy', '''
+            package com.example
+            class Channels {
+                Connection.Subscription authorize(String identifier) { null }
+            }
+        ''')
+        taglib('Nesting.groovy', '''
+            import com.example.Channels
+            import grails.gsp.TagLib
+            @TagLib
+            class NestingTagLib {
+                static namespace = 'nesting'
+                Channels channels
+                def show(Map attrs) { }
+            }
+        ''')
+
+        when:
+        generate()
+
+        then:
+        descriptor('NestingTagLib').tags == 'show'
+        indexOf().isNamespaceComplete('nesting')
+    }
+
+    void 'a class and its nested class referred to together are read from one source'() {
+        given: 'reading the source once per name would declare both classes twice'
+        appSource('com/example/Connection.groovy', '''
+            package com.example
+            class Connection {
+                static class Subscription {
+                }
+            }
+        ''')
+        appSource('com/example/Channels.groovy', '''
+            package com.example
+            class Channels {
+                void subscribe(Connection connection, Connection.Subscription subscription) { }
+            }
+        ''')
+        taglib('Paired.groovy', '''
+            import com.example.Channels
+            import grails.gsp.TagLib
+            @TagLib
+            class PairedTagLib {
+                static namespace = 'paired'
+                Channels channels
+                def show(Map attrs) { }
+            }
+        ''')
+
+        when:
+        generate()
+
+        then:
+        descriptor('PairedTagLib').tags == 'show'
+        indexOf().isNamespaceComplete('paired')
+    }
+
+    void 'a type named inside another is not mistaken for a nested class of it'() {
+        given: 'the compiler tries Helper$Other before com.example.Other, and Helper.groovy declares no such class'
+        appSource('com/example/Other.groovy', '''
+            package com.example
+            class Other {
+            }
+        ''')
+        appSource('com/example/Helper.groovy', '''
+            package com.example
+            class Helper {
+                Other other
+            }
+        ''')
+        taglib('Helped.groovy', '''
+            import com.example.Helper
+            import grails.gsp.TagLib
+            @TagLib
+            class HelpedTagLib {
+                static namespace = 'helped'
+                Helper helper
+                def show(Map attrs) { }
+            }
+        ''')
+
+        when:
+        generate()
+
+        then:
+        descriptor('HelpedTagLib').tags == 'show'
+        indexOf().isNamespaceComplete('helped')
+    }
+
+    void 'a misspelled nested class is not invented'() {
+        given:
+        appSource('com/example/Connection.groovy', '''
+            package com.example
+            class Connection {
+                static class Subscription {
+                }
+            }
+        ''')
+        taglib('Mistaken.groovy', '''
+            import com.example.Connection
+            import grails.gsp.TagLib
+            @TagLib
+            class MistakenTagLib {
+                static namespace = 'mistaken'
+                Connection.Subscriptoin subscription
+                def show(Map attrs) { }
+            }
+        ''')
+
+        when:
+        generate()
+
+        then:
+        manifest().isEmpty()
+        !indexOf().isNamespaceComplete('mistaken')
+    }
+
     void 'a misspelled type is not invented, and the tag library referring to it is left out'() {
         given: 'inventing it would let a description be derived from a tree that does not compile'
         taglib('Misspelled.groovy', '''

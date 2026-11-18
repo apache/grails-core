@@ -24,7 +24,10 @@ import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.SessionFactory
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.Unroll
 
 import javax.sql.DataSource
 
@@ -84,5 +87,29 @@ class HibernateDatastoreConnectionSourcesRegistrarSpec extends HibernateGormData
         // (they are usually registered elsewhere for the default connection)
         !registry.containsBeanDefinition("sessionFactory_dataSource")
         !registry.containsBeanDefinition("transactionManager_dataSource")
+    }
+
+    @Unroll
+    def "test postProcessBeanDefinitionRegistry keeps a #registeredAs data source bean that is already registered"() {
+        given:
+        def registry = new DefaultListableBeanFactory()
+        def dataSource = new DriverManagerDataSource('jdbc:h2:mem:registeredDataSource')
+        register(registry, dataSource)
+        def registrar = new HibernateDatastoreConnectionSourcesRegistrar([ConnectionSource.DEFAULT])
+
+        when:
+        registrar.postProcessBeanDefinitionRegistry(registry)
+
+        then:
+        registry.getBean(Settings.SETTING_DATASOURCE, DataSource).is(dataSource)
+
+        where:
+        registeredAs | register
+        'definition' | { DefaultListableBeanFactory beanFactory, DataSource instance ->
+            beanFactory.registerBeanDefinition(Settings.SETTING_DATASOURCE, new RootBeanDefinition(DataSource, { instance }))
+        }
+        'singleton'  | { DefaultListableBeanFactory beanFactory, DataSource instance ->
+            beanFactory.registerSingleton(Settings.SETTING_DATASOURCE, instance)
+        }
     }
 }

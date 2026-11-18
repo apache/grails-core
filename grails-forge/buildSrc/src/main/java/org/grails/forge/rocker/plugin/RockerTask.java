@@ -23,6 +23,7 @@ import com.fizzed.rocker.compiler.RockerOptions;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.CacheableTask;
@@ -39,6 +40,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
+
+import javax.inject.Inject;
 
 @CacheableTask
 public abstract class RockerTask extends DefaultTask {
@@ -66,21 +69,26 @@ public abstract class RockerTask extends DefaultTask {
     @Classpath
     public abstract DirectoryProperty getClassDir();
 
+    @Inject
+    protected abstract FileSystemOperations getFileSystemOperations();
+
     /**
      * Sets up the logger and runs the rocker compiler
      */
     @TaskAction
     public void compileRocker() {
-        RockerConfiguration ext = (RockerConfiguration)
-                getProject().getExtensions().findByName("rocker");
+        RockerConfiguration ext = getRockerProjectConfig().get();
+        File outputDir = getOutputDir().get().getAsFile();
+        // Rocker only writes files, so remove sources generated from templates that no longer exist
+        getFileSystemOperations().delete(spec -> spec.delete(outputDir));
         Set<File> templateDirs = getTemplateDirs().getFiles();
         for (File templateDir : templateDirs) {
-            doCompileRocker(ext, getLogger(), templateDir, getOutputDir().get().getAsFile(), getClassDir().get().getAsFile());
+            doCompileRocker(ext, getLogger(), templateDir, outputDir, getClassDir().get().getAsFile());
         }
     }
 
     /**
-     * Uses the project to get GradleExtension and runs the generator
+     * Runs the generator with the given configuration
      */
     public static void doCompileRocker(RockerConfiguration ext,
                                        Logger logger,

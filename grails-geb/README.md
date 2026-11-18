@@ -68,6 +68,24 @@ This requires a [compatible container runtime](https://java.testcontainers.org/s
 If you choose to use the `ContainerGebSpec` class, as long as you have a compatible container runtime installed, you don't need to do anything else.
 Just run `./gradlew integrationTest` and a container will be started and configured to start a browser that can access your application under test.
 
+#### Browser Container Image
+
+By default, `ContainerGebSpec` starts the `selenium/standalone-chrome` image at the Selenium version found on the test classpath, which the Grails BOM manages.
+Selenium publishes that image for both amd64 and arm64 from 4.47.0, so the default test runs natively on Apple silicon and other arm64 hosts.
+Overriding `selenium.version` to a release older than 4.47.0 brings back the amd64-only Chrome image.
+
+To start a different browser, set the `containerBrowser` property in `GebConfig.groovy` as described in [GebConfig.groovy and using non-default browser settings](#gebconfiggroovy-and-using-non-default-browser-settings).
+The `selenium/standalone-firefox` image has been published for arm64 since before 4.47.0, while `selenium/standalone-edge` is amd64-only as of 4.49.0.
+
+To pull the image from somewhere else, for example a private registry mirror, set the `grails.geb.container.image.template` system property on the test task.
+The template may use the `${browser}` and `${version}` placeholders, which are replaced with the browser name and the Selenium version:
+
+```groovy
+tasks.named('integrationTest') {
+    systemProperty 'grails.geb.container.image.template', 'registry.example.com/selenium/standalone-${browser}:${version}'
+}
+```
+
 #### Context Path Support
 
 If your application configures a servlet context path (e.g., `server.servlet.context-path: /myapp`), `ContainerGebSpec` automatically includes it in the browser's base URL. No changes are needed in your test code — page URLs remain relative to the context root:

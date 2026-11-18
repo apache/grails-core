@@ -33,7 +33,9 @@ import org.grails.web.util.WebUtils
  *
  * @author Graeme Rocher
  * @since 2.0
+ * @deprecated Return a Grails promise from a controller and let Spring MVC manage asynchronous request processing.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 class GrailsAsyncContext implements AsyncContext {
 
     private static final String PERSISTENCE_INTERCEPTORS = 'org.codehaus.groovy.grails.PERSISTENCE_INTERCEPTORS'

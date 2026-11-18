@@ -1,3 +1,21 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.OutputFile
@@ -5,6 +23,13 @@ import org.gradle.api.tasks.TaskAction
 
 plugins {
     id 'org.apache.grails.gradle.grails-app'
+}
+
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
 }
 
 abstract class GenUserScript extends DefaultTask {
@@ -26,17 +51,20 @@ tasks.named('compileGroovy', GroovyCompile) {
 
 tasks.register('inspectGenerated') {
     dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+    def userScript = file('build/user-config.groovy')
     doLast {
-        def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
         println "COMBINED_HAS_USER_SCRIPT=${combined.exists() && combined.text.contains(/star 'java.time'/)}"
-        println "USER_SCRIPT_PRODUCED=${file('build/user-config.groovy').exists()}"
+        println "USER_SCRIPT_PRODUCED=${userScript.exists()}"
     }
 }
 
 tasks.register('inspectOrder') {
-    doLast {
+    def dependsOnProducer = providers.provider {
         def gen = tasks.named('generateCompileGroovyGrailsCompilerConfig').get()
-        def deps = gen.taskDependencies.getDependencies(gen)*.path
-        println "GENERATOR_DEPENDS_ON_USER_SCRIPT_PRODUCER=${deps.any { it == ':generateUserConfigScript' }}"
+        gen.taskDependencies.getDependencies(gen)*.path.any { it == ':generateUserConfigScript' }
+    }
+    doLast {
+        println "GENERATOR_DEPENDS_ON_USER_SCRIPT_PRODUCER=${dependsOnProducer.get()}"
     }
 }

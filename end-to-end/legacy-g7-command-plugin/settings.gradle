@@ -34,12 +34,14 @@ plugins {
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def hasDevelocityAccessKey = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 
 // Same shape as the root and end-to-end builds, so this leg of the suite shows up in Develocity
 // alongside them rather than being the one invocation with no scan.
 develocity {
     server = 'https://develocity.apache.org'
+    projectId = 'grails'
     buildScan {
         tag('grails')
         tag('grails-end-to-end')
@@ -52,7 +54,7 @@ develocity {
 buildCache {
     local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
-        push = isCI
+        push = hasDevelocityAccessKey
         enabled = !isReproducibleBuild
     }
 }

@@ -259,6 +259,12 @@ public boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
 
 The `AbstractPersistenceEvent` class has many subclasses (`PreInsertEvent`, `PostInsertEvent` etc.) that provide further information specific to the event. A `cancel()` method is also provided on the event which allows you to veto an insert, update or delete operation.
 
+GORM for Hibernate 7 also publishes a `PersistEvent` (`eventType` `Persist`) whenever an entity is persisted, whether explicitly through `save()` or by a cascade when the session flushes, and a `MergeEvent` (`eventType` `Merge`) whenever an entity is merged. Both are published before Hibernate performs the operation and cannot be cancelled; the exception is an
+application that registers a listener of its own for `merge` or `persist`, in which case that listener performs
+the operation and GORM's event is published after it. A `MergeEvent` carries the detached instance passed to the merge rather than the managed copy it produces, and neither event is published for an uninitialized proxy.
+
+GORM for Hibernate 5 publishes a `SaveOrUpdateEvent` (`eventType` `SaveOrUpdate`) when an entity is saved, and publishes no event for a merge. A listener that switches over every `eventType` and runs against either version should therefore handle all three values.
+
 Once you have created your event listener you need to register it. If you are using Spring this can be done via the `ApplicationContext`:
 
 [source,groovy]

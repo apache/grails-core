@@ -52,7 +52,12 @@ dependencies {
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-console'
     api 'org.apache.groovy:groovy-swing'
-    api 'org.apache.groovy:groovy-groovysh'
+    // groovysh declares the individual JLine modules. Grails ships the org.jline:jline bundle, which
+    // contains every one of them at the BOM's version, so the modules are left off the classpath
+    // rather than carrying a second copy of each JLine class next to the bundle.
+    api('org.apache.groovy:groovy-groovysh') {
+        exclude group: 'org.jline'
+    }
     implementation 'org.jline:jline'
     implementation 'net.java.dev.jna:jna'
 

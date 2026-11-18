@@ -18,6 +18,8 @@
  */
 package grails.test.mixin
 
+import groovy.transform.CompileStatic
+
 import grails.artefact.Interceptor
 import grails.testing.web.interceptor.InterceptorUnitTest
 import spock.lang.Specification
@@ -26,6 +28,12 @@ import spock.lang.Specification
  * Created by graemerocher on 02/09/15.
  */
 class InterceptorUnitTestMixinSpec extends Specification implements InterceptorUnitTest<TestInterceptor> {
+
+    @CompileStatic
+    void "mockInterceptor returns the typed interceptor"() {
+        expect: "no compilation error"
+        TypedTestInterceptor i = mockInterceptor(TypedTestInterceptor)
+    }
 
     void "Test interceptor matching"() {
         when:"A request matches the interceptor"
@@ -52,6 +60,34 @@ class InterceptorUnitTestMixinSpec extends Specification implements InterceptorU
         then:"The interceptor does match"
         !interceptor.doesMatch()
     }
+
+    void 'withInterceptors returns the result of the callable'() {
+        expect:
+        withInterceptors(controller: 'foo', action: 'bar') { 'result' } == 'result'
+    }
+
+    void 'withInterceptors returns null when the callable throws an exception'() {
+        expect:
+        withInterceptors(controller: 'foo', action: 'bar') { throw new IllegalStateException() } == null
+    }
+}
+
+class StoppingInterceptorUnitTestSpec extends Specification implements InterceptorUnitTest<StoppingInterceptor> {
+
+    void 'withInterceptors returns null when an interceptor stops the request'() {
+        given:
+        def called = false
+
+        when:
+        def result = withInterceptors(controller: 'foo', action: 'bar') {
+            called = true
+            'result'
+        }
+
+        then:
+        result == null
+        !called
+    }
 }
 
 class TestInterceptor implements Interceptor {
@@ -59,3 +95,16 @@ class TestInterceptor implements Interceptor {
         match(controller:"foo", action:"bar")
     }
 }
+
+class StoppingInterceptor implements Interceptor {
+
+    StoppingInterceptor() {
+        match(controller: 'foo')
+    }
+
+    boolean before() {
+        false
+    }
+}
+
+class TypedTestInterceptor implements Interceptor {}

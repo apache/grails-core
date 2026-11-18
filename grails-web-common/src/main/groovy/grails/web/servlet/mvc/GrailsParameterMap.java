@@ -91,10 +91,30 @@ public class GrailsParameterMap extends TypeConvertingMap implements Cloneable {
         this.request = request;
         // Request parameters (including form-encoded PUT/PATCH/DELETE bodies parsed at the servlet
         // layer by Spring's FormContentFilter) are read straight from the request parameter map.
-        final Map requestMap = new LinkedHashMap(request.getParameterMap());
+        // updateNestedKeys only reads this map, so the servlet's own is used directly and copied only when
+        // there is something to merge into it. Read tolerantly because a multipart body the container
+        // refuses to parse fails every parameter read - see WebUtils.readParameterMap.
+        Map requestMap = WebUtils.readParameterMap(request);
 
-        if (request instanceof MultipartHttpServletRequest) {
-            MultiValueMap<String, MultipartFile> fileMap = ((MultipartHttpServletRequest) request).getMultiFileMap();
+        // This is the outermost request, so the multipart request is found through its wrapper chain.
+        MultipartHttpServletRequest multipartRequest = WebUtils.resolveMultipartRequest(request);
+        if (multipartRequest != null) {
+            // A container need not publish a multipart body's text fields through the request's own
+            // parameter map, which is why Spring's wrapper merges them into its. This request need not be
+            // that wrapper, so the same merge happens here, without displacing the request's own values.
+            Map<String, String[]> multipartParameters = WebUtils.readParameterMap(multipartRequest);
+            boolean mergeParameters = !multipartParameters.isEmpty() &&
+                    !requestMap.keySet().containsAll(multipartParameters.keySet());
+
+            MultiValueMap<String, MultipartFile> fileMap = multipartRequest.getMultiFileMap();
+            if (mergeParameters || !fileMap.isEmpty()) {
+                requestMap = new LinkedHashMap(requestMap);
+            }
+            if (mergeParameters) {
+                for (Entry<String, String[]> entry : multipartParameters.entrySet()) {
+                    requestMap.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+            }
             for (Entry<String, List<MultipartFile>> entry : fileMap.entrySet()) {
                 List<MultipartFile> value = entry.getValue();
                 if (value.size() == 1) {

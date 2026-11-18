@@ -70,6 +70,10 @@ class NamespacedController {
         chain controller: 'anotherNamespaced', action: 'demo', namespace: null
     }
 
+    def redirectToAnotherNamespaced() {
+        // redirects to anotherNamespaced without naming a namespace
+        redirect controller: 'anotherNamespaced', action: 'demo'
+    }
     def demo() {
         render 'Rendered by the secondary Namespaced Controller'
     }

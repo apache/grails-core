@@ -91,6 +91,7 @@ public class MapSecondPassBinder {
         }
 
         map.setInverse(false);
+        collectionSecondPassBinder.createCollectionKeys(property);
     }
 
     ColumnConfig getSingleColumnConfig(PropertyConfig propertyConfig) {

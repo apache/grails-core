@@ -29,6 +29,7 @@ import org.hibernate.Hibernate;
 import org.hibernate.HibernateException;
 import org.hibernate.event.internal.DefaultMergeEventListener;
 import org.hibernate.event.internal.DefaultPersistEventListener;
+import org.hibernate.event.internal.DefaultPersistOnFlushEventListener;
 import org.hibernate.event.spi.MergeContext;
 import org.hibernate.event.spi.MergeEvent;
 import org.hibernate.event.spi.MergeEventListener;
@@ -154,6 +155,8 @@ public class ClosureEventTriggeringInterceptor
 
     private final DefaultPersistEventListener persistEventListener = new DefaultPersistEventListener();
     private final DefaultMergeEventListener mergeEventListener = new DefaultMergeEventListener();
+    private final PersistOnFlushEventListener persistOnFlushEventListener = new PersistOnFlushEventListener();
+    private final ObservingEventListener observingEventListener = new ObservingEventListener();
     /** The datastore. */
     protected HibernateDatastore datastore;
 
@@ -179,6 +182,7 @@ public class ClosureEventTriggeringInterceptor
     public void onMerge(MergeEvent hibernateEvent) throws HibernateException {
         publishMergeEvent(hibernateEvent);
         mergeEventListener.onMerge(hibernateEvent);
+        activateDirtyCheckingOnMergeResult(hibernateEvent);
     }
 
     private Object getMergeEntity(MergeEvent hibernateEvent) {
@@ -189,6 +193,22 @@ public class ClosureEventTriggeringInterceptor
     public void onMerge(MergeEvent hibernateEvent, MergeContext copiedAlready) throws HibernateException {
         publishMergeEvent(hibernateEvent);
         mergeEventListener.onMerge(hibernateEvent, copiedAlready);
+        activateDirtyCheckingOnMergeResult(hibernateEvent);
+    }
+
+    /**
+     * Starts tracking changes on the managed copy a merge produced.
+     * <p>
+     * Merging a transient instance that already carries an identifier saves that copy directly rather than
+     * firing a persist event, so nothing else would activate GORM's change tracking before the flush. An
+     * untracked instance reports every property as changed, which schedules an {@code UPDATE} behind the
+     * {@code INSERT} and starts the entity at version 1.
+     */
+    private void activateDirtyCheckingOnMergeResult(MergeEvent hibernateEvent) {
+        Object result = hibernateEvent.getResult();
+        if (result != null) {
+            activateDirtyChecking(result);
+        }
     }
 
     private void publishMergeEvent(MergeEvent hibernateEvent) {
@@ -227,9 +247,85 @@ public class ClosureEventTriggeringInterceptor
         }
     }
 
+    /**
+     * The listener to register for Hibernate's {@code create-onflush} event, the persist it cascades to
+     * reachable transient entities when the session flushes. That event is not handled by this class itself
+     * because Hibernate's default listener for it uses the {@code PERSIST_ON_FLUSH} cascade action, which the
+     * plain persist delegate does not, so the returned listener extends that default and publishes the same
+     * GORM persist event as an explicit persist.
+     */
+    public PersistEventListener getPersistOnFlushEventListener() {
+        return persistOnFlushEventListener;
+    }
+
+    /**
+     * The listener to keep in a persist or merge group that an application listener has taken over.
+     * <p>
+     * This interceptor performs the persist or merge itself, through the default listener it composes, so
+     * leaving it in such a group would run that work a second time for every entity. The returned listener
+     * carries only the part that must survive - GORM's own event and its change tracking - and leaves the
+     * operation to the listener that replaced the group.
+     */
+    public ObservingEventListener getObservingEventListener() {
+        return observingEventListener;
+    }
+
     @Override
     public void injectCallbackRegistry(CallbackRegistry callbackRegistry) {
         persistEventListener.injectCallbackRegistry(callbackRegistry);
+        mergeEventListener.injectCallbackRegistry(callbackRegistry);
+        persistOnFlushEventListener.injectCallbackRegistry(callbackRegistry);
+    }
+
+    /**
+     * Publishes this interceptor's persist and merge events and activates change tracking, without performing
+     * the operation itself. Registered in place of the interceptor when an application listener has taken over
+     * a group, so it runs after that listener rather than before it.
+     */
+    public final class ObservingEventListener implements MergeEventListener, PersistEventListener {
+
+        @Override
+        public void onMerge(MergeEvent event) throws HibernateException {
+            publishMergeEvent(event);
+            activateDirtyCheckingOnMergeResult(event);
+        }
+
+        @Override
+        public void onMerge(MergeEvent event, MergeContext copiedAlready) throws HibernateException {
+            publishMergeEvent(event);
+            activateDirtyCheckingOnMergeResult(event);
+        }
+
+        @Override
+        public void onPersist(PersistEvent event) throws HibernateException {
+            publishPersistEvent(event);
+        }
+
+        @Override
+        public void onPersist(PersistEvent event, PersistContext createdAlready) throws HibernateException {
+            publishPersistEvent(event);
+        }
+    }
+
+    /** The listener this interceptor contributes for Hibernate's persist-on-flush event. */
+    public final class PersistOnFlushEventListener extends DefaultPersistOnFlushEventListener {
+
+        /** @see ClosureEventTriggeringInterceptor#getObservingEventListener() */
+        public ObservingEventListener getObservingEventListener() {
+            return observingEventListener;
+        }
+
+        @Override
+        public void onPersist(PersistEvent event) throws HibernateException {
+            publishPersistEvent(event);
+            super.onPersist(event);
+        }
+
+        @Override
+        public void onPersist(PersistEvent event, PersistContext createdAlready) throws HibernateException {
+            publishPersistEvent(event);
+            super.onPersist(event, createdAlready);
+        }
     }
 
     @Override

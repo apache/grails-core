@@ -62,7 +62,8 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
             boolean shouldConfigureDataSourceBean = GrailsVersion.isAtLeastMajorMinor(3, 3)
             String dataSourceBeanName = isDefault ? Settings.SETTING_DATASOURCE : "${Settings.SETTING_DATASOURCE}_$dataSourceName"
 
-            if (!registry.containsBeanDefinition(dataSourceBeanName) && shouldConfigureDataSourceBean) {
+            // A data source registered by other means, also as a singleton, is the one to keep
+            if (!registry.isBeanNameInUse(dataSourceBeanName) && shouldConfigureDataSourceBean) {
                 def dataSourceBean = new RootBeanDefinition()
                 dataSourceBean.setTargetType(ResolvableType.forClassWithGenerics(InstanceFactoryBean, DataSource))
                 dataSourceBean.setBeanClass(InstanceFactoryBean)

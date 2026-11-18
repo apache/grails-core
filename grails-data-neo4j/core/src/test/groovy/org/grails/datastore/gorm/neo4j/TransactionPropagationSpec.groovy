@@ -23,7 +23,6 @@ import org.apache.grails.data.neo4j.core.Neo4jGormDatastoreSpec
 import org.apache.grails.data.testing.tck.domains.Person
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.TransactionStatus
-import spock.lang.Ignore
 
 /**
  * @author graemerocher
@@ -51,18 +50,22 @@ class TransactionPropagationSpec extends Neo4jGormDatastoreSpec {
 
     }
 
-    @Ignore // Neo4j
     void "Test nested REQUIRES_NEW transaction"() {
         when:"An entity is persisted in a nested transaction"
-        Person.withTransaction {
-            new Person(lastName:"person1").save()
-            Person.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW) { TransactionStatus status ->
-                new Person(lastName:"person2").save()
+        try {
+            Person.withTransaction {
+                new Person(lastName:"person1").save()
+                Person.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_REQUIRES_NEW) { TransactionStatus status ->
+                    new Person(lastName:"person2").save()
+                }
+                throw new RuntimeException("bad")
             }
-            throw new RuntimeException("bad")
+        } finally {
+            // The outer transaction joined the one the test's session holds, which it left rollback-only
+            manager.session.disconnect()
         }
 
-        then:"Both transactions are rolled back"
+        then:"Only the REQUIRES_NEW transaction's write is committed"
         thrown RuntimeException
         Person.count() == 1
         Person.findByLastName('person2')

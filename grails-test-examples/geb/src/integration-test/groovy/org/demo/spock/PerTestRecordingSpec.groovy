@@ -50,9 +50,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         when: 'visiting another page than the previous test'
         to(UploadPage)
 
-        and: 'pausing so we can see the page change in the video'
-        Thread.sleep(500)
-
         then: 'the page loads correctly'
         title == 'Upload Test'
     }
@@ -85,11 +82,32 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         names.contains('setup_running_a_test_to_create_a_recording')
         names.contains('setup_running_a_second_test_to_create_another')
 
-        and: 'the recording files should have different content'
+        when: 'finding the recording of each test method'
+        // The recordings are complete by now: GebRecordingTestListener saves each one
+        // synchronously when its iteration ends, and this spec is @Stepwise.
         def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
         def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
+
+        then: 'each recording shows the screen, not just the black frames of a recorder that has not received it yet'
+        // WebDriverContainerHolder#restartVncRecordingContainer waits until the restarted VNC
+        // recorder has written the screen to the recording, so even a test as short as the ones
+        // above is recorded. Without that wait, a short test can be recorded as black frames
+        // only. Two such recordings can encode to identical bytes, which would fail the
+        // difference check below without saying why.
+        firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+        secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+
+        and: 'the recording files should have different content'
+        // Kept alongside the size check above rather than dropped in favor of it: the size
+        // check only rules out near-blank captures, it says nothing about two recordings
+        // accidentally being the *same* file (e.g. a future regression in how recording
+        // files are named or matched). The two checks guard against different failure modes.
         Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
+
+    // A recording of black frames only is 2-3 kilobytes. A recording that shows the screen
+    // of the browser container is tens of kilobytes, as its first full frame alone is.
+    private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
 
     private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
 

@@ -81,7 +81,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity entity = getPersistentEntity(Simple) as GrailsHibernatePersistentEntity
 
         expect:
-        entity.buildDiscriminatorSet() == ["'Simple'"] as Set
+        entity.buildDiscriminatorSet() == ["'${Simple.name}'".toString()] as Set
     }
 
     void "test buildDiscriminatorSet with custom discriminator value"() {
@@ -105,7 +105,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity vehicle = getPersistentEntity(Vehicle) as GrailsHibernatePersistentEntity
 
         expect:
-        vehicle.buildDiscriminatorSet() == ["'Vehicle'", "'Car'", "'Truck'"] as Set
+        vehicle.buildDiscriminatorSet() == ["'${Vehicle.name}'", "'${Car.name}'", "'${Truck.name}'"]*.toString() as Set
     }
 
     void "test getHibernateRootEntity and getRootMapping"() {
@@ -135,7 +135,7 @@ class GrailsHibernatePersistentEntitySpec extends HibernateGormDatastoreSpec {
         GrailsHibernatePersistentEntity custom = getPersistentEntity(CustomDiscriminator) as GrailsHibernatePersistentEntity
 
         expect:
-        vehicle.getDiscriminatorValue() == "Vehicle"
+        vehicle.getDiscriminatorValue() == Vehicle.name
         custom.getDiscriminatorValue() == "custom_val"
     }
 
