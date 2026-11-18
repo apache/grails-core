@@ -19,11 +19,7 @@
 
 package org.grails.orm.hibernate.dialect;
 
-import org.hibernate.dialect.DB2Dialect;
-import org.hibernate.dialect.DB2iDialect;
-import org.hibernate.dialect.DB2zDialect;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.OracleDialect;
 
 /**
  * How the unique index Hibernate creates over nullable columns treats a null in the key, by database. This is one
@@ -39,30 +35,17 @@ import org.hibernate.dialect.OracleDialect;
  * index that leaves the rows with a null out, which comes to the same. On Db2 for IBM i and Db2 for z/OS Hibernate
  * creates it as {@code create unique where not null index}, under which nulls are not equal to each other.</li>
  * </ul>
- * The Db2 dialects for IBM i and z/OS extend the one for Linux, UNIX and Windows, so they are listed first.
  *
  * @since 8.0.1
  */
-public enum UniqueIndexNulls implements DialectKeyed<UniqueIndexNulls> {
+public enum UniqueIndexNulls {
 
-    DISTINCT(DB2iDialect.class, DB2zDialect.class, Dialect.class),
+    DISTINCT,
 
-    COMPARED(OracleDialect.class, DB2Dialect.class);
-
-    private final Class<? extends Dialect>[] dialectClasses;
-
-    @SafeVarargs
-    UniqueIndexNulls(Class<? extends Dialect>... dialectClasses) {
-        this.dialectClasses = dialectClasses;
-    }
+    COMPARED;
 
     /** Returns how the unique index of the database the dialect is for treats a null in its key. */
     public static UniqueIndexNulls forDialect(Dialect dialect) {
-        return DialectKeyed.forDialect(UniqueIndexNulls.class, dialect);
-    }
-
-    @Override
-    public Class<? extends Dialect>[] dialectClasses() {
-        return dialectClasses.clone();
+        return SupportedDatabase.forDialect(dialect).uniqueIndexNulls();
     }
 }
