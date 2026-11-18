@@ -56,6 +56,7 @@ import groovyjarjarasm.asm.Opcodes
 
 import org.springframework.transaction.PlatformTransactionManager
 
+import grails.gorm.MultiTenant
 import grails.gorm.services.Service
 import grails.gorm.transactions.NotTransactional
 import grails.gorm.transactions.ReadOnly
@@ -703,17 +704,22 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
         // PlatformTransactionManager tenantTransactionManager = GormRegistry.getInstance().findCurrentTenantTransactionManager(serviceDatastore)
         // if (tenantTransactionManager != null) return tenantTransactionManager
         // The tenant is the one bound for the service's datastore: the thread can hold a different one for each datastore.
+        // Only a service of a multi-tenant class, or of no known class, follows it: a class that is not multi-tenant
+        // keeps its own datastore inside a tenant block, so its writes must commit in that datastore's transaction.
         BlockStatement body = new BlockStatement()
         body.addStatement(
             declS(datastoreVar, callX(varX('this'), 'getDatastore'))
         )
-        VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
-        body.addStatement(
-            declS(tenantTransactionManagerVar, callX(registryExpr, 'findCurrentTenantTransactionManager', datastoreVar))
-        )
-        body.addStatement(
-            ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
-        )
+        if (targetDomainClass == null || targetDomainClass == ClassHelper.OBJECT_TYPE ||
+                targetDomainClass.implementsInterface(ClassHelper.make(MultiTenant))) {
+            VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
+            body.addStatement(
+                declS(tenantTransactionManagerVar, callX(registryExpr, 'findCurrentTenantTransactionManager', datastoreVar))
+            )
+            body.addStatement(
+                ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
+            )
+        }
 
         // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
         body.addStatement(

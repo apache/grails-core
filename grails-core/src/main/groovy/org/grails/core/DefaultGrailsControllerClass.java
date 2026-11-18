@@ -20,8 +20,6 @@ package org.grails.core;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -36,9 +34,9 @@ import org.springframework.util.ReflectionUtils;
 import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.core.GrailsControllerClass;
-import grails.util.Environment;
 import grails.web.Action;
 import grails.web.UrlConverter;
+import org.grails.core.exceptions.GrailsConfigurationException;
 
 /**
  * Evaluates the conventions contained within controllers to perform auto-configuration.
@@ -58,7 +56,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     public static final String SCOPE = "scope";
     public static final String SCOPE_SINGLETON = "singleton";
     private String scope;
-    private Map<String, ActionInvoker> actions = new HashMap<>();
+    private Map<String, MethodHandle> actions = new HashMap<>();
     private String defaultActionName;
     private String namespace;
     protected Map<String, String> actionUriToViewName = new HashMap<>();
@@ -110,27 +108,14 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
         return this.defaultActionName;
     }
 
-    private void methodStrategy(Map<String, ActionInvoker> methodNames) {
+    private void methodStrategy(Map<String, MethodHandle> methodNames) {
 
         Class superClass = getClazz();
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         while (superClass != Object.class && superClass != GroovyObject.class) {
             for (Method method : superClass.getMethods()) {
                 if (Modifier.isPublic(method.getModifiers()) && method.getAnnotation(Action.class) != null) {
-                    String methodName = method.getName();
-                    if (Environment.isDevelopmentMode()) {
-                        methodNames.put(methodName, new ReflectionInvoker(method));
-                    }
-                    else {
-                        MethodHandle mh;
-                        try {
-                            mh = lookup.findVirtual(superClass, methodName, MethodType.methodType(method.getReturnType()));
-                            methodNames.put(methodName, new MethodHandleInvoker(mh));
-                        } catch (NoSuchMethodException | IllegalAccessException e) {
-                            methodNames.put(methodName, new ReflectionInvoker(method));
-                        }
-                    }
-
+                    methodNames.put(method.getName(), actionHandle(lookup, method));
                 }
             }
             superClass = superClass.getSuperclass();
@@ -139,6 +124,26 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
         if (!isActionMethod(defaultActionName) && methodNames.size() == 1 && !isReadableProperty("scaffold")) {
             defaultActionName = methodNames.keySet().iterator().next();
         }
+    }
+
+    /**
+     * A handle to the action, made from the method that reflection reports, so that it also reaches an action a class
+     * reloading agent has added to a class that is already loaded, and an action of a class that is not public.
+     */
+    private static MethodHandle actionHandle(MethodHandles.Lookup lookup, Method method) {
+        ReflectionUtils.makeAccessible(method);
+        MethodHandle handle;
+        try {
+            handle = lookup.unreflect(method);
+        }
+        catch (IllegalAccessException e) {
+            throw new GrailsConfigurationException("Cannot invoke controller action [" + method + "]", e);
+        }
+        if (Modifier.isStatic(method.getModifiers())) {
+            // invoked with the controller, which a static action ignores, as Method.invoke does
+            handle = MethodHandles.dropArguments(handle, 0, Object.class);
+        }
+        return handle;
     }
 
     @Override
@@ -188,7 +193,7 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
     @Override
     public Object invoke(Object controller, String action) throws Throwable {
         if (action == null) action = this.defaultActionName;
-        ActionInvoker handle = actions.get(action);
+        MethodHandle handle = actions.get(action);
         if (handle == null) throw new IllegalArgumentException("Invalid action name: " + action);
         return handle.invoke(controller);
     }
@@ -197,42 +202,5 @@ public class DefaultGrailsControllerClass extends AbstractInjectableGrailsClass 
         String actionName = actionUriToViewName.get(actionUri);
 
         return actionName != null ? actionName : actionUri;
-    }
-
-    private interface ActionInvoker {
-        Object invoke(Object controller) throws Throwable;
-    }
-
-    private class ReflectionInvoker implements ActionInvoker {
-        private final Method method;
-
-        public ReflectionInvoker(Method method) {
-            this.method = method;
-            ReflectionUtils.makeAccessible(method);
-        }
-
-        @Override
-        public Object invoke(Object controller) throws Throwable {
-            try {
-                return method.invoke(controller);
-            }
-            catch (InvocationTargetException e) {
-                // what a method handle throws, so that what an action fails with does not depend on the environment
-                throw e.getTargetException();
-            }
-        }
-    }
-
-    private class MethodHandleInvoker implements ActionInvoker {
-        private final MethodHandle handle;
-
-        public MethodHandleInvoker(MethodHandle handle) {
-            this.handle = handle;
-        }
-
-        @Override
-        public Object invoke(Object controller) throws Throwable {
-            return handle.invoke(controller);
-        }
     }
 }

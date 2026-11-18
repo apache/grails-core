@@ -1453,9 +1453,35 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 * Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
 * To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
 
-==== 25. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+==== 25. A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
 
-In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 27 does not apply to them.
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` now stays on its own datastore inside a block that binds a tenant, such as `Tenants.withId('acme') { }`, as it does outside one. Only the classes that implement `MultiTenant` follow the tenant. This is what Grails 7 did and what the multi-tenancy guide describes; Grails 8.0 changed it, so an application upgrading from Grails 7 sees no change.
+
+In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `save`, `get`, `list` and `count` already used the default database, while `where` queries and data service methods did not work, because the tenant's session factory does not map the class; they now use the default database too.
+
+Writes of such a class inside the block go to the default datastore, so they run in a transaction of that datastore:
+
+* A data service of such a class runs its transactions in its own datastore, not the tenant's.
+* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back.
+* A write of such a class inside the tenant's transaction but outside a transaction of its own datastore, such as a `save()` in a method annotated `@Transactional` that runs in the tenant's transaction, now fails with an `IllegalTransactionStateException`. In Grails 8 the tenant's transaction wrote it to the tenant's database. The tenant's transaction cannot commit or roll back a write to another datastore, so the write would otherwise be lost, or written although the tenant's transaction rolled back. This applies to `save`, `insert`, `delete`, `saveAll` and `deleteAll` without `flush: true`, with GORM for MongoDB and the in-memory datastore of unit tests. With GORM for Hibernate, such a save already failed in Grails 8 and still does.
+
+===== Required Actions
+
+For most applications **no changes are required**.
+
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` also works: it writes at once, and the write stays when the tenant's transaction rolls back.
+
+With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
+
+* When each tenant should have its own instances, implement `MultiTenant` on the class, which then reads and writes the tenant's database again. Without it, every tenant reads and changes the same instances, in the default database.
+* A class that a multi-tenant class references, such as a `Country` of a multi-tenant `Book`, is loaded through the tenant's session, from the tenant's database, so it has to implement `MultiTenant` as well, even when it holds shared data.
+* When the instances are shared by every tenant and no multi-tenant class references them, move the documents from the tenants' databases into the default database.
+
+Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
+==== 26. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 28 does not apply to them.
 
 ===== Required Actions
 
@@ -1463,7 +1489,7 @@ In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a 
 * A test that expected a domain class event not to run on such a save expects what the event does.
 * The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
 
-==== 26. A Domain Class Has an `autoTimestampEventListener` Property
+==== 27. A Domain Class Has an `autoTimestampEventListener` Property
 
 Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
 
@@ -1471,7 +1497,7 @@ Every domain class now has a static `autoTimestampEventListener` property, the l
 
 * Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
 
-==== 27. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+==== 28. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
 
 In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
 

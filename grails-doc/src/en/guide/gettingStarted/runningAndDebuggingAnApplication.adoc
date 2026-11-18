@@ -158,6 +158,8 @@ or for a single run, where a switch such as `openBrowser` given without a value 
 $ ./gradlew bootRun -Pgrails.startup.progress.openBrowser
 ----
 
+An application generated with the `grails-startup-progress` feature sets `grails.startup.progress.openBrowser=true` in its own `gradle.properties`, so `bootRun` opens a browser on the page from the first run. Gradle ranks a property in `~/.gradle/gradle.properties` or on the command line above the project's, so a developer who does not want the browser sets it to `false` there, or runs `./gradlew bootRun -Pgrails.startup.progress.openBrowser=false`, without changing the application. Only `bootRun` reads it: tests, the packaged application and starting the `Application` class from an IDE are unaffected. Under `bootRun` the property reaches the application as a system property, which ranks above `application.yml`, so `openBrowser: false` there does not keep the browser closed. To turn it off for everyone working on the application, delete the line from `gradle.properties`.
+
 Setting `grails.startup.progress.enabled` to `true` outside development mode, for example in production, serves only the progress bar, unless `grails.startup.progress.showDetails` is set as well, and then the details go only to a browser signed in with the address in the log.
 
 ==== The Startup Report
