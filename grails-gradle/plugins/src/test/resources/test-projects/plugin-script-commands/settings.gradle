@@ -1,0 +1,3 @@
+rootProject.name = 'plugin-script-commands'
+
+include 'plugin-with-cli', 'plugin-without-cli'

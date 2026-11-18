@@ -31,26 +31,23 @@ import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.NamedDelegate
 import groovy.transform.NamedVariant
+import groovy.util.logging.Slf4j
 import groovy.xml.FactorySupport
 import groovy.xml.MarkupBuilder
 import groovy.xml.XmlSlurper
 
 import org.xml.sax.SAXException
 
+import org.apache.grails.gradle.common.XmlParserFeature
+
 /**
  * Utility methods for handling XML.
  *
  * @since 7.0.10
  */
+@Slf4j
 @CompileStatic
 class XmlUtils {
-
-    private static final String DISALLOW_DOCTYPE_DECL = 'https://apache.org/xml/features/disallow-doctype-decl'
-    private static final String EXTERNAL_GENERAL_ENTITIES = 'https://xml.org/sax/features/external-general-entities'
-    private static final String EXTERNAL_PARAMETER_ENTITIES = 'https://xml.org/sax/features/external-parameter-entities'
-    private static final String FEATURE_SECURE_PROCESSING = XMLConstants.FEATURE_SECURE_PROCESSING
-    private static final String LOAD_DTD_GRAMMAR = 'https://apache.org/xml/features/nonvalidating/load-dtd-grammar'
-    private static final String LOAD_EXTERNAL_DTD = 'https://apache.org/xml/features/nonvalidating/load-external-dtd'
 
     private static final Pattern SPACE_AND_EMPTY_ELEMENT_CLOSE = ~/ \/>/
     private static final String EMPTY_ELEMENT_CLOSE = '/>'
@@ -59,12 +56,12 @@ class XmlUtils {
     private static final Pattern XML_DECLARATION = ~/^\s*(<\?xml\b.*?\?>)/
 
     private static final Map<String, Boolean> SECURE_XML_SLURPER_FEATURES = [
-            (DISALLOW_DOCTYPE_DECL): false,
-            (EXTERNAL_GENERAL_ENTITIES): false,
-            (EXTERNAL_PARAMETER_ENTITIES): false,
-            (FEATURE_SECURE_PROCESSING): true,
-            (LOAD_DTD_GRAMMAR): false,
-            (LOAD_EXTERNAL_DTD): false
+            (XMLConstants.FEATURE_SECURE_PROCESSING): true,
+            (XmlParserFeature.DISALLOW_DOCTYPE_DECL.featureName): true,
+            (XmlParserFeature.EXTERNAL_GENERAL_ENTITIES.featureName): false,
+            (XmlParserFeature.EXTERNAL_PARAMETER_ENTITIES.featureName): false,
+            (XmlParserFeature.LOAD_DTD_GRAMMAR.featureName): false,
+            (XmlParserFeature.LOAD_EXTERNAL_DTD.featureName): false
     ].asImmutable()
 
     /**
@@ -118,8 +115,8 @@ class XmlUtils {
     /**
      * Creates an {@link XmlSlurper} with secure defaults.
      * <p>
-     * The default parser is namespace aware, non-validating, permits inline DOCTYPE declarations,
-     * and disables external entity expansion plus external DTD loading.
+     * The default parser is namespace aware, non-validating, rejects DOCTYPE declarations, and disables
+     * external entity expansion plus external DTD loading.
      *
      * @param slurperConfig optional XML parser configuration or custom factory
      * @return configured {@link XmlSlurper}
@@ -226,12 +223,22 @@ class XmlUtils {
             it.validating = false
         }
 
+        try {
+            saxParserFactory.XIncludeAware = false
+        }
+        catch (UnsupportedOperationException ignored) {
+            // ignore, parser doesn't support
+        }
+
         SECURE_XML_SLURPER_FEATURES.each { feature, enabled ->
             try {
                 saxParserFactory.setFeature(feature, enabled)
             }
-            catch (Exception ignored) {
-                // ignore, parser doesn't support
+            catch (ParserConfigurationException | SAXException e) {
+                // tolerated so any SAX provider works, but reported: an unrecognised feature identifier
+                // once switched this hardening off without a trace
+                log.warn('XML parser factory [{}] does not support feature [{}]: {}',
+                        saxParserFactory.class.name, feature, e.message)
             }
         }
 

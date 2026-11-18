@@ -1,0 +1,3 @@
+rootProject.name = 'legacy-command-discovery'
+
+include 'legacy-command-api', 'legacy-command-plugin', 'app'

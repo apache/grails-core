@@ -60,12 +60,13 @@ public class GrailsForgeConfiguration {
      * @return The URI to redirect to when visiting via the browser
      */
     public Optional<URI> getRedirectUri() {
-        return Optional.of(URI.create(redirectUrl));
+        return Optional.ofNullable(redirectUrl).map(URI::create);
     }
 
     /**
      * @return The URL to redirect to when visiting via the browser
      */
+    @Nullable
     public String getRedirectUrl() {
         return redirectUrl;
     }
@@ -75,7 +76,9 @@ public class GrailsForgeConfiguration {
      * @param redirectUri The redirect URI
      */
     public void setRedirectUrl(@Nullable String redirectUri) {
-        this.redirectUrl = redirectUrl;
+        if (redirectUri != null) {
+            this.redirectUrl = redirectUri;
+        }
     }
 
     /**
@@ -98,70 +101,5 @@ public class GrailsForgeConfiguration {
 
     public void setPath(String path) {
         this.path = path;
-    }
-
-    @ConfigurationProperties(GitHubConfiguration.PREFIX)
-    public static class GitHubConfiguration {
-        public static final String PREFIX = "github";
-        public static final String DEFAULT_USER_AGENT = "https://start.grails.org/";
-
-        private String clientId;
-        private String clientSecret;
-        private String tokenPermissions;
-
-        private String userAgent = DEFAULT_USER_AGENT;
-
-        public String getUserAgent() {
-            return userAgent;
-        }
-
-        public void setUserAgent(String userAgent) {
-            this.userAgent = userAgent;
-        }
-
-        /**
-         * @return GitHub OAuth App client id
-         */
-        public String getClientId() {
-            return clientId;
-        }
-
-        /**
-         * Sets GitHub OAuth App client id
-         * @param clientId client id
-         */
-        public void setClientId(String clientId) {
-            this.clientId = clientId;
-        }
-
-        /**
-         * @return GitHub OAuth App secret id
-         */
-        public String getClientSecret() {
-            return clientSecret;
-        }
-
-        /**
-         * Sets GitHub OAuth App secret
-         * @param clientSecret secret
-         */
-        public void setClientSecret(String clientSecret) {
-            this.clientSecret = clientSecret;
-        }
-
-        /**
-         * @return token permission to request from user
-         */
-        public String getTokenPermissions() {
-            return tokenPermissions;
-        }
-
-        /**
-         * Sets GitHub token permissions
-         * @param tokenPermissions token permissions
-         */
-        public void setTokenPermissions(String tokenPermissions) {
-            this.tokenPermissions = tokenPermissions;
-        }
     }
 }

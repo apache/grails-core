@@ -81,6 +81,7 @@ public class GrailsDefaultPlugins implements DefaultFeature {
         generatorContext.addTemplate("messages_sv_properties", new URLTemplate("grails-app/i18n/messages_sv.properties", classLoader.getResource("i18n/messages_sv.properties")));
         generatorContext.addTemplate("messages_th_properties", new URLTemplate("grails-app/i18n/messages_th.properties", classLoader.getResource("i18n/messages_th.properties")));
         generatorContext.addTemplate("messages_zh_CN_properties", new URLTemplate("grails-app/i18n/messages_zh_CN.properties", classLoader.getResource("i18n/messages_zh_CN.properties")));
+        generatorContext.addTemplate("messages_zh_TW_properties", new URLTemplate("grails-app/i18n/messages_zh_TW.properties", classLoader.getResource("i18n/messages_zh_TW.properties")));
     }
 
     @Override

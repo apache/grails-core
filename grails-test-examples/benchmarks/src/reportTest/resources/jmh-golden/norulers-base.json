@@ -1,0 +1,1 @@
+[{"benchmark": "g.group.First.run", "primaryMetric": {"score": 100, "scoreUnit": "ns/op", "scoreConfidence": [99, 101], "scoreError": 1.0}, "mode": "avgt"}, {"benchmark": "g.group.Second.run", "primaryMetric": {"score": 100, "scoreUnit": "ns/op", "scoreConfidence": [99, 101], "scoreError": 1.0}, "mode": "avgt"}]

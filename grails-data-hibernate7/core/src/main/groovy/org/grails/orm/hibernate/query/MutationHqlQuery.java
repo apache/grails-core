@@ -30,8 +30,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersi
 /**
  * A query implementation for HQL mutation queries (UPDATE/DELETE).
  *
- * @author Graeme Rocher
- * @since 7.0.0
+ * @since 8.0
  */
 @SuppressWarnings("rawtypes")
 public class MutationHqlQuery extends Query implements HqlQueryMethods {
@@ -54,9 +53,9 @@ public class MutationHqlQuery extends Query implements HqlQueryMethods {
     }
 
     protected void applyQuerySettings(HqlQueryDelegate d) {
-        populateQuerySettings(d, queryContext.querySettings());
-        populateHints(d, queryContext.hints());
-        HqlQueryMethods.populateParameters(d, queryContext);
+        populateQuerySettings(d, queryContext.settings().settings());
+        populateHints(d, queryContext.settings().hints());
+        HqlQueryMethods.populateParameters(d, queryContext.parameters());
     }
 
     @Override

@@ -167,9 +167,11 @@ To build the code, without tests, simply run:
 
     ./gradlew build -PskipTests
 
-If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
+If you encounter out of memory errors when trying to run the build, raise the daemon heap.
+`org.gradle.jvmargs` in `gradle.properties` is what sizes it, so a bare `-Xmx` in `GRADLE_OPTS`
+is ignored - override the property itself:
 
-    export GRADLE_OPTS="-Xms2G -Xmx5G"
+    export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
 build will pass.
@@ -271,6 +273,29 @@ To check compliance with the code styles, run the `codeStyle` Gradle task.
 Grails makes use of [Release Drafter](https://github.com/release-drafter/release-drafter) to draft its release notes so
 commit messages are important. They should follow the project's rules. While a change can be incrementally made under
 many commits, pull requests should be squashed into a single, meaningful commit message.
+
+### Continuous Integration
+
+Every push and pull request runs the GitHub Actions workflows, and runner time is shared with every other Apache
+project, so two controls limit what runs:
+
+* A draft pull request runs no workflow unless it carries the `run ci` label; marking it ready for review starts CI.
+  A pull request labelled `no ci` runs no workflow at all, draft or not. Labels are read when a push arrives, so add
+  `run ci` (or remove `no ci`) and then push, or mark the draft ready, to get a run. Pushing to a draft still cancels
+  the run in flight for it, as every push to a pull request does.
+* Adding `no ci` to a pull request cancels the runs it has in flight, and merging a pull request into a release branch
+  cancels the runs started before the merge, unless the pull request is labelled `run ci`: on an older release branch
+  the push after the merge does not run the tests, so the tests the label asked for are left to finish. A pull request
+  from a fork gets a read-only token, so its runs are cancelled by the next push to a release branch instead of at
+  once when it is labelled.
+* The tests run by default only on the default branch and the release branches above it. Elsewhere, that is on an
+  older release branch such as `7.0.x` while `8.0.x` is the default, and on a pull request whose base is a side
+  branch rather than a release branch, a push or pull request builds without running the tests unless asked: a
+  commit message starting with `[run tests]`, or the `run ci` label on the pull request, runs them. On the default
+  branch and above, a commit message starting with `[skip tests]` skips them, and it does so even with the label.
+  The marker is read from the first line of the head commit's message. A manual run (`workflow_dispatch`) of a
+  workflow in `apache/grails-core` follows the same rule unless its `run-tests` input is ticked; in your own fork
+  it runs the tests unless the commit message starts with `[skip tests]`.
 
 ### Change Review Process
 

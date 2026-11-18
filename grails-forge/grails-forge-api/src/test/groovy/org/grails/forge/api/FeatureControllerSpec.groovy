@@ -32,6 +32,7 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.ServletImpl
 import spock.lang.Specification
+import spock.lang.Unroll
 
 @MicronautTest
 class FeatureControllerSpec extends Specification {
@@ -171,11 +172,34 @@ class FeatureControllerSpec extends Specification {
         !features.any { it.name == 'asset-pipeline-grails' }
     }
 
+    @Unroll
+    void 'test gorm-graphql is listed for the #type application type: #listed'() {
+        when:
+        List<FeatureDTO> features = applicationTypeClient
+                .features(type,
+                        RequestInfo.LOCAL,
+                        new FeatureFilter(reloading: DevelopmentReloading.DEFAULT_OPTION,
+                                gorm: GormImpl.DEFAULT_OPTION,
+                                servlet: ServletImpl.DEFAULT_OPTION,
+                                javaVersion: JdkVersion.DEFAULT_OPTION)).features
+        FeatureDTO graphql = features.find { it.name == 'gorm-graphql' }
+
+        then:
+        (graphql != null) == listed
+        !listed || graphql.category == 'API'
+
+        where:
+        type                       | listed
+        ApplicationType.WEB        | true
+        ApplicationType.REST_API   | true
+        ApplicationType.PLUGIN     | false
+        ApplicationType.WEB_PLUGIN | false
+    }
+
     void "test feature filter - invalid option as query parameter"() {
         when:
-        String response = httpClient.toBlocking().withCloseable { client ->
-            client.exchange(HttpRequest.GET('/application-types/' + ApplicationType.WEB.name + '/features?javaVersion=invalid'), String.class).body()
-        }
+        String response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/application-types/' + ApplicationType.WEB.name + '/features?javaVersion=invalid'), String.class).body()
 
         then:
         response
@@ -185,5 +209,28 @@ class FeatureControllerSpec extends Specification {
         def map = mapper.readValue(response, Map)
 
         map.features.collect { it -> it.name }.find { it == 'gorm-mongodb'}
+    }
+
+    void "test feature filter - Grails Data implementation as query parameter"() {
+        when: 'a valid Grails Data implementation is accepted'
+        String response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/application-types/' + ApplicationType.WEB.name + '/features?gorm=hibernate7'), String.class).body()
+
+        then:
+        response
+
+        when: 'the legacy hibernate value is accepted'
+        response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/application-types/' + ApplicationType.WEB.name + '/features?gorm=hibernate'), String.class).body()
+
+        then:
+        response
+
+        when: 'an invalid value falls back to the default like other filter options'
+        response = httpClient.toBlocking()
+                .exchange(HttpRequest.GET('/application-types/' + ApplicationType.WEB.name + '/features?gorm=invalid'), String.class).body()
+
+        then:
+        response
     }
 }

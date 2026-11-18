@@ -27,7 +27,16 @@ class UrlMappings {
         }
 
         "/"(view: "/index")
+        "/failing/$action"(controller: 'failing')
+        "/admin/pages/$action"(controller: 'pages', namespace: 'admin')
+        "/page/$slug"(controller: 'failing', action: 'includesAnswerOfController')
+
         "500"(view: '/error')
+        "500"(controller: 'failing', action: 'errorHandler', exception: UnsupportedOperationException)
+        "500"(controller: 'failing', action: 'errorHandler', exception: StackOverflowError)
+        "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
+        "500"(controller: 'failing', action: 'includingErrorHandler', exception: NoSuchElementException)
+        "413"(controller: 'upload', action: 'tooLarge')
         "404"(view: '/notFound')
     }
 }

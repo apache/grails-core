@@ -21,7 +21,10 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.bom-conventions'
+    id 'org.apache.grails.buildsrc.bom-property-validator'
 }
+
+ext.bomVersionProperties = customBomVersions
 
 dependencies {
     api platform(project(':grails-base-bom'))
@@ -55,3 +58,6 @@ dependencies {
 }
 
 ext.pomDescription = 'Grails Hibernate 7 BOM (Bill of Materials) for managing dependency versions used by Grails Projects with Hibernate 7'
+
+// Declare companion constraints directly so enforcedPlatform consumers receive forced versions.
+apply from: rootProject.layout.projectDirectory.file('gradle/cli-companion-bom-constraints.gradle')

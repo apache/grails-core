@@ -1,0 +1,81 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+// Vendored Spring Boot Undertow support.
+// Spring Boot 4 removed its spring-boot-undertow module before GA because Undertow
+// did not yet support Servlet 6.1. Undertow has since shipped Servlet 6.1 support
+// via io.undertow:undertow-core 2.4.x and the io.undertow.ee servlet/websockets
+// artifacts, so the module is vendored here from Spring Boot 4.0.0-M1
+// (org.springframework.boot.undertow, repackaged as org.apache.grails.undertow.core) and
+// adapted to the Spring Boot 4.1.x APIs.
+// Original source: https://github.com/spring-projects/spring-boot/tree/v4.0.0-M1/module/spring-boot-undertow
+
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Undertow Spring Boot Support'
+    pomDescription = 'Vendored Spring Boot Undertow web server support for Grails, from the spring-boot-undertow module removed before Spring Boot 4 GA'
+}
+
+dependencies {
+    implementation platform(project(':grails-bom'))
+    annotationProcessor platform(project(':grails-bom'))
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    api 'org.springframework.boot:spring-boot-web-server'
+    api 'io.undertow:undertow-core'
+    api 'io.undertow.ee:undertow-servlet'
+
+    // Optional in the original module: only needed when the consuming
+    // application uses autoconfiguration, the actuator, websockets or WebFlux
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+    compileOnly 'io.undertow.ee:undertow-websockets'
+    compileOnly 'org.springframework:spring-webflux'
+
+    testImplementation 'org.springframework.boot:spring-boot-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-actuator-autoconfigure'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    testImplementation 'org.springframework:spring-webflux'
+    testImplementation 'org.springframework:spring-webmvc'
+    testImplementation 'io.undertow.ee:undertow-websockets'
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.mockito:mockito-core'
+
+    testRuntimeOnly 'ch.qos.logback:logback-classic'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

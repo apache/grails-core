@@ -22,6 +22,8 @@ In addition to the higher level async features discussed earlier in the section,
 
 ==== Servlet 3.0 Asynchronous Rendering
 
+WARNING: `AsyncController` and its `startAsync()` API are deprecated for removal in Grails 8. Prefer returning a `Promise` from an action so Spring MVC manages completion, dispatch, timeouts, and errors. The examples below are retained for migrating existing applications.
+
 To do so your should first implement the `grails.async.web.AsyncController` trait in your controller:
 
 [source,groovy]

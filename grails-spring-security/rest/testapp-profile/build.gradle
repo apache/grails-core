@@ -17,9 +17,10 @@
  *  under the License.
  */
 
+import javax.inject.Inject
+
 plugins {
     id 'org.apache.grails.gradle.grails-profile'
-    id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
 }
 
@@ -29,25 +30,31 @@ group = 'org.apache.grails.profiles'
 ext {
     pomTitle = 'Grails Spring Security REST Test App Profile'
     pomDescription = 'A Grails profile to assist in generating various implementations of the Grails Spring Security REST plugin for testing purposes'
-    pomDevelopers = [
-            alvarosanchez: 'Alvaro Sanchez-Mariscal',
-    ]
+}
+
+interface FileSystemSupport {
+    @Inject FileSystemOperations getFs()
 }
 
 tasks.register('generateProfileConfig') {
-    copy {
-        from 'profile.yml.tmpl'
-        into '.'
-        rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-        expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
-    }
-
-    file('features').eachDir { feature ->
-        copy {
-            from "features/${feature.name}/feature.yml.tmpl"
-            into "features/${feature.name}/"
+    def fs = objects.newInstance(FileSystemSupport).fs
+    File profileDir = layout.projectDirectory.asFile
+    Map<String, Object> expansions = [pluginVersion: project.version, grailsVersion: findProperty('projectVersion')]
+    doLast {
+        fs.copy {
+            from new File(profileDir, 'profile.yml.tmpl')
+            into profileDir
             rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
-            expand(pluginVersion: project.version, grailsVersion: findProperty('projectVersion'))
+            expand(expansions)
+        }
+
+        new File(profileDir, 'features').eachDir { feature ->
+            fs.copy {
+                from new File(feature, 'feature.yml.tmpl')
+                into feature
+                rename { String fileName -> fileName.replaceAll '\\.tmpl', '' }
+                expand(expansions)
+            }
         }
     }
 }
@@ -57,5 +64,10 @@ dependencies {
 }
 
 tasks.named('compileProfile') {
+    dependsOn('generateProfileConfig')
+}
+
+// The sources jar packages the generated profile.yml, so it must be created first
+tasks.named('sourcesJar') {
     dependsOn('generateProfileConfig')
 }

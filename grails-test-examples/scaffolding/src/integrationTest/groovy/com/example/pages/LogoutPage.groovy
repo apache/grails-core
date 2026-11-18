@@ -29,6 +29,9 @@ class LogoutPage extends NavigationPage {
     }
 
     void logout() {
-        clickAndWaitForNavigation(logoutButton)
+        logoutButton.click()
+        // Wait for a definitive logged-out signal: the confirm page is replaced and the login
+        // form is present again, not merely a transient title change.
+        waitFor { title != pageTitle && !$('input', name: 'username').empty }
     }
 }

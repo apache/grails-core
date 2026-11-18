@@ -63,7 +63,7 @@ class TestPhasesGradlePlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        testPhases = project.container(TestPhase) { String name ->
+        testPhases = project.objects.domainObjectContainer(TestPhase) { String name ->
             project.objects.newInstance(TestPhase, name)
         }
         project.extensions.add(EXTENSION_NAME, testPhases)

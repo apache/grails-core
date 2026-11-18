@@ -23,6 +23,7 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.gradle.grails-code-style'
@@ -57,7 +58,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
     api "org.hibernate.models:hibernate-models"
     api 'org.hibernate.validator:hibernate-validator', {
@@ -85,7 +85,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
 
     testImplementation 'org.testcontainers:testcontainers'
@@ -97,6 +96,9 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-mariadb'
     testImplementation 'com.oracle.database.jdbc:ojdbc11'
     testImplementation 'org.testcontainers:testcontainers-oracle-free'
+    // IBM's driver (IPLA licence), for the test rows against the Db2 container only, as ojdbc11 is for Oracle's
+    testImplementation 'com.ibm.db2:jcc'
+    testImplementation 'org.testcontainers:testcontainers-db2'
     testImplementation 'org.testcontainers:testcontainers-spock'
     testImplementation 'org.jsr107.ri:cache-ri-impl'
 
@@ -116,6 +118,8 @@ dependencies {
     // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'org.slf4j:jcl-over-slf4j'

@@ -1,0 +1,69 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails Latency Testing Support'
+    pomDescription =
+            'Testing support that injects artificial latency into a running Grails application, ' +
+            'so functional tests can be exercised against randomly slowed responses to surface timing bugs'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    api 'org.springframework.boot:spring-boot-servlet' // FilterRegistrationBean
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.springframework:spring-core' // Ordered
+    implementation 'org.springframework:spring-web' // OncePerRequestFilter
+    implementation 'org.slf4j:slf4j-api'
+
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation 'org.assertj:assertj-core' // required by the spring-boot-test context runners
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Remove annoying warning
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+}

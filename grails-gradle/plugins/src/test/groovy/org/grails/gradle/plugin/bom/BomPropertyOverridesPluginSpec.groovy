@@ -108,6 +108,26 @@ class BomPropertyOverridesPluginSpec extends Specification {
         'org.example:enforced-bom:2.0.0' in coordinates
     }
 
+    def "detectDeclaredBoms ignores project platform dependencies"() {
+        given: 'a platform(project(...)) BOM, the idiom used throughout a multi-project build'
+        def root = ProjectBuilder.builder().withName('root').build()
+        def bom = ProjectBuilder.builder().withName('test-bom').withParent(root).build()
+        bom.group = 'org.example'
+        bom.version = '1.0.0'
+        def consumer = ProjectBuilder.builder().withName('consumer').withParent(root).build()
+        consumer.plugins.apply('java')
+        consumer.dependencies.add(
+                'implementation',
+                consumer.dependencies.platform(consumer.dependencies.project(path: ':test-bom'))
+        )
+
+        when:
+        def coordinates = BomPropertyOverridesPlugin.detectDeclaredBoms(consumer.configurations)
+
+        then: 'the in-build BOM is skipped - it has no published pom whose properties could be read'
+        coordinates.isEmpty()
+    }
+
     def "detectDeclaredBoms ignores non-platform dependencies"() {
         given:
         def project = ProjectBuilder.builder().build()

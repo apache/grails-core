@@ -1,0 +1,5 @@
+org.springframework.aot.hint.RuntimeHintsRegistrar=\
+org.apache.grails.openapi.aot.OpenApiRuntimeHints
+
+org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor=\
+org.apache.grails.openapi.aot.OpenApiBeanFactoryInitializationAotProcessor

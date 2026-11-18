@@ -1,0 +1,57 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== simple
+
+=== Purpose
+
+Declares a trigger that fires repeatedly on a fixed interval.
+
+=== Examples
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        simple(
+            name: 'simpleTrigger',
+            startDelay: 10000,
+            repeatInterval: 30000,
+            repeatCount: 10
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+=== Description
+
+Accepted attributes:
+
+* `name` — uniquely identifies the trigger; must be unique across the whole application. Defaults to the job name followed by a counter.
+* `group` — the trigger group. Defaults to `GRAILS_TRIGGERS`.
+* `startDelay` — delay in milliseconds between scheduler startup and the first execution. Must be a non-negative `Integer` or `Long`. Defaults to `0`.
+* `repeatInterval` — interval in milliseconds between consecutive executions. Defaults to `60000`.
+* `repeatCount` — the trigger fires `1 + repeatCount` times and then stops. Use `0` for a one-shot job or `-1` to repeat indefinitely. Defaults to `-1`.
+
+Refer to the user guide topic on link:{guidePath}backgroundJobs.html#quartzTriggers[Triggers] for more information.

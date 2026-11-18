@@ -29,6 +29,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 
@@ -67,25 +68,47 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
 
     String modelSuffix = ''
 
+    /**
+     * The character encoding applied to the content type of responses the
+     * default renderers produce. Resolved from
+     * {@code grails.converters.encoding} when this registry is a Spring bean;
+     * defaults to UTF-8 otherwise.
+     */
+    @Value('${grails.converters.encoding:UTF-8}')
+    String encoding = grails.util.GrailsWebUtil.DEFAULT_ENCODING
+
     @PostConstruct
     void initialize() {
-        addDefaultRenderer(new DefaultXmlRenderer<Object>(Object, groovyPageLocator, this))
-        addDefaultRenderer(new DefaultJsonRenderer<Object>(Object, groovyPageLocator, this))
+        final defaultXmlRenderer = new DefaultXmlRenderer<Object>(Object, groovyPageLocator, this)
+        defaultXmlRenderer.encoding = encoding
+        addDefaultRenderer(defaultXmlRenderer)
+        final defaultJsonRenderer = new DefaultJsonRenderer<Object>(Object, groovyPageLocator, this)
+        defaultJsonRenderer.encoding = encoding
+        addDefaultRenderer(defaultJsonRenderer)
         final defaultHtmlRenderer = new DefaultHtmlRenderer<Object>(Object)
         defaultHtmlRenderer.suffix = modelSuffix
         defaultHtmlRenderer.proxyHandler = proxyHandler
+        defaultHtmlRenderer.encoding = encoding
         addDefaultRenderer(defaultHtmlRenderer)
         final allHtmlRenderer = new DefaultHtmlRenderer<Object>(Object, MimeType.ALL)
         allHtmlRenderer.suffix = modelSuffix
         allHtmlRenderer.proxyHandler = proxyHandler
+        allHtmlRenderer.encoding = encoding
         addDefaultRenderer(allHtmlRenderer)
-        containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.XML), new DefaultXmlRenderer(Errors))
-        containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.TEXT_XML), new DefaultXmlRenderer(Errors))
-        containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.JSON), new DefaultJsonRenderer(Errors))
-        containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.TEXT_JSON), new DefaultJsonRenderer(Errors))
+        [MimeType.XML, MimeType.TEXT_XML].each { MimeType mimeType ->
+            final errorsXmlRenderer = new DefaultXmlRenderer(Errors)
+            errorsXmlRenderer.encoding = encoding
+            containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsXmlRenderer)
+        }
+        [MimeType.JSON, MimeType.TEXT_JSON].each { MimeType mimeType ->
+            final errorsJsonRenderer = new DefaultJsonRenderer(Errors)
+            errorsJsonRenderer.encoding = encoding
+            containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsJsonRenderer)
+        }
         final defaultContainerHtmlRenderer = new DefaultHtmlRenderer(Errors)
         defaultContainerHtmlRenderer.suffix = modelSuffix
         defaultContainerHtmlRenderer.proxyHandler = proxyHandler
+        defaultContainerHtmlRenderer.encoding = encoding
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.HTML), defaultContainerHtmlRenderer)
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.ALL), defaultContainerHtmlRenderer)
     }

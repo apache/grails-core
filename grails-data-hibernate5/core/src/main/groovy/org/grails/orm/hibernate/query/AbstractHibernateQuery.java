@@ -483,10 +483,16 @@ public abstract class AbstractHibernateQuery extends Query {
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
         if (property != null && (property instanceof Association)) {
+            Association association = (Association) property;
+            if (association instanceof Embedded) {
+                // Hibernate cannot create a sub-criteria on a component ("Criteria objects
+                // cannot be created directly on components"); return a plain association
+                // query whose criteria the criterion adapter applies via dotted paths.
+                return super.createQuery(associationName);
+            }
             String alias = generateAlias(associationName);
             CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
 
-            Association association = (Association) property;
             if (subCriteria.criteria != null) {
                 return new HibernateAssociationQuery(subCriteria.criteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, alias);
             }

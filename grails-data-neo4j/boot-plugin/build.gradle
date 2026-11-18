@@ -17,27 +17,43 @@
  *  under the License.
  */
 
-dependencies {
-    compileOnly "org.springframework.boot:spring-boot-cli:$springBootVersion", {
-        exclude group:'org.codehaus.groovy', module:'groovy'
-        exclude group:'jline', module:'jline'
-    }
-
-    api "org.springframework.boot:spring-boot-autoconfigure:$springBootVersion"
-
-    api "org.codehaus.groovy:groovy"
-    api project(":grails-datastore-gorm-neo4j")
-    api "org.springframework:spring-tx:$springVersion"
-
-    testRuntimeOnly "org.neo4j.test:neo4j-harness:$neo4jVersion"
-    testImplementation ("org.spockframework:spock-core:$spockVersion") {
-        exclude group: 'junit', module: 'junit-dep'
-        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
-        exclude group: 'org.hamcrest', module: 'hamcrest-core'
-        transitive = false
-    }
-    testImplementation "org.springframework.boot:spring-boot-cli:$springBootVersion", {
-        exclude group:'org.codehaus.groovy', module:'groovy'
-        exclude group:'jline', module:'jline'
-    }
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
 }
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    gormApiDocs = true
+}
+
+dependencies {
+
+    implementation platform(project(':grails-neo4j-bom'))
+
+    api 'org.springframework.boot:spring-boot-autoconfigure'
+    // DispatcherServletAutoConfiguration (referenced via @AutoConfigureBefore) moved to spring-boot-webmvc.
+    api 'org.springframework.boot:spring-boot-webmvc'
+    api 'org.apache.groovy:groovy'
+    api project(':grails-data-neo4j-core')
+    api 'org.springframework:spring-tx'
+
+    testRuntimeOnly 'org.neo4j.test:neo4j-harness'
+    testImplementation 'org.spockframework:spock-core'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Jetty/JUnit-platform/reflection-opens config for the embedded Neo4j 3.5.x test harness is
+// shared across every grails-data-neo4j module - see neo4j-harness-test-config.gradle. The
+// neo4j-java-driver version comes from grails-neo4j-bom's 'strictly' constraint (dependencies.gradle);
+// no local resolutionStrategy.force is needed for it.
+apply from: rootProject.layout.projectDirectory.file('grails-data-neo4j/gradle/neo4j-harness-test-config.gradle')
+

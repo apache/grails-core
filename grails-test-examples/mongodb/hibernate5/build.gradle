@@ -51,7 +51,6 @@ dependencies {
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.hibernate:hibernate-ehcache', {

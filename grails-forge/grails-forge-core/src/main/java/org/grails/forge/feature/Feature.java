@@ -24,6 +24,9 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
 import io.micronaut.core.order.Ordered;
+import java.util.Collections;
+import java.util.List;
+
 import org.grails.forge.application.ApplicationType;
 import org.grails.forge.application.generator.GeneratorContext;
 
@@ -140,6 +143,18 @@ public interface Feature extends Named, Ordered, Described {
     /**
      * @return The {@link Category} to which the feature belongs to.
      */
+    /**
+     * The names of features this feature adds automatically through
+     * {@link #processSelectedFeatures(FeatureContext)}. Purely descriptive
+     * metadata so user interfaces can surface the implied selection; the
+     * imperative hook remains authoritative.
+     *
+     * @return the dependent feature names
+     */
+    default List<String> getDependentFeatures() {
+        return Collections.emptyList();
+    }
+
     default String getCategory() {
         return Category.OTHER;
     }

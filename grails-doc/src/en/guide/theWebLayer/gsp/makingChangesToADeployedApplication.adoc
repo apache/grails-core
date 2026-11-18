@@ -46,8 +46,9 @@ There are also some system properties to control GSP reloading:
 |===
 |Name|Description|Default
 |grails.gsp.enable.reload|system property for enabling the GSP reload mode (alternative to adding it in the file-based application configuration|
-|grails.gsp.reload.interval|interval between checking the lastmodified time of the gsp source file, unit is milliseconds|5000
-|grails.gsp.reload.granularity|the number of milliseconds leeway to give before deciding a file is out of date. this is needed because different roundings usually cause a 1000ms difference in lastmodified times|1000
+|grails.gsp.reload.interval|interval between checks of the gsp source file, unit is milliseconds|5000
 |===
 
 GSP reloading is supported for precompiled GSPs since Grails 1.3.5.
+
+A GSP records a checksum of the page it was compiled from, and is reloaded when the source no longer matches that checksum. Comparing content rather than modification times means a page that was copied or checked out afresh — and so carries a new modification time but the same content — is not needlessly recompiled, and an edit is detected however close together two writes fall. Precompiled and runtime-compiled pages are compared the same way.

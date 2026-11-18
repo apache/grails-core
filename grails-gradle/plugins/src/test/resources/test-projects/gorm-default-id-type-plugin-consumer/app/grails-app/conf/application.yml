@@ -1,0 +1,4 @@
+grails:
+    gorm:
+        default:
+            idType: native

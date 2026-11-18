@@ -18,12 +18,10 @@
  */
 
 import com.diffplug.gradle.spotless.SpotlessExtension
-import io.spring.nohttp.gradle.NoHttpExtension
 
 apply plugin: 'checkstyle'
 apply plugin: 'codenarc'
 apply plugin: 'com.diffplug.spotless'
-apply plugin: 'io.spring.nohttp' // enforce https everywhere
 apply plugin: 'org.apache.grails.gradle.grails-code-style'
 
 extensions.configure(SpotlessExtension) {
@@ -48,14 +46,49 @@ extensions.configure(SpotlessExtension) {
     }
 }
 
-extensions.configure(NoHttpExtension) {
-    // Explicit `it` is required in extension configuration block
-    it.source.exclude(
-            'build/**',
-            'src/main/resources/assets/**',
-            'src/main/resources/main/pom.xml',
-            'src/test/**',
-    )
+// Enforces https everywhere with the nohttp Checkstyle check
+configurations.register('nohttp') {
+    it.canBeConsumed = false
+    it.extendsFrom(configurations.named('checkstyle').get())
+}
+dependencies {
+    add('nohttp', "io.spring.nohttp:nohttp-checkstyle:$nohttpCheckstyleVersion")
+}
+def checkstyleNohttp = tasks.register('checkstyleNohttp', Checkstyle) { Checkstyle task ->
+    task.description = 'Checks for illegal uses of http://'
+    task.checkstyleClasspath = configurations.nohttp
+    task.classpath = files()
+    task.source = fileTree(layout.projectDirectory) {
+        exclude(
+                '.git/**',
+                '.gradle/**',
+                '.idea/**',
+                '**/*.class',
+                '**/*.hprof',
+                '**/*.jar',
+                '**/*.jpg',
+                '**/*.jks',
+                '**/spring.handlers',
+                '**/spring.schemas',
+                '**/spring.tooling',
+                'build/**',
+                'src/main/resources/assets/**',
+                'src/main/resources/main/pom.xml',
+                'src/test/**',
+        )
+    }
+    task.config = resources.text.fromString('''<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.3//EN" "https://www.puppycrawl.com/dtds/configuration_1_3.dtd">
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="fileExtensions" value=""/>
+    <module name="io.spring.nohttp.checkstyle.check.NoHttpCheck"/>
+    <module name="SuppressWithPlainTextCommentFilter"/>
+</module>
+''')
+}
+tasks.named('check') {
+    dependsOn(checkstyleNohttp)
 }
 
 tasks.named('checkstyleMain') {

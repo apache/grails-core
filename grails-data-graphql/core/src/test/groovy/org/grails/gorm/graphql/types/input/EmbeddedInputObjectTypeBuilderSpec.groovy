@@ -84,6 +84,6 @@ class EmbeddedInputObjectTypeBuilderSpec extends HibernateSpec {
 
         then: 'one is included because it is the owning side, many is included because it is not bidirectional'
         props*.name == ['one', 'many']
-        props.any { !it.nullable } //some are not nullable
+        !props.any { !it.nullable } //all are nullable by default
     }
 }

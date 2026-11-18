@@ -99,6 +99,15 @@ environments:
         jdbcInterceptors: ConnectionState
         defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
 ---
+# Lenient enum values resolved via environment.getProperty(name, Access) rather than
+# relaxed configuration-property binding - regression test for issue #15818
+management:
+  endpoint:
+    heapdump:
+      access: unrestricted
+    threaddump:
+      access: read-only
+---
 test:
   config:
     number: 12345

@@ -222,7 +222,7 @@ json {
 
 == Specifying the HAL Content Type
 
-The default HAL response content type is `application/hal+json`, however as discussed in the section on link:#mime[TypesCustom Mime Type] you can define your own response content types to represent your resources.
+The default HAL response content type is `application/hal+json`, however as discussed in the section on <<mimeTypes,custom MIME types>> you can define your own response content types to represent your resources.
 
 For example given the following configuration in `grails-app/conf/application.yml`:
 
@@ -254,14 +254,14 @@ For example:
 [source,groovy]
 model {
     Iterable<Book> bookList
-    Integer bookCount
+    Long bookCount
     Integer max // optional, defaults to 10
     Integer offset // optional, defaults to 0
     String sort // optional
     String order // optional
 }
 json {
-    hal.paginate(Book, bookCount, max, offset, sort, order)
+    hal.paginate(Book, bookCount, offset, max, sort, order)
     ...
 }
 
@@ -305,7 +305,7 @@ If you have other links that you want to include along with the pagination links
 model {
     Author author
     Iterable<Book> bookList
-    Integer bookCount
+    Long bookCount
 }
 json {
     // the model, type to paginate, and the total count

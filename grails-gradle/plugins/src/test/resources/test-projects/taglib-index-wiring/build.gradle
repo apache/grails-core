@@ -1,0 +1,32 @@
+// Verifies which of the two tag library indexes is which: the one written before compilation is for
+// compiling this project only, and the one written after it is the authoritative one that pages are
+// compiled against, that is packaged, and that a project depending on this one reads.
+// No tag library sources are present, so neither generator forks a process.
+plugins {
+    id 'groovy'
+    id 'org.apache.grails.gradle.grails-gsp'
+}
+
+tasks.register('inspectTagLibraryIndexWiring') {
+    def compileGroovyClasspath = tasks.named('compileGroovy').get().classpath.files.collect { path(it) }
+    def pagesClasspath = tasks.named('compileGroovyPages').get().classpath.files.collect { path(it) }
+    def resourceDirs = sourceSets.main.resources.srcDirs.collect { path(it) }
+    def runtimePaths = sourceSets.main.runtimeClasspath.files.collect { path(it) }
+    def testRuntimePaths = sourceSets.test.runtimeClasspath.files.collect { path(it) }
+    def packaged = tasks.named('packageTagLibraryIndex').get()
+    def packagedDeps = packaged.taskDependencies.getDependencies(packaged)*.name
+
+    doLast {
+        println "COMPILE_SEES_PRE_INDEX=${compileGroovyClasspath.any { it.endsWith('/generated/grails-taglibs') }}"
+        println "PAGES_SEE_PACKAGED=${pagesClasspath.any { it.endsWith('/generated/grails-taglibs-packaged') }}"
+        println "PAGES_SEE_PRE_INDEX=${pagesClasspath.any { it.endsWith('/generated/grails-taglibs') }}"
+        println "PRE_INDEX_IS_A_RESOURCE=${resourceDirs.any { it.endsWith('/generated/grails-taglibs') }}"
+        println "RUNTIME_SEES_PACKAGED=${runtimePaths.any { it.endsWith('/generated/grails-taglibs-packaged') }}"
+        println "PACKAGED_WAITS_FOR_CLASSES=${packagedDeps.contains('classes')}"
+        println "TEST_RUNTIME_SEES_PACKAGED=${testRuntimePaths.any { it.endsWith('/generated/grails-taglibs-packaged') }}"
+    }
+}
+
+static String path(File file) {
+    file.absolutePath.replace('\\', '/')
+}

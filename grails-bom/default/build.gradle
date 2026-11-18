@@ -21,7 +21,10 @@ plugins {
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.bom-conventions'
+    id 'org.apache.grails.buildsrc.bom-property-validator'
 }
+
+ext.bomVersionProperties = customBomVersions
 
 dependencies {
     api platform(project(':grails-base-bom'))
@@ -59,3 +62,6 @@ dependencies {
 }
 
 ext.pomDescription = 'Grails BOM (Bill of Materials) for managing dependency versions used by Grails Projects'
+
+// Declare companion constraints directly so enforcedPlatform consumers receive forced versions.
+apply from: rootProject.layout.projectDirectory.file('gradle/cli-companion-bom-constraints.gradle')

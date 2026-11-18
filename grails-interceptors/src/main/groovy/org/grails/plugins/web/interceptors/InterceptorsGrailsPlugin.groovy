@@ -21,6 +21,9 @@ package org.grails.plugins.web.interceptors
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
 import org.springframework.web.servlet.handler.MappedInterceptor
 
 import grails.artefact.Interceptor
@@ -46,21 +49,18 @@ class InterceptorsGrailsPlugin extends Plugin {
     GrailsInterceptorHandlerInterceptorAdapter interceptorAdapter
 
     @Override
-    @CompileDynamic
-    Closure doWithSpring() {
-        { ->
-            GrailsClass[] interceptors = grailsApplication.getArtefacts(InterceptorArtefactHandler.TYPE)
-            if (interceptors.length == 0) return
-
-            grailsInterceptorMappedInterceptor(MappedInterceptor, ['/**'] as String[], bean(GrailsInterceptorHandlerInterceptorAdapter))
-
-            def enableJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
-            for (GrailsClass i in interceptors) {
-                "${i.propertyName}"(i.clazz) { bean ->
-                    bean.autowire = 'byName'
-                    if (enableJsessionId) {
-                        useJessionId = enableJsessionId
-                    }
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            // The mapped interceptor (wrapping the handler adapter as an inner bean) and the
+            // per-interceptor beans autowire by name and must not expose the adapter as a
+            // top-level HandlerInterceptor bean — WebUtils.lookupHandlerInterceptors collects
+            // every HandlerInterceptor bean, so a top-level adapter would run twice. None of
+            // that is expressible through the BeanRegistry API, so the definitions are
+            // contributed by a dedicated post-processor instead.
+            boolean enableJsessionId = environment.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
+            registry.registerBean('interceptorBeanDefinitionsPostProcessor', InterceptorBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new InterceptorBeanDefinitionsPostProcessor(grailsApplication, enableJsessionId)
                 }
             }
         }

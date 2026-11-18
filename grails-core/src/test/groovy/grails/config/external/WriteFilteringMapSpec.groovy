@@ -70,4 +70,48 @@ class WriteFilteringMapSpec extends Specification {
         filter.getWrittenValues().get('a.c.e') == 'new-e-value'
         filter.getWrittenValues().get('a.c.f.g.h') == 'new-h-value'
     }
+
+    def "put and putAll record written values"() {
+        given:
+        def filter = new WriteFilteringMap([a: 'a-value'])
+
+        when:
+        filter.put('b', 'b-value')
+        filter.putAll([c: 'c-value', d: 'd-value'])
+
+        then:
+        filter.getWrittenValues() == [b: 'b-value', c: 'c-value', d: 'd-value']
+        filter.b == 'b-value'
+        filter.c == 'c-value'
+    }
+
+    def "removing a written value forgets it"() {
+        given:
+        def filter = new WriteFilteringMap()
+        filter.a = 'a-value'
+        filter.b = 'b-value'
+
+        when:
+        def removed = filter.remove('a')
+
+        then:
+        removed == 'a-value'
+        filter.getWrittenValues() == [b: 'b-value']
+        !filter.containsKey('a')
+    }
+
+    def "removing a written value only when it has the given value forgets it"() {
+        given:
+        def filter = new WriteFilteringMap()
+        filter.a = 'a-value'
+
+        expect: 'a different value leaves the entry in place'
+        !filter.remove('a', 'other-value')
+        filter.getWrittenValues() == [a: 'a-value']
+
+        and: 'the current value removes it'
+        filter.remove('a', 'a-value')
+        filter.getWrittenValues() == [:]
+        !filter.containsKey('a')
+    }
 }

@@ -76,7 +76,7 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         element != null
         element.getColumnSpan() > 0
         // Ensure the enum binder is NOT called for a String collection
-        0 * enumTypeBinder.bindEnumTypeForColumn(_, _, _)
+        0 * enumTypeBinder.bindEnumType(_, _)
     }
 
     void "bind delegates to enumTypeBinder for enum collection"() {
@@ -95,8 +95,7 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
 
         then:
         element != null
-        // Corrected: Match the 3-argument signature (Property, Class, String)
-        1 * enumTypeBinder.bindEnumTypeForColumn(property) >> mockValue
+        1 * enumTypeBinder.bindEnumType(property, _) >> mockValue
     }
 
     void "test bind with custom column mapping and backticks"() {
@@ -182,10 +181,8 @@ class BasicCollectionElementBinderSpec extends HibernateGormDatastoreSpec {
         when:
         BasicValue element = binder.bind(property)
 
-        then: "columnName is the resolved fully qualified Enum class name"
-        // The namingStrategy resolves 'org.grails.orm.hibernate.cfg.domainbinding.secondpass.BCEBStatus'
-        // to 'org_grails_orm_hibernate_cfg_domainbinding_secondpass_bcebstatus'
-        1 * enumTypeBinder.bindEnumTypeForColumn(property) >> mockValue
+        then: "the enum binder is delegated to for the enum element"
+        1 * enumTypeBinder.bindEnumType(property, _) >> mockValue
         element == mockValue
     }
 

@@ -87,6 +87,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware {
 
     private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity)
+    private static final Object HIBERNATE_TRANSFORM_APPLIED_MARKER = new Object()
     private static final Object APPLIED_MARKER = new Object()
 
 //    final boolean available = ClassUtils.isPresent("org.hibernate.SessionFactory") && Boolean.valueOf(System.getProperty("hibernate.enhance", "true"))
@@ -111,7 +112,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
     }
 
     void visit(ClassNode classNode, SourceUnit sourceUnit) {
-        if (classNode.getNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER) == APPLIED_MARKER) {
+        if (classNode.getNodeMetaData(HIBERNATE_TRANSFORM_APPLIED_MARKER) == APPLIED_MARKER) {
             return
         }
 
@@ -123,7 +124,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         def mapWith = AstUtils.getPropertyFromHierarchy(classNode, GormProperties.MAPPING_STRATEGY)
         String mapWithValue = mapWith?.initialExpression?.text
 
-        if (mapWithValue != null && (mapWithValue != ('hibernate') || mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY)) {
+        if (mapWithValue != null && mapWithValue != 'hibernate' && mapWithValue != GormProperties.DEFAULT_MAPPING_STRATEGY) {
             return
         }
 
@@ -183,7 +184,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
         nextManagedEntityField
                 .addAnnotation(transientAnnotationNode)
 
-        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, constX(-1))
+        FieldNode instanceIdField = classNode.addField(instanceIdFieldName, Modifier.PRIVATE | Modifier.TRANSIENT, ClassHelper.int_TYPE, null)
         instanceIdField
                 .addAnnotation(transientAnnotationNode)
 
@@ -428,6 +429,6 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
             }
         }
 
-        classNode.putNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
+        classNode.putNodeMetaData(HIBERNATE_TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
     }
 }

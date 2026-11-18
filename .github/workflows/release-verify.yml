@@ -1,0 +1,97 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Runs the automated release verification (etc/bin/verify.sh) against a
+# published release tag. The job fails if any verification step fails.
+# This replaces the local Docker-based flow (etc/bin/Dockerfile) for CI use;
+# the container remains useful for reproducing this environment locally.
+name: "Release - Verify Troubleshooting"
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to verify (e.g. v7.0.5)'
+        required: true
+        type: string
+
+permissions: { }
+
+concurrency:
+  group: release-verify-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      # mirror the layout of the local verification container (etc/bin/Dockerfile):
+      # the source is checked out at 'project' and verification runs from a
+      # sibling 'grails-verify' scratch directory
+      - name: "📥 Checkout repository"
+        uses: actions/checkout@v7.0.1
+        with:
+          path: project
+      - name: "☕️ Determine Java version from .sdkmanrc"
+        # a release must be verified with the exact JDK it was built with for
+        # the reproducible-build comparison, so read the pinned version from
+        # .sdkmanrc instead of duplicating it here
+        id: sdkmanrc
+        working-directory: project
+        run: |
+          SDKMAN_JAVA=$(grep -E '^java=' .sdkmanrc | cut -d= -f2)
+          JAVA_VERSION=${SDKMAN_JAVA%-*}
+          SDKMAN_SUFFIX=${SDKMAN_JAVA##*-}
+          case "${SDKMAN_SUFFIX}" in
+            librca) JAVA_DISTRIBUTION=liberica ;;
+            tem)    JAVA_DISTRIBUTION=temurin ;;
+            *)
+              echo "❌ Unmapped sdkman java distribution suffix: ${SDKMAN_SUFFIX}" >&2
+              exit 1
+              ;;
+          esac
+          echo "Using Java ${JAVA_VERSION} (${JAVA_DISTRIBUTION})"
+          echo "java-version=${JAVA_VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "java-distribution=${JAVA_DISTRIBUTION}" >> "${GITHUB_OUTPUT}"
+      - name: "☕️ Setup JDK"
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: ${{ steps.sdkmanrc.outputs.java-distribution }}
+          java-version: ${{ steps.sdkmanrc.outputs.java-version }}
+      - name: "🐘 Setup Gradle"
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        with:
+          # verification must run against a pristine environment, never cached state
+          cache-disabled: true
+      - name: "🥃 Install Groovy"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends groovy
+          groovy --version
+      - name: "🛠 Add wrapper and verification scripts to PATH"
+        # matches the container's PATH setup: verify.sh resolves `gradlew` from
+        # the PATH (the wrapper locates its jar relative to the script, so the
+        # checkout's copy works from any directory)
+        run: |
+          echo "${GITHUB_WORKSPACE}/project" >> "${GITHUB_PATH}"
+          echo "${GITHUB_WORKSPACE}/project/etc/bin" >> "${GITHUB_PATH}"
+      - name: "✅ Verify release"
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p grails-verify
+          cd grails-verify
+          verify.sh "${RELEASE_TAG}" .

@@ -25,6 +25,7 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.options.GormImpl;
 import org.grails.forge.options.Options;
 
 import java.util.Set;
@@ -99,7 +100,7 @@ public class H2 extends DatabaseDriverFeature implements DefaultFeature {
 
     @Override
     public boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return options.getGormImpl().getName().equals("gorm-hibernate5") &&
+        return (options.getGormImpl() == GormImpl.HIBERNATE5 || options.getGormImpl() == GormImpl.HIBERNATE7) &&
                 selectedFeatures.stream().noneMatch(f -> f instanceof DatabaseDriverFeature);
     }
 }

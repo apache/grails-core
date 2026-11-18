@@ -24,11 +24,26 @@ import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.hibernate.SessionFactory
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.Unroll
 
 import javax.sql.DataSource
 
 class HibernateDatastoreConnectionSourcesRegistrarSpec extends HibernateGormDatastoreSpec {
+
+    /**
+     * What a definition says it will produce, without producing it.
+     *
+     * <p>These are factory beans, so the bean a definition stands for is the factory's type
+     * argument rather than the factory. Naming it on the definition is what lets the type be known
+     * from the definition alone -- which is what generating bean definitions as code requires, and
+     * what asking the factory would have prevented, since asking it means creating it.</p>
+     */
+    private static Class<?> produces(def definition) {
+        definition.targetType == InstanceFactoryBean ? definition.resolvableType.getGeneric(0).resolve() : null
+    }
 
     def "test postProcessBeanDefinitionRegistry registers expected beans"() {
         given:
@@ -44,33 +59,57 @@ class HibernateDatastoreConnectionSourcesRegistrarSpec extends HibernateGormData
         registry.containsBeanDefinition(Settings.SETTING_DATASOURCE)
         def defaultDs = registry.getBeanDefinition(Settings.SETTING_DATASOURCE)
         defaultDs.beanClass == InstanceFactoryBean
-        defaultDs.targetType == DataSource
+        produces(defaultDs) == DataSource
         defaultDs.constructorArgumentValues.genericArgumentValues[0].value == "#{dataSourceConnectionSourceFactory.create('dataSource', environment).source}"
 
         // Secondary dataSource bean
         registry.containsBeanDefinition("${Settings.SETTING_DATASOURCE}_readOnly")
         def readOnlyDs = registry.getBeanDefinition("${Settings.SETTING_DATASOURCE}_readOnly")
         readOnlyDs.beanClass == InstanceFactoryBean
-        readOnlyDs.targetType == DataSource
+        produces(readOnlyDs) == DataSource
         readOnlyDs.constructorArgumentValues.genericArgumentValues[0].value == "#{dataSourceConnectionSourceFactory.create('readOnly', environment).source}"
 
         // Secondary sessionFactory bean
         registry.containsBeanDefinition("sessionFactory_readOnly")
         def readOnlySf = registry.getBeanDefinition("sessionFactory_readOnly")
         readOnlySf.beanClass == InstanceFactoryBean
-        readOnlySf.targetType == SessionFactory
+        produces(readOnlySf) == SessionFactory
         readOnlySf.constructorArgumentValues.genericArgumentValues[0].value == "#{hibernateDatastore.getDatastoreForConnection('readOnly').sessionFactory}"
 
         // Secondary transactionManager bean
         registry.containsBeanDefinition("transactionManager_readOnly")
         def readOnlyTm = registry.getBeanDefinition("transactionManager_readOnly")
         readOnlyTm.beanClass == InstanceFactoryBean
-        readOnlyTm.targetType == PlatformTransactionManager
+        produces(readOnlyTm) == PlatformTransactionManager
         readOnlyTm.constructorArgumentValues.genericArgumentValues[0].value == "#{hibernateDatastore.getDatastoreForConnection('readOnly').transactionManager}"
 
         // Default sessionFactory and transactionManager should NOT be registered by this registrar
         // (they are usually registered elsewhere for the default connection)
         !registry.containsBeanDefinition("sessionFactory_dataSource")
         !registry.containsBeanDefinition("transactionManager_dataSource")
+    }
+
+    @Unroll
+    def "test postProcessBeanDefinitionRegistry keeps a #registeredAs data source bean that is already registered"() {
+        given:
+        def registry = new DefaultListableBeanFactory()
+        def dataSource = new DriverManagerDataSource('jdbc:h2:mem:registeredDataSource')
+        register(registry, dataSource)
+        def registrar = new HibernateDatastoreConnectionSourcesRegistrar([ConnectionSource.DEFAULT])
+
+        when:
+        registrar.postProcessBeanDefinitionRegistry(registry)
+
+        then:
+        registry.getBean(Settings.SETTING_DATASOURCE, DataSource).is(dataSource)
+
+        where:
+        registeredAs | register
+        'definition' | { DefaultListableBeanFactory beanFactory, DataSource instance ->
+            beanFactory.registerBeanDefinition(Settings.SETTING_DATASOURCE, new RootBeanDefinition(DataSource, { instance }))
+        }
+        'singleton'  | { DefaultListableBeanFactory beanFactory, DataSource instance ->
+            beanFactory.registerSingleton(Settings.SETTING_DATASOURCE, instance)
+        }
     }
 }

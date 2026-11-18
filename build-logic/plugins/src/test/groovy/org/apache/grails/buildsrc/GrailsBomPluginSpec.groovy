@@ -126,11 +126,11 @@ class GrailsBomPluginSpec extends Specification {
         }.version.text().trim() == '${grails-gradle-common.version}'
     }
 
-    def "release snapshot validation wires lazily to publication tasks"() {
+    def "release snapshot validation wires lazily to #publicationTask"() {
         when:
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('generateMetadataFileForMavenPublication', '--stacktrace')
+                .withArguments(publicationTask, '--configuration-cache', '--stacktrace')
                 .withEnvironment([
                         'GRAILS_PUBLISH_RELEASE'          : 'true',
                         'NEXUS_PUBLISH_STAGING_PROFILE_ID': 'test'
@@ -140,6 +140,69 @@ class GrailsBomPluginSpec extends Specification {
 
         then:
         result.task(':validateNoSnapshotDependencies').outcome == TaskOutcome.SUCCESS
-        result.task(':generateMetadataFileForMavenPublication').outcome == TaskOutcome.SUCCESS
+        result.task(":$publicationTask").outcome == TaskOutcome.SUCCESS
+
+        where:
+        publicationTask << ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication']
+    }
+
+    def "release configuration fails when #publicationTask is missing"() {
+        given:
+        def buildFile = testProjectDir.resolve('build.gradle').toFile()
+        buildFile.text = buildFile.text.replace("tasks.register('$publicationTask')", '')
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('help', '--stacktrace')
+                .withEnvironment([
+                        'GRAILS_PUBLISH_RELEASE'          : 'true',
+                        'NEXUS_PUBLISH_STAGING_PROFILE_ID': 'test'
+                ])
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.output.contains("Task with name '$publicationTask' not found")
+
+        where:
+        publicationTask << ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication']
+    }
+
+    def "plugin fails when projectVersion is absent"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = ''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('help', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.output.contains("unknown property 'projectVersion'")
+    }
+
+    def "check does not extract constraints or configure unrelated tasks"() {
+        given:
+        testProjectDir.resolve('build.gradle').toFile() << '''
+            tasks.register('unrelated') {
+                throw new GradleException('Unrelated task must stay unrealized')
+            }
+        '''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('check', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':check').outcome == TaskOutcome.UP_TO_DATE
+        result.task(':extractConstraints') == null
+        result.task(':generatePomFileForMavenPublication') == null
+        result.task(':generateMetadataFileForMavenPublication') == null
     }
 }

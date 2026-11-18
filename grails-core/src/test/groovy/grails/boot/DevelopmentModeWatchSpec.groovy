@@ -18,11 +18,14 @@
  */
 package grails.boot
 
+import grails.boot.config.GrailsAutoConfiguration
+import grails.boot.config.GrailsEarlyPluginRegistrationPostProcessor
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
 import grails.util.Environment
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.springframework.boot.WebApplicationType
 import org.springframework.boot.bootstrap.BootstrapRegistry
 import org.springframework.boot.bootstrap.BootstrapRegistryInitializer
 import org.springframework.context.ConfigurableApplicationContext
@@ -71,6 +74,57 @@ class DevelopmentModeWatchSpec extends Specification {
             watchedFile.delete()
         }
     }
+
+    void "in a hierarchy the development watch belongs to the Grails application, not to a plain parent"() {
+        setup:
+        System.setProperty(Environment.KEY, Environment.DEVELOPMENT.getName())
+        System.setProperty("base.dir", ".")
+        DefaultPluginDiscovery discovery = new DefaultPluginDiscovery([WatchedResourcesGrailsPlugin] as Class<?>[])
+        discovery.loadPluginsFromClasspath = false
+        GrailsAppBuilder parentBuilder = new GrailsAppBuilder(GrailsTestConfigurationClass)
+        GrailsAppBuilder childBuilder = parentBuilder.child(WatchedResourcesApplication)
+                .web(WebApplicationType.NONE)
+                .addBootstrapRegistryInitializer(new BootstrapRegistryInitializer() {
+                    @Override
+                    void initialize(BootstrapRegistry registry) {
+                        registry.register(PluginDiscovery, BootstrapRegistry.InstanceSupplier.of(discovery))
+                    }
+                })
+
+        when: 'the hierarchy starts with reloading enabled, the parent first'
+        ConfigurableApplicationContext child = childBuilder.run()
+        ConfigurableApplicationContext parent = parentBuilder.context()
+        GrailsPluginManager pluginManager = child.getBean(GrailsPluginManager.BEAN_NAME, GrailsPluginManager)
+        WatchedResourcesGrailsPlugin plugin = (WatchedResourcesGrailsPlugin) pluginManager.getGrailsPlugin('watchedResources').instance
+
+        then: 'the parent, which has no plugin manager of its own, started without a watch to install'
+        parent.isActive()
+        !parent.beanFactory.containsSingleton(GrailsEarlyPluginRegistrationPostProcessor.EARLY_REGISTRATION_COMPLETE_BEAN_NAME)
+
+        and: 'the child, which has, is watching'
+        GrailsApp.isDevelopmentModeActive()
+
+        when:
+        File watchedFile = new File('testWatchedHierarchyFile.properties')
+        watchedFile.createNewFile()
+        watchedFile.write 'foo.bar=baz'
+
+        then:
+        new PollingConditions(timeout: 10).eventually {
+            assert plugin.fileIsChanged.endsWith('testWatchedHierarchyFile.properties')
+        }
+
+        cleanup:
+        GrailsApp.setDevelopmentModeActive(false)
+        child?.close()
+        parent?.close()
+        if (watchedFile != null) {
+            watchedFile.delete()
+        }
+    }
+}
+
+class WatchedResourcesApplication extends GrailsAutoConfiguration {
 }
 
 @Configuration

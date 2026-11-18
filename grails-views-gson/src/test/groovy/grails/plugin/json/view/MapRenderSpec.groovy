@@ -19,6 +19,9 @@
 package grails.plugin.json.view
 
 import tools.jackson.databind.json.JsonMapper
+import grails.plugin.json.view.maprender.Player
+import grails.plugin.json.view.maprender.PlayerWithAge
+import grails.plugin.json.view.maprender.Team
 import grails.plugin.json.view.test.JsonViewTest
 import grails.testing.gorm.DataTest
 import grails.validation.Validateable
@@ -44,7 +47,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
         def renderResult = render(templateText, [map: [foo: 'bar', version: 'one']])
@@ -60,7 +63,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
         def renderResult = render(templateText, [map: [foo: 'bar', version: 'one', 'errors': ['test1']]])
@@ -77,7 +80,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -97,7 +100,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -140,7 +143,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -170,7 +173,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -208,7 +211,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -241,7 +244,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map, [excludes: ['player1','player2.name']])
         '''
 
@@ -273,7 +276,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map, [excludes: ['players.name']])
         '''
 
@@ -308,7 +311,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map)
         '''
 
@@ -330,7 +333,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 List list
             }
-            
+
             json g.render(list)
         '''
 
@@ -357,7 +360,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map, [includes: ['a', 'b']])
         '''
 
@@ -372,7 +375,7 @@ class MapRenderSpec extends Specification implements JsonViewTest, DataTest {
             model {
                 Map map
             }
-            
+
             json g.render(map, [includes: ['a', 'd']])
         '''
         renderResult = render(templateText, [map: [a: '1', b: '2', c: '3', d: '4']])

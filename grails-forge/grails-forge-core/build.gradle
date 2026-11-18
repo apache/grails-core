@@ -56,7 +56,6 @@ dependencies {
     api 'io.micronaut:micronaut-http'
     api 'io.micronaut:micronaut-http-client'
     api 'io.micronaut:micronaut-inject'
-    api "org.eclipse.jgit:org.eclipse.jgit:$jgitVersion"
 
     implementation "com.typesafe:config:$typesafeConfigVersion"
     implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
@@ -73,7 +72,7 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
 
-    testRuntimeOnly "ch.qos.logback:logback-classic"
+    testImplementation "ch.qos.logback:logback-classic"
     testRuntimeOnly "org.objenesis:objenesis:$objenesisVersion"
     testImplementation 'org.apache.groovy:groovy-test'
 }
@@ -86,6 +85,7 @@ grailsVersionInfoTask.configure { WriteGrailsVersionInfoTask it ->
     it.dependsOn(bomPublicationTask)
     it.bomPublicationFile = rootProject.layout.projectDirectory.file('../grails-bom/default/build/publications/maven/pom-default.xml')
     it.versionsDirectory = grailsVersionsPath
+    it.endOfSupport = findProperty('grailsEndOfSupport') as String
 }
 sourceSets.main.resources.srcDir(grailsVersionsPath)
 
@@ -118,13 +118,14 @@ copyGrailsWrapper.configure { Sync it ->
 }
 
 apply {
+    from rootProject.layout.projectDirectory.file('gradle/groovy-version-pin.gradle')
     from rootProject.layout.projectDirectory.file('gradle/code-style-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
     from rootProject.layout.projectDirectory.file('gradle/doc-config.gradle')
 }
 
-nohttp {
-    source.exclude('**/pom.rocker.raw')
+tasks.named('checkstyleNohttp', Checkstyle) {
+    exclude('**/pom.rocker.raw')
 }
 
 ['processResources', 'sourcesJar', 'spotlessJavaMisc', 'checkstyleNohttp'].each { name ->
@@ -132,4 +133,3 @@ nohttp {
         it.dependsOn(copyGrailsWrapper, grailsVersionInfoTask)
     }
 }
-

@@ -58,12 +58,16 @@ import grails.plugin.springsecurity.web.filter.GrailsAnonymousAuthenticationFilt
 
 import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFilter
 import grails.plugin.springsecurity.web.filter.IpAddressFilter
+import grails.plugin.springsecurity.web.filter.StartupGateFilter
 import grails.plugins.Plugin
 import groovy.util.logging.Slf4j
 import org.grails.web.mime.HttpServletResponseExtension
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.cache.jcache.JCacheCacheManager
+import org.springframework.core.Ordered
 import org.springframework.expression.spel.standard.SpelExpressionParser
 import org.springframework.security.authentication.event.LoggerListener
 import org.springframework.security.access.expression.DenyAllPermissionEvaluator
@@ -158,11 +162,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     String authorEmail = ''
     String title = 'Spring Security Core Plugin'
     String description = 'Spring Security Core plugin'
-    String documentation = 'https://apache.github.io/grails-spring-security'
+    String documentation = 'https://grails.apache.org/documentation.html'
     String license = 'APACHE'
-    def organization = [name: 'Grails', url: 'https://www.grails.org']
-    def issueManagement = [url: 'https://github.com/apache/grails-spring-security/issues']
-    def scm = [url: 'https://github.com/apache/grails-spring-security']
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
+    def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
+    def scm = [url: 'https://github.com/apache/grails-core']
     def profiles = ['web']
 
     private beanTypeResolver
@@ -223,6 +227,20 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             beanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
 
             springSecurityBeanFactoryPostProcessor(classFor('springSecurityBeanFactoryPostProcessor', SpringSecurityBeanFactoryPostProcessor))
+
+            if (conf.rejectRequestsDuringStartup) {
+                // respond with 503 until the application has started
+                springSecurityStartupGateFilter(classFor('springSecurityStartupGateFilter', StartupGateFilter))
+
+                springSecurityStartupGateRegistrationBean(classFor('springSecurityStartupGateRegistrationBean', FilterRegistrationBean)) {
+                    filter = ref('springSecurityStartupGateFilter')
+                    urlPatterns = ['/*']
+                    dispatcherTypes = EnumSet.of(DispatcherType.ERROR, DispatcherType.REQUEST)
+                    // leave the highest precedence to filters that answer requests themselves while
+                    // the application starts, such as a startup progress page
+                    order = Ordered.HIGHEST_PRECEDENCE + 1
+                }
+            }
 
             // configure the filter and optionally the listener
             int filterOrder = securityFilterOrder()
@@ -722,6 +740,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 //                passwordEncoder.resetInitializing()
 //            }
         }
+
+        if (conf.rejectRequestsDuringStartup) {
+            // the startup gate opens once this has run and the application has started
+            applicationContext.springSecurityStartupGateFilter.markInitialized()
+        }
     }
 
     void onChange(Map<String, Object> event) {
@@ -793,7 +816,7 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 def env = applicationContext.environment
                 String userName = env.getProperty('spring.security.user.name', String)
                 String userPassword = env.getProperty('spring.security.user.password', String)
-                List<String> userRoles = env.getProperty('spring.security.user.roles', List)
+                List<String> userRoles = Binder.get(env).bind('spring.security.user.roles', Bindable.listOf(String)).orElse(null)
                 def bridged = ComponentBasedConfigBlender.bridgeSpringSecurityUserProperties(userName, userPassword, userRoles)
                 if (bridged != null) {
                     additional << (UserDetailsService) bridged

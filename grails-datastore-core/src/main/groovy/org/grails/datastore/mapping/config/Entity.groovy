@@ -325,6 +325,9 @@ class Entity<P extends Property> {
             P globalConstraints = propertyConfigs.get('*')
             if (globalConstraints != null) {
                 pc = (P) globalConstraints.clone()
+                // Stored, as a new entry is below: the caller configures what is returned, and a clone held nowhere
+                // else would take that configuration with it.
+                propertyConfigs[name] = pc
             }
         }
         else {

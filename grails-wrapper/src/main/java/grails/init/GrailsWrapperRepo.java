@@ -17,14 +17,20 @@
 package grails.init;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Helper class to locate the remote or local repository for the `grails-cli`
  */
 public class GrailsWrapperRepo {
+
+    private static final Pattern URL_SCHEME_PREFIX = Pattern.compile("[A-Za-z][A-Za-z0-9+.-]*://.*");
+
     private String baseUrl;
     private String repoPath;
     private String metadataName;
@@ -98,19 +104,89 @@ public class GrailsWrapperRepo {
         return repos;
     }
 
-    private static GrailsWrapperRepo createGrailsWrapperRepo(String urlOrFile) {
+    static GrailsWrapperRepo createGrailsWrapperRepo(String urlOrFile) {
+        String resolvedUrlOrFile = resolveRepositoryAlias(urlOrFile);
         GrailsWrapperRepo repo = new GrailsWrapperRepo();
-        repo.repoPath = "org/apache/grails/" + GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME;
-        repo.baseUrl = urlOrFile;
-        repo.isFile = !repo.baseUrl.startsWith("http");
+        repo.isFile = isFileRepository(resolvedUrlOrFile);
+        if (!repo.isFile) {
+            validateRemoteRepositoryUrl(resolvedUrlOrFile);
+        }
+        repo.repoPath = repo.isFile ?
+            String.join(File.separator, "org", "apache", "grails", GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME) :
+            "org/apache/grails/" + GrailsWrapperHome.CLI_COMBINED_PROJECT_NAME;
+        repo.baseUrl = normalizeBaseUrl(resolvedUrlOrFile, repo.isFile);
 
-        if ((repo.isFile && repo.baseUrl.endsWith(File.separator)) || (!repo.isFile && repo.baseUrl.endsWith("/"))) {
+        if ((repo.isFile && endsWithFileSeparator(repo.baseUrl)) || (!repo.isFile && repo.baseUrl.endsWith("/"))) {
             // remove trailing slash
             repo.baseUrl = repo.baseUrl.substring(0, repo.baseUrl.length() - 1);
         }
 
         repo.metadataName = repo.isFile ? "maven-metadata-local.xml" : "maven-metadata.xml";
         return repo;
+    }
+
+    /**
+     * Resolves the Gradle-style repository aliases {@code mavenLocal()} and {@code mavenCentral()}
+     * to the local Maven repository path and the Maven Central URL respectively. Keep the alias
+     * handling identical in shape to the GRAILS_REPO_URL handling in grails-forge and the Grails
+     * Shell CLI so all tools agree on what the aliases mean.
+     */
+    private static String resolveRepositoryAlias(String urlOrFile) {
+        if ("mavenLocal()".equals(urlOrFile)) {
+            return String.join(File.separator, System.getProperty("user.home"), ".m2", "repository");
+        }
+        if ("mavenCentral()".equals(urlOrFile)) {
+            return "https://repo1.maven.org/maven2";
+        }
+        return urlOrFile;
+    }
+
+    private static void validateRemoteRepositoryUrl(String url) {
+        try {
+            URI uri = new URI(url);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) {
+                throw new IllegalArgumentException("Grails wrapper remote repository URLs must use HTTPS: " + url);
+            }
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("Invalid Grails wrapper remote repository URL: " + url, e);
+        }
+    }
+
+    private static boolean isFileRepository(String urlOrFile) {
+        try {
+            URI uri = new URI(urlOrFile);
+            String scheme = uri.getScheme();
+            // Local: no scheme (a plain path), an explicit file: scheme, or a single-letter
+            // scheme with no authority — a Windows drive letter ("C:/repo", "C:repo"), not a
+            // remote URL scheme ("c://host" carries an authority and stays remote).
+            return scheme == null ||
+                "file".equalsIgnoreCase(scheme) ||
+                (scheme.length() == 1 && uri.getRawAuthority() == null);
+        } catch (URISyntaxException e) {
+            // Unparseable: a URL-shaped value (leading "scheme://") is a broken remote
+            // override, classified remote so it is validated and rejected rather than
+            // silently searched on the filesystem; anything else ("C:\repo", paths with
+            // spaces) is a local path.
+            return !URL_SCHEME_PREFIX.matcher(urlOrFile).matches();
+        }
+    }
+
+    private static String normalizeBaseUrl(String urlOrFile, boolean fileRepository) {
+        if (fileRepository) {
+            try {
+                URI uri = new URI(urlOrFile);
+                if ("file".equalsIgnoreCase(uri.getScheme())) {
+                    return new File(uri).getPath();
+                }
+            } catch (IllegalArgumentException | URISyntaxException ignored) {
+                // not a file: URI — use the value as a plain path
+            }
+        }
+        return urlOrFile;
+    }
+
+    private static boolean endsWithFileSeparator(String urlOrFile) {
+        return urlOrFile.endsWith("/") || urlOrFile.endsWith(File.separator);
     }
 
     /**

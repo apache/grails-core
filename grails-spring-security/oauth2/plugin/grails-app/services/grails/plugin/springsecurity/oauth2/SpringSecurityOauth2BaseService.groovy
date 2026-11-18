@@ -301,7 +301,8 @@ class SpringSecurityOauth2BaseService {
      * @return The role names for a newly registered user
      */
     def getRoleNames() {
-        def roleNames = grailsApplication.config.getProperty('grails.plugin.springsecurity.oauth2.registration.roleNames', List<String>, ['ROLE_USER'])
+        // Raw List: Groovy 6 does not accept a parameterized type as a class literal (GROOVY-12319).
+        def roleNames = grailsApplication.config.getProperty('grails.plugin.springsecurity.oauth2.registration.roleNames', List, ['ROLE_USER'])
         return roleNames
     }
 }

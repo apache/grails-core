@@ -29,6 +29,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.plugins.JavaPlatformExtension
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.TaskProvider
 
 import org.apache.grails.gradle.tasks.bom.ExtractDependenciesTask
@@ -39,12 +40,6 @@ import org.apache.grails.gradle.tasks.bom.PropertyNameCalculator
 class GrailsBomPlugin implements Plugin<Project> {
 
     private static final String BASE_CONSTRAINTS_FILE = 'grails-bom-constraints.adoc'
-
-    private static final Set<String> MICRONAUT_BOM_PROJECTS = [
-            'grails-hibernate5-micronaut-bom',
-            'grails-hibernate7-micronaut-bom',
-            'grails-micronaut-bom',
-    ] as Set<String>
 
     private static final Map<String, String> GRADLE_BUILD_PROJECTS = [
             'grails-gradle-plugins': 'org.apache.grails',
@@ -70,6 +65,8 @@ class GrailsBomPlugin implements Plugin<Project> {
     }
 
     private static void applyDependencyDefinitions(Project project) {
+        // Unlike the former buildscript application, these definitions are available in the
+        // project context after this plugin is applied, not in earlier buildscript contexts.
         project.apply([from: project.rootProject.layout.projectDirectory.file('dependencies.gradle')])
     }
 
@@ -107,7 +104,6 @@ class GrailsBomPlugin implements Plugin<Project> {
             task.definitions.set(project.provider { getStringMap(project, 'combinedDependencies') })
             task.projectName.set(project.name)
             task.versions.set(project.provider { getStringMap(project, 'combinedVersions') })
-            task.autoRegisterTransitivePlatforms.set(MICRONAUT_BOM_PROJECTS.contains(project.name))
 
             project.rootProject.subprojects.each { Project subproject ->
                 project.evaluationDependsOn(subproject.path)
@@ -115,7 +111,8 @@ class GrailsBomPlugin implements Plugin<Project> {
             task.projectArtifactIds.set(project.provider { projectArtifactIds(project) })
             task.forcedGroupPrefixes.set(['org.apache.grails.profiles': 'grails-profile'])
             task.projectCoordinateProperties.set(project.provider { projectCoordinateProperties(project) })
-            task.dependsOn('generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication')
+            task.dependsOn(project.tasks.named('generateMetadataFileForMavenPublication'),
+                    project.tasks.named('generatePomFileForMavenPublication'))
         }
     }
 
@@ -127,6 +124,12 @@ class GrailsBomPlugin implements Plugin<Project> {
         Map<String, String> artifactIdMappings = [:]
         project.rootProject.subprojects.each { Project subproject ->
             artifactIdMappings[subproject.name] = (subproject.findProperty('pomArtifactId') ?: subproject.name).toString()
+            if (project.name == 'grails-base-bom') {
+                String cliArtifactId = subproject.findProperty('cliArtifactId') as String
+                if (cliArtifactId) {
+                    artifactIdMappings[cliArtifactId] = cliArtifactId
+                }
+            }
         }
 
         getGradleBuildProjects(project).each { String dependencyName, String dependencyGroup ->
@@ -142,6 +145,12 @@ class GrailsBomPlugin implements Plugin<Project> {
             String artifactId = (subproject.findProperty('pomArtifactId') ?: subproject.name).toString()
             String baseVersionName = artifactId.replaceAll('[.]', '-')
             projectCoordinates["${subproject.group}:${artifactId}:${subproject.version}".toString()] = baseVersionName
+            if (project.name == 'grails-base-bom') {
+                String cliArtifactId = subproject.findProperty('cliArtifactId') as String
+                if (cliArtifactId) {
+                    projectCoordinates["${subproject.group}:${cliArtifactId}:${subproject.version}".toString()] = cliArtifactId
+                }
+            }
         }
 
         getGradleBuildProjects(project).each { String dependencyName, String dependencyGroup ->
@@ -152,40 +161,66 @@ class GrailsBomPlugin implements Plugin<Project> {
     }
 
     private static void configureSnapshotValidation(Project project) {
+        Provider<? extends List<String>> snapshotDependencies = project.provider {
+            List<String> snapshots = []
+            project.configurations.each { Configuration configuration ->
+                configuration.allDependencies.each { Dependency dependency ->
+                    if (dependency.version && dependency.version.contains('-SNAPSHOT')) {
+                        snapshots.add("${dependency.group}:${dependency.name} (${dependency.version})".toString())
+                    }
+                }
+            }
+            snapshots
+        }
         TaskProvider<Task> validateNoSnapshotDependencies = project.tasks.register('validateNoSnapshotDependencies') { Task task ->
             task.group = 'publishing'
             task.description = 'Validates that no snapshot dependencies are present in the project when performing a release.'
 
             task.doLast {
-                project.configurations.each { Configuration configuration ->
-                    configuration.allDependencies.each { Dependency dependency ->
-                        if (dependency.version && dependency.version.contains('-SNAPSHOT')) {
-                            throw new GradleException(
-                                    "Releases cannot have a snapshot dependency: ${dependency.group}:${dependency.name} (${dependency.version})"
-                            )
-                        }
-                    }
+                if (snapshotDependencies.get()) {
+                    throw new GradleException("Releases cannot have a snapshot dependency: ${snapshotDependencies.get().first()}")
                 }
             }
         }
 
         if (project.extensions.extraProperties.get('isReleaseBuild') &&
                 project.extensions.extraProperties.get('isPublishedExternal')) {
-            Set<String> publicationTasks = ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication'] as Set<String>
-            project.tasks.configureEach { Task task ->
-                if (publicationTasks.contains(task.name)) {
-                    task.dependsOn(validateNoSnapshotDependencies)
+            project.afterEvaluate {
+                ['generateMetadataFileForMavenPublication', 'generatePomFileForMavenPublication'].each { String taskName ->
+                    project.tasks.named(taskName).configure { Task task ->
+                        task.dependsOn(validateNoSnapshotDependencies)
+                    }
                 }
             }
         }
     }
 
     private static void configurePomCustomization(Project project) {
-        project.extensions.extraProperties.set('pomCustomization', createPomCustomization(project))
+        Provider<PropertyNameCalculator> bomPropertyNames = project.provider {
+            PropertyNameCalculator calculator = new PropertyNameCalculator(
+                    getStringMap(project, 'combinedPlatforms'),
+                    getStringMap(project, 'combinedDependencies'),
+                    getStringMap(project, 'combinedVersions'))
+            calculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
+            calculator.addProjects(project.rootProject.subprojects)
+            getGradleBuildProjects(project).each { String artifactId, String dependencyGroup ->
+                calculator.addProject(dependencyGroup, artifactId, project.version.toString(), artifactId)
+            }
+            if (project.name == 'grails-base-bom') {
+                project.rootProject.subprojects.each { Project subproject ->
+                    String cliArtifactId = subproject.findProperty('cliArtifactId') as String
+                    if (cliArtifactId) {
+                        calculator.addProject(subproject.group.toString(), cliArtifactId, subproject.version.toString(), cliArtifactId)
+                    }
+                }
+            }
+            calculator
+        }
+        project.extensions.extraProperties.set('pomCustomization', createPomCustomization(bomPropertyNames))
     }
 
     @CompileDynamic
-    private static Closure createPomCustomization(Project project) {
+    private static Closure createPomCustomization(Provider<PropertyNameCalculator> bomPropertyNames) {
         { xml ->
             def root = xml.asNode()
 
@@ -194,21 +229,7 @@ class GrailsBomPlugin implements Plugin<Project> {
             def depMgmt = root.dependencyManagement?.getAt(0)
             def deps = depMgmt?.dependencies?.getAt(0)
             if (deps) {
-                PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(
-                        getStringMap(project, 'combinedPlatforms'),
-                        getStringMap(project, 'combinedDependencies'),
-                        getStringMap(project, 'combinedVersions')
-                )
-                propertyNameCalculator.addForcedGroupPrefix('org.apache.grails.profiles', 'grails-profile')
-                propertyNameCalculator.addProjects(project.rootProject.subprojects)
-                getGradleBuildProjects(project).each { String gradleArtifactId, String dependencyGroup ->
-                    propertyNameCalculator.addProject(
-                            dependencyGroup,
-                            gradleArtifactId,
-                            project.version as String,
-                            gradleArtifactId
-                    )
-                }
+                PropertyNameCalculator propertyNameCalculator = bomPropertyNames.get()
 
                 Map<String, String> pomProperties = [:]
                 deps.dependency.each { dep ->

@@ -43,7 +43,6 @@ dependencies {
 
     implementation 'org.apache.grails:grails-spring-security'
 
-    console 'org.apache.grails:grails-console'
 }
 
 apply {

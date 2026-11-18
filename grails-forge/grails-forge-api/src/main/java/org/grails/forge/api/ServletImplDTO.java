@@ -74,7 +74,7 @@ public class ServletImplDTO extends Linkable implements Named, Described, Select
 
     @NonNull
     @Override
-    @Schema(description = "A description of the GORM Implementation")
+    @Schema(description = "A description of the Servlet implementation")
     public String getDescription() {
         return description;
     }

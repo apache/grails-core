@@ -33,7 +33,7 @@ class RegisterPage extends LifecyclePage {
 		email { $(name: 'email').module(TextInput) }
 		password { $(name: 'password').module(PasswordInput) }
 		password2 { $(name: 'password2').module(PasswordInput) }
-		submitBtn { $('a', id: 'submit') }
+		submitBtn { $('#submit') }
 	}
 
 	def <T extends LifecyclePage> T submitRegister(Form formData = null, Class<T> expectedPageType) {

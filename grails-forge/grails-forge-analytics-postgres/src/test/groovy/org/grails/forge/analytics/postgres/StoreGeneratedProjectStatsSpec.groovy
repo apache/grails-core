@@ -73,7 +73,7 @@ class StoreGeneratedProjectStatsSpec extends Specification implements TestProper
         given:
         def generated = new Generated(
                 ApplicationType.WEB,
-                GormImpl.HIBERNATE,
+                GormImpl.HIBERNATE5,
                 ServletImpl.TOMCAT,
                 DevelopmentReloading.DEVTOOLS,
                 JdkVersion.DEFAULT_OPTION
