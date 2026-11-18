@@ -41,14 +41,14 @@ Remove the dependency once your configuration is clean.
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-8-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+The `grails-upgrade` agent skill of the last Grails 8 release turns this guide into a migration checklist for an AI coding agent.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM does not manage it:
+Declare it with the version of that Grails 8 release; the `grails-upgrade` skill of Grails 9 covers the upgrade from Grails 8 to Grails 9 only:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:<last Grails 8 version>'
 ----
 ====
 
@@ -4974,3 +4974,24 @@ As of Grails 8.0.1, an exception an action throws is recorded as an error on the
 * Whether case matters follows the database: Oracle, H2 and Db2 match case-sensitively, and MySQL and MariaDB by the collation of the column. PostgreSQL matches with `~` (case-sensitive) with Hibernate 7 and `~*` (case-insensitive) with Hibernate 5; see issue 16882.
 
 See the `rlike` entry of the criteria reference for the databases that match with a regular expression.
+
+==== 94. The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins
+
+The Spring Security REST plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin, that is its scheme, host and port, is listed in the new setting `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, and the URL has a path, a query or a fragment after the host. It ignores any other `callback` URL, and every `callback` URL when the setting is missing, and redirects to the `frontendCallbackUrl` instead, as it does without the parameter. It checks the URL when the login starts and again when it completes, and a new login drops the `callback` URL of an earlier login that was not completed. An application that passes the `callback` parameter lists the origins of its frontend:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+----
+
+Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+==== 95. Encrypted JWTs of the Spring Security REST plugin are signed
+
+As of Grails 8.0.1, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the Spring Security REST plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key, and it accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+* Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+* An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated. Use the key pair for these tokens only: the plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+* For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+* With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+* An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
