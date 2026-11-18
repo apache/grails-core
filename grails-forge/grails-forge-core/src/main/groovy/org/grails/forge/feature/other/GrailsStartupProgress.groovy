@@ -37,6 +37,9 @@ class GrailsStartupProgress implements Feature {
 
     public static final String FEATURE_NAME = 'grails-startup-progress'
 
+    /** The Gradle property bootRun passes to the application to open a browser on the progress page. */
+    public static final String OPEN_BROWSER = 'grails.startup.progress.openBrowser'
+
     @Override
     String getName() {
         return FEATURE_NAME
@@ -50,7 +53,8 @@ class GrailsStartupProgress implements Feature {
     @Override
     String getDescription() {
         return 'Shows a progress page on the application\'s port while the application starts, instead of the port ' +
-                'refusing connections, and a report of how long each stage of the start took once it is running.'
+                'refusing connections, and a report of how long each stage of the start took once it is running. ' +
+                'bootRun opens a browser on the page.'
     }
 
     @Override
@@ -59,6 +63,11 @@ class GrailsStartupProgress implements Feature {
                 .groupId('org.apache.grails')
                 .artifactId('grails-startup-progress')
                 .implementation())
+        // bootRun hands every grails.startup.progress.* Gradle property to the application; the project's
+        // gradle.properties ranks below ~/.gradle/gradle.properties and -P, so a developer can still say no
+        generatorContext.getBuildProperties().addComment(' Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;')
+        generatorContext.getBuildProperties().addComment(' for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -P' + OPEN_BROWSER + '=false')
+        generatorContext.getBuildProperties().put(OPEN_BROWSER, 'true')
     }
 
     /** Only an application starts its own web server; a plugin's dependency would reach every application using it. */
