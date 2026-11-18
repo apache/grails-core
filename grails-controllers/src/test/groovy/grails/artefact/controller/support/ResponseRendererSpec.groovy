@@ -193,6 +193,49 @@ class ResponseRendererSpec extends Specification {
         response.contentType == 'text/plain;charset=utf-8'
         response.contentAsString == "['unsafe':'<script>alert(1)</script>']"
     }
+
+    void 'rendering an object keeps a content type already set on the response'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        response.contentType = 'text/html;charset=utf-8'
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(new InspectableResponseValue('<script>alert(1)</script>'))
+
+        then:
+        response.contentType == 'text/html;charset=utf-8'
+        response.contentAsString == '<script>alert(1)</script>'
+    }
+
+    void 'an unrecognized map keeps an explicit content type'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(unsafe: '<script>alert(1)</script>', contentType: 'text/html')
+
+        then:
+        response.contentType == 'text/html;charset=utf-8'
+        response.contentAsString == "['unsafe':'<script>alert(1)</script>', 'contentType':'text/html']"
+    }
+
+    void 'rendering text keeps the html content type'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render('<b>hello</b>')
+
+        then:
+        response.contentType == 'text/html;charset=utf-8'
+        response.contentAsString == '<b>hello</b>'
+    }
 }
 
 class TemplateRenderingController implements ResponseRenderer {

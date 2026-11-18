@@ -5006,7 +5006,7 @@ As of Grails 8.0.1, with `grails.plugin.springsecurity.rest.token.storage.jwt.us
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
-==== 96. Object and Map Renders Default to text/plain
+==== Object and Map Renders Default to text/plain
 
 Rendering an arbitrary object with `render(object)`, or rendering a map that does not contain a recognized render argument, now writes the Groovy `inspect()` value as `text/plain` by default instead of `text/html`.
 The default applies only when no content type has been set. Set an explicit `contentType`, or assign `response.contentType` before calling `render`, when the response should use another media type.
