@@ -51,7 +51,7 @@ abstract class NativeMetadataExtension {
      * {@code contentType}, {@code body} and {@code accept}. One that does not, or that names anything else, fails
      * the trace before the application is started.
      *
-     * @since 9.1
+     * @since 9.0
      */
     abstract ListProperty<Map<String, String>> getRequests()
 

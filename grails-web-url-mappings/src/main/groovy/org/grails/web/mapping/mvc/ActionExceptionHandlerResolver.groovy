@@ -110,7 +110,7 @@ class ActionExceptionHandlerResolver implements HandlerExceptionResolver, Ordere
      * {@code grails.exceptionresolver.problemDetails} says, which it reads from the environment of its application
      * context where it is not set.
      *
-     * @since 9.1
+     * @since 9.0
      */
     Boolean problemDetails
 

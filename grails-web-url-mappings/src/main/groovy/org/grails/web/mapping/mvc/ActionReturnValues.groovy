@@ -183,7 +183,7 @@ class ActionReturnValues {
      * Whether Spring MVC's handler adapter is there to write an error response.
      *
      * @return whether it is
-     * @since 9.1
+     * @since 9.0
      */
     boolean writesErrorResponses() {
         return adapter() != null
@@ -201,7 +201,7 @@ class ActionReturnValues {
      * @param request the request
      * @param response the response
      * @return the view a handler selected, or an empty one where it wrote the response
-     * @since 9.1
+     * @since 9.0
      */
     ModelAndView writeErrorResponse(ErrorResponse errorResponse, Class<?> controllerType, HttpServletRequest request,
                                     HttpServletResponse response) {

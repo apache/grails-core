@@ -26,6 +26,9 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.YearMonth
 
+import org.apache.commons.validator.routines.EmailValidator
+import org.apache.commons.validator.routines.RegexValidator
+import org.apache.commons.validator.routines.UrlValidator
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.testfixtures.ProjectBuilder
@@ -39,6 +42,10 @@ import spock.lang.TempDir
  * task asks the application for, because the metadata is only ever as complete as that.</p>
  */
 class TraceNativeMetadataTaskSpec extends Specification {
+
+    /** The validator Grails' {@code url} constraint builds, which accepts any scheme. */
+    private static final UrlValidator URL_CONSTRAINT = new UrlValidator((RegexValidator) null,
+            UrlValidator.ALLOW_ALL_SCHEMES + UrlValidator.ALLOW_2_SLASHES)
 
     @TempDir
     File temporaryFolder
@@ -184,7 +191,7 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
     void 'a field rendered empty is filled in with something its type accepts'() {
         given: 'a number or a date sent text fails to bind, and the form answering again with a 200 reads as a save'
-            TraceNativeMetadataTask task = task([], ['/typed'])
+            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=a@b.example&tinyHomepage=ftp://e.example'])
 
         when:
             task.trace()
@@ -209,9 +216,24 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
                 sprint ==~ /\d{4}-W\d{2}/
                 contact ==~ /traced-\d+@example\.com/
                 (shortContact ==~ /[^@]+@example\.com/) && shortContact.size() <= 16
+                edgeContact ==~ /\d@example\.com/
+                tinyContact == 'a@b.example'
                 new URI(homepage).scheme == 'https' && new URI(homepage).host
+                (shortHomepage ==~ /https:\/\/example\.com\/\d+/) && shortHomepage.size() <= 24
+                siteHomepage == 'https://example.com'
+                plainHomepage == 'http://example.com'
+                ftpHomepage == 'ftp://example.com'
+                tinyHomepage == 'ftp://e.example'
                 phone ==~ /\d+/
                 colour ==~ /#[0-9a-f]{6}/
+            }
+
+        and: 'each address and link passes the check the email and url constraints make, and stays on example.com'
+            [sent.contact, sent.shortContact, sent.edgeContact].every { String email ->
+                EmailValidator.instance.isValid(email) && email.endsWith('@example.com')
+            }
+            [sent.homepage, sent.shortHomepage, sent.siteHomepage, sent.plainHomepage, sent.ftpHomepage].every { String url ->
+                URL_CONSTRAINT.isValid(url) && new UrlValidator().isValid(url) && new URI(url).host == 'example.com'
             }
 
         and: 'a hidden field is the page\'s own, so one that says nothing is sent saying nothing'
@@ -337,6 +359,23 @@ exec '${new File(System.getProperty('java.home'), 'bin/java').absolutePath}' \\
 
         then: 'the form on the page that was asked for, rather than the one on the way to it'
             requested.any { it.startsWith('POST /protected-save') && it.contains('secretTitle=') }
+    }
+
+    void 'a form with a field too short for an address or link on example.com is not submitted, and fails the trace'() {
+        given: 'whatever fits is text the field rejects, answered with the form again and a 200, or another host'
+            TraceNativeMetadataTask task = task([], ['/typed?tinyContact=a@b.example'])
+
+        when:
+            task.trace()
+
+        then: 'the field without a value is named, with how to give it one'
+            GradleException e = thrown()
+            e.message.contains('FORM /typed -> not submitted: tinyHomepage too short')
+            e.message.contains('/typed?tinyHomepage=...')
+            !e.message.contains('tinyContact')
+
+        and:
+            !requested.any { it.startsWith('POST /typed-save') }
     }
 
     void 'a form on a page that has none fails the trace'() {

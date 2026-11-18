@@ -45,7 +45,7 @@ import org.springframework.security.crypto.password.NoOpPasswordEncoder
  *
  * <p>The {@code passwordEncoder} bean is not used to compare, so it stays as configured for everything else.</p>
  *
- * @since 9.1
+ * @since 9.0
  */
 @CompileStatic
 class DigestDaoAuthenticationProvider extends DaoAuthenticationProvider {

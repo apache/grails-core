@@ -31,7 +31,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher
  * leaves the same paths out of the matcher its configuration DSL builds, which the plugin does not use, and that list
  * is private to the DSL.
  *
- * @since 9.1
+ * @since 9.0
  */
 @CompileStatic
 class SavedRequestMatcher implements RequestMatcher {

@@ -24,14 +24,14 @@ This guide outlines the changes introduced in Grails 9 and the steps required to
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-9-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 9 release.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM does not manage it:
+While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM manages the upgrade skill of Grails 8:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-9-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:{version}'
 ----
 ====
 
@@ -1410,7 +1410,7 @@ Grails no longer registers a character encoding filter of its own. It used to, a
 * The CAS plugin's single sign-out filter, which reads a parameter of every POST, is registered right after the encoding filter.
 * A filter of your own that reads request parameters needs a later order than `Ordered.HIGHEST_PRECEDENCE`, or form input reaches controllers decoded as ISO-8859-1. One registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before the encoding filter.
 
-==== 21. A Configuration Key Below a Value That Is Not a Map Is Absent
+==== 23. A Configuration Key Below a Value That Is Not a Map Is Absent
 
 In Grails 8, `getProperty` on `grailsApplication.config` answered a dotted key that runs past a value that is not a map with that value: `server.url.port` when `server.url` is a string, `server.ports.0` when `server.ports` is a list, or `grails.gorm.default.constraints.nullable` when `grails.gorm.default.constraints` is a closure from `application.groovy`. `containsProperty` of such a key was `true`. In Grails 9 the key is absent: `getProperty` returns `null` or the default, `containsProperty` returns `false`, and `navigate` answers `null`.
 
@@ -1442,3 +1442,39 @@ A property source of lower precedence that sets the deeper key now answers it. W
 * Code that reads a child of a string or a closure and relied on being answered with the parent reads the parent instead.
 * Code that read a whole list through a key ending in a whole number, such as `server.ports.0`, now gets the element; it reads the list as `server.ports`.
 * A typed read with a default below such a value, such as `getProperty('x.y.enabled', Boolean, true)` when `x.y` is `false`, reads the parent, or the configuration sets the deeper key.
+
+==== 24. The Spring Security User Cache Stores Copies
+
+With `cacheUsers` enabled, the Spring Security plugin's user cache now stores users by value, so each lookup gets its own copy, made by serializing the user. Grails 8 stored the instance itself. The authentication manager erases the password of the user it signs in, and it erased the cached instance too: the next sign-in missed the cache and loaded the user again. A copy is erased instead, so the cached user keeps its password and the user kept in the session holds none. In a native image the plugin registers its own user classes for this. A user class or id type of your own needs serialization metadata, which `traceNativeMetadata` records when the login form is listed in `forms`.
+
+===== Required Actions
+
+* A user class of your own is serialized, as `UserDetails` is `Serializable`. A field that cannot be serialized, such as a reference to a domain instance, makes the user uncached: it is loaded on every sign-in, and a warning is logged. Mark such a field `transient`, or hold its id instead.
+* Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
+* To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
+
+==== 25. A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
+
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` now stays on its own datastore inside a block that binds a tenant, such as `Tenants.withId('acme') { }`, as it does outside one. Only the classes that implement `MultiTenant` follow the tenant. This is what Grails 7 did and what the multi-tenancy guide describes; Grails 8.0 changed it, so an application upgrading from Grails 7 sees no change.
+
+In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `save`, `get`, `list` and `count` already used the default database, while `where` queries and data service methods did not work, because the tenant's session factory does not map the class; they now use the default database too.
+
+Writes of such a class inside the block go to the default datastore, so they run in a transaction of that datastore:
+
+* A data service of such a class runs its transactions in its own datastore, not the tenant's.
+* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back.
+* A write of such a class inside the tenant's transaction but outside a transaction of its own datastore, such as a `save()` in a method annotated `@Transactional` that runs in the tenant's transaction, now fails with an `IllegalTransactionStateException`. In Grails 8 the tenant's transaction wrote it to the tenant's database. The tenant's transaction cannot commit or roll back a write to another datastore, so the write would otherwise be lost, or written although the tenant's transaction rolled back. This applies to `save`, `insert`, `delete`, `saveAll` and `deleteAll` without `flush: true`, with GORM for MongoDB and the in-memory datastore of unit tests. With GORM for Hibernate, such a save already failed in Grails 8 and still does.
+
+===== Required Actions
+
+For most applications **no changes are required**.
+
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` also works: it writes at once, and the write stays when the tenant's transaction rolls back.
+
+With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
+
+* When each tenant should have its own instances, implement `MultiTenant` on the class, which then reads and writes the tenant's database again. Without it, every tenant reads and changes the same instances, in the default database.
+* A class that a multi-tenant class references, such as a `Country` of a multi-tenant `Book`, is loaded through the tenant's session, from the tenant's database, so it has to implement `MultiTenant` as well, even when it holds shared data.
+* When the instances are shared by every tenant and no multi-tenant class references them, move the documents from the tenants' databases into the default database.
+
+Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.

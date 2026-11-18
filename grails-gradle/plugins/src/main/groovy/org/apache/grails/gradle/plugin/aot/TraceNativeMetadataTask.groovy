@@ -139,6 +139,8 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
 
     private static final String EMAIL_DOMAIN = '@example.com'
     private static final String URL_BASE = 'https://example.com/'
+    private static final List<String> SHORT_URLS = ['https://example.com/', 'https://example.com',
+            'http://example.com', 'ftp://example.com']
 
     /**
      * Carries the session from one request to the next, which is what makes a form that
@@ -180,7 +182,7 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     /**
      * Requests to make as they are declared.
      *
-     * @since 9.1
+     * @since 9.0
      */
     @Input
     abstract ListProperty<Map<String, String>> getRequests()
@@ -434,6 +436,16 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                 logger.warn('{} has no field named {}, so that value was not sent', path, name)
             }
         }
+        // Not submitted with a field too short for any address or link on example.com. Whatever fits it is either
+        // text it rejects, so the page answers with the form again and a 200 that reads as a save, or a value on
+        // someone else's domain. The form is given a value for it, or it is not traced.
+        List<String> tooShort = tooShortFields(markup) - given.keySet()
+        if (tooShort) {
+            String first = tooShort.first()
+            return new Answer("FORM ${path} -> not submitted: ${tooShort.join(', ')} too short for an address or " +
+                    "link on example.com. Give each a value in nativeMetadata.forms, as in ${path}?${first}=...".toString(),
+                    false)
+        }
 
         String encoded = fields.collect { String name, String value ->
             "${URLEncoder.encode(name, 'UTF-8')}=${URLEncoder.encode(value, 'UTF-8')}"
@@ -529,6 +541,35 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
     }
 
     /**
+     * The email and URL fields rendered empty with a {@code maxlength} too short for any address or link on
+     * {@code example.com}, which are filled with text they reject.
+     */
+    private static List<String> tooShortFields(String markup) {
+        List<String> names = []
+        Matcher field = FIELD.matcher(markup)
+        while (field.find()) {
+            String tag = field.group()
+            Matcher name = NAME.matcher(tag)
+            Matcher type = TYPE.matcher(tag)
+            Matcher value = VALUE.matcher(tag)
+            if (field.group(1).equalsIgnoreCase('select') || !name.find() || !type.find() || (value.find() && value.group(1))) {
+                continue
+            }
+            String kind = type.group(1).trim().toLowerCase(Locale.ROOT).split(/\s+/)[0]
+            String declaredLength = attribute(MAXLENGTH, tag)
+            if (declaredLength && fitsNothing(kind, Integer.valueOf(declaredLength))) {
+                names << name.group(1)
+            }
+        }
+        names
+    }
+
+    /** Whether no address or link on {@code example.com} fits a field of this type and length. */
+    private static boolean fitsNothing(String kind, int maxLength) {
+        (kind == 'email' && maxLength <= EMAIL_DOMAIN.length()) || (kind == 'url' && maxLength < SHORT_URLS.last().length())
+    }
+
+    /**
      * What a browser sends for a select: the option selected, or the first that can be chosen where
      * none is, and an option without a value sends its text.
      *
@@ -596,9 +637,9 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
                 return within(String.format(Locale.ROOT, '%d-W%02d',
                         now.get(IsoFields.WEEK_BASED_YEAR), now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)), tag)
             case 'email':
-                return traced(maxLength == null ? null : Math.max(maxLength - EMAIL_DOMAIN.length(), 1)) + EMAIL_DOMAIN
+                return address(maxLength)
             case 'url':
-                return URL_BASE + traced(maxLength == null ? null : Math.max(maxLength - URL_BASE.length(), 0))
+                return link(maxLength)
             case 'tel':
                 return cut('5550100', maxLength)
             case 'color':
@@ -654,6 +695,31 @@ abstract class TraceNativeMetadataTask extends DefaultTask {
         int room = maxLength - 'traced-'.length()
         room > 0 ? "traced-${unique.substring(unique.length() - room)}".toString()
                 : unique.substring(Math.max(unique.length() - maxLength, 0))
+    }
+
+    /**
+     * An address on {@code example.com}, which is kept for examples and accepts no mail, within the field's
+     * {@code maxlength}. Where not even one character and the domain fit, the traced name is sent alone: it is not
+     * an address, so the field fails as it would for anyone, and no shorter domain is used, because each that fits
+     * is someone's, and a save that sends mail would send it there.
+     */
+    private static String address(Integer maxLength) {
+        if (maxLength == null || maxLength > EMAIL_DOMAIN.length()) {
+            return traced(maxLength == null ? null : maxLength - EMAIL_DOMAIN.length()) + EMAIL_DOMAIN
+        }
+        traced(maxLength)
+    }
+
+    /**
+     * A link to {@code example.com} within the field's {@code maxlength}: a path under it where there is room for
+     * one, and otherwise the longest of the shorter links to it that fits. Where none does, the traced name is
+     * sent alone, for the reason an address is: a link cut to the length can name another host.
+     */
+    private static String link(Integer maxLength) {
+        if (maxLength == null || maxLength > URL_BASE.length()) {
+            return URL_BASE + traced(maxLength == null ? null : maxLength - URL_BASE.length())
+        }
+        SHORT_URLS.find { String url -> url.length() <= maxLength } ?: traced(maxLength)
     }
 
     private static String cut(String value, Integer maxLength) {

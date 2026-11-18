@@ -273,6 +273,23 @@ class GrailsGradlePluginToolchainSpec extends GradleSpecification {
         passed.first().startsWith('QUERY_TAIL_ARG test -Dgrails.gorm.queryTail.run=')
     }
 
+    def "BootRun hands a startup progress setting from the project's gradle.properties to the application, unless -P overrides it"() {
+        given: 'a project whose gradle.properties sets openBrowser, as Forge generates it'
+        setupTestResourceProject('bootrun-startup-progress-project-property')
+
+        when:
+        def result = executeTask('inspectBootRunStartupProgress', arguments)
+
+        then:
+        result.output.contains("STARTUP_PROGRESS_ARG -Dgrails.startup.progress.openBrowser=${expected}")
+        !result.output.contains("STARTUP_PROGRESS_ARG -Dgrails.startup.progress.openBrowser=${!expected}")
+
+        where:
+        arguments                                       || expected
+        []                                              || true
+        ['-Pgrails.startup.progress.openBrowser=false'] || false
+    }
+
     def "custom heap sizes are not overridden by fork settings"() {
         given:
         setupTestResourceProject('fork-settings-custom')

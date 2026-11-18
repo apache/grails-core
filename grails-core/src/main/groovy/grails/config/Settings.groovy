@@ -420,7 +420,7 @@ interface Settings {
      * resolves as without it. It turns on {@link #SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS} unless the application sets
      * that, since a problem is the last resort after those methods. Defaults to {@code false}.
      *
-     * @since 9.1
+     * @since 9.0
      */
     String SETTING_EXCEPTION_RESOLVER_PROBLEM_DETAILS = 'grails.exceptionresolver.problemDetails'
 

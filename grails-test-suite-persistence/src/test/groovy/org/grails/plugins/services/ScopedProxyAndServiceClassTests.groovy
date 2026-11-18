@@ -18,6 +18,7 @@
  */
 package org.grails.plugins.services
 
+import org.junit.jupiter.api.Test
 import grails.spring.WebBeanBuilder
 import grails.util.GrailsWebMockUtil
 
@@ -29,6 +30,7 @@ import org.springframework.web.context.request.RequestContextHolder
 class ScopedProxyAndServiceClassTests extends AbstractGrailsMockTests {
 
     // test for http://jira.codehaus.org/browse/GRAILS-6278
+    @Test
     void testScopedProxy() {
         def bb = new WebBeanBuilder()
 
