@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+=== Upgrade Instructions for Grails 9 to Grails 10
+
+This guide outlines the changes introduced in Grails 10 and the steps required to upgrade your application.
+
+Grails 10 is in development. It does not differ from Grails 9 yet, so there is nothing to change in an application today. Each change that an application has to act on is added to this guide, and to the `grails-upgrade` agent skill, with the pull request that makes it.
+
+[TIP]
+====
+**Let your coding agent work through this guide.**
+Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 10 release.
+Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
+While the application is still on Grails 9, declare the skill with its version, since the Grails 9 BOM manages the upgrade skill of Grails 9:
+
+[source,groovy,subs="attributes"]
+.build.gradle
+----
+skill 'org.apache.grails.skills:grails-upgrade:{version}'
+----
+====
+
+==== 1. Upgrade to the Last Grails 9 Release First
+
+Upgrade the application to the last Grails 9 release before moving to Grails 10, following <<upgrading90x,Upgrading from Grails 8 to Grails 9>>. An application on Grails 8 or earlier upgrades one major version at a time.
+
+==== 2. Defaults That Grails 9 Announced for Grails 10
+
+Grails 9 added settings that keep the Grails 8 behavior by default, and its upgrade guide announces which defaults Grails 10 changes. None of them has changed on Grails 10 yet. Set each one explicitly while the application is on Grails 9, so that the upgrade changes nothing unannounced:
+
+[options="header",cols="2,3,1,1"]
+|===
+| Setting
+| What it governs
+| Grails 9 default
+| Announced for Grails 10
+
+| `grails.web.rendering.json.spring`
+| JSON written by `respond`, including validation errors as problems
+| `false`
+| `true`
+
+| `grails.converters.json.legacy`
+| `grails.converters.JSON`: `render ... as JSON`, `JSON.parse`, `request.JSON`
+| `true`
+| `false`
+
+| `grails.databinding.json.jackson`
+| JSON request bodies bound to command objects and domain classes
+| `false`
+| `true`
+
+| `grails.exceptionresolver.springHandlers`
+| Exceptions that actions throw, resolved by Spring MVC `@ExceptionHandler` methods
+| `false`
+| `true`
+
+| `grails.controllers.responseBody`
+| The values of actions annotated `@ResponseBody`, written by Spring MVC as the body
+| `false`
+| `true`
+|===
+
+The Grails 9 guide also announces that the web starter and `grails-web-boot` stop bringing `org.apache.grails:grails-xml` in Grails 10, and that `@Resource` then defaults to JSON only. An application that serves or reads XML declares the module itself.

@@ -78,7 +78,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 > - **Style, CodeNarc, Checkstyle, PMD, SpotBugs violations** (`codeStyle`, `aggregateViolations`, linting) → Read `.agents/skills/violation-fixer/SKILL.md`
 > - **Fixing test failures or flaky tests** (test debugging, parallel test isolation, thread-local resets) → Read `.agents/skills/test-fixer/SKILL.md`
 > - **Merging standalone plugin repositories into monorepo** → Read `.agents/skills/mono-repo-integration/SKILL.md`
-> - **Grails application upgrade guidance** (8.x to 9 breaking changes, changes between 9.x releases, Groovy 6, invokedynamic) → Read `.agents/skills/grails-upgrade/SKILL.md`
+> - **Grails application upgrade guidance** (9.x to 10 breaking changes, changes between 10.x releases) → Read `.agents/skills/grails-upgrade/SKILL.md`
 > - **Using AI models from a Grails application** (`grails-spring-ai`, Spring AI providers, `ChatClient`, streaming, scripted models in tests) → Read `.agents/skills/grails-ai-developer/SKILL.md`
 > - **Grails web application development** (controllers, views, GORM models, taglibs, services, web MVC) → Read `.agents/skills/grails-developer/SKILL.md`
 >
@@ -93,7 +93,7 @@ export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 | **violation-fixer** | CodeNarc, Checkstyle, PMD, SpotBugs violations, `codeStyle`, conventions | `.agents/skills/violation-fixer/SKILL.md` | Code quality, static analysis tools, repo conventions |
 | **test-fixer** | Broken or flaky tests, test isolation, fork pollution | `.agents/skills/test-fixer/SKILL.md` | Test failure debugging, report analysis, thread-safe request context |
 | **mono-repo-integration** | Merging standalone Grails plugin repos | `.agents/skills/mono-repo-integration/SKILL.md` | Monorepo integration, subproject wiring, BOM registration |
-| **grails-upgrade** | Upgrading applications from Grails 8.x to 9, and between 9.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, Groovy 6 baseline, invokedynamic compilation |
+| **grails-upgrade** | Upgrading applications from Grails 9.x to 10, and between 10.x releases | `.agents/skills/grails-upgrade/SKILL.md` | Application upgrade guide, changes of each release, defaults announced in Grails 9 |
 | **grails-ai-developer** | `grails-spring-ai`, Spring AI providers, `ChatClient`, streamed answers | `.agents/skills/grails-ai-developer/SKILL.md` | Using AI models from an application: providers, chat client, streaming, testing |
 | **grails-developer** | Controllers, views, GORM models, taglibs, services, web MVC | `.agents/skills/grails-developer/SKILL.md` | Web applications, REST APIs, GORM, controllers, views, plugins |
 

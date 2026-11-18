@@ -13,7 +13,7 @@ App-facing skills, useful when building or upgrading Grails applications, are al
 | Published skill | Gradle project | Maven coordinates | Use |
 |-----------------|----------------|-------------------|-----|
 | `grails-developer` | `:grails-skills-developer` (`grails-skills/developer/skills/grails-developer`) | `org.apache.grails.skills:grails-developer` | Building Grails web applications, REST APIs, GORM models, controllers, services, views, plugins, and tests |
-| `grails-upgrade` | `:grails-skills-upgrade` (`grails-skills/upgrade/skills/grails-upgrade`) | `org.apache.grails.skills:grails-upgrade` | Upgrading Grails applications from Grails 8.x to Grails 9, and from one Grails 9 release to a later one |
+| `grails-upgrade` | `:grails-skills-upgrade` (`grails-skills/upgrade/skills/grails-upgrade`) | `org.apache.grails.skills:grails-upgrade` | Upgrading Grails applications from Grails 9.x to Grails 10, and from one Grails 10 release to a later one |
 | `grails-ai-developer` | `:grails-skills-ai` (`grails-skills/ai/skills/grails-ai-developer`) | `org.apache.grails.skills:grails-ai-developer` | Using AI models from an application: providers, the chat client, streamed answers, configuration and testing |
 
 There is one upgrade skill, `grails-upgrade`, on every release branch, not one per major version; `grails-skills/upgrade/README.md` describes how it is kept current and when it is cleared.

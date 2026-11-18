@@ -24,14 +24,14 @@ This guide outlines the changes introduced in Grails 9 and the steps required to
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 9 release.
+The `grails-upgrade` agent skill of the last Grails 9 release turns this guide into a migration checklist for an AI coding agent.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 8, declare the skill with its version, since the Grails 8 BOM manages the upgrade skill of Grails 8:
+Declare it with the version of that Grails 9 release; the `grails-upgrade` skill of Grails 10 covers the upgrade from Grails 9 to Grails 10 only:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:<last Grails 9 version>'
 ----
 ====
 
