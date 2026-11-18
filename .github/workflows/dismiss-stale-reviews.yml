@@ -25,7 +25,8 @@
 # the merge git makes by itself only inside the conflicts git could not merge. The pull request then gets a comment
 # naming the files whose conflicts were resolved, once for each merge, since nobody reviewed the resolution. A merge
 # that changes any other line, or that merges anything but the base branch, dismisses the approval like any other
-# push, and so does a walk over the merges that cannot finish: more than 20 commits, or more than two minutes.
+# push, and so does a walk over the merges that cannot finish, because a request fails or the walk takes more than
+# its two minutes. How many merges follow the approval does not matter.
 #
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
@@ -70,10 +71,12 @@ jobs:
           # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          # A check of the merges after an approval has two minutes. Each git and gh command it runs gets what is left
-          # of them: a request or a fetch left to hang would end the job at its timeout, and with it the dismissals
-          # of every pull request after this one, on each run.
+          # A check of the merges after an approval has two minutes, and all of them together have seven, which
+          # leaves the job three for the rest before its timeout. Each git and gh command a check runs gets what is
+          # left: a request or a fetch left to hang, or one pull request with a long run of merges, would otherwise
+          # end the job at its timeout, and with it the dismissals of every pull request after that one, on each run.
           export GIT_LITERAL_PATHSPECS=1
+          checks_end=$(( SECONDS + 420 ))
           bounded() {
             local left=$(( deadline - SECONDS ))
             (( left > 0 )) || return 124
@@ -118,18 +121,15 @@ jobs:
           # contents; git then asks for the contents of the files changed on both sides, and of the conflicted files
           # of the merge commit. Sets the reason of a dismissal, and lists the files whose conflicts were resolved by
           # hand, one line with the merge and the file each. A commit that is not such a merge answers no, and so does
-          # anything that keeps the check from finishing: a failed request, a git command that fails or runs out of
-          # time, or more merges than the limit, which bounds what an approval kept this way, whose commit GitHub does
-          # not move, costs each hourly run.
+          # anything that keeps the check from finishing: a failed request, or a git command that fails or runs out of
+          # time. The number of merges is not limited, only the time: GitHub does not move an approval kept this way,
+          # so each hourly run walks its merges again, and the time limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 merges=0 deadline=$(( SECONDS + 120 )) first second other behind fork merged tree conflicts changed path
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) first second other behind fork merged tree conflicts changed path
+            (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
             while [[ "$commit" != "$approved" ]]; do
-              if (( ++merges > 20 )); then
-                reason="more than 20 commits followed this approval, more than this workflow checks"
-                return 1
-              fi
               read -r first second other < <(bounded gh api "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")')
               [[ -n "$first" ]] || return 1
               [[ -n "$second" && -z "$other" ]] || { reason="the pull request changed after this approval"; return 1; }
