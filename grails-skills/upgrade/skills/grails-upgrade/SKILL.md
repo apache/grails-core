@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: Guide for upgrading Grails applications from Grails 8.x to Grails 9 and from one Grails 9 release to a later one, covering the changes of each Grails 9 release, the Groovy 6 baseline, the move to Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26 for GraphQL applications, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, the character encoding filter Spring Boot now registers, configuration keys below a value that is not a map, which are absent, and list elements read by index as in Spring Boot
+description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, and configuration keys below a value that is not a map"
 license: Apache-2.0
 ---
 
@@ -39,17 +39,16 @@ Activate this skill when:
 
 ## Which Parts Apply
 
-Find the Grails version the application is on, the `grailsVersion` in its `gradle.properties`, and the version it is going to.
+Read the Grails version the application is on from the `grailsVersion` in its `gradle.properties`, and find the version it is going to.
 
-- From Grails 8.x: apply everything from [Upgrade Baseline](#upgrade-baseline) on, then every section of [Changes Within Grails 9 Releases](#changes-within-grails-9-releases) up to the target version.
-- From an earlier Grails 9 release: apply the sections of [Changes Within Grails 9 Releases](#changes-within-grails-9-releases) for every release after the current version, up to and including the target version. The rest of this skill has already been applied.
-- From Grails 7 or earlier: upgrade to the last Grails 8 release first, with the `grails-upgrade` skill of that release.
+The base version of this skill is Grails 8. After these introductory sections, each part of this skill is one Grails 9 release, under a level-1 heading named after the release, and the last part is [After the Upgrade](#after-the-upgrade).
 
-## Changes Within Grails 9 Releases
+- Apply the part of every release after the application's current version, up to and including the target version.
+- An application on Grails 8 starts at [Grails 9.0.0-M1](#grails-900-m1).
+- An application on Grails 7 or earlier first upgrades to the last Grails 8 release, with the `grails-upgrade` skill of that release.
+- Finish with [After the Upgrade](#after-the-upgrade), whatever the version the application started from.
 
-Each change is listed under the release that first carried it. A change that adds a configuration setting names the setting and its default. Where there is a way to keep the previous result, the entry gives it.
-
-No Grails 9 release has changed anything after 9.0.0 yet.
+Each change is listed under the release that first carried it. A change that adds a configuration setting names the setting and its default. Where there is a way to keep the previous result, the entry gives it. A later release gets a part of its own after `# Grails 9.0.0-M1` when it has upgrade notes.
 
 ## Primary Sources
 
@@ -71,6 +70,8 @@ Use the published Grails documentation as the source of truth before changing an
 | `https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes` | Spring Framework 7.1 changes |
 | `https://github.com/graphql-java/graphql-java/releases/tag/v26.0` | graphql-java 26.0 breaking changes, for applications using the GraphQL plugin |
 | `https://github.com/ReactiveX/RxJava/wiki/What's-different-in-3.0` | RxJava 3 API differences, with the RxJava 1 to 2 differences it links to |
+
+# Grails 9.0.0-M1
 
 ## Upgrade Baseline
 
@@ -569,6 +570,8 @@ With a database or a schema per tenant, a domain class that does not implement `
 - Writes of such a class inside the block go to the default datastore and run in a transaction of that datastore. Its data service runs in its own datastore's transaction. Its own `withTransaction`, `withNewTransaction` or data service inside the tenant's transaction is independent: what it saves stays when the tenant's transaction rolls back. A `save`, `insert`, `delete`, `saveAll` or `deleteAll` of the class inside the tenant's transaction but outside one of its own, such as in a `@Transactional` method running in the tenant's transaction, now throws `IllegalTransactionStateException` with GORM for MongoDB and the in-memory datastore (in Grails 8 the tenant's transaction wrote it to the tenant's database). Move it into the class's data service or `withTransaction`, or save with `flush: true`, which writes at once. With GORM for Hibernate such a save already failed in Grails 8.
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
+# After the Upgrade
 
 ## Verification Checklist
 

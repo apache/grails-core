@@ -37,8 +37,8 @@ skill 'org.apache.grails.skills:grails-upgrade:{version}'
 
 The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
 
-[[grails-9-0-0]]
-=== Grails 9.0.0
+[[grails-9-0-0-M1]]
+=== Grails 9.0.0-M1
 
 ==== 1. Groovy 6
 
