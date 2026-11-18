@@ -88,6 +88,39 @@ class UniqueConstraintConnectionScopeHibernate7Spec extends Specification {
         saved != null
     }
 
+    void 'a save through the API of the default connection checks the default connection, not the block around it'() {
+        given: 'a row on the second connection only'
+        UnqScopeEntity.second.withNewTransaction {
+            new UnqScopeEntity(name: 'taken').second.save(validate: false, flush: true)
+        }
+
+        when: 'the default connection API saves it inside a block of the second, with a session open for the default'
+        UnqScopeEntity book = new UnqScopeEntity(name: 'taken')
+        UnqScopeEntity saved = UnqScopeEntity.withNewSession {
+            UnqScopeEntity.second.withNewSession {
+                UnqScopeEntity.DEFAULT.save(book)
+            }
+        }
+
+        then: 'the default connection has no such row, so the save goes through'
+        book.errors.allErrors.toString() == '[]'
+        saved != null
+    }
+
+    void 'a save through the API of the second connection checks the second connection outside any block'() {
+        given: 'a row on the second connection only'
+        UnqScopeEntity.second.withNewTransaction {
+            new UnqScopeEntity(name: 'taken').second.save(validate: false, flush: true)
+        }
+
+        expect: 'the second connection rejects it'
+        UnqScopeEntity.withNewSession {
+            UnqScopeEntity.second.withNewSession {
+                UnqScopeEntity.second.save(new UnqScopeEntity(name: 'taken')) == null
+            }
+        }
+    }
+
     void 'a duplicate that exists only on the default connection is accepted inside the block of the second'() {
         given: 'a row on the default connection only'
         UnqScopeEntity.withNewTransaction {

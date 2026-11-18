@@ -69,6 +69,30 @@ class UniqueWithMultipleDataSourcesSpec extends Specification {
         then: 'the unique check of the second save looks at the second connection only'
         !abc1.hasErrors()
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/16934')
+    void "a save through the API of the default connection checks the default connection, not the block around it"() {
+        given: 'a value that exists on the second connection only'
+        Abc.second.withNewTransaction {
+            new Abc(temp: 'scoped-only-second').second.save(validate: false, flush: true)
+        }
+
+        when: 'the default connection API saves it inside a block of the second'
+        Abc abc = new Abc(temp: 'scoped-only-second')
+        Abc saved = Abc.withNewSession {
+            Abc.second.withNewSession {
+                Abc.DEFAULT.save(abc)
+            }
+        }
+
+        then: 'the default connection has no such row, so the save goes through'
+        abc.errors.allErrors.toString() == '[]'
+        saved != null
+
+        cleanup:
+        Abc.second.withNewTransaction { Abc.second.executeUpdate('delete from Abc where temp = :t', [t: 'scoped-only-second']) }
+        Abc.withNewTransaction { Abc.executeUpdate('delete from Abc where temp = :t', [t: 'scoped-only-second']) }
+    }
 }
 
 @Entity

@@ -267,37 +267,37 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
 
     @Override
     D save(D instance) {
-        registry.findInstanceApi(persistentClass, qualifier).save(instance)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).save(instance) }
     }
 
     @Override
     D insert(D instance) {
-        registry.findInstanceApi(persistentClass, qualifier).insert(instance)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).insert(instance) }
     }
 
     @Override
     D insert(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, qualifier).insert(instance, params)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).insert(instance, params) }
     }
 
     @Override
     D merge(D instance) {
-        registry.findInstanceApi(persistentClass, qualifier).merge(instance)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).merge(instance) }
     }
 
     @Override
     D merge(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, qualifier).merge(instance, params)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).merge(instance, params) }
     }
 
     @Override
     D save(D instance, boolean validate) {
-        registry.findInstanceApi(persistentClass, qualifier).save(instance, validate)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).save(instance, validate) }
     }
 
     @Override
     D save(D instance, Map params) {
-        registry.findInstanceApi(persistentClass, qualifier).save(instance, params)
+        inConnectionScope { registry.findInstanceApi(persistentClass, qualifier).save(instance, params) }
     }
 
     @Override
