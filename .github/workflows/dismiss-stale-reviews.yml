@@ -74,7 +74,9 @@ jobs:
           # parents: the files that differ have to be among the conflicted ones. Three commits are fetched for a
           # merge, its parents and their merge base, without history and without file contents; git then asks for
           # the contents of the files changed on both sides only. Anything unexpected, such as a failed request,
-          # an unknown commit or more merges than the limit, answers no, and the approval is dismissed.
+          # an unknown commit or more merges than the limit, answers no, and the approval is dismissed. So does a
+          # git command that takes too long: left to hang, it would end the job at its timeout and with it the
+          # dismissals of every pull request after this one, on each run.
           only_merges_base() {
             local base=$1 approved=$2 commit=$3 merges=0 first second other fork merged tree changed
             while [[ "$commit" != "$approved" ]]; do
@@ -84,11 +86,11 @@ jobs:
               [[ "$(gh api "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by')" == 0 ]] || return 1
               fork=$(gh api "repos/$REPO/compare/$first...$second?per_page=1" --jq '.merge_base_commit.sha') || return 1
               [[ -n "$fork" ]] || return 1
-              git -C merges.git fetch --quiet --depth=1 --filter=blob:none origin "$commit" "$first" "$second" "$fork" || return 1
+              timeout 120 git -C merges.git fetch --quiet --depth=1 --filter=blob:none origin "$commit" "$first" "$second" "$fork" || return 1
               # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
-              merged=$(git -C merges.git merge-tree --write-tree --name-only --no-messages --merge-base="$fork" "$first" "$second") || [[ $? == 1 ]] || return 1
+              merged=$(timeout 120 git -C merges.git merge-tree --write-tree --name-only --no-messages --merge-base="$fork" "$first" "$second") || [[ $? == 1 ]] || return 1
               tree=${merged%%$'\n'*}
-              changed=$(git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
+              changed=$(timeout 120 git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
               [[ -z "$(comm -23 <(sort <<< "$changed") <(tail -n +2 <<< "$merged" | sort))" ]] || return 1
               commit=$first
             done
