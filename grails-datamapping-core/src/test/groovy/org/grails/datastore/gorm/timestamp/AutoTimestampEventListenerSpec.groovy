@@ -31,6 +31,7 @@ import java.util.function.Supplier
 import groovy.transform.InheritConstructors
 import spock.lang.Specification
 
+import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.context.support.GenericApplicationContext
@@ -737,6 +738,34 @@ class AutoTimestampEventListenerSpec extends Specification {
         context.close()
     }
 
+    void "an auditor set while the listener looks one up in the application context of its datastore is kept"() {
+        given: 'a context whose lookup of the auditor blocks until it is released, and then finds none'
+        BlockingAuditorLookupContext context = new BlockingAuditorLookupContext()
+        context.refresh()
+        context.blockAuditorLookup = true
+        TestEventListener contextListener = new TestEventListener(Stub(Datastore) {
+            getMappingContext() >> null
+            getApplicationEventPublisher() >> new ConfigurableApplicationContextEventPublisher(context)
+        })
+        AuditorAware<String> setAuditor = { -> Optional.of('setUser') } as AuditorAware<String>
+        Thread lookup = new Thread({ contextListener.auditorAware } as Runnable)
+
+        when: 'an auditor is set while the lookup runs'
+        lookup.start()
+        assert context.lookupEntered.await(10, TimeUnit.SECONDS)
+        contextListener.auditorAware = setAuditor
+        context.release.countDown()
+        lookup.join(10000)
+
+        then:
+        !lookup.alive
+        contextListener.auditorAware.is(setAuditor)
+
+        cleanup:
+        context.release.countDown()
+        context.close()
+    }
+
     private PersistentEntity auditedEntity() {
         PersistentEntity entity = null
         PersistentProperty createdBy = auditedProperty('createdBy') { -> entity }
@@ -822,5 +851,22 @@ class TestEventListener extends AutoTimestampEventListener {
             entitiesWithLastUpdated.put(it.getName(), Optional.of(['lastUpdated'] as Set<String>))
             entitiesWithDateCreated.put(it.getName(), Optional.of(['dateCreated'] as Set<String>))
         }
+    }
+}
+
+class BlockingAuditorLookupContext extends GenericApplicationContext {
+
+    final CountDownLatch lookupEntered = new CountDownLatch(1)
+    final CountDownLatch release = new CountDownLatch(1)
+    volatile boolean blockAuditorLookup
+
+    @Override
+    <T> T getBean(Class<T> requiredType) {
+        if (blockAuditorLookup && requiredType == AuditorAware) {
+            lookupEntered.countDown()
+            release.await(10, TimeUnit.SECONDS)
+            throw new NoSuchBeanDefinitionException(AuditorAware)
+        }
+        super.getBean(requiredType)
     }
 }

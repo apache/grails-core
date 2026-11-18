@@ -101,6 +101,10 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
     // the application context of the datastore when an entity is saved.
     private volatile boolean auditorAwareResolved;
 
+    // Guards the writes of auditorAware and auditorAwareResolved, so that an auditor set while a lookup runs is not
+    // replaced by what the lookup finds.
+    private final Object auditorAwareLock = new Object();
+
     /**
      * Creates the listener of the datastore, which reads {@link Settings#SETTING_AUTO_TIMESTAMP_INSERT_OVERWRITE} and
      * {@link Settings#SETTING_AUTO_TIMESTAMP_CACHE_ANNOTATIONS} from the datastore's configuration. Unless an
@@ -131,10 +135,12 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         // Spring calls this after it has set the bean's properties, so an auditor the listener was configured with
         // is kept when the context has none of its own.
         AuditorAware<?> contextAuditorAware = lookUpAuditorAware(applicationContext);
-        if (contextAuditorAware != null) {
-            this.auditorAware = contextAuditorAware;
+        synchronized (auditorAwareLock) {
+            if (contextAuditorAware != null) {
+                this.auditorAware = contextAuditorAware;
+            }
+            this.auditorAwareResolved = true;
         }
-        this.auditorAwareResolved = true;
     }
 
     private void applySettings(Datastore datastore) {
@@ -386,16 +392,24 @@ public class AutoTimestampEventListener extends AbstractPersistenceEventListener
         if (!auditorAwareResolved) {
             ApplicationContext applicationContext = activeApplicationContextOfDatastore();
             if (applicationContext != null) {
-                auditorAware = lookUpAuditorAware(applicationContext);
-                auditorAwareResolved = true;
+                // The lookup runs outside the lock, and what it finds is kept only if no auditor was set meanwhile.
+                AuditorAware<?> contextAuditorAware = lookUpAuditorAware(applicationContext);
+                synchronized (auditorAwareLock) {
+                    if (!auditorAwareResolved) {
+                        auditorAware = contextAuditorAware;
+                        auditorAwareResolved = true;
+                    }
+                }
             }
         }
         return auditorAware;
     }
 
     public void setAuditorAware(AuditorAware<?> auditorAware) {
-        this.auditorAware = auditorAware;
-        this.auditorAwareResolved = true;
+        synchronized (auditorAwareLock) {
+            this.auditorAware = auditorAware;
+            this.auditorAwareResolved = true;
+        }
     }
 
     private static boolean isDisabled(final ThreadLocal<DisabledTimestamps> disabledTimestamps, final String entityName) {
