@@ -119,20 +119,51 @@ class GroovyPageAttributesTests {
     }
 
     // https://github.com/apache/grails-core/issues/16280
-    // gspTagSyntaxCall keeps a real setter, so assigning that one name invokes the setter rather
-    // than storing an entry - both in dotted and subscript form. That is the Grails 7 behaviour,
-    // and TagOutput and GroovyPage rely on it. Use put() to store an attribute of that name.
+    // gspTagSyntaxCall keeps a real setter, so dotted assignment to that one name invokes the
+    // setter rather than storing an entry, as in Grails 7.
     @Test
-    void testAssigningGspTagSyntaxCallInvokesTheSetter() {
+    void testDottedAssignmentOfGspTagSyntaxCallInvokesTheSetter() {
         def dotted = toGroovyPageAttributes([:])
         dotted.gspTagSyntaxCall = false
         assertFalse dotted.gspTagSyntaxCall()
         assertFalse dotted.containsKey('gspTagSyntaxCall')
+    }
 
+    // Subscript assignment stores an attribute, as Groovy 6 does for any Map. Without putAt,
+    // Groovy 5 invoked the setter here.
+    @Test
+    void testSubscriptAssignmentOfGspTagSyntaxCallStoresAnAttribute() {
         def subscript = toGroovyPageAttributes([:])
         subscript['gspTagSyntaxCall'] = false
-        assertFalse subscript.gspTagSyntaxCall()
-        assertFalse subscript.containsKey('gspTagSyntaxCall')
+        assertTrue subscript.gspTagSyntaxCall()
+        assertTrue subscript.containsKey('gspTagSyntaxCall')
+        assertEquals false, subscript['gspTagSyntaxCall']
+
+        def name = 'gspTagSyntaxCall'
+        def interpolated = toGroovyPageAttributes([:])
+        interpolated["${name}"] = false
+        assertTrue interpolated.gspTagSyntaxCall()
+        assertEquals false, interpolated['gspTagSyntaxCall']
+    }
+
+    @Test
+    void testStaticallyCompiledSubscriptAssignmentStoresAnAttribute() {
+        def attrs = toGroovyPageAttributes([:])
+        StaticallyCompiledAccess.writeSubscript(attrs, false)
+
+        assertTrue attrs.gspTagSyntaxCall()
+        assertEquals false, attrs['gspTagSyntaxCall']
+    }
+
+    @Test
+    void testSubscriptAssignmentStoresAnyAttribute() {
+        def attrs = toGroovyPageAttributes([:])
+        attrs['name'] = 'value'
+        attrs[1] = 'one'
+
+        assertEquals 'value', attrs.name
+        assertEquals 'one', attrs.get(1)
+        assertEquals 2, attrs.size()
     }
 
     @Test
@@ -155,6 +186,10 @@ class GroovyPageAttributesTests {
 
         static void write(GroovyPageAttributes attrs, Object value) {
             attrs.put('gspTagSyntaxCall', value)
+        }
+
+        static void writeSubscript(GroovyPageAttributes attrs, Object value) {
+            attrs['gspTagSyntaxCall'] = value
         }
 
         static Object readSubscript(GroovyPageAttributes attrs) {

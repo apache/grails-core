@@ -22,8 +22,11 @@ import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import jakarta.persistence.FlushModeType
+import jakarta.persistence.LockModeType
+import jakarta.persistence.TransactionRequiredException
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
+import jakarta.persistence.criteria.Expression
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Criteria
@@ -31,6 +34,11 @@ import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.engine.spi.EntityKey
+import org.hibernate.engine.spi.PersistenceContext
+import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.engine.spi.Status
+import org.hibernate.persister.entity.EntityPersister
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
@@ -40,7 +48,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import grails.orm.HibernateCriteriaBuilder
 import org.grails.datastore.gorm.finders.DynamicFinder
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.gorm.finders.FinderMethod
+import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
 import org.grails.datastore.mapping.query.event.PostQueryEvent
 import org.grails.datastore.mapping.query.event.PreQueryEvent
@@ -63,13 +73,15 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     protected ConversionService conversionService
     protected Class identityType
     protected ClassLoader classLoader
+    protected String qualifier
     private HibernateGormInstanceApi<D> instanceApi
     private int defaultFlushMode
 
     HibernateGormStaticApi(Class<D> persistentClass, HibernateDatastore datastore, List<FinderMethod> finders,
-                ClassLoader classLoader, PlatformTransactionManager transactionManager) {
+                ClassLoader classLoader, PlatformTransactionManager transactionManager, String qualifier = null) {
         super(persistentClass, datastore, finders, transactionManager)
         this.classLoader = classLoader
+        this.qualifier = qualifier
         sessionFactory = datastore.getSessionFactory()
         conversionService = datastore.mappingContext.conversionService
 
@@ -81,6 +93,23 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
     @Override
     GrailsHibernateTemplate getHibernateTemplate() {
         return (GrailsHibernateTemplate) super.getHibernateTemplate()
+    }
+
+    /**
+     * The connection this api was created for. {@code AbstractGormApi} records {@code DEFAULT} for every api
+     * built through the deprecated constructor this class uses, so the qualifier is kept here instead, and
+     * an entity mapped to a single named datasource reports that one when no qualifier was given.
+     */
+    String getQualifier() {
+        if (qualifier != null) return qualifier
+        def dsNames = persistentEntity.mapping.mappedForm.datasources
+        if (dsNames) {
+            String first = dsNames[0]
+            if (first != ConnectionSource.DEFAULT && first != 'ALL') {
+                return first
+            }
+        }
+        null
     }
 
     @Override
@@ -151,7 +180,89 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     D lock(Serializable id) {
-        (D) hibernateTemplate.lock((Class)persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
+        if (!persistentEntity.isMultiTenant()) {
+            return (D) hibernateTemplate.lock((Class) persistentClass, convertIdentifier(id), LockMode.PESSIMISTIC_WRITE)
+        }
+        // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant row is loaded
+        // through a query the way get(id) does, rather than handed to whichever tenant asks for the id.
+        Serializable identifier = convertIdentifier(id)
+        if (identifier == null) {
+            return null
+        }
+        (D) hibernateTemplate.execute { Session session ->
+            lockedLoad(session, identifier, LockModeType.PESSIMISTIC_WRITE)
+        }
+    }
+
+    @Override
+    D lock(Map args, Serializable id) {
+        LockModeType lockMode = RefreshLockArguments.lockTypeFrom(args)
+        boolean refresh = RefreshLockArguments.refreshRequested(args)
+        if (!refresh && !RefreshLockArguments.typeRequested(args)) {
+            // Nothing was asked for that lock(id) does not already do, so keep its behaviour exactly,
+            // including what it does without a transaction. A call that names a type does not take this
+            // route even when it names the default one, because it is one of the forms documented to
+            // require a transaction.
+            return lock(id)
+        }
+        (D) hibernateTemplate.execute { Session session ->
+            if (!session.getTransaction().isActive()) {
+                throw new TransactionRequiredException(RefreshLockArguments.TRANSACTION_REQUIRED)
+            }
+            Serializable identifier = convertIdentifier(id)
+            if (identifier == null) {
+                return null
+            }
+            if (!refresh) {
+                return lockedLoad(session, identifier, lockMode)
+            }
+            // Stay on this connection's session: the generic implementation resolves the instance api
+            // through the registry, which yields the default connection for a named-connection static api.
+            Object managed = findManagedInstance(session, identifier)
+            if (managed == null) {
+                // Not loaded yet, so a single locked load is enough.
+                return lockedLoad(session, identifier, lockMode)
+            }
+            instanceApi.refresh((D) managed, [(RefreshLockArguments.LOCK): lockMode])
+        }
+    }
+
+    /**
+     * Loads and locks the row for the given identifier.
+     * <p>
+     * A multi-tenant entity is loaded through a query, as {@code get} does, because Hibernate's tenant filter
+     * does not apply to a load by identifier and would otherwise hand out another tenant's row.
+     */
+    private D lockedLoad(Session session, Serializable identifier, LockModeType lockMode) {
+        if (!persistentEntity.isMultiTenant()) {
+            return session.find(persistentClass, identifier, lockMode)
+        }
+        CriteriaBuilder criteriaBuilder = session.getCriteriaBuilder()
+        CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
+        Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
+        criteriaQuery = criteriaQuery.where(
+                criteriaBuilder.equal((Expression<?>) queryRoot.get(persistentEntity.identity.name), identifier)
+        )
+        (D) proxyHandler.unwrap(session.createQuery(criteriaQuery).setLockMode(lockMode).uniqueResult())
+    }
+
+    private Object findManagedInstance(Session session, Serializable id) {
+        SessionImplementor sessionImplementor = session.unwrap(SessionImplementor)
+        EntityPersister persister = sessionImplementor.factory.metamodel.entityPersister(persistentClass)
+        EntityKey key = sessionImplementor.generateEntityKey(id, persister)
+        PersistenceContext persistenceContext = sessionImplementor.persistenceContextInternal
+        Object entity = persistenceContext.getEntity(key)
+        if (entity == null) {
+            return null
+        }
+        Status status = persistenceContext.getEntry(entity)?.status
+        if (status == Status.DELETED || status == Status.GONE) {
+            // A deleted entity is no longer attached for refresh purposes; fall back to the locked load,
+            // which reports the row as gone the same way lock(id) does.
+            return null
+        }
+        // Return the proxy when the caller holds one, so the result is the instance already in use.
+        persistenceContext.getProxy(key) ?: entity
     }
 
     @Override

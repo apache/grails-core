@@ -2,6 +2,13 @@ plugins {
     id 'org.apache.grails.gradle.grails-app'
 }
 
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
 tasks.named('compileGroovy', GroovyCompile) {
     groovyOptions.configurationScript = file('missing-config.groovy')
 }

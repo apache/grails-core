@@ -22,6 +22,7 @@ import spock.lang.Specification
 
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
+import org.grails.datastore.mapping.model.DatastoreConfigurationException
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.model.ValueGenerator
@@ -36,6 +37,31 @@ class HibernateMappingContextSpec extends Specification {
 
         then:"The mapping is correct"
         entity.mapping.identifier.generator == ValueGenerator.CUSTOM
+    }
+
+    void "an entity mapped with a built-in generator name resolves to that generator whatever its case"() {
+        when:
+        PersistentEntity entity = new HibernateMappingContext().addPersistentEntity(MixedCaseIdGeneratorEntity)
+
+        then:
+        entity.mapping.identifier.generator == ValueGenerator.SEQUENCE
+    }
+
+    void "an entity mapped with a generator name that is neither built in nor a class fails to register"() {
+        when:
+        new HibernateMappingContext().addPersistentEntity(UnresolvableIdGeneratorEntity)
+
+        then:
+        DatastoreConfigurationException e = thrown()
+        e.message == "Invalid id generation strategy for entity [${UnresolvableIdGeneratorEntity.name}]: notAGeneratorOrClassName"
+    }
+
+    void "an entity with a composite identifier resolves to the AUTO generator"() {
+        when:
+        PersistentEntity entity = new HibernateMappingContext().addPersistentEntity(MappingContextCompositeIdEntity)
+
+        then:
+        entity.mapping.identifier.generator == ValueGenerator.AUTO
     }
 
     void "test entity with custom type marshaller is registered correctly"() {
@@ -105,6 +131,22 @@ class CustomIdGeneratorEntity {
     String name
     static mapping = {
         id(generator: "org.grails.orm.hibernate.cfg.MyUUIDGenerator", type: "uuid-binary")
+    }
+}
+
+@Entity
+class MixedCaseIdGeneratorEntity {
+    String name
+    static mapping = {
+        id(generator: "Sequence")
+    }
+}
+
+@Entity
+class UnresolvableIdGeneratorEntity {
+    String name
+    static mapping = {
+        id(generator: "notAGeneratorOrClassName")
     }
 }
 

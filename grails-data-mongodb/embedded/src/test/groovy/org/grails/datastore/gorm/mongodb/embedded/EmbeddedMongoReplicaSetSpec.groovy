@@ -35,6 +35,23 @@ import spock.lang.Specification
  */
 class EmbeddedMongoReplicaSetSpec extends Specification {
 
+    private final List<GenericApplicationContext> contexts = []
+
+    /**
+     * Stopped through the bean the initializer registers rather than by closing the context: a
+     * context that was never refreshed is not active, and closing one that is not active does
+     * nothing at all - which left every mongod these features started running until the JVM
+     * shutdown hook stopped it on the way out.
+     */
+    void cleanup() {
+        contexts.each { GenericApplicationContext context ->
+            if (context.beanFactory.containsBean(EmbeddedMongoLifecycle.BEAN_NAME)) {
+                context.beanFactory.getBean(EmbeddedMongoLifecycle.BEAN_NAME, EmbeddedMongoLifecycle).stop()
+            }
+        }
+        contexts.clear()
+    }
+
     void 'a server asked for a replica set commits a transaction across two collections'() {
         given:
         GenericApplicationContext context = contextWith([
@@ -62,7 +79,6 @@ class EmbeddedMongoReplicaSetSpec extends Specification {
         cleanup:
         session?.close()
         client?.close()
-        context?.close()
     }
 
     void 'a transaction that is not committed leaves nothing behind'() {
@@ -88,7 +104,6 @@ class EmbeddedMongoReplicaSetSpec extends Specification {
         cleanup:
         session?.close()
         client?.close()
-        context?.close()
     }
 
     void 'an application that asks GORM for transactions is given a replica set without naming one'() {
@@ -106,7 +121,6 @@ class EmbeddedMongoReplicaSetSpec extends Specification {
 
         cleanup:
         client?.close()
-        context?.close()
     }
 
     void 'a server nobody asked to replicate is left standalone'() {
@@ -123,12 +137,12 @@ class EmbeddedMongoReplicaSetSpec extends Specification {
 
         cleanup:
         client?.close()
-        context?.close()
     }
 
     private GenericApplicationContext contextWith(Map<String, Object> properties) {
         GenericApplicationContext context = new GenericApplicationContext()
         context.environment.propertySources.addFirst(new MapPropertySource('test', properties))
+        contexts << context
         context
     }
 

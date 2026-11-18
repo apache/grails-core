@@ -409,16 +409,26 @@ class GormRegistryCoverageSpec extends Specification {
         registry.removeConstraints() == null
     }
 
-    void "removeDatastore de-registers constraints as part of tearing down the datastore"() {
-        given:
-        def registry = new GormRegistry()
+    void "removeDatastore de-registers constraints only when the last datastore is torn down"() {
+        given: 'two registered datastores'
+        GormRegistry registry = Spy(GormRegistry)
+        Datastore other = Stub(Datastore)
         registry.registerDatastore(ConnectionSource.DEFAULT, datastore)
+        registry.registerDatastore('other', other)
 
-        when:
+        when: 'one datastore is removed while the other stays registered'
         registry.removeDatastore(datastore)
 
-        then: "no exception - the Grails-2-only constraint removal safely no-ops outside that environment"
-        notThrown(Throwable)
+        then: 'the global constraint registry, which the remaining datastore shares, is left alone'
+        0 * registry.removeConstraints()
+        registry.allDatastores == [other] as Set
+
+        when: 'the last datastore is removed'
+        registry.removeDatastore(other)
+
+        then: 'the Grails-2-only constraint removal runs once and safely no-ops outside that environment'
+        1 * registry.removeConstraints()
+        registry.allDatastores.isEmpty()
     }
 
     void "registerEntity registers static, instance and validation apis plus the entity's default datastore mapping"() {

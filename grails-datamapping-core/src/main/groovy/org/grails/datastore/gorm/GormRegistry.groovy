@@ -35,6 +35,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
@@ -59,6 +60,11 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 class GormRegistry {
 
     private static final GormRegistry instance = new GormRegistry()
+
+    /**
+     * The {@link #withConnectionScope} blocks running on this thread, innermost first; {@code null} outside every one.
+     */
+    private static final ThreadLocal<Deque<ConnectionScope>> CONNECTION_SCOPES = new ThreadLocal<>()
     private final GormApiFactory defaultApiFactory = new DefaultGormApiFactory()
     final GormApiResolver apiResolver = new GormApiResolver(this)
     final GormStaticApiRegistry staticApiRegistry = new GormStaticApiRegistry(this)
@@ -189,6 +195,80 @@ class GormRegistry {
         }
         if (ds instanceof TransactionCapableDatastore) {
             return ((TransactionCapableDatastore) ds).transactionManager
+        }
+        return null
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the default
+     * datastore.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
+     *
+     * @return The transaction manager, or {@code null} if no tenant or the tenant {@link ConnectionSource#DEFAULT} is
+     *         bound, or no connection has the name of the tenant
+     * @see #findCurrentTenantTransactionManager(Datastore)
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManager() {
+        return findCurrentTenantTransactionManager(null)
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the given
+     * datastore. A thread can hold a different tenant for each datastore, so only the tenant of the datastore the
+     * transaction is for is considered. The connection is the one of that datastore when it has several, as another
+     * datastore can have a connection of the same name.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations.
+     *
+     * @param datastore The datastore the tenant is bound for, or {@code null} for the default datastore
+     * @return The transaction manager, or {@code null} if no datastore is registered, no tenant or the tenant
+     *         {@link ConnectionSource#DEFAULT} is bound, or no connection has the name of the tenant
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManager(Datastore datastore) {
+        Datastore tenantDatastore = datastore ?: getDefaultDatastore()
+        if (tenantDatastore == null) {
+            return null
+        }
+        Serializable tenantId = CurrentTenantHolder.get(tenantDatastore)
+        if (tenantId == null || ConnectionSource.DEFAULT == tenantId.toString()) {
+            return null
+        }
+        if (tenantDatastore instanceof MultipleConnectionSourceCapableDatastore) {
+            return findConnectionTransactionManager((MultipleConnectionSourceCapableDatastore) tenantDatastore, tenantId.toString())
+        }
+        return findSingleTransactionManager(tenantId.toString())
+    }
+
+    /**
+     * Finds the transaction manager of the connection named by the tenant bound to the current thread for the
+     * datastore of the given type, as {@link #findCurrentTenantTransactionManager(Datastore)} does.
+     * Nominally unused, but invoked at compile-time by transactional AST transformations for a
+     * {@code datastore} attribute.
+     *
+     * @param datastoreType The type of the datastore the tenant is bound for
+     * @return The transaction manager, or {@code null} if no datastore of the type is registered, or as
+     *         {@link #findCurrentTenantTransactionManager(Datastore)} returns it
+     */
+    PlatformTransactionManager findCurrentTenantTransactionManagerByType(Class<? extends Datastore> datastoreType) {
+        Datastore datastore
+        try {
+            datastore = apiResolver.findDatastoreByType(datastoreType)
+        }
+        catch (IllegalStateException ignored) {
+            return null
+        }
+        return findCurrentTenantTransactionManager(datastore)
+    }
+
+    private static PlatformTransactionManager findConnectionTransactionManager(MultipleConnectionSourceCapableDatastore datastore, String connectionName) {
+        Datastore connectionDatastore
+        try {
+            connectionDatastore = datastore.getDatastoreForConnection(connectionName)
+        }
+        catch (ConfigurationException ignored) {
+            return null
+        }
+        if (connectionDatastore instanceof TransactionCapableDatastore) {
+            return ((TransactionCapableDatastore) connectionDatastore).transactionManager
         }
         return null
     }
@@ -379,11 +459,11 @@ class GormRegistry {
     }
 
     /**
-     * Completely removes a datastore from the registry.
+     * Completely removes a datastore from the registry. The global constraint registry is cleared
+     * only when the last datastore goes away, since other datastores still registered share it.
      */
     void removeDatastore(Datastore datastore) {
         if (datastore == null) return
-        removeConstraints()
         allDatastores.remove(datastore)
         datastoresByType.remove(datastore.getClass())
 
@@ -410,6 +490,7 @@ class GormRegistry {
         // references (classloader retention across reloads) and normalizedQualifiers grows by one
         // entry per tenant identifier ever seen.
         if (allDatastores.isEmpty()) {
+            removeConstraints()
             normalizedEntityKeysByClass.clear()
             normalizedEntityKeysByName.clear()
             normalizedQualifiers.clear()
@@ -492,13 +573,136 @@ class GormRegistry {
         return validationApiRegistry.get(normalizeEntityKey(entityClass), normalizeQualifier(qualifier))
     }
 
+    /**
+     * Runs the callable with the unqualified operations on the entity routed to the named connection: an explicit
+     * static call such as {@code Book.list()}, an instance call such as {@code book.save()}, and a query built by
+     * either. This is what a {@code withConnection} block promises; the closure's delegate only covers the calls
+     * that do not name the class. Such a lookup resolves exactly as if it had named the connection, so for a
+     * multi-tenant entity the block's connection takes precedence over the current tenant, as an explicitly
+     * named connection does. An operation that names its own connection, and every other entity, is unaffected.
+     * The scope belongs to the calling thread. Blocks nest, and the previous connection applies again when an
+     * inner one ends. A block for the default connection undoes any enclosing one for its duration, and outside
+     * every block it costs nothing.
+     *
+     * @param entity The entity whose operations follow the connection
+     * @param connectionName The connection
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    static <T> T withConnectionScope(Class entity, String connectionName, Closure<T> callable) {
+        return runInScope(instance.normalizeEntityKey(entity), instance.normalizeQualifier(connectionName), callable)
+    }
+
+    /**
+     * Runs the callable with the unqualified operations on every entity mapped to the named connection routed to
+     * it, as {@link #withConnectionScope(Class, String, Closure)} does for one entity. An entity that is not mapped
+     * to the connection keeps its own. This is what a transaction opened for a connection, as a method annotated
+     * {@code @Transactional(connection = 'books')} opens one, promises for the calls made inside it.
+     *
+     * @param connectionName The connection
+     * @param callable What to run
+     * @return What the callable returns
+     */
+    static <T> T withConnectionScope(String connectionName, Closure<T> callable) {
+        return runInScope(null, instance.normalizeQualifier(connectionName), callable)
+    }
+
+    private static <T> T runInScope(String entityKey, String qualifier, Closure<T> callable) {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        if (ConnectionSource.DEFAULT == qualifier && scopes == null) {
+            // Nothing to undo: outside every block the operations are on their default connections already.
+            return callable.call()
+        }
+        if (scopes == null) {
+            scopes = new ArrayDeque<ConnectionScope>()
+            CONNECTION_SCOPES.set(scopes)
+        }
+        scopes.push(new ConnectionScope(entityKey, qualifier))
+        try {
+            return callable.call()
+        }
+        finally {
+            scopes.pop()
+            if (scopes.isEmpty()) {
+                CONNECTION_SCOPES.remove()
+            }
+        }
+    }
+
+    /**
+     * @return whether a {@link #withConnectionScope} block is running on this thread, for any entity
+     */
+    static boolean insideConnectionScope() {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        return scopes != null && !scopes.isEmpty()
+    }
+
+    /**
+     * @return the connection that the innermost {@link #withConnectionScope} block applying to the entity routes
+     * its unqualified operations to, or {@code null} when none is running for it on this thread
+     */
+    private static String scopedConnection(String normalizedClassName) {
+        Deque<ConnectionScope> scopes = CONNECTION_SCOPES.get()
+        if (scopes == null) {
+            return null
+        }
+        for (ConnectionScope scope : scopes) {
+            boolean applies = scope.entityKey == null ?
+                    instance.isMappedToConnection(normalizedClassName, scope.qualifier) :
+                    scope.entityKey == normalizedClassName
+            if (applies) {
+                return scope.qualifier
+            }
+        }
+        return null
+    }
+
+    /**
+     * Whether a block for every entity on the connection covers this one. A block for the default connection undoes
+     * an enclosing one for every entity; any other covers only the entities mapped to its connection, so that none
+     * is sent to a connection it has no mapping for.
+     *
+     * <p>A multi-tenant entity is never covered: which tenant its operations belong to is what the tenant context
+     * says, and a transaction opened for a connection, or for a tenant's own schema or database, does not answer
+     * that. Naming the connection on the entity still routes it, as it always did.
+     */
+    private boolean isMappedToConnection(String normalizedClassName, String qualifier) {
+        if (ConnectionSource.DEFAULT == qualifier) {
+            return true
+        }
+        Map<String, Datastore> mapped = entityDatastores.get(normalizedClassName)
+        if (mapped == null || !mapped.containsKey(qualifier)) {
+            return false
+        }
+        Datastore defaultDatastore = getDatastoreByString(normalizedClassName, ConnectionSource.DEFAULT)
+        PersistentEntity entity = defaultDatastore?.mappingContext?.getPersistentEntity(normalizedClassName)
+        return entity == null || !entity.isMultiTenant()
+    }
+
+    /**
+     * One {@link #withConnectionScope} block: the entity it routes, by normalized name, or {@code null} for every
+     * entity mapped to its connection.
+     */
+    private static final class ConnectionScope {
+
+        final String entityKey
+
+        final String qualifier
+
+        ConnectionScope(String entityKey, String qualifier) {
+            this.entityKey = entityKey
+            this.qualifier = qualifier
+        }
+    }
+
     GormStaticApi resolveStaticApi(Class entityClass) {
         return resolveStaticApi(entityClass, (String) null)
     }
 
     GormStaticApi resolveStaticApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        // A lookup that names no connection follows the scope exactly as if it had named that connection.
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             // Priority 1: Explicit qualifier that doesn't match default is likely a tenant ID
@@ -545,7 +749,7 @@ class GormRegistry {
 
     GormInstanceApi resolveInstanceApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
@@ -596,7 +800,7 @@ class GormRegistry {
      */
     GormValidationApi resolveValidationApi(Class entityClass, String qualifier) {
         String normalizedClassName = normalizeEntityKey(entityClass)
-        String normalizedQualifier = normalizeQualifier(qualifier)
+        String normalizedQualifier = normalizeQualifier(qualifier != null ? qualifier : scopedConnection(normalizedClassName))
 
         if (MultiTenant.isAssignableFrom(entityClass)) {
             if (!ConnectionSource.DEFAULT.equals(normalizedQualifier)) {
@@ -940,7 +1144,8 @@ class GormRegistry {
      * underlying constraint registry this clears is global), so takes no parameters, same as the
      * original. Lives here, not on {@code GormEnhancer}, because {@link #removeDatastore(Datastore)}
      * already owns every other piece of teardown for a datastore going away (API deregistration,
-     * datastore mapping cleanup, metaclass cleanup); constraint removal is one more.
+     * datastore mapping cleanup, metaclass cleanup); constraint removal is one more, run when the
+     * last datastore is removed so that datastores still registered keep the constraint.
      */
     @CompileDynamic
     void removeConstraints() {

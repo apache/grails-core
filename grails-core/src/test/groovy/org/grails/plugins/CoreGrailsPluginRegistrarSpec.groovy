@@ -21,6 +21,8 @@ package org.grails.plugins
 
 import java.beans.PropertyEditor
 
+import java.lang.reflect.Field
+
 import org.springframework.aop.config.AopConfigUtils
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.config.BeanDefinition
@@ -28,6 +30,11 @@ import org.springframework.beans.factory.config.CustomEditorConfigurer
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.beans.factory.support.GenericBeanDefinition
 import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration
+import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import org.springframework.context.ApplicationContextInitializer
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 
 import grails.config.Settings
@@ -53,6 +60,14 @@ import spock.lang.Specification
  * and the {@code grails.spring.bean.packages} scan by {@link SpringBeanPackagesSpec}.
  */
 class CoreGrailsPluginRegistrarSpec extends Specification {
+
+    /** Undone after each feature, so nothing this specification changes outlives it. */
+    private final List<Closure<?>> cleanupActions = []
+
+    void cleanup() {
+        cleanupActions.reverseEach { it.call() }
+        cleanupActions.clear()
+    }
 
     void 'the auto proxy creator is the AspectJ aware variant when AspectJ is available'() {
         given:
@@ -93,6 +108,21 @@ class CoreGrailsPluginRegistrarSpec extends Specification {
 
         cleanup:
         context.close()
+    }
+
+    void "Spring Boot's AOP auto-configuration starts on top of the registered auto proxy creator"() {
+        given: 'a JVM where nothing has made the Grails creators known to Spring yet'
+        GrailsApplication application = new DefaultGrailsApplication()
+        forgetGrailsAutoProxyCreators()
+
+        expect: 'the auto-configuration accepts the registered creator instead of rejecting it as unknown'
+        new ApplicationContextRunner()
+                .withInitializer(applyRegistrar(application))
+                .withConfiguration(AutoConfigurations.of(AopAutoConfiguration))
+                .run { context ->
+                    assert context.getBean(AopConfigUtils.AUTO_PROXY_CREATOR_BEAN_NAME) instanceof
+                            GroovyAwareAspectJAwareAdvisorAutoProxyCreator
+                }
     }
 
     void 'the Class and Properties editors are registered'() {
@@ -178,20 +208,52 @@ class CoreGrailsPluginRegistrarSpec extends Specification {
         context.close()
     }
 
+    /**
+     * Removes the Grails auto-proxy creators from Spring's priority list, which is static and so
+     * shared by every specification in the fork: loading {@code GrailsAutoConfiguration} anywhere
+     * earlier adds them, and a specification that assumes they are absent would otherwise pass
+     * whether or not the code under test puts them there. The list is restored afterwards, so the
+     * fork is left as it was found.
+     */
+    private void forgetGrailsAutoProxyCreators() {
+        List<Class<?>> priorityList = autoProxyCreatorPriorityList()
+        List<Class<?>> removed = priorityList.findAll { it.name.startsWith('org.grails.') }
+        priorityList.removeAll(removed)
+        // the code under test puts them back, so restore only what it has not; adding them all again
+        // would leave a second copy of each behind
+        cleanupActions << { removed.each { if (!priorityList.contains(it)) { priorityList.add(it) } } }
+    }
+
+    private static List<Class<?>> autoProxyCreatorPriorityList() {
+        Field field = AopConfigUtils.getDeclaredField('APC_PRIORITY_LIST')
+        field.accessible = true
+        (List<Class<?>>) field.get(null)
+    }
+
     private static GenericApplicationContext buildContext(GrailsApplication application,
                                                           Closure<?> customizer = null) {
-        CoreGrailsPlugin plugin = new CoreGrailsPlugin()
-        plugin.grailsApplication = application
-
         GenericApplicationContext context = new GenericApplicationContext()
         context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
         customizer?.call(context)
+        registerBeans(application, context)
+        context.refresh()
+        context
+    }
+
+    private static ApplicationContextInitializer<ConfigurableApplicationContext> applyRegistrar(GrailsApplication application) {
+        return { ConfigurableApplicationContext context ->
+            context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, application)
+            registerBeans(application, (GenericApplicationContext) context)
+        } as ApplicationContextInitializer<ConfigurableApplicationContext>
+    }
+
+    private static void registerBeans(GrailsApplication application, GenericApplicationContext context) {
+        CoreGrailsPlugin plugin = new CoreGrailsPlugin()
+        plugin.grailsApplication = application
 
         BeanRegistrar registrar = plugin.beanRegistrar()
         new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
                 .register(registrar)
-        context.refresh()
-        context
     }
 
     /**

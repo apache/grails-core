@@ -18,9 +18,20 @@
  */
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileStatic
+
+import jakarta.persistence.LockModeType
+
+import grails.gorm.MultiTenant
 import grails.gorm.annotation.Entity
+import grails.gorm.api.GormAllOperations
+import grails.gorm.api.GormInstanceOperations
+import grails.gorm.api.GormStaticOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
+import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -28,12 +39,17 @@ import org.grails.datastore.mapping.core.connections.ConnectionSources
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider
 import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Specification
+
+import java.lang.reflect.InvocationHandler
+import java.lang.reflect.Method
+import java.lang.reflect.Proxy
 
 class GormStaticApiSpec extends Specification {
 
@@ -98,6 +114,40 @@ class GormStaticApiSpec extends Specification {
 
         expect:
         api.executeQualified(ConnectionSource.DEFAULT, { Session session -> 'ran' }) == 'ran'
+    }
+
+    void "count() does not dispatch log.debug through methodMissing"() {
+        given:
+        def api = new GormStaticApi(GormStaticApiThing, datastore, [])
+
+        when:
+        Long n = api.count()
+
+        then:
+        n == 0L
+    }
+
+    void "count() preserves a datastore count above Integer.MAX_VALUE"() {
+        given:
+        def ds = Stub(Datastore)
+        def session = Stub(Session)
+        def query = Mock(Query)
+        ds.getMappingContext() >> datastore.mappingContext
+        ds.connect() >> session
+        session.getDatastore() >> ds
+        session.createQuery(GormStaticApiThing) >> query
+        query.projections() >> Mock(Query.ProjectionList)
+        query.singleResult() >> 3_000_000_000L
+        def api = new GormStaticApi(GormStaticApiThing, ds, [])
+
+        expect: 'the value survives instead of wrapping to a negative int'
+        api.count() == 3_000_000_000L
+    }
+
+    void "the count members a domain class exposes are Long"() {
+        expect:
+        GormStaticApiThing.count() instanceof Long
+        GormStaticApiThing.count instanceof Long
     }
 
     void "getGormDynamicFinders returns the finders the api was constructed with"() {
@@ -252,6 +302,341 @@ class GormStaticApiSpec extends Specification {
         !api.exists(-999L)
     }
 
+    void "all operations refresh(instance, lock: true) rejects an unsupported datastore"() {
+        given:
+        def instance = new GormStaticApiThing(name: 'local change')
+        GormAllOperations<GormStaticApiThing> operations = GormStaticApiThing.'default'
+
+        when:
+        refreshWithLock(operations, instance)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a lock'
+        instance.name == 'local change'
+    }
+
+    void "the static api passes the instance and arguments to the instance api for the persistent class and returns its result"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def reloaded = new GormStaticApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+        def api = registerStaticApiWith(locking)
+        def instance = new GormStaticApiThing(name: 'local change')
+
+        when:
+        def result = api.refresh(instance, [lock: true])
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.is(instance)
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "refresh(instance, args) on a non-default qualifier routes through that qualifier's connection, not the default one"() {
+        given: 'a default datastore and a separately-registered named connection, each with its own live entity'
+        def defaultDs = new SimpleMapDatastore(GormStaticApiThing)
+        def namedDs = new SimpleMapDatastore(GormStaticApiThing)
+        GormRegistry.instance.registerDatastore(ConnectionSource.DEFAULT, defaultDs)
+        // GormStaticApiThing was already registered against the spec's own SimpleMapDatastore (the
+        // 'datastore' field) as a side effect of its construction. Overwrite that entity-specific
+        // DEFAULT mapping, and the api registration, so lookups for this class resolve defaultDs.
+        GormRegistry.instance.registerEntityDatastore(GormStaticApiThing.name, ConnectionSource.DEFAULT, defaultDs)
+        GormRegistry.instance.registerEntityDatastore(GormStaticApiThing.name, 'orders', namedDs)
+        GormRegistry.instance.registerEntityApis(GormStaticApiThing,
+                new GormStaticApi<GormStaticApiThing>(GormStaticApiThing, defaultDs, []),
+                new GormInstanceApi<GormStaticApiThing>(GormStaticApiThing, defaultDs),
+                new GormValidationApi<GormStaticApiThing>(GormStaticApiThing, defaultDs))
+
+        and: 'an instance persisted only in the named connection, then locally mutated'
+        def instance = new GormStaticApiThing(name: 'persisted in orders')
+        def namedSession = namedDs.connect()
+        namedSession.persist(instance)
+        namedSession.flush()
+        instance.name = 'unflushed local change'
+
+        and: 'a static api bound to the named qualifier'
+        def qualifiedApi = new GormStaticApi<GormStaticApiThing>(GormStaticApiThing, defaultDs.mappingContext, [],
+                { defaultDs } as DatastoreResolver, 'orders', GormRegistry.instance)
+
+        when:
+        def result = qualifiedApi.refresh(instance, [:])
+
+        then: 'the refresh reloaded state from the orders connection, proving that connection was used'
+        result.is(instance)
+        instance.name == 'persisted in orders'
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) without a refresh request locks by identifier only (#description)"() {
+        given:
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def locked = new GormStaticApiThing(name: 'locked')
+        api.lockResult = locked
+
+        when:
+        def result = lockWithArguments(api, args, 42L)
+
+        then:
+        api.lockedIds == [42L]
+        api.resolvedIds.isEmpty()
+        result.is(locked)
+
+        where:
+        description               | args
+        'empty map'               | [:]
+        'null map'                | null
+        'refresh: false'          | [refresh: false]
+        'other arguments'         | [flush: true]
+        'type: PESSIMISTIC_WRITE' | [type: LockModeType.PESSIMISTIC_WRITE]
+        "type: 'pessimistic_write'" | [type: 'pessimistic_write']
+    }
+
+    void "lock(args, id) with a non-default type rejects an unsupported datastore (#description)"() {
+        given:
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+
+        when:
+        lockWithArguments(api, args, 42L)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support lock types other than PESSIMISTIC_WRITE'
+        api.lockedIds.isEmpty()
+        api.resolvedIds.isEmpty()
+
+        where:
+        description              | args
+        'PESSIMISTIC_READ'       | [type: LockModeType.PESSIMISTIC_READ]
+        "'OPTIMISTIC'"           | [type: 'OPTIMISTIC']
+        'with refresh: false'    | [type: LockModeType.PESSIMISTIC_READ, refresh: false]
+    }
+
+    void "lock(args, id) rejects an invalid type before doing anything (#description)"() {
+        given:
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+
+        when:
+        lockWithArguments(api, args, 42L)
+
+        then:
+        def exception = thrown(IllegalArgumentException)
+        exception.message == message
+        api.lockedIds.isEmpty()
+
+        where:
+        description    | args                          | message
+        'NONE'         | [type: LockModeType.NONE]     | "The 'type' argument must name a lock but was NONE"
+        'unknown name' | [type: 'SHARED']              | "The 'type' argument must be a jakarta.persistence.LockModeType but was 'SHARED'"
+        'boolean'      | [type: true]                  | "The 'type' argument must be a jakarta.persistence.LockModeType but was an instance of java.lang.Boolean"
+    }
+
+    void "lock(args, id) with refresh: true resolves the managed instance and refreshes it under a lock"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def api = registerStaticApiWith(locking)
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+        def reloaded = new GormStaticApiThing(name: 'reloaded')
+        locking.refreshResult = reloaded
+
+        when:
+        def result = api.lock([refresh: true], saved.id)
+
+        then:
+        locking.refreshInvocations == 1
+        locking.refreshedInstance.id == saved.id
+        locking.refreshArguments == [lock: true]
+        result.is(reloaded)
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) with refresh: true rejects a datastore that cannot refresh under a lock before reading anything"() {
+        given: 'an instance api that keeps the datastore-neutral default of refresh(D, Map)'
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        GormRegistry.instance.registerEntityApis(GormStaticApiThing, api,
+                new GormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore),
+                new GormValidationApi<GormStaticApiThing>(GormStaticApiThing, datastore))
+
+        when:
+        api.lock([refresh: true], 42L)
+
+        then: 'the refusal does not depend on whether the row exists, so nothing is read'
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a lock'
+        api.resolvedIds.isEmpty()
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) with refresh: true rejects a datastore that overrides refresh(D, Map) without supporting a lock"() {
+        given: 'an instance api that honours arguments of its own but never takes a lock'
+        def unlockable = new UnlockableRefreshingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def api = registerStaticApiWith(unlockable)
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+
+        when:
+        api.lock([refresh: true], saved.id)
+
+        then: 'support is what the datastore declares, not whether it happens to override the method'
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a lock'
+        unlockable.refreshInvocations == 0
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "lock(args, id) with refresh: true returns null without refreshing when no instance exists"() {
+        given:
+        def locking = new LockingGormInstanceApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def api = registerStaticApiWith(locking)
+
+        when:
+        def result = api.lock([refresh: true], -999L)
+
+        then:
+        result == null
+        locking.refreshInvocations == 0
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void "the entity static lock(id, refresh: true) rejects an unsupported datastore"() {
+        given:
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+
+        when:
+        GormStaticApiThing.lock(saved.id, refresh: true)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a lock'
+    }
+
+    void "the default lock(args, id) of the static operations contract splits on the refresh argument"() {
+        given: 'an implementation that provides nothing beyond the interface defaults and records what they call'
+        def calls = []
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    calls << [method.name, methodArgs as List]
+                    return 'locked'
+                } as InvocationHandler)
+
+        when:
+        def result = operations.lock([flush: true], 7L)
+
+        then:
+        calls == [['lock', [7L]]]
+        result == 'locked'
+
+        when:
+        operations.lock([refresh: true], 7L)
+
+        then:
+        def exception = thrown(UnsupportedOperationException)
+        exception.message == 'Datastore implementation does not support refreshing under a lock'
+        calls.size() == 1
+
+        when:
+        operations.lock([type: LockModeType.PESSIMISTIC_READ], 7L)
+
+        then:
+        def typeException = thrown(UnsupportedOperationException)
+        typeException.message == 'Datastore implementation does not support lock types other than PESSIMISTIC_WRITE'
+        calls.size() == 1
+
+        when:
+        def written = operations.lock([type: LockModeType.PESSIMISTIC_WRITE], 8L)
+
+        then:
+        calls == [['lock', [7L]], ['lock', [8L]]]
+        written == 'locked'
+    }
+
+    void "the default lock(args, id) of the static operations contract rejects an invalid type before a combined refresh request, the same way GormStaticApi does"() {
+        given: 'an implementation that provides nothing beyond the interface defaults'
+        GormStaticOperations<Object> operations = (GormStaticOperations<Object>) Proxy.newProxyInstance(
+                GormStaticOperations.classLoader, [GormStaticOperations] as Class[],
+                { Object proxy, Method method, Object[] methodArgs ->
+                    if (method.isDefault()) {
+                        return InvocationHandler.invokeDefault(proxy, method, methodArgs)
+                    }
+                    return null
+                } as InvocationHandler)
+        def api = new LockRecordingGormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore)
+        def combinedArgs = [type: LockModeType.PESSIMISTIC_READ, refresh: true]
+
+        when: 'the interface default handles a lock type it does not support combined with a refresh request'
+        operations.lock(combinedArgs, 7L)
+
+        then:
+        def defaultException = thrown(UnsupportedOperationException)
+
+        when: 'GormStaticApi.lock(Map, Serializable) handles the identical combined input'
+        lockWithArguments(api, combinedArgs, 7L)
+
+        then: 'both reject it for the same reason, the type, not the refresh flag'
+        def concreteException = thrown(UnsupportedOperationException)
+        concreteException.message == defaultException.message
+        defaultException.message == 'Datastore implementation does not support lock types other than PESSIMISTIC_WRITE'
+        api.lockedIds.isEmpty()
+    }
+
+    void "lock(Map) on the entity names both supported forms"() {
+        when:
+        GormStaticApiThing.lock(refresh: true)
+
+        then:
+        def exception = thrown(IllegalArgumentException)
+        exception.message == 'lock was called with named arguments but no identifier. ' +
+                'Use DomainClass.lock(id, refresh: true) to lock by identifier, ' +
+                'or instance.refresh(lock: true) to reload an instance under a lock'
+    }
+
+    void "lock(Map) called on an instance is rejected the same way"() {
+        given:
+        def saved = new GormStaticApiThing(name: 'persisted').save(flush: true)
+
+        when:
+        saved.lock(refresh: true)
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    private GormStaticApi<GormStaticApiThing> registerStaticApiWith(GormInstanceApi<GormStaticApiThing> instanceApi) {
+        def api = new GormStaticApi<GormStaticApiThing>(GormStaticApiThing, datastore, [])
+        GormRegistry.instance.registerEntityApis(GormStaticApiThing, api, instanceApi,
+                new GormValidationApi<GormStaticApiThing>(GormStaticApiThing, datastore))
+        return api
+    }
+
+    @CompileStatic
+    private static GormStaticApiThing refreshWithLock(GormInstanceOperations<GormStaticApiThing> operations,
+                                                     GormStaticApiThing instance) {
+        operations.refresh(instance, [lock: true])
+    }
+
+    @CompileStatic
+    private static GormStaticApiThing lockWithArguments(GormStaticOperations<GormStaticApiThing> operations,
+                                                       Map args, Serializable id) {
+        operations.lock(args, id)
+    }
+
     void "getAll resolves multiple persisted instances by varargs and iterable ids"() {
         given:
         def api = new GormStaticApi(GormStaticApiThing, datastore, [])
@@ -262,6 +647,48 @@ class GormStaticApiSpec extends Specification {
         api.getAll(one.id, two.id)*.name.sort() == ['one', 'two']
         api.getAll([one.id, two.id])*.name.sort() == ['one', 'two']
         api.getAll()*.name.sort() == ['one', 'two']
+    }
+
+    void "getAll with iterable ids passes them to getAll with an array of ids, so that a subclass overrides both"() {
+        given:
+        def api = new GetAllRecordingGormStaticApi(GormStaticApiThing, datastore)
+
+        when:
+        api.getAll([1L, 2L])
+
+        then:
+        api.requestedIds == [[1L, 2L]]
+    }
+
+    void "get/read/load/exists/getAll find an instance of a multi-tenant entity for the current tenant only in DISCRIMINATOR mode"() {
+        given:
+        def tenantDatastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(
+                        [(Settings.SETTING_MULTI_TENANCY_MODE): MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR]),
+                new DefaultApplicationEventPublisher(), GormStaticApiTenantThing)
+        def api = new GormStaticApi(GormStaticApiTenantThing, tenantDatastore, [])
+        Serializable ownId = Tenants.withId(tenantDatastore, 'own') {
+            new GormStaticApiTenantThing(name: 'own').save(flush: true).id
+        }
+        Serializable otherId = Tenants.withId(tenantDatastore, 'other') {
+            new GormStaticApiTenantThing(name: 'other').save(flush: true).id
+        }
+
+        expect:
+        Tenants.withId(tenantDatastore, 'own') {
+            api.withNewSession {
+                [api.get(ownId)?.name, api.get(otherId), api.read(otherId), api.exists(otherId),
+                 api.getAll(otherId, ownId)*.name, api.getAll([ownId, otherId])*.name, api.load(ownId).name]
+            }
+        } == ['own', null, null, false, [null, 'own'], ['own', null], 'own']
+
+        and: 'inside withoutId a lookup by id is not restricted to a tenant'
+        Tenants.withoutId(tenantDatastore) {
+            api.withNewSession { [api.get(ownId)?.name, api.get(otherId)?.name] }
+        } == ['own', 'other']
+
+        cleanup:
+        tenantDatastore?.close()
     }
 
     void "list and list(Map) support the max parameter via a paged result list"() {
@@ -700,7 +1127,44 @@ class GormStaticApiSpec extends Specification {
         api.withId(ConnectionSource.DEFAULT) { Session session -> 'ran' } == 'ran'
     }
 
-    void "withoutId delegates to withId with the DEFAULT connection"() {
+    void "withoutId runs without a tenant id for a multi-tenant datastore"() {
+        given:
+        def mappingContext = datastore.mappingContext
+        def multiTenantDs = Stub(MultiTenantCapableDatastore) {
+            getMappingContext() >> mappingContext
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+        }
+        def registry = new GormRegistry()
+        registry.registerEntityDatastore(GormStaticApiThing.name, ConnectionSource.DEFAULT, multiTenantDs)
+        def api = new GormStaticApi(GormStaticApiThing, mappingContext, [], null, ConnectionSource.DEFAULT, registry)
+
+        expect:
+        api.withoutId { Tenants.isWithoutId(multiTenantDs) }
+        !Tenants.isWithoutId(multiTenantDs)
+    }
+
+    void "withoutId passes a closure with parameters the tenant id and the session, as withId does"() {
+        given:
+        def mappingContext = datastore.mappingContext
+        def session = Stub(Session)
+        def multiTenantDs = Stub(MultiTenantCapableDatastore) {
+            getMappingContext() >> mappingContext
+            getMultiTenancyMode() >> MultiTenancySettings.MultiTenancyMode.DISCRIMINATOR
+            withSession(_) >> { Closure body -> body.call(session) }
+        }
+        def registry = new GormRegistry()
+        registry.registerEntityDatastore(GormStaticApiThing.name, ConnectionSource.DEFAULT, multiTenantDs)
+        def api = new GormStaticApi(GormStaticApiThing, mappingContext, [], null, ConnectionSource.DEFAULT, registry)
+
+        expect:
+        api.withoutId { Serializable tenantId -> [tenantId, Tenants.isWithoutId(multiTenantDs)] } ==
+                [ConnectionSource.DEFAULT, true]
+        api.withoutId { Serializable tenantId, Session s -> [tenantId, s, Tenants.isWithoutId(multiTenantDs)] } ==
+                [ConnectionSource.DEFAULT, session, true]
+        !Tenants.isWithoutId(multiTenantDs)
+    }
+
+    void "withoutId delegates to withId with the DEFAULT connection for a datastore that is not multi-tenant"() {
         given:
         def mappingContext = datastore.mappingContext
         def plainDs = Stub(Datastore) {
@@ -736,4 +1200,57 @@ class GormStaticApiSpec extends Specification {
 class GormStaticApiThing {
 
     String name
+}
+
+@Entity
+class GormStaticApiTenantThing implements MultiTenant<GormStaticApiTenantThing> {
+
+    String name
+    String tenantId
+}
+
+/**
+ * A static api that records the ids that {@code getAll(Serializable...)} is called with, so that
+ * {@code getAll(Iterable)} can be verified to pass its ids on to it.
+ */
+class GetAllRecordingGormStaticApi<D> extends GormStaticApi<D> {
+
+    List<List<Serializable>> requestedIds = []
+
+    GetAllRecordingGormStaticApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore, [])
+    }
+
+    @Override
+    List<D> getAll(Serializable... ids) {
+        requestedIds << ids.toList()
+        return []
+    }
+}
+
+/**
+ * A static api that records identifier locks and resolutions, so that {@code lock(args, id)} can be
+ * verified to delegate to {@code lock(id)} alone when no refresh is requested.
+ */
+class LockRecordingGormStaticApi<D> extends GormStaticApi<D> {
+
+    List<Serializable> lockedIds = []
+    List<Serializable> resolvedIds = []
+    D lockResult
+
+    LockRecordingGormStaticApi(Class<D> persistentClass, Datastore datastore) {
+        super(persistentClass, datastore, [])
+    }
+
+    @Override
+    D lock(Serializable id) {
+        lockedIds << id
+        return lockResult
+    }
+
+    @Override
+    D get(Serializable id) {
+        resolvedIds << id
+        return super.get(id)
+    }
 }

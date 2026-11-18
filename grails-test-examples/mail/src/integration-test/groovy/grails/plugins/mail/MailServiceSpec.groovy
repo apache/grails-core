@@ -740,7 +740,7 @@ class MailServiceSpec extends Specification {
         }
 
         then: 'the message should have the correct content'
-        message.text == "Hello\nWorld!"
+        message.text.replace('\r\n', '\n') == "Hello\nWorld!"
 
         where:
         view << ['/_testemails/newLineTest', '/_testemails/newLineTagTest']

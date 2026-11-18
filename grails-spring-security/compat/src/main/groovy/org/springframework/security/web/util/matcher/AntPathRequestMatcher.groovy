@@ -23,9 +23,13 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.util.AntPathMatcher
+import org.springframework.web.util.UrlPathHelper
 
 @CompileStatic
 class AntPathRequestMatcher implements RequestMatcher {
+
+    private static final UrlPathHelper PATH_HELPER = UrlPathHelper.defaultInstance
+    private static final UrlPathHelper RAW_PATH_HELPER = rawPathHelper()
 
     private final String pattern
     private final String httpMethod
@@ -47,14 +51,34 @@ class AntPathRequestMatcher implements RequestMatcher {
         if (httpMethod && !httpMethod.equalsIgnoreCase(request.method)) {
             return false
         }
-        def path = request.requestURI ?: '/'
-        def contextPath = request.contextPath
-        if (contextPath && path.startsWith(contextPath)) {
-            path = path.substring(contextPath.length())
-        }
-        def candidate = caseSensitive ? path : path.toLowerCase(Locale.ENGLISH)
-        def matcherPattern = caseSensitive ? pattern : pattern.toLowerCase(Locale.ENGLISH)
+        String path = getPathWithinApplication(request)
+        String candidate = caseSensitive ? path : path.toLowerCase(Locale.ENGLISH)
+        String matcherPattern = caseSensitive ? pattern : pattern.toLowerCase(Locale.ENGLISH)
         pathMatcher.match(matcherPattern, candidate)
+    }
+
+    /**
+     * The request path within the application, resolved with the same {@link UrlPathHelper} call that Grails URL
+     * mapping dispatch uses, so an encoded or matrix-parameter variant of a path selects the same filter chain as
+     * the path it is dispatched to. Path parameters are removed per segment before percent-decoding (Jakarta Servlet
+     * 6.0 section 3.5.2), so an encoded semicolon stays a literal character (RFC 3986 section 2.2), and the path is
+     * decoded exactly once (RFC 3986 section 2.4). Like dispatch, and unlike RFC 3986 section 6.2.2.1, the context
+     * path is compared case-insensitively, and during a {@code RequestDispatcher} include the included URI is
+     * matched. A URI with an illegal percent escape, which a Servlet 6.0 container rejects with 400 before the filter
+     * chain runs, is matched undecoded rather than failing chain selection.
+     */
+    private static String getPathWithinApplication(HttpServletRequest request) {
+        try {
+            PATH_HELPER.getPathWithinApplication(request)
+        } catch (IllegalArgumentException ignored) {
+            RAW_PATH_HELPER.getPathWithinApplication(request)
+        }
+    }
+
+    private static UrlPathHelper rawPathHelper() {
+        UrlPathHelper helper = new UrlPathHelper()
+        helper.urlDecode = false
+        helper
     }
 
     @Override

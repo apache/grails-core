@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import groovy.xml.slurpersupport.GPathResult
 import org.codehaus.groovy.reflection.CachedMethod
+import org.codehaus.groovy.runtime.InvokerHelper
 
 import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
@@ -402,6 +403,9 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         } else if (Map.isAssignableFrom(propertyType)) {
+            // Map.put rather than mapInstance[index] = ...: on Groovy 5 a String subscript on a Map
+            // resolves as property access, so an index such as "properties" would throw
+            // ReadOnlyPropertyException instead of storing the entry.
             Map mapInstance = initializeMap(obj, propName)
             if (mapInstance.size() < autoGrowCollectionLimit || mapInstance.containsKey(indexedPropertyReferenceDescriptor.index)) {
                 def referencedType = getReferencedTypeForCollection(propName, obj)
@@ -409,17 +413,17 @@ class SimpleDataBinder implements DataBinder {
                     if (val instanceof Map) {
                         def indexedInstance = instantiateAndBindOrUseMapConstructor(referencedType, (Map) val, listener)
                         if (indexedInstance != null) {
-                            mapInstance[indexedPropertyReferenceDescriptor.index] = indexedInstance
+                            mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
                         }
                     } else if (val instanceof DataBindingSource) {
                         def indexedInstance = referencedType.getDeclaredConstructor().newInstance()
                         bind(indexedInstance, val, listener)
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = indexedInstance
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
                     } else {
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = convert(referencedType, val)
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, convert(referencedType, val))
                     }
                 } else {
-                    mapInstance[indexedPropertyReferenceDescriptor.index] = val
+                    mapInstance.put(indexedPropertyReferenceDescriptor.index, val)
                 }
             }
         }
@@ -430,10 +434,22 @@ class SimpleDataBinder implements DataBinder {
         try {
             instance = referencedType.getDeclaredConstructor().newInstance()
         } catch (NoSuchMethodException | IllegalAccessException ignored) {
-            return referencedType.newInstance(values)
+            return newInstanceFromMapArguments(referencedType, values)
         }
         bind(instance, new SimpleMapDataBindingSource(values), listener)
         instance
+    }
+
+    /**
+     * Invoke a {@code Map} constructor without calling Groovy's
+     * {@code Class.newInstance(Map)}. Under {@code @CompileStatic} with
+     * invokedynamic disabled that extension is not selected, so nested
+     * objects with only a Map constructor are left unbound.
+     */
+    protected Object newInstanceFromMapArguments(Class referencedType, Map values) {
+        // Pass an Object[] so CompileStatic cannot treat the Map as named
+        // arguments or coerce it to a multi-arg constructor signature.
+        InvokerHelper.invokeConstructorOf(referencedType, new Object[] { values })
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

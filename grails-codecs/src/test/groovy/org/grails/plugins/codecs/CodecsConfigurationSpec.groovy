@@ -45,4 +45,35 @@ class CodecsConfigurationSpec extends Specification {
         cleanup:
             context.close()
     }
+
+    void 'the HTML codec uses the encoder selected by grails.views.gsp.htmlcodec #htmlCodecSetting'() {
+        given:
+            DefaultGrailsApplication grailsApplication = new DefaultGrailsApplication(HTMLCodec)
+            if (htmlCodecSetting != null) {
+                grailsApplication.config[HTMLCodec.CONFIG_PROPERTY_GSP_HTMLCODEC] = htmlCodecSetting
+                grailsApplication.configChanged()
+            }
+            grailsApplication.initialise()
+            AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+            grailsApplication.mainContext = context
+            context.beanFactory.registerSingleton(GrailsApplication.APPLICATION_ID, grailsApplication)
+            context.register(CodecsConfiguration)
+
+        when:
+            context.refresh()
+            CodecLookup codecLookup = context.getBean(CodecLookup)
+
+        then:
+            codecLookup.lookupEncoder('HTML').encode("<a href='x'>Vid\u00E9o @ ` \\ \u2028</a>") == expected
+
+        cleanup:
+            context?.close()
+
+        where:
+            htmlCodecSetting | expected
+            null             | '&lt;a href=&#39;x&#39;&gt;Vid\u00E9o &#64; &#96; &#92; &#8232;&lt;/a&gt;'
+            'xml'            | '&lt;a href=&#39;x&#39;&gt;Vid\u00E9o &#64; &#96; &#92; &#8232;&lt;/a&gt;'
+            'xhtml'          | '&lt;a href=&#39;x&#39;&gt;Vid\u00E9o &#64; &#96; &#92; &#8232;&lt;/a&gt;'
+            'html4'          | "&lt;a href=&#39;x&#39;&gt;Vid&eacute;o @ ` \\ \u2028&lt;/a&gt;"
+    }
 }

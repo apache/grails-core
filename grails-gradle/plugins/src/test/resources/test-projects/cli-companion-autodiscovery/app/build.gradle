@@ -19,6 +19,7 @@ tasks.register('prepareDigitBearingPlugin') {
 dependencies {
     implementation project(':my-plugin')
     implementation project(':renamed-plugin')
+    implementation project(':plain-library')
     implementation 'org.example.test:my-plugin-2fa-one:1'
     implementation 'org.example.test:my-plugin-2fa-snapshot:1-SNAPSHOT'
     implementation 'org.example.test:my-plugin-2fa-timestamp:1-20260101.123456-1'
@@ -28,53 +29,62 @@ dependencies {
 tasks.register('inspectGrailsCli') {
     // build the sibling jars so their components (and advertised companions) are resolvable
     dependsOn ':my-plugin:jar', ':renamed-plugin:jar'
-    def grailsCli = configurations.grailsCli
-    doLast {
-        grailsCli.dependencies.each { dep ->
+    def grailsCliDependencies = providers.provider {
+        configurations.grailsCli.dependencies.collect { dep ->
             if (dep instanceof org.gradle.api.artifacts.ProjectDependency) {
                 def caps = dep.requestedCapabilities.collect { "${it.group}:${it.name}" }.join(',')
-                println "GRAILSCLI_DEP: project path=${dep.path} capabilities=[${caps}]"
+                "GRAILSCLI_DEP: project path=${dep.path} capabilities=[${caps}]".toString()
             }
             else {
-                println "GRAILSCLI_DEP: module ${dep.group}:${dep.name}:${dep.version}"
+                "GRAILSCLI_DEP: module ${dep.group}:${dep.name}:${dep.version}".toString()
             }
         }
+    }
+    doLast {
+        grailsCliDependencies.get().each { println it }
     }
 }
 
 tasks.register('inspectClasspathWiring') {
-    doLast {
+    def report = providers.provider {
         def extendsGrailsCli = { org.gradle.api.artifacts.Configuration c -> 'grailsCli' in (c.hierarchy*.name as Set) }
         def extendsGrailsCliLegacy = { org.gradle.api.artifacts.Configuration c -> 'grailsCliLegacy' in (c.hierarchy*.name as Set) }
         def hasGrailsCliLegacy = { org.gradle.api.artifacts.Configuration c ->
             c.allDependencies.any { it.group == 'org.apache.grails' && it.name == 'grails-core-cli-legacy' }
         }
-        println "COMPILE_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.compileClasspath)}"
-        println "COMPILE_EXTENDS_GRAILSCLILEGACY=${extendsGrailsCliLegacy(configurations.compileClasspath)}"
-        println "RUNTIME_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.runtimeClasspath)}"
-        println "CLASSPATH_EXTENDS_GRAILSCLILEGACY=${extendsGrailsCliLegacy(configurations.grailsCliClasspath)}"
-        println "COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.compileClasspath)}"
-        println "TEST_COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.testCompileClasspath)}"
-        println "INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.integrationTestCompileClasspath)}"
-        println "TEST_RUNTIME_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.testRuntimeClasspath)}"
-        println "INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.integrationTestRuntimeClasspath)}"
+        [
+                "COMPILE_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.compileClasspath)}",
+                "COMPILE_EXTENDS_GRAILSCLILEGACY=${extendsGrailsCliLegacy(configurations.compileClasspath)}",
+                "RUNTIME_EXTENDS_GRAILSCLI=${extendsGrailsCli(configurations.runtimeClasspath)}",
+                "CLASSPATH_EXTENDS_GRAILSCLILEGACY=${extendsGrailsCliLegacy(configurations.grailsCliClasspath)}",
+                "COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.compileClasspath)}",
+                "TEST_COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.testCompileClasspath)}",
+                "INTEGRATION_TEST_COMPILE_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.integrationTestCompileClasspath)}",
+                "TEST_RUNTIME_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.testRuntimeClasspath)}",
+                "INTEGRATION_TEST_RUNTIME_HAS_GRAILSCLILEGACY=${hasGrailsCliLegacy(configurations.integrationTestRuntimeClasspath)}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }
 
 tasks.register('inspectGrailsCliLegacy') {
-    def grailsCliLegacy = configurations.grailsCliLegacy
-    doLast {
-        grailsCliLegacy.dependencies.each { dep ->
-            println "GRAILSCLILEGACY_DEP: module ${dep.group}:${dep.name}:${dep.version}"
+    def grailsCliLegacyDependencies = providers.provider {
+        configurations.grailsCliLegacy.dependencies.collect { dep ->
+            "GRAILSCLILEGACY_DEP: module ${dep.group}:${dep.name}:${dep.version}".toString()
         }
+    }
+    doLast {
+        grailsCliLegacyDependencies.get().each { println it }
     }
 }
 
 tasks.register('inspectRuntimeClasspath') {
     dependsOn ':my-plugin:jar', ':renamed-plugin:jar'
-    def runtimeClasspath = configurations.runtimeClasspath
+    def runtimeArtifacts = configurations.runtimeClasspath.incoming.artifactView { it.lenient(true) }.files
     doLast {
-        runtimeClasspath.incoming.artifactView { it.lenient(true) }.files.each {
+        runtimeArtifacts.each {
             println "RUNTIME_ARTIFACT: ${it.name}"
         }
     }
@@ -83,9 +93,9 @@ tasks.register('inspectRuntimeClasspath') {
 tasks.register('inspectCliClasspath') {
     // the companion jars must actually resolve through the projects' cli capabilities
     dependsOn ':my-plugin:cliJar', ':renamed-plugin:cliJar'
-    def cliClasspath = configurations.grailsCliClasspath
+    def cliArtifacts = configurations.grailsCliClasspath.incoming.artifactView { it.lenient(true) }.files
     doLast {
-        cliClasspath.incoming.artifactView { it.lenient(true) }.files.each {
+        cliArtifacts.each {
             println "CLI_ARTIFACT: ${it.name}"
         }
     }

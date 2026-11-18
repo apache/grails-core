@@ -10,13 +10,17 @@ dependencies {
 }
 
 tasks.register('inspectBomSetup') {
-    doLast {
+    def report = providers.provider {
         def extension = project.extensions.findByName('bomPropertyOverrides')
-        println "HAS_EXTENSION=${extension != null}"
-        println "AUTO_DETECT_DEFAULT=${extension?.autoDetect?.get()}"
-
         Set<String> detected = org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
                 .detectDeclaredBoms(project.configurations)
-        println "DETECTED_BOMS=${detected.sort().join(',')}"
+        [
+                "HAS_EXTENSION=${extension != null}",
+                "AUTO_DETECT_DEFAULT=${extension?.autoDetect?.get()}",
+                "DETECTED_BOMS=${detected.sort().join(',')}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
     }
 }

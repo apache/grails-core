@@ -21,6 +21,8 @@ package org.apache.grails.gradle.tasks.bom
 
 import java.util.regex.Pattern
 
+import javax.inject.Inject
+
 import org.apache.maven.model.Model
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.gradle.api.DefaultTask
@@ -39,19 +41,24 @@ import org.gradle.api.artifacts.result.DependencyResult
 import org.gradle.api.artifacts.result.ResolvedDependencyResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 /**
  * Grails Bom files define their dependencies in a series of maps, this task takes those maps and generates an
  * asciidoc file containing all of the resolve dependencies and their versions in the bom.
+ *
+ * <p>Resolving the configuration and the BOMs it imports needs the project's dependency services, so the
+ * table rows are computed once, while the task's inputs are: when the task graph is stored in the configuration
+ * cache, or else before the task runs. The task itself only writes the rows it was given.</p>
  */
 @CacheableTask
 abstract class ExtractDependenciesTask extends DefaultTask {
@@ -87,13 +94,15 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     @Input
     abstract MapProperty<String, String> getProjectCoordinateProperties()
 
-    // Captured at configuration time to avoid deprecated Task.project access at execution time.
-    // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
-    @Internal
-    DependencyHandler dependencyHandler
+    /**
+     * The rows of the generated table, one per dependency the BOM manages. Computed from the other inputs and
+     * the resolved configuration once {@link #captureProjectServices} has been called.
+     */
+    @Input
+    abstract ListProperty<String> getRows()
 
-    @Internal
-    ConfigurationContainer configurationContainer
+    @Inject
+    abstract ProviderFactory getProviders()
 
     /**
      * When {@code true}, transitive platform dependencies that are not explicitly
@@ -120,12 +129,11 @@ abstract class ExtractDependenciesTask extends DefaultTask {
     }
 
     /**
-     * Captures project-scoped services at configuration time so they can be used
-     * at execution time without accessing the deprecated Task.project property.
+     * Computes {@link #getRows()} with the project's dependency services. They are only used while the task's
+     * inputs are computed, never when the task runs.
      */
     void captureProjectServices(DependencyHandler dependencies, ConfigurationContainer configurations) {
-        this.dependencyHandler = dependencies
-        this.configurationContainer = configurations
+        rows.set(providers.provider({ extractRows(dependencies, configurations) }.memoize()))
     }
 
     @TaskAction
@@ -133,6 +141,18 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         File outputFile = destination.get().asFile
         outputFile.parentFile.mkdirs()
 
+        outputFile.withWriter { writer ->
+            writer.writeLine('[cols="1,1,1,1,1,1", options="header"]')
+            writer.writeLine('|===')
+            writer.writeLine('| Index | Group | Artifact | Version | Property Name | Source')
+            rows.get().each { line ->
+                writer.writeLine(line)
+            }
+            writer.writeLine('|===')
+        }
+    }
+
+    protected List<String> extractRows(DependencyHandler dependencyHandler, ConfigurationContainer configurationContainer) {
         Map<CoordinateHolder, ExtractedDependencyConstraint> constraints = [:]
         PropertyNameCalculator propertyNameCalculator = new PropertyNameCalculator(
                 getPlatformDefinitions().get(),
@@ -155,18 +175,21 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         populateExplicitConstraints(configuration, constraints, propertyNameCalculator)
 
         Map<CoordinateHolder, List<CoordinateHolder>> exclusions = determineExclusions(configuration)
-        populateInheritedConstraints(configuration, exclusions, constraints, propertyNameCalculator)
+        BomPomResolver bomPomResolver = { CoordinateVersionHolder bom ->
+            Configuration bomConfiguration = configurationContainer.detachedConfiguration(dependencyHandler.create("${bom.coordinates}@pom"))
+            bomConfiguration.transitive = false
+            bomConfiguration.singleFile
+        } as BomPomResolver
+        populateInheritedConstraints(configuration, exclusions, constraints, propertyNameCalculator, bomPomResolver)
 
-        List<String> lines = generateAsciiDoc(constraints)
-        destination.get().asFile.withWriter { writer ->
-            writer.writeLine('[cols="1,1,1,1,1,1", options="header"]')
-            writer.writeLine('|===')
-            writer.writeLine('| Index | Group | Artifact | Version | Property Name | Source')
-            lines.each { line ->
-                writer.writeLine(line)
-            }
-            writer.writeLine('|===')
-        }
+        generateAsciiDoc(constraints)
+    }
+
+    /**
+     * Fetches the POM of a BOM.
+     */
+    interface BomPomResolver {
+        File resolve(CoordinateVersionHolder bomCoordinates)
     }
 
     private List<String> generateAsciiDoc(Map<CoordinateHolder, ExtractedDependencyConstraint> constraints) {
@@ -213,7 +236,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
         exclusions
     }
 
-    private void populateInheritedConstraints(Configuration configuration, Map<CoordinateHolder, List<CoordinateHolder>> exclusions, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, PropertyNameCalculator propertyNameCalculator) {
+    private void populateInheritedConstraints(Configuration configuration, Map<CoordinateHolder, List<CoordinateHolder>> exclusions, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, PropertyNameCalculator propertyNameCalculator, BomPomResolver bomPomResolver) {
         for (DependencyResult result : configuration.incoming.resolutionResult.allDependencies) {
             if (!(result instanceof ResolvedDependencyResult)) {
                 throw new GradleException('Dependencies should be resolved prior to running this task.')
@@ -252,16 +275,12 @@ abstract class ExtractDependenciesTask extends DefaultTask {
             constraints.put(bomCoordinate.toCoordinateHolder(), constraint)
 
             List<CoordinateHolder> exclusionRules = exclusions.get(bomCoordinate.toCoordinateHolder())
-            populatePlatformDependencies(bomCoordinate, exclusionRules, constraints)
+            populatePlatformDependencies(bomPomResolver, bomCoordinate, exclusionRules, constraints)
         }
     }
 
-    Properties populatePlatformDependencies(CoordinateVersionHolder bomCoordinates, List<CoordinateHolder> exclusionRules, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, boolean error = true, int level = 0) {
-        def bomDependency = dependencyHandler.create("${bomCoordinates.coordinates}@pom")
-        def dependencyConfiguration = configurationContainer.detachedConfiguration(bomDependency).tap {
-            transitive = false
-        }
-        File bomPomFile = dependencyConfiguration.singleFile
+    Properties populatePlatformDependencies(BomPomResolver bomPomResolver, CoordinateVersionHolder bomCoordinates, List<CoordinateHolder> exclusionRules, Map<CoordinateHolder, ExtractedDependencyConstraint> constraints, boolean error = true, int level = 0) {
+        File bomPomFile = bomPomResolver.resolve(bomCoordinates)
 
         // Parse the BOM POM with Maven's own model library so resolution mirrors upstream Maven.
         Model model = bomPomFile.withInputStream { InputStream input -> new MavenXpp3Reader().read(input) }
@@ -274,7 +293,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                     artifactId: model.parent.artifactId,
                     version: model.parent.version
             )
-            populatePlatformDependencies(parentBom, exclusionRules, constraints, false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
+            populatePlatformDependencies(bomPomResolver, parentBom, exclusionRules, constraints, false, level + 1)?.entrySet()?.each { Map.Entry<Object, Object> entry ->
                 versionProperties.put(entry.key, entry.value)
             }
         }
@@ -344,7 +363,7 @@ abstract class ExtractDependenciesTask extends DefaultTask {
                         artifactId: resolvedCoordinates.artifactId,
                         version: resolvedVersion
                 )
-                populatePlatformDependencies(resolvedBomCoordinates, exclusionRules, constraints, error, level + 1)
+                populatePlatformDependencies(bomPomResolver, resolvedBomCoordinates, exclusionRules, constraints, error, level + 1)
             }
         }
 

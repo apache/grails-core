@@ -48,7 +48,7 @@ For `Map` properties where the keys are not known at all, it is entirely up to t
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
 
 }
 ----
@@ -66,11 +66,11 @@ The property must be modified to contain the definition proposed above. In order
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
 
     static graphql = GraphQLMapping.build {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customBooks]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customBooks]
 
     }
 }
@@ -90,7 +90,7 @@ A data binder must be configured to transform the data sent in the `key/value` o
 [source,groovy]
 .src/main/groovy/demo/AuthorDataBinder.groovy
 ----
-include::{sourcedir}/examples/grails-docs-app/src/main/groovy/demo/AuthorDataBinder.groovy[tags=wholeFile]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/main/groovy/demo/AuthorDataBinder.groovy[tags=wholeFile]
 ----
 
 Then to register the data binder, see the section on link:#dataBinders.html[data binders].
@@ -104,11 +104,11 @@ For `Map` properties where the keys of the map are known, the process to handle 
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=locationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=locationDefinition]
 
     static graphql = GraphQLMapping.build {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customLocation]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customLocation]
 
     }
 }
@@ -125,14 +125,14 @@ Once all of the above is in place, here is what a create mutation might look lik
 :url: http://localhost:8080/graphql
 [source, bash, subs="attributes"]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createCommand]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createCommand]
 ----
 
 And here is the expected response:
 
 [source, json]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
 ----
 
 === Testing and JSON Serialization

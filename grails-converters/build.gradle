@@ -41,7 +41,9 @@ dependencies {
     api project(':grails-web-common')
     api 'org.apache.groovy:groovy'
 
-    compileOnly 'jakarta.servlet:jakarta.servlet-api' // Provided
+    // api needed downstream: ConvertersExtension is a Groovy extension module with HttpServletRequest
+    // in its signatures, and the Groovy compiler loads it from any compile classpath it is on
+    compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'
 
     implementation 'org.apache.commons:commons-lang3'
     implementation project(':grails-datamapping-core')
@@ -52,12 +54,13 @@ dependencies {
     testImplementation 'org.springframework:spring-context'
     testImplementation project(':grails-core')
     testImplementation project(':grails-web-common')
+    testImplementation testFixtures(project(':grails-web-common')) // DateTimeValues
 
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation 'tools.jackson.core:jackson-databind' // JSON rendering is compared against Spring Boot's Jackson JsonMapper
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

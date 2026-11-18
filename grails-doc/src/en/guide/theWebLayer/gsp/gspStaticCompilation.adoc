@@ -53,6 +53,12 @@ The variable [publisher] is undeclared.
 
 A page that declares no model has stated nothing, and reads what it is rendered with exactly as a dynamically compiled page does. This is what makes static compilation adoptable for views that were never written with it in mind: what the page does say is checked, and what it does not say still works.
 
+A value the model supplies is converted to the declared type the way a Groovy assignment converts it, so a `Long` satisfies an `Integer` declaration and a `GString` satisfies a `String` one. A conversion that would change the value fails at render instead, naming the variable and both types: a `Long` too large for an `Integer`, or a `BigDecimal` with a fraction for a whole-number type. So does a value that cannot be converted at all, such as a `Date` for an `Integer`.
+
+A `BigDecimal` and a `Double` or `Float` are compared through the decimal the floating-point value prints as, which is the decimal Groovy converts it to, so `19.99G` satisfies a `Double` declaration and `19.99d` a `BigDecimal` one, while a value with more digits than the type can carry, `9007199254740993G` for a `Double`, is rejected. Widening a finite `Float` to `Double` is accepted; narrowing a `Double` to `Float` is rejected if it loses precision. Non-finite values (`NaN` and infinities) cannot populate `BigDecimal` or `BigInteger` fields and fail with the same field-specific diagnostic.
+
+Precompiling the views does not catch these failures, because the value only exists once the page renders.
+
 ==== Names Supplied by the Framework
 
 The names bound into every page do not need to be declared. Most carry their real types and are checked like anything else:

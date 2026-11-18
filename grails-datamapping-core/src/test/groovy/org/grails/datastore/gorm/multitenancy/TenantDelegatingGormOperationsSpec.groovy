@@ -183,6 +183,85 @@ class TenantDelegatingGormOperationsSpec extends Specification {
         1 * delegate.lock(instance)
     }
 
+    void "refresh(instance, args) returns the wrapped result under the bound tenant and restores the enclosing tenant"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def decorator = buildOperations(delegate)
+        def tenantDatastore = (MultiTenantCapableDatastore) decorator.datastore
+        GormAllOperations<Object> operations = decorator
+        def instance = new Object()
+        def args = [lock: true]
+
+        when:
+        def result = Tenants.withId(tenantDatastore, 'outer') {
+            def refreshed = operations.refresh(instance, args)
+            assert Tenants.currentId(tenantDatastore) == 'outer'
+            refreshed
+        }
+
+        then:
+        1 * delegate.refresh(instance, args) >> {
+            assert Tenants.currentId(tenantDatastore) == 'tenant1'
+            instance
+        }
+        0 * delegate.refresh(_)
+        0 * delegate.lock(_)
+        result.is(instance)
+    }
+
+    void "refresh(instance, args) restores the enclosing tenant when the datastore rejects it"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def decorator = buildOperations(delegate)
+        def tenantDatastore = (MultiTenantCapableDatastore) decorator.datastore
+        GormAllOperations<Object> operations = decorator
+        def instance = new Object()
+        def args = [lock: true]
+        def failure = new UnsupportedOperationException('Datastore implementation does not support refreshing under a lock')
+
+        when:
+        Tenants.withId(tenantDatastore, 'outer') {
+            try {
+                operations.refresh(instance, args)
+            } finally {
+                assert Tenants.currentId(tenantDatastore) == 'outer'
+            }
+        }
+
+        then:
+        1 * delegate.refresh(instance, args) >> {
+            assert Tenants.currentId(tenantDatastore) == 'tenant1'
+            throw failure
+        }
+        def exception = thrown(UnsupportedOperationException)
+        exception.is(failure)
+    }
+
+    void "lock(args, id) delegates to the wrapped two-argument lock under the bound tenant and restores the enclosing tenant"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def decorator = buildOperations(delegate)
+        def tenantDatastore = (MultiTenantCapableDatastore) decorator.datastore
+        GormAllOperations<Object> operations = decorator
+        def args = [refresh: true]
+        def locked = new Object()
+
+        when:
+        def result = Tenants.withId(tenantDatastore, 'outer') {
+            def value = operations.lock(args, 7L)
+            assert Tenants.currentId(tenantDatastore) == 'outer'
+            value
+        }
+
+        then:
+        1 * delegate.lock(args, 7L) >> {
+            assert Tenants.currentId(tenantDatastore) == 'tenant1'
+            locked
+        }
+        0 * delegate.lock(_)
+        result.is(locked)
+    }
+
     void "mutex(instance, callable) delegates to the wrapped operations under the bound tenant"() {
         given:
         def delegate = Mock(GormAllOperations)

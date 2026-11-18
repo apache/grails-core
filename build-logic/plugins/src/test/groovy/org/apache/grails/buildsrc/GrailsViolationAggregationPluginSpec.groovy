@@ -22,6 +22,7 @@ import org.gradle.testkit.runner.GradleRunner
 import org.gradle.testkit.runner.TaskOutcome
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 
 import java.nio.file.Path
 
@@ -29,6 +30,10 @@ class GrailsViolationAggregationPluginSpec extends Specification {
 
     @TempDir
     Path testProjectDir
+
+    String pmdVersion = System.getProperty('grails.test.pmdVersion')
+    String codenarcVersion = System.getProperty('grails.test.codenarcVersion')
+    String checkstyleVersion = System.getProperty('grails.test.checkstyleVersion')
 
     def "plugin must be applied to root project only"() {
         given: "a subproject-only build with the aggregation plugin"
@@ -53,9 +58,11 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         result.output.contains('must be applied to the root project only')
     }
 
-    def "all aggregation tasks are registered on root"() {
+    def "canonical roots register repository convention validation"() {
         given: "root project with aggregation plugin"
         testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('AGENTS.md').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
         testProjectDir.resolve('build.gradle').toFile().text = """
             plugins {
                 id 'org.apache.grails.gradle.grails-violation-aggregation'
@@ -73,11 +80,166 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         result.output.contains('aggregateStyleViolations')
         result.output.contains('aggregateAnalysisViolations')
         result.output.contains('aggregateViolations')
+        result.output.contains('validateRepositoryConventions')
         result.output.contains('aggregateJacocoCoverage')
     }
 
-    def "aggregateStyleViolations writes CodeNarc and Checkstyle reports to build/reports/violations/"() {
-        given: "a root project with a subproject that has codestyle XML reports"
+    def "generated profile wrappers avoid convention validation implicit dependencies"() {
+        given: "a source-tree convention input and the legacy wrapper copy output"
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('AGENTS.md').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        def i18n = testProjectDir.resolve('skeleton/grails-app/i18n/messages.properties').toFile()
+        i18n.parentFile.mkdirs()
+        i18n.text = 'message=Message\n'
+        def staleWrappers = [
+                'grails-wrapper.jar': 'stale-jar',
+                'grailsw': 'stale-shell',
+                'grailsw.bat': 'stale-bat',
+        ]
+        staleWrappers.each { String name, String content ->
+            new File(testProjectDir.resolve('skeleton').toFile(), name).text = content
+        }
+        def wrapper = testProjectDir.resolve('wrapper').toFile()
+        wrapper.mkdirs()
+        def generatedWrappers = [
+                'grails-wrapper.jar': 'generated-jar',
+                'grailsw': 'generated-shell',
+                'grailsw.bat': 'generated-bat',
+        ]
+        generatedWrappers.each { String name, String content ->
+            new File(wrapper, name).text = content
+        }
+        new File(wrapper, 'LICENSE').text = 'license'
+        new File(wrapper, 'NOTICE').text = 'notice'
+        testProjectDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+
+            def copyWrapper = tasks.register('copyGrailsWrapperScripts', Copy) {
+                from('wrapper')
+                into(layout.projectDirectory.dir('skeleton'))
+            }
+            tasks.register('packageProfile', Zip) {
+                dependsOn(copyWrapper)
+                from(layout.projectDirectory.dir('skeleton'))
+                archiveFileName.set('packageProfile.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+            tasks.register('sourcesJar', Zip) {
+                dependsOn(copyWrapper)
+                from(layout.projectDirectory.dir('skeleton'))
+                archiveFileName.set('sourcesJar.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+        '''
+
+        when: "Gradle 9 validates the old combined task graph"
+        def failedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('validateRepositoryConventions', 'packageProfile', 'sourcesJar', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then: "the source-owned wrapper output is rejected"
+        failedResult.output.contains("Task ':validateRepositoryConventions' uses this output of task ':copyGrailsWrapperScripts'")
+
+        when: "wrappers are generated under build and consumed at the skeleton archive path"
+        def generatedOutput = testProjectDir.resolve('build/generated/wrapper').toFile()
+        generatedOutput.mkdirs()
+        new File(generatedOutput, 'NOTICE').text = 'stale-sidecar'
+        testProjectDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+
+            def wrapperFiles = ['grails-wrapper.jar', 'grailsw', 'grailsw.bat']
+            def sourceSkeleton = layout.projectDirectory.dir('skeleton').asFile
+            def copyWrapper = tasks.register('copyGrailsWrapperScripts', Sync) {
+                from('wrapper') {
+                    include 'grails-wrapper.jar'
+                    include 'grailsw'
+                    include 'grailsw.bat'
+                }
+                into(layout.buildDirectory.dir('generated/wrapper'))
+            }
+            tasks.register('packageProfile', Zip) {
+                exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+                from(sourceSkeleton) {
+                    into('skeleton')
+                }
+                from(copyWrapper) {
+                    into('skeleton')
+                }
+                archiveFileName.set('packageProfile.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+            tasks.register('sourcesJar', Zip) {
+                exclude { details -> details.file.parentFile == sourceSkeleton && wrapperFiles.contains(details.name) }
+                from(sourceSkeleton) {
+                    into('skeleton')
+                }
+                from(copyWrapper) {
+                    into('skeleton')
+                }
+                archiveFileName.set('sourcesJar.zip')
+                destinationDirectory.set(layout.buildDirectory.dir('distributions'))
+            }
+        '''
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('validateRepositoryConventions', 'packageProfile', 'sourcesJar', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then: "validation and wrapper packaging succeed together"
+        result.task(':validateRepositoryConventions').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        result.task(':copyGrailsWrapperScripts').outcome == TaskOutcome.SUCCESS
+        result.task(':packageProfile').outcome == TaskOutcome.SUCCESS
+        result.task(':sourcesJar').outcome == TaskOutcome.SUCCESS
+        !new File(generatedOutput, 'NOTICE').exists()
+
+        and: "both archives retain source content and exactly the generated wrappers"
+        ['build/distributions/packageProfile.zip', 'build/distributions/sourcesJar.zip'].each { String archive ->
+            new java.util.zip.ZipFile(testProjectDir.resolve(archive).toFile()).withCloseable { zipFile ->
+                def entries = zipFile.entries()*.name
+                assert entries.contains('skeleton/grails-app/i18n/messages.properties')
+                generatedWrappers.each { String wrapperName, String generatedContent ->
+                    assert entries.count { it == 'skeleton/' + wrapperName } == 1
+                    zipFile.getInputStream(zipFile.getEntry('skeleton/' + wrapperName)).withCloseable { input ->
+                        assert input.getText('UTF-8') == generatedContent
+                    }
+                }
+                assert !entries.contains('skeleton/LICENSE')
+                assert !entries.contains('skeleton/NOTICE')
+            }
+        }
+    }
+
+    def "canonical roots report a missing AGENTS.md"() {
+        given:
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('validateRepositoryConventions', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.output.contains('AGENTS.md: file is missing')
+    }
+
+    def "nested builds ignore stale legacy style XML without AGENTS.md"() {
+        given: "a nested build root with a stale leaf-keyed style report"
         testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
         testProjectDir.resolve('build.gradle').toFile().text = """
             plugins {
@@ -96,43 +258,40 @@ class GrailsViolationAggregationPluginSpec extends Specification {
                 implementation localGroovy()
             }
         """
-        def srcFile = moduleDir.resolve('src/main/groovy/com/example/AppClass.groovy').toFile()
-        srcFile.parentFile.mkdirs()
-        srcFile.text = 'package com.example\nclass AppClass {}'
-
-        // Pre-populate XML reports in the standard consolidated location (build/reports/code-style/)
         def checkstyleDir = testProjectDir.resolve('build/reports/code-style/checkstyle').toFile()
         checkstyleDir.mkdirs()
-        new File(checkstyleDir, 'app-module-checkstyleMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
+        new File(checkstyleDir, 'app-module-checkstyleMain.xml').text = '''<?xml version="1.0" encoding="UTF-8"?>
 <checkstyle version="10.0">
-<file name="${srcFile.absolutePath}">
-<error line="2" column="1" severity="error" message="Missing a Javadoc comment." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocPackageCheck"/>
+<file name="src/main/groovy/com/example/AppClass.groovy">
+<error line="2" column="1" severity="error" message="Legacy report." source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocPackageCheck"/>
 </file>
 </checkstyle>
-"""
+'''
         def codenarcDir = testProjectDir.resolve('build/reports/code-style/codenarc').toFile()
         codenarcDir.mkdirs()
-        new File(codenarcDir, 'app-module-codenarcMain.xml').text = """<?xml version="1.0" encoding="UTF-8"?>
+        new File(codenarcDir, 'app-module-codenarcMain.xml').text = '''<?xml version="1.0" encoding="UTF-8"?>
 <CodeNarc version="3.1.0">
 <Package name="com.example">
 <File name="AppClass.groovy">
 <Violation ruleName="EmptyClass" priority="2" lineNumber="1">
-<Message>The class is empty</Message>
+<Message>Legacy report</Message>
 </Violation>
 </File>
 </Package>
 </CodeNarc>
-"""
+'''
 
-        when: "running aggregateStyleViolations skipping the actual style tasks"
+        when: "running aggregateStyleViolations"
         def result = GradleRunner.create()
                 .withProjectDir(testProjectDir.toFile())
-                .withArguments('aggregateStyleViolations', '-x', 'checkstyleMain', '-x', 'codenarcMain', '--stacktrace')
+                .withArguments('aggregateStyleViolations', '--stacktrace')
                 .withPluginClasspath()
                 .build()
 
         then: "task succeeds"
-        result.task(':aggregateStyleViolations').outcome == TaskOutcome.SUCCESS
+        result.task(':aggregateStyleViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        result.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        result.task(':validateRepositoryConventions') == null
 
         and: "reports land in build/reports/violations/ — NOT in the repo root"
         def violationsDir = testProjectDir.resolve('build/reports/violations').toFile()
@@ -141,15 +300,939 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         !testProjectDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().exists()
         !testProjectDir.resolve('CODENARC_VIOLATIONS.md').toFile().exists()
 
-        and: "checkstyle report contains the violation"
+        and: "legacy Checkstyle XML is ignored"
         def checkstyleMd = new File(violationsDir, 'CHECKSTYLE_VIOLATIONS.md').text
-        checkstyleMd.contains('## Module: app-module')
-        checkstyleMd.contains('JavadocPackageCheck')
+        !checkstyleMd.contains('Legacy report.')
 
-        and: "codenarc report contains the violation"
+        and: "legacy CodeNarc XML is ignored"
         def codenarcMd = new File(violationsDir, 'CODENARC_VIOLATIONS.md').text
-        codenarcMd.contains('## Module: app-module')
-        codenarcMd.contains('EmptyClass')
+        !codenarcMd.contains('Legacy report')
+    }
+
+    def "aggregateAnalysisViolations recognizes the PMD project allowlist and reports disabled SpotBugs"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:app-module
+grails.code-analysis.ignoreFailures=true
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = '''package com.example;
+
+public class App {
+    private void unused() {
+    }
+}
+'''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':app-module:pmdMain').outcome == TaskOutcome.SUCCESS
+        result.task(':aggregateAnalysisViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        result.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        def violationsDir = testProjectDir.resolve('build/reports/violations').toFile()
+        def pmdReport = new File(violationsDir, 'PMD_VIOLATIONS.md').text
+        pmdReport.contains('UnusedPrivateMethod')
+        new File(violationsDir, 'SPOTBUGS_VIOLATIONS.md').text.contains('SpotBugs is disabled.')
+
+        when: "the generated configuration inputs settle after the first run"
+        def updatedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        updatedResult.output.contains('Configuration cache entry stored')
+
+        when: "running the stable lifecycle from the reused configuration cache"
+        def reusedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        reusedResult.output.contains('Reusing configuration cache')
+        reusedResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "aggregateAnalysisViolations fails for PMD violations in an allowlisted project"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:app-module
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = '''package com.example;
+
+public class App {
+    private void unused() {
+    }
+}
+'''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--continue', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.task(':app-module:pmdMain').outcome == TaskOutcome.FAILED
+        result.task(':writeAnalysisViolations').outcome == TaskOutcome.FAILED
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text
+        pmdReport.contains('UnusedPrivateMethod')
+    }
+
+    def "aggregateAnalysisViolations fails when an executed task removes its XML report"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:app-module
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+            tasks.configureEach {
+                if (name == 'pmdMain') {
+                    doLast {
+                        reports.xml.outputLocation.get().asFile.delete()
+                    }
+                }
+            }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = '''package com.example;
+
+public class App {
+    public void used() {
+    }
+}
+'''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.task(':app-module:pmdMain').outcome == TaskOutcome.SUCCESS
+        result.task(':writeAnalysisViolations').outcome == TaskOutcome.FAILED
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text
+        pmdReport.contains('MissingReport')
+        pmdReport.contains('Modules analyzed: none')
+    }
+
+    def "aggregateAnalysisViolations aggregates SpotBugs reports from an extension-enabled project"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = 'grails.code-analysis.ignoreFailures=true\n'
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+            grailsCodeAnalysis {
+                enableSpotbugs()
+            }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = '''package com.example;
+
+public class App {
+    public int nullDereference() {
+        String value = null;
+        return value.length();
+    }
+}
+'''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':app-module:spotbugsMain').outcome == TaskOutcome.SUCCESS
+        File[] markers = testProjectDir.resolve('app-module/build/reports/aggregation-markers/spotbugs').toFile().listFiles()
+        markers.length == 1
+        markers[0].text.trim() == 'build/reports/code-analysis/spotbugs/__app-module-spotbugsMain.xml'
+        def spotbugsReport = testProjectDir.resolve('build/reports/violations/SPOTBUGS_VIOLATIONS.md').toFile().text
+        spotbugsReport.contains('## Module: :app-module')
+        spotbugsReport.contains('NP_ALWAYS_NULL')
+    }
+
+    def "aggregateStyleViolations aggregates Checkstyle reports with violations"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+checkstyleVersion=${checkstyleVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example;\n\npublic class App {\n\tpublic void run() {\n    }\n}\n'
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        def checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
+        checkstyleReport.contains('## Module: :app-module')
+        checkstyleReport.contains('FileTabCharacter')
+    }
+
+    def "aggregateStyleViolations names reports after the project path and keeps main reports of modules named like tests"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+checkstyleVersion=${checkstyleVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'grails-testing-support:core'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('grails-testing-support/core')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example;\n\npublic class App {\n\tpublic void run() {\n    }\n}\n'
+
+        when:
+        def result = runBuild('aggregateStyleViolations')
+
+        then:
+        result.task(':grails-testing-support:core:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        testProjectDir.resolve('build/reports/code-style/checkstyle/__grails-testing-support__core-checkstyleMain.xml').toFile().isFile()
+        checkstyleReport().contains('## Module: :grails-testing-support:core')
+        checkstyleReport().contains('FileTabCharacter')
+    }
+
+    def "aggregateStyleViolations fails when an executed task removes its XML report"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = "checkstyleVersion=${checkstyleVersion}\n"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+            tasks.configureEach {
+                if (name == 'checkstyleMain') {
+                    doLast {
+                        reports.xml.outputLocation.get().asFile.delete()
+                    }
+                }
+            }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example;\n\npublic class App {\n}\n'
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        result.task(':writeStyleViolations').outcome == TaskOutcome.FAILED
+        def checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
+        checkstyleReport.contains('## Module: :app-module')
+        checkstyleReport.contains('MissingReport')
+        checkstyleReport.contains('Modules analyzed: none')
+    }
+
+    def "aggregate Checkstyle task reports only its configured analyzer module"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = "checkstyleVersion=${checkstyleVersion}\n"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'one', 'two'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        ['one', 'two'].each { projectName ->
+            def moduleDir = testProjectDir.resolve(projectName)
+            moduleDir.toFile().mkdirs()
+            moduleDir.resolve('build.gradle').toFile().text = projectName == 'one' ? """
+                plugins {
+                    id 'java'
+                    id 'org.apache.grails.gradle.grails-code-style'
+                }
+                repositories { mavenCentral() }
+            """ : """
+                plugins {
+                    id 'java'
+                }
+                repositories { mavenCentral() }
+            """
+            def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+            sourceFile.parentFile.mkdirs()
+            sourceFile.text = 'package com.example;\n\npublic class App {\n}\n'
+        }
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':one:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        result.task(':aggregateStyleViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        result.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        def checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
+        checkstyleReport.contains('Modules analyzed: :one')
+        !checkstyleReport.contains(':two')
+    }
+
+    def "aggregate PMD task aggregates only its configured report"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:one
+grails.code-analysis.ignoreFailures=true
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'one', 'two'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        ['one', 'two'].each { projectName ->
+            def moduleDir = testProjectDir.resolve(projectName)
+            moduleDir.toFile().mkdirs()
+            moduleDir.resolve('build.gradle').toFile().text = """
+                plugins {
+                    id 'java'
+                    id 'org.apache.grails.gradle.grails-code-style'
+                }
+                repositories { mavenCentral() }
+            """
+            def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+            sourceFile.parentFile.mkdirs()
+            sourceFile.text = 'package com.example; public class App {}'
+        }
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':one:pmdMain').outcome == TaskOutcome.SUCCESS
+        result.task(':aggregateAnalysisViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        result.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text
+        !pmdReport.contains('MissingReport')
+        pmdReport.contains('Modules analyzed: :one')
+        !pmdReport.contains(':two')
+    }
+
+    def "direct Checkstyle task leaves the aggregate report unchanged"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = "checkstyleVersion=${checkstyleVersion}\n"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'one', 'two'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        File moduleOneSource
+        ['one', 'two'].each { projectName ->
+            def moduleDir = testProjectDir.resolve(projectName)
+            moduleDir.toFile().mkdirs()
+            moduleDir.resolve('build.gradle').toFile().text = """
+                plugins {
+                    id 'java'
+                    id 'org.apache.grails.gradle.grails-code-style'
+                }
+                repositories { mavenCentral() }
+            """
+            def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+            sourceFile.parentFile.mkdirs()
+            sourceFile.text = 'package com.example;\n\npublic class App {\n}\n'
+            if (projectName == 'one') {
+                moduleOneSource = sourceFile
+            }
+        }
+
+        when: "writing the authoritative aggregate report"
+        def aggregateResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+        File checkstyleReport = testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile()
+        byte[] aggregateReport = checkstyleReport.bytes
+        moduleOneSource << '\n'
+
+        and: "running a direct analyzer task"
+        def directResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(':one:checkstyleMain', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        aggregateResult.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        directResult.task(':one:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        directResult.task(':writeStyleViolations') == null
+        checkstyleReport.bytes == aggregateReport
+
+        when: "reusing the direct task configuration cache"
+        def reusedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(':one:checkstyleMain', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        reusedResult.output.contains('Reusing configuration cache')
+    }
+
+    def "aggregateViolations runs repository convention validation but aggregateStyleViolations does not"() {
+        given:
+        testProjectDir.resolve('settings.gradle').toFile().text = ''
+        testProjectDir.resolve('AGENTS.md').toFile().text = ''
+        testProjectDir.resolve('.asf.yaml').toFile().text = ''
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+            tasks.register('rat')
+        """
+
+        when:
+        def styleResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        styleResult.task(':validateRepositoryConventions') == null
+
+        when:
+        def aggregateResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        aggregateResult.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "NO-SOURCE analyzers are omitted from aggregation"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd=true
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'common', 'model'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        ['common', 'model'].each { projectName ->
+            testProjectDir.resolve(projectName).toFile().mkdirs()
+            testProjectDir.resolve("${projectName}/build.gradle").toFile().text = """
+                plugins {
+                    id 'java'
+                    id 'org.apache.grails.gradle.grails-code-style'
+                }
+            """
+        }
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':aggregateAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        !testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text.contains('MissingReport')
+    }
+
+    def "renamed analysis XML reports aggregate through root-relative cache-safe markers"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:app-module
+grails.code-analysis.ignoreFailures=true
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+            grailsCodeAnalysis {
+                enablePmd()
+                reportsDirectory.set(layout.buildDirectory.dir('custom-analysis'))
+            }
+            tasks.named('pmdMain') {
+                reports.xml.outputLocation.set(layout.buildDirectory.file('custom-analysis/pmd/renamed-pmd.xml'))
+            }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = '''package com.example;
+
+public class App {
+    private void unused() {
+    }
+}
+'''
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':aggregateAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        moduleDir.resolve('build/custom-analysis/pmd/renamed-pmd.xml').toFile().isFile()
+        testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
+        File[] markers = moduleDir.resolve('build/reports/aggregation-markers/pmd').toFile().listFiles()
+        markers.length == 1
+        def marker = markers[0]
+        marker.text.trim() == 'app-module/build/custom-analysis/pmd/renamed-pmd.xml'
+        !new File(marker.text.trim()).absolute
+
+        when:
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+        def reusedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--configuration-cache', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        reusedResult.output.contains('Reusing configuration cache.')
+    }
+
+    def "renamed style XML reports aggregate through root-relative markers"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+codenarcVersion=${codenarcVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+            dependencies { implementation localGroovy() }
+            grailsCodeStyle.reportsDirectory.set(layout.buildDirectory.dir('custom-style'))
+            tasks.named('codenarcMain') {
+                reports.xml.outputLocation.set(layout.buildDirectory.file('custom-style/codenarc/renamed-codenarc.xml'))
+            }
+        """
+        def sourceFile = moduleDir.resolve('src/main/groovy/com/example/App.groovy').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example\nclass App {}'
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateStyleViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':aggregateStyleViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        moduleDir.resolve('build/custom-style/codenarc/renamed-codenarc.xml').toFile().isFile()
+        testProjectDir.resolve('build/reports/violations/CODENARC_VIOLATIONS.md').toFile().text.contains('App | CodeNarc')
+        File[] markers = moduleDir.resolve('build/reports/aggregation-markers/codenarc').toFile().listFiles()
+        markers.length == 1
+        def marker = markers[0]
+        marker.text.trim() == 'app-module/build/custom-style/codenarc/renamed-codenarc.xml'
+        !new File(marker.text.trim()).absolute
+    }
+
+    def "aggregateAnalysisViolations distinguishes duplicate nested project leaf names"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-analysis.enabled.pmd.projects=:one:shared,:two:shared
+grails.code-analysis.ignoreFailures=true
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'one:shared', 'two:shared'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        ['one', 'two'].each { parent ->
+            def moduleDir = testProjectDir.resolve("${parent}/shared")
+            moduleDir.toFile().mkdirs()
+            moduleDir.resolve('build.gradle').toFile().text = """
+                plugins {
+                    id 'java'
+                    id 'org.apache.grails.gradle.grails-code-style'
+                }
+                repositories { mavenCentral() }
+            """
+            def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+            sourceFile.parentFile.mkdirs()
+            sourceFile.text = '''package com.example;
+
+public class App {
+    private void unused() {
+    }
+}
+'''
+        }
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        result.task(':aggregateAnalysisViolations').outcome in [TaskOutcome.SUCCESS, TaskOutcome.UP_TO_DATE]
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile().text
+        pmdReport.contains('## Module: :one:shared')
+        pmdReport.contains('## Module: :two:shared')
+    }
+
+    def "analysis validation failure removes reports from a previous run"() {
+        given:
+        def propertiesFile = testProjectDir.resolve('gradle.properties').toFile()
+        propertiesFile.text = """grails.code-analysis.enabled.pmd.projects=:app-module
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = 'package com.example; public class App { public void used() {} }'
+
+        when: "writing valid reports"
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .build()
+
+        then:
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile()
+        def spotbugsReport = testProjectDir.resolve('build/reports/violations/SPOTBUGS_VIOLATIONS.md').toFile()
+        pmdReport.exists()
+        spotbugsReport.exists()
+
+        when: "the next run fails before parsing reports"
+        propertiesFile.text = """grails.code-analysis.enabled.pmd.projects=:missing
+pmdVersion=${pmdVersion}
+"""
+        def failedResult = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        failedResult.task(':writeAnalysisViolations').outcome == TaskOutcome.FAILED
+        !pmdReport.exists()
+        !spotbugsReport.exists()
+    }
+
+    @Unroll
+    def "aggregateAnalysisViolations rejects unknown #tool project paths"() {
+        given:
+        testProjectDir.resolve('gradle.properties').toFile().text = "${property}=${projectPath}"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'known'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        testProjectDir.resolve('known').toFile().mkdirs()
+        testProjectDir.resolve('known/build.gradle').toFile().text = ''
+        testProjectDir.resolve('build/reports/code-analysis').toFile().mkdirs()
+
+        when:
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('aggregateAnalysisViolations', '--stacktrace')
+                .withPluginClasspath()
+                .buildAndFail()
+
+        then:
+        result.output.contains("Unknown project path(s) in ${property}: ${projectPath}")
+        result.output.contains("Run './gradlew projects' to list valid subproject paths.")
+
+        where:
+        tool            | property                                                             | projectPath
+        'PMD'           | GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY                | ':missing'
+        'SpotBugs'      | GrailsCodeAnalysisPlugin.SPOTBUGS_ENABLED_PROJECTS_PROPERTY           | ':missing'
+        'PMD root-path' | GrailsCodeAnalysisPlugin.PMD_ENABLED_PROJECTS_PROPERTY                | ':'
+    }
+
+    def "analyzers stay up to date across aggregate runs until clean or cleanViolationReports removes their reports"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n\tpublic void run() {\n    }\n}\n')
+
+        when:
+        def first = runBuild('aggregateStyleViolations')
+        def second = runBuild('aggregateStyleViolations')
+
+        then:
+        first.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        second.task(':app-module:checkstyleMain').outcome == TaskOutcome.UP_TO_DATE
+        second.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('Modules analyzed: :app-module')
+        checkstyleReport().contains('FileTabCharacter')
+
+        when:
+        def cleaned = runBuild('clean', 'aggregateStyleViolations')
+
+        then:
+        cleaned.task(':cleanViolationReports').outcome == TaskOutcome.SUCCESS
+        cleaned.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('FileTabCharacter')
+
+        when:
+        def reportsCleaned = runBuild('cleanViolationReports', 'aggregateStyleViolations')
+
+        then:
+        reportsCleaned.task(':app-module:checkstyleMain').outcome == TaskOutcome.SUCCESS
+        checkstyleReport().contains('FileTabCharacter')
+    }
+
+    def "analyzers whose sources are removed leave no stale findings in the next aggregate report"() {
+        given:
+        File source = writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+        def pmdReport = testProjectDir.resolve('build/reports/violations/PMD_VIOLATIONS.md').toFile()
+
+        expect:
+        checkstyleReport().contains('FileTabCharacter')
+        pmdReport.text.contains('UnusedPrivateMethod')
+
+        when: "each analyzer either re-runs over no files or is NO-SOURCE, which removes its outputs"
+        source.delete()
+        def result = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome in [TaskOutcome.SUCCESS, TaskOutcome.NO_SOURCE]
+        result.task(':app-module:pmdMain').outcome in [TaskOutcome.SUCCESS, TaskOutcome.NO_SOURCE]
+        !checkstyleReport().contains('FileTabCharacter')
+        !checkstyleReport().contains('MissingReport')
+        !pmdReport.text.contains('UnusedPrivateMethod')
+        !pmdReport.text.contains('MissingReport')
+    }
+
+    def "report writers requested without their aggregate task leave the previous reports untouched"() {
+        given:
+        File source = writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        def aggregateResult = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', '--configuration-cache')
+        def violationsDir = testProjectDir.resolve('build/reports/violations')
+        byte[] checkstyleBytes = violationsDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().bytes
+        byte[] pmdBytes = violationsDir.resolve('PMD_VIOLATIONS.md').toFile().bytes
+
+        when: "the sources change and only the writers are requested, including from the configuration cache"
+        source.text = 'package com.example;\n\npublic class App {\n}\n'
+        def writerResult = runBuild('writeStyleViolations', 'writeAnalysisViolations', '--configuration-cache')
+        def reusedResult = runBuild('writeStyleViolations', 'writeAnalysisViolations', '--configuration-cache')
+
+        then:
+        aggregateResult.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        aggregateResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        writerResult.task(':writeStyleViolations').outcome == TaskOutcome.SKIPPED
+        writerResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SKIPPED
+        reusedResult.output.contains('Reusing configuration cache')
+        reusedResult.task(':writeStyleViolations').outcome == TaskOutcome.SKIPPED
+        reusedResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SKIPPED
+        violationsDir.resolve('CHECKSTYLE_VIOLATIONS.md').toFile().bytes == checkstyleBytes
+        violationsDir.resolve('PMD_VIOLATIONS.md').toFile().bytes == pmdBytes
+
+        when: "the aggregate tasks run again"
+        def rerunResult = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', '--configuration-cache')
+
+        then:
+        rerunResult.task(':writeStyleViolations').outcome == TaskOutcome.SUCCESS
+        rerunResult.task(':writeAnalysisViolations').outcome == TaskOutcome.SUCCESS
+        !checkstyleReport().contains('FileTabCharacter')
+        !violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
+    }
+
+    def "report writers are not listed as verification tasks"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n}\n')
+
+        when:
+        def result = runBuild('tasks', '--group', 'verification')
+
+        then:
+        result.output.contains('aggregateStyleViolations')
+        result.output.contains('aggregateAnalysisViolations')
+        !result.output.contains('writeStyleViolations')
+        !result.output.contains('writeAnalysisViolations')
+    }
+
+    def "#flag writes skipped reports instead of reading markers from an earlier run"() {
+        given:
+        writeAnalyzedModule('package com.example;\n\npublic class App {\n\tprivate void unused() {\n    }\n}\n')
+        runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations')
+
+        when:
+        def result = runBuild('aggregateStyleViolations', 'aggregateAnalysisViolations', flag)
+        def violationsDir = testProjectDir.resolve('build/reports/violations')
+
+        then:
+        result.task(':app-module:checkstyleMain').outcome == (styleSkipped ? TaskOutcome.SKIPPED : TaskOutcome.UP_TO_DATE)
+        result.task(':app-module:pmdMain').outcome == TaskOutcome.SKIPPED
+        violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains("PMD was skipped (${flag}).")
+        violationsDir.resolve('SPOTBUGS_VIOLATIONS.md').toFile().text.contains("SpotBugs was skipped (${flag}).")
+        !violationsDir.resolve('PMD_VIOLATIONS.md').toFile().text.contains('UnusedPrivateMethod')
+        checkstyleReport().contains("Checkstyle was skipped (${flag}).") == styleSkipped
+        checkstyleReport().contains('FileTabCharacter') == !styleSkipped
+
+        where:
+        flag                 || styleSkipped
+        '-PskipCodeStyle'    || true
+        '-PskipCodeAnalysis' || false
     }
 
     def "aggregateJacocoCoverage handles no csv reports gracefully"() {
@@ -237,5 +1320,45 @@ class GrailsViolationAggregationPluginSpec extends Specification {
         def csv = testProjectDir.resolve('build/reports/jacoco/test/jacocoTestReport.csv').toFile()
         csv.parentFile.mkdirs()
         csv.text = (['GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED'] + dataRows).join('\n') + '\n'
+    }
+
+    private File writeAnalyzedModule(String source) {
+        testProjectDir.resolve('gradle.properties').toFile().text = """grails.code-style.ignoreFailures=true
+grails.code-analysis.ignoreFailures=true
+grails.code-analysis.enabled.pmd.projects=:app-module
+checkstyleVersion=${checkstyleVersion}
+pmdVersion=${pmdVersion}
+"""
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'org.apache.grails.gradle.grails-violation-aggregation'
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-code-style'
+            }
+            repositories { mavenCentral() }
+        """
+        def sourceFile = moduleDir.resolve('src/main/java/com/example/App.java').toFile()
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        sourceFile
+    }
+
+    private def runBuild(String... arguments) {
+        GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments(arguments + ['--stacktrace'])
+                .withPluginClasspath()
+                .build()
+    }
+
+    private String checkstyleReport() {
+        testProjectDir.resolve('build/reports/violations/CHECKSTYLE_VIOLATIONS.md').toFile().text
     }
 }

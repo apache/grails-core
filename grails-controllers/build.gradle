@@ -60,9 +60,19 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation testFixtures(project(':grails-web-common'))
+    // LogCapture (Logback) for asserting the security headers filter's configuration warnings
+    testImplementation testFixtures(project(':grails-core'))
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
     testImplementation 'org.springframework.boot:spring-boot-test'
+    // Test-only: lets GrailsSecurityHeadersAutoConfigurationSpec verify that the
+    // security headers filter coexists with Spring Security's HeaderWriterFilter.
+    // Not a main/runtime dependency - grails-controllers has no compile-time
+    // dependency on Spring Security.
+    testImplementation 'org.springframework.security:spring-security-web'
+    // Test-only: GrailsSecurityHeadersFilterTomcatSpec runs the security headers filter
+    // in a real servlet container, whose commit behavior the Spring mocks do not model.
+    testImplementation 'org.apache.tomcat.embed:tomcat-embed-core'
     testRuntimeOnly 'org.assertj:assertj-core'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
@@ -76,7 +86,6 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
     testImplementation 'org.spockframework:spock-core'
 }
 

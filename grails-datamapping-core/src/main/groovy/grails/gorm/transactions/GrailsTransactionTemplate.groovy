@@ -31,6 +31,7 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.interceptor.TransactionAttribute
 import org.springframework.transaction.support.TransactionCallback
 
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.mapping.transactions.CustomizableRollbackTransactionAttribute
 
 /**
@@ -49,6 +50,15 @@ class GrailsTransactionTemplate {
 
     CustomizableRollbackTransactionAttribute transactionAttribute
 
+    /**
+     * The named connection whose transaction manager this template runs, or {@code null}. Given one, the action
+     * routes the unqualified GORM operations of every domain class mapped to that connection to it, as the
+     * connection's own {@code withTransaction} does for its class.
+     *
+     * @since 8.0
+     */
+    String connectionName
+
     private org.springframework.transaction.support.TransactionTemplate transactionTemplate
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager) {
@@ -64,11 +74,33 @@ class GrailsTransactionTemplate {
     }
 
     GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute) {
+        this(transactionManager, transactionAttribute, null)
+    }
+
+    /**
+     * A template for the transaction manager of a named connection; see {@link #getConnectionName()}. A method
+     * annotated {@code @Transactional(connection = 'books')} runs through one.
+     *
+     * @param transactionManager The connection's transaction manager
+     * @param transactionAttribute The transaction attribute
+     * @param connectionName The connection, or {@code null} for none
+     * @since 8.0
+     */
+    GrailsTransactionTemplate(PlatformTransactionManager transactionManager, CustomizableRollbackTransactionAttribute transactionAttribute, String connectionName) {
         this.transactionAttribute = transactionAttribute
         this.transactionTemplate = new org.springframework.transaction.support.TransactionTemplate(transactionManager, this.transactionAttribute)
+        this.connectionName = connectionName
+    }
+
+    private <T> T inConnectionScope(Closure<T> callable) {
+        return connectionName == null ? callable.call() : GormRegistry.withConnectionScope(connectionName, callable)
     }
 
     <T> T executeAndRollback(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+        return inConnectionScope { doExecuteAndRollback(action) }
+    }
+
+    private <T> T doExecuteAndRollback(Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {
@@ -96,6 +128,10 @@ class GrailsTransactionTemplate {
     }
 
     <T> T execute(@ClosureParams(value = SimpleType, options = 'org.springframework.transaction.TransactionStatus') Closure<T> action) throws TransactionException {
+        return inConnectionScope { doExecute(action) }
+    }
+
+    private <T> T doExecute(Closure<T> action) throws TransactionException {
         try {
             Object result = transactionTemplate.execute(new TransactionCallback() {
                 Object doInTransaction(TransactionStatus status) {

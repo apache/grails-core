@@ -8,11 +8,11 @@ tasks.register('dummyJavaExec', JavaExec) {
 }
 
 tasks.register('inspectCompatArgs') {
+    def execArgsProvider = providers.provider { tasks.named('dummyJavaExec', JavaExec).get().jvmArgs.join(',') }
+    def testArgsProvider = providers.provider { tasks.named('test', Test).get().jvmArgs.join(',') }
     doLast {
-        def javaExecTask = tasks.named('dummyJavaExec', JavaExec).get()
-        def testTask = tasks.named('test', Test).get()
-        def execArgs = javaExecTask.jvmArgs.join(',')
-        def testArgs = testTask.jvmArgs.join(',')
+        def execArgs = execArgsProvider.get()
+        def testArgs = testArgsProvider.get()
         println "EXEC_ARGS=${execArgs}"
         println "TEST_ARGS=${testArgs}"
         println "HAS_NATIVE_ACCESS=${execArgs.contains('--enable-native-access=ALL-UNNAMED')}"

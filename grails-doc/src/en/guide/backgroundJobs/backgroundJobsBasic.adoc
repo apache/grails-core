@@ -40,7 +40,7 @@ class Application extends GrailsAutoConfiguration {
 }
 ----
 
-NOTE: Grails 3 enabled scheduling implicitly. From Grails 4 onwards `@EnableScheduling` must be applied explicitly — see xref:upgrading.adoc#upgrading33x[Upgrading from Grails 3.3.x to Grails 4].
+NOTE: Grails 3 enabled scheduling implicitly. From Grails 4 onwards `@EnableScheduling` must be applied explicitly.
 
 ===== Scheduling a method
 

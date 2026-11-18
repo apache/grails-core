@@ -232,4 +232,39 @@ class CurrentTenantHolderSpec extends Specification {
             CurrentTenantHolder.get(datastore)
         } == 'outer'
     }
+
+    void "isWithoutTenant is true only for the datastore inside withoutTenant"() {
+        given:
+        def datastore = Mock(Datastore)
+        def other = Mock(Datastore)
+
+        expect:
+        !CurrentTenantHolder.isWithoutTenant(datastore)
+        CurrentTenantHolder.withoutTenant(datastore) {
+            [CurrentTenantHolder.isWithoutTenant(datastore), CurrentTenantHolder.isWithoutTenant(other)]
+        } == [true, false]
+        !CurrentTenantHolder.withTenant(datastore, ConnectionSource.DEFAULT) {
+            CurrentTenantHolder.isWithoutTenant(datastore)
+        }
+        CurrentTenantHolder.withoutTenant(datastore) {
+            [CurrentTenantHolder.withTenant(datastore, 'tenant1') { CurrentTenantHolder.isWithoutTenant(datastore) },
+             CurrentTenantHolder.isWithoutTenant(datastore)]
+        } == [false, true]
+    }
+
+    void "the tenant id that withoutTenant binds is handed out as DEFAULT, and binding it again is a tenant id like any other"() {
+        given:
+        def datastore = Mock(Datastore)
+
+        when:
+        Serializable captured = CurrentTenantHolder.withoutTenant(datastore) { CurrentTenantHolder.get(datastore) }
+
+        then:
+        captured == ConnectionSource.DEFAULT
+        !CurrentTenantHolder.withTenant(datastore, captured) { CurrentTenantHolder.isWithoutTenant(datastore) }
+        CurrentTenantHolder.withoutTenant(datastore) { CurrentTenantHolder.get() } == ConnectionSource.DEFAULT
+        !CurrentTenantHolder.withTenant(datastore, CurrentTenantHolder.withoutTenant(datastore) { CurrentTenantHolder.get() }) {
+            CurrentTenantHolder.isWithoutTenant(datastore)
+        }
+    }
 }

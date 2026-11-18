@@ -41,7 +41,7 @@ dependencies {
    ...
 ----
 
-then configure any required parameters and whatever optional parameters you want in application.yml or application.groovy. These are described in detail in the <<configuration>> section but typically you only need to set these properties:
+then configure any required parameters and whatever optional parameters you want in application.yml or application.groovy. These are described in detail in the <<cas-configuration,Configuration>> section but typically you only need to set these properties:
 
 [source,yaml]
 .grails-app/conf/application.yml

@@ -40,6 +40,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
 
@@ -102,7 +103,9 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                             }
 
                             if (currentId != null) {
-                                if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
+                                // Without a tenant, a numeric tenant id is compared with 0. A tenant id that only
+                                // equals ConnectionSource.DEFAULT is a tenant id like any other.
+                                if (Tenants.isWithoutId(datastore) && Number.class.isAssignableFrom(tenantId.getType())) {
                                     currentId = 0L;
                                 }
                                 query.eq(tenantId.getName(), currentId);
@@ -129,15 +132,22 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                             }
 
                             if (currentId != null) {
-                                Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
-                                if (existingId != null) {
-                                    currentId = (Serializable) existingId;
+                                // The current tenant decides the tenant id. Only without a tenant, inside
+                                // Tenants.withoutId, is a tenant id set on the instance kept.
+                                if (Tenants.isWithoutId(datastore)) {
+                                    Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                                    if (existingId != null) {
+                                        currentId = (Serializable) existingId;
+                                    }
                                 }
-                                if (ConnectionSource.DEFAULT.equals(currentId) && Number.class.isAssignableFrom(tenantId.getType())) {
+                                if (Tenants.isWithoutId(datastore) && ConnectionSource.DEFAULT.equals(currentId) &&
+                                        Number.class.isAssignableFrom(tenantId.getType())) {
                                     currentId = 0L;
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
                             }
+                        } catch (TenantNotFoundException e) {
+                            throw e;
                         } catch (Exception e) {
                             throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                         }

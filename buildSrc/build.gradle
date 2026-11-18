@@ -25,13 +25,15 @@ plugins {
 compileJava.options.release = javaVersion.toString().toInteger()
 
 dependencies {
+    // Gradle plugins are declared by their implementation artifact, not by their plugin marker
+    // (<id>:<id>.gradle.plugin). A marker is a POM-only module, so Gradle also requests a jar for it
+    // that does not exist, and a proxy repository answers that miss from upstream, not from its cache.
     implementation platform("org.apache.grails:grails-gradle-bom:$projectVersion")
     implementation 'org.apache.grails.gradle:grails-publish'
     implementation 'cloud.wondrify:asset-pipeline-gradle'
     implementation 'org.apache.grails:grails-docs-core'
     implementation 'org.apache.grails:grails-gradle-plugins'
-    implementation 'org.asciidoctor:asciidoctor-gradle-jvm'
     implementation 'org.springframework.boot:spring-boot-gradle-plugin'
-    implementation "org.nosphere.apache.rat:org.nosphere.apache.rat.gradle.plugin:$apacheRatVersion"
-    implementation "org.cyclonedx.bom:org.cyclonedx.bom.gradle.plugin:$gradleCycloneDxPluginVersion"
+    implementation "org.nosphere.apache:creadur-rat-gradle:$apacheRatVersion"
+    implementation "org.cyclonedx:cyclonedx-gradle-plugin:$gradleCycloneDxPluginVersion"
 }

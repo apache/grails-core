@@ -59,7 +59,7 @@ final class TokenizedHTMLPage2Content implements Content {
 
     @Override
     public String[] getPropertyKeys() {
-        return getPropertyKeys();
+        return page.getPropertyKeys();
     }
 
     @Override

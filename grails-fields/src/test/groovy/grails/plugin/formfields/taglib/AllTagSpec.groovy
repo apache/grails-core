@@ -82,6 +82,7 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         given:
         views["/_fields/default/_field.gsp"] = '${property} '
         views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        List<String> defaultExclusions = tagLib.exclusionsInput
         tagLib.exclusionsInput = ['id', 'created', 'modified', 'version']
 
         when:
@@ -91,9 +92,47 @@ class AllTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitTest<
         !output.contains(excluded)
         output.contains(included)
 
+        cleanup:
+        tagLib.exclusionsInput = defaultExclusions
+
         where:
         excluded << ['id', 'created', 'modified', 'version', 'onLoad', 'excludedProperty', 'displayFalseProperty']
         included << ['salutation', 'name', 'password', 'gender', 'dateOfBirth', 'address.street', 'minor']
+    }
+
+    void 'all tag skips the properties excluded by #description in application.yml'() {
+        given:
+        views["/_fields/default/_field.gsp"] = '${property} '
+        views["/_fields/default/_wrapper.gsp"] = '${widget}'
+        List<String> defaultExclusions = tagLib.exclusionsInput
+        tagLib.environment = applicationYml(yaml, variables)
+
+        when:
+        def output = applyTemplate('<f:all bean="personInstance"/>', [personInstance: personInstance])
+
+        then:
+        tagLib.exclusionsInput == ['id', 'version', excluded]
+        !(output =~ /\b${excluded}\b/)
+        output =~ /\bname\b/
+
+        cleanup:
+        tagLib.exclusionsInput = defaultExclusions
+
+        where:
+        description                           | yaml                                                                                      | variables                   | excluded
+        'a list'                              | 'grails.plugin.fields.exclusions.input: [id, version, "${EXAMPLE_EXCLUDED:password}"]' | [:]                         | 'password'
+        'a list with an environment variable' | 'grails.plugin.fields.exclusions.input: [id, version, "${EXAMPLE_EXCLUDED:password}"]' | [EXAMPLE_EXCLUDED: 'minor'] | 'minor'
+        'a comma-separated value'             | 'grails.plugin.fields.exclusions.input: "id, version, gender"'                          | [:]                         | 'gender'
+    }
+
+    void 'all tag keeps the default exclusions when application.yml configures none'() {
+        when:
+        tagLib.environment = applicationYml('grails.plugin.fields.localizeNumbers: false')
+
+        then:
+        tagLib.exclusionsInput == ['version', 'dateCreated', 'lastUpdated']
+        tagLib.exclusionsList == ['id', 'dateCreated', 'lastUpdated']
+        tagLib.exclusionsDisplay == ['version', 'dateCreated', 'lastUpdated']
     }
 
     @Issue('https://github.com/grails/fields/issues/12')

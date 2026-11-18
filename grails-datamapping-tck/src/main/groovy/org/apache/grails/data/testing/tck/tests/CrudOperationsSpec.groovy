@@ -18,8 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.IgnoreRest
-
 import grails.validation.ValidationException
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
@@ -56,7 +54,6 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
         t == null
     }
 
-    @IgnoreRest
     void 'Test basic CRUD operations'() {
         given:
 
@@ -87,8 +84,9 @@ class CrudOperationsSpec extends GrailsDataTckSpec {
     }
 
     void 'Test failOnError'() {
-        given:
+        given: 'a name that violates the blank constraint, whether or not properties are nullable by default'
         def t = new TestEntity(child: new ChildEntity(name: 'Child'))
+        t.name = ''
 
         when:
         t.save(failOnError: true)

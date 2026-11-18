@@ -20,6 +20,7 @@ package org.apache.grails.data.mongo.core
 
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
+import com.mongodb.client.MongoDatabase
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
@@ -43,12 +44,10 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 import org.grails.datastore.mapping.query.Query
-import org.slf4j.LoggerFactory
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.validation.Validator
 import org.testcontainers.containers.MongoDBContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
@@ -67,9 +66,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
-        mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
-        mongoDBContainer.start()
-        mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+        mongoDBContainer = MongoContainers.shared()
 
         configuration = [
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
@@ -82,7 +79,8 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void cleanupSpec() {
         super.cleanupSpec()
-        mongoDBContainer.stop()
+        // the container is shared by the specs of this JVM, so the next one finds the server empty
+        MongoContainers.dropUserDatabases(mongoDBContainer)
     }
 
     @Override
@@ -140,10 +138,10 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                     ?.findAll { !(it in ['admin', 'config', 'local']) }
                     ?.each {
                         try {
-                            mongoDatastore.mongoClient.getDatabase(it as String).drop()
+                            clearDatabase(mongoDatastore.mongoClient.getDatabase(it as String))
                         }
                         catch (ignored) {
-                            log.warn("Could not drop ${it}")
+                            log.warn("Could not clear ${it}")
                         }
                     }
             for (cls in domainClasses) {
@@ -163,6 +161,27 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
         }
 
         super.destroy()
+    }
+
+    /**
+     * Removes the documents but keeps the collections and their indexes. The datastore of the next feature
+     * finds them in place, whereas dropping the database makes it create every collection and index again,
+     * and WiredTiger keeps the files of the dropped ones open until its next checkpoint.
+     */
+    private void clearDatabase(MongoDatabase database) {
+        for (String collectionName in database.listCollectionNames()) {
+            if (collectionName.startsWith('system.')) {
+                continue
+            }
+            try {
+                database.getCollection(collectionName).deleteMany(new Document())
+            }
+            catch (e) {
+                // e.g. views do not support deletes
+                log.warn("Could not clear ${collectionName}, dropping it instead: ${e.message}")
+                database.getCollection(collectionName).drop()
+            }
+        }
     }
 
     @Override

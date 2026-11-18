@@ -29,6 +29,7 @@ import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
 import grails.web.servlet.mvc.GrailsParameterMap
 import org.grails.databinding.bindingsource.DataBindingSourceCreationException
+import org.grails.web.util.HiddenHttpMethod
 
 @CompileStatic
 abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBindingSourceCreator {
@@ -45,7 +46,9 @@ abstract class AbstractRequestBodyDataBindingSourceCreator extends DefaultDataBi
         try {
             if (bindingSource instanceof HttpServletRequest) {
                 def req = (HttpServletRequest) bindingSource
-                HttpMethod method = HttpMethod.valueOf(req.method)
+                // The method the request routed as: a POST naming DELETE has no body to bind, exactly as
+                // it has none when a servlet filter did the rewriting.
+                HttpMethod method = HttpMethod.valueOf(HiddenHttpMethod.effectiveMethod(req))
                 if (req.contentLength != 0 && !ignoredRequestBodyMethods.contains(method)) {
                     def is = req.getInputStream()
                     return createBindingSource(is, req.getCharacterEncoding())

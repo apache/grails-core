@@ -16,3 +16,7 @@ limitations under the License.
 # build-logic
 The Grails project is structured into 3 separate composite builds. Composite builds make use of Gradle's `includeBuild` feature, which do not share Gradle plugins from `buildSrc`. This project exists to share internal Gradle plugins across all 3 separate builds.
 
+
+The `plugins` project holds the shared convention plugins. The `vulnerability-scan` project holds the `org.apache.grails.buildsrc.vulnerability-scan` plugin, whose `vulnerabilityScan` task looks the dependencies of a project up in the OSV and Sonatype Guide vulnerability databases, and the `org.apache.grails.buildsrc.vulnerability-scan-report` plugin, which summarizes the scans of every project for the root build.
+
+Both plugins cache the answers of the databases under `caches/grails-vulnerability-scan` in the Gradle user home, one small file per dependency and per vulnerability looked up. Nothing removes the entries: an entry older than the cache time to live (`vulnerabilityScan.cacheTtl`, an hour by default) is fetched again and overwritten, and the directory can be deleted at any time.

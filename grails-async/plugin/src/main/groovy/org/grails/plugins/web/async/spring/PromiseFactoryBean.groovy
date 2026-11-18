@@ -32,7 +32,9 @@ import org.grails.async.factory.PromiseFactoryBuilder
  *
  * @author Graeme Rocher
  * @since 3.3
+ * @deprecated The async plugin now registers the Boot-managed promise factory directly.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @CompileStatic
 class PromiseFactoryBean extends PromiseFactoryBuilder implements FactoryBean<PromiseFactory> {
 

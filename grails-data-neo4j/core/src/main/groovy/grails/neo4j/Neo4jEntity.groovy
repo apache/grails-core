@@ -28,6 +28,7 @@ import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.GormEntity
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.neo4j.GraphPersistentEntity
 import org.grails.datastore.gorm.neo4j.Neo4jDatastore
@@ -257,7 +258,10 @@ trait Neo4jEntity<D> implements GormEntity<D>, DynamicAttributes {
         def staticApi = GormEnhancer.findStaticApi(this, connectionName)
         return (T) staticApi.withNewSession {
             callable.setDelegate(staticApi)
-            return callable.call()
+            // The delegate covers only the calls that do not name the class; the scope covers the rest.
+            return GormRegistry.withConnectionScope(this, connectionName) {
+                callable.call()
+            }
         }
     }
 

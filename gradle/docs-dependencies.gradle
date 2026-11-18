@@ -26,6 +26,12 @@ dependencies {
     add('documentation', 'org.apache.groovy:groovy-ant')
     add('documentation', 'org.apache.groovy:groovy-docgenerator')
     add('documentation', 'org.apache.groovy:groovy-templates')
+
+    // Groovydoc resolves referenced types with Class.forName, which runs their static
+    // initialisers; any that touch LoggerFactory make slf4j-api warn that it found no
+    // provider. In the daemon the Ant class loader's parent supplied Gradle's binding - a
+    // forked JVM has no such parent, so bring a no-op one.
+    add('documentation', 'org.slf4j:slf4j-nop')
 }
 
 String resolveProjectVersion(String artifact) {

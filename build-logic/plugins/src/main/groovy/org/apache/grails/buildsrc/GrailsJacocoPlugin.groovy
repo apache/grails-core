@@ -45,6 +45,9 @@ class GrailsJacocoPlugin implements Plugin<Project> {
 
     static final String AGGREGATE_TASK_NAME = 'jacocoAggregateReport'
 
+    /** The source set of a cli companion, the name GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME in grails-gradle uses. */
+    static final String CLI_SOURCE_SET_NAME = 'cli'
+
     @Override
     void apply(Project project) {
         project.logger.info('Configuring JaCoCo for project: {}', project.name)
@@ -117,13 +120,24 @@ class GrailsJacocoPlugin implements Plugin<Project> {
         // is attributed to the H5 class definitions.
         if (!project.path.contains('hibernate7')) {
             project.plugins.withType(JavaPlugin).configureEach {
-                def mainSourceSet = project.extensions
-                        .getByType(SourceSetContainer)
-                        .named(SourceSet.MAIN_SOURCE_SET_NAME)
+                SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+                def mainSourceSet = sourceSets.named(SourceSet.MAIN_SOURCE_SET_NAME)
                 aggregateTask.configure {
                     it.sourceDirectories.from(mainSourceSet.map { it.allSource.srcDirs })
                     it.classDirectories.from(mainSourceSet.map { it.output.classesDirs })
                 }
+                // A cli companion (src/cli, added by the grails-plugin-cli plugin) is production code with its
+                // own testCli phase. Its exec data is wired in above like any other test task's; without its
+                // classes here the report has nothing to match that data against, and the whole tier is
+                // missing from Codecov. Both file collections are live: a directory the source set gains after
+                // the aggregate task is realized is still reported, where a snapshot of srcDirs would miss it.
+                sourceSets.matching { SourceSet sourceSet -> sourceSet.name == CLI_SOURCE_SET_NAME }
+                        .configureEach { SourceSet cliSourceSet ->
+                            aggregateTask.configure {
+                                it.sourceDirectories.from(cliSourceSet.allSource.sourceDirectories)
+                                it.classDirectories.from(cliSourceSet.output.classesDirs)
+                            }
+                        }
             }
         }
     }

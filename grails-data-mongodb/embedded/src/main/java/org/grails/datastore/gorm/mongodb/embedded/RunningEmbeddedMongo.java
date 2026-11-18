@@ -38,6 +38,7 @@ public interface RunningEmbeddedMongo {
 
     /**
      * Stops the server. Called from a JVM shutdown hook, so it must not throw.
+     * May be called again after the server has stopped, in which case it must do nothing.
      */
     void stop();
 

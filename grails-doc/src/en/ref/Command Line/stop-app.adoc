@@ -25,7 +25,7 @@ under the License.
 === Purpose
 
 
-Stops a Grails application that was started with the link:{commandLineRef}run-app.html[run-app] command.
+Stops a Grails application that was started with the link:{commandLineRefFromRef}run-app.html[run-app] command.
 
 NOTE: This command works in development mode only.
 

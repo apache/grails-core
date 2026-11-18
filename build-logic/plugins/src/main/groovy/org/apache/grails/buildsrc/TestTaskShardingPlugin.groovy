@@ -29,6 +29,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
 
 /**
@@ -54,17 +56,33 @@ class TestTaskShardingPlugin implements Plugin<Project> {
         }
 
         Set<Test> candidateTasks = new LinkedHashSet<>()
+        Provider<String> manifest = project.providers.provider {
+            createManifest(project, candidateTasks, configuration)
+        }
+        TaskProvider<Task> manifestTask = project.tasks.register('testShardManifest') { Task task ->
+            task.group = 'verification'
+            task.description = 'Prints the Test tasks assigned to the current deterministic shard.'
+            task.inputs.property('manifest', manifest)
+            task.doLast { Task runningTask ->
+                runningTask.logger.lifecycle(manifest.get())
+            }
+        }
         project.allprojects { Project candidateProject ->
             candidateProject.tasks.withType(Test).configureEach { Test task ->
                 candidateTasks.add(task)
+                task.dependsOn(manifestTask)
+                // Shard membership is fixed during configuration; only the boolean belongs in the cached predicate.
+                boolean selected = isSelectedForShard(task, configuration)
                 task.onlyIf {
-                    isSelectedForShard(task, configuration)
+                    selected
                 }
             }
         }
-        registerShardTask(project, candidateTasks, configuration)
+        registerShardTask(project, candidateTasks, configuration, manifestTask)
         project.gradle.taskGraph.whenReady { TaskExecutionGraph taskGraph ->
-            emitManifest(project, candidateTasks, configuration)
+            // Validate after all projects' callbacks have registered their Test tasks. The manifest itself is
+            // printed by a task, so a configuration-cache hit prints it too.
+            manifest.get()
         }
     }
 
@@ -98,10 +116,11 @@ class TestTaskShardingPlugin implements Plugin<Project> {
         }
     }
 
-    private static void registerShardTask(Project rootProject, Set<Test> candidateTasks, ShardConfiguration configuration) {
+    private static void registerShardTask(Project rootProject, Set<Test> candidateTasks, ShardConfiguration configuration, TaskProvider<Task> manifestTask) {
         rootProject.tasks.register(SHARD_TASK_NAME) { Task task ->
             task.group = 'verification'
             task.description = 'Runs the Test tasks assigned to the current deterministic shard.'
+            task.dependsOn(manifestTask)
             task.dependsOn {
                 collectCandidateTasks(rootProject, candidateTasks).findAll { Test testTask ->
                     isSelectedForShard(testTask, configuration)
@@ -110,7 +129,7 @@ class TestTaskShardingPlugin implements Plugin<Project> {
         }
     }
 
-    private static void emitManifest(Project rootProject, Set<Test> candidateTasks, ShardConfiguration configuration) {
+    private static String createManifest(Project rootProject, Set<Test> candidateTasks, ShardConfiguration configuration) {
         List<Test> candidates = collectCandidateTasks(rootProject, candidateTasks)
         List<String> candidatePaths = candidates.collect { Test task -> normalizeTaskPath(task.path) }
         validateUniqueTaskPaths(candidatePaths)
@@ -121,7 +140,7 @@ class TestTaskShardingPlugin implements Plugin<Project> {
         List<String> selectedPaths = candidates.findAll { Test task ->
             isSelectedForShard(task, configuration)
         }.collect { Test task -> normalizeTaskPath(task.path) }.sort()
-        rootProject.logger.lifecycle("${MANIFEST_PREFIX} totalCandidates=${candidatePaths.size()} shardIndex=${configuration.shardIndex} shardCount=${configuration.shardCount} selectedTasks=${selectedPaths.join(',')}")
+        "${MANIFEST_PREFIX} totalCandidates=${candidatePaths.size()} shardIndex=${configuration.shardIndex} shardCount=${configuration.shardCount} selectedTasks=${selectedPaths.join(',')}"
     }
 
     private static List<Test> collectCandidateTasks(Project rootProject, Set<Test> candidateTasks) {

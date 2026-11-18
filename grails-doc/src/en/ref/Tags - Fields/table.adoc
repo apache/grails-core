@@ -24,6 +24,8 @@ under the License.
 
 `<f:table/>` renders some or all properties of a collection of beans in a table using the _f:display_ widget for each property type. If there is no _\_display_ template in scope the tag will simply render the property values.
 
+Unless the `except` attribute is given, the columns named by the `grails.plugin.fields.exclusions.list` setting are skipped. It defaults to `id`, `dateCreated` and `lastUpdated`; set it to a list in `application.yml`, or to a comma-separated value, to skip other columns.
+
 ===== Examples
 
 [source,groovy]

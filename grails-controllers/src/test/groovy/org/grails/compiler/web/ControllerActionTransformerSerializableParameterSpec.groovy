@@ -105,6 +105,23 @@ class ControllerActionTransformerSerializableParameterSpec extends Specification
         controller.show().value == 'abc'
     }
 
+    void 'the request parameter an action parameter is renamed to can be read at runtime'() {
+        given:
+        def cls = gcl.parseClass('''
+            import grails.web.RequestParameter
+
+            @grails.artefact.Artefact('Controller')
+            class RenamedParameterController {
+                def show(@RequestParameter('personId') Serializable id) {
+                    [value: id]
+                }
+            }
+        ''')
+
+        expect: 'a tool describing the action names the parameter a request sends'
+        cls.getMethod('show', Serializable).parameters[0].getAnnotation(grails.web.RequestParameter).value() == 'personId'
+    }
+
     void 'an action taking a Serializable parameter still generates the no-argument entry point'() {
         given:
         def cls = serializableIdController().getClass()

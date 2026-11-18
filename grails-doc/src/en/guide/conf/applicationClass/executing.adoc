@@ -36,3 +36,26 @@ $ java -jar build/libs/myapp-0.1.war
 ----
 
 This is useful if you plan to deploy your application using a container-less approach.
+
+[id=application-builder]
+=== Building the Application
+
+`GrailsApp.run(Application, args)` is the shortest way to start a Grails application. When the application needs configuring before it starts -- additional profiles, default properties, or a parent/child context hierarchy -- use link:{api}grails/boot/GrailsAppBuilder.html[GrailsAppBuilder], the Grails counterpart of Spring Boot's {springbootapi}org/springframework/boot/builder/SpringApplicationBuilder.html[SpringApplicationBuilder]. Every method of the Spring Boot builder is available and returns the `GrailsAppBuilder`, and the application it runs is a `GrailsApp`, so the Grails startup defaults apply:
+
+[source,groovy]
+----
+import grails.boot.GrailsAppBuilder
+import grails.boot.config.GrailsAutoConfiguration
+
+class Application extends GrailsAutoConfiguration {
+
+    static void main(String[] args) {
+        new GrailsAppBuilder(Application)
+                .profiles('metrics')
+                .properties('server.port=8081')
+                .run(args)
+    }
+}
+----
+
+The builder's `child()`, `parent()` and `sibling()` methods arrange contexts in a hierarchy as Spring Boot's do, and every context of the hierarchy is started by a `GrailsApp`. Exactly one of them is the Grails application: the one whose sources include the `Application` class, a `GrailsAutoConfiguration` subclass. The plugin lifecycle runs there only, and the other contexts are plain Spring contexts that reach the Grails beans through their parent; a hierarchy member whose sources hold no application class logs at `INFO` that it starts as a plain Spring context, where a standalone `GrailsApp` with the same sources would run the lifecycle. As in Spring Boot, the parent cannot host an embedded web server, so a web application is the child of a parent holding the shared configuration, and a Grails application that serves no web requests can be the parent of plain Spring children. Keep the parent to plain `@Configuration` classes and leave auto-configuration to the Grails application.

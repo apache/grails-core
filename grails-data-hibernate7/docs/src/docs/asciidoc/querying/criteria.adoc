@@ -149,6 +149,55 @@ def results = c.list {
 Here we find all accounts that have either performed transactions in the last 10 days OR have been recently created in the last 10 days.
 
 
+[[criteriaAssociationAliases]]
+==== Association Aliases
+
+`createAlias('association', 'alias')` creates an inner join. Restrictions, projections, and ordering on `alias.property` reuse that association join rather than adding another join. The three-argument overload accepts `0` for an inner join, `1` for a left outer join, or `2` for a right outer join. Hibernate 7 does not support full joins through this overload; other values produce an inner join.
+
+Every explicitly requested alias of an entity association creates a join, even when no restriction, projection, or order references it. For example, `createAlias('favorite', 'a', 1)` followed by `createAlias('favorite', 'b', 0)` creates both a left join and an inner join. The inner join excludes entities with no favorite even when `b` is otherwise unused. This also applies to counts and paginated queries.
+
+An explicitly declared alias takes precedence over an association path with the same name. For example, after `createAlias('favorite', 'f')` and `createAlias('likes', 'favorite')`, `f.label` refers to the favorite entity, while `favorite.label` refers to an element of `likes`. This applies independently to restrictions, projections, and ordering; using `f.label` only in a projection or an order does not change which association `favorite.label` restricts.
+
+The path of an alias can go through more than one association. For example, `createAlias('favorite.tag', 't')` joins the favorite and then the tag of that favorite, and `t.name` refers to that tag. Each association before the last one shares the join the query already has for it, such as the one created by `createAlias('favorite', 'f')`, by a `favorite { ... }` block or by a restriction on `favorite.label`, and keeps the join type of that join, so `t` is the tag of the favorite that `f` refers to. The join type of the alias applies to the last association, and to an association before it when nothing else in the query joins it: `createAlias('favorite.tag', 't', 1)` alone keeps the entities with no favorite, while adding `createAlias('favorite', 'f')` excludes them.
+
+The path can also start with an alias declared earlier in the same criteria or association block. After `createAlias('favorite', 'f')`, `createAlias('f.tag', 't')` joins the tag of the favorite that `f` refers to, as `createAlias('favorite.tag', 't')` does. When several aliases are declared for the same association, each has its own join, and a path continues from the alias it names: after `createAlias('likes', 'a')` and `createAlias('likes', 'b')`, `createAlias('b.tag', 't')` joins the tag of the like that `b` refers to. A first segment that is both an alias and an association refers to the alias. In a `DetachedCriteria`, the path of `createAlias` starts with an association.
+
+Aliases declared inside an association block are relative to that association. For example, `likes { createAlias('tag', 't'); eq('t.name', 'a') }` joins the tag of each like, not a tag on the outer entity. A local alias can reuse an outer alias name without changing the outer alias. Aliases declared in a `list { ... }` closure are discarded when another `list { ... }` query starts on the same builder.
+
+A dotted path in an association block whose first segment is the name of an alias declared outside the block starts at that alias, in a criteria query, a `DetachedCriteria` and a subquery alike. After `createAlias('tag', 'tag')`, `likes { eq('tag.name', 'a') }` restricts the tag of the entity the alias names, not the tag of each like. To restrict the tag of each like, give the outer alias another name or declare a local alias inside the block, as in `likes { createAlias('tag', 't'); eq('t.name', 'a') }`. Without an outer alias of that name, `tag.name` is the tag of each like.
+
+Restrictions through one association are made on one join, however the query reaches it. A nested alias path such as `createAlias('team.likes.tag', 't')`, a block such as `team { likes { eq('label', 'a') } }` and a block alias such as `team { createAlias('likes', 'l'); eq('l.label', 'a') }` all restrict the same like, so `eq('t.name', 'B')` and `eq('l.label', 'a')` have to hold for one like. A block asks for an inner join, so the associations before the last one of a nested alias path are joined inner when a block goes through them, and the join type of the alias, a left join for example, applies to its last association. Hibernate 5 rejects a block alias for an association that a nested alias path already joined, with `could not resolve property`.
+
+
+An unused entity alias inside an association block still creates its requested join in that association's scope. For example, `likes { createAlias('tag', 't') }` excludes likes with no tag, even without a restriction on `t`. Using join type `1` retains those likes. These join semantics also apply to counts and paginated totals.
+
+===== Collection Aliases
+
+Declaring two different aliases for the same entity-valued collection in `createCriteria()` or `withCriteria` creates independent joins, so restrictions on those aliases can match different associated entities:
+
+[source,groovy]
+----
+def teams = Team.withCriteria {
+    createAlias('likes', 'a')
+    createAlias('likes', 'b')
+    eq('a.label', 'first')
+    eq('b.label', 'second')
+}
+----
+
+Each alias retains its own join type: `createAlias('likes', 'a')` followed by `createAlias('likes', 'b', 1)` leaves `a` as an inner join rather than changing it to a left join. In particular, `isNull('a.label')` does not match an entity with no likes. This also applies when an explicitly declared alias has the same name as the association path, for example `createAlias('likes', 'likes')` followed by `createAlias('likes', 'other')`. Repeated restrictions, projections, and ordering on one alias still reuse that alias's join.
+
+For a collection of basic values, such as `static hasMany = [schools: String]`, each explicit alias represents an independent element join with its own join type. For example, restrictions on two aliases can match different elements of the same collection. The collection property itself remains available for collection restrictions such as `sizeEq('schools', 2)`, even when an alias is used to restrict an individual element.
+
+These aliases are also preserved when calculating a paged criteria result's `totalCount` and when calling `count { ... }` with projections. This includes multiple aliases of an entity collection and aliases of basic-value collections. The total count uses the alias restrictions without applying the page's `max` or `offset`.
+
+===== Aliases in Subqueries
+
+An association alias declared in a detached subquery joins from the subquery's own root, even if its name matches an association path or alias in the outer query. A locally declared alias takes precedence. Referencing an outer query's alias explicitly, without redeclaring it in the subquery, can still correlate the subquery with the outer query.
+
+A plain dotted association path in a detached subquery, such as `eq('favorite.label', 'second')`, resolves from the subquery's own root when its entity has that association, rather than reusing an outer query's implicit association join. This applies to either operand of a property comparison, including `eqProperty('name', 'favorite.label')`, and to comparisons inside nested junctions. When the subquery entity does not have that association, the path can instead reference an existing enclosing query join. For example, a subquery over `Like` can use `eqProperty('favorite.label', 'label')` to correlate with an outer `Team` query that joins `favorite`. This works whether the outer join comes from a dotted path restriction, `createAlias('favorite', 'f')`, or an association block such as `favorite { isNotNull('label') }` in an outer detached query. A dotted-path restriction or association block in the outer query must come before the `exists`; otherwise, use `createAlias` on the outer query.
+
+
 ==== Querying with Projections
 
 
@@ -173,7 +222,7 @@ Common projections include `count`, `countDistinct`, `groupProperty`, `avg`, `mi
 ==== SQL Restrictions
 
 
-You can access Hibernate's SQL Restrictions capabilities.
+You can restrict the results with a native SQL condition, which is added to the `where` clause of the query as written, in parentheses.
 
 [source,java]
 ----
@@ -196,6 +245,102 @@ def peopleWithShortFirstNames = c.list {
 ----
 
 NOTE: Note that the parameter there is SQL. The `first_name` attribute referenced in the example refers to the persistence model, not the object model like in HQL queries.
+
+Each `?` in the SQL is bound to the value at the same position in the list, so the number of `?` placeholders must match the number of values, and a value must not be `null`. A `?` in a string literal, such as `'%?'`, in a quoted identifier or in a comment is not a placeholder.
+
+The SQL is read the way the database reads it, from the dialect of the connection the query runs on, so that a `?` the database does not read as a placeholder is not counted as one:
+
+* On SQL Server and Sybase, square brackets quote an identifier, so a `?` inside `[...]` is part of a name, and block comments nest. On every other database, square brackets hold an array literal or an array subscript, and the placeholders inside them are bound as any other: `pages = ANY(ARRAY[?, ?])` takes two values on PostgreSQL or H2.
+* On MySQL and MariaDB, a backslash escapes in a string, so `'it\'s ?'` is one string; `#` starts a comment, and `--` starts one only when a space follows it.
+* On PostgreSQL, a block comment nests, `$tag$...$tag$` is a string, an `E'...'` string escapes with a backslash, and `??` is a literal question mark, not two placeholders. H2 has `$$...$$` strings.
+* On Oracle, `q'[...]'` is a string.
+* On H2, `//` starts a comment as `--` does, and `$$...$$` is a string.
+
+On every database a string in single quotes, an identifier in double quotes and a comment hold no placeholder. A backquote is read as quoting on every database, as it does on MySQL, MariaDB and H2 in their MySQL mode. The defaults of each server are assumed: the server modes that change what a quote or a backslash means, such as `NO_BACKSLASH_ESCAPES` and `ANSI_QUOTES` of MySQL, are not read from the server. In HQL, only `/* ... */` is a comment: Hibernate rejects `--` and `//`.
+
+The SQL of a `sqlProjection` column alias may be written as a string in single quotes on MySQL and SQL Server, which accept that form.
+
+When the query joins other tables, qualify the columns with `{alias}`, which stands for the table alias of the queried class, so that a column a joined table also has is not ambiguous:
+
+[source,java]
+----
+def c = Person.createCriteria()
+
+def peopleWithShortFirstNames = c.list {
+    pets {
+        eq 'name', 'Lucky'
+    }
+    sqlRestriction "char_length({alias}.first_name) <= ?", [4]
+}
+----
+
+Inside an association block, such as `pets { ... }`, the condition restricts the association, as the other criteria in the block do, and `{alias}` stands for the table alias of the association instead. This includes an association block inside an `and`, `or` or `not` block.
+
+A <<querying-detachedCriteria,detached criteria>> accepts `sqlRestriction` too.
+
+==== SQL Projections
+
+
+The `projections` node also accepts native SQL, for a value that only SQL computes, such as a date truncated to the day.
+
+[source,java]
+----
+// Box is a domain class...
+class Box {
+    int width
+    int height
+    Date packedAt
+}
+----
+
+[source,java]
+----
+def c = Box.createCriteria()
+
+def results = c.list {
+    projections {
+        sqlProjection '(2 * (width + height)) as perimeter, (width * height) as area', ['perimeter', 'area'], [INTEGER, INTEGER]
+    }
+}
+----
+
+The first argument to the `sqlProjection` method is the SQL which defines the projected values, separated by commas, each one optionally followed by `as` and its column alias, which may be quoted the way the database quotes an identifier: in double quotes, in backquotes, or in square brackets on SQL Server. The second argument is the list of column aliases of the projected values, and the third is the list of their types. A type is a constant of `org.hibernate.type.StandardBasicTypes`, such as `INTEGER`, `LONG`, `STRING` or `TIMESTAMP`, which the DSL provides under the same name, an `org.hibernate.type.Type` or a Java class.
+
+The query above returns the perimeter and the area of each box, in a list each: `[[18, 14], [20, 16], [22, 18], [26, 36]]`. If only one value is projected, the alias and the type do not need to be in a list:
+
+[source,java]
+----
+def totalArea = Box.createCriteria().get {
+    projections {
+        sqlProjection 'sum(width * height) as totalArea', 'totalArea', INTEGER
+    }
+}
+----
+
+The `sqlGroupProjection` method groups the results by a SQL group by clause, a single expression or a comma separated list of them, given as its second argument:
+
+[source,java]
+----
+def results = Box.createCriteria().list {
+    projections {
+        sqlGroupProjection 'width, sum(height) as combinedHeightsForThisWidth', 'width', ['width', 'combinedHeightsForThisWidth'], [INTEGER, INTEGER]
+    }
+}
+----
+
+The query above returns the combined heights of the boxes of each width: `[[2, 24], [4, 9]]`. A SQL projection combines with the other projections, such as `rowCount()`, and the results can be ordered by its column alias with `order`. The group by clause may also name a column alias, which stands for the SQL that it names. A restriction such as `gt('height', 5)` always restricts the property, even if a column alias has the same name.
+
+As in a SQL restriction, `{alias}` in the SQL stands for the table alias of the queried class, so a column that a joined table also has is not ambiguous:
+
+[source,java]
+----
+def boxesPerDay = Box.createCriteria().list {
+    projections {
+        sqlGroupProjection "date_trunc('day', {alias}.packed_at) as day", "date_trunc('day', {alias}.packed_at)", ['day'], [TIMESTAMP]
+        rowCount()
+    }
+}
+----
 
 ==== Setting Properties in the Criteria Instance
 

@@ -19,6 +19,8 @@
 
 package grails.boot.config
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -33,8 +35,6 @@ import org.springframework.context.annotation.AnnotationConfigUtils
 import org.springframework.aot.AotDetector
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.beans.factory.config.BeanDefinition
-import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor
-import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor
 import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -43,11 +43,9 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.event.ApplicationContextEvent
 import org.springframework.context.event.ContextClosedEvent
 import org.springframework.context.event.ContextRefreshedEvent
-import org.springframework.core.convert.converter.Converter
 import org.springframework.core.convert.support.ConfigurableConversionService
 import org.springframework.core.env.AbstractEnvironment
 import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.io.Resource
 
 import grails.boot.GrailsApp
 import grails.config.Settings
@@ -61,13 +59,15 @@ import grails.plugins.GrailsPluginManager
 import grails.spring.BeanBuilder
 import grails.util.Environment
 import grails.util.Holders
-import org.grails.config.NavigableMap
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.exceptions.GrailsConfigurationException
 import org.grails.core.lifecycle.ShutdownOperations
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.grails.spring.RuntimeSpringConfigUtilities
+import org.apache.grails.core.aot.GeneratedArtifactsAutowiredAnnotationBeanPostProcessor
+import org.apache.grails.core.aot.GeneratedArtifactsCommonAnnotationBeanPostProcessor
+import org.apache.grails.core.aot.GeneratedBeanDefinitions
 import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
@@ -214,24 +214,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         if (environment instanceof ConfigurableEnvironment) {
             if (environment instanceof AbstractEnvironment) {
                 conversionService = environment.getConversionService()
-                conversionService.addConverter(new Converter<String, Resource>() {
-                    @Override
-                    Resource convert(String source) {
-                        return applicationContext.getResource(source)
-                    }
-                })
-                conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, String>() {
-                    @Override
-                    String convert(NavigableMap.NullSafeNavigator source) {
-                        return null
-                    }
-                })
-                conversionService.addConverter(new Converter<NavigableMap.NullSafeNavigator, Object>() {
-                    @Override
-                    Object convert(NavigableMap.NullSafeNavigator source) {
-                        return null
-                    }
-                })
+                GrailsConversionServiceConverters.register(conversionService, applicationContext)
             }
             def propertySources = environment.getPropertySources()
             def config = new PropertySourcesConfig(propertySources)
@@ -250,7 +233,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
         def application = grailsApplication
         Holders.setGrailsApplication(application)
 
-        if (!earlyPluginRegistrationRan) {
+        if (!pluginBeanRegistrationDone) {
             // first register plugin beans; when the early phase ran they were
             // already drained into the registry ahead of auto-configuration
             pluginManager.doRuntimeConfiguration(springConfig)
@@ -298,7 +281,7 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
 
         springConfig.registerBeansWithRegistry(registry)
 
-        if (!earlyPluginRegistrationRan) {
+        if (!pluginBeanRegistrationDone) {
             // the early phase applies plugin registrars itself; on the fallback path (contexts not
             // booted through GrailsApp) apply them here so a plugin's beanRegistrar() behaves the same
             applyPluginBeanRegistrars(registry)
@@ -316,12 +299,22 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
     }
 
     /**
+     * Whether the plugins' {@code doWithSpring} and {@code beanRegistrar} beans are already in the
+     * registry, so {@link #postProcessBeanDefinitionRegistry} leaves them out: true once the early
+     * phase has run. A subclass that registers them itself, ahead of the configuration classes as the
+     * early phase does, says so here.
+     */
+    protected boolean isPluginBeanRegistrationDone() {
+        earlyPluginRegistrationRan
+    }
+
+    /**
      * Applies each enabled plugin's {@link BeanRegistrar} on the fallback path where the early
      * plugin registration phase did not run, mirroring that phase so a plugin's {@code beanRegistrar()}
      * is honoured in every context rather than only those booted through {@code GrailsApp}. Runs after
      * the DSL flush so registrar beans win name conflicts with the deprecated {@code doWithSpring} DSL.
      */
-    private void applyPluginBeanRegistrars(BeanDefinitionRegistry registry) {
+    protected void applyPluginBeanRegistrars(BeanDefinitionRegistry registry) {
         String[] activeProfiles = applicationContext.environment.activeProfiles
         for (GrailsPlugin plugin in pluginManager.allPlugins) {
             if (!plugin.supportsCurrentScopeAndEnvironment() || !plugin.isEnabled(activeProfiles)) {
@@ -354,23 +347,36 @@ class GrailsApplicationPostProcessor implements BeanDefinitionRegistryPostProces
      *
      * <p>They are registered under the names Spring uses itself, so a context that already has them
      * keeps what it has, and a context running without generated artifacts is untouched.</p>
+     *
+     * <p>They do not inject again what the generated code injected into an instance it created: injected a
+     * second time, a bean runs a side-effecting {@code @Autowired} method twice, and every executor's metrics
+     * were registered twice. The initialization and destruction methods the generated code recorded from
+     * annotations are taken off its definitions, for the common processor calls them. See
+     * {@link GeneratedBeanDefinitions}.</p>
      */
     protected static void registerAnnotationConfigProcessorsForGeneratedArtifacts(BeanDefinitionRegistry registry) {
         if (!AotDetector.useGeneratedArtifacts()) {
             return
         }
         registerInfrastructureBean(registry, AnnotationConfigUtils.AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME,
-                AutowiredAnnotationBeanPostProcessor)
+                GeneratedArtifactsAutowiredAnnotationBeanPostProcessor, () -> new GeneratedArtifactsAutowiredAnnotationBeanPostProcessor())
         registerInfrastructureBean(registry, AnnotationConfigUtils.COMMON_ANNOTATION_PROCESSOR_BEAN_NAME,
-                CommonAnnotationBeanPostProcessor)
+                GeneratedArtifactsCommonAnnotationBeanPostProcessor, () -> new GeneratedArtifactsCommonAnnotationBeanPostProcessor())
+        GeneratedBeanDefinitions.leaveAnnotatedLifecycleMethodsToProcessor(registry)
     }
 
-    private static void registerInfrastructureBean(BeanDefinitionRegistry registry, String beanName,
-            Class<?> beanClass) {
+    /**
+     * Registers a processor created by the given supplier rather than reflectively, because these are
+     * registered while running on generated artifacts, which includes a native image, where a constructor
+     * is called reflectively only if something asked for it. The suppliers are lambdas: a constructor
+     * reference is resolved through Groovy, reflectively, even under static compilation.
+     */
+    private static <T> void registerInfrastructureBean(BeanDefinitionRegistry registry, String beanName,
+            Class<T> beanClass, Supplier<T> supplier) {
         if (registry.containsBeanDefinition(beanName)) {
             return
         }
-        RootBeanDefinition definition = new RootBeanDefinition(beanClass)
+        RootBeanDefinition definition = new RootBeanDefinition(beanClass, supplier)
         definition.role = BeanDefinition.ROLE_INFRASTRUCTURE
         registry.registerBeanDefinition(beanName, definition)
     }

@@ -64,3 +64,35 @@ Hotswap Agent is an open-source tool that provides advanced hot swapping capabil
 Enables limited dynamic reloading via standard JVM hot swapping. This feature is built into the JVM and does not require additional configuration beyond starting the application with debugging enabled.  Supports automatic reloading of static content (such as CSS, JavaScript, or HTML templates) without restarting the application.  You can modify and reload Java code changes without a full restart, but this is limited to non-structural modifications.  Changes that affect class or method signatures (e.g., adding new methods, fields, or constructors; changing method parameters; or modifying class hierarchies) are not supported and will require a restart. This limitation stems from the JVM's hot swapping constraints.
 
 *Reloading Mechanism:* standard JVM hot swapping
+
+=== Running More Than One Instance of a Checkout
+
+Two Gradle builds of one checkout share its `build/` directory. While an application runs from `build/`, another build of the same checkout (a second instance on another port, tests run alongside it, an IDE or a tool compiling in the same tree) rewrites the classes it runs from, and Spring Boot Developer Tools restarts the running application into a half-written build.
+
+Give each instance a build directory of its own instead, by setting `layout.buildDirectory` from a Gradle property for every project in the build:
+
+[source,groovy]
+.build.gradle
+----
+allprojects {
+    def instanceBuildDir = providers.gradleProperty('instanceBuildDir')
+    if (instanceBuildDir.present) {
+        layout.buildDirectory = layout.projectDirectory.dir(instanceBuildDir.get())
+    }
+}
+----
+
+Then start each instance with a build directory, a port and a Gradle project cache of its own:
+
+[source,shell]
+----
+./gradlew bootRun -PinstanceBuildDir=instances/8081/build \
+    --project-cache-dir=instances/8081/.gradle \
+    --args='--server.port=8081'
+----
+
+The project cache (the checkout's `.gradle/` directory) does not move with the build directory, and two builds running at once contend for it, so `--project-cache-dir` gives each build its own. Keep it beside the build directory, not inside it, or `clean` deletes the project cache of the build running it. Named `build` and `.gradle`, the two stay out of version control, since a generated application's `.gitignore` ignores both names at any depth.
+
+The Grails Gradle plugin tells the application where its build directory is. It passes `grails.project.class.dir`, `grails.project.resource.dir` and `grails.project.target.dir` to `bootRun` and the other forked `JavaExec` and `Test` tasks, so development reloading compiles a changed class and copies a changed message bundle into that instance's build directory, the application reads its resources from there, and each instance keeps its own development restart marker. An `@Integration` test without an `applicationClass` finds the application class next to its own compiled classes, wherever the build directory is.
+
+NOTE: Development reloading also compiles a change in a plugin subproject whose sources it watches, into the same relative path under that subproject. Move every project's build directory the same way, relative to itself, as the `allprojects` block above does.

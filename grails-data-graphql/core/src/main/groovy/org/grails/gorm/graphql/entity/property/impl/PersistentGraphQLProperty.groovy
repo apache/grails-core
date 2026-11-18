@@ -88,28 +88,32 @@ class PersistentGraphQLProperty extends OrderedGraphQLProperty {
         this.output = mapping.output
         this.input = mapping.input
         this.dataFetcher = mapping.dataFetcher ? new ClosureDataFetcher(mapping.dataFetcher) : new PersistentPropertyDataFetcher((PersistentProperty) property)
+        this.order = resolveOrder(mapping)
+
+        initializeMetadata(mapping)
+    }
+
+    private Integer resolveOrder(GraphQLPropertyMapping mapping) {
         if (mapping.order != null) {
-            this.order = mapping.order
+            return mapping.order
         }
-        else {
-            Validator validator = mappingContext.getEntityValidator(property.owner)
-            if (validator instanceof PersistentEntityValidator) {
-                ConstrainedProperty constrainedProperty = ((PersistentEntityValidator) validator).constrainedProperties.get(name)
-                if (constrainedProperty != null) {
-                    this.order = constrainedProperty.order
-                }
-            }
-        }
-        if (this.order == null) {
-            if (isIdentifier(property.owner, name)) {
-                this.order = DEFAULT_ID_ORDER
-            }
-            else if (name == 'version') {
-                this.order = DEFAULT_VERSION_ORDER
+
+        Validator validator = mappingContext.getEntityValidator(property.owner)
+        if (validator instanceof PersistentEntityValidator) {
+            ConstrainedProperty constrainedProperty = ((PersistentEntityValidator) validator).constrainedProperties.get(name)
+            if (constrainedProperty != null) {
+                return constrainedProperty.order
             }
         }
 
-        initializeMetadata(mapping)
+        if (isIdentifier(property.owner, name)) {
+            return DEFAULT_ID_ORDER
+        }
+        else if (name == 'version') {
+            return DEFAULT_VERSION_ORDER
+        }
+
+        null
     }
 
     private void initializeMetadata(GraphQLPropertyMapping mapping) {
@@ -169,16 +173,10 @@ class PersistentGraphQLProperty extends OrderedGraphQLProperty {
             graphQLType = typeManager.getEnumType(type, nullable)
         }
         else {
-            boolean embedded = false
-            PersistentEntity entity
-            if (property instanceof Association) {
-                Association association = ((Association)property)
-                entity = association.associatedEntity
-                embedded = association.embedded
-            }
-            if (entity == null) {
-                entity = mappingContext.getPersistentEntity(type.name)
-            }
+            Association association = property instanceof Association ? (Association) property : null
+            boolean embedded = association != null && association.embedded
+            PersistentEntity entity = association?.associatedEntity ?: mappingContext.getPersistentEntity(type.name)
+
             if (entity != null) {
                 if (propertyType.operationType == GraphQLOperationType.OUTPUT) {
                     if (embedded) {

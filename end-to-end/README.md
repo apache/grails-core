@@ -32,6 +32,8 @@ applications at via `GRAILS_REPO_URL`.
 
 | Project | What it is |
 |---|---|
+| `agent-skills` | An example Grails 8 application that gets the published agent skills the way the user guide shows: extracted by the SkillsJars Gradle plugin, declared without a version and resolved through the Grails BOM. Its test checks what it and `agent-skills-plain-build` extract. |
+| `agent-skills-plain-build` | The same from a build without the Grails Gradle plugin, which names the Grails BOM on the `skill` configuration itself. |
 | `legacy-g7-command-plugin` | A **standalone build**, not part of this one. Compiles against published Grails 7 / Groovy 4 to produce a genuine precompiled `grails.dev.commands.ApplicationCommand` binary. |
 | `legacy-commands-plugin` | A Grails 8 plugin whose legacy commands are recompiled under Groovy 5. |
 | `legacy-commands` | A Grails 8 application that consumes both and runs their commands through the registry. |
@@ -58,7 +60,7 @@ neither the core build nor a contributor's default environment inherits a second
 
 | Where | JDK | Why |
 |---|---|---|
-| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.5 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
+| `legacy-g7-command-plugin/.sdkmanrc` | 17, Gradle 8.14.7 | What Grails 7 pins, so the fixture is built the way a Grails 7 plugin actually was. `gradle-bootstrap` generates this wrapper from that file via its `legacyG7Wrapper` task, rather than copying the shared one. |
 | the repository's root `.sdkmanrc` | 21 | The Grails 8 baseline. This build consumes artifacts from the core build, so it runs on whatever the core build runs on — it deliberately does not re-pin that. |
 
 ## Running locally

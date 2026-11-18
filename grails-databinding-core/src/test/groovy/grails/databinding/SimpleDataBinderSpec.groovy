@@ -247,9 +247,10 @@ class SimpleDataBinderSpec extends Specification {
         15 == calendar.get(Calendar.DAY_OF_MONTH)
         1969 == calendar.get(Calendar.YEAR)
 
-        when:
+        when: 'a time in UTC, read in UTC'
         obj.utilDate = null
         binder.bind obj, new SimpleMapDataBindingSource([utilDate: "2011-03-12T09:24:22Z"])
+        calendar.setTimeZone(TimeZone.getTimeZone('UTC'))
         calendar.setTime(obj.utilDate)
 
         then:
@@ -612,6 +613,20 @@ class SimpleDataBinderSpec extends Specification {
 
         then:
         target.values.one.name == 'First'
+    }
+
+    void 'Test binding an indexed typed map entry whose key names a bean property of the map'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def target = new MapConstructorValueHolder()
+
+        when:
+        binder.bind(target, ['values[properties]': [name: 'First'], 'values[metaClass]': [name: 'Second']] as SimpleMapDataBindingSource)
+
+        then:
+        target.values.get('properties').name == 'First'
+        target.values.get('metaClass').name == 'Second'
+        target.values.size() == 2
     }
 
     void 'Test an empty whiteList binds no properties'() {

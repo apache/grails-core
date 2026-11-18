@@ -48,4 +48,28 @@ class Neo4jConnectionSourceSettingsSpec extends Specification {
         settings.embedded.options == [foo: 'bar']
 
     }
+
+    void "test a named connection inherits the options the default connection customized, and keeps its own"() {
+        given:
+        def configuration = DatastoreUtils.createPropertyResolver([
+                'grails.neo4j.options.maxConnectionPoolSize'            : '7',
+                'grails.neo4j.connections.other.url'                    : 'bolt://localhost:7688',
+                'grails.neo4j.connections.other.options.fetchSize'      : '50'
+        ])
+        Neo4jConnectionSourceSettings defaultSettings = new Neo4jConnectionSourceSettingsBuilder(configuration).build()
+
+        when: "the named connection's settings are built with the default connection's as their fallback"
+        Neo4jConnectionSourceSettings other = new Neo4jConnectionSourceSettingsBuilder(configuration,
+                'grails.neo4j.connections.other', defaultSettings).build()
+        Config config = other.options.build()
+
+        then: "the driver's own defaults are not passed on as if they were settings, so the options build at all"
+        notThrown(IllegalArgumentException)
+        config.eventLoopThreads() == Config.defaultConfig().eventLoopThreads()
+
+        and:
+        config.maxConnectionPoolSize() == 7
+        config.fetchSize() == 50
+        other.url == 'bolt://localhost:7688'
+    }
 }

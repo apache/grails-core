@@ -8,8 +8,9 @@ gradle.projectsEvaluated {
 }
 
 tasks.register('inspectLate') {
+    def taskNames = providers.provider { tasks.names as List<String> }
     doLast {
-        println "LATE_GENERATOR_EXISTS=${tasks.names.contains('generateCompileLateGroovyGrailsCompilerConfig')}"
-        println "MAIN_GENERATOR_EXISTS=${tasks.names.contains('generateCompileGroovyGrailsCompilerConfig')}"
+        println "LATE_GENERATOR_EXISTS=${taskNames.get().contains('generateCompileLateGroovyGrailsCompilerConfig')}"
+        println "MAIN_GENERATOR_EXISTS=${taskNames.get().contains('generateCompileGroovyGrailsCompilerConfig')}"
     }
 }

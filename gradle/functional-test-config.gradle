@@ -80,6 +80,7 @@ List<String> debugArguments = [
         '-Xmx2g', '-Xdebug', '-Xnoagent', '-Djava.compiler=NONE',
         '-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005'
 ]
+boolean cacheTests = !doNotCacheTests
 tasks.withType(Test).configureEach { Test task ->
     boolean isHibernate5 = project.name.startsWith('grails-test-examples-hibernate5')
     boolean isHibernate7 = project.name.startsWith('grails-test-examples-hibernate7')
@@ -90,10 +91,10 @@ tasks.withType(Test).configureEach { Test task ->
 
     // Honor DO_NOT_CACHE_TESTS=1 so developers can repeatedly invoke the same test command
     // without --rerun-tasks (and without recompiling everything else).
-    task.outputs.cacheIf { !doNotCacheTests }
-    task.outputs.upToDateWhen { !doNotCacheTests }
+    task.outputs.cacheIf { cacheTests }
+    task.outputs.upToDateWhen { cacheTests }
 
-    onlyIf {
+    boolean enabled = {
         if (['skipFunctionalTests', 'onlyCoreTests', 'skipTests'].any { project.hasProperty(it) }) {
             return false
         }
@@ -147,7 +148,8 @@ tasks.withType(Test).configureEach { Test task ->
         }
 
         return true
-    }
+    }()
+    onlyIf { enabled }
 
     if (isMongo && project.hasProperty('serializeMongoTests')) {
         // if the developer decides to run a local mongo instance, the tests must be serialized instead of launching containers as needed
