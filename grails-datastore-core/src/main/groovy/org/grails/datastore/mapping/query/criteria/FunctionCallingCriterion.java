@@ -34,6 +34,10 @@ import org.grails.datastore.mapping.query.Query;
  * This criterion calls a function on the property before apply the appropriate comparison.
  *
  * Example in SQL: year(date) == 2007 where the function is 'year', the property 'date' and the value is '2007'
+ *
+ * <p>The {@code public static} members ({@code SUPPORTED_FUNCTIONS}, {@code requireSupported}, {@code isWholeInt},
+ * {@code isFractional} and {@code convertOperand}) are internal to GORM: the Hibernate modules and the query builder
+ * call them from other packages. They may change in a minor release.</p>
  */
 public class FunctionCallingCriterion extends Query.PropertyNameCriterion {
 

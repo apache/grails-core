@@ -213,10 +213,17 @@ public class ExpressionResolver {
         return join;
     }
 
+    /**
+     * The association path whose join an alias shares, or {@code null} when the alias has a join of its own. Only the
+     * first alias of a path shares the join of the path: a later alias of the same path has an independent join, so a
+     * dotted property below it continues from that join and is not routed through the join the path belongs to.
+     */
     private String aliasPath(String alias) {
         HibernateAlias def = aliasRegistry.getDefinition(alias);
-        return def != null && def.path() != null && !def.path().contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR) ?
-                def.path() : null;
+        if (def == null || def.path() == null || def.path().contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            return null;
+        }
+        return def.explicit() && !def.equals(aliasRegistry.getAssociationAlias(def.path())) ? null : def.path();
     }
 
     /**

@@ -883,7 +883,7 @@ public class JpaQueryBuilder {
      *
      * @param comparedProperty the property the subquery is compared with, or {@code null} to select the entity
      */
-    protected static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
+    private static void buildSubQuery(StringBuilder q, StringBuilder whereClause, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible, QueryableCriteria subquery, String comparedProperty) {
         PersistentEntity associatedEntity = subquery.getPersistentEntity();
         String associatedEntityName = associatedEntity.getName();
         String associatedEntityLogicalName = associatedEntity.getDecapitalizedName() + position;

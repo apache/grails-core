@@ -1893,6 +1893,76 @@ class CreateAliasJoinSpec extends HibernateGormDatastoreSpec {
         CreateAliasTeam.withCriteria { createAlias('favorite', 'likes'); likes(1) { isNull('label') } }*.id == [noLikes.id]
         CreateAliasTeam.withCriteria { likes(1) { isNull('label') }; createAlias('favorite', 'likes') }*.id == [noLikes.id]
     }
+
+    void 'a dotted restriction on a second alias of the same association keeps the join of that alias'() {
+        given: 'a team whose two likes split the two tags'
+        def tagA = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(flush: true, failOnError: true)
+        def other = new CreateAliasTeam(name: 'only a').addToLikes(new CreateAliasLike(label: 'a2', tag: tagA).save(failOnError: true))
+                .save(flush: true, failOnError: true)
+
+        expect: 'each alias restricts its own like, so only the team with a like of each tag matches'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            eq('first.tag.name', 'a')
+            eq('second.tag.name', 'b')
+            projections { id() }
+        } == [team.id]
+
+        and: 'the other way round matches the same team'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            eq('first.tag.name', 'b')
+            eq('second.tag.name', 'a')
+            projections { id() }
+        } == [team.id]
+
+        and: 'one alias alone still restricts only its own join (two independent joins repeat a team, so the ids are compared as a set)'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            eq('second.tag.name', 'a')
+            projections { id() }
+        } as Set == [team.id, other.id] as Set
+    }
+
+    void 'a subquery compares with a dotted property of the second outer alias, not with its own path'() {
+        given:
+        def tagA = new CreateAliasTag(name: 'a').save(failOnError: true)
+        def tagB = new CreateAliasTag(name: 'b').save(failOnError: true)
+        def likeA = new CreateAliasLike(label: 'a', tag: tagA).save(failOnError: true)
+        def likeB = new CreateAliasLike(label: 'b', tag: tagB).save(failOnError: true)
+        def team = new CreateAliasTeam(name: 'split').addToLikes(likeA).addToLikes(likeB).save(flush: true, failOnError: true)
+        def sameTagAs = { String label ->
+            new DetachedCriteria(CreateAliasLike).build {
+                eq('label', label)
+                eqProperty('tag.name', 'second.tag.name')
+            }
+        }
+
+        expect: 'the second alias is the like labelled b, whose tag is b: a like labelled a has another tag'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            eq('second.label', 'b')
+            exists(sameTagAs('a'))
+            projections { id() }
+        }.isEmpty()
+
+        and: 'a like labelled b has the tag of the second alias'
+        CreateAliasTeam.withCriteria {
+            createAlias('likes', 'first')
+            createAlias('likes', 'second')
+            eq('second.label', 'b')
+            exists(sameTagAs('b'))
+            projections { id() }
+        } as Set == [team.id] as Set
+    }
 }
 
 @Entity
