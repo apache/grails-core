@@ -22,6 +22,8 @@ import groovy.io.FileType
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilerConfiguration
 
+import grails.util.BuildSettings
+
 import org.grails.gsp.compiler.GroovyPageCompiler
 
 /**
@@ -85,7 +87,25 @@ class GroovyPageForkedCompiler {
         if (encoding) {
             compiler.encoding = encoding
         }
+        compiler.generatedViewsDirs = generatedViewDirectories()
+        String optionalPages = System.getProperty(BuildSettings.OPTIONAL_GSP_PAGES)
+        if (optionalPages) {
+            for (String list : optionalPages.split(File.pathSeparator)) {
+                File file = new File(list)
+                if (file.isFile()) {
+                    compiler.optionalPages.addAll(file.readLines('UTF-8')*.trim().findAll { String page -> page })
+                }
+            }
+        }
         return compiler
+    }
+
+    /** The directories of generated pages the build asks to be compiled with the source, those that exist. */
+    static List<File> generatedViewDirectories() {
+        String dirs = System.getProperty(BuildSettings.GENERATED_GSP_VIEW_DIRECTORIES)
+        (dirs ? dirs.split(File.pathSeparator).toList() : [])
+                .collect { String dir -> new File(dir) }
+                .findAll { File dir -> dir.isDirectory() }
     }
 
     private String[] extractValidConfigPaths(String[] configs) {
@@ -100,6 +120,11 @@ class GroovyPageForkedCompiler {
         GroovyPageCompiler compiler = createPageCompiler()
         compiler.srcFiles = sources
         compiler.compile()
+        // the build shows what this process prints, not what it logs
+        compiler.leftOut.each { String page, String reason ->
+            System.err.println("Left out the optional page ${page}, which does not compile; if it is rendered it " +
+                    "is produced then instead, and fails the same way: ${reason}")
+        }
     }
 
     static void main(String[] args) {
@@ -142,9 +167,13 @@ Usage: java -cp CLASSPATH GroovyPageForkedCompiler [srcDir] [destDir] [tmpDir] [
         }
 
         List<File> allFiles = []
-        srcDir.eachFileRecurse(FileType.FILES) { File f ->
-            if (f.name.endsWith(fileExtension)) {
-                allFiles.add(f)
+        ([srcDir] + generatedViewDirectories()).each { File dir ->
+            if (dir.isDirectory()) {
+                dir.eachFileRecurse(FileType.FILES) { File f ->
+                    if (f.name.endsWith(fileExtension)) {
+                        allFiles.add(f)
+                    }
+                }
             }
         }
         compiler.compile(allFiles)

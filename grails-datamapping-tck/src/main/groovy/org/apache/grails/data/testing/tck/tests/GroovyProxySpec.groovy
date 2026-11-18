@@ -96,6 +96,29 @@ class GroovyProxySpec extends GrailsDataTckSpec {
         useGroovyProxyFactory << [true, false]
     }
 
+    void 'Test writing a property through a proxy updates the proxied instance'() {
+        setup:
+        if (useGroovyProxyFactory) {
+            manager.session.mappingContext.proxyFactory = new GroovyProxyFactory()
+        }
+
+        def id = new Location(name: 'United Kingdom', code: 'UK').save(flush: true)?.id
+        manager.session.clear()
+
+        when: 'A property is assigned on an uninitialized proxy'
+        def location = Location.proxy(id)
+        location.code = 'GB'
+
+        then: 'The proxy was initialized and the write reached the proxied instance'
+        true == location.isInitialized()
+        'GB' == location.code
+        'GB' == location.target.code
+        'United Kingdom - GB' == location.namedAndCode()
+
+        where:
+        useGroovyProxyFactory << [true, false]
+    }
+
     void 'Test setting metaClass property on proxy'() {
         setup:
         if (useGroovyProxyFactory) {

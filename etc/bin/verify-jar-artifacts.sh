@@ -129,6 +129,20 @@ while IFS= read -r line; do
     exit 1
   fi
 
+  # When a jar advertises an SBOM via the Sbom-Location manifest attribute, that file must be
+  # packaged. This is manifest-driven so it validates every jar that generates an SBOM (the primary
+  # jar and its cli companion) while skipping jars that legitimately ship none (javadoc, sources).
+  SBOM_LOCATION=$(unzip -p "${JAR_FILE}" META-INF/MANIFEST.MF | tr -d '\r' | sed -n 's/^Sbom-Location: *//p')
+  if [ -n "${SBOM_LOCATION}" ]; then
+    echo "... Verifying declared SBOM is packaged (${SBOM_LOCATION})..."
+    if jar tf "${JAR_FILE}" | grep -qxF -- "${SBOM_LOCATION}"; then
+      echo "✅ SBOM present at ${SBOM_LOCATION} in ${JAR_FILE}"
+    else
+      echo "❌ Manifest declares Sbom-Location '${SBOM_LOCATION}' but it is not packaged in ${JAR_FILE}"
+      exit 1
+    fi
+  fi
+
   if [[ $ARTIFACT_ID != grails-cli && $ARTIFACT_ID != grails-forge-cli && $JAR_FILE != *-javadoc.jar ]]; then
       echo "... Verifying required files exist in non-javadoc jar..."
         required_jar_contents=(META-INF/LICENSE META-INF/NOTICE)

@@ -19,6 +19,7 @@ under the License.
 
 When Grails logs a stacktrace, the log message may include the names and values of all of the request parameters for the current request.
 To mask out the values of secure request parameters, specify the parameter names in the `grails.exceptionresolver.params.exclude` config property:
+Parameter names are matched case-insensitively.
 
 [source, yaml]
 .grails-app/conf/application.yml

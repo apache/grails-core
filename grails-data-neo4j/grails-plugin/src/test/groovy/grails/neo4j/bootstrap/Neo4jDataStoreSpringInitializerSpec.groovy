@@ -20,9 +20,11 @@
 package grails.neo4j.bootstrap
 
 import grails.gorm.annotation.Entity
+import groovy.transform.CompileStatic
 import org.grails.datastore.gorm.neo4j.config.Settings
 import org.grails.spring.DefaultRuntimeSpringConfiguration
 import org.springframework.core.env.MapPropertySource
+import org.springframework.core.env.PropertyResolver
 import org.springframework.core.env.StandardEnvironment
 import spock.lang.Specification
 
@@ -31,53 +33,64 @@ import spock.lang.Specification
  */
 class Neo4jDataStoreSpringInitializerSpec extends Specification {
 
-    void "Test Neo4jDataStoreSpringInitializer loads neo4j correctly"() {
-        setup:"neo4j is initialised"
+    void 'Test Neo4jDataStoreSpringInitializer loads neo4j correctly'() {
+        setup:'neo4j is initialised'
         def config = new StandardEnvironment()
-        config.propertySources.addFirst(new MapPropertySource("test",
+        config.propertySources.addFirst(new MapPropertySource('test',
                 [(Settings.SETTING_NEO4J_TYPE): Settings.DATABASE_TYPE_EMBEDDED]
         ))
         def init = new Neo4jDataStoreSpringInitializer(config, Author, Book)
         def ctx = init.configure()
 
-        when:"A GORm method is executed"
+        when:'A GORm method is executed'
         int count = Book.count()
-        then:"GORM for Neo4j is correctly configured"
+        then:'GORM for Neo4j is correctly configured'
         count == 0
 
         when:
         Author author
         Author.withTransaction {
-            author = new Author(name: "Stephen King")
-                    .addToBooks(title: "")
+            author = new Author(name: 'Stephen King')
+                    .addToBooks(title: '')
             author.validate()
         }
 
-        then:"GORM for Neo4j is correctly configured"
+        then:'GORM for Neo4j is correctly configured'
         author.errors.hasErrors()
 
         cleanup:
         ctx.close()
     }
 
-    void "Test configuration from map Neo4jDataStoreSpringInitializer loads neo4j correctly"() {
-        when:"neo4j is initialised"
+    void 'Test configuration from map Neo4jDataStoreSpringInitializer loads neo4j correctly'() {
+        when:'neo4j is initialised'
 
-        def config = [ (Settings.SETTING_NEO4J_URL):"jdbc:foo:bar", (Settings.SETTING_NEO4J_DRIVER_PROPERTIES):[one:"two"]]
+        def config = [ (Settings.SETTING_NEO4J_URL):'jdbc:foo:bar', (Settings.SETTING_NEO4J_DRIVER_PROPERTIES):[one: 'two']]
         def init = new Neo4jDataStoreSpringInitializer(config,Book)
 //        init.configure()
 
-        then:"GORM for Neo4j is correctly configured"
-        init.configuration.getProperty("grails.neo4j.url") == "jdbc:foo:bar"
-        init.configuration.getProperty("grails.neo4j.options", Map.class) == [one:"two"]
+        then:'GORM for Neo4j is correctly configured'
+        resolveProperty(init.configuration, 'grails.neo4j.url') == 'jdbc:foo:bar'
+        resolveProperty(init.configuration, 'grails.neo4j.options', Map) == [one: 'two']
 
+    }
+
+    @CompileStatic
+    private static String resolveProperty(PropertyResolver resolver, String key) {
+        resolver.getProperty(key)
+    }
+
+    @CompileStatic
+    private static <T> T resolveProperty(PropertyResolver resolver, String key, Class<T> type) {
+        resolver.getProperty(key, type)
     }
 }
 
 @Entity
 class Author {
+
     String name
-    static hasMany = [books:Book]
+    static hasMany = [books: Book]
 
     static constraints = {
         name blank:false
@@ -85,8 +98,9 @@ class Author {
 }
 @Entity
 class Book {
+
     String title
-    static belongsTo = [author:Author]
+    static belongsTo = [author: Author]
     static constraints = {
         title blank:false
     }

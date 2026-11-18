@@ -26,8 +26,8 @@ import org.grails.forge.build.dependencies.Dependency;
 @Singleton
 public class SQLServer extends DatabaseDriverFeature {
 
-    public SQLServer(HibernateGorm hibernateGorm, TestContainers testContainers) {
-        super(hibernateGorm, testContainers);
+    public SQLServer(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
+        super(grailsDataHibernate5, testContainers);
     }
 
     @Override

@@ -13,6 +13,7 @@ dependencies {
     implementation platform('org.example:test-bom:1.0.0')
     implementation 'org.example:mylib'
     implementation 'org.example:childlib'
+    implementation 'org.example:grouplib'
 }
 
 // mylib's BOM default is 2.0.0; this override is a DOWNGRADE that must win over
@@ -26,14 +27,20 @@ ext['mylib.version'] = '1.0.0'
 // (regression coverage for imported-BOM property overrides).
 ext['childbom.version'] = '2.0.0'
 
+// test-bom writes grouplib's group, and child-bom's, as ${project.groupId}. The
+// override must reach org.example:grouplib, not a module literally named
+// ${project.groupId}:grouplib.
+ext['grouplib.version'] = '2.0.0'
+
 tasks.register('printVersions') {
     def runtimeClasspath = configurations.runtimeClasspath
+    def resolved = providers.provider {
+        runtimeClasspath.incoming.resolutionResult.allComponents
+                .collect { it.moduleVersion }
+                .findAll { it != null }
+                .collect { "${it.group}:${it.name}:${it.version}" as String }
+    }
     doLast {
-        runtimeClasspath.incoming.resolutionResult.allComponents.each { component ->
-            def id = component.moduleVersion
-            if (id != null) {
-                println "RESOLVED=${id.group}:${id.name}:${id.version}"
-            }
-        }
+        resolved.get().each { println "RESOLVED=${it}" }
     }
 }

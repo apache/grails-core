@@ -17,5 +17,7 @@
  *  under the License.
  */
 
+//= require webjars/jquery/%/dist/jquery.js
+//= require webjars/bootstrap/%/dist/js/bootstrap.bundle.js
 //= require_tree .
 //= require_self

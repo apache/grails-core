@@ -18,7 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -27,7 +26,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import grails.util.GrailsMetaClassUtils;
-import grails.util.GrailsStringUtils;
 import grails.web.mapping.LinkGenerator;
 import grails.web.mapping.UrlMapping;
 import grails.web.servlet.mvc.GrailsParameterMap;
@@ -52,10 +50,6 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
     private static final String COMMA_SEPARATOR = ", ";
     private static final String KEY_VALUE_SEPARATOR = ":";
     private static final String THIS_MAP = "(this Map)";
-    // Synthetic cache-key entries that capture the request context namespace inference depends on for
-    // resource links, whose target controller this class does not resolve.
-    private static final String REQUEST_CONTROLLER_KEY = "__grailsRequestController";
-    private static final String REQUEST_NAMESPACE_KEY = "__grailsRequestNamespace";
 
     private Cache<String, Object> linkCache;
 
@@ -75,13 +69,24 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
             return super.link(attrs, encoding);
         }
 
-        final String key = makeKey(LINK_PREFIX, attrs);
+        // The encoding decides how the link's parameters are escaped, so a link is cached per encoding.
+        final String key = linkKey(attrs) + "encoding[" + encoding + "]";
         Object resourceLink = linkCache.getIfPresent(key);
         if (resourceLink == null) {
             resourceLink = super.link(attrs, encoding);
             linkCache.put(key, resourceLink);
         }
         return resourceLink.toString();
+    }
+
+    /**
+     * The key a link is cached under: its attributes, as {@link #makeKey} renders them, and what it resolves
+     * to, which can depend on the request it is generated in. The resolution is appended here rather than in
+     * {@code makeKey}, so a subclass that overrides {@code makeKey}, as the asset pipeline plugin's
+     * {@code AssetSupportingCachingLinkGenerator} does, still keys each link on it.
+     */
+    String linkKey(Map attrs) {
+        return makeKey(LINK_PREFIX, attrs) + resolvedLinkKey(attrs);
     }
 
     protected boolean isCacheable(Map attrs) {
@@ -106,52 +111,8 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
             buffer.append(OPENING_BRACKET);
         } else {
             buffer.append(OPENING_BRACKET);
-            Map map = new LinkedHashMap<>(params);
-            final String requestControllerName = getRequestStateLookupStrategy().getControllerName();
-            if (map.get(UrlMapping.ACTION) != null && map.get(UrlMapping.CONTROLLER) == null && map.get(RESOURCE_PREFIX) == null) {
-                Object action = map.remove(UrlMapping.ACTION);
-                map.put(UrlMapping.CONTROLLER, requestControllerName);
-                map.put(UrlMapping.ACTION, action);
-            }
-            // Fold the effective namespace into the cache key whenever none was supplied explicitly,
-            // so an inferred namespace (not just the current-controller case) is part of the key and
-            // links generated from different request namespaces never collide. The target controller
-            // may be supplied at the top level or nested in a url attribute map (for example
-            // <g:link url="[controller:'book']"/>); the plugin, like link(), is read from the top
-            // level. For these shapes we fold the precisely resolved namespace, which keeps the key
-            // tight and the cache hit rate high.
-            if (!map.containsKey(UrlMapping.NAMESPACE)) {
-                Object controllerValue = map.get(UrlMapping.CONTROLLER);
-                Object pluginValue = map.get(UrlMapping.PLUGIN);
-                Object urlValue = map.get(ATTRIBUTE_URL);
-                if (controllerValue == null && urlValue instanceof Map) {
-                    controllerValue = ((Map) urlValue).get(UrlMapping.CONTROLLER);
-                }
-                if (controllerValue != null) {
-                    String namespace = getDefaultNamespace(controllerValue.toString(),
-                            pluginValue == null ? null : pluginValue.toString());
-                    if (GrailsStringUtils.isNotEmpty(namespace)) {
-                        map.put(UrlMapping.NAMESPACE, namespace);
-                    }
-                }
-                else if (map.get(RESOURCE_PREFIX) != null && hasNamespacedControllers()) {
-                    // A resource link derives its controller through more involved resolution that we
-                    // do not duplicate here. When namespaced controllers exist a namespace could be
-                    // inferred, so fold the request context the inference depends on into the key so
-                    // resource links from different request namespaces never collide on a cached URL.
-                    // (A non-null request namespace always implies a namespaced controller is
-                    // registered, so this condition also covers the same-controller resource case.)
-                    String requestNamespace = getRequestStateLookupStrategy().getControllerNamespace();
-                    if (GrailsStringUtils.isNotEmpty(requestControllerName)) {
-                        map.put(REQUEST_CONTROLLER_KEY, requestControllerName);
-                    }
-                    if (GrailsStringUtils.isNotEmpty(requestNamespace)) {
-                        map.put(REQUEST_NAMESPACE_KEY, requestNamespace);
-                    }
-                }
-            }
             boolean first = true;
-            for (Object o : map.entrySet()) {
+            for (Object o : params.entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
                 Object value = entry.getValue();
                 if (value == null) continue;
@@ -160,7 +121,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
                 if (RESOURCE_PREFIX.equals(key)) {
                     value = getCacheKeyValueForResource(value);
                 }
-                appendKeyValue(buffer, map, key, value);
+                appendKeyValue(buffer, params, key, value);
             }
         }
         buffer.append(CLOSING_BRACKET);

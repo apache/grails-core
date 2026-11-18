@@ -47,6 +47,9 @@ dependencies {
     api 'org.apache.groovy:groovy'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    // the lifecycle annotations of AbstractGrailsMockTests; the test suites that extend it have the API on their classpath
+    compileOnly 'org.junit.jupiter:junit-jupiter-api'
     compileOnly 'org.springframework:spring-test', {
         // MockHttpServletRequest/Response/Context used in many classes
     }

@@ -51,4 +51,4 @@ Parameters:
 
 * `max` - The maximum number to list
 * `offset` - The offset from the first result to list from
-* `order` - The order to list by, either `"desc"` or `"asc"`
+* `order` - The order to list by, either `"desc"` or `"asc"` (case-insensitive, surrounding whitespace ignored). Any other value is rejected with an `IllegalArgumentException`, so a request parameter can be passed through without further checks.

@@ -67,6 +67,22 @@ class SingleTableSubclassBinderSpec extends HibernateGormDatastoreSpec {
         singleTableSubclass.getTable() == rootTable
         singleTableSubclass.getDiscriminatorValue() == "SUB_CLASS"
     }
+
+    void "test bind single table subclass without a discriminator mapping uses the fully qualified class name"() {
+        given:
+        def buildingContext = getGrailsDomainBinder().getMetadataBuildingContext()
+        createPersistentEntity(SingleTableSubClassRoot)
+        def subEntity = createPersistentEntity(SingleTableSubClassDefault) as org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentEntity
+        def rootClass = new RootClass(buildingContext)
+        rootClass.setEntityName(SingleTableSubClassRoot.name)
+        rootClass.setTable(new Table("ST_ROOT_TABLE"))
+
+        when:
+        def singleTableSubclass = binder.bindSubClass(subEntity, rootClass)
+
+        then:
+        singleTableSubclass.getDiscriminatorValue() == SingleTableSubClassDefault.name
+    }
 }
 
 @Entity
@@ -80,4 +96,9 @@ class SingleTableSubClassSub extends SingleTableSubClassRoot {
     static mapping = {
         discriminator "SUB_CLASS"
     }
+}
+
+@Entity
+class SingleTableSubClassDefault extends SingleTableSubClassRoot {
+    String label
 }

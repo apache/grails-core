@@ -110,6 +110,34 @@ class MappingContextTraversableResolverSpec extends Specification {
         !resolver.isCascadable(book, node, Book, path, ElementType.TYPE)
     }
 
+    void "test isCascadeable returns false when CASCADE_VALIDATION is explicitly disabled"() {
+        given: "the owning-side scenario that would otherwise cascade"
+        MappingContext mappingContext = new KeyValueMappingContext("test")
+        mappingContext.addPersistentEntities(Book, Author)
+        mappingContext.initialize()
+
+        MappingContextTraversableResolver resolver = new MappingContextTraversableResolver(mappingContext)
+
+        def author = new Author(name: "Stephen King")
+        Book book = new Book(author: author, title: "The Stand")
+        author.books = new HashSet<>()
+        author.books.add(book)
+
+        Path.Node node = Mock(Path.Node)
+        node.getName() >> "books"
+        Path path = Mock(Path)
+        path.iterator() >> [node].iterator()
+
+        when:
+        GormValidatorAdapter.CASCADE_VALIDATION.set(Boolean.FALSE)
+
+        then: "cascading is short-circuited regardless of the owning-side/association state"
+        !resolver.isCascadable(author, node, Author, path, ElementType.TYPE)
+
+        cleanup:
+        GormValidatorAdapter.CASCADE_VALIDATION.remove()
+    }
+
     void "test isCascadeable for initialized entity owning side"() {
         given:
         MappingContext mappingContext = new KeyValueMappingContext("test")

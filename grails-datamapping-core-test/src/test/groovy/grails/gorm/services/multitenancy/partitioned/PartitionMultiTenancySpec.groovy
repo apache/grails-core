@@ -50,6 +50,67 @@ class PartitionMultiTenancySpec extends Specification {
     @Shared
     IBookService bookDataService = datastore.getService(IBookService)
 
+    void 'test a block for a tenant id, which names no connection, leaves the routing alone'() {
+        given: 'two books for one tenant and one for another'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '900')
+        Book.withTransaction {
+            new Book(title: 'First').save(flush: true)
+            new Book(title: 'Second').save(flush: true)
+        }
+        Book.withTenant('901') {
+            Book.withTransaction { new Book(title: 'Another tenant').save(flush: true) }
+        }
+
+        expect: 'a session or transaction opened for a tenant leaves the calls on the class to the current tenant'
+        Book.withTenant('901').withTransaction { Book.count() } == 2
+        Book.withTenant('901').withNewSession { Book.count() } == 2
+
+        and: 'while the call that names the tenant reaches it'
+        Book.withTenant('901').count() == 1
+
+        cleanup:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+    }
+
+    void 'an instance whose tenant id names another tenant is saved under the current tenant'() {
+        given: 'a current tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '910')
+
+        when: 'a book with the tenant id of another tenant is saved'
+        Book book = Book.withTransaction { new Book(title: 'Inserted', tenantId: 911).save(flush: true) }
+
+        then: 'it gets the current tenant, and only the current tenant sees it'
+        book.tenantId == 910
+        Book.withTransaction { Book.countByTitle('Inserted') } == 1
+        Book.withTenant('911') { Book.withTransaction { Book.countByTitle('Inserted') } } == 0
+
+        when: 'its tenant id is changed to another tenant and it is saved again'
+        Book updated = Book.withTransaction {
+            Book loaded = Book.get(book.id)
+            loaded.tenantId = 911
+            loaded.save(flush: true)
+        }
+
+        then: 'it keeps the current tenant, and only the current tenant sees it'
+        updated.tenantId == 910
+        Book.withTransaction { Book.countByTitle('Inserted') } == 1
+        Book.withTenant('911') { Book.withTransaction { Book.countByTitle('Inserted') } } == 0
+
+        cleanup:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+    }
+
+    void 'saving without a tenant throws the TenantNotFoundException of the tenant resolver'() {
+        given: 'no current tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+
+        when: 'a book is saved'
+        Book.withTransaction { new Book(title: 'No tenant').save(flush: true) }
+
+        then: 'the exception says that no tenant was found'
+        thrown(TenantNotFoundException)
+    }
+
     void 'Test partitioned multi-tenancy with GORM services'() {
         setup:
         BookService bookService = new BookService()

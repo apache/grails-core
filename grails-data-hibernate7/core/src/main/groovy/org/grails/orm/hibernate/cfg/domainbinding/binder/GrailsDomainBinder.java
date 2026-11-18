@@ -66,7 +66,10 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
     public static final String ENUM_CLASS_PROP = "enumClass";
     public static final Logger LOG = LoggerFactory.getLogger(GrailsDomainBinder.class);
 
-    public static final String JPA_DEFAULT_DISCRIMINATOR_TYPE = "DTYPE";
+    /**
+     * The name of the discriminator column of a table-per-hierarchy tree that does not map one.
+     */
+    public static final String DEFAULT_DISCRIMINATOR_COLUMN_NAME = "class";
 
     private final String sessionFactoryName;
     private final String dataSourceName;
@@ -128,10 +131,12 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         var jdbcEnvironment = getJdbcEnvironment();
         var defaultColumnNameFetcher =
                 new DefaultColumnNameFetcher(namingStrategy, backticksRemover);
-        var columnNameForPropertyAndPathFetcher =
-                new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, backticksRemover);
+        var columnNameForPropertyAndPathFetcher = new ColumnNameForPropertyAndPathFetcher(
+                namingStrategy, defaultColumnNameFetcher, backticksRemover, metadataBuildingContext);
         var simpleValueBinder =
                 new SimpleValueBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
+        var compositeUserTypeBinder =
+                new CompositeUserTypeBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment);
         var enumTypeBinder =
                 new EnumTypeBinder(metadataBuildingContext, columnNameForPropertyAndPathFetcher, namingStrategy);
         var propertyFromValueCreator = new PropertyFromValueCreator();
@@ -139,6 +144,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
         var simpleValueColumnFetcher = new SimpleValueColumnFetcher();
         var compositeIdentifierToManyToOneBinder =
                 new CompositeIdentifierToManyToOneBinder(
+                        metadataCollector,
                         new org.grails.orm.hibernate.cfg.domainbinding.util.ForeignKeyColumnCountCalculator(),
                         namingStrategy,
                         defaultColumnNameFetcher,
@@ -175,6 +181,7 @@ public class GrailsDomainBinder implements AdditionalMappingContributor, TypeCon
                 componentBinder,
                 collectionBinder,
                 simpleValueBinder,
+                compositeUserTypeBinder,
                 oneToOneBinder,
                 manyToOneBinder,
                 foreignKeyOneToOneBinder);

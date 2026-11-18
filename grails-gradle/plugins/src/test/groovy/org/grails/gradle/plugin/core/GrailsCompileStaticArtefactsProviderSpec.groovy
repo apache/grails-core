@@ -114,6 +114,45 @@ class GrailsCompileStaticArtefactsProviderSpec extends Specification {
         ]
     }
 
+    void 'an artefact type set to false is held back from the all shortcut'() {
+        given:
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.all.set(true)
+        compileStatic.services.set(false)
+
+        expect:
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == [
+                "-D${BuildSettings.COMPILE_STATIC_CONTROLLERS}=true".toString(),
+                "-D${BuildSettings.COMPILE_STATIC_TAGLIBS}=true".toString()
+        ]
+    }
+
+    void 'every artefact type can be held back from the all shortcut'() {
+        given:
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.with {
+            all = true
+            controllers = false
+            services = false
+            tagLibs = false
+        }
+
+        expect:
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == []
+    }
+
+    void 'an artefact type set to true is published where the all shortcut is off'() {
+        given:
+        GrailsCompileStaticOptions compileStatic = options()
+        compileStatic.all.set(false)
+        compileStatic.services.set(true)
+
+        expect:
+        new GrailsCompileStaticArtefactsProvider(compileStatic).asArguments().toList() == [
+                "-D${BuildSettings.COMPILE_STATIC_SERVICES}=true".toString()
+        ]
+    }
+
     void 'the provider reads the options lazily so it reflects values set after construction'() {
         given:
         GrailsCompileStaticOptions compileStatic = options()

@@ -397,7 +397,8 @@ class Mapping extends Entity<PropertyConfig> {
     @CompileStatic
     Mapping version(String versionColumn) {
         PropertyConfig pc = getOrInitializePropertyConfig(GormProperties.VERSION)
-        pc.columns << new ColumnConfig(name: versionColumn)
+        // Through column(), which names a column copied from a '*' entry rather than adding a second one.
+        pc.column(versionColumn)
         return this
     }
 
@@ -564,6 +565,9 @@ class Mapping extends Entity<PropertyConfig> {
                 if (pc.columns.size() == 1) {
                     pc.firstColumnIsColumnCopy = true
                 }
+                // Stored, as a new entry is below: the caller configures what is returned, and a clone held
+                // nowhere else would take that configuration with it.
+                columns[name] = pc
             }
         }
         else {

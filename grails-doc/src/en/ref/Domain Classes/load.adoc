@@ -46,7 +46,11 @@ Book.load(1).delete()
 === Description
 
 
-`load` usually returns a proxy for the instance which is initialized on-demand, when a method other than `getId()` is invoked. `load()` only returns `null` if the provided id is `null`, so you cannot use it to test for existence. If you provide an id for an instance that doesn't exist, a proxy will be returned and an exception will be thrown only when you call any instance method other than `getId()`.
+`load` usually returns a proxy for the instance which is initialized on-demand. The mapped identifier getter (normally `getId()`) can return the identifier without initializing the proxy. `load()` only returns `null` if the provided id is `null`, so you cannot use it to test for existence. If you provide an id for an instance that doesn't exist, a proxy will be returned and an exception will be thrown when the instance is initialized.
+
+Use `ident()` to obtain the mapped identifier, including renamed and composite keys, rather than assuming that a method named `getId()` exposes it. An overload of the mapped getter or a business method named `getIdentifier()` still invokes the entity implementation.
+
+On an uninitialized Groovy-aware proxy, dynamic lookups such as `proxy.getProperty('id')` and `proxy['id']` retain the shortcut to the mapped identifier. These lookups are not interchangeable with a direct `getId()` call when that method is not the mapped identifier getter.
 
 If there is an existing instance with the same id in the Hibernate session or 2nd-level cache, load() will return that non-proxy instance instead of a proxy.
 

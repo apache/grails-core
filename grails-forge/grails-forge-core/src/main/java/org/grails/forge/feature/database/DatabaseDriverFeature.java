@@ -29,15 +29,15 @@ import java.util.Map;
 public abstract class DatabaseDriverFeature implements OneOfFeature {
 
     private final TestContainers testContainers;
-    private final HibernateGorm hibernateGorm;
+    private final GrailsDataHibernate5 grailsDataHibernate5;
 
     public DatabaseDriverFeature() {
         this.testContainers = null;
-        this.hibernateGorm = null;
+        this.grailsDataHibernate5 = null;
     }
 
-    public DatabaseDriverFeature(HibernateGorm hibernateGorm, TestContainers testContainers) {
-        this.hibernateGorm = hibernateGorm;
+    public DatabaseDriverFeature(GrailsDataHibernate5 grailsDataHibernate5, TestContainers testContainers) {
+        this.grailsDataHibernate5 = grailsDataHibernate5;
         this.testContainers = testContainers;
     }
 
@@ -56,8 +56,8 @@ public abstract class DatabaseDriverFeature implements OneOfFeature {
         if (!featureContext.isPresent(TestContainers.class) && testContainers != null) {
             featureContext.addFeature(testContainers);
         }
-        if (!featureContext.isPresent(HibernateGorm.class) && hibernateGorm != null) {
-            featureContext.addFeature(hibernateGorm);
+        if (!featureContext.isPresent(DatabaseDriverConfigurationFeature.class) && grailsDataHibernate5 != null) {
+            featureContext.addFeature(grailsDataHibernate5);
         }
     }
 

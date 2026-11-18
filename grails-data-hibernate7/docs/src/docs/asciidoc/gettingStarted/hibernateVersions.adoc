@@ -35,18 +35,6 @@ dependencies {
 }
 ----
 
-Or using the Micronaut integration:
-
-[source,groovy]
-.build.gradle
-----
-dependencies {
-    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:{version}")
-    implementation "org.apache.grails:grails-hibernate7"
-    implementation "org.apache.grails:grails-micronaut"
-}
-----
-
 === Hibernate 7.4 support line
 
 Grails Hibernate 7 targets Hibernate ORM 7.4, the current stable Hibernate 7 line. Hibernate ORM 7.3 and 7.2 are limited-support lines, so new Hibernate 7 applications should validate against the Hibernate 7.4 behavior described below.

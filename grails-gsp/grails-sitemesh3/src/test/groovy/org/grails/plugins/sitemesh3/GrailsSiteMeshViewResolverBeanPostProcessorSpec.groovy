@@ -25,8 +25,6 @@ import org.sitemesh.SiteMeshContext
 import org.sitemesh.content.ContentProcessor
 
 import org.springframework.beans.factory.BeanFactory
-import org.springframework.context.ApplicationEvent
-import org.springframework.context.ApplicationListener
 import org.springframework.web.servlet.ViewResolver
 import org.springframework.web.servlet.view.InternalResourceViewResolver
 
@@ -35,11 +33,6 @@ import spock.lang.Specification
 class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
 
     BeanFactory beanFactory = Mock(BeanFactory)
-
-    static class ListenerViewResolver extends InternalResourceViewResolver implements ApplicationListener<ApplicationEvent> {
-        @Override
-        void onApplicationEvent(ApplicationEvent event) { }
-    }
 
     void "target bean name defaults to jspViewResolver and wrapper class is GrailsSiteMeshViewResolver"() {
         expect:
@@ -68,6 +61,28 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
         result instanceof GrailsSiteMeshViewResolver
     }
 
+    void "wraps a resolver that carries jspViewResolver as an alias, as a standalone Spring Boot application registers it"() {
+        given:
+        ContentProcessor cp = Mock(ContentProcessor)
+        DecoratorSelector<SiteMeshContext> ds = Mock(DecoratorSelector)
+        ServletContext sc = Mock(ServletContext)
+        beanFactory.containsBean('contentProcessor') >> true
+        beanFactory.containsBean('decoratorSelector') >> true
+        beanFactory.getBean('contentProcessor', ContentProcessor) >> cp
+        beanFactory.getBean('decoratorSelector', DecoratorSelector) >> ds
+        beanFactory.getBean('servletContext', ServletContext) >> sc
+        beanFactory.getAliases('gspViewResolver') >> (['jspViewResolver'] as String[])
+
+        GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
+        pp.setBeanFactory(beanFactory)
+
+        when:
+        Object result = pp.postProcessAfterInitialization(new InternalResourceViewResolver(), 'gspViewResolver')
+
+        then:
+        result instanceof GrailsSiteMeshViewResolver
+    }
+
     void "beans with a non-matching name are returned untouched"() {
         given:
         beanFactory.containsBean(_ as String) >> true
@@ -77,17 +92,6 @@ class GrailsSiteMeshViewResolverBeanPostProcessorSpec extends Specification {
 
         expect:
         pp.postProcessAfterInitialization(other, 'someOther').is(other)
-    }
-
-    void "a resolver that is an ApplicationListener, like SiteMesh 2's layout resolver, is left unwrapped"() {
-        given:
-        beanFactory.containsBean(_ as String) >> true
-        GrailsSiteMeshViewResolverBeanPostProcessor pp = new GrailsSiteMeshViewResolverBeanPostProcessor()
-        pp.setBeanFactory(beanFactory)
-        ViewResolver listenerResolver = new ListenerViewResolver()
-
-        expect:
-        pp.postProcessAfterInitialization(listenerResolver, 'jspViewResolver').is(listenerResolver)
     }
 
     void "the view resolver is left unwrapped when the SiteMesh beans are not in the context"() {

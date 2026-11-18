@@ -38,7 +38,7 @@ import org.grails.datastore.mapping.mongo.MongoDatastore
 class MongodbGrailsPlugin extends Plugin {
 
     def license = 'Apache 2.0 License'
-    def organization = [name: 'Grails', url: 'https://grails.apache.org/']
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org/']
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
     def grailsVersion = '7.0.0-SNAPSHOT > *'

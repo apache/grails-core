@@ -18,12 +18,15 @@
  */
 package org.grails.plugins.web.controllers
 
+import groovy.transform.CompileDynamic
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
 import org.springframework.beans.factory.support.AbstractBeanDefinition
 import org.springframework.context.ApplicationContext
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter
-import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping
+import org.springframework.core.env.Environment
 
 import grails.config.Settings
 import grails.core.GrailsControllerClass
@@ -31,7 +34,6 @@ import grails.plugins.Plugin
 import grails.util.GrailsUtil
 import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.plugins.web.servlet.context.BootStrapClassRunner
-import org.grails.web.errors.GrailsExceptionResolver
 import org.grails.web.servlet.mvc.TokenResponseActionResultTransformer
 import org.grails.web.servlet.view.CompositeViewResolver
 
@@ -42,6 +44,7 @@ import org.grails.web.servlet.view.CompositeViewResolver
  * @since 0.4
  */
 @Slf4j
+@CompileStatic
 class ControllersGrailsPlugin extends Plugin {
 
     def watchedResources = [
@@ -53,59 +56,35 @@ class ControllersGrailsPlugin extends Plugin {
     def dependsOn = [core: version, i18n: version, urlMappings: version]
 
     @Override
-    Closure doWithSpring() {
-        { ->
-            def application = grailsApplication
-            def config = application.config
-
-            boolean useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            boolean useJsessionId = environment.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
 
             if (!Boolean.parseBoolean(System.getProperty(Settings.SETTING_SKIP_BOOTSTRAP))) {
-                bootStrapClassRunner(BootStrapClassRunner)
+                registry.registerBean('bootStrapClassRunner', BootStrapClassRunner)
             }
 
-            tokenResponseActionResultTransformer(TokenResponseActionResultTransformer)
+            registry.registerBean('tokenResponseActionResultTransformer', TokenResponseActionResultTransformer)
 
-            exceptionHandler(GrailsExceptionResolver) {
-                exceptionMappings = ['java.lang.Exception': '/error']
-            }
+            registry.registerBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver)
 
-            "${CompositeViewResolver.BEAN_NAME}"(CompositeViewResolver)
-
-            def handlerInterceptors = springConfig.containsBean('localeChangeInterceptor') ? [ref('localeChangeInterceptor')] : []
-            def interceptorsClosure = {
-                interceptors = handlerInterceptors
-            }
-            // allow @Controller annotated beans
-            annotationHandlerMapping(RequestMappingHandlerMapping, interceptorsClosure)
-            annotationHandlerAdapter(RequestMappingHandlerAdapter)
-
-            for (controller in application.getArtefacts(ControllerArtefactHandler.TYPE)) {
-                log.debug('Configuring controller {}', controller.fullName)
-                if (controller.available) {
-                    def lazyInit = controller.hasProperty('lazyInit') ? controller.getPropertyValue('lazyInit') : true
-                    "${controller.fullName}"(controller.clazz) { bean ->
-                        bean.lazyInit = lazyInit
-                        def beanScope = controller.getScope()
-                        bean.scope = beanScope
-                        bean.autowire = 'byName'
-                        if (beanScope == 'prototype') {
-                            bean.beanDefinition.dependencyCheck = AbstractBeanDefinition.DEPENDENCY_CHECK_NONE
-                        }
-                        if (useJsessionId) {
-                            useJessionId = useJsessionId
-                        }
-                    }
+            // Controller beans autowire by name and use per-controller scopes, which the
+            // BeanRegistry API cannot express — their definitions are contributed by a
+            // dedicated post-processor instead
+            registry.registerBean('controllerBeanDefinitionsPostProcessor', ControllerBeanDefinitionsPostProcessor) {
+                it.infrastructure().supplier {
+                    new ControllerBeanDefinitionsPostProcessor(grailsApplication, useJsessionId)
                 }
             }
 
-            if (config.getProperty(Settings.SETTING_LEGACY_JSON_BUILDER, Boolean, false)) {
+            if (environment.getProperty(Settings.SETTING_LEGACY_JSON_BUILDER, Boolean, false)) {
                 log.warn("'grails.json.legacy.builder' is set to TRUE but is NOT supported in this version of Grails.")
             }
         }
     }
 
     @Override
+    @CompileDynamic
     void onChange(Map<String, Object> event) {
         if (!(event.source instanceof Class)) {
             return

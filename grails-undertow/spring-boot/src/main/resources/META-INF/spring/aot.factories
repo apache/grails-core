@@ -1,0 +1,2 @@
+org.springframework.aot.hint.RuntimeHintsRegistrar=\
+org.apache.grails.undertow.core.UndertowWebServer$UndertowWebServerRuntimeHints

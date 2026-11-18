@@ -32,6 +32,6 @@ class LoginPage extends Page {
 		username { $('input', type: 'text',     name: 'username') }
 		password { $('input', type: 'password', name: 'password') }
 		rememberMe { $('input', type: 'checkbox', name: 'remember-me') }
-		loginButton { $('input', type: 'submit', value: 'Login') }
+		loginButton { $('#submit') }
 	}
 }

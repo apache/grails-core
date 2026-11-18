@@ -22,8 +22,9 @@ import grails.artefact.Interceptor
 import grails.util.Environment
 import grails.web.mapping.UrlMappingInfo
 import spock.lang.Issue
-import spock.util.environment.RestoreSystemProperties
 import spock.lang.Specification
+import spock.lang.Unroll
+import spock.util.environment.RestoreSystemProperties
 
 class UrlMappingMatcherSpec extends Specification {
 
@@ -63,5 +64,69 @@ class UrlMappingMatcherSpec extends Specification {
 
         then:
         !matcher.doesMatch(url, info)
+    }
+
+    @Unroll
+    void "the matcher matches the path it is given without decoding it again: #uri"() {
+        given: "match(uri: '/admin/**').excludes(uri: '/admin/health')"
+        def matcher = new UrlMappingMatcher(Mock(Interceptor))
+        matcher.matches(uri: '/admin/**').excludes(uri: '/admin/health')
+
+        expect: "Interceptor canonicalizes the request path once, so a literal semicolon or escape is a different path"
+        matcher.doesMatch(uri, null) == matches
+
+        where:
+        uri                   | matches
+        '/admin/deleteUser'   | true
+        '/admin/health'       | false
+        '/admin/health;x'     | true
+        '/%61dmin/deleteUser' | false
+    }
+
+    @Unroll
+    void "a pattern is matched against the path within the application under context path /app: #pattern"() {
+        given:
+        def matcher = new UrlMappingMatcher(Mock(Interceptor))
+        matcher.matches(uri: pattern)
+
+        expect:
+        matcher.doesMatch('/save', null, 'GET', '/app') == matches
+
+        where:
+        pattern             | matches
+        '/save'             | true
+        '/*'                | true
+        '/app/save'         | true
+        '/app'              | false
+        '/*/*'              | false
+        '/app/*/*'          | false
+        '/application/save' | false
+    }
+
+    @Unroll
+    void "a context-prefixed exclude pattern only strips the context path when one is given: #contextPath"() {
+        given: "matchAll().excludes(uri: '/app/mgmt/*')"
+        def matcher = new UrlMappingMatcher(Mock(Interceptor))
+        matcher.matchAll().excludes(uri: '/app/mgmt/*')
+
+        expect:
+        matcher.doesMatch('/mgmt/health', null, 'GET', contextPath) == matches
+
+        where:
+        contextPath | matches
+        '/app'      | false
+        '/'         | true
+        ''          | true
+        null        | true
+    }
+
+    void "the three argument doesMatch behaves as if no context path was given"() {
+        given:
+        def matcher = new UrlMappingMatcher(Mock(Interceptor))
+        matcher.matches(uri: '/app/save')
+
+        expect:
+        !matcher.doesMatch('/save', null, 'GET')
+        matcher.doesMatch('/app/save', null, 'GET')
     }
 }

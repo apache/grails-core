@@ -113,6 +113,24 @@ class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManage
         postCodes[0][1] == [postCode: '30483']
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/15955')
+    void "Test property-to-property comparison inside an embedded block fails loudly"() {
+        given: "A domain with an embedded association"
+        new Individual(name: "Bob", address: new Address(postCode: "30483")).save(flush: true)
+        manager.session.clear()
+
+        when: "a property comparison criterion is used inside the embedded block"
+        Individual.createCriteria().list {
+            address {
+                eqProperty('postCode', 'postCode')
+            }
+        }
+
+        then: "the query is rejected instead of silently matching nothing"
+        def e = thrown(UnsupportedOperationException)
+        e.message.contains('embedded')
+    }
+
     void "Test persistence of embedded entities"() {
         given: "A domain with an embedded association"
         def i = new Individual(name: "Bob", address: new Address(postCode: "30483"))

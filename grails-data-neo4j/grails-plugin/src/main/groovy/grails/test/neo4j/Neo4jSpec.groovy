@@ -65,27 +65,26 @@ abstract class Neo4jSpec extends Specification {
         neo4jDatastore.getMappingContext()
     }
 
-
     /**
      * @return The domain classes
      */
     protected List<Class> getDomainClasses() { [] }
 
     void setupSpec() {
-        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader.class, getClass().getClassLoader())
+        List<PropertySourceLoader> propertySourceLoaders = SpringFactoriesLoader.loadFactories(PropertySourceLoader, getClass().getClassLoader())
         ResourceLoader resourceLoader = new DefaultResourceLoader()
 
         List<PropertySource> propertySources = []
-        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("yml") }
+        PropertySourceLoader ymlLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('yml') }
         if (ymlLoader) {
-            propertySources.addAll(load(resourceLoader, ymlLoader, "application.yml"))
+            propertySources.addAll(load(resourceLoader, ymlLoader, 'application.yml'))
         }
-        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains("groovy") }
+        PropertySourceLoader groovyLoader = propertySourceLoaders.find { it.getFileExtensions().toList().contains('groovy') }
         if (groovyLoader) {
-            propertySources.addAll(load(resourceLoader, groovyLoader, "application.groovy"))
+            propertySources.addAll(load(resourceLoader, groovyLoader, 'application.groovy'))
         }
 
-        if(propertySources) {
+        if (propertySources) {
             Map<String, Object> mapPropertySource = [:] as Map<String, Object>
             mapPropertySource += propertySources
                     .findAll { it.getSource() }
@@ -115,7 +114,7 @@ abstract class Neo4jSpec extends Specification {
 
     void setup() {
         boolean existing = neo4jDatastore.hasCurrentSession()
-        session = (Neo4jSession)( existing ? neo4jDatastore.currentSession : DatastoreUtils.bindSession(neo4jDatastore.connect()) )
+        session = (Neo4jSession)(existing ? neo4jDatastore.currentSession : DatastoreUtils.bindSession(neo4jDatastore.connect()))
         transaction = session.beginTransaction()
     }
 
@@ -135,7 +134,7 @@ abstract class Neo4jSpec extends Specification {
      */
     protected Package getPackageToScan(Config config) {
         def p = Package.getPackage(config.getProperty('grails.codegen.defaultPackage', getClass().package.name))
-        if(p == null) {
+        if (p == null) {
             p = getClass().package
         }
         return p

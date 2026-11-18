@@ -45,3 +45,10 @@ asciidoctorj {
                "revnumber": "$project.version"
 }
 
+// The Asciidoctor Gradle plugin does not support the configuration cache, so a build that runs
+// its task runs without the cache instead of failing. This script cannot see the plugin's classes,
+// so it names the task rather than its type.
+tasks.named('asciidoctor') {
+    notCompatibleWithConfigurationCache('The Asciidoctor Gradle plugin does not support the configuration cache')
+}
+

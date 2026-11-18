@@ -22,7 +22,11 @@ package org.grails.async.factory
 import grails.async.PromiseFactory
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import org.grails.async.factory.future.CachedThreadPoolPromiseFactory
+import java.util.concurrent.Executor
+import java.util.function.UnaryOperator
+
+import org.grails.async.factory.future.CompletableFuturePromiseFactory
+import org.grails.async.factory.future.VirtualThreadPromiseFactory
 
 /**
  * Constructs the default promise factory
@@ -37,14 +41,20 @@ class PromiseFactoryBuilder {
     /**
      * @return Builds the default PromiseFactory
      */
-    static PromiseFactory build() {
+    static PromiseFactory build(Executor executor = null, UnaryOperator<Executor> ownedExecutorDecorator = UnaryOperator.<Executor>identity()) {
 
         List<PromiseFactory> promiseFactories = ServiceLoader.load(PromiseFactory).toList()
 
         PromiseFactory promiseFactory
         if (promiseFactories.isEmpty()) {
-            log.debug('No PromiseFactory implementation found. Using default ExecutorService promise factory.')
-            promiseFactory = new CachedThreadPoolPromiseFactory()
+            if (System.getProperty('grails.async.promiseFactory') == 'virtual-thread') {
+                log.debug('No PromiseFactory implementation found. Using virtual thread promise factory.')
+                promiseFactory = new VirtualThreadPromiseFactory(ownedExecutorDecorator)
+            }
+            else {
+                log.debug('No PromiseFactory implementation found. Using the CompletableFuture promise factory.')
+                promiseFactory = executor == null ? new CompletableFuturePromiseFactory(ownedExecutorDecorator) : new CompletableFuturePromiseFactory(executor)
+            }
         }
         else {
             promiseFactory = promiseFactories.first()

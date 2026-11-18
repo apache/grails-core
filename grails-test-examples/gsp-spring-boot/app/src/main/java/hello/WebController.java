@@ -18,14 +18,18 @@
  */
 package hello;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -37,31 +41,63 @@ public class WebController implements WebMvcConfigurer {
         registry.addViewController("/results").setViewName("results");
     }
 
-    @RequestMapping("/jsp") public String jsp() { return setJsp(true); }
+    /**
+     * Tells every view what rendered it and whether the JSP rendering can be offered - the results
+     * view included, which is rendered by the view controller above rather than by a handler method
+     * of this class.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new HandlerInterceptor() {
+            @Override
+            public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+                    ModelAndView modelAndView) {
+                // not onto a redirect, which would carry the attributes over as query parameters
+                if (modelAndView != null && !isRedirect(modelAndView)) {
+                    modelAndView.getModel().putIfAbsent("jspAvailable",
+                            JspSupport.canServeJsp(request.getServletContext()));
+                    modelAndView.getModel().putIfAbsent("viewType", viewType(modelAndView));
+                }
+            }
 
-    @RequestMapping("/gsp") public String gsp() { return setJsp(false); }
+            /** What renders this page, which the view name says: only a JSP is asked for by file. */
+            private String viewType(ModelAndView modelAndView) {
+                String viewName = modelAndView.getViewName();
+                return viewName != null && viewName.endsWith(".jsp") ? "JSP" : "GSP";
+            }
 
-    private static boolean jsp = false;
+            private boolean isRedirect(ModelAndView modelAndView) {
+                String viewName = modelAndView.getViewName();
+                return viewName != null && viewName.startsWith("redirect:");
+            }
+        });
+    }
 
-    private String setJsp(boolean jsp) {
-        this.jsp = jsp;
+    @RequestMapping("/gsp") public String gsp(HttpSession session) {
+        selectJsp(session, false);
         return "redirect:/";
     }
 
-    private String formView(Model model) {
-        model.addAttribute("viewType", jsp ? "JSP" : "GSP");
-        return String.format("form%s", jsp ? ".jsp" : "");
+    /** Which rendering of the form this visitor asked for, so one visitor's choice is their own. */
+    private static final String JSP_SELECTED = "jspSelected";
+
+    static void selectJsp(HttpSession session, boolean selected) {
+        session.setAttribute(JSP_SELECTED, selected);
+    }
+
+    private static String formView(HttpSession session) {
+        return Boolean.TRUE.equals(session.getAttribute(JSP_SELECTED)) ? "form.jsp" : "form";
     }
 
     @RequestMapping(value = "/", method = RequestMethod.GET)
-    public String showForm(Person person, Model model) {
-        return formView(model);
+    public String showForm(Person person, HttpSession session) {
+        return formView(session);
     }
 
     @RequestMapping(value = "/", method = RequestMethod.POST)
-    public String checkPersonInfo(@Valid Person person, BindingResult result, Model model, HttpSession session) throws Exception {
+    public String checkPersonInfo(@Valid Person person, BindingResult result, HttpSession session) throws Exception {
         if (result.hasErrors()) {
-            return formView(model);
+            return formView(session);
         }
         session.setAttribute("person", person);
         return "redirect:results";

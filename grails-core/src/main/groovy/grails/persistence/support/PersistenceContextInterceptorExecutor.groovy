@@ -70,8 +70,7 @@ class PersistenceContextInterceptorExecutor {
         for (PersistenceContextInterceptor i in interceptors) {
             try {
                 i.destroy()
-            } catch (e) {
-                // ignore exception
+            } catch (ignored) {
             }
         }
     }

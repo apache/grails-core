@@ -22,6 +22,10 @@ package org.grails.plugins.web.mapping
 import java.util.function.Supplier
 
 import grails.config.Settings
+import grails.web.CamelCaseUrlConverter
+import grails.web.HyphenatedUrlConverter
+import grails.web.UrlConverter
+import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappings
 import grails.web.mapping.cors.GrailsCorsConfiguration
 import grails.web.mapping.cors.GrailsCorsFilter
@@ -32,6 +36,8 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.filter.CorsFilter
 
+import org.grails.web.mapping.CachingLinkGenerator
+import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.mvc.UrlMappingsInfoHandlerAdapter
 import org.grails.web.mapping.servlet.UrlMappingsErrorPageCustomizer
 
@@ -56,6 +62,84 @@ class UrlMappingsAutoConfigurationSpec extends Specification {
             assert context.containsBean('urlMappingsErrorPageCustomizer')
             assert context.containsBean('urlMappingsInfoHandlerAdapter')
         }
+    }
+
+    void 'the camelCase url converter registers by default'() {
+        expect:
+        contextRunner().run { context ->
+            assert context.getBean(UrlConverter.BEAN_NAME) instanceof CamelCaseUrlConverter
+        }
+    }
+
+    void 'the hyphenated url converter registers when selected by property'() {
+        expect:
+        contextRunner()
+                .withPropertyValues("${Settings.WEB_URL_CONVERTER}=hyphenated")
+                .run { context ->
+                    assert context.getBean(UrlConverter.BEAN_NAME) instanceof HyphenatedUrlConverter
+                }
+    }
+
+    void 'the link generator caches when enabled by property'() {
+        expect:
+        contextRunner()
+                .withPropertyValues("${Settings.WEB_LINK_GENERATOR_USE_CACHE}=true")
+                .run { context ->
+                    assert context.getBean(LinkGenerator.BEAN_NAME) instanceof CachingLinkGenerator
+                }
+    }
+
+    void 'the link generator does not cache when disabled by property, and receives the configured server URL'() {
+        expect:
+        contextRunner()
+                .withPropertyValues(
+                        "${Settings.WEB_LINK_GENERATOR_USE_CACHE}=false",
+                        "${Settings.SERVER_URL}=https://example.org")
+                .run { context ->
+                    def linkGenerator = context.getBean(LinkGenerator.BEAN_NAME)
+                    assert linkGenerator instanceof DefaultLinkGenerator
+                    assert !(linkGenerator instanceof CachingLinkGenerator)
+                    assert linkGenerator.configuredServerBaseURL == 'https://example.org'
+                }
+    }
+
+    void 'the configured server URL also propagates to the caching link generator'() {
+        expect:
+        contextRunner()
+                .withPropertyValues(
+                        "${Settings.WEB_LINK_GENERATOR_USE_CACHE}=true",
+                        "${Settings.SERVER_URL}=https://example.org")
+                .run { context ->
+                    assert context.getBean(LinkGenerator.BEAN_NAME).configuredServerBaseURL == 'https://example.org'
+                }
+    }
+
+    void 'a user-defined grailsLinkGenerator bean makes the auto-configured one back off'() {
+        given:
+        LinkGenerator userLinkGenerator = new DefaultLinkGenerator('https://user.example.org')
+        Supplier<LinkGenerator> userLinkGeneratorSupplier = () -> userLinkGenerator
+
+        expect:
+        contextRunner()
+                .withBean(LinkGenerator.BEAN_NAME, LinkGenerator, userLinkGeneratorSupplier)
+                .run { context ->
+                    assert context.getBeanNamesForType(LinkGenerator).length == 1
+                    assert context.getBean(LinkGenerator.BEAN_NAME).is(userLinkGenerator)
+                }
+    }
+
+    void 'a user-defined grailsUrlConverter bean makes both auto-configured variants back off'() {
+        given:
+        UrlConverter userConverter = new HyphenatedUrlConverter()
+        Supplier<UrlConverter> userConverterSupplier = () -> userConverter
+
+        expect:
+        contextRunner()
+                .withBean(UrlConverter.BEAN_NAME, UrlConverter, userConverterSupplier)
+                .run { context ->
+                    assert context.getBeanNamesForType(UrlConverter).length == 1
+                    assert context.getBean(UrlConverter.BEAN_NAME).is(userConverter)
+                }
     }
 
     void 'the CORS filter is not registered when disabled by property'() {

@@ -23,6 +23,7 @@ import grails.artefact.Artefact
 import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.Validateable
+import grails.web.databinding.BindAllowed
 import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
@@ -382,10 +383,28 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
         then:
         commandObject.testId == 1
     }
+
+    void '@BindAllowed on a command object action parameter only binds listed fields'() {
+        given:
+        params.displayName = 'Grace Hopper'
+        params.admin = true
+        params.role = 'admin'
+
+        when:
+        def model = controller.methodActionWithBindAllowedUser()
+        def commandObject = model.commandObject
+
+        then:
+        commandObject.displayName == 'Grace Hopper'
+        !commandObject.admin
+        commandObject.role == null
+    }
 }
 
 @Artefact('Controller')
 class TestController {
+    static final String USER_ALLOWED_FIELD = 'displayName'
+
     def methodAction(Person p) {
         [person: p]
     }
@@ -447,6 +466,10 @@ class TestController {
 
     def methodTakingParent(ParentCommand command) {
         [commandObject: command, pId: 2]
+    }
+
+    def methodActionWithBindAllowedUser(@BindAllowed([USER_ALLOWED_FIELD]) UserCommand command) {
+        [commandObject: command]
     }
 }
 
@@ -532,4 +555,10 @@ abstract class WithGeneric<G> implements Validateable {
 }
 
 class ConcreteGenericBased extends WithGeneric<String> {
+}
+
+class UserCommand implements Validateable {
+    String displayName
+    boolean admin
+    String role
 }

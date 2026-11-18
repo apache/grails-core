@@ -33,7 +33,6 @@ import org.springframework.boot.autoconfigure.AutoConfigureBefore
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-import org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration
 import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -59,7 +58,7 @@ import org.grails.orm.hibernate.cfg.HibernateMappingContextConfiguration
 @ConditionalOnBean(DataSource)
 @ConditionalOnMissingBean(type = 'grails.orm.bootstrap.HibernateDatastoreSpringInitializer')
 @AutoConfigureAfter(DataSourceAutoConfiguration)
-@AutoConfigureBefore([HibernateJpaAutoConfiguration])
+@AutoConfigureBefore(name = 'org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration')
 class HibernateGormAutoConfiguration implements ApplicationContextAware,BeanFactoryAware {
 
     BeanFactory beanFactory

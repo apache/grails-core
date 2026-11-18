@@ -31,6 +31,6 @@ class LoginPage extends Page {
 		loginForm { $('form') }
 		username { $('input', type: 'text',     name: 'username') }
 		password { $('input', type: 'password', name: 'password') }
-		loginButton { $('input', type: 'submit', value: 'Login') }
+		loginButton { $('#submit') }
 	}
 }

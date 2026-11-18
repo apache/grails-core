@@ -18,73 +18,108 @@
  */
 package grails.artefact.controller.support
 
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.servlet.View
+import spock.lang.Specification
+
 import grails.util.GrailsWebMockUtil
 import org.grails.web.servlet.mvc.GrailsWebRequest
 import org.grails.web.servlet.mvc.ParameterCreationListener
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.web.context.WebApplicationContext
-import org.springframework.web.context.request.RequestContextHolder
-import spock.lang.Specification
+import org.grails.web.servlet.view.CompositeViewResolver
+import org.grails.web.util.GrailsApplicationAttributes
 
 class ResponseRendererSpec extends Specification {
+
+    MockServletContext servletContext = new MockServletContext()
+    WebApplicationContext applicationContext = Mock(WebApplicationContext)
+
+    void setup() {
+        applicationContext.getBeansOfType(ParameterCreationListener) >> [:]
+        servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, applicationContext)
+    }
 
     void cleanup() {
         RequestContextHolder.setRequestAttributes(null)
     }
 
-    void 'rendering an object uses text plain for inspect output'() {
-        given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        def renderer = new TestResponseRenderer()
-
-        when:
-        renderer.render(new InspectableResponseValue('<script>alert(1)</script>'))
-
-        then:
-        webRequest.response.contentType == 'text/plain;charset=utf-8'
-        webRequest.response.contentAsString == '<script>alert(1)</script>'
+    private void bindRequest() {
+        GrailsWebMockUtil.bindMockWebRequest(applicationContext, new MockHttpServletRequest(servletContext),
+                new MockHttpServletResponse())
     }
 
-    void 'rendering an unrecognized map uses text plain for inspect output'() {
+    void 'the composite view resolver is looked up once and reused for every template rendered'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        def renderer = new TestResponseRenderer()
+        def view = Mock(View)
+        def viewResolver = Mock(CompositeViewResolver)
+        def controller = new TemplateRenderingController()
 
-        when:
-        renderer.render([unsafe: '<script>alert(1)</script>'])
+        when: 'the same controller renders two templates'
+        bindRequest()
+        controller.renderTemplate('first')
+        bindRequest()
+        controller.renderTemplate('second')
 
-        then:
-        webRequest.response.contentType == 'text/plain;charset=utf-8'
-        webRequest.response.contentAsString == "['unsafe':'<script>alert(1)</script>']"
+        then: 'the view resolver bean is only resolved from the context once'
+        1 * applicationContext.getBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver) >> viewResolver
+
+        and: 'but each template is still resolved and rendered'
+        1 * viewResolver.resolveView('/templateRendering/_first', _) >> view
+        1 * viewResolver.resolveView('/templateRendering/_second', _) >> view
+        2 * view.render(_, _, _)
+    }
+
+    void 'different controllers in the same servlet context share one view resolver lookup'() {
+        given:
+        def view = Mock(View)
+        def viewResolver = Mock(CompositeViewResolver)
+
+        when: 'two different controller classes each render a template'
+        bindRequest()
+        new TemplateRenderingController().renderTemplate('first')
+        bindRequest()
+        new OtherTemplateRenderingController().renderTemplate('second')
+
+        then: 'the bean is still resolved only once, because the lookup is not per controller'
+        1 * applicationContext.getBean(CompositeViewResolver.BEAN_NAME, CompositeViewResolver) >> viewResolver
+
+        and: 'each controller resolves its own template uri'
+        1 * viewResolver.resolveView('/templateRendering/_first', _) >> view
+        1 * viewResolver.resolveView('/otherTemplateRendering/_second', _) >> view
+        2 * view.render(_, _, _)
     }
 
     void 'file renders are attachments by default without a file name'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        def renderer = new TestResponseRenderer()
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
 
         when:
         renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml')
 
         then:
-        webRequest.response.getHeader('Content-Disposition') == 'attachment'
-        webRequest.response.contentAsByteArray == '<svg/>'.bytes
+        response.getHeader('Content-Disposition') == 'attachment'
+        response.contentAsByteArray == '<svg/>'.bytes
     }
 
     void 'file renders use the resolved file name for attachment disposition'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
         File file = File.createTempFile('grails-render-', '.txt')
         file.text = 'download body'
-        def renderer = new TestResponseRenderer()
+        def renderer = new FileRenderingController()
 
         when:
         renderer.render(file: file, contentType: 'text/plain')
 
         then:
-        webRequest.response.getHeader('Content-Disposition') == "attachment;filename=\"${file.name}\""
-        webRequest.response.contentAsString == 'download body'
+        response.getHeader('Content-Disposition') == "attachment;filename=\"${file.name}\""
+        response.contentAsString == 'download body'
 
         cleanup:
         file.delete()
@@ -92,53 +127,89 @@ class ResponseRendererSpec extends Specification {
 
     void 'file renders escape unsafe attachment file names'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        def renderer = new TestResponseRenderer()
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
 
         when:
         renderer.render(file: 'download body'.bytes, contentType: 'text/plain', fileName: 'a"b\\c\r\n.txt')
 
         then:
-        webRequest.response.getHeader('Content-Disposition') == 'attachment;filename="a\\"b\\\\c__.txt"'
-        webRequest.response.contentAsString == 'download body'
+        response.getHeader('Content-Disposition') == 'attachment;filename="a\\"b\\\\c__.txt"'
+        response.contentAsString == 'download body'
     }
 
     void 'file renders may explicitly opt into inline disposition'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        def renderer = new TestResponseRenderer()
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
 
         when:
         renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml', inline: true)
 
         then:
-        webRequest.response.getHeader('Content-Disposition') == null
+        response.getHeader('Content-Disposition') == null
     }
 
     void 'file renders preserve an existing content disposition header'() {
         given:
-        GrailsWebRequest webRequest = bindWebRequest()
-        webRequest.response.setHeader('Content-Disposition', 'inline')
-        def renderer = new TestResponseRenderer()
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        response.setHeader('Content-Disposition', 'inline')
+        def renderer = new FileRenderingController()
 
         when:
         renderer.render(file: '<svg/>'.bytes, contentType: 'image/svg+xml')
 
         then:
-        webRequest.response.getHeader('Content-Disposition') == 'inline'
+        response.getHeader('Content-Disposition') == 'inline'
     }
 
-    private GrailsWebRequest bindWebRequest() {
-        WebApplicationContext applicationContext = Mock(WebApplicationContext)
-        applicationContext.getBeansOfType(ParameterCreationListener) >> [:]
-        GrailsWebMockUtil.bindMockWebRequest(
-                applicationContext,
-                new MockHttpServletRequest(),
-                new MockHttpServletResponse())
+    void 'rendering an object uses text plain for inspect output'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render(new InspectableResponseValue('<script>alert(1)</script>'))
+
+        then:
+        response.contentType == 'text/plain;charset=utf-8'
+        response.contentAsString == '<script>alert(1)</script>'
+    }
+
+    void 'rendering an unrecognized map uses text plain for inspect output'() {
+        given:
+        bindRequest()
+        def response = GrailsWebRequest.lookup().currentResponse
+        def renderer = new FileRenderingController()
+
+        when:
+        renderer.render([unsafe: '<script>alert(1)</script>'])
+
+        then:
+        response.contentType == 'text/plain;charset=utf-8'
+        response.contentAsString == "['unsafe':'<script>alert(1)</script>']"
     }
 }
 
-class TestResponseRenderer implements ResponseRenderer {
+class TemplateRenderingController implements ResponseRenderer {
+
+    void renderTemplate(String templateName) {
+        render(template: templateName)
+    }
+}
+
+class OtherTemplateRenderingController implements ResponseRenderer {
+
+    void renderTemplate(String templateName) {
+        render(template: templateName)
+    }
+}
+
+class FileRenderingController implements ResponseRenderer {
 }
 
 class InspectableResponseValue {

@@ -23,7 +23,11 @@ import io.micronaut.core.annotation.Creator;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.naming.Described;
 import io.micronaut.core.naming.Named;
+import java.util.Collections;
+import java.util.List;
+
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.OneOfFeature;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -44,6 +48,8 @@ public class FeatureDTO extends Linkable implements Named, Described {
     private final String category;
     private final boolean preview;
     private final boolean community;
+    private final List<String> dependentFeatures;
+    private final String oneOfGroup;
 
     /**
      * Default constructor.
@@ -58,6 +64,8 @@ public class FeatureDTO extends Linkable implements Named, Described {
         this.category = feature.getCategory();
         this.preview = feature.isPreview();
         this.community = feature.isCommunity();
+        this.dependentFeatures = feature.getDependentFeatures();
+        this.oneOfGroup = feature instanceof OneOfFeature ? ((OneOfFeature) feature).getFeatureClass().getSimpleName() : null;
     }
 
     /**
@@ -75,6 +83,8 @@ public class FeatureDTO extends Linkable implements Named, Described {
         this.category = category;
         this.preview = false;
         this.community = false;
+        this.dependentFeatures = Collections.emptyList();
+        this.oneOfGroup = null;
     }
 
     /**
@@ -107,6 +117,22 @@ public class FeatureDTO extends Linkable implements Named, Described {
     @Schema(description = "The category to which this feature belongs to")
     public String getCategory() {
         return category;
+    }
+
+    /**
+     * @return the names of features added automatically when this feature is selected
+     */
+    @Schema(description = "The names of features added automatically when this feature is selected")
+    public List<String> getDependentFeatures() {
+        return dependentFeatures;
+    }
+
+    /**
+     * @return the mutual-exclusion group this feature belongs to, if any
+     */
+    @Schema(description = "Features sharing a oneOfGroup are mutually exclusive; at most one can be selected")
+    public String getOneOfGroup() {
+        return oneOfGroup;
     }
 
     /**

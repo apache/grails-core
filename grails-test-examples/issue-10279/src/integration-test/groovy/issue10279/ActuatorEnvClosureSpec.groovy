@@ -53,4 +53,12 @@ class ActuatorEnvClosureSpec extends Specification implements HttpClientSupport 
         and: 'the string property defined in application.groovy is present in the response'
         response.assertContains('hello-from-groovy-config')
     }
+
+    void 'actuator /health endpoint returns 200'() {
+        when: 'the actuator health endpoint is accessed'
+        def response = http('/actuator/health')
+
+        then: 'it too serializes to JSON — the same converter path the /env regression exposed'
+        response.assertStatus(200)
+    }
 }

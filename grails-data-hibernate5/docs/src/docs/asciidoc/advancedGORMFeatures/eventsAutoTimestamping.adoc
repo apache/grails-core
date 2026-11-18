@@ -408,3 +408,21 @@ autoTimestampEventListener.withoutTimestamps {
 ----
 
 WARNING: Because the timestamp handling is only disabled for the duration of the closure, you must flush the session during the closure execution!
+
+NOTE: The timestamp handling is only disabled for the thread executing the closure. Other threads persisting entities at the same time are unaffected and will continue to have their timestamps applied.
+
+If work inside the closure runs on other threads (for example an executor-based import), the suppression must be propagated to those threads explicitly. Capture the state with `captureTimestampSuppression` and apply it on the executing thread with `withTimestampSuppression`:
+
+[source,groovy]
+----
+autoTimestampEventListener.withoutTimestamps {
+    def suppression = autoTimestampEventListener.captureTimestampSuppression()
+    executor.submit {
+        autoTimestampEventListener.withTimestampSuppression(suppression) {
+            new Foo(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+        }
+    }.get()
+}
+----
+
+The captured state is immutable and may be applied on any number of threads, even after the capturing closure has completed.

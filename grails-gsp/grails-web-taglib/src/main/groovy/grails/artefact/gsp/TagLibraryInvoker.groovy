@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 
 import org.springframework.beans.factory.annotation.Autowired
 
-import grails.util.Environment
 import grails.util.GrailsMetaClassUtils
 import grails.web.api.WebAttributes
 import org.grails.taglib.NamespacedTagDispatcher
@@ -43,7 +42,6 @@ import org.codehaus.groovy.runtime.InvokerHelper
 trait TagLibraryInvoker extends WebAttributes {
 
     private TagLibraryLookup tagLibraryLookup
-    private boolean developmentMode = Environment.isDevelopmentMode()
 
     @Autowired(required = false)
     void setTagLibraryLookup(TagLibraryLookup tagLibraryLookup) {
@@ -93,11 +91,14 @@ trait TagLibraryInvoker extends WebAttributes {
                 }
 
                 if (tagLibrary) {
-                    if (!developmentMode) {
-                        MetaClass thisMc = GrailsMetaClassUtils.getMetaClass(this)
-                        TagLibraryMetaUtils.registerMethodMissingForTags(thisMc, lookup, usedNamespace, methodName)
-                    }
-                    return tagLibrary.invokeMethod(methodName, args)
+                    // Resolving the tag used to install it onto this object's metaclass so that later
+                    // calls bypassed methodMissing. That made every caller mutate its own
+                    // ExpandoMetaClass the first time it used a tag, and made every later call pay the
+                    // read lock guarding an initialised metaclass. The tag is dispatched through the
+                    // lookup each time instead, which is a map read.
+                    return TagLibraryMetaUtils.methodMissingForTagLib(
+                            GrailsMetaClassUtils.getMetaClass(this), getClass(), lookup,
+                            usedNamespace, methodName, args, false)
                 }
             }
         }
@@ -124,9 +125,8 @@ trait TagLibraryInvoker extends WebAttributes {
         TagLibraryLookup lookup = getTagLibraryLookup()
         NamespacedTagDispatcher namespacedTagDispatcher = lookup?.lookupNamespaceDispatcher(propertyName)
         if (namespacedTagDispatcher) {
-            if (!developmentMode) {
-                TagLibraryMetaUtils.registerPropertyMissingForTag(GrailsMetaClassUtils.getMetaClass(this), propertyName, namespacedTagDispatcher)
-            }
+            // As above: the namespace is resolved through the lookup rather than installed as a
+            // property on this object's metaclass.
             return namespacedTagDispatcher
         }
 

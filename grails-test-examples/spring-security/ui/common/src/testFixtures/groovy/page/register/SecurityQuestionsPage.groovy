@@ -30,7 +30,7 @@ class SecurityQuestionsPage extends LifecyclePage {
 		form { $('securityQuestionsForm') }
 		question1 { $('#myAnswer1').module(TextInput) }
 		question2 { $('#myAnswer2').module(TextInput) }
-		submitBtn { $('a', id: 'submit') }
+		submitBtn { $('#submit') }
 	}
 
 	def <T extends LifecyclePage> T  submitAnswer(String answer1, String answer2, Class<T> expectedPageType) {

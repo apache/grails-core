@@ -59,6 +59,11 @@ class DelegatingGormEntityApi<D> implements GormEntityApi<D> {
     }
 
     @Override
+    D refresh(Map args) {
+        return instanceApi.refresh(target, args)
+    }
+
+    @Override
     D save() {
         return instanceApi.save(target)
     }

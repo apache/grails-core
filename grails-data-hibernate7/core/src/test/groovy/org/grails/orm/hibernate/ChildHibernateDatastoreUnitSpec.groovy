@@ -88,4 +88,41 @@ class ChildHibernateDatastoreUnitSpec extends HibernateGormDatastoreSpec {
         cleanup:
         secondaryConnectionSource?.close()
     }
+
+    void "test destroy marks the child as destroyed without closing shared resources"() {
+        given: "A primary datastore (parent) and a child datastore backed by a secondary connection source"
+        HibernateDatastore parent = getDatastore()
+        def secondaryUrl = "jdbc:h2:mem:childDestroyDB;LOCK_TIMEOUT=10000"
+        def dataSource = new DriverManagerDataSource(secondaryUrl, "sa", "")
+        def settings = new HibernateConnectionSourceSettings()
+        def factory = parent.connectionSources.getFactory()
+        def dataSourceConnectionSource = new DataSourceConnectionSource("childDestroy", dataSource, settings.getDataSource())
+        def secondaryConnectionSource = factory.create("childDestroy", dataSourceConnectionSource, settings)
+        def child = new ChildHibernateDatastore(
+                parent,
+                new SingletonConnectionSources(secondaryConnectionSource, parent.connectionSources.getBaseConfiguration()),
+                parent.mappingContext,
+                parent.eventPublisher
+        )
+
+        expect: "not destroyed initially"
+        !child.destroyed
+
+        when: "destroy is called"
+        child.destroy()
+
+        then: "the child is marked destroyed but the parent's shared session factory remains usable"
+        child.destroyed
+        parent.getSessionFactory() != null
+
+        when: "destroy is called again"
+        child.destroy()
+
+        then: "it remains destroyed without error"
+        child.destroyed
+        noExceptionThrown()
+
+        cleanup:
+        secondaryConnectionSource?.close()
+    }
 }

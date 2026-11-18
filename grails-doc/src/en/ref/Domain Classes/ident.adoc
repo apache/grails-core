@@ -25,7 +25,11 @@ under the License.
 === Purpose
 
 
-Returns the value of the identity property of the domain class regardless of the name of the identity property itself
+Returns the value of the mapped identity property of the domain class, regardless of its name. For example, when the mapping uses `id name: 'code'`, `ident()` returns the value of `code`. A generated identifier remains `null` until it has been assigned.
+
+For a composite identity, `ident()` returns a separate serializable instance of the domain class with the mapped key properties copied into it, including any associations that form part of the key. Other properties retain their new-instance defaults. Pass the returned identifier to `get()` or `load()` to retrieve the entity.
+
+An uninitialized proxy, such as one returned by `load()`, is the exception: `ident()` returns the identifier the proxy was created with and does not load the entity. For a composite identity, that is the object passed to `load()`, including any non-key properties set on it, rather than a new copy.
 
 
 === Examples
@@ -37,4 +41,20 @@ def b = new Book(title: "The Shining")
 b.save()
 
 println b.ident()
+----
+
+For a `BookEdition` mapped with `id composite: ['isbn', 'edition']`:
+
+[source,groovy]
+----
+def bookEdition = new BookEdition(isbn: '9780307743657', edition: 1, title: 'The Shining')
+bookEdition.save(flush: true, failOnError: true)
+
+def identifier = bookEdition.ident()
+assert identifier.isbn == bookEdition.isbn
+assert identifier.edition == bookEdition.edition
+assert !identifier.is(bookEdition)
+
+def reloaded = BookEdition.get(identifier)
+def reference = BookEdition.load(identifier)
 ----

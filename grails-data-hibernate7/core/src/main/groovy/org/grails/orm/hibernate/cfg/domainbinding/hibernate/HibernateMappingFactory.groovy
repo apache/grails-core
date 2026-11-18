@@ -61,7 +61,9 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     @Override
     org.grails.datastore.mapping.model.types.Identity<PropertyConfig> createIdentity(
             PersistentEntity owner, MappingContext context, PropertyDescriptor pd) {
-        HibernateSimpleIdentityProperty identity = new HibernateSimpleIdentityProperty(owner, context, pd)
+        HibernateSimpleIdentityProperty identity = pd.propertyType == Serializable
+                ? new HibernateSimpleIdentityProperty(owner, context, pd.name, Long)
+                : new HibernateSimpleIdentityProperty(owner, context, pd)
         identity.setMapping(createPropertyMapping(identity, owner))
         identity
     }
@@ -167,10 +169,13 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
             PersistentEntity entity, MappingContext context, PropertyDescriptor property, Class collectionType) {
         if (entity instanceof GrailsHibernatePersistentEntity) {
             GrailsHibernatePersistentEntity ghpEntity = (GrailsHibernatePersistentEntity) entity
-            HibernateBasicProperty basic = new HibernateBasicProperty(ghpEntity, context, property)
+            boolean isEnumCollection = collectionType != null && collectionType.isEnum()
+            HibernateBasicProperty basic = isEnumCollection
+                    ? new HibernateBasicEnumProperty(ghpEntity, context, property)
+                    : new HibernateBasicProperty(ghpEntity, context, property)
             basic.setMapping(createPropertyMapping(basic, entity))
             CustomTypeMarshaller customTypeMarshaller = findCustomType(context, property.propertyType)
-            if (collectionType != null && collectionType.isEnum()) {
+            if (isEnumCollection) {
                 customTypeMarshaller = findCustomType(context, collectionType)
                 if (customTypeMarshaller == null) {
                     customTypeMarshaller = findCustomType(context, Enum)
@@ -188,31 +193,19 @@ class HibernateMappingFactory extends AbstractGormMappingFactory<Mapping, Proper
     IdentityMapping createIdentityMapping(ClassMapping classMapping) {
         Mapping mappedForm = (Mapping) createMappedForm(classMapping.entity)
         HibernatePropertyIdentity identity = mappedForm.identity
-        ValueGenerator generator
-
-        if (identity instanceof HibernateSimpleIdentity) {
-            HibernateSimpleIdentity id = (HibernateSimpleIdentity) identity
-            String generatorName = id.generator
-            if (generatorName != null) {
-                ValueGenerator resolvedGenerator
-                try {
-                    resolvedGenerator = ValueGenerator.valueOf(generatorName.toUpperCase(Locale.ENGLISH))
-                } catch (IllegalArgumentException ignored) {
-                    if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
-                        resolvedGenerator = ValueGenerator.CUSTOM
-                    } else {
-                        throw new DatastoreConfigurationException(
-                                "Invalid id generation strategy for entity [${classMapping.entity.name}]: $generatorName")
-                    }
-                }
-                generator = resolvedGenerator
-            } else {
-                generator = ValueGenerator.AUTO
-            }
-        } else {
-            generator = ValueGenerator.AUTO
-        }
+        ValueGenerator generator = identity instanceof HibernateSimpleIdentity
+                ? resolveGenerator(classMapping, ((HibernateSimpleIdentity) identity).generator)
+                : ValueGenerator.AUTO
         new HibernateIdentityMapping(identity, generator, classMapping)
+    }
+
+    @Override
+    protected ValueGenerator resolveCustomGenerator(ClassMapping classMapping, String generatorName) {
+        if (generatorName.equalsIgnoreCase('table') || ClassUtils.isPresent(generatorName)) {
+            return ValueGenerator.CUSTOM
+        }
+        throw new DatastoreConfigurationException(
+                "Invalid id generation strategy for entity [${classMapping.entity.name}]: $generatorName")
     }
 
     @Override

@@ -53,4 +53,16 @@ public interface DirtyCheckableCollection extends Serializable {
      * @return True if the collection has changed size
      */
     boolean hasChangedSize();
+
+    /**
+     * Whether this wrapper was created for a collection ASSIGNED over a previously tracked
+     * value (through a dirty-checking setter), as opposed to wrapping the value a datastore
+     * decoded. An assigned collection is a wholesale replacement: persisters must not diff it
+     * element-by-element against the stored state, whose layout it need not match.
+     *
+     * @return True if this wrapper was created by a property assignment
+     */
+    default boolean isAssigned() {
+        return false;
+    }
 }

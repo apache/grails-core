@@ -122,6 +122,58 @@ class DefaultMappingConfigurationBuilderSpec extends Specification {
         nameConfig.unique
     }
 
+    void "constraints closure does not overwrite mapping properties when a '*' default is configured"() {
+        // grails.gorm.default.constraints = { '*'(nullable: true) } is evaluated before the
+        // domain class's own closures, so every later property entry starts from the '*'
+        // default. Starting from it again on the constraints pass would discard what the
+        // mapping pass configured.
+        given:
+        def entity = new Collection()
+        def builder = new DefaultMappingConfigurationBuilder(entity, TestAttribute)
+
+        when:
+        builder.evaluate {
+            '*'(nullable: true)
+        }
+        builder.evaluate {
+            name index: true, indexAttributes: [unique: true]
+        }
+        builder.evaluate {
+            name unique: true
+        }
+        TestAttribute nameConfig = builder.getProperties()['name'] as TestAttribute
+
+        then:
+        nameConfig.isIndex()
+        nameConfig.indexAttributes == [unique: true]
+        nameConfig.unique
+        nameConfig.nullable
+    }
+
+    void "a property first configured after a '*' default starts from that default"() {
+        given:
+        def entity = new Collection()
+        def builder = new DefaultMappingConfigurationBuilder(entity, TestAttribute)
+
+        when:
+        builder.evaluate {
+            '*'(nullable: true)
+        }
+        builder.evaluate {
+            name unique: true
+        }
+        TestAttribute nameConfig = builder.getProperties()['name'] as TestAttribute
+        TestAttribute defaultConfig = builder.getProperties()['*'] as TestAttribute
+
+        then:
+        nameConfig.nullable
+        nameConfig.unique
+
+        and: "the default itself is not changed by the property built from it"
+        !nameConfig.is(defaultConfig)
+        !defaultConfig.unique
+    }
+
     void "mapping properties survive when no constraint or propertyConfigs entry exists"() {
         given:
         def entity = new Collection()
