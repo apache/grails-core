@@ -135,6 +135,98 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         documentsIn('plainClassFooDb', TenantMongoNote) == 1
     }
 
+    @Unroll
+    void 'a tenant transaction with #before, then #inner, that #outcome, leaves #expected in the default database'() {
+        when:
+        boolean failed = false
+        try {
+            Tenants.withId('foo') {
+                new TransactionalNoteWriter().run {
+                    BEFORE[before].call(this)
+                    INNER[inner].call(this)
+                    new PlainMongoNote(text: 'after').save()
+                    if (fails) {
+                        throw new IllegalStateException('rolled back')
+                    }
+                }
+            }
+        }
+        catch (IllegalStateException ignored) {
+            failed = true
+        }
+
+        then: 'read without GORM'
+        failed == fails
+        textsIn('plainClassDefaultDb', PlainMongoNote) == expected
+        textsIn('plainClassFooDb', PlainMongoNote) == []
+
+        where:
+        [before, inner, fails] << [BEFORE.keySet().toList(), INNER.keySet().toList(), [false, true]].combinations()
+        outcome = fails ? 'fails' : 'commits'
+        expected = expectedNotes(before, inner, fails)
+    }
+
+    /**
+     * The rules every combination follows: the plain class's session joins the tenant's transaction, so what it holds
+     * unflushed is written when that transaction commits and discarded when it rolls back; a transaction of the plain
+     * class's own datastore begun inside is independent, so what it saves is written when it commits, whatever the
+     * tenant's transaction does next, and it neither writes nor discards what the tenant's transaction holds.
+     */
+    static List<String> expectedNotes(String before, String inner, boolean fails) {
+        List<String> texts = ['seed']
+        if (before == 'a pending plain save' && !fails) {
+            texts << 'outer'
+        }
+        if (inner in INNER_THAT_WRITES) {
+            texts << 'inner'
+        }
+        if (!fails) {
+            texts << 'after'
+        }
+        texts.sort()
+    }
+
+    static final Map<String, Closure> BEFORE = [
+            'nothing'             : { PlainClassInTenantBlockSpec spec -> },
+            'a plain read'        : { PlainClassInTenantBlockSpec spec -> PlainMongoNote.list() },
+            'a pending plain save': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'outer').save() },
+    ]
+
+    static final Map<String, Closure> INNER = [
+            'no inner transaction'                     : { PlainClassInTenantBlockSpec spec -> },
+            'a plain withTransaction save'             : { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save() }
+            },
+            'a plain withTransaction save with a flush': { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save(flush: true) }
+            },
+            'a plain withTransaction that rolls back'  : { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withTransaction { status ->
+                    new PlainMongoNote(text: 'inner').save()
+                    status.setRollbackOnly()
+                }
+            },
+            'a plain withNewTransaction save'          : { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withNewTransaction { new PlainMongoNote(text: 'inner').save() }
+            },
+            'a plain data service save'                : { PlainClassInTenantBlockSpec spec ->
+                spec.datastore.getService(PlainMongoNoteService).save(new PlainMongoNote(text: 'inner'))
+            },
+            'a tenant withTransaction save'            : { PlainClassInTenantBlockSpec spec ->
+                TenantMongoNote.withTransaction { new TenantMongoNote(text: 'tenant').save() }
+            },
+            'a tenant withNewTransaction save'         : { PlainClassInTenantBlockSpec spec ->
+                TenantMongoNote.withNewTransaction { new TenantMongoNote(text: 'tenant').save() }
+            },
+    ]
+
+    static final List<String> INNER_THAT_WRITES = [
+            'a plain withTransaction save',
+            'a plain withTransaction save with a flush',
+            'a plain withNewTransaction save',
+            'a plain data service save',
+    ]
+
     void 'a multi-tenant class still reaches the tenant\'s database inside a tenant block'() {
         given:
         Datastore foo = datastore.getDatastoreForConnection('foo')
@@ -147,6 +239,15 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         documentsIn('plainClassDefaultDb', TenantMongoNote) == 0
         Tenants.withId('foo') { TenantMongoNote.count() } == 1
         Tenants.withId('foo') { GormEnhancer.findDatastore(TenantMongoNote) }.is(foo)
+    }
+
+    /**
+     * @return the sorted texts of the documents of the class in the database, read without GORM
+     */
+    List<String> textsIn(String databaseName, Class type) {
+        String collectionName = datastore.getCollectionName(datastore.mappingContext.getPersistentEntity(type.name))
+        datastore.mongoClient.getDatabase(databaseName).getCollection(collectionName).find()
+                .collect { it.getString('text') }.sort()
     }
 
     /**
@@ -185,6 +286,11 @@ interface TenantMongoNoteService {
 }
 
 class TransactionalNoteWriter {
+
+    @Transactional
+    void run(Closure body) {
+        body.call()
+    }
 
     @Transactional
     void savePlain(String text) {

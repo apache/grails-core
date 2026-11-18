@@ -144,8 +144,14 @@ public class DatastoreTransactionManager extends AbstractPlatformTransactionMana
     @Override
     protected void doBegin(Object o, TransactionDefinition definition) throws TransactionException {
         TransactionObject txObject = (TransactionObject) o;
-        if (txObject.getSessionHolder() == null) {
-            // The surrounding transaction was suspended (REQUIRES_NEW): this one gets a session of its own
+        SessionHolder found = txObject.getSessionHolder();
+        boolean setAside = found != null && !txObject.isNewSessionHolder() &&
+                TransactionSynchronizationManager.getResource(getDatastore()) != found;
+        if (found == null || setAside) {
+            // This one gets a session of its own when the surrounding transaction was suspended (REQUIRES_NEW), and
+            // when the session it found belongs to a transaction of another datastore, which set it aside as this
+            // one began. Begun on that session, its commit would write what the other transaction has not
+            // committed yet, and its rollback would discard it.
             txObject.setSession(getDatastore().connect());
         }
 

@@ -149,6 +149,105 @@ class PlainClassInTenantBlockSpec extends Specification {
         mode << [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA]
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a tenant transaction with #before, then #inner, that #outcome, keeps #expected'() {
+        given:
+        startDatastore(mode)
+
+        when:
+        boolean failed = false
+        try {
+            Tenants.withId('foo') {
+                new TransactionalPlainNoteWriter().run {
+                    BEFORE[before].call(this)
+                    INNER[inner].call(this)
+                    new PlainNote(text: 'after').save()
+                    if (fails) {
+                        throw new IllegalStateException('rolled back')
+                    }
+                }
+            }
+        }
+        catch (IllegalStateException ignored) {
+            failed = true
+        }
+
+        then:
+        failed == fails
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == expected
+
+        where:
+        [mode, before, inner, fails] << [
+                [MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA],
+                BEFORE.keySet().toList(),
+                INNER.keySet().toList(),
+                [false, true]
+        ].combinations()
+        outcome = fails ? 'fails' : 'commits'
+        expected = expectedNotes(before, inner, fails)
+    }
+
+    /**
+     * The rules every combination follows: the plain class's session joins the tenant's transaction, so what it holds
+     * unflushed is written when that transaction commits and discarded when it rolls back; a transaction of the plain
+     * class's own datastore begun inside is independent, so what it saves is written when it commits, whatever the
+     * tenant's transaction does next, and it neither writes nor discards what the tenant's transaction holds.
+     */
+    static List<String> expectedNotes(String before, String inner, boolean fails) {
+        List<String> texts = ['seed']
+        if (before == 'a pending plain save' && !fails) {
+            texts << 'outer'
+        }
+        if (inner in INNER_THAT_WRITES) {
+            texts << 'inner'
+        }
+        if (!fails) {
+            texts << 'after'
+        }
+        texts.sort()
+    }
+
+    static final Map<String, Closure> BEFORE = [
+            'nothing'             : { PlainClassInTenantBlockSpec spec -> },
+            'a plain read'        : { PlainClassInTenantBlockSpec spec -> PlainNote.list() },
+            'a pending plain save': { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'outer').save() },
+    ]
+
+    static final Map<String, Closure> INNER = [
+            'no inner transaction'                          : { PlainClassInTenantBlockSpec spec -> },
+            'a plain withTransaction save'                  : { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withTransaction { new PlainNote(text: 'inner').save() }
+            },
+            'a plain withTransaction save with a flush'     : { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withTransaction { new PlainNote(text: 'inner').save(flush: true) }
+            },
+            'a plain withTransaction that rolls back'       : { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withTransaction { status ->
+                    new PlainNote(text: 'inner').save()
+                    status.setRollbackOnly()
+                }
+            },
+            'a plain withNewTransaction save'               : { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withNewTransaction { new PlainNote(text: 'inner').save() }
+            },
+            'a plain data service save'                     : { PlainClassInTenantBlockSpec spec ->
+                spec.datastore.getService(PlainNoteService).save(new PlainNote(text: 'inner'))
+            },
+            'a tenant withTransaction save'                 : { PlainClassInTenantBlockSpec spec ->
+                TenantNote.withTransaction { new TenantNote(text: 'tenant').save() }
+            },
+            'a tenant withNewTransaction save'              : { PlainClassInTenantBlockSpec spec ->
+                TenantNote.withNewTransaction { new TenantNote(text: 'tenant').save() }
+            },
+    ]
+
+    static final List<String> INNER_THAT_WRITES = [
+            'a plain withTransaction save',
+            'a plain withTransaction save with a flush',
+            'a plain withNewTransaction save',
+            'a plain data service save',
+    ]
+
     static final Map<String, Closure<Boolean>> OPERATIONS = [
             'count'                     : { PlainClassInTenantBlockSpec spec -> PlainNote.count() == 1 },
             'list'                      : { PlainClassInTenantBlockSpec spec -> PlainNote.list()*.text == ['seed'] },
@@ -200,6 +299,11 @@ interface PlainNoteService {
 }
 
 class TransactionalPlainNoteWriter {
+
+    @Transactional
+    void run(Closure body) {
+        body.call()
+    }
 
     @Transactional
     PlainNote save(String text) {
