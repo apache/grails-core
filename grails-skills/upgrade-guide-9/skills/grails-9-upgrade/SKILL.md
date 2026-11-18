@@ -466,6 +466,14 @@ With a database or a schema per tenant, a domain class that does not implement `
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+## JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. It is the terminal library behind the prompts of the `grails` command line tools and `grails shell`, and behind `GrailsConsole`. The `org.jline` packages are unchanged.
+
+- Recompile code that uses JLine, such as an `org.jline.reader.Completer` of a command, against JLine 4, which removed APIs JLine 3 had deprecated: use `org.jline.builtins.Completers.FileNameCompleter` for `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()`/`outputEncoding()` for `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`; `TerminalBuilder.codepage(int)`, `PROP_JNA` and `PROP_JANSI` are gone.
+- Remove dependencies on `org.jline:jline-terminal-jna` and `org.jline:jline-terminal-jansi`, which have no JLine 4 version.
+- `info.picocli:picocli-shell-jline3` still runs, but its `PicocliCommands` implements the deprecated `org.jline.console.CommandRegistry`; `org.jline:jline-picocli`, at the JLine version the Grails BOM manages, is the JLine 4 bridge to move to.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -497,6 +505,7 @@ With a database or a schema per tenant, a domain class that does not implement `
 - [ ] No typed read with a default, such as `getProperty('x.y.enabled', Boolean, true)`, names a key below a configuration value that is not a map
 - [ ] With a database or a schema per tenant, every domain class saved inside a tenant block whose instances belong to a tenant, or that a multi-tenant class references, implements `MultiTenant`
 - [ ] Every write of a class that is not multi-tenant inside a tenant's transaction runs in the class's data service or its own `withTransaction`, or uses `flush: true`
+- [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid
