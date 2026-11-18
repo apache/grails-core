@@ -849,6 +849,29 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 
 The guide gives no setting that restores encrypted JWTs without a signature.
 
+## GORM for Hibernate 5: `merge()` of a detached instance writes its changes
+
+`merge()` of a detached instance now writes the properties that were changed, as `save(flush: true)` of the same instance does. Before, the merge returned the managed instance with the changes copied onto it, and the flush wrote nothing, so the row kept its old values. This includes an instance built by hand with the id and version of a row, one restored from a serialized copy, and one marked dirty as a whole: all of its properties are written.
+
+Search the application for `merge(` and check each call whose instance was changed before it:
+
+- An application that changes an instance it keeps in the HTTP session, for example to render a page, and calls `merge()` only to attach it again, now writes those changes. Call `discard()` on the instance, or load it again, to keep the row as it is.
+- `merge()` of a new instance is unchanged: it is inserted once and is not followed by an update.
+- An instance that the session already manages is returned as it is.
+
+GORM for Hibernate 5 only. The guide gives no setting that restores the old result.
+
+## GORM for Hibernate 5: a criterion added inside `or`, `and` or `not`
+
+`add(Restrictions.eq(...))` inside `or { }`, `and { }` or `not { }` now joins that junction. Before, the criterion was added to the root and combined with the junction by AND, so an `or` returned fewer rows than it should, and a criterion in `not` was not negated.
+
+- An `or` that holds an `add(...)` can now return more rows. Search the criteria closures for `add(` inside `or`, `and` and `not`.
+- Inside a junction, `add` now returns the criterion it added instead of the `Criteria`, so `or { add(a).add(b) }`, which put both criteria at the root, throws `MissingMethodException`. Write two `add` calls instead.
+- Outside a junction `add` still returns the `Criteria`, so `add(a).add(b)` and `add(a).list()` work as before.
+- Moving the `add` out of the junction keeps the old result.
+
+The `eq`, `ne` and the other methods of the criteria builder already joined the junction they were written in; only a criterion passed to `add` did not. GORM for Hibernate 5 only. The guide gives no setting that restores the old result.
+
 # After the Upgrade
 
 ## Verification Checklist

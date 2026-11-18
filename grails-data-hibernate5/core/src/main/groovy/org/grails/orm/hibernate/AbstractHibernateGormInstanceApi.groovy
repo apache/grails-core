@@ -26,6 +26,8 @@ import org.hibernate.HibernateException
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.engine.internal.ForeignKeys
+import org.hibernate.engine.spi.SessionImplementor
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -263,8 +265,27 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
     }
 
     protected D performMerge(final D target, final boolean flush) {
+        // Hibernate copies the state of a detached instance onto the managed one without GORM's change tracking
+        // seeing it, so the properties the detached instance changed are marked on the managed one; otherwise
+        // the dirtiness strategy finds nothing to flush.
+        List<String> changed = target instanceof DirtyCheckable ? ((DirtyCheckable) target).listDirtyPropertyNames() : []
+        // a detached instance that reports a change without naming the properties, such as one restored from a
+        // serialized session, has all of its properties marked
+        boolean changedWithoutNames = changed.isEmpty() && target instanceof DirtyCheckable &&
+                ((DirtyCheckable) target).hasChanged()
         hibernateTemplate.execute { Session session ->
+            // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
+            // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
+            // type it has and whatever changes it tracks.
+            boolean inserted = ForeignKeys.isTransient(target.getClass().name, target, null, (SessionImplementor) session)
             Object merged = session.merge(target)
+            if (!inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
+                if (changedWithoutNames) {
+                    ((DirtyCheckable) merged).markDirty()
+                } else {
+                    changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
+                }
+            }
             session.lock(merged, LockMode.NONE)
             if (flush) {
                 flushSession(session)
