@@ -65,6 +65,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 > - Writing Grails code → Read `.agents/skills/grails-developer/SKILL.md`
 > - Writing Groovy code → Read `.agents/skills/groovy-developer/SKILL.md`
 > - Writing Java code → Read `.agents/skills/java-developer/SKILL.md`
+> - Upgrading applications to or within Grails 7 → Read `.agents/skills/grails-upgrade/SKILL.md`
 >
 > Use your file reading capability to load the skill content before proceeding with any code changes.
 
@@ -73,6 +74,7 @@ export GRADLE_OPTS="-Xms2G -Xmx5G"
 | **grails-developer** | `.agents/skills/grails-developer/SKILL.md` | Grails 7 apps, GORM, controllers, views |
 | **groovy-developer** | `.agents/skills/groovy-developer/SKILL.md` | Groovy 4 syntax, closures, DSLs, Spock |
 | **java-developer** | `.agents/skills/java-developer/SKILL.md` | Java 17 features, Groovy interop |
+| **grails-upgrade** | `.agents/skills/grails-upgrade/SKILL.md` | Upgrading Grails applications from Grails 6 to 7, and between 7.x releases |
 
 ## Technology Stack
 

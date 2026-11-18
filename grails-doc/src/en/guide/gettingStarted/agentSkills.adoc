@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Grails publishes an https://agentskills.io[Agent Skill] that teaches AI coding agents how to upgrade a Grails application. A skill is a `SKILL.md` file of instructions that an agent loads when a task calls for it.
+
+[options="header",cols="1,2,3"]
+|===
+| Skill | Coordinates | Use
+
+| `grails-upgrade` | `org.apache.grails.skills:grails-upgrade` | Upgrading an application from Grails 6 to Grails 7, and from one Grails 7 release to a later one
+|===
+
+The skill is released with Grails, under the same version, and the Grails BOM manages it, so an application gets the skill written for the Grails version it builds with. The skill of a release lists the changes of every earlier release of the same major version, one section per release, so it covers an upgrade that skips releases.
+
+==== Adding the Skill to an Application
+
+Agents read skills from directories in the repository rather than from the classpath. The https://github.com/skillsjars/skillsjars-gradle-plugin[SkillsJars Gradle plugin] extracts skill jars into such a directory. Apply it, declare the skill in the `skill` configuration it adds, and set the directory to write it to:
+
+[source,groovy]
+.build.gradle
+----
+plugins {
+    // the application's other plugins
+    id 'com.skillsjars.gradle-plugin' version '0.2.0'
+}
+
+dependencies {
+    skill 'org.apache.grails.skills:grails-upgrade'
+}
+
+skillsjars {
+    outputDir = layout.projectDirectory.dir('.agents/skills')
+}
+----
+
+Then extract it:
+
+[source,bash]
+----
+./gradlew extractSkillsJars
+----
+
+The skill is written to a directory named after its path in the jar, `+.agents/skills/skillsjars__apache__grails-core__grails-upgrade/SKILL.md+`. Set `outputDir` to the directory your agent reads skills from; Claude Code, for example, reads `.claude/skills`. `-PoutputDir=<directory>` overrides it for a single run.
+
+WARNING: `extractSkillsJars` deletes everything in the output directory before it writes the skills, and `clean` deletes the directory. Point it at a directory that holds only extracted skills, not one with skills the project keeps itself.
+
+The `skill` configuration stays off the application's compile and runtime classpaths. The Grails BOM applies to it, as it does to the application's other configurations, which is why the dependency needs no version.
+
+TIP: Treat the extracted skill as build output: exclude it from version control and run `extractSkillsJars` again after upgrading Grails, so the skill matches the new version.
+
+==== Upgrading with the Skill
+
+Set the application to the Grails version it is going to, extract the skill of that version, and ask the agent to upgrade the application with it. To prepare an upgrade before changing the version of the application, name the version of the skill:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    skill 'org.apache.grails.skills:grails-upgrade:<target Grails version>'
+}
+----
+
+==== The SkillsJars Layout
+
+The skill jar holds the skill under `META-INF/skills/apache/grails-core/grails-upgrade/`, the layout defined by https://www.skillsjars.com[SkillsJars], so other SkillsJars tools, such as its Maven plugin, extract it as well. Skills published by other projects in that layout can be added to the `skill` configuration alongside it.
