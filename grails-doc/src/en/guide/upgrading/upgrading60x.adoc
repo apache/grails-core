@@ -1208,3 +1208,11 @@ As of Grails 7.0.18, the list of bindable properties that Grails generates for a
 * Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
 * A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== UPGRADE-NUMBER. A finder with `lock: false` no longer locks
+
+Before, with Hibernate 5, `findBy*`, `findAllBy*` and the other finders that take a `lock` argument ended in `for update` when the argument was `false`, as they did when it was `true`. A finder called with `[lock: params.boolean('lock')]`, for example, took a write lock for every request, whatever the parameter said.
+
+Now `lock: false` takes no lock, also after `lock(true)` on a query, and `lock: true` still takes a write lock. A query that was cached before it was asked to lock is cached again when it is asked not to.
+
+To keep the lock, pass `lock: true`. An application that relied on `lock: false` to lock has to say so.
