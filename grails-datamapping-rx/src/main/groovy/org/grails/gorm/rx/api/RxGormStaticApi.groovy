@@ -44,8 +44,8 @@ import org.grails.gorm.rx.finders.RxCountFinder
 import org.grails.gorm.rx.finders.RxListResultFinder
 import org.grails.gorm.rx.finders.RxSingleResultFinder
 import org.springframework.beans.PropertyAccessorFactory
-import rx.Observable
-import rx.Subscriber
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.schedulers.Schedulers
 
 /**
  * Bridge to the implementation of the static method level operations for RX GORM
@@ -242,7 +242,7 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
     Observable<List<D>> list(Map params = Collections.emptyMap()) {
         def query = datastoreClient.createQuery(entity.javaClass, params)
         DynamicFinder.populateArgumentsForCriteria(entity.javaClass, query, params)
-        return ((RxQuery<D>) query).findAll(params).toList()
+        return ((RxQuery<D>) query).findAll(params).toList().toObservable()
     }
 
     Observable<D> findAll(Map params = Collections.emptyMap()) {
@@ -285,11 +285,10 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      * @return A single result
      */
     Observable<D> findOrCreateWhere(Map queryMap) {
-        findWhere(queryMap)
-            .switchIfEmpty(Observable.create({ Subscriber s ->
-            s.onNext(entity.javaClass.newInstance(queryMap))
-            s.onCompleted()
-        } as Observable.OnSubscribe))
+        Observable<D> created = Observable.fromCallable {
+            (D) entity.javaClass.newInstance(queryMap)
+        }
+        findWhere(queryMap).switchIfEmpty(created)
     }
 
     /**
@@ -301,28 +300,11 @@ class RxGormStaticApi<D> implements RxGormAllOperations<D> {
      */
 
     Observable<D> findOrSaveWhere(Map queryMap) {
-        findWhere(queryMap)
-                .switchIfEmpty(Observable.create({ Subscriber s ->
-            Thread.start {
-                def instance = entity.javaClass.newInstance(queryMap)
-                ((RxEntity)instance).save().subscribe(new Subscriber() {
-                    @Override
-                    void onCompleted() {
-                        s.onCompleted()
-                    }
-
-                    @Override
-                    void onError(Throwable e) {
-                        s.onError(e)
-                    }
-
-                    @Override
-                    void onNext(Object o) {
-                        s.onNext(o)
-                    }
-                })
-            }
-        } as Observable.OnSubscribe))
+        Observable<D> saved = Observable.defer {
+            def instance = entity.javaClass.newInstance(queryMap)
+            (Observable<D>) ((RxEntity) instance).save()
+        }
+        findWhere(queryMap).switchIfEmpty(saved.subscribeOn(Schedulers.io()))
     }
 
     /**

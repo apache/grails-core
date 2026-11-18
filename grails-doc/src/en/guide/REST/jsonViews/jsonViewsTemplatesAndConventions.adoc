@@ -26,7 +26,7 @@ def show(Long id) {
 }
 ----
 
-In addition if an error occurs during validation by default Grails will try to render a template called `grails-app/views/book/_errors.gson`, otherwise it will try to render `grails-app/views/errors/_errors.gson` if the former doesn't exist.
+In addition if an error occurs during validation by default Grails will try to render a template called `grails-app/views/book/_errors.gson`, otherwise it will try to render `grails-app/views/errors/_errors.gson` if the former doesn't exist. If neither exists, the errors are written as they are without JSON views, with a `422` status; the `/object/_object.gson` template does not render them.
 
 This is useful because when persisting objects you can `respond` with validation errors to render these aforementioned templates:
 

@@ -23,8 +23,13 @@ import groovy.transform.CompileStatic
 
 import jakarta.annotation.PostConstruct
 
+import org.springframework.beans.BeanUtils
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.ApplicationContext
+import org.springframework.util.ClassUtils
 
+import grails.config.Settings
 import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBindingSource
 import grails.web.mime.MimeType
@@ -34,6 +39,22 @@ import org.grails.web.util.ClassAndMimeTypeRegistry
 @CompileStatic
 class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBindingSourceCreator, DataBindingSourceCreatorCacheKey> implements DataBindingSourceRegistry {
 
+    /**
+     * The XML binding source creator of the {@code grails-xml} module, found by name since that module depends on this
+     * one, or {@code null} without it; {@code grails-xml} registers it for an ahead-of-time image.
+     */
+    private static final Class<? extends DataBindingSourceCreator> XML_CREATOR = xmlCreator()
+
+    /**
+     * With Jackson parsing, a creator the application's context creates, so that it parses with the application's
+     * mapper, as where the data binding plugin defines the registry.
+     */
+    private DataBindingSourceCreator defaultJsonCreator() {
+        jacksonJsonParsing && applicationContext != null ?
+                applicationContext.autowireCapableBeanFactory.createBean(JsonDataBindingSourceCreator) :
+                new JsonDataBindingSourceCreator()
+    }
+
     @Autowired(required = false)
     void setDataBindingSourceCreators(DataBindingSourceCreator[] dataBindingSourceCreators) {
         for (dbsc in dataBindingSourceCreators) {
@@ -41,12 +62,40 @@ class DefaultDataBindingSourceRegistry extends ClassAndMimeTypeRegistry<DataBind
         }
     }
 
+    /**
+     * The creator for the JSON bodies of a type no registered creator handles; where none is set, a
+     * {@link JsonDataBindingSourceCreator} that parses as {@code grails.databinding.json.jackson} says: with a default
+     * {@code JsonSlurper}, as in Grails 8, or with the application's Jackson mapper. It is read when the registry is
+     * initialized, so it is set before then.
+     *
+     * @since 9.0
+     */
+    DataBindingSourceCreator defaultJsonDataBindingSourceCreator
+
+    @Value('${' + Settings.DATABINDING_JSON_JACKSON + ':' + Settings.DATABINDING_JSON_JACKSON_DEFAULT + '}')
+    private boolean jacksonJsonParsing = Boolean.parseBoolean(Settings.DATABINDING_JSON_JACKSON_DEFAULT)
+
+    @Autowired(required = false)
+    private ApplicationContext applicationContext
+
     @PostConstruct
     void initialize() {
-        registerDefault(MimeType.JSON, new JsonDataBindingSourceCreator())
-        registerDefault(MimeType.TEXT_JSON, new JsonDataBindingSourceCreator())
-        registerDefault(MimeType.XML, new XmlDataBindingSourceCreator())
-        registerDefault(MimeType.TEXT_XML, new XmlDataBindingSourceCreator())
+        DataBindingSourceCreator json = defaultJsonDataBindingSourceCreator ?: defaultJsonCreator()
+        registerDefault(MimeType.JSON, json)
+        registerDefault(MimeType.TEXT_JSON, json)
+        if (XML_CREATOR != null) {
+            // the XML bodies of a type no creator bean handles, as Grails 8 parsed them
+            registerDefault(MimeType.XML, BeanUtils.instantiateClass(XML_CREATOR))
+            registerDefault(MimeType.TEXT_XML, BeanUtils.instantiateClass(XML_CREATOR))
+        }
+    }
+
+    @SuppressWarnings('unchecked')
+    private static Class<? extends DataBindingSourceCreator> xmlCreator() {
+        String name = 'org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator'
+        ClassLoader classLoader = DefaultDataBindingSourceRegistry.classLoader
+        ClassUtils.isPresent(name, classLoader) ?
+                (Class<? extends DataBindingSourceCreator>) ClassUtils.resolveClassName(name, classLoader) : null
     }
 
     protected DataBindingSourceCreator getDataBindingSourceCreator(MimeType mimeType, Class targetType, Object bindingSource) {

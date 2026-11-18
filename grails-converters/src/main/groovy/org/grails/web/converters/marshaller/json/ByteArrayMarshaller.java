@@ -25,7 +25,7 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 /**
  * @author Siegfried Puchbauer
  * @since 1.1
- * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as a later release does by default,
+ * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as Grails 10 does by default,
  *     the converter writes {@code byte[]} values with the application's {@code JsonMapper}; this marshaller is registered while
  *     it is {@code true}, the default in Grails 9, to render JSON as Grails 8 did.
  */

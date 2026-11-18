@@ -55,8 +55,8 @@ import org.grails.datastore.mapping.reflect.ClassPropertyFetcher;
 import org.grails.web.converters.ConverterUtil;
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder;
 import org.grails.web.converters.exceptions.ConverterException;
+import org.grails.web.converters.jackson.DomainClassRenderer;
 import org.grails.web.converters.jackson.DomainClassRendering;
-import org.grails.web.converters.jackson.DomainClassSerializer;
 import org.grails.web.converters.marshaller.ByDatasourceDomainClassFetcher;
 import org.grails.web.converters.marshaller.ByGrailsApplicationDomainClassFetcher;
 import org.grails.web.converters.marshaller.DomainClassFetcher;
@@ -66,7 +66,7 @@ import org.grails.web.json.JSONWriter;
 /**
  *
  * Object marshaller for domain classes to JSON. It renders an instance with a
- * {@link DomainClassSerializer}, through the converter's {@code JsonMapper}, with the includes and excludes of the
+ * {@link DomainClassJacksonModule}, through the converter's {@code JsonMapper}, with the includes and excludes of the
  * converter and of {@link #includesProperty(Object, String)} and {@link #excludesProperty(Object, String)}, and renders
  * the property values with the converter. With {@code grails.converters.json.legacy}, it renders an instance as
  * Grails 8 did.
@@ -76,7 +76,7 @@ import org.grails.web.json.JSONWriter;
  *
  * @since 1.1
  */
-public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON> {
+public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON> implements DomainClassRenderer {
 
     private boolean includeVersion = false;
     private boolean includeClass = false;
@@ -84,6 +84,8 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
     private GrailsApplication application;
 
     private final boolean overridesAsShortObject;
+
+    private final boolean overridesMarshalObject;
 
     private List<DomainClassFetcher> domainClassFetchers;
 
@@ -103,6 +105,17 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
         Method asShortObject = ReflectionUtils.findMethod(getClass(), "asShortObject", Object.class, JSON.class,
                 PersistentProperty.class, PersistentEntity.class);
         this.overridesAsShortObject = asShortObject != null && asShortObject.getDeclaringClass() != DomainClassMarshaller.class;
+        Method marshalObject = ReflectionUtils.findMethod(getClass(), "marshalObject", Object.class, JSON.class);
+        this.overridesMarshalObject = marshalObject != null && marshalObject.getDeclaringClass() != DomainClassMarshaller.class;
+    }
+
+    /**
+     * @return whether this marshaller writes an instance with the converter's {@code JsonMapper}: without
+     *         {@code grails.converters.json.legacy}, unless a subclass writes it itself
+     * @since 9.0
+     */
+    public boolean writesWithMapper() {
+        return !ConvertersConfigurationHolder.isLegacyJson() && !overridesMarshalObject;
     }
 
     public boolean isIncludeVersion() {
@@ -131,8 +144,30 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
             marshalObjectAsGrails8(value, json);
             return;
         }
-        Object object = proxyHandler.unwrapIfProxy(value);
-        JsonMapperValueMarshaller.write(DomainClassSerializer.value(object, new Rendering(json, object.getClass())), json);
+        Object object = unwrapped(value, json);
+        JsonMapperValueMarshaller.write(object, json);
+    }
+
+    /**
+     * The instance a proxy stands for, which the converter is told it writes in the proxy's place, so that the includes and
+     * excludes it has for the class of the proxy apply to it, or the value itself.
+     */
+    private Object unwrapped(Object value, JSON json) {
+        Object unwrapped = proxyHandler.unwrapIfProxy(value);
+        if (unwrapped != value && unwrapped != null) {
+            json.standIn(value, unwrapped);
+        }
+        return unwrapped;
+    }
+
+    /**
+     * Renders an instance with the includes and excludes the converter has for its class.
+     *
+     * @since 9.0
+     */
+    @Override
+    public DomainClassRendering getRendering(JSON json, Class<?> type) {
+        return new Rendering(json, type);
     }
 
     /**
@@ -142,7 +177,7 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private void marshalObjectAsGrails8(Object value, JSON json) throws ConverterException {
         JSONWriter writer = json.getWriter();
-        value = proxyHandler.unwrapIfProxy(value);
+        value = unwrapped(value, json);
         Class<?> clazz = value.getClass();
 
         List<String> excludes = json.getExcludes(clazz);
@@ -354,6 +389,14 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
             return includeExcludeSupport.shouldInclude(includes, excludes, property) && shouldInclude(object, property);
         }
 
+        /** The converter's includes and excludes name a property by its name or by the name it is written with. */
+        @Override
+        public boolean includes(Object object, String property, String written) {
+            return (excludes == null || !excludes.contains(property) && !excludes.contains(written)) &&
+                    (includes == null || includes.contains(property) || includes.contains(written)) &&
+                    shouldInclude(object, property);
+        }
+
         @Override
         public Object propertyValue(Object object, PersistentProperty property) {
             return extractValue(object, property);
@@ -366,6 +409,11 @@ public class DomainClassMarshaller extends IncludeExcludePropertyMarshaller<JSON
             }
             json.getWriter().writeNested(() -> asShortObject(reference, json, idProperty, entity));
             return true;
+        }
+
+        @Override
+        public boolean writesReferences() {
+            return overridesAsShortObject;
         }
     }
 }

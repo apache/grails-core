@@ -51,6 +51,7 @@ import org.springframework.context.support.ConversionServiceFactoryBean
 import org.springframework.context.support.PropertySourcesPlaceholderConfigurer
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.core.Ordered
+import org.springframework.core.SimpleAliasRegistry
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
 import org.springframework.util.ClassUtils
@@ -92,6 +93,13 @@ class GrailsApplicationBuilder {
     static final String DO_WITH_CONFIG_PROPERTY_SOURCE = 'doWithConfig'
     static final String GRAILS_PLUGIN_SUFFIX = 'GrailsPlugin'
     static final String AUTO_CONFIGURATION_SUFFIX = 'AutoConfiguration'
+
+    /**
+     * The attribute of the definition of a bean the test declares itself, in its {@code doWithSpring}, its
+     * {@code beanRegistrar()} or one of its configuration classes, rather than a plugin or the framework. The web test
+     * traits keep such a bean where they otherwise define one of their own.
+     */
+    static final String DECLARED_BY_TEST = GrailsApplicationBuilder.name + '.declaredByTest'
     private static final String GRAILS_BEANS_DESCRIPTOR = 'Lgrails/compiler/beans/GrailsBeans;'
     private static final String AUTO_CONFIGURATION_NAME_ATTRIBUTE = 'autoConfigurationName'
 
@@ -100,6 +108,7 @@ class GrailsApplicationBuilder {
     Set<Class<?>> configurationClasses
     Closure doWithConfig
     Set<String> includePlugins
+    Class<?> testClass
     boolean loadExternalBeans
     boolean localOverride = false
 
@@ -212,6 +221,17 @@ class GrailsApplicationBuilder {
             ((AnnotationConfigRegistry) context).register(ClassUtils.forName(it, classLoader))
         }
 
+        if (isWebTest()) {
+            // Boot's mapper, and the message converter customizers the web test traits apply as Spring MVC does
+            [
+                    'org.springframework.boot.jackson.autoconfigure.JacksonAutoConfiguration',
+                    'org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration'
+            ].each { String autoConfiguration ->
+                if (ClassUtils.isPresent(autoConfiguration, classLoader)) {
+                    ((AnnotationConfigRegistry) context).register(ClassUtils.forName(autoConfiguration, classLoader))
+                }
+            }
+        }
         prepareContext(context, beanFactory)
         // Added by hand, so it runs before the configuration classes are read, as an application's
         // early phase does
@@ -221,10 +241,49 @@ class GrailsApplicationBuilder {
         return context
     }
 
+    /**
+     * A web test gets the beans of the converters and XML plugins without including the plugins,
+     * whose controllers and urlMappings dependencies would be discovered too: Jackson and data
+     * binding read them during the refresh. They are registered after the test's post-processor has
+     * registered the plugin beans: creating the default one applies the test's {@code doWithConfig}
+     * to the environment, which their registrars read.
+     */
+    protected void registerWebPluginBeans(ConfigurableApplicationContext context, BeanDefinitionRegistry registry) {
+        if (!isWebTest()) {
+            return
+        }
+        ClassLoader classLoader = this.class.classLoader
+        PluginDiscovery discovery = context.beanFactory.getBean(PluginDiscovery.BEAN_NAME, PluginDiscovery)
+        String convertersPlugin = 'org.grails.plugins.converters.ConvertersGrailsPlugin'
+        if (discovery.findPlugin('converters') == null && ClassUtils.isPresent(convertersPlugin, classLoader)) {
+            registerPluginBeans(context, registry, convertersPlugin)
+        }
+        String xmlPlugin = 'org.grails.plugins.xml.XmlGrailsPlugin'
+        if (discovery.findPlugin('xml') == null && ClassUtils.isPresent(xmlPlugin, classLoader)) {
+            registerPluginBeans(context, registry, xmlPlugin)
+        }
+    }
+
+    private static void registerPluginBeans(ConfigurableApplicationContext context,
+            BeanDefinitionRegistry registry, String className) {
+        Class<?> pluginClass = ClassUtils.forName(className, GrailsApplicationBuilder.classLoader)
+        Object plugin = pluginClass.getDeclaredConstructor().newInstance()
+        BeanRegistrar registrar = (BeanRegistrar) pluginClass.getMethod('beanRegistrar').invoke(plugin)
+        new BeanRegistryAdapter(registry, context.beanFactory, context.environment, registrar.getClass()).register(registrar)
+    }
+
     protected void prepareContext(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
         def discovery = registerPluginDiscoveryBean(applicationContext, beanFactory)
         registerGrailsAppPostProcessorBean(beanFactory, discovery)
         AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) beanFactory)
+    }
+
+    private boolean isWebTest() {
+        // Resolve the optional web trait without making core testing support depend on it.
+        // Inspect the test type so trait ordering with DataTest cannot discard web setup.
+        String webTrait = 'grails.testing.web.GrailsWebUnitTest'
+        return testClass != null && ClassUtils.isPresent(webTrait, testClass.classLoader) &&
+                ClassUtils.forName(webTrait, testClass.classLoader).isAssignableFrom(testClass)
     }
 
     protected PluginDiscovery registerPluginDiscoveryBean(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
@@ -234,7 +293,11 @@ class GrailsApplicationBuilder {
         }
         def discovery = new DefaultPluginDiscovery()
         // we must load the classpath since the plugin manager needs to find the default plugins
-        discovery.pluginFilter = new IncludingPluginFilter(includePlugins ?: DEFAULT_INCLUDED_PLUGINS)
+        Set<String> plugins = new HashSet<String>(includePlugins ?: DEFAULT_INCLUDED_PLUGINS)
+        if (isWebTest()) {
+            plugins.add('restResponder')
+        }
+        discovery.pluginFilter = new IncludingPluginFilter(plugins)
         discovery.init(applicationContext.getEnvironment())
         beanFactory.registerSingleton(PluginDiscovery.BEAN_NAME, discovery)
         discovery
@@ -315,7 +378,33 @@ class GrailsApplicationBuilder {
 
     void executeDoWithSpringCallback(GrailsApplication grailsApplication) {
         if (!doWithSpring) return
-        defineBeans(grailsApplication, doWithSpring)
+        declareByTest((BeanDefinitionRegistry) grailsApplication.mainContext) { defineBeans(grailsApplication, doWithSpring) }
+    }
+
+    /**
+     * @param beanFactory the bean factory of a test's application context
+     * @param name the name of a bean, or an alias of it
+     * @return whether the test declares the bean of the name itself
+     */
+    static boolean isDeclaredByTest(ConfigurableListableBeanFactory beanFactory, String name) {
+        String beanName = beanFactory instanceof SimpleAliasRegistry ? ((SimpleAliasRegistry) beanFactory).canonicalName(name) : name
+        beanFactory.containsBeanDefinition(beanName) &&
+                beanFactory.getBeanDefinition(beanName).getAttribute(DECLARED_BY_TEST) == Boolean.TRUE
+    }
+
+    /** Runs a registration of the test's own beans, marking each definition it adds or replaces. */
+    static void declareByTest(BeanDefinitionRegistry registry, Closure<?> registration) {
+        Map<String, BeanDefinition> before = [:]
+        for (String name : registry.beanDefinitionNames) {
+            before[name] = registry.getBeanDefinition(name)
+        }
+        registration.call()
+        for (String name : registry.beanDefinitionNames) {
+            BeanDefinition definition = registry.getBeanDefinition(name)
+            if (!before[name].is(definition)) {
+                definition.setAttribute(DECLARED_BY_TEST, Boolean.TRUE)
+            }
+        }
     }
 
     void defineBeans(Closure callable) {
@@ -344,7 +433,9 @@ class GrailsApplicationBuilder {
                 keep[name] = definition
             }
         }
-        keep.putAll(beanDefinitionsDeclaredBy(configurationClasses, registry))
+        Map<String, BeanDefinition> declared = beanDefinitionsDeclaredBy(configurationClasses, registry)
+        declared.values().each { BeanDefinition definition -> definition.setAttribute(DECLARED_BY_TEST, Boolean.TRUE) }
+        keep.putAll(declared)
 
         defineBeans(grailsApplication) { ->
 
@@ -373,7 +464,7 @@ class GrailsApplicationBuilder {
 
     /**
      * The bean definitions the test's configuration classes declared, a {@code group(...)} nested in
-     * one included, read off the {@code @Bean} method each came from.
+     * one included, read off the {@code @Bean} method each came from, which the class may inherit.
      */
     protected static Map<String, BeanDefinition> beanDefinitionsDeclaredBy(Collection<Class<?>> configurationClasses,
                                                                          BeanDefinitionRegistry registry) {
@@ -384,11 +475,19 @@ class GrailsApplicationBuilder {
         Set<String> owners = configurationClasses*.name as Set<String>
         for (String name : registry.beanDefinitionNames) {
             BeanDefinition definition = registry.getBeanDefinition(name)
-            if (!(definition instanceof AnnotatedBeanDefinition)) {
+            // the bean of a @Bean method, not a class such as a @Component nested in a configuration class
+            if (!(definition instanceof AnnotatedBeanDefinition) || ((AnnotatedBeanDefinition) definition).factoryMethodMetadata == null) {
                 continue
             }
-            String declaringClass = ((AnnotatedBeanDefinition) definition).factoryMethodMetadata?.declaringClassName
-            if (declaringClass && owners.any { String owner -> declaringClass == owner || declaringClass.startsWith(owner + '$') }) {
+            String declaringClass = ((AnnotatedBeanDefinition) definition).factoryMethodMetadata.declaringClassName
+            // the class of the configuration bean whose method creates it, which declares the method or inherits it, or,
+            // for a static method, the configuration class itself
+            String factoryName = definition.factoryBeanName
+            String factoryClass = factoryName ? (registry.containsBeanDefinition(factoryName) ?
+                    registry.getBeanDefinition(factoryName).beanClassName : null) : definition.beanClassName
+            if ([declaringClass, factoryClass].any { String type ->
+                type && owners.any { String owner -> type == owner || type.startsWith(owner + '$') }
+            }) {
                 declared[name] = definition
             }
         }
@@ -478,22 +577,23 @@ class GrailsApplicationBuilder {
             // A subclass whose registerGrailsAppPostProcessorBean registers another post-processor, or
             // none, is left to register plugin beans the way that post-processor does
             ConfigurableListableBeanFactory beanFactory = context.beanFactory
-            if (!beanFactory.containsBean(POST_PROCESSOR_BEAN_NAME) ||
-                    !beanFactory.isTypeMatch(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)) {
-                return
-            }
-            def processor = beanFactory.getBean(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)
-            Map<String, BeanDefinition> before = [:]
-            for (String name : registry.beanDefinitionNames) {
-                before[name] = registry.getBeanDefinition(name)
-            }
-            processor.registerPluginBeans(registry)
-            for (String name : registry.beanDefinitionNames) {
-                BeanDefinition definition = registry.getBeanDefinition(name)
-                if (!before[name].is(definition)) {
-                    builder.pluginBeanDefinitions[name] = definition
+            if (beanFactory.containsBean(POST_PROCESSOR_BEAN_NAME) &&
+                    beanFactory.isTypeMatch(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)) {
+                // Creating the processor applies the test's doWithConfig
+                def processor = beanFactory.getBean(POST_PROCESSOR_BEAN_NAME, TestRuntimeGrailsApplicationPostProcessor)
+                Map<String, BeanDefinition> before = [:]
+                for (String name : registry.beanDefinitionNames) {
+                    before[name] = registry.getBeanDefinition(name)
+                }
+                processor.registerPluginBeans(registry)
+                for (String name : registry.beanDefinitionNames) {
+                    BeanDefinition definition = registry.getBeanDefinition(name)
+                    if (!before[name].is(definition)) {
+                        builder.pluginBeanDefinitions[name] = definition
+                    }
                 }
             }
+            builder.registerWebPluginBeans(context, registry)
         }
 
         @Override
@@ -543,8 +643,10 @@ class GrailsApplicationBuilder {
             super.postProcessBeanDefinitionRegistry(registry)
             // Where an application's registrar drains: after the DSL, so it wins a name conflict with doWithSpring
             if (beanRegistrar != null) {
-                new BeanRegistryAdapter(registry, applicationContext, applicationContext.environment, beanRegistrar.getClass())
-                        .register(beanRegistrar)
+                declareByTest(registry) {
+                    new BeanRegistryAdapter(registry, applicationContext, applicationContext.environment, beanRegistrar.getClass())
+                            .register(beanRegistrar)
+                }
             }
             PropertySourcesPlaceholderConfigurer propertySourcePlaceholderConfigurer  = (PropertySourcesPlaceholderConfigurer) grailsApplication.mainContext.getBean('grailsPlaceholderConfigurer')
             propertySourcePlaceholderConfigurer.order = Ordered.HIGHEST_PRECEDENCE

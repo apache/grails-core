@@ -31,6 +31,8 @@ import grails.web.mime.MimeType
 import graphql.GraphQL
 import graphql.schema.GraphQLCodeRegistry
 import graphql.schema.GraphQLSchema
+import org.apache.grails.data.graphql.core.querytail.QueryTailInstrumentation
+import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.gorm.graphql.GraphQLServiceManager
 import org.grails.gorm.graphql.Schema
@@ -155,7 +157,9 @@ class GormGraphqlGrailsPlugin extends Plugin {
             }
             registry.registerBean('graphQL', GraphQL) {
                 it.supplier {
-                    it.bean('graphQLBuilder', GraphQL.Builder).build()
+                    GraphQL graphQL = it.bean('graphQLBuilder', GraphQL.Builder).build()
+                    // counted by operation only while statements are captured, so that nothing runs per operation otherwise
+                    QueryTailSettings.of(environment).enabled ? QueryTailInstrumentation.install(graphQL) : graphQL
                 }
             }
         }

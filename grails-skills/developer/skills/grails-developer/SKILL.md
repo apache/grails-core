@@ -232,7 +232,7 @@ import grails.rest.RestfulController
 
 class BookController extends RestfulController<Book> {
 
-    static responseFormats = ['json', 'xml']
+    static responseFormats = ['json']   // add 'xml' only with the grails-xml module
 
     BookController() {
         super(Book)
@@ -286,7 +286,7 @@ def show(Long id) {
     withFormat {
         html { render view: 'show', model: [book: book] }
         json { render book as JSON }
-        xml { render book as XML }
+        // xml { render book as XML } needs org.apache.grails:grails-xml; grails.converters.XML is deprecated for removal in Grails 11
     }
 }
 ```

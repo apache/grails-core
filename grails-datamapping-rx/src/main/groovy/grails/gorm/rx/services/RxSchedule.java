@@ -31,7 +31,8 @@ import org.apache.grails.common.compiler.GroovyTransformOrder;
 import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 
 /**
- * A transformation that transforms the body of a method to return an Observable that runs on the IO Scheduler
+ * A transformation that transforms the body of a method to return an Observable that delivers its result on
+ * the IO Scheduler. The blocking operation itself runs on the thread that subscribes.
  *
  * @since 6.1
  */
@@ -44,7 +45,7 @@ import org.grails.datastore.gorm.transform.GormASTTransformationClass;
 public @interface RxSchedule {
 
     /**
-     * @return A closure that returns the scheduler to run on. Default is {@link rx.schedulers.Schedulers#io()}
+     * @return A closure that returns the scheduler the result is delivered on. Default is {@link io.reactivex.rxjava3.schedulers.Schedulers#io()}
      */
     Class scheduler() default Object.class;
     /**

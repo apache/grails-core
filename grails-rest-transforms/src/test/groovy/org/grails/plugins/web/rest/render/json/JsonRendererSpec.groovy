@@ -22,6 +22,7 @@ import grails.core.DefaultGrailsApplication
 import grails.persistence.Entity
 import grails.rest.render.json.JsonRenderer
 import grails.util.GrailsWebMockUtil
+import grails.web.render.NamedJsonRenderer
 import org.grails.config.NavigableMapConfig
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.lifecycle.ShutdownOperations
@@ -30,6 +31,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.plugins.web.rest.render.ServletRenderContext
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.exceptions.ConverterException
 import org.springframework.context.ApplicationContext
 import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.Specification
@@ -96,6 +98,27 @@ class JsonRendererSpec extends Specification {
 
     }
 
+    void "a named configuration receives the renderer's own includes and excludes"() {
+        given:
+        def namedRenderer = Mock(NamedJsonRenderer)
+        def renderer = new JsonRenderer(Album)
+        renderer.namedJsonRenderer = namedRenderer
+        renderer.includes = ['title', 'isbn']
+        renderer.excludes = ['isbn']
+
+        when:
+        final webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        renderer.render(new Album(title: "Undertow", isbn: "38047301"),
+                new ServletRenderContext(webRequest, [jsonConfiguration: 'plain', excludes: ['other']]))
+
+        then:
+        1 * namedRenderer.contains('plain') >> true
+        1 * namedRenderer.render('plain', _ as Album, _, ['title', 'isbn'], ['isbn']) >> { arguments ->
+            arguments[2].write('{"title":"Undertow"}')
+        }
+        webRequest.response.contentAsString == '{"title":"Undertow"}'
+    }
+
     void "Test render domain class with JsonRenderer"() {
         given:"A new JsonRenderer instance is created with the defaults"
         def renderer = new JsonRenderer(Song)
@@ -149,6 +172,90 @@ class JsonRendererSpec extends Specification {
         then:"Only included properties are rendered"
         webRequest.response.contentAsString == '{"class":"org.grails.plugins.web.rest.render.json.Song","title":"Undertow"}'
 
+    }
+
+    void "a JsonRenderer of a domain class writes its associations in full and the version and class name it includes, with legacy #legacy"() {
+        given:
+        def app = domainApplication(legacy)
+        def renderer = new JsonRenderer(Record)
+        renderer.includes = includes
+        renderer.grailsApplication = app
+        renderer.registerCustomConverter()
+        def band = new Band(name: 'Low')
+        band.id = 7
+        def record = new Record(title: 'Things We Lost', band: band)
+        record.id = 1
+        record.version = 2
+
+        when:
+        final webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        renderer.render(record, new ServletRenderContext(webRequest))
+
+        then:
+        webRequest.response.contentAsString == written
+
+        where:
+        legacy | includes                     || written
+        true   | ['title', 'band']            || '{"title":"Things We Lost","band":{"id":7,"name":"Low"}}'
+        false  | ['title', 'band']            || '{"title":"Things We Lost","band":{"id":7,"name":"Low"}}'
+        true   | ['class', 'version', 'title'] || '{"class":"org.grails.plugins.web.rest.render.json.Record","version":2,"title":"Things We Lost"}'
+        false  | ['class', 'version', 'title'] || '{"class":"org.grails.plugins.web.rest.render.json.Record","version":2,"title":"Things We Lost"}'
+    }
+
+    void "a JsonRenderer of a domain class reports a failure to read it as a converter failure, with legacy #legacy"() {
+        given:
+        def app = domainApplication(legacy)
+        def renderer = new JsonRenderer(Unreadable)
+        renderer.grailsApplication = app
+        renderer.registerCustomConverter()
+
+        when:
+        final webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        renderer.render(new Unreadable(), new ServletRenderContext(webRequest))
+
+        then:
+        ConverterException e = thrown()
+        e.cause != null
+
+        where:
+        legacy << [true, false]
+    }
+
+    private DefaultGrailsApplication domainApplication(boolean legacy) {
+        def app = new DefaultGrailsApplication(Record, Band, Unreadable)
+        app.config.setAt('grails.converters.json.legacy', legacy)
+        def context = new KeyValueMappingContext("jsonrenderer")
+        context.addPersistentEntities(Record, Band, Unreadable)
+        app.setApplicationContext(Stub(ApplicationContext) {
+            getBean('grailsDomainClassMappingContext', MappingContext) >> {
+                context
+            }
+        })
+        app.setMappingContext(context)
+        app.initialise()
+        ConvertersConfigurationHolder.clear()
+        new ConvertersConfigurationInitializer(grailsApplication: app).initialize()
+        app
+    }
+}
+
+@Entity
+class Record {
+    String title
+    Band band
+}
+
+@Entity
+class Band {
+    String name
+}
+
+@Entity
+class Unreadable {
+    String title
+
+    String getTitle() {
+        throw new IllegalStateException('unreadable')
     }
 }
 

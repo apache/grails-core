@@ -35,7 +35,8 @@ import org.grails.datastore.gorm.services.implementers.SingleResultProjectionSer
 import org.grails.datastore.gorm.services.implementers.SingleResultServiceImplementer
 import org.grails.datastore.mapping.core.Ordered
 import org.grails.gorm.rx.transform.RxScheduleIOTransformation
-import rx.Single
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -113,6 +114,24 @@ class SingleResultAdapterSpec extends Specification {
 
         where:
         compatible << [true, false]
+    }
+
+    def "doesImplement returns false for a single result projection implementer when the method returns an Observable rather than a Single"() {
+        given: 'a projection the adapted implementer accepts on the projected type alone'
+        SingleResultAdapter adapter = new SingleResultAdapter(new ProjectionSingleImplementer(prefix: 'find', compatible: true))
+        MethodNode methodNode = methodNode('find', GenericsUtils.makeClassSafeWithGenerics(Observable, ClassHelper.make(String)))
+
+        expect: 'an Observable of the projected type is left to ObservableResultAdapter'
+        !adapter.doesImplement(ClassHelper.make(RxSingleDomainFixture), methodNode)
+    }
+
+    def "doesImplement returns false for a single result projection implementer when the adapted implementer does not resolve a prefix"() {
+        given:
+        SingleResultAdapter adapter = new SingleResultAdapter(new ProjectionSingleImplementer(prefix: null, compatible: true))
+        MethodNode methodNode = methodNode('find', singleOf(ClassHelper.make(String)))
+
+        expect:
+        !adapter.doesImplement(ClassHelper.make(RxSingleDomainFixture), methodNode)
     }
 
     def "doesImplement falls back to isInterfaceProjection when the Single's generic type does not match the adapted domain type"() {

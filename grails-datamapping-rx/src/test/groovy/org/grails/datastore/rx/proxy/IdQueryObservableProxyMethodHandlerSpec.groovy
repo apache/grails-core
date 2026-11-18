@@ -24,7 +24,7 @@ import org.grails.datastore.rx.exceptions.BlockingOperationException
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 import java.lang.reflect.Method
@@ -56,7 +56,7 @@ class IdQueryObservableProxyMethodHandlerSpec extends Specification {
 
         when:
         Observable result = handler.invoke(new Object(), methodNamed('toObservable'), null, [] as Object[]) as Observable
-        Object resolved = result.toBlocking().first()
+        Object resolved = result.blockingFirst()
 
         then:
         1 * client.get(Widget, 5L, queryState) >> Observable.just(loaded)
@@ -75,7 +75,7 @@ class IdQueryObservableProxyMethodHandlerSpec extends Specification {
 
         when:
         Observable result = handler.invoke(new Object(), methodNamed('toObservable'), null, [] as Object[]) as Observable
-        Object resolved = result.toBlocking().first()
+        Object resolved = result.blockingFirst()
 
         then:
         0 * client.get(_, _, _)
@@ -92,7 +92,7 @@ class IdQueryObservableProxyMethodHandlerSpec extends Specification {
 
         when:
         Observable result = handler.invoke(new Object(), methodNamed('toObservable'), null, [] as Object[]) as Observable
-        Object resolved = result.toBlocking().first()
+        Object resolved = result.blockingFirst()
 
         then:
         0 * client.get(_, _, _)
@@ -108,7 +108,7 @@ class IdQueryObservableProxyMethodHandlerSpec extends Specification {
 
         when:
         Observable result = handler.invoke(new Object(), methodNamed('toObservable'), null, [] as Object[]) as Observable
-        List received = result.toList().toBlocking().first()
+        List received = result.toList().blockingGet()
 
         then:
         0 * client.get(_, _, _)

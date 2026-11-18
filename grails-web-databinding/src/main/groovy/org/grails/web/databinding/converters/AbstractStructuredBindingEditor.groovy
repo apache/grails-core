@@ -73,7 +73,8 @@ abstract class AbstractStructuredBindingEditor<T> implements TypedStructuredBind
         for (String key : bindingSource.propertyNames) {
             if (key.startsWith(prefix) && key.size() > prefix.size()) {
                 def propName = key[prefix.size()..-1]
-                valuesMap[propName] = bindingSource.getPropertyValue(key)
+                // Map.put rather than a subscript: a suffix such as "properties" is a bean property on Groovy 5
+                valuesMap.put(propName, bindingSource.getPropertyValue(key))
             }
         }
         valuesMap as Map<String, Object>

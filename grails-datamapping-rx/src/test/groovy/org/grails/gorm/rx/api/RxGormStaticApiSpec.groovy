@@ -42,7 +42,7 @@ import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.multitenancy.TenantDelegatingRxGormOperations
 import org.springframework.core.convert.support.DefaultConversionService
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 import java.util.concurrent.CountDownLatch
@@ -208,7 +208,7 @@ class RxGormStaticApiSpec extends Specification {
         then:
         1 * query.max(1)
         1 * query.singleResult([sort: 'name']) >> Observable.just(new Person(name: 'A'))
-        result.toBlocking().single().name == 'A'
+        result.blockingSingle().name == 'A'
     }
 
     void "first(Map) strips any explicit order before querying"() {
@@ -257,7 +257,7 @@ class RxGormStaticApiSpec extends Specification {
         1 * query.projections() >> projectionList
         1 * query.singleResult() >> Observable.just(3)
         projectionList.projectionList[0] instanceof Query.CountProjection
-        result.toBlocking().single() == 3
+        result.blockingSingle() == 3
     }
 
     void "deleteAll(Iterable) delegates directly to the datastore client"() {
@@ -408,7 +408,7 @@ class RxGormStaticApiSpec extends Specification {
 
         then:
         1 * query.singleResult([:]) >> Observable.just(new Person(id: '1'))
-        result.toBlocking().single()
+        result.blockingSingle()
     }
 
     void "exists(id) emits false when get(id) resolves no instance"() {
@@ -420,7 +420,7 @@ class RxGormStaticApiSpec extends Specification {
 
         then:
         1 * query.singleResult([:]) >> Observable.empty()
-        !result.toBlocking().single()
+        !result.blockingSingle()
     }
 
     void "list(Map) converts all matching results into a list observable"() {
@@ -434,7 +434,7 @@ class RxGormStaticApiSpec extends Specification {
 
         then:
         1 * query.findAll([:]) >> Observable.just(a, b)
-        result.toBlocking().single() == [a, b]
+        result.blockingSingle() == [a, b]
     }
 
     void "findAll(Map) streams each matching result individually rather than collecting a list"() {
@@ -447,7 +447,7 @@ class RxGormStaticApiSpec extends Specification {
 
         then:
         1 * query.findAll([:]) >> Observable.just(a)
-        result.toList().toBlocking().single() == [a]
+        result.toList().blockingGet() == [a]
     }
 
     void "findWhere(Map) applies equality constraints, limits to one result and delegates to singleResult"() {
@@ -485,7 +485,7 @@ class RxGormStaticApiSpec extends Specification {
         Person existing = new Person(id: '1', name: 'Fred')
 
         when:
-        def result = api.findOrCreateWhere([name: 'Fred']).toBlocking().single()
+        def result = api.findOrCreateWhere([name: 'Fred']).blockingSingle()
 
         then:
         1 * query.singleResult([:]) >> Observable.just(existing)
@@ -497,7 +497,7 @@ class RxGormStaticApiSpec extends Specification {
         def api = newApi()
 
         when:
-        def result = api.findOrCreateWhere([name: 'Fred']).toBlocking().single()
+        def result = api.findOrCreateWhere([name: 'Fred']).blockingSingle()
 
         then:
         1 * query.singleResult([:]) >> Observable.empty()
@@ -511,7 +511,7 @@ class RxGormStaticApiSpec extends Specification {
         SavablePerson existing = new SavablePerson(id: '1', name: 'Fred')
 
         when:
-        def result = api.findOrSaveWhere([name: 'Fred']).toBlocking().single()
+        def result = api.findOrSaveWhere([name: 'Fred']).blockingSingle()
 
         then:
         1 * query.singleResult([:]) >> Observable.just(existing)

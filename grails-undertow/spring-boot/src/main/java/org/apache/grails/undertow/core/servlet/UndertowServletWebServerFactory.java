@@ -37,6 +37,8 @@ import java.util.regex.Pattern;
 
 import jakarta.servlet.ServletContainerInitializer;
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.ServletException;
 
 import io.undertow.Undertow.Builder;
@@ -65,6 +67,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.web.error.ErrorPage;
+import org.springframework.boot.web.server.AbstractConfigurableWebServerFactory.TempDirs;
 import org.springframework.boot.web.server.Cookie.SameSite;
 import org.springframework.boot.web.server.MimeMappings.Mapping;
 import org.springframework.boot.web.server.WebServer;
@@ -219,12 +222,17 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
     @Override
     public WebServer getWebServer(ServletContextInitializer... initializers) {
         Builder builder = createBuilder(this, this::getSslBundle, this::getServerNameSslBundles);
-        DeploymentManager manager = createManager(initializers);
+        DeploymentManager manager = createManager(new TempDirs(getPort()), initializers);
         return getUndertowWebServer(builder, manager, getPort());
     }
 
-    private DeploymentManager createManager(ServletContextInitializer... initializers) {
+    private DeploymentManager createManager(TempDirs tempDirs, ServletContextInitializer... initializers) {
         DeploymentInfo deployment = Servlets.deployment();
+        // First, so it is destroyed last: the servlet context destroys its listeners in reverse order,
+        // and the application's are added after this one, so they still find the directories, as they do
+        // on Tomcat and Jetty, which delete them once the context is destroyed.
+        deployment.addListener(new ListenerInfo(CleanTempDirsListener.class,
+            new ImmediateInstanceFactory<>(new CleanTempDirsListener(tempDirs))));
         registerServletContainerInitializerToDriveServletContextInitializers(deployment, initializers);
         deployment.setClassLoader(getServletClassLoader());
         deployment.setContextPath(getSettings().getContextPath().toString());
@@ -235,8 +243,8 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
         }
         configureErrorPages(deployment);
         deployment.setServletStackTraces(ServletStackTraces.NONE);
-        deployment.setResourceManager(getDocumentRootResourceManager());
-        deployment.setTempDir(createTempDir("undertow"));
+        deployment.setResourceManager(getDocumentRootResourceManager(tempDirs));
+        deployment.setTempDir(tempDirs.createTempDir("undertow"));
         deployment.setEagerFilterInit(this.eagerFilterInit);
         deployment.setPreservePathOnForward(this.preservePathOnForward);
         configureMimeMappings(deployment);
@@ -300,11 +308,11 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
         return getClass().getClassLoader();
     }
 
-    private ResourceManager getDocumentRootResourceManager() {
+    private ResourceManager getDocumentRootResourceManager(TempDirs tempDirs) {
         DocumentRoot documentRoot = new DocumentRoot(logger);
         documentRoot.setDirectory(this.settings.getDocumentRoot());
         File root = documentRoot.getValidDirectory();
-        File docBase = getCanonicalDocumentRoot(root);
+        File docBase = getCanonicalDocumentRoot(root, tempDirs);
         List<URL> metaInfResourceUrls = getSettings().getStaticResourceUrls();
         List<URL> resourceJarUrls = new ArrayList<>();
         List<ResourceManager> managers = new ArrayList<>();
@@ -334,9 +342,9 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
         return new CompositeResourceManager(managers.toArray(new ResourceManager[0]));
     }
 
-    private File getCanonicalDocumentRoot(File docBase) {
+    private File getCanonicalDocumentRoot(File docBase, TempDirs tempDirs) {
         try {
-            File root = (docBase != null) ? docBase : createTempDir("undertow-docbase");
+            File root = (docBase != null) ? docBase : tempDirs.createTempDir("undertow-docbase").toFile();
             return root.getCanonicalFile();
         } catch (IOException ex) {
             throw new IllegalStateException("Cannot get canonical document root", ex);
@@ -589,6 +597,25 @@ public class UndertowServletWebServerFactory extends UndertowWebServerFactory
                 }
             }
             return null;
+        }
+
+    }
+
+    /**
+     * {@link ServletContextListener} that deletes the temporary directories of a
+     * deployment when its servlet context is destroyed.
+     */
+    private static final class CleanTempDirsListener implements ServletContextListener {
+
+        private final TempDirs tempDirs;
+
+        private CleanTempDirsListener(TempDirs tempDirs) {
+            this.tempDirs = tempDirs;
+        }
+
+        @Override
+        public void contextDestroyed(ServletContextEvent event) {
+            this.tempDirs.cleanup();
         }
 
     }

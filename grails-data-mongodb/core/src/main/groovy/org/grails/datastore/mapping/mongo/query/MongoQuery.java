@@ -57,6 +57,8 @@ import org.grails.datastore.bson.query.BsonQuery;
 import org.grails.datastore.bson.query.EmbeddedQueryEncoder;
 import org.grails.datastore.gorm.mongo.geo.GeoJSONType;
 import org.grails.datastore.gorm.query.AbstractResultList;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionImplementor;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
@@ -485,8 +487,26 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         return query;
     }
 
+    /**
+     * The codec engine decodes the associations of what it reads in the session bound to the thread,
+     * which need not be this query's: a proxy or a collection loads through the session its owner was
+     * read in, which by then may be closed and not bound. With no session bound, this reads in a
+     * session of its own, and reads every result before that session closes: MongoDB returns the
+     * first 101 documents with the query, and the cursor decodes the rest as they are read.
+     */
     @Override
     protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+        if (isCodecPersister && !session.getDatastore().hasCurrentSession()) {
+            return DatastoreUtils.execute(session.getDatastore(), (Session bound) -> {
+                final List results = readResults(entity, criteria);
+                results.size(); // reads every result
+                return results;
+            });
+        }
+        return readResults(entity, criteria);
+    }
+
+    private List readResults(final PersistentEntity entity, final Junction criteria) {
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 
@@ -1504,10 +1524,24 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         @SuppressWarnings("unchecked")
         public MongoResultList(MongoCursor cursor, Integer offset, EntityPersister mongoEntityPersister) {
-            super(offset == null ? 0 : offset, cursor);
-            this.cursor = cursor;
+            super(offset == null ? 0 : offset, boundToSession(cursor, mongoEntityPersister));
+            this.cursor = (MongoCursor) super.getCursor();
             this.mongoEntityPersister = mongoEntityPersister;
             this.isCodecPersister = mongoEntityPersister instanceof MongoCodecEntityPersister;
+        }
+
+        /**
+         * The results are read after the query returns, by which time a session it opened for itself
+         * is closed. The codec engine decodes each batch, associations included, as the cursor fetches
+         * it, and needs a session to do so; the other engine decodes documents as they are read, in the
+         * query's session.
+         */
+        @SuppressWarnings("unchecked")
+        private static MongoCursor boundToSession(MongoCursor cursor, EntityPersister mongoEntityPersister) {
+            if (mongoEntityPersister instanceof MongoCodecEntityPersister) {
+                return new SessionBoundCursor<>(cursor, mongoEntityPersister.getSession().getDatastore());
+            }
+            return cursor;
         }
 
         @Override

@@ -70,8 +70,18 @@ public class GrailsResourceRuntimeHints implements RuntimeHintsRegistrar {
      */
     public static final String ADDITIONAL_PATTERNS_PROPERTY = "grails.aot.resource-patterns";
 
+    /**
+     * What the build writes into the application about itself, read by name while the environment is
+     * prepared: the environment it was packaged for, the identity type GORM gives a domain class that
+     * declares none, and the application's name, version and Grails version. An image built without it
+     * starts in the development environment. Written out rather than taken from {@code Metadata},
+     * whose constant is a Groovy property and so not visible here.
+     */
+    private static final String BUILD_INFO = "META-INF/grails.build.info";
+
     @Override
     public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+        hints.resources().registerPattern(BUILD_INFO);
         for (String pattern : ASSETS) {
             hints.resources().registerPattern(pattern);
         }

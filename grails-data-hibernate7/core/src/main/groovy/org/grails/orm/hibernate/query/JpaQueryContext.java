@@ -23,6 +23,7 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.ParameterExpression;
 import jakarta.persistence.criteria.Path;
 
@@ -34,7 +35,7 @@ import jakarta.persistence.criteria.Path;
  *
  * @since 8.0
  */
-public class JpaQueryContext implements Cloneable {
+public class JpaQueryContext implements Cloneable, QueryPathContext {
 
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
@@ -76,11 +77,29 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
+     * Creates the context of an association block, which shares the joins of the context that contains it.
+     *
+     * @param parent the context of the query or block that contains the block
+     * @param aliases the aliases the block declares, or {@code null}
+     * @param root the join of the block's association
+     * @param blockPath the association path of the block, relative to the container
+     */
+    public static JpaQueryContext forBlock(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root,
+                                           String blockPath) {
+        return new JpaQueryContext(parent, aliases, root, blockPath);
+    }
+
+    /**
      * Internal constructor for subqueries and base initialization.
      */
     public JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root) {
+        this(parent, aliases, root, null);
+    }
+
+    private JpaQueryContext(JpaQueryContext parent, List<HibernateAlias> aliases, From<?, ?> root, String blockPath) {
         this.parent = parent;
-        this.joinTracker = new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
+        this.joinTracker = blockPath != null ? JoinTracker.forBlock(parent.getJoinTracker(), root, blockPath) :
+                new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
         if (aliases != null) {
@@ -110,6 +129,7 @@ public class JpaQueryContext implements Cloneable {
         this.parent = parent;
     }
 
+    @Override
     public From<?, ?> getRoot() {
         return joinTracker.getRoot();
     }
@@ -120,6 +140,22 @@ public class JpaQueryContext implements Cloneable {
 
     public From<?, ?> getFrom(String path) {
         return joinTracker.getJoin(path);
+    }
+
+    void setJoinPlan(JoinPlan joinPlan) {
+        joinTracker.setPlan(joinPlan);
+    }
+
+    /**
+     * The join of an association path relative to this scope. It is the join every alias, block and property
+     * that goes through the path of the query shares, with the join type the criteria decided for the path.
+     */
+    From<?, ?> resolveAssociation(String path) {
+        HibernateAlias definition = aliasRegistry.getDefinition(path);
+        JoinType planned = joinTracker.plannedType(path);
+        JoinType joinType = planned != null ? planned :
+                definition != null && !definition.explicit() ? definition.joinType() : JoinType.INNER;
+        return resolver.resolveAssociation(path, joinType);
     }
 
     public void registerAlias(String alias, Expression<?> expression) {
@@ -143,11 +179,13 @@ public class JpaQueryContext implements Cloneable {
     }
 
     /**
-     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}.
+     * Returns the selection recorded under an alias by {@link #registerSelectionAlias(String, Expression)}. Unlike
+     * {@link #getFullyQualifiedExpression(String)}, which resolves a property first, this asks for the alias alone.
      *
      * @param alias the alias of the selection
      * @return the selection, or {@code null} if no selection of this query has the alias
      */
+    @Override
     public Expression<?> getSelectionAlias(String alias) {
         return selectionAliases.get(alias);
     }
@@ -173,6 +211,7 @@ public class JpaQueryContext implements Cloneable {
         return expr;
     }
 
+    @Override
     public Expression<?> getFullyQualifiedExpression(String path) {
         if (parent != null) {
             if ("{alias}".equals(path)) {
@@ -185,6 +224,7 @@ public class JpaQueryContext implements Cloneable {
         return resolver.resolve(path);
     }
 
+    @Override
     public Path<?> getFullyQualifiedPath(String path) {
         if (parent != null) {
             if ("{alias}".equals(path)) {

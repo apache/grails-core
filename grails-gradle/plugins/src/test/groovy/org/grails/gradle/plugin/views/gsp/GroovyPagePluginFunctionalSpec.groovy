@@ -72,6 +72,19 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         result.output.contains('WEBAPP_HAS_CLASSES_DIR=true')
     }
 
+    def "the GSP compile classpath is put together without deprecated Gradle features"() {
+        given:
+        setupTestResourceProject('gsp-compile-classpath')
+
+        when: 'the build fails on any deprecation, such as a Provider used where a boolean is expected'
+        def result = executeTask('inspectGspCompileClasspath', ['--warning-mode=fail'])
+
+        then: 'the classpath still has everything it needs to compile a GSP'
+        result.output.contains('MAIN_HAS_COMPILE_CLASSPATH=true')
+        result.output.contains('MAIN_HAS_PROVIDED_COMPILE=true')
+        result.output.contains('MAIN_HAS_CLASSES_DIR=true')
+    }
+
     def "the page opt-in reaches both the build's page compiler and the JVM running the application"() {
         given:
         setupTestResourceProject('gsp-compile-static')
@@ -173,8 +186,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
         // The generator the task runs comes from grails-scaffolding, and the page compiler from
         // grails-web-gsp, which this build cannot depend on; the tests' stand-ins record what they
         // are handed instead.
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -310,8 +324,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('widget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes
@@ -365,8 +380,9 @@ class GroovyPagePluginFunctionalSpec extends GradleSpecification {
                 runtimeOnly files('gadget-plugin.jar')
             }
         """)
-        ['generator': 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class',
-         'compiler' : 'org/grails/web/pages/GroovyPageForkedCompiler.class'].each { String dir, String standIn ->
+        [['generator', 'org/apache/grails/scaffolding/ScaffoldedPagesGenerator.class'],
+         ['compiler', 'org/grails/web/pages/GroovyPageForkedCompiler.class'],
+         ['compiler', 'org/grails/gradle/plugin/views/RecordingForkedCompiler.class']].each { String dir, String standIn ->
             File standInClass = new File(projectDir, "${dir}/${standIn}")
             standInClass.parentFile.mkdirs()
             standInClass.bytes = getClass().classLoader.getResource(standIn).bytes

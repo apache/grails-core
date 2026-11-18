@@ -22,9 +22,9 @@ import grails.gorm.rx.PersistentObservable
 import groovy.transform.PackageScope
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.datastore.rx.query.QueryState
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Observer
+import io.reactivex.rxjava3.disposables.Disposable
 import spock.lang.Specification
 
 import java.lang.reflect.Method
@@ -47,18 +47,19 @@ class AbstractObservableProxyMethodHandlerSpec extends Specification {
         List<String> received = []
         Observable observable = Observable.just('resolved')
         TestObservableProxyMethodHandler handler = newHandler(observable)
-        Subscriber subscriber = new Subscriber<String>() {
+        Observer subscriber = new Observer<String>() {
+            void onSubscribe(Disposable d) { }
             void onNext(String value) { received << value }
             void onError(Throwable error) { throw error }
-            void onCompleted() { }
+            void onComplete() { }
         }
 
         when:
-        Object result = handler.invoke(new Object(), methodNamed('subscribe', Subscriber), null, [subscriber] as Object[])
+        Object result = handler.invoke(new Object(), methodNamed('subscribe', Observer), null, [subscriber] as Object[])
 
         then:
         received == ['resolved']
-        result instanceof Subscription
+        result == null
     }
 
     void "invoke() for toObservable() returns the resolved observable directly"() {
@@ -206,7 +207,7 @@ class AbstractObservableProxyMethodHandlerSpec extends Specification {
 }
 
 interface Signatures {
-    void subscribe(Subscriber subscriber)
+    void subscribe(Observer observer)
     void toObservable()
     void isProxy()
     void getProxyKey()

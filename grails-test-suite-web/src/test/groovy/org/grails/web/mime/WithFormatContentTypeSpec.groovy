@@ -40,15 +40,6 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
         // This triggers doWithConfig() which registers the custom MIME types.
         assert config != null
         
-        // Clear the static mimeTypes cache to prevent test environment pollution.
-        // HttpServletResponseExtension caches mime types in a static field.
-        // This must be done AFTER accessing config to ensure the new config is applied.
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    def cleanup() {
-        // Clear the static mimeTypes cache after each test
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     @Issue('GRAILS-11093')
@@ -83,6 +74,31 @@ class WithFormatContentTypeSpec extends Specification implements ControllerUnitT
         view == '/wildcardView'
     }
 
+    void 'a content type #contentType matches the configured type, as it does in an application'() {
+        when:
+        request.contentType = contentType
+
+        then:
+        request.format == 'json'
+
+        where:
+        contentType << ['Application/JSON', 'application/json;charset=UTF-8']
+    }
+
+    void 'a content type of application/problem+json is the json format, whose body binds as JSON'() {
+        given:
+        request.method = 'POST'
+        request.contentType = 'application/problem+json'
+        request.content = '{"title":"Conflict","status":409}'.getBytes('UTF-8')
+
+        when:
+        controller.problem()
+
+        then:
+        request.format == 'json'
+        response.text == 'Conflict 409'
+    }
+
     @Issue('GRAILS-11093')
     void 'Test specifying request format'() {
         when: 'a request format is specified'
@@ -108,4 +124,13 @@ class FormatController {
             }
         }
     }
+
+    def problem(ProblemCommand command) {
+        render "${command.title} ${command.status}"
+    }
+}
+
+class ProblemCommand {
+    String title
+    Integer status
 }

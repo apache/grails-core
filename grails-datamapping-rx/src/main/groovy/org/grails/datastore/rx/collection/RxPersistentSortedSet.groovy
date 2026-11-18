@@ -30,9 +30,8 @@ import org.grails.datastore.rx.exceptions.BlockingOperationException
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
-import rx.Subscriber
-import rx.Subscription
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Observer
 
 /**
  * Represents a reactive sorted set that can be observed in order to allow non-blocking lazy loading of associations
@@ -99,7 +98,7 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
             if (((RxDatastoreClientImplementor)datastoreClient).isAllowBlockingOperations()) {
                 log.warn("Association $association initialised using blocking operation. Consider using subscribe(..) or an eager query instead")
 
-                addAll observable.toBlocking().first()
+                addAll observable.blockingFirst()
             }
             else {
                 throw new BlockingOperationException("Cannot initialize $association using a blocking operation. Use subscribe(..) instead.")
@@ -111,8 +110,8 @@ class RxPersistentSortedSet<T> extends PersistentSortedSet implements RxPersiste
     }
 
     @Override
-    Subscription subscribe(Subscriber subscriber) {
-        return toObservable().subscribe(subscriber)
+    void subscribe(Observer observer) {
+        toObservable().subscribe(observer)
     }
 
     @Override

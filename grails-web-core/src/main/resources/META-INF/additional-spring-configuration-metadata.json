@@ -69,14 +69,22 @@
         {
             "name": "grails.filter.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for the Grails character encoding filter.",
-            "defaultValue": "UTF-8"
+            "description": "The character encoding of the character encoding filter.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; its encoding is configured with spring.servlet.encoding.charset.",
+                "replacement": "spring.servlet.encoding.charset"
+            }
         },
         {
             "name": "grails.filter.forceEncoding",
             "type": "java.lang.Boolean",
-            "description": "Whether to force the encoding filter to set the encoding on the response.",
-            "defaultValue": true
+            "description": "Whether the character encoding filter overrides the encoding of the request and the response.",
+            "deprecation": {
+                "level": "warning",
+                "reason": "Spring Boot registers the character encoding filter; whether it overrides the encoding is configured with spring.servlet.encoding.force.",
+                "replacement": "spring.servlet.encoding.force"
+            }
         },
         {
             "name": "grails.exceptionresolver.logRequestParameters",
@@ -116,8 +124,7 @@
         {
             "name": "grails.mime.disable.accept.header.userAgents",
             "type": "java.util.List<java.lang.String>",
-            "description": "List of user agent substrings (matched case-insensitively) for which Accept header processing is disabled.",
-            "defaultValue": ["Gecko", "WebKit", "Presto", "Trident"]
+            "description": "List of regular expressions, found anywhere in the User-Agent header, ignoring case, for the user agents whose Accept header is ignored. Unset by default, so that the Accept header is honored for every client; Grails 7 and earlier defaulted it to Gecko, WebKit, Presto and Trident."
         },
         {
             "name": "grails.mime.disable.accept.header.userAgentsXhr",
@@ -128,7 +135,7 @@
         {
             "name": "grails.converters.encoding",
             "type": "java.lang.String",
-            "description": "The character encoding for converter output (JSON or XML) and for the response content types stamped by the default renderers used by respond().",
+            "description": "The character encoding for converter output (JSON or XML), for render json: and for the response content types stamped by the default renderers used by respond().",
             "defaultValue": "UTF-8"
         },
         {

@@ -19,12 +19,20 @@
 
 package grails.config
 
+import groovy.transform.CompileStatic
+
 /**
  * Constants for names of settings in Grails
+ *
+ * <p>Compiled statically, because one constant is computed rather than written out and the interface
+ * is initialized as an application starts: compiled dynamically, its {@code System.getProperty} call
+ * was dispatched through a metaclass, which a native image cannot do for a JDK method nothing
+ * registered.</p>
  *
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 interface Settings {
 
     /**
@@ -210,13 +218,41 @@ interface Settings {
     String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'
 
     /**
-     * The encoding to use for filters, default to UTF-8
+     * Whether Spring MVC writes any value of a controller action annotated {@code @ResponseBody}, or of an action of a
+     * controller annotated so, directly or with an annotation such as {@code @RestController}, as the body of the
+     * response, as it writes the value of a handler method annotated so, where Grails 8 ignored the annotation and
+     * rendered the action's view for a model. The values Spring MVC writes as the response whatever a handler method is
+     * annotated with, such as a {@code ResponseEntity} or a {@code ProblemDetail}, are written whatever it says.
+     * Defaults to {@link #CONTROLLERS_RESPONSE_BODY_DEFAULT}.
+     *
+     * @since 9.0
      */
+    String CONTROLLERS_RESPONSE_BODY = 'grails.controllers.responseBody'
+
+    /**
+     * The default of {@link #CONTROLLERS_RESPONSE_BODY}, as a property placeholder reads it: {@code false} in Grails 9,
+     * and {@code true} from Grails 10.
+     *
+     * @since 9.0
+     */
+    String CONTROLLERS_RESPONSE_BODY_DEFAULT = 'false'
+
+    /**
+     * The encoding of the character encoding filter.
+     *
+     * @deprecated since 9.0, for removal. Spring Boot registers the character encoding filter; configure
+     * {@code spring.servlet.encoding.charset} instead.
+     */
+    @Deprecated(since = '9.0', forRemoval = true)
     String FILTER_ENCODING = 'grails.filter.encoding'
 
     /**
-     * The encoding to use for filters, default to UTF-8
+     * Whether the character encoding filter overrides the encoding of the request and the response.
+     *
+     * @deprecated since 9.0, for removal. Spring Boot registers the character encoding filter; configure
+     * {@code spring.servlet.encoding.force} instead.
      */
+    @Deprecated(since = '9.0', forRemoval = true)
     String FILTER_FORCE_ENCODING = 'grails.filter.forceEncoding'
 
     /**
@@ -357,6 +393,25 @@ interface Settings {
      * for resolver-driven emission.
      */
     String SETTING_LOG_FULL_STACKTRACE_ON_FILTER = 'grails.exceptionresolver.logFullStackTraceOnFilter'
+
+    /**
+     * Whether an exception a controller action throws is resolved first by the {@code @ExceptionHandler} methods Spring
+     * MVC resolves those of a handler method with: those of the controller's class and of the {@code @ControllerAdvice}
+     * beans that apply to it, Spring Boot's handler of {@code spring.mvc.problemdetails.enabled} among them, ahead of
+     * Spring MVC's other exception resolvers and of the Grails exception resolver, which resolve one none of them handles.
+     * Defaults to {@link #SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT}.
+     *
+     * @since 9.0
+     */
+    String SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS = 'grails.exceptionresolver.springHandlers'
+
+    /**
+     * The default of {@link #SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS}, as a property placeholder reads it: {@code false}
+     * in Grails 9, and {@code true} from Grails 10.
+     *
+     * @since 9.0
+     */
+    String SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT = 'false'
     /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */
@@ -385,6 +440,54 @@ interface Settings {
     String DATE_LENIENT_PARSING = 'grails.databinding.dateParsingLenient'
 
     String DATABINDING_DENY_BY_DEFAULT = 'grails.databinding.denyByDefault'
+
+    /**
+     * Whether JSON request bodies are bound as the application's Jackson mapper parses them, rather than with the legacy
+     * parser. Defaults to {@link #DATABINDING_JSON_JACKSON_DEFAULT}.
+     *
+     * @since 9.0
+     */
+    String DATABINDING_JSON_JACKSON = 'grails.databinding.json.jackson'
+
+    /**
+     * The default of {@link #DATABINDING_JSON_JACKSON}, as a property placeholder reads it: {@code false} in Grails 9,
+     * and {@code true} from Grails 10.
+     *
+     * @since 9.0
+     */
+    String DATABINDING_JSON_JACKSON_DEFAULT = 'false'
+
+    /**
+     * Whether {@code respond} writes JSON with Spring MVC's message converters, rather than with the legacy JSON
+     * converter. Defaults to {@link #WEB_RENDERING_JSON_SPRING_DEFAULT}.
+     *
+     * @since 9.0
+     */
+    String WEB_RENDERING_JSON_SPRING = 'grails.web.rendering.json.spring'
+
+    /**
+     * The default of {@link #WEB_RENDERING_JSON_SPRING}, as a property placeholder reads it: {@code false} in Grails 9,
+     * and {@code true} from Grails 10.
+     *
+     * @since 9.0
+     */
+    String WEB_RENDERING_JSON_SPRING_DEFAULT = 'false'
+
+    /**
+     * Whether {@code respond} writes ordinary beans as XML with Spring MVC's message converters, rather than with the
+     * legacy XML converter. Defaults to {@link #WEB_RENDERING_XML_SPRING_DEFAULT}.
+     *
+     * @since 9.0
+     */
+    String WEB_RENDERING_XML_SPRING = 'grails.web.rendering.xml.spring'
+
+    /**
+     * The default of {@link #WEB_RENDERING_XML_SPRING}, as a property placeholder reads it: {@code false} until legacy XML
+     * conversion is removed.
+     *
+     * @since 9.0
+     */
+    String WEB_RENDERING_XML_SPRING_DEFAULT = 'false'
 
     /**
      * Whether message bundles contributed by plugins participate, both in message resolution and in

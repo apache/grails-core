@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,8 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import groovy.lang.Closure;
@@ -75,6 +78,9 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 import grails.gorm.multitenancy.Tenants;
 import grails.util.GrailsMessageSourceUtils;
+import org.apache.grails.data.mongodb.core.querytail.MongoMappedFields;
+import org.apache.grails.data.mongodb.core.querytail.QueryTailCommandListener;
+import org.apache.grails.datastore.core.querytail.QueryTailSettings;
 import org.grails.datastore.bson.codecs.CodecExtensions;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
@@ -193,6 +199,12 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     public static final String CODEC_ENGINE = MongoConstants.CODEC_ENGINE;
 
     private static final Logger LOG = LoggerFactory.getLogger(MongoDatastore.class);
+
+    /**
+     * The connection sources GORM has warned of capturing nothing of, so that the datastores built on one, a parent
+     * and its child, warn of it once.
+     */
+    private static final Set<ConnectionSource<?, ?>> UNCAPTURED = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<>()));
 
     /**
      * Not final because {@link #start()} replaces it after a CRaC restore when it is not a
@@ -339,6 +351,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
                 public void newConnectionSource(final ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
                     final SingletonConnectionSources<MongoClient, MongoConnectionSourceSettings> singletonConnectionSources = new SingletonConnectionSources<>(connectionSource, connectionSources.getBaseConfiguration());
                     MongoDatastore childDatastore = createChildDatastore(mappingContext, eventPublisher, parent, singletonConnectionSources);
+                    // Built, the child leaves the query-tail listener of its connection source to this datastore.
+                    bindQueryTail(singletonConnectionSources.getAllConnectionSources(), childDatastore);
                     datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
                     registerAllEntitiesWithEnhancer();
                     // Decided under the lifecycle monitor, so a connection registered while start() or stop() is
@@ -400,6 +414,39 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         this.autoTimestampEventListener = new AutoTimestampEventListener(this);
         registerEventListeners(this.eventPublisher);
         this.gormEnhancer = initialize(settings);
+        bindQueryTail();
+    }
+
+    /**
+     * Binds the query-tail listeners of the connection sources of this datastore, once it is built, so that one that
+     * fails to build leaves every capture file as it was. A child datastore leaves its listener to its parent, which
+     * binds the listeners of all its connection sources once it is built itself, and that of one added at runtime once
+     * the child of it is built.
+     */
+    void bindQueryTail() {
+        bindQueryTail(connectionSources.getAllConnectionSources(), this);
+    }
+
+    /**
+     * Gives the query-tail listeners of connection sources the mapping of a datastore, which opens their captures, and
+     * warns of each whose capture is enabled but whose client was built without the listener: one the application built
+     * itself, or one a connection source factory built other than through {@link MongoConnectionSource#create}, which
+     * registers it.
+     */
+    private static void bindQueryTail(Iterable<ConnectionSource<MongoClient, MongoConnectionSourceSettings>> connectionSources,
+            MongoDatastore datastore) {
+        QueryTailCommandListener.bind(connectionSources, datastore);
+        for (ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource : connectionSources) {
+            boolean listening = connectionSource instanceof MongoConnectionSource mongoSource && mongoSource.getQueryTail() != null;
+            MongoConnectionSourceSettings settings = connectionSource.getSettings();
+            QueryTailSettings queryTail = settings != null ? settings.getQueryTail() : null;
+            if (!listening && queryTail != null && queryTail.isEnabled() && UNCAPTURED.add(connectionSource)) {
+                LOG.warn("Query-tail capture is enabled, but GORM cannot register its listener on the MongoDB client of " +
+                        "connection [{}], which was built without it, so none of its commands is captured. Let GORM build " +
+                        "the client; a connection source factory that builds it itself registers the listener by creating " +
+                        "the connection source with {}.create.", connectionSource.getName(), MongoConnectionSource.class.getSimpleName());
+            }
+        }
     }
 
     private MongoDatastore createChildDatastore(MongoMappingContext mappingContext,
@@ -417,6 +464,11 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
             void ensureStarted() {
                 // A child has no lifecycle of its own: starting the parent starts it.
                 parent.ensureStarted();
+            }
+
+            @Override
+            void bindQueryTail() {
+                // The parent binds the listener of a child's connection source, once neither can fail to build.
             }
 
             @Override
@@ -472,7 +524,9 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      * Configures a new {@link MongoDatastore} around the clients a supplier builds, which GORM owns: it builds one
      * the first time the client is needed, closes it when the datastore is stopped for a checkpoint, and builds the
      * one the restore needs from the same supplier. Use this where the client cannot be rebuilt from
-     * {@code grails.mongodb} settings, such as one built from Spring Boot's own {@code MongoClientSettings}.
+     * {@code grails.mongodb} settings. GORM cannot add to the settings a supplier builds a client from, so
+     * query-tail capture records nothing of it; a client built from settings is better handed over through
+     * {@link #fromClientFactory(Function, PropertyResolver, ConfigurableApplicationEventPublisher, Package...)}.
      *
      * @param clientSupplier Builds a {@link MongoClient}, whenever the datastore needs one
      * @param configuration The configuration
@@ -498,6 +552,46 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         // GORM builds the client from the supplier, so it owns it and must close it (closeable = true).
         this(createDefaultConnectionSources(new RestartableMongoClient(ConnectionSource.DEFAULT, clientSupplier),
                 configuration, mappingContext, true), mappingContext, eventPublisher);
+    }
+
+    /**
+     * Creates a {@link MongoDatastore} around the clients a factory builds from settings, which GORM owns, as it owns
+     * those of {@link #MongoDatastore(Supplier, PropertyResolver, ConfigurableApplicationEventPublisher, Package...)}.
+     * The factory is handed what GORM adds to the settings of every client it owns, such as the listener query-tail
+     * capture records the commands of the client with, to apply to the settings it builds the client from. Use this
+     * where the client is built from settings other than {@code grails.mongodb}, such as Spring Boot's own
+     * {@code MongoClientSettings}. It is a method rather than a constructor, so that a Groovy closure that builds a
+     * client is still handed to the constructor that takes a supplier, which it would match as well as this.
+     *
+     * @param clientFactory Builds a {@link MongoClient}, whenever the datastore needs one, applying what it is handed
+     * to the settings it builds the client from
+     * @param configuration The configuration
+     * @param eventPublisher The Spring ApplicationContext
+     * @param packages The packages to scan
+     * @return The datastore
+     * @since 9.0
+     */
+    public static MongoDatastore fromClientFactory(Function<Consumer<MongoClientSettings.Builder>, MongoClient> clientFactory,
+            PropertyResolver configuration, ConfigurableApplicationEventPublisher eventPublisher, Package... packages) {
+        return fromClientFactory(clientFactory, configuration,
+                createMappingContext(configuration, new ClasspathEntityScanner().scan(packages)), eventPublisher);
+    }
+
+    /**
+     * Creates a {@link MongoDatastore} around the clients a factory builds from settings; see
+     * {@link #fromClientFactory(Function, PropertyResolver, ConfigurableApplicationEventPublisher, Package...)}.
+     *
+     * @param clientFactory Builds a {@link MongoClient}, whenever the datastore needs one, applying what it is handed
+     * to the settings it builds the client from
+     * @param configuration The configuration
+     * @param mappingContext The mapping context
+     * @param eventPublisher The Spring ApplicationContext
+     * @return The datastore
+     * @since 9.0
+     */
+    public static MongoDatastore fromClientFactory(Function<Consumer<MongoClientSettings.Builder>, MongoClient> clientFactory,
+            PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
+        return new MongoDatastore(createOwnedConnectionSources(clientFactory, configuration, mappingContext), mappingContext, eventPublisher);
     }
 
     /**
@@ -551,7 +645,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
-        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, eventPublisher);
+        this(createOwnedConnectionSources(clientOptions, configuration, mappingContext), mappingContext, eventPublisher);
     }
 
     /**
@@ -563,7 +657,7 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
      */
     public MongoDatastore(MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
         // GORM builds the client from the supplied options, so it owns it and must close it (closeable = true).
-        this(createDefaultConnectionSources(createMongoClient(configuration, clientOptions, mappingContext), configuration, mappingContext, true), mappingContext, new DefaultApplicationEventPublisher());
+        this(createOwnedConnectionSources(clientOptions, configuration, mappingContext), mappingContext, new DefaultApplicationEventPublisher());
     }
 
     /**
@@ -1704,6 +1798,22 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     /**
+     * Gets the collection the mapping of an entity stores it in, which is the collection of the entity in every
+     * datastore built on the mapping: the collection the mapping names, else the decapitalized name of its root
+     * entity.
+     *
+     * @param entity The entity
+     * @return The collection name
+     * @since 9.0
+     */
+    public static String getMappedCollectionName(PersistentEntity entity) {
+        if (entity.getMapping().getMappedForm() instanceof MongoCollection collectionMapping && collectionMapping.getCollection() != null) {
+            return collectionMapping.getCollection();
+        }
+        return entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName();
+    }
+
+    /**
      * Gets the default collection name for the given entity
      *
      * @param entity The entity
@@ -2595,17 +2705,22 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     /**
      * Builds a replacement for a client {@link #stop()} closed. The default connection's is built from the
      * configuration again; any other reuses its settings, since a connection added at runtime was never part of
-     * the configuration.
+     * the configuration. The query-tail listener the replacement was built with takes the place of the closed
+     * client's, with the mapping of this datastore, as {@link MongoConnectionSource#replaceWith} hands it over; one
+     * the connection source cannot hold is closed at once.
      */
     private void replaceClient(ConnectionSourceFactory<MongoClient, MongoConnectionSourceSettings> factory, boolean defaultConnection) {
         ConnectionSource<MongoClient, MongoConnectionSourceSettings> own = connectionSources.getDefaultConnectionSource();
-        MongoClient replacement = defaultConnection ?
-                factory.create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration()).getSource() :
-                factory.create(own.getName(), own.getSettings()).getSource();
-        if (own instanceof MongoConnectionSource) {
-            ((MongoConnectionSource) own).replaceSource(replacement);
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> built = defaultConnection ?
+                factory.create(ConnectionSource.DEFAULT, connectionSources.getBaseConfiguration()) :
+                factory.create(own.getName(), own.getSettings());
+        MongoClient replacement;
+        if (own instanceof MongoConnectionSource ownSource) {
+            ownSource.replaceWith(built, MongoMappedFields.of(this));
+            replacement = ownSource.getSource();
         }
         else {
+            replacement = MongoConnectionSource.detach(built);
             // Only the connection source the factory creates can be given the replacement. A custom factory's
             // own kind cannot, so whatever reads the client from it, rather than from the datastore, would go on
             // using the one that was closed.
@@ -2788,9 +2903,8 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         // exactly as they do when GORM creates the client itself. The connection details in them are
         // unused - this client is already connected - so a configured URL is dropped: its database would
         // otherwise take precedence over the mapping context's, which is the one this path always used.
-        MongoConnectionSourceSettings settings = buildConnectionSourceSettings(configuration);
-        settings.url(null);
-        settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
+        // The client was built without the query-tail listener, which the datastore warns of when capture is enabled.
+        MongoConnectionSourceSettings settings = defaultConnectionSourceSettings(configuration, mappingContext);
         // One that GORM owns can be replaced after a restore; see start().
         ConnectionSource<MongoClient, MongoConnectionSourceSettings> defaultConnectionSource = closeable ?
                 new MongoConnectionSource(ConnectionSource.DEFAULT, mongoClient, settings) :
@@ -2798,10 +2912,82 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
         return new InMemoryConnectionSources<>(defaultConnectionSource, new MongoConnectionSourceFactory(), configuration);
     }
 
+    /**
+     * Builds a client from the configuration and the given options. Nothing owns a query-tail capture of the
+     * client it returns, so its listener is closed before it has opened the capture file, which is left as it was,
+     * and the client records nothing; a client whose commands are to
+     * be captured is built by the datastore, from {@link #MongoDatastore(MongoClientSettings.Builder, PropertyResolver,
+     * MongoMappingContext, ConfigurableApplicationEventPublisher)} or a factory GORM hands its settings to.
+     *
+     * @param configuration The configuration
+     * @param mongoOptions The options the client is built from
+     * @param mappingContext The mapping context
+     * @return The client
+     */
     protected static MongoClient createMongoClient(PropertyResolver configuration, MongoClientSettings.Builder mongoOptions, MongoMappingContext mappingContext) {
         MongoConnectionSourceFactory mongoConnectionSourceFactory = new MongoConnectionSourceFactory();
         mongoConnectionSourceFactory.setClientOptionsBuilder(mongoOptions);
-        return mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration).getSource();
+        return MongoConnectionSource.detach(mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration));
+    }
+
+    /**
+     * The connection sources of a client GORM builds from the given options and owns, with the query-tail listener
+     * the connection source factory registers on it when capture is enabled.
+     */
+    private static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createOwnedConnectionSources(
+            MongoClientSettings.Builder clientOptions, PropertyResolver configuration, MongoMappingContext mappingContext) {
+        MongoConnectionSourceFactory mongoConnectionSourceFactory = new MongoConnectionSourceFactory();
+        mongoConnectionSourceFactory.setClientOptionsBuilder(clientOptions);
+        ConnectionSource<MongoClient, MongoConnectionSourceSettings> built = mongoConnectionSourceFactory.create(ConnectionSource.DEFAULT, configuration);
+        MongoConnectionSource connectionSource = null;
+        try {
+            connectionSource = MongoConnectionSource.adopt(built, defaultConnectionSourceSettings(configuration, mappingContext));
+            return new InMemoryConnectionSources<>(connectionSource, new MongoConnectionSourceFactory(), configuration);
+        }
+        catch (RuntimeException | Error failure) {
+            // the connection source that took the client and its listener, or the one built, which still holds them
+            closeQuietly(connectionSource != null ? connectionSource : built);
+            throw failure;
+        }
+    }
+
+    /**
+     * The connection sources of a client a factory builds from settings GORM adds to, and GORM owns.
+     */
+    private static ConnectionSources<MongoClient, MongoConnectionSourceSettings> createOwnedConnectionSources(
+            Function<Consumer<MongoClientSettings.Builder>, MongoClient> clientFactory, PropertyResolver configuration,
+            MongoMappingContext mappingContext) {
+        MongoConnectionSourceSettings settings = defaultConnectionSourceSettings(configuration, mappingContext);
+        MongoConnectionSource connectionSource = MongoConnectionSource.create(ConnectionSource.DEFAULT, settings,
+                gormSettings -> new RestartableMongoClient(ConnectionSource.DEFAULT, () -> clientFactory.apply(gormSettings)));
+        try {
+            return new InMemoryConnectionSources<>(connectionSource, new MongoConnectionSourceFactory(), configuration);
+        }
+        catch (RuntimeException | Error failure) {
+            // the configured connections other than the default could not be built
+            closeQuietly(connectionSource);
+            throw failure;
+        }
+    }
+
+    /**
+     * The settings of the default connection of a client the datastore is handed, bound from the configuration with
+     * the database the mapping context names; see {@link #createDefaultConnectionSources}.
+     */
+    private static MongoConnectionSourceSettings defaultConnectionSourceSettings(PropertyResolver configuration, MongoMappingContext mappingContext) {
+        MongoConnectionSourceSettings settings = buildConnectionSourceSettings(configuration);
+        settings.url(null);
+        settings.setDatabaseName(mappingContext.getDefaultDatabaseName());
+        return settings;
+    }
+
+    private static void closeQuietly(ConnectionSource<MongoClient, MongoConnectionSourceSettings> connectionSource) {
+        try {
+            connectionSource.close();
+        }
+        catch (IOException | RuntimeException ignored) {
+            // the failure that led here is the one to report
+        }
     }
 
     protected static MongoMappingContext createMappingContext(ConnectionSources<MongoClient, MongoConnectionSourceSettings> connectionSources, Class... classes) {
@@ -2824,13 +3010,10 @@ public class MongoDatastore extends AbstractDatastore implements MappingContext.
     }
 
     protected void registerEntity(PersistentEntity entity) {
-        String collectionName = entity.isRoot() ? entity.getDecapitalizedName() : entity.getRootEntity().getDecapitalizedName();
+        String collectionName = getMappedCollectionName(entity);
         String databaseName = this.defaultDatabase;
 
         MongoCollection collectionMapping = (MongoCollection) entity.getMapping().getMappedForm();
-        if (collectionMapping.getCollection() != null) {
-            collectionName = collectionMapping.getCollection();
-        }
         if (collectionMapping.getDatabase() != null) {
             databaseName = collectionMapping.getDatabase();
         }

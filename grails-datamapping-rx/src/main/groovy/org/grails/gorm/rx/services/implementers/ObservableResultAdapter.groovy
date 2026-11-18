@@ -43,7 +43,7 @@ import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationOrGetEx
 import static org.grails.gorm.rx.transform.RxAstUtils.isRxEntity
 
 /**
- * Adapts results for queries that return an {@link rx.Observable}
+ * Adapts results for queries that return an {@link io.reactivex.rxjava3.core.Observable}
  *
  * @since 6.1.1
  */
@@ -88,6 +88,11 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
             else {
                 String prefix = adapted.resolvePrefix(methodNode)
                 if (adapted instanceof IterableProjectionServiceImplementer) {
+                    // The projection implementers check the projected type alone, so the Observable return type
+                    // is checked here: a Single of the projected type belongs to SingleResultAdapter
+                    if (!RxAstUtils.isObservable(methodReturnType)) {
+                        return false
+                    }
                     ClassNode genericType = resolveSingleGenericType(methodReturnType)
                     ClassNode iterableType = GenericsUtils.makeClassSafeWithGenerics(Iterable, genericType)
 
@@ -110,7 +115,10 @@ class ObservableResultAdapter  implements ServiceImplementer, Ordered, AdaptedIm
     @Override
     void implement(ClassNode domainClassNode, MethodNode abstractMethodNode, MethodNode newMethodNode, ClassNode targetClassNode) {
         ClassNode returnType = resolveSingleGenericType(abstractMethodNode.returnType)
-        if (isDomainReturnType && !(adapted instanceof IterableInterfaceProjectionBuilder)) {
+        // A projection's generic type is the projected property or interface type, not a domain class, so only
+        // a plain domain query takes its domain class from the Observable's generic type
+        boolean isProjection = adapted instanceof IterableInterfaceProjectionBuilder || adapted instanceof IterableProjectionServiceImplementer
+        if (isDomainReturnType && !isProjection) {
             domainClassNode = returnType
         }
 

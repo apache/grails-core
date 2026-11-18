@@ -280,10 +280,14 @@ Every push and pull request runs the GitHub Actions workflows, and runner time i
 project, so two controls limit what runs:
 
 * A draft pull request runs no workflow unless it carries the `run ci` label; marking it ready for review starts CI.
-  A pull request labelled `no ci` runs no workflow at all, draft or not. (The Release Drafter still labels every
-  pull request into a release branch; it runs no build.) Labels are read when a push arrives, so add `run ci` (or
-  remove `no ci`) and then push, or mark the draft ready, to get a run. Pushing to a draft still cancels the run in
-  flight for it, as every push to a pull request or a branch does.
+  A pull request labelled `no ci` runs no workflow at all, draft or not. Labels are read when a push arrives, so add
+  `run ci` (or remove `no ci`) and then push, or mark the draft ready, to get a run. Pushing to a draft still cancels
+  the run in flight for it, as every push to a pull request does.
+* Adding `no ci` to a pull request cancels the runs it has in flight, and merging a pull request into a release branch
+  cancels the runs started before the merge, unless the pull request is labelled `run ci`: on an older release branch
+  the push after the merge does not run the tests, so the tests the label asked for are left to finish. A pull request
+  from a fork gets a read-only token, so its runs are cancelled by the next push to a release branch instead of at
+  once when it is labelled.
 * The tests run by default only on the default branch and the release branches above it. Elsewhere, that is on an
   older release branch such as `7.0.x` while `8.0.x` is the default, and on a pull request whose base is a side
   branch rather than a release branch, a push or pull request builds without running the tests unless asked: a

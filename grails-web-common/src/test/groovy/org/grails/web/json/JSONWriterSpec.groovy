@@ -21,9 +21,13 @@ package org.grails.web.json
 import java.util.function.Predicate
 
 import groovy.transform.CompileStatic
+
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import spock.lang.Issue
 import spock.lang.Specification
 import tools.jackson.core.JsonGenerator
+import tools.jackson.core.json.JsonWriteFeature
 import tools.jackson.databind.SerializationContext
 import tools.jackson.databind.cfg.DateTimeFeature
 import tools.jackson.databind.json.JsonMapper
@@ -115,7 +119,33 @@ class JSONWriterSpec extends Specification {
         out.toString() == '{"list":[{"a":1}]}'
     }
 
-    void "a GString and a StreamCharBuffer are escaped for an HTML script element, as in Grails 8"() {
+    void 'a writer with the default mapper writes values nested deeper than Jackson limits a mapper to, as Grails 8 did'() {
+        given:
+        def out = new StringWriter()
+        def writer = new JSONWriter(out)
+
+        when:
+        600.times { writer.array() }
+        600.times { writer.endArray() }
+
+        then:
+        out.toString() == '[' * 600 + ']' * 600
+    }
+
+    void 'a Writable is written as the text it writes, whatever its toString() gives'() {
+        given:
+        def out = new StringWriter()
+        Writable writable = { Writer w -> w << 'written</' } as Writable
+
+        when:
+        new JSONWriter(out).array().value(writable).endArray()
+
+        then:
+        writable.toString() != 'written</'
+        out.toString() == '["written<\\u002f"]'
+    }
+
+    void "a GString and a StreamCharBuffer are escaped as a String is, for an HTML script element"() {
         given:
         def buffer = new StreamCharBuffer()
         buffer.writer.write('</b> ')
@@ -123,8 +153,82 @@ class JSONWriterSpec extends Specification {
         when:
         writer.array().value("</a>${1} ").value(buffer).value('</c> ').endArray()
 
-        then: 'by the Grails JavaScript encoder, as JSONWriter quoted them in Grails 8, and a String by the generator'
-        out.toString() == '["<\\/a>1\\u2028","<\\/b>\\u2028","<\\u002fc>\\u2028"]'
+        then: 'by the generator, also without the JSON encoder of grails-converters, which wrote </ as <\\/'
+        out.toString() == '["<\\u002fa>1\\u2028","<\\u002fb>\\u2028","<\\u002fc>\\u2028"]'
+    }
+
+    void "a GString, a StreamCharBuffer and any other value are escaped as #description escapes a String"() {
+        given:
+        def buffer = new StreamCharBuffer()
+        buffer.writer.write('\u001B\u00e9')
+        def out = new StringWriter()
+
+        when:
+        new JSONWriter(out, support, false).array()
+                .value('\u001B\u00e9')
+                .value("\u001B${'\u00e9'}")
+                .value(buffer)
+                .value(new StringBuilder('\u001B\u00e9'))
+                .value(new TextOf('\u001B\u00e9'))
+                .endArray()
+
+        then:
+        out.toString() == '[' + ([element] * 5).join(',') + ']'
+
+        where:
+        description                                    | support                                                                                         || element
+        'a mapper that escapes non-ASCII characters'   | new JsonMapperSupport(JsonMapper.builder().enable(JsonWriteFeature.ESCAPE_NON_ASCII).build()) || '"\\u001B\\u00E9"'
+        'the default mapper, as Grails 8 escaped them' | JsonMapperSupport.DEFAULT                                                                       || '"\\u001b\u00e9"'
+    }
+
+    void 'a scalar root is a complete JSON document with #writerType.simpleName'() {
+        given:
+        def output = new StringWriter()
+        def writer = writerType.getConstructor(Writer).newInstance(output)
+
+        when:
+        writer.value(value)
+
+        then:
+        output.toString() == expected
+
+        when: 'a second root is refused and leaves the text as it was'
+        writer.value('another root')
+
+        then:
+        thrown(JSONException)
+        output.toString() == expected
+
+        where:
+        [writerType, value, expected] << [JSONWriter, PrettyPrintJSONWriter].collectMany { type ->
+            [
+                [type, 'ok', '"ok"'],
+                [type, 'a"b\nc', '"a\\"b\\nc"'],
+                [type, "Hi ${'Ada'}", '"Hi Ada"'],
+                [type, 42L, '42'],
+                [type, 1.5d, '1.5'],
+                [type, true, 'true'],
+                [type, null, 'null'],
+            ]
+        }
+    }
+
+    void "a JsonMapperSupport with an attribute writes with it, and the one it derives from does not"() {
+        given: 'a serializer that writes the attribute of the write'
+        def mapper = JsonMapper.builder().addModule(new SimpleModule()
+                .addSerializer(Box, new AttributeSerializer())).build()
+        def support = new JsonMapperSupport(mapper)
+        def derived = support.withAttribute('who', 'the writer')
+        def plain = new StringWriter()
+        def attributed = new StringWriter()
+
+        when:
+        new JSONWriter(plain, support, false).value(new JsonMapperValue(new Box(content: 'x'), support))
+        new JSONWriter(attributed, derived, false).value(new JsonMapperValue(new Box(content: 'x'), derived))
+
+        then:
+        plain.toString() == '"none"'
+        attributed.toString() == '"the writer"'
     }
 
     void "a single value is a JSON text, written without a flush"() {
@@ -260,7 +364,29 @@ class JSONWriterSpec extends Specification {
         out.toString() == '{"map":{"content":{"size":2}},"date":{"content":"1970-01-01T00:00:00.000Z"},"after":1}'
     }
 
-    void "a nested value writer must write one complete value"() {
+    void "a nested value writer that writes nothing leaves the value out of a list, and writes null for a property, also of a bean written as an array"() {
+        given: 'a nested value writer that writes nothing for a map, as the converter writes a value IGNORE leaves out'
+        def writer = new JSONWriter(out, boxes, false)
+        def nested = { Object value ->
+            if (value instanceof Map) {
+                writer.writeNested { }
+                return true
+            }
+            false
+        } as Predicate<Object>
+
+        when:
+        writer.object()
+                .key('property').value(new JsonMapperValue(new Box(content: [a: 1]), boxes, nested))
+                .key('elements').value(new JsonMapperValue(new Box(content: [[a: 1], 2]), boxes, nested))
+                .key('row').value(new JsonMapperValue(new Box(content: new PositionalRow(first: [a: 1], second: 2)), boxes, nested))
+                .endObject()
+
+        then: 'as the mapper writes them'
+        out.toString() == '{"property":{"content":null},"elements":{"content":[2]},"row":{"content":[null,2]}}'
+    }
+
+    void "a nested value writer that starts a value must complete it"() {
         given:
         def writer = new JSONWriter(out, boxes, false)
         def nested = { Object value ->
@@ -316,6 +442,13 @@ class Box {
     Object content
 }
 
+@JsonFormat(shape = JsonFormat.Shape.ARRAY)
+@JsonPropertyOrder(['first', 'second'])
+class PositionalRow {
+    Object first
+    Object second
+}
+
 class BoxSerializer extends StdSerializer<Box> {
 
     BoxSerializer() {
@@ -328,5 +461,31 @@ class BoxSerializer extends StdSerializer<Box> {
         generator.writeName('content')
         generator.writePOJO(box.content)
         generator.writeEndObject()
+    }
+}
+
+class AttributeSerializer extends StdSerializer<Box> {
+
+    AttributeSerializer() {
+        super(Box)
+    }
+
+    @Override
+    void serialize(Box box, JsonGenerator generator, SerializationContext context) {
+        generator.writeString((context.getAttribute('who') ?: 'none') as String)
+    }
+}
+
+class TextOf {
+
+    private final String text
+
+    TextOf(String text) {
+        this.text = text
+    }
+
+    @Override
+    String toString() {
+        text
     }
 }

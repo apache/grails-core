@@ -115,6 +115,8 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private static final String ASSET_PIPELINE_PLUGIN = 'cloud.wondrify.asset-pipeline'
 
+    private static final String WAR_PLUGIN = 'war'
+
     private static final int TRAINING_PORT = 18080
 
     /** Not the training port: a trace and a training run are both a started application. */
@@ -124,6 +126,12 @@ class GrailsGradlePlugin implements Plugin<Project> {
 
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
+
+    /** The Gradle property prefix of the query-tail capture settings handed to forked JVMs, {@code -Pgrails.gorm.queryTail.enabled}. */
+    private static final String QUERY_TAIL_PROPERTY_PREFIX = 'grails.gorm.queryTail.'
+
+    /** The switch that turns query-tail capture on, which a Gradle property given without a value sets. */
+    private static final String QUERY_TAIL_ENABLED = QUERY_TAIL_PROPERTY_PREFIX + 'enabled'
 
     /**
      * A {@code configurationScript} configured on a GroovyCompile task, keyed by compile task name
@@ -245,10 +253,22 @@ class GrailsGradlePlugin implements Plugin<Project> {
     private void configureGroovyCompiler(Project project) {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
             if (c.name == 'compileGroovy') {
-                // Resource-only changes do not ordinarily invalidate compilation. This file changes
-                // whether the compiler owns the generated imports resource, so adding or deleting it
-                // must run the transform even when no Groovy source changed.
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
                 AutoConfigurationImportsCompileInput.register(project, c)
+                FactoriesCompileInput.registerGrailsFactories(project, c)
+                FactoriesCompileInput.registerCliFactories(project, c)
+                // Under incremental Groovy compilation, which a build opts into with
+                // options.incremental = true, a deleted class that nothing depends on compiles nothing,
+                // so the factories files the compiler generated are reconciled with what the compilation
+                // produced once it is done. The default full recompilation cleans the destination
+                // directory first and leaves nothing to prune.
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.GRAILS_FACTORIES_LOCATION,
+                        [FactoriesCompileInput.GRAILS_FACTORIES_PATH])
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.CLI_FACTORIES_LOCATION,
+                        FactoriesCompileInput.CLI_FACTORIES_PATHS)
             }
             // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
             // GlobalGrailsClassInjectorTransformation AST transform can locate
@@ -1055,6 +1075,10 @@ ${importStatements}
             // path relative to the project, not its name, so that two instances of one checkout have one each
             task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_TARGET_DIR,
                     project.projectDir, project.layout.buildDirectory, task.systemProperties))
+            // query-tail capture settings given as Gradle properties reach every forked application and test
+            // JVM under their own names: ./gradlew bootRun -Pgrails.gorm.queryTail.enabled
+            task.jvmArgumentProviders.add(new GrailsPropertyArgumentProvider(
+                    project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX), [QUERY_TAIL_ENABLED]))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
@@ -1078,6 +1102,23 @@ ${importStatements}
 
         String grailsEnvSystemProperty = System.getProperty(Environment.KEY)
         tasks.withType(Test).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.TEST.getName()))
+        // the test JVMs of one build capture to one query-tail run, however capture is enabled: a later one appends
+        // rather than truncates
+        Provider<GrailsQueryTailRun> queryTailRun = project.gradle.sharedServices.registerIfAbsent('grailsQueryTailRun', GrailsQueryTailRun) { }
+        Provider<Map<String, String>> queryTailSettings = project.providers.gradlePropertiesPrefixedBy(QUERY_TAIL_PROPERTY_PREFIX)
+        // a bare flag is passed as true; any other value is read as the application binds it
+        Provider<Boolean> queryTailCapturing = queryTailSettings.map { Map<String, String> settings ->
+            String enabled = settings.get(QUERY_TAIL_ENABLED)?.trim()?.toLowerCase(Locale.ROOT)
+            enabled != null && (enabled.isEmpty() || enabled in ['true', 'on', 'yes', '1'])
+        }
+        tasks.withType(Test).configureEach { Test task ->
+            task.usesService(queryTailRun)
+            task.jvmArgumentProviders.add(new GrailsQueryTailRunProvider(queryTailSettings, queryTailRun))
+            // what the tests capture is written only as they run, so a result taken from the build cache, or kept from
+            // an earlier build, would leave the capture without them
+            task.outputs.cacheIf('query-tail capture is not requested') { !queryTailCapturing.get() }
+            task.outputs.upToDateWhen { !queryTailCapturing.get() }
+        }
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
         configureToolchainForForkTasks(project)
@@ -1491,6 +1532,9 @@ ${importStatements}
      * archive is extracted, the extracted application is run and asked for its pages, and what the
      * run recorded is left beside it. An application asks for this with
      * {@code grails.aotCache.enabled}, and says which of its pages matter.</p>
+     *
+     * <p>The archive is the executable war where the application applies the war plugin, as a
+     * generated application does, and the executable jar otherwise.</p>
      */
     protected void configureAotCache(Project project) {
         AotCacheExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
@@ -1502,7 +1546,6 @@ ${importStatements}
         extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
 
         project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
-            TaskProvider<?> bootJar = project.tasks.named('bootJar')
             Provider<Directory> application = project.layout.buildDirectory.dir('aot-cache/application')
             Provider<JavaLauncher> launcher = trainingLauncher(project)
 
@@ -1511,7 +1554,7 @@ ${importStatements}
                 task.group = BasePlugin.BUILD_GROUP
                 task.description = 'Extracts the application, which is the form the cache is read against'
                 task.onlyIf { extension.enabled.get() }
-                task.archiveFile.set(archiveFileOf(bootJar))
+                task.archiveFile.set(archiveFileOf(executableArchive(project)))
                 // The launcher rather than its path: this task is cacheable, and a path is where a
                 // JDK happens to live on the machine that ran the build. Set as the provider it is,
                 // so the toolchain is not resolved -- and a JDK not provisioned -- by every build
@@ -1526,7 +1569,8 @@ ${importStatements}
                 task.onlyIf { extension.enabled.get() }
                 task.dependsOn(extract)
                 task.applicationDirectory.set(application)
-                task.archiveFileName.set(archiveFileOf(bootJar).map { RegularFile file -> file.asFile.name })
+                task.archiveFileName.set(archiveFileNameOf(executableArchive(project))
+                        .map { String name -> ExtractApplicationTask.applicationFileName(name) })
                 // Beside the extracted application rather than inside it. Inside, the cache and its
                 // metadata land in the directory this task declares as its input, so writing them
                 // changes that input and the task can never be up to date -- every build would run
@@ -1560,8 +1604,37 @@ ${importStatements}
      * task resolved while the build is configured is one every build pays for whether or not it
      * asked for an archive.</p>
      */
-    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> bootJar) {
-        bootJar.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> archive) {
+        archive.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    }
+
+    /** The name of the archive a task builds, which is known before the task has run, unlike its file. */
+    private static Provider<String> archiveFileNameOf(TaskProvider<?> archive) {
+        archive.flatMap { Task task -> (Provider<String>) task.property('archiveFileName') }
+    }
+
+    /**
+     * The executable archive the application ships: the war where it applies the war plugin, as a
+     * generated application does, and the jar otherwise.
+     *
+     * <p>Spring Boot extracts a war as of 4.2: its provided libraries, the embedded container among
+     * them, beside its own, and what sits outside {@code WEB-INF}, {@code src/main/webapp} included,
+     * in the extracted jar's {@code META-INF/resources}. The jar leaves {@code src/main/webapp} out,
+     * so a cache trained against the jar of an application that ships its war was trained against
+     * an application missing what the war serves. An application that switches its war off ships
+     * the jar.</p>
+     *
+     * <p>Read as a task that consumes the archive is configured, by which time the build has applied
+     * its plugins and configured its archives.</p>
+     */
+    private static TaskProvider<?> executableArchive(Project project) {
+        if (project.pluginManager.hasPlugin(WAR_PLUGIN)) {
+            TaskProvider<?> bootWar = project.tasks.named('bootWar')
+            if (bootWar.get().enabled) {
+                return bootWar
+            }
+        }
+        project.tasks.named('bootJar')
     }
 
     /**

@@ -20,7 +20,11 @@ package org.grails.testing
 
 import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.BeanRegistry
+import org.springframework.context.MessageSource
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.context.support.StaticMessageSource
+import org.springframework.stereotype.Component
 import org.springframework.core.env.Environment
 
 import grails.core.support.proxy.DefaultProxyHandler
@@ -49,6 +53,62 @@ class ReplacingHarnessDefaultsSpec extends Specification implements GrailsUnitTe
     void "a beans block does not replace one an included plugin registers too, as core does proxyHandler"() {
         expect:
         applicationContext.getBean('proxyHandler').getClass() == DefaultProxyHandler
+    }
+}
+
+class InheritedBeanOverHarnessDefaultSpec extends Specification implements GrailsUnitTest {
+
+    @Configuration
+    static class MessagesConfiguration extends InheritedHarnessDefaultBeans {
+    }
+
+    void "a bean of a method the test's configuration class inherits replaces a bean the harness provides, as one it declares"() {
+        expect:
+        applicationContext.getBean('messageSource') instanceof TestMessageSource
+    }
+}
+
+class InheritedStaticBeanOverHarnessDefaultSpec extends Specification implements GrailsUnitTest {
+
+    @Configuration
+    static class MessagesConfiguration extends InheritedStaticHarnessDefaultBeans {
+    }
+
+    void "a bean of a static method the test's configuration class inherits replaces a bean the harness provides"() {
+        expect:
+        applicationContext.getBean('messageSource') instanceof TestMessageSource
+    }
+}
+
+class NestedComponentOverHarnessDefaultSpec extends Specification implements GrailsUnitTest {
+
+    @Configuration
+    static class ComponentsConfiguration {
+
+        @Component('messageSource')
+        static class NestedMessageSource extends StaticMessageSource {
+        }
+    }
+
+    void 'a component class nested in the test\'s configuration class does not replace a bean the harness provides, as in Grails 8'() {
+        expect:
+        applicationContext.getBean('messageSource').getClass() == StaticMessageSource
+    }
+}
+
+abstract class InheritedHarnessDefaultBeans {
+
+    @Bean
+    MessageSource messageSource() {
+        new TestMessageSource()
+    }
+}
+
+abstract class InheritedStaticHarnessDefaultBeans {
+
+    @Bean
+    static MessageSource messageSource() {
+        new TestMessageSource()
     }
 }
 

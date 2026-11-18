@@ -6,8 +6,9 @@ import org.grails.web.json.JSONElement;
 import org.grails.web.json.JSONObject;
 
 /**
- * A JavaCC JSON parser, generated from {@code jsonparser.jj}. Grails does not use it: {@code JSON.parse},
- * {@code request.JSON} and {@code new JSONObject(String)} parse with {@link org.grails.web.json.JSONTokener}.
+ * A JavaCC JSON parser, generated from {@code jsonparser.jj}. Grails does not use it: {@code new JSONObject(String)}
+ * parses with {@link org.grails.web.json.JSONTokener}, and so do {@code JSON.parse} and {@code request.JSON} unless
+ * {@code grails.converters.json.legacy} is {@code false}, when the application's Jackson mapper parses them.
  *
  * @deprecated use {@code JSON.parse} or {@code new JSONObject(String)}
  */

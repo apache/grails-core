@@ -25,7 +25,8 @@ import org.grails.orm.hibernate.HibernateDatastore
 
 /**
  * A many-to-many where neither side declares {@code belongsTo} has no owning side, so the relationship is never
- * stored. A warning at startup points this out.
+ * stored, unless a {@code Map} side or a circular mapping writes the join table. A warning at startup points out
+ * the mappings that are not stored.
  */
 class ManyToManyWithoutOwnerWarningSpec extends Specification {
 
@@ -51,6 +52,95 @@ class ManyToManyWithoutOwnerWarningSpec extends Specification {
 
         then:
         !output.contains(WARNING)
+    }
+
+    void 'a unidirectional self-referencing one-to-many logs no warning'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnSelfReferencing).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'a circular many-to-many with no belongsTo logs no warning, because both properties write their own join table'() {
+        given:
+        var output = null
+        HibernateDatastore datastore = null
+
+        when:
+        output = stderrWhile {
+            datastore = new HibernateDatastore(WarnCircular)
+        }
+        WarnCircular.withNewTransaction {
+            WarnCircular followed = new WarnCircular(name: 'followed').save(failOnError: true)
+            WarnCircular follower = new WarnCircular(name: 'follower').save(failOnError: true)
+            follower.addToFollowing(followed)
+            follower.save(failOnError: true)
+        }
+
+        then:
+        !output.contains(WARNING)
+        WarnCircular.withNewSession {
+            WarnCircular.findByName('follower').following*.name == ['followed'] &&
+                    WarnCircular.findByName('followed').followers*.name == ['follower']
+        }
+
+        cleanup:
+        datastore?.close()
+    }
+
+    void 'a unidirectional one-to-many and a basic collection log no warning'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnParent, WarnChild).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'a many-to-many with a Map on one side logs no warning, because the Map side writes the join table'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnMapLeft, WarnMapRight).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'a many-to-many with a Map on both sides logs no warning'() {
+        when:
+        var output = stderrWhile {
+            new HibernateDatastore(WarnMapBothLeft, WarnMapBothRight).close()
+        }
+
+        then:
+        !output.contains(WARNING)
+    }
+
+    void 'the relationship is stored when it is written through the Map side'() {
+        given:
+        HibernateDatastore datastore = new HibernateDatastore(WarnMapLeft, WarnMapRight)
+
+        when:
+        WarnMapLeft.withNewTransaction {
+            WarnMapRight right = new WarnMapRight(name: 'right').save(failOnError: true)
+            new WarnMapLeft(name: 'left', rights: [first: right]).save(failOnError: true)
+        }
+
+        then:
+        WarnMapLeft.withNewSession {
+            WarnMapLeft.findByName('left').rights.keySet() == ['first'] as Set
+        }
+        WarnMapRight.withNewSession {
+            WarnMapRight.findByName('right').lefts*.name == ['left']
+        }
+
+        cleanup:
+        datastore?.close()
     }
 
     private static String stderrWhile(Closure<?> work) {
@@ -102,4 +192,76 @@ class WarnOwnerRight {
     Set<WarnOwnedLeft> lefts
 
     static hasMany = [lefts: WarnOwnedLeft]
+}
+
+@Entity
+class WarnSelfReferencing {
+
+    String name
+    Set<WarnSelfReferencing> friends
+
+    static hasMany = [friends: WarnSelfReferencing]
+}
+
+@Entity
+class WarnCircular {
+
+    String name
+    Set<WarnCircular> following
+    Set<WarnCircular> followers
+
+    static hasMany = [following: WarnCircular, followers: WarnCircular]
+    static mappedBy = [following: 'followers', followers: 'following']
+}
+
+@Entity
+class WarnParent {
+
+    String name
+    Set<WarnChild> children
+    Set<String> labels
+
+    static hasMany = [children: WarnChild, labels: String]
+}
+
+@Entity
+class WarnChild {
+
+    String name
+}
+
+@Entity
+class WarnMapLeft {
+
+    String name
+    Map<String, WarnMapRight> rights
+
+    static hasMany = [rights: WarnMapRight]
+}
+
+@Entity
+class WarnMapRight {
+
+    String name
+    Set<WarnMapLeft> lefts
+
+    static hasMany = [lefts: WarnMapLeft]
+}
+
+@Entity
+class WarnMapBothLeft {
+
+    String name
+    Map<String, WarnMapBothRight> rights
+
+    static hasMany = [rights: WarnMapBothRight]
+}
+
+@Entity
+class WarnMapBothRight {
+
+    String name
+    Map<String, WarnMapBothLeft> lefts
+
+    static hasMany = [lefts: WarnMapBothLeft]
 }

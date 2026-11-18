@@ -34,7 +34,9 @@ class ClockController {
 }
 ----
 
-A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed. As Spring MVC does, Grails resolves it and treats its value as the action's result, the way a returned `Promise`'s value is: a `Map` is the model of the view, anything else leaves the response to what the action rendered, and a failure fails the request. Which publishers are single-valued is what Spring's `ReactiveAdapterRegistry` knows, so a Reactor `Mono`, a `CompletableFuture` adapted to one or an RxJava `Single` all resolve rather than stream.
+A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed. As Spring MVC does, Grails resolves it and treats its value as the action's result, the way a returned `Promise`'s value is: a `Map` is the model of the view, anything else leaves the response to what the action rendered, and a failure fails the request. Which publishers are single-valued is what Spring's `ReactiveAdapterRegistry` knows, so a Reactor `Mono` and a `CompletableFuture` adapted to one both resolve rather than stream.
+
+Only a result that implements `Publisher` is streamed or resolved. An RxJava 3 `Observable` or `Single` is not a `Publisher`, so Grails neither streams it nor renders a view for it, and the response holds only what the action rendered itself; convert it to one with `toFlowable(..)`, as <<rxjava,RxJava Support>> shows. A `Flowable` is multi-valued whatever it emits, so a `Flowable` of one item is streamed as a single event rather than resolved.
 
 A browser reads the events with `EventSource`:
 

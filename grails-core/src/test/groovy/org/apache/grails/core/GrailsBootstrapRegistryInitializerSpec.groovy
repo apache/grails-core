@@ -65,6 +65,19 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
         promotedFilterer(context) instanceof DefaultStackTraceFilterer
     }
 
+    def 'promotes a configured subclass of the default rather than the default itself'() {
+        given: 'the default is created directly, so a subclass must not be mistaken for it'
+        def context = contextWithProperties([
+                (Settings.SETTING_LOGGING_STACKTRACE_FILTER_CLASS): ExtendedDefaultStackTraceFilterer.name
+        ])
+
+        when:
+        closeBootstrapContext(context)
+
+        then:
+        promotedFilterer(context).class == ExtendedDefaultStackTraceFilterer
+    }
+
     def 'promotes the class configured via grails.logging.stackTraceFiltererClass as a class name'() {
         given: 'the string form, as written in application.yml or application.properties'
         def context = contextWithProperties([
@@ -281,6 +294,9 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
                 new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
         ] as StackTraceElement[]
         exception
+    }
+
+    static class ExtendedDefaultStackTraceFilterer extends DefaultStackTraceFilterer {
     }
 
     static class RecordingStackTraceFilterer implements StackTraceFilterer {

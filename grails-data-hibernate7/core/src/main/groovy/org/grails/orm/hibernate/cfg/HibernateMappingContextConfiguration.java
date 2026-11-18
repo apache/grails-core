@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
@@ -46,14 +47,18 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
+import org.hibernate.boot.spi.SessionFactoryBuilderFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.BytecodeSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
 import org.hibernate.cfg.JdbcSettings;
+import org.hibernate.cfg.QuerySettings;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.internal.util.config.ConfigurationHelper;
+import org.hibernate.persister.internal.PersisterClassResolverInitiator;
 import org.hibernate.service.ServiceRegistry;
+import org.hibernate.service.spi.SessionFactoryServiceContributor;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -69,6 +74,7 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
+import org.apache.grails.data.hibernate7.core.querytail.QueryTailSessionFactoryObserver;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -80,7 +86,9 @@ import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
+import org.grails.orm.hibernate.persister.GormPersisterClassResolver;
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
+import org.grails.orm.hibernate.query.RestrictedCollectionSqmTranslatorFactory;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -114,6 +122,7 @@ public class HibernateMappingContextConfiguration extends Configuration
     private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
     protected GrailsBytecodeProvider bytecodeProvider;
+    private transient File queryTailFile;
 
     public void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
         this.bytecodeProvider = bytecodeProvider;
@@ -292,6 +301,17 @@ public class HibernateMappingContextConfiguration extends Configuration
 
         ConfigurationHelper.resolvePlaceHolders(getProperties());
 
+        // Hibernate 7 tests the emptiness of a collection without its restriction; this translator tests it
+        // with a size subquery instead, which applies the restriction (apache/grails-core#16748)
+        getProperties().putIfAbsent(QuerySettings.SEMANTIC_QUERY_TRANSLATOR,
+                RestrictedCollectionSqmTranslatorFactory.class.getName());
+
+        // Hibernate 7 leaves a nullable element column out of the delete of one row of a set, which then deletes every
+        // row of the owner; this resolver gives a set of entities in a join table a persister that deletes by the
+        // element too (apache/grails-core#16691)
+        getProperties().putIfAbsent(PersisterClassResolverInitiator.IMPL_NAME,
+                GormPersisterClassResolver.class.getName());
+
         final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
                 dataSourceName,
                 sessionFactoryBeanName,
@@ -317,6 +337,8 @@ public class HibernateMappingContextConfiguration extends Configuration
 
         addAnnotatedClasses(annotatedClasses.toArray(new Class[0]));
 
+        QueryTailSessionFactoryObserver queryTail = queryTailFile != null ?
+                new QueryTailSessionFactoryObserver(dataSourceName, queryTailFile) : null;
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
@@ -333,6 +355,18 @@ public class HibernateMappingContextConfiguration extends Configuration
                     allContributors.add(grailsBinder);
                     allContributors.addAll(parentContributors);
                     return allContributors;
+                }
+                if (queryTail != null && SessionFactoryBuilderFactory.class.isAssignableFrom(serviceContract)) {
+                    // The capture observes the session factory being built, whatever observer the configuration holds.
+                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    factories.add(serviceContract.cast(queryTail.getSessionFactoryBuilderFactory()));
+                    return factories;
+                }
+                if (queryTail != null && SessionFactoryServiceContributor.class.isAssignableFrom(serviceContract)) {
+                    // The capture records the connections of the session factory, whatever provider hands them out.
+                    List<S> contributors = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    contributors.add(serviceContract.cast(queryTail.getSessionFactoryServiceContributor()));
+                    return contributors;
                 }
                 return super.loadJavaServices(serviceContract);
             }
@@ -421,5 +455,18 @@ public class HibernateMappingContextConfiguration extends Configuration
 
     public ServiceRegistry getServiceRegistry() {
         return serviceRegistry;
+    }
+
+    /**
+     * Sets the file query-tail capture records the statements of the session factories this
+     * configuration builds to. Each session factory is given an observer, and a capture, of its own,
+     * which records the statements run on the connections of its service registry. The observer is
+     * added to the session factory as Hibernate builds it, next to the observer the configuration
+     * holds, which is left as the application set it.
+     *
+     * @param queryTailFile the capture file, or null to record nothing
+     */
+    public void setQueryTailFile(File queryTailFile) {
+        this.queryTailFile = queryTailFile;
     }
 }

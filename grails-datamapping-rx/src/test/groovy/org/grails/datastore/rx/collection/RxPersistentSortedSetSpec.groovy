@@ -29,8 +29,8 @@ import org.grails.datastore.rx.exceptions.BlockingOperationException
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
-import rx.Observable
-import rx.observers.TestSubscriber
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.observers.TestObserver
 import spock.lang.Specification
 
 class RxPersistentSortedSetSpec extends Specification {
@@ -134,7 +134,7 @@ class RxPersistentSortedSetSpec extends Specification {
         given:
         Association association = createAssociation()
         int subscriptions = 0
-        Observable observable = Observable.from([1, 2, 3]).doOnSubscribe { subscriptions++ }
+        Observable observable = Observable.fromIterable([1, 2, 3]).doOnSubscribe { subscriptions++ }
         RxDatastoreClientImplementor client = Stub(RxDatastoreClientImplementor) {
             createQuery(_, _) >> Stub(Query, additionalInterfaces: [RxQuery]) {
                 findAll() >> observable
@@ -165,13 +165,13 @@ class RxPersistentSortedSetSpec extends Specification {
             }
         }
         RxPersistentSortedSet<TestChild> set = new RxPersistentSortedSet<>(client, association, 5L, new QueryState())
-        TestSubscriber<TestChild> subscriber = new TestSubscriber<>()
+        TestObserver<TestChild> subscriber = new TestObserver<>()
 
         when:
         set.subscribe(subscriber)
 
         then:
-        subscriber.assertCompleted()
+        subscriber.assertComplete()
         subscriber.assertValueCount(1)
     }
 

@@ -19,6 +19,9 @@
 
 package org.grails.orm.hibernate.query
 
+import org.hibernate.dialect.DB2Dialect
+import org.hibernate.dialect.DB2iDialect
+import org.hibernate.dialect.DB2zDialect
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.dialect.MySQLDialect
 import org.hibernate.dialect.MariaDBDialect
@@ -42,6 +45,9 @@ class RegexDialectPatternSpec extends Specification {
         new PostgreSQLDialect()  | "?1 ~ ?2"
         new OracleDialect()      | "REGEXP_LIKE(?1, ?2)"
         new H2Dialect()          | "REGEXP_LIKE(?1, ?2)"
+        new DB2Dialect()         | "REGEXP_LIKE(?1, ?2)"
+        new DB2iDialect()        | "REGEXP_LIKE(?1, ?2)"
+        new DB2zDialect()        | "?1 LIKE ?2" // only through the Db2 Analytics Accelerator
         new SQLServerDialect()   | "?1 LIKE ?2" // Fallback
     }
 }

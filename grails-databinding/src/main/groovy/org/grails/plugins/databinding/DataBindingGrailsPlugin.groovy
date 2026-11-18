@@ -21,6 +21,8 @@ package org.grails.plugins.databinding
 
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigureOrder
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration
@@ -29,6 +31,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.MessageSource
 import org.springframework.core.annotation.AnnotationAwareOrderComparator
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.databinding.TypedStructuredBindingEditor
 import grails.databinding.converters.FormattedValueConverter
@@ -42,10 +45,8 @@ import org.grails.databinding.converters.DefaultConvertersConfiguration
 import org.grails.web.databinding.bindingsource.DataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.DefaultDataBindingSourceRegistry
 import org.grails.web.databinding.bindingsource.HalJsonDataBindingSourceCreator
-import org.grails.web.databinding.bindingsource.HalXmlDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonApiDataBindingSourceCreator
 import org.grails.web.databinding.bindingsource.JsonDataBindingSourceCreator
-import org.grails.web.databinding.bindingsource.XmlDataBindingSourceCreator
 
 /**
  * Plugin for configuring the data binding features of Grails
@@ -103,17 +104,24 @@ class DataBindingGrailsPlugin extends Plugin {
 
         // Each of these is nothing but its own no-argument construction, and each type's
         // JavaBeans-derived name is exactly the bean name the hand-written class declared.
-        bean(XmlDataBindingSourceCreator)
         bean(JsonDataBindingSourceCreator)
         bean(HalJsonDataBindingSourceCreator)
-        bean(HalXmlDataBindingSourceCreator)
         bean(JsonApiDataBindingSourceCreator)
 
         // Declared as an array rather than the original varargs parameter; Spring resolves both the
         // same way, injecting every DataBindingSourceCreator bean.
-        bean(DataBindingSourceRegistry) { DataBindingSourceCreator[] creators ->
+        bean(DataBindingSourceRegistry) { DataBindingSourceCreator[] creators, AutowireCapableBeanFactory beanFactory,
+                @Value('${' + Settings.DATABINDING_JSON_JACKSON + ':' + Settings.DATABINDING_JSON_JACKSON_DEFAULT + '}') boolean jackson ->
             new DefaultDataBindingSourceRegistry().tap {
                 dataBindingSourceCreators = creators
+                if (jackson) {
+                    // the JSON bodies of a type no creator bean handles are parsed with the application's mapper, as the
+                    // JSON creator Grails defines parses them, whatever creator the application defines in its place;
+                    // the registry makes the same choice when Spring injects its own setting and context, but ahead-of-time
+                    // code, which sees only the interface this bean is declared as, does not rely on that
+                    defaultJsonDataBindingSourceCreator = beanFactory.createBean(JsonDataBindingSourceCreator)
+                }
+                // read again when Spring initializes the bean this returns
                 initialize()
             }
         }

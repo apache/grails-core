@@ -216,6 +216,11 @@ include::ref/Command Line/schema-export.adoc[]
 
 include::ref/Command Line/shell.adoc[]
 
+[[ref-command-line-query-tail]]
+==== query-tail
+
+include::ref/Command Line/query-tail.adoc[]
+
 [[ref-command-line-stats]]
 ==== stats
 
@@ -1087,6 +1092,11 @@ include::ref/Tags/createLink.adoc[]
 ==== createLinkTo
 
 include::ref/Tags/createLinkTo.adoc[]
+
+[[ref-tags-cspNonce]]
+==== cspNonce
+
+include::ref/Tags/cspNonce.adoc[]
 
 [[ref-tags-currencySelect]]
 ==== currencySelect

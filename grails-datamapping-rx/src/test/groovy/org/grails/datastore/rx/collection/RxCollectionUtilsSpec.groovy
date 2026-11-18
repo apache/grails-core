@@ -29,7 +29,7 @@ import org.grails.datastore.rx.query.QueryState
 import org.grails.datastore.rx.query.RxQuery
 import org.grails.gorm.rx.api.RxGormEnhancer
 import org.grails.gorm.rx.api.RxGormInstanceApi
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class RxCollectionUtilsSpec extends Specification {

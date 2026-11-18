@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: XML conversion, renderers and binding require `org.apache.grails:grails-xml`. The Grails 9
+web starter and `grails-web-boot` bring it; applications without either, and applications upgrading to Grails 10,
+must add the dependency explicitly. Advertising an XML format alone does not install XML support.
+
 The framework provides a sophisticated but simple mechanism for binding REST requests to domain objects and command objects.  One way to take advantage of this is to bind the `request` property in a controller the `properties` of a domain class.  Given the following XML as the body of the request, the `createBook` action will create a new `Book` and assign "The Stand" to the `title` property and "Stephen King" to the `authorName` property.
 
 [source,groovy]
@@ -90,16 +94,29 @@ class BookController {
 }
 ----
 
-The data binding depends on an instance of the link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] interface created by an instance of the link:{api}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator] interface.  The specific implementation of `DataBindingSourceCreator` will be selected based on the `contentType` of the request.  Several implementations are provided to handle common content types.  The default implementations will be fine for most use cases.  The following table lists the content types which are supported by the core framework and which `DataBindingSourceCreator` implementations are used for each. All of the implementation classes are in the `org.grails.databinding.bindingsource` package.
+Data binding uses a link:{api}grails/databinding/DataBindingSource.html[DataBindingSource] created by a
+link:{api}org/grails/databinding/bindingsource/DataBindingSourceCreator.html[DataBindingSourceCreator].
+The request's `contentType` selects the appropriate binding source. The following beans handle common
+content types; XML and HAL XML sources are contributed by `grails-xml`, not the core JSON infrastructure.
+JSON, HAL JSON and JSON API bodies are parsed by `JsonSlurper`, as in Grails 8, unless
+`grails.databinding.json.jackson` is `true`, which has the Jackson mapper Spring MVC reads a `@RequestBody` with parse
+them, Spring Boot's `JsonMapper` unless a `WebMvcConfigurer` configures the converter with another, so that its parser
+features, such as `spring.jackson.json.read.*`, apply; Jackson becomes the default in Grails 10. The mapper reads
+plain JSON values, which the data binder binds by their names, so its naming strategy, date format and annotations do not
+apply to binding, and a body is read as it is, also where the mapper unwraps root values, its arrays as lists and its
+whole numbers as `Integer`, `Long` or `BigInteger`, whatever the mapper's `spring.jackson.deserialization.*` features say.
+Nor does the mapper's default typing apply: a body is read without type ids, so that it binds where the mapper's
+`activateDefaultTyping` would require them, and it cannot name a class for Grails to create.
 
 [format="csv", options="header"]
 |===
 
-Content Type(s),Bean Name,DataBindingSourceCreator Impl.
-"application/xml, text/xml",xmlDataBindingSourceCreator,XmlDataBindingSourceCreator
-"application/json, text/json",jsonDataBindingSourceCreator,JsonDataBindingSourceCreator
-application/hal+json,halJsonDataBindingSourceCreator,HalJsonDataBindingSourceCreator
-application/hal+xml,halXmlDataBindingSourceCreator,HalXmlDataBindingSourceCreator
+Content Type(s),Bean Name,Module
+"application/xml, text/xml",xmlDataBindingSourceCreator,grails-xml
+"application/json, text/json",jsonDataBindingSourceCreator,grails-web-databinding
+application/hal+json,halJsonDataBindingSourceCreator,grails-web-databinding
+application/vnd.api+json,jsonApiDataBindingSourceCreator,grails-web-databinding
+application/hal+xml,halXmlDataBindingSourceCreator,grails-xml
 |===
 
 In order to provide your own `DataBindingSourceCreator` for any of those content types, write a class which implements
@@ -108,61 +125,64 @@ are replacing one of the existing helpers, use the corresponding bean name from 
 helper for a content type other than those accounted for by the core framework, the bean name may be anything that
 you like but you should take care not to conflict with one of the bean names above.
 
-The `DataBindingSourceCreator` interface defines just 2 methods:
+A creator whose `getTargetType()` returns a class other than `Object` handles only the bodies bound to that class and its subclasses. One whose target type is an interface handles the bodies bound to the classes that implement it in a content type no creator for `Object` handles, since the creators of a class and of its superclasses, `Object` included, are found first.
+Replacing `jsonDataBindingSourceCreator` with one leaves the JSON bodies bound to other types to Grails' default parser,
+which `grails.databinding.json.jackson` selects: `JsonSlurper` by default, as in Grails 8, or the application's Jackson
+`JsonMapper`. Likewise, replacing `xmlDataBindingSourceCreator` with one leaves the XML bodies bound to other types to
+Grails' default XML parser, as in Grails 8. The HAL JSON bodies of a type a `HalJsonRenderer` bean renders are parsed by a default `JsonSlurper`, as in
+Grails 8, or, with `grails.databinding.json.jackson: true`, or where the renderer's `useJackson` property is set, with
+Jackson: by the `halJsonDataBindingSourceCreator` bean, the application's own where it replaces it, as the HAL JSON bodies
+of other types are, unless the application's creator handles another class only, or is one of Grails' JSON creators that
+does not parse with Jackson, as Grails' own does not without the setting, where they are parsed with the application's
+Jackson `JsonMapper`.
+
+The `DataBindingSourceCreator` interface, a `MimeTypeProvider`, defines these methods:
 
 [source,groovy]
 ----
 package org.grails.databinding.bindingsource
 
-import grails.web.mime.MimeType
+import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBindingSource
+import grails.web.mime.MimeType
+import grails.web.mime.MimeTypeProvider
 
-/**
- * A factory for DataBindingSource instances
- *
- * @since 2.3
- * @see DataBindingSourceRegistry
- * @see DataBindingSource
- *
- */
-interface DataBindingSourceCreator {
+interface DataBindingSourceCreator extends MimeTypeProvider {
 
-    /**
-     * `return All of the {`link MimeType} supported by this helper
-     */
+    // the content types this creator handles, from MimeTypeProvider
     MimeType[] getMimeTypes()
 
-    /**
-     * Creates a DataBindingSource suitable for binding bindingSource to bindingTarget
-     *
-     * @param mimeType a mime type
-     * @param bindingTarget the target of the data binding
-     * @param bindingSource the value being bound
-     * @return a DataBindingSource
-     */
-    DataBindingSource createDataBindingSource(MimeType mimeType, Object bindingTarget, Object bindingSource)
+    // the class of the targets whose bodies this creator handles, Object for any
+    Class getTargetType()
+
+    // a DataBindingSource for the body bound to a single object
+    DataBindingSource createDataBindingSource(MimeType mimeType, Class bindingTargetType, Object bindingSource)
+
+    // a CollectionDataBindingSource for the body bound to a collection, as bindData binds a list
+    CollectionDataBindingSource createCollectionDataBindingSource(MimeType mimeType, Class bindingTargetType,
+                                                                  Object bindingSource)
 }
 ----
 
 link:{api}org/grails/web/databinding/bindingsource/AbstractRequestBodyDataBindingSourceCreator.html[AbstractRequestBodyDataBindingSourceCreator]
-is an abstract class designed to be extended to simplify writing custom `DataBindingSourceCreator` classes.  Classes which
-extend `AbstractRequestbodyDatabindingSourceCreator` need to implement a method named `createBindingSource`
-which accepts an `InputStream` as an argument and returns a `DataBindingSource` as well as implementing the `getMimeTypes`
-method described in the `DataBindingSourceCreator` interface above.  The `InputStream` argument to `createBindingSource`
-provides access to the body of the request.
+is an abstract class designed to be extended to simplify writing custom `DataBindingSourceCreator` classes. It handles
+the bodies bound to any class, and reads the body of a request in the request's character encoding. Classes which
+extend it implement `createBindingSource` and `createCollectionBindingSource`, which take a `Reader` of the body and
+return a `DataBindingSource` and a `CollectionDataBindingSource`, as well as the `getMimeTypes` method of the
+interface.
 
 The code below shows a simple implementation.
-
 
 [source,groovy]
 .src/main/groovy/com/demo/myapp/databinding/MyCustomDataBindingSourceCreator.groovy
 ----
 package com.demo.myapp.databinding
 
-import grails.web.mime.MimeType
+import grails.databinding.CollectionDataBindingSource
 import grails.databinding.DataBindingSource
-import org...databinding.SimpleMapDataBindingSource
-import org...databinding.bindingsource.AbstractRequestBodyDataBindingSourceCreator
+import grails.databinding.SimpleMapDataBindingSource
+import grails.web.mime.MimeType
+import org.grails.web.databinding.bindingsource.AbstractRequestBodyDataBindingSourceCreator
 
 /**
  * A custom DataBindingSourceCreator capable of parsing key value pairs out of
@@ -170,42 +190,44 @@ import org...databinding.bindingsource.AbstractRequestBodyDataBindingSourceCreat
  *
  * name:Herman,age:99,town:STL
  *
+ * A body bound to a collection has one such line for each element.
  */
 class MyCustomDataBindingSourceCreator extends AbstractRequestBodyDataBindingSourceCreator {
 
     @Override
-    public MimeType[] getMimeTypes() {
+    MimeType[] getMimeTypes() {
         [new MimeType('text/custom+demo+csv')] as MimeType[]
     }
 
     @Override
-    protected DataBindingSource createBindingSource(InputStream inputStream) {
-        def map = [:]
+    protected DataBindingSource createBindingSource(Reader reader) {
+        new SimpleMapDataBindingSource(parse(reader.text))
+    }
 
-        def reader = new InputStreamReader(inputStream)
+    @Override
+    protected CollectionDataBindingSource createCollectionBindingSource(Reader reader) {
+        List<DataBindingSource> sources = reader.readLines().findAll { it.trim() }.collect { String line ->
+            (DataBindingSource) new SimpleMapDataBindingSource(parse(line))
+        }
+        return { -> sources } as CollectionDataBindingSource
+    }
 
-        // this is an obviously naive parser and is intended
-        // for demonstration purposes only.
-
-        reader.eachLine { line ->
-            def keyValuePairs = line.split(',')
-            keyValuePairs.each { keyValuePair ->
-                if(keyValuePair?.trim()) {
-                    def keyValuePieces = keyValuePair.split(':')
-                    def key = keyValuePieces[0].trim()
-                    def value = keyValuePieces[1].trim()
-                    map<<key>> = value
-                }
+    // this is an obviously naive parser and is intended
+    // for demonstration purposes only
+    private static Map parse(String text) {
+        Map map = [:]
+        text.split(',').each { String keyValuePair ->
+            if (keyValuePair?.trim()) {
+                def keyValuePieces = keyValuePair.split(':')
+                map.put(keyValuePieces[0].trim(), keyValuePieces[1].trim())
             }
         }
-
-        // create and return a DataBindingSource which contains the parsed data
-        new SimpleMapDataBindingSource(map)
+        map
     }
 }
 ----
 
-An instance of `MyCustomDataSourceCreator` needs to be registered in the spring application context.
+An instance of `MyCustomDataBindingSourceCreator` needs to be registered in the spring application context.
 
 [source,groovy]
 .grails-app/conf/spring/resources.groovy

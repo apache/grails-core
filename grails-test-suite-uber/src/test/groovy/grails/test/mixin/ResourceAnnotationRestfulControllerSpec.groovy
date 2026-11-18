@@ -177,7 +177,8 @@ class Video {
             controller.update()
 
         then:"A redirect is issues to the show action"
-            response.status == 200
+            response.status == 302
+            response.redirectedUrl == "/videos/${video.id}"
             domainClass.get(video.id).title == 'Game of Thrones'
 
     }
@@ -199,7 +200,8 @@ class Video {
             controller.patch()
 
         then:"A redirect is issues to the show action"
-            response.status == 200
+            response.status == 302
+            response.redirectedUrl == "/videos/${video.id}"
             domainClass.get(video.id).title == 'Game of Thrones'
 
     }

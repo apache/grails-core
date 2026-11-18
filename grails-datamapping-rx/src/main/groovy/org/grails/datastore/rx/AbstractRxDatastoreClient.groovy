@@ -70,7 +70,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceAware
 import org.springframework.context.support.StaticMessageSource
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 
 import jakarta.persistence.CascadeType
 
@@ -289,24 +289,24 @@ abstract class AbstractRxDatastoreClient<T> implements RxDatastoreClient<T>, RxD
      */
     @Override
     final <T1> Observable<T1> persist(T1 instance, Map<String, Object> arguments) {
-        persistAll((Iterable<T1>)Collections.singletonList(instance), arguments).map { List<Serializable> identifiers ->
+        persistAll((Iterable<T1>)Collections.singletonList(instance), arguments).flatMap { List<Serializable> identifiers ->
             if (!identifiers.isEmpty()) {
-                return instance
+                return Observable.just(instance)
             }
             else {
-                return null
+                return Observable.<T1>empty()
             }
         }
     }
 
     @Override
     final <T1> Observable<T1> insert(T1 instance, Map<String, Object> arguments) {
-        insertAll((Iterable<T1>)Collections.singletonList(instance), arguments).map { List<Serializable> identifiers ->
+        insertAll((Iterable<T1>)Collections.singletonList(instance), arguments).flatMap { List<Serializable> identifiers ->
             if (!identifiers.isEmpty()) {
-                return instance
+                return Observable.just(instance)
             }
             else {
-                return null
+                return Observable.<T1>empty()
             }
         }
     }

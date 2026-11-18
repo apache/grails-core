@@ -23,7 +23,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
 import grails.converters.JSON
-import grails.converters.XML
+import org.grails.web.converters.Converter
 
 import spock.lang.Specification
 
@@ -83,22 +83,22 @@ class ConvertersConfigurationHolderSpec extends Specification {
     void "clearing one converter keeps other thread-local converter configurations"() {
         given:
         def jsonConfiguration = new DefaultConverterConfiguration<JSON>()
-        def xmlConfiguration = new DefaultConverterConfiguration<XML>()
+        def otherConfiguration = new DefaultConverterConfiguration<OtherConverter>()
         ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, jsonConfiguration)
-        ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML, xmlConfiguration)
+        ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(OtherConverter, otherConfiguration)
 
         when:
         ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(JSON, null)
 
         then:
         ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(JSON) == null
-        ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(XML).is(xmlConfiguration)
+        ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(OtherConverter).is(otherConfiguration)
 
         when:
-        ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(XML, null)
+        ConvertersConfigurationHolder.setThreadLocalConverterConfiguration(OtherConverter, null)
 
         then:
-        ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(XML) == null
+        ConvertersConfigurationHolder.getThreadLocalConverterConfiguration(OtherConverter) == null
     }
 
     void "converter use restores a missing thread-local configuration after a named scope"() {
@@ -123,3 +123,6 @@ class ConvertersConfigurationHolderSpec extends Specification {
     }
 
 }
+
+/** A converter other than the JSON converter, as the XML converter of grails-xml is. */
+interface OtherConverter extends Converter { }

@@ -80,6 +80,7 @@ trait GrailsUnitTest {
                     configurationClasses: getConfigurationClasses(),
                     doWithConfig: doWithConfig(),
                     includePlugins: getIncludePlugins(),
+                    testClass: getClass(),
                     loadExternalBeans: loadExternalBeans(),
                     localOverride: localOverride
             ).build()

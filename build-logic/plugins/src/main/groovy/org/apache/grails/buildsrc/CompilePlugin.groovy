@@ -52,6 +52,14 @@ class CompilePlugin implements Plugin<Project> {
     private static final String AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED =
             'grailsAutoConfigurationImportsInputRegistered'
 
+    static final String GRAILS_FACTORIES_PATH = 'src/main/resources/META-INF/grails.factories'
+    static final List<String> CLI_FACTORIES_PATHS = [
+            'src/main/resources/META-INF/grails-cli.factories',
+            'src/cli/resources/META-INF/grails-cli.factories',
+    ].asImmutable()
+    private static final String GRAILS_FACTORIES_INPUT_REGISTERED = 'grailsFactoriesInputRegistered'
+    private static final String CLI_FACTORIES_INPUT_REGISTERED = 'grailsCliFactoriesInputRegistered'
+
     @Override
     void apply(Project project) {
         def initialized = new AtomicBoolean(false)
@@ -203,10 +211,12 @@ class CompilePlugin implements Plugin<Project> {
                         GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
             }
             project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
-                // Resource-only changes do not ordinarily invalidate compilation. This file changes
-                // whether the compiler owns the generated imports resource, so adding or deleting it
-                // must run the transform even when no Groovy source changed.
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
                 registerAutoConfigurationImportsInput(project, task)
+                registerFactoriesInputs(project, task)
             }
         }
     }
@@ -219,6 +229,26 @@ class CompilePlugin implements Plugin<Project> {
         task.inputs.files(project.layout.projectDirectory.file(AUTO_CONFIGURATION_IMPORTS_PATH))
                 .withPropertyName('grailsAutoConfigurationImports')
                 .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
+
+    /**
+     * Mirrors {@code FactoriesCompileInput} from the Grails Gradle plugins, which is not on build-logic's
+     * classpath, and marks the task the same way, so a module that also applies those plugins registers
+     * each input once. A cli tier's compilation is covered by the plugin that creates it.
+     */
+    static void registerFactoriesInputs(Project project, GroovyCompile task) {
+        if (!task.extensions.extraProperties.has(GRAILS_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(GRAILS_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(project.layout.projectDirectory.file(GRAILS_FACTORIES_PATH))
+                    .withPropertyName('grailsFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
+        }
+        if (!task.extensions.extraProperties.has(CLI_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(CLI_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(CLI_FACTORIES_PATHS.collect { String path -> project.layout.projectDirectory.file(path) })
+                    .withPropertyName('grailsCliFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
+        }
     }
 
     private static void configureReproducible(Project project) {

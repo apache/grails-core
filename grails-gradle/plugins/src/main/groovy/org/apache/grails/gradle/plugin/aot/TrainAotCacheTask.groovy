@@ -67,6 +67,7 @@ abstract class TrainAotCacheTask extends DefaultTask {
     @PathSensitive(PathSensitivity.RELATIVE)
     abstract DirectoryProperty getApplicationDirectory()
 
+    /** The name of the extracted application's jar: the archive's own, which for a war is a jar's. */
     @Input
     abstract Property<String> getArchiveFileName()
 

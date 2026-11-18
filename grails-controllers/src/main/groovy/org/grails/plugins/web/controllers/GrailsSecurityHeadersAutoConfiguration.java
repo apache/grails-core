@@ -48,18 +48,19 @@ import org.grails.web.config.http.GrailsFilters;
  * that are still absent, so it coexists with Spring Security's header writers and any
  * other filter or controller that sets these headers itself.
  *
- * <p>The filter is registered at {@link GrailsFilters#FIRST}, the outermost Grails slot.
+ * <p>The filter is registered at {@link GrailsFilters#FIRST}, the outermost Grails slot
+ * after the character encoding filter, which writes none of these headers.
  * Commit-time writers nest, and the innermost fires first, so the outermost one is the
  * last to write and therefore the one that only fills gaps; that is what lets every
  * filter inside it (Spring Security at Spring Boot's default filter order, SiteMesh, an
- * application filter) win. Being outermost among the Grails filters also means a filter
+ * application filter) win. Running ahead of the other Grails filters also means a filter
  * that serves the response itself without continuing the chain, as the asset-pipeline
  * filter does for static assets, still passes through this filter's response wrapper and
  * receives the headers.</p>
  *
- * <p>Filters ordered ahead of {@link GrailsFilters#FIRST} run outside this one. Spring
- * Boot's forwarded-header filter and, in a WAR deployment, its error-page filter are such
- * filters, as is a Spring Security chain whose {@code spring.security.filter.order} is set
+ * <p>Filters ordered ahead of {@link GrailsFilters#FIRST} run outside this one. The
+ * character encoding filter, Spring Boot's forwarded-header filter and, in a WAR
+ * deployment, its error-page filter are such filters, as is a Spring Security chain whose {@code spring.security.filter.order} is set
  * below {@link GrailsFilters#FIRST}. In that arrangement Spring Security's writers run after the
  * Grails defaults have been written, and those of them that only fill absent headers
  * (every writer but {@code XFrameOptionsHeaderWriter}) leave the Grails value in place;

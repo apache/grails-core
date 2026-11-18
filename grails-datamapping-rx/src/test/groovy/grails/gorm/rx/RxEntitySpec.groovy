@@ -25,7 +25,7 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.rx.internal.RxDatastoreClientImplementor
 import org.grails.gorm.rx.api.RxGormEnhancer
 import org.grails.gorm.rx.api.RxGormStaticApi
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class RxEntitySpec extends Specification {
@@ -41,7 +41,7 @@ class RxEntitySpec extends Specification {
         })
 
         expect:
-        ExistsFixture.exists(1L).toBlocking().first()
+        ExistsFixture.exists(1L).blockingFirst()
     }
 
     void "exists() emits false when get() resolves nothing"() {
@@ -51,7 +51,7 @@ class RxEntitySpec extends Specification {
         })
 
         expect:
-        !ExistsFixture.exists(1L).toBlocking().first()
+        !ExistsFixture.exists(1L).blockingFirst()
     }
 
     /**

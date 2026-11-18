@@ -117,3 +117,34 @@ class DemoController implements DatabaseExceptionHandler {
 ----
 
 Exception handler methods must be present at compile time.  Specifically, exception handler methods which are runtime metaprogrammed onto a controller class are not supported.
+
+With `grails.exceptionresolver.springHandlers: true`, which Grails 10 makes the default, an exception an action throws
+and does not handle itself is resolved first as Spring MVC resolves one a handler method throws: by the
+`@ExceptionHandler` methods of the controller's class, and by those of the `@ControllerAdvice` beans that apply to the
+controller, scoped by its type or package as for a Spring MVC controller, Spring Boot's handler of
+`spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. What
+such a method returns, such as a `ProblemDetail` or a `ResponseEntity`, is written as Spring MVC writes it. An exception
+none of them handles is resolved as without the setting, by Spring MVC's other resolvers and the Grails exception
+resolver, which renders the application's error page.
+
+[source,groovy]
+.src/main/groovy/com/demo/BookExceptionAdvice.groovy
+----
+package com.demo
+
+import org.springframework.http.HttpStatus
+import org.springframework.http.ProblemDetail
+import org.springframework.web.bind.annotation.ControllerAdvice
+import org.springframework.web.bind.annotation.ExceptionHandler
+
+@ControllerAdvice(assignableTypes = BookController)
+class BookExceptionAdvice {
+
+    @ExceptionHandler(BookNotFoundException)
+    ProblemDetail notFound(BookNotFoundException e) {
+        ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.message)
+    }
+}
+----
+
+Declare the advice as a bean, in `grails-app/conf/spring/resources.groovy` or as a `@Bean` of a configuration class.

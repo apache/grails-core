@@ -57,7 +57,7 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/lookupByIdDb" as String,
         ]
-        this.datastore = new MongoDatastore(config, Memo, NumberedMemo, KeyedMemo)
+        this.datastore = new MongoDatastore(config, Memo, NumberedMemo, KeyedMemo, FiledMemo, MemoFolder)
     }
 
     void setup() {
@@ -273,10 +273,20 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
         Memo.withTenant('other') { Memo.withNewSession { Memo.get(otherId)?.title } } == 'Other'
         Memo.withTenant('other') { Memo.withNewSession { Memo.get(ownId) } } == null
 
-        and: 'the tenant id DEFAULT restricts it as it restricts a query'
+        and: 'the tenant id default restricts it as it restricts a query'
         Memo.withTenant(ConnectionSource.DEFAULT) {
             Memo.withNewSession { [Memo.findById(ownId), Memo.get(ownId), Memo.getAll(ownId, otherId)] }
         } == [null, null, [null, null]]
+    }
+
+    void 'a lookup by id through withTenant inside withoutId is restricted to that tenant as a query is'() {
+        expect:
+        Tenants.withoutId(datastore) {
+            Memo.withNewSession {
+                def other = Memo.withTenant('other')
+                [other.findById(ownId), other.get(ownId), other.exists(ownId), other.getAll(ownId, otherId)*.title]
+            }
+        } == [null, null, false, [null, 'Other']]
     }
 
     void 'a lookup by id inside withoutId is not restricted to a tenant'() {
@@ -293,6 +303,23 @@ class MongoLookupByIdMultiTenancySpec extends AutoStartedMongoSpec {
             Memo other = Memo.load(otherId)
             Tenants.withoutId(datastore) { [own.title, other.title] }
         } == ['Own', 'Other']
+    }
+
+    void 'a proxy from load initializes with no session bound when its class has an association'() {
+        given:
+        ObjectId filedId = FiledMemo.withTenant('own') {
+            FiledMemo.withNewSession {
+                new FiledMemo(title: 'Own', folder: new MemoFolder(name: 'Inbox').save()).save(flush: true).id
+            }
+        }
+
+        when:
+        FiledMemo memo = FiledMemo.load(filedId)
+
+        then:
+        !datastore.hasCurrentSession()
+        memo.title == 'Own'
+        memo.folder.name == 'Inbox'
     }
 
     void 'a lookup by id without a current tenant throws TenantNotFoundException'() {
@@ -326,6 +353,20 @@ class Memo implements MultiTenant<Memo>, MongoEntity<Memo> {
     ObjectId id
     String tenantId
     String title
+}
+
+@Entity
+class FiledMemo implements MultiTenant<FiledMemo>, MongoEntity<FiledMemo> {
+    ObjectId id
+    String tenantId
+    String title
+    MemoFolder folder
+}
+
+@Entity
+class MemoFolder implements MongoEntity<MemoFolder> {
+    ObjectId id
+    String name
 }
 
 @Entity

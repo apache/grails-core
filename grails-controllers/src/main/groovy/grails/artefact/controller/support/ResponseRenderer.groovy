@@ -46,6 +46,7 @@ import grails.web.mime.MimeType
 import grails.web.mime.MimeUtility
 import grails.web.pages.GrailsLayoutSelector
 import grails.web.pages.GrailsRenderViewMutator
+import grails.web.render.NamedJsonRenderer
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.io.support.SpringIOUtils
 import org.grails.web.json.JSONElement
@@ -92,12 +93,28 @@ import static org.grails.plugins.web.controllers.metaclass.RenderDynamicMethod.T
 @CompileStatic
 trait ResponseRenderer extends WebAttributes {
 
+    static final String ARGUMENT_JSON = 'json'
+
+    static final String ARGUMENT_JSON_CONFIGURATION = 'jsonConfiguration'
+
     private Collection<ActionResultTransformer> actionResultTransformers = []
 
     private MimeUtility mimeUtility
     private GrailsRenderViewMutator grailsRenderViewMutator
     private GrailsLayoutSelector grailsLayoutSelector
     private GrailsPluginManager pluginManager
+    private NamedJsonRenderer namedJsonRenderer
+
+    @Generated
+    @Autowired(required = false)
+    void setNamedJsonRenderer(NamedJsonRenderer namedJsonRenderer) {
+        this.namedJsonRenderer = namedJsonRenderer
+    }
+
+    @Generated
+    NamedJsonRenderer getNamedJsonRenderer() {
+        return namedJsonRenderer
+    }
 
     @Generated
     @Autowired(required = false)
@@ -252,6 +269,55 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     /**
+     * Renders the {@code json} argument with the default or a registered named Jackson configuration:
+     *
+     * <pre>render json: book, jsonConfiguration: 'catalog'</pre>
+     *
+     * Keyed off the argument map rather than an overload taking an object, so that no other
+     * two-argument render call can be captured by it.
+     *
+     * @param argMap the render arguments
+     * @param webRequest the current request
+     * @param response the response to write to
+     */
+    @Generated
+    private void renderNamedJson(Map argMap, GrailsWebRequest webRequest, HttpServletResponse response) {
+        Object value = argMap.get(ARGUMENT_JSON)
+        // an empty name selects the default configuration, as it does for respond
+        String configurationName = argMap.get(ARGUMENT_JSON_CONFIGURATION)?.toString() ?: null
+        if (namedJsonRenderer == null) {
+            throw new IllegalStateException('No JSON renderer is available.')
+        }
+        if (configurationName && !namedJsonRenderer.contains(configurationName)) {
+            throw new IllegalArgumentException("Named JSON configuration [$configurationName] is not registered.")
+        }
+        String encoding = jsonEncoding(webRequest)
+        if (!applyContentType(response, argMap, value, false, encoding)) {
+            setContentType(response, MimeType.JSON.name, argMap.get(ARGUMENT_ENCODING)?.toString() ?: encoding)
+        }
+        try {
+            namedJsonRenderer.render(configurationName, value, response.writer,
+                    (List<String>) argMap.get('includes'), (List<String>) argMap.get('excludes'))
+            response.writer.flush()
+        }
+        catch (IOException e) {
+            throw new ControllerExecutionException(
+                    "I/O error rendering named JSON configuration [$configurationName].", e)
+        }
+        webRequest.renderView = false
+    }
+
+    /**
+     * The encoding of a JSON response, as {@code respond} and the JSON converter write it: {@code grails.converters.encoding},
+     * which defaults to UTF-8.
+     */
+    @Generated
+    private static String jsonEncoding(GrailsWebRequest webRequest) {
+        return webRequest.attributes?.grailsApplication?.config?.getProperty('grails.converters.encoding', String,
+                DEFAULT_ENCODING) ?: DEFAULT_ENCODING
+    }
+
+    /**
      * Render a response for the given named arguments
      *
      * @param argMap The named argument map
@@ -264,6 +330,11 @@ trait ResponseRenderer extends WebAttributes {
         boolean statusSet = handleStatusArgument(argMap, webRequest, response)
 
         def applicationAttributes = webRequest.attributes
+        // A JSONObject is a Map too: one with a top-level "json" key is a value to write, not render arguments.
+        if (!(argMap instanceof JSONElement) && argMap.containsKey(ARGUMENT_JSON)) {
+            renderNamedJson(argMap, webRequest, response)
+            return
+        }
         if (argMap.containsKey(ARGUMENT_TEXT)) {
             def textArg = argMap[ARGUMENT_TEXT]
             applyContentType(response, argMap, textArg)
@@ -516,9 +587,14 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault) {
+        applyContentType(response, argMap, renderArgument, useDefault, DEFAULT_ENCODING)
+    }
+
+    private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault,
+                                     String defaultEncoding) {
         boolean contentTypeIsDefault = true
         String contentType = resolveContentTypeBySourceType(renderArgument, useDefault ? TEXT_HTML : null)
-        String encoding = DEFAULT_ENCODING
+        String encoding = defaultEncoding
         if (argMap != null) {
             if (argMap.containsKey(ARGUMENT_CONTENT_TYPE)) {
                 contentType = argMap.get(ARGUMENT_CONTENT_TYPE).toString()

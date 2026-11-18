@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -438,6 +440,20 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
                 currentRequest.getAttribute(REDIRECT_CALLED) == null;
     }
 
+    /**
+     * Whether the response has been rendered, as {@code render}, {@code respond} and {@code redirect} render it, or
+     * committed, whatever its status, where {@link #isRenderView()} is also false for a status of 300 or more, such as
+     * that of an error page.
+     *
+     * @return whether it has
+     * @since 9.0
+     */
+    public boolean isResponseRendered() {
+        return !renderView ||
+                getCurrentResponse().isCommitted() ||
+                getRequest().getAttribute(REDIRECT_CALLED) != null;
+    }
+
     public String getId() {
         Object id = getParams().get(ID_PARAMETER);
         return id == null ? null : id.toString();
@@ -495,12 +511,36 @@ public class GrailsWebRequest extends DispatcherServletWebRequest {
 
     /**
      * Looks up the GrailsWebRequest from the current request.
+     * <p>
+     * The web request bound to the current thread wins when it was built with this request or another
+     * wrapper of the same request, so a task running alongside the request it was started during, which
+     * is bound to a web request of its own, and the request thread each find their own, however the
+     * request is wrapped. For any other request, the web request stored on it is returned, falling back
+     * to the one bound to the thread.
+     *
      * @param request The current request
      * @return The GrailsWebRequest
      */
     public static @Nullable GrailsWebRequest lookup(HttpServletRequest request) {
+        GrailsWebRequest bound = lookup();
+        if (bound != null && sameRequest(bound.getRequest(), request)) {
+            return bound;
+        }
         GrailsWebRequest webRequest = (GrailsWebRequest) request.getAttribute(GrailsApplicationAttributes.WEB_REQUEST);
-        return webRequest == null ? lookup() : webRequest;
+        return webRequest == null ? bound : webRequest;
+    }
+
+    // Whether both are, or wrap, the same request the container created
+    private static boolean sameRequest(ServletRequest first, ServletRequest second) {
+        return first == second || innermost(first) == innermost(second);
+    }
+
+    private static ServletRequest innermost(ServletRequest request) {
+        ServletRequest innermost = request;
+        while (innermost instanceof ServletRequestWrapper wrapper) {
+            innermost = wrapper.getRequest();
+        }
+        return innermost;
     }
 
     /**

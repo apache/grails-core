@@ -384,11 +384,13 @@ However, if you want to control the order of filter registrations you will need 
 myFilter(FilterRegistrationBean) {
     filter = bean(MyFilter)
     urlPatterns = ['/*']
-    order = Ordered.HIGHEST_PRECEDENCE
+    order = Ordered.HIGHEST_PRECEDENCE + 1
 }
 ----
 
-NOTE: Grails' internal registered filters (`GrailsWebRequestFilter`, `HiddenHttpMethodFilter` etc.) are defined by incrementing `HIGHEST_PRECEDENCE` by 10 thus allowing several filters to be inserted before or between Grails' filters.
+{api}org/grails/web/config/http/GrailsFilters.html[GrailsFilters] lists the order of every filter that Grails and the plugins in the Grails repository register, and of the slots Grails gives Spring Boot's own filters, in the order they run. Order a filter relative to them rather than with a number, for example `GrailsFilters.ASSET_PIPELINE_FILTER.order + 1` to run right after asset-pipeline's filter. To run right after Spring Boot's character encoding filter, use `Ordered.HIGHEST_PRECEDENCE + 1`.
+
+NOTE: Spring Boot registers the character encoding filter at `Ordered.HIGHEST_PRECEDENCE`, ahead of every other filter. Once any filter reads a request parameter, the servlet container has decoded the request body, so a filter that reads parameters needs a later order than the encoding filter, or form input arrives decoded as ISO-8859-1. A filter registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean` runs before it. Grails' own filters (`HiddenHttpMethodFilter`, `GrailsWebRequestFilter` etc.) have orders from -200 to -150, at least ten apart, and `GrailsFilters.LAST` is at -110, ahead of the Spring Security filter chain at -100, which leaves room to insert filters before or between them.
 
 
 ==== Doing Post Initialisation Configuration

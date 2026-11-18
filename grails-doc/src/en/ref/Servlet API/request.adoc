@@ -50,7 +50,7 @@ The {jakartaee}jakarta/servlet/http/HttpServletRequest.html[HttpServletRequest] 
 
 Grails enhances the `HttpServletRequest` instance by adding the following new properties and methods:
 
-* `XML` - An instance of `XmlSlurper`'s {groovyapi}groovy/xml/slurpersupport/GPathResult.html][GPathResult] class that allows parsing of an incoming XML request (useful for REST).
+* `XML` - An instance of `XmlSlurper`'s {groovyapi}groovy/xml/slurpersupport/GPathResult.html][GPathResult] class that allows parsing of an incoming XML request (useful for REST). It is provided by `org.apache.grails:grails-xml`, which the web starter and `grails-web-boot` bring in Grails 9; applications without either, and applications upgrading to Grails 10, add it explicitly.
 * `JSON` - An instance of Grails' link:{apiFromRef}org/grails/web/json/JSONObject.html[JSONObject] class that allows parsing of an incoming JSON request (useful for JSON based REST).
 * `forwardURI` - Useful for obtaining the current request URI since the `request` object's `requestURI` property returns the original URI, not the matched one.
 * `isRedirected()` - Returns `true` if a redirect has been issued for this request (Grails 2+).

@@ -29,9 +29,14 @@ import grails.events.Event
  *
  * @since 3.3
  * @author Graeme Rocher
+ *
+ * @deprecated RxJava 1 is no longer maintained. Use the RxJava 3 implementation in
+ * {@code grails-events-rxjava3} instead. This class, and the {@code grails-events-rxjava} module that provides it,
+ * will be removed in a future release.
  */
 @AutoFinal
 @CompileStatic
+@Deprecated(since = '9.0', forRemoval = true)
 class EventWithReply {
 
     final Event event

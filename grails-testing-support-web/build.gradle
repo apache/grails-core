@@ -54,6 +54,9 @@ dependencies {
         // impl: TagLibraryResolverImpl
     }
     implementation testFixtures(project(':grails-web-common'))
+    implementation 'org.springframework.boot:spring-boot-webmvc', {
+        // impl: WebMvcProperties, which configure the content negotiation of a web unit test as Spring Boot configures Spring MVC's
+    }
 
     compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }

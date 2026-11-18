@@ -27,6 +27,7 @@ import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 
 import org.springframework.boot.autoconfigure.AutoConfigurations
+import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration
 import org.springframework.boot.servlet.autoconfigure.MultipartAutoConfiguration
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner
 import org.springframework.boot.web.servlet.AbstractFilterRegistrationBean
@@ -41,6 +42,7 @@ import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.WebApplicationContext
 import org.springframework.web.context.support.StaticWebApplicationContext
+import org.springframework.web.filter.CharacterEncodingFilter
 import org.springframework.web.filter.RequestContextFilter
 import org.springframework.web.servlet.handler.SimpleMappingExceptionResolver
 
@@ -216,6 +218,23 @@ class ControllersAutoConfigurationSpec extends Specification {
                 }
     }
 
+    void 'Spring Boot registers the only character encoding filter, first on the chain'() {
+        expect: 'one encoding filter, configured by spring.servlet.encoding, ahead of every Grails filter'
+        new WebApplicationContextRunner()
+                .withBean(GrailsApplication, grailsApplicationSupplier())
+                .withPropertyValues('spring.servlet.encoding.charset=ISO-8859-1')
+                .withConfiguration(AutoConfigurations.of(
+                        ControllersAutoConfiguration,
+                        HttpEncodingAutoConfiguration,
+                        WebMvcAutoConfiguration))
+                .run { context ->
+                    def encodingFilter = context.getBean(CharacterEncodingFilter)
+                    assert encodingFilter.encoding == 'ISO-8859-1'
+                    assert encodingFilter.forceRequestEncoding
+                    assert filterChain(context).first().is(encodingFilter)
+                }
+    }
+
     private static MockServletContext servletContextWithWebApplicationContext() {
         def servletContext = new MockServletContext()
         servletContext.setAttribute(
@@ -243,5 +262,11 @@ class ControllersAutoConfigurationSpec extends Specification {
             initializer instanceof AbstractFilterRegistrationBean &&
                     ((AbstractFilterRegistrationBean) initializer).filter instanceof GrailsWebRequestFilter
         }
+    }
+
+    private static List<Filter> filterChain(ConfigurableApplicationContext context) {
+        new ServletContextInitializerBeans(context.beanFactory)
+                .findAll { it instanceof AbstractFilterRegistrationBean }
+                .collect { ((AbstractFilterRegistrationBean) it).filter }
     }
 }

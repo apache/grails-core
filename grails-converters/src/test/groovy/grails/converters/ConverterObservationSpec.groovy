@@ -59,23 +59,6 @@ class ConverterObservationSpec extends Specification {
         recorded[0].error == null
     }
 
-    void "XML response rendering records a converter observation when a registry bean is available"() {
-        given:
-        initializeConverters(recordingRegistry())
-        def response = new MockHttpServletResponse()
-
-        when:
-        new XML([title: 'Undertow']).render(response)
-
-        then:
-        response.contentAsString.contains('Undertow')
-        recorded.size() == 1
-        recorded[0].name == 'grails.convert'
-        recorded[0].contextualName == 'grails.convert xml'
-        recorded[0].lowCardinalityKeyValues.find { it.key == 'grails.convert.format' }?.value == 'xml'
-        recorded[0].error == null
-    }
-
     void "configured observations are cleared back to a no-op registry"() {
         given:
         initializeConverters(recordingRegistry())

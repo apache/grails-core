@@ -22,8 +22,8 @@ package org.grails.gorm.rx.transform
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.tools.GenericsUtils
-import rx.Observable
-import rx.Single
+import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import spock.lang.Specification
 
 class RxAstUtilsSpec extends Specification {

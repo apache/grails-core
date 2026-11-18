@@ -89,7 +89,15 @@ class HttpServletRequestExtension {
 
     static getProperty(HttpServletRequest request, String name) {
         def mp = request.getClass().metaClass.getMetaProperty(name)
-        mp ? mp.getProperty(request) : request.getAttribute(name)
+        if (mp) {
+            return mp.getProperty(request)
+        }
+        if ('XML' == name) {
+            // the parsed XML body, which the XML module's extension provides, never an attribute
+            throw new IllegalStateException('request.XML parses the request body as XML, which requires ' +
+                    'org.apache.grails:grails-xml on the classpath')
+        }
+        request.getAttribute(name)
     }
 
     static void setProperty(HttpServletRequest request, String name, val) {

@@ -19,6 +19,7 @@
 package org.grails.plugins.web.rest.render
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -28,20 +29,24 @@ import jakarta.annotation.PostConstruct
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.validation.BeanPropertyBindingResult
 import org.springframework.validation.Errors
 
+import grails.config.Settings
 import grails.core.support.proxy.ProxyHandler
 import grails.rest.render.ContainerRenderer
 import grails.rest.render.Renderer
 import grails.rest.render.RendererRegistry
+import grails.rest.render.errors.ValidationProblemDetailFactory
 import grails.util.GrailsClassUtils
 import grails.web.mime.MimeType
+import grails.web.render.NamedJsonRenderer
 import org.grails.plugins.web.rest.render.html.DefaultHtmlRenderer
 import org.grails.plugins.web.rest.render.json.DefaultJsonRenderer
-import org.grails.plugins.web.rest.render.xml.DefaultXmlRenderer
+import org.grails.web.converters.jackson.GrailsJsonMapperCustomizer
 import org.grails.web.gsp.io.GrailsConventionGroovyPageLocator
 import org.grails.web.util.ClassAndMimeTypeRegistry
 
@@ -63,6 +68,10 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
     @Autowired(required = false)
     GrailsConventionGroovyPageLocator groovyPageLocator
 
+    /** Finds a GSP locator created after this registry, as a unit test creates it, when a JSON response is written. */
+    @Autowired(required = false)
+    ObjectProvider<GrailsConventionGroovyPageLocator> groovyPageLocatorProvider
+
     @Autowired(required = false)
     ProxyHandler proxyHandler
 
@@ -77,11 +86,40 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
     @Value('${grails.converters.encoding:UTF-8}')
     String encoding = grails.util.GrailsWebUtil.DEFAULT_ENCODING
 
+    @Autowired(required = false)
+    SpringMessageConverters springMessageConverters
+
+    @Autowired(required = false)
+    GrailsJsonMapperCustomizer grailsJsonMapperCustomizer
+
+    @Autowired(required = false)
+    NamedJsonRenderer namedJsonRenderer
+
+    @Autowired(required = false)
+    ValidationProblemDetailFactory validationProblemDetailFactory
+
+    /**
+     * Opts into Spring JSON in Grails 9. The default changes in Grails 10;
+     * the legacy response path is scheduled for removal in Grails 11.
+     */
+    @Value('${' + Settings.WEB_RENDERING_JSON_SPRING + ':' + Settings.WEB_RENDERING_JSON_SPRING_DEFAULT + '}')
+    Boolean useSpringJson = Boolean.valueOf(Settings.WEB_RENDERING_JSON_SPRING_DEFAULT)
+
+    private final AtomicBoolean legacyJsonFallbackReported = new AtomicBoolean()
+    private final AtomicBoolean missingJsonConvertersReported = new AtomicBoolean()
+    private final AtomicBoolean problemJsonFallbackReported = new AtomicBoolean()
+    private final Set<String> springJsonFallbacksReported = ConcurrentHashMap.newKeySet()
+
+    /** The renderers plugins contribute as defaults, collected with the renderer beans. */
+    private final List<Renderer<Object>> pendingDefaultRenderers = []
+
+    /** The container renderers plugins contribute as defaults, collected with the renderer beans, with their component types. */
+    private final List<Tuple2<Class, Renderer>> pendingDefaultContainerRenderers = []
+
+    private boolean initialized
+
     @PostConstruct
     void initialize() {
-        final defaultXmlRenderer = new DefaultXmlRenderer<Object>(Object, groovyPageLocator, this)
-        defaultXmlRenderer.encoding = encoding
-        addDefaultRenderer(defaultXmlRenderer)
         final defaultJsonRenderer = new DefaultJsonRenderer<Object>(Object, groovyPageLocator, this)
         defaultJsonRenderer.encoding = encoding
         addDefaultRenderer(defaultJsonRenderer)
@@ -95,14 +133,10 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
         allHtmlRenderer.proxyHandler = proxyHandler
         allHtmlRenderer.encoding = encoding
         addDefaultRenderer(allHtmlRenderer)
-        [MimeType.XML, MimeType.TEXT_XML].each { MimeType mimeType ->
-            final errorsXmlRenderer = new DefaultXmlRenderer(Errors)
-            errorsXmlRenderer.encoding = encoding
-            containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsXmlRenderer)
-        }
-        [MimeType.JSON, MimeType.TEXT_JSON].each { MimeType mimeType ->
+        [DefaultJsonRenderer.PROBLEM_JSON, MimeType.JSON, MimeType.TEXT_JSON].each { MimeType mimeType ->
             final errorsJsonRenderer = new DefaultJsonRenderer(Errors)
             errorsJsonRenderer.encoding = encoding
+            configureJsonRenderer(errorsJsonRenderer)
             containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, mimeType), errorsJsonRenderer)
         }
         final defaultContainerHtmlRenderer = new DefaultHtmlRenderer(Errors)
@@ -111,6 +145,50 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
         defaultContainerHtmlRenderer.encoding = encoding
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.HTML), defaultContainerHtmlRenderer)
         containerRenderers.put(new ContainerRendererCacheKey(Errors, Object, MimeType.ALL), defaultContainerHtmlRenderer)
+        // The defaults plugins contribute take their keys as the registry's own do, over the renderer beans
+        initialized = true
+        pendingDefaultRenderers.each { Renderer<Object> pending ->
+            addDefaultRenderer(pending)
+        }
+        pendingDefaultRenderers.clear()
+        pendingDefaultContainerRenderers.each { Tuple2<Class, Renderer> pending ->
+            addContainerRenderer(pending.v1, pending.v2)
+        }
+        pendingDefaultContainerRenderers.clear()
+    }
+
+    /**
+     * Applies this registry's settings to a JSON renderer: the ones it creates, renderer beans
+     * such as an application {@code JsonRenderer}, and renderers added to it directly. Settings a
+     * renderer sets itself are kept.
+     */
+    private void configureJsonRenderer(Renderer<?> candidate) {
+        if (!(candidate instanceof DefaultJsonRenderer)) {
+            return
+        }
+        DefaultJsonRenderer renderer = (DefaultJsonRenderer) candidate
+        renderer.legacyFallbackReported = legacyJsonFallbackReported
+        renderer.missingConvertersReported = missingJsonConvertersReported
+        renderer.problemFallbackReported = problemJsonFallbackReported
+        renderer.springFallbacksReported = springJsonFallbacksReported
+        if (renderer.useSpringJson == null) {
+            renderer.useSpringJson = useSpringJson
+        }
+        if (renderer.namedJsonRenderer == null) {
+            renderer.namedJsonRenderer = namedJsonRenderer
+        }
+        if (renderer.grailsJsonMapperCustomizer == null) {
+            renderer.grailsJsonMapperCustomizer = grailsJsonMapperCustomizer
+        }
+        if (renderer.validationProblemDetailFactory == null) {
+            renderer.validationProblemDetailFactory = validationProblemDetailFactory
+        }
+        if (renderer.groovyPageLocatorProvider == null) {
+            renderer.groovyPageLocatorProvider = groovyPageLocatorProvider
+        }
+        if (renderer.springHttpMessageConvertersSupplier == null && springMessageConverters != null) {
+            renderer.springHttpMessageConvertersSupplier = springMessageConverters::getConverters
+        }
     }
 
     @Autowired(required = false)
@@ -122,9 +200,12 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
 
     @Override
     def <T> void addRenderer(Renderer<T> renderer) {
+        configureJsonRenderer(renderer)
         if (renderer instanceof ContainerRenderer) {
             ContainerRenderer cr = (ContainerRenderer) renderer
             addContainerRenderer(cr.componentType, cr)
+        } else if (renderer instanceof FallbackRenderer) {
+            addDefaultRenderer((Renderer<Object>) renderer)
         } else {
             Class targetType = renderer.targetType
             addToRegisteredObjects(targetType, renderer)
@@ -133,6 +214,11 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
 
     @Override
     void addDefaultRenderer(Renderer<Object> renderer) {
+        configureJsonRenderer(renderer)
+        if (renderer instanceof FallbackRenderer && !initialized) {
+            pendingDefaultRenderers.add(renderer)
+            return
+        }
         for (MimeType mt in renderer.mimeTypes) {
             registerDefault(mt, renderer)
             removeFromCache(renderer.getTargetType(), mt)
@@ -141,9 +227,13 @@ class DefaultRendererRegistry extends ClassAndMimeTypeRegistry<Renderer, Rendere
 
     @Override
     void addContainerRenderer(Class objectType, Renderer renderer) {
+        configureJsonRenderer(renderer)
+        if (renderer instanceof FallbackRenderer && !initialized) {
+            pendingDefaultContainerRenderers.add(new Tuple2<Class, Renderer>(objectType, renderer))
+            return
+        }
         for (MimeType mt in renderer.mimeTypes) {
             def key = new ContainerRendererCacheKey(renderer.getTargetType(), objectType, mt)
-
             containerRendererCache.invalidate(key)
             containerRenderers.put(key, renderer)
         }

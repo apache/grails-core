@@ -123,6 +123,7 @@ class ArtefactClassesBeanFactoryInitializationAotProcessorSpec extends Specifica
             context.beanFactory.registerSingleton(GrailsPluginManager.BEAN_NAME,
                     Stub(GrailsPluginManager) {
                         getAllPlugins() >> ([Stub(GrailsPlugin) {
+                            getPluginClass() >> DemoGrailsPlugin
                             getProvidedArtefacts() >> ([DemoService] as Class[])
                         }] as GrailsPlugin[])
                     })
@@ -156,6 +157,9 @@ class ArtefactClassesBeanFactoryInitializationAotProcessorSpec extends Specifica
     }
 
     static class DemoController {
+    }
+
+    static class DemoGrailsPlugin {
     }
 
     static class DemoService {

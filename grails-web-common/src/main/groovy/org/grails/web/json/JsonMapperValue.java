@@ -23,10 +23,13 @@ import java.io.Writer;
 import java.util.function.Predicate;
 
 /**
- * A value for a {@link JSONWriter} to write with a {@link JsonMapperSupport}'s mapper. A {@code JSONWriter} with the
- * same mapper streams it to its generator, and offers the values nested in it to the value's nested value writer (see
+ * A value for a {@link JSONWriter} to write with a {@link JsonMapperSupport}'s mapper. A {@code JSONWriter} created with
+ * the same {@code JsonMapperSupport} instance streams it to its generator, and offers the values nested in it to the
+ * value's nested value writer (see
  * {@link JsonMapperSupport#writeValue(tools.jackson.core.JsonGenerator, Object, Predicate)}). Anywhere else, it is
- * written as any {@link JSONElement} is: the JSON text the mapper writes for the value.
+ * written as any {@link JSONElement} is: the JSON text the mapper writes for the value. A marshaller of
+ * {@code grails.converters.JSON} creates one with the converter's {@code getJsonMapperSupport()}, which carries the
+ * attributes of the write.
  *
  * @since 9.0
  */

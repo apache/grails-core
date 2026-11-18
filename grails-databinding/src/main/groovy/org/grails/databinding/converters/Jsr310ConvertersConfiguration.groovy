@@ -352,9 +352,10 @@ class Jsr310ConvertersConfiguration {
     }
 
     /**
-     * Binds a {@link Month} from its number, 1 for January through 12 for December, which is how
-     * {@code grails.converters.JSON} and Spring Boot render a Month. Without it a number would bind through Spring's
-     * conversion service by ordinal, one month late. The name that JSON views render binds as any enum does.
+     * Binds a {@link Month} from its number, 1 for January through 12 for December, which is how Spring Boot renders a
+     * Month, and {@code grails.converters.JSON} with {@code grails.converters.json.legacy} set to {@code false}. Without it
+     * a number would bind through Spring's conversion service by ordinal, one month late. The name that the converter
+     * renders by default, as JSON views do, binds as any enum does.
      */
     @Bean
     ValueConverter monthValueConverter() {

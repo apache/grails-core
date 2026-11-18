@@ -36,7 +36,6 @@ import org.hibernate.query.criteria.JpaSubQuery;
 import org.springframework.core.convert.ConversionService;
 
 import grails.gorm.DetachedCriteria;
-import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
@@ -54,6 +53,7 @@ public class JpaCriteriaQueryCreator<T> {
     private final DetachedCriteria<?> detachedCriteria;
     private final ConversionService conversionService;
     private final HibernateQuery hibernateQuery;
+    private final QueryAliasRegistrar aliasRegistrar;
     private JpaQueryContext parentContext;
     private JpaQueryContext context;
 
@@ -79,6 +79,7 @@ public class JpaCriteriaQueryCreator<T> {
         this.detachedCriteria = detachedCriteria;
         this.conversionService = conversionService;
         this.hibernateQuery = hibernateQuery;
+        this.aliasRegistrar = new QueryAliasRegistrar(detachedCriteria, hibernateQuery);
     }
 
     public void setParentContext(JpaQueryContext parentContext) {
@@ -101,20 +102,8 @@ public class JpaCriteriaQueryCreator<T> {
         var cq = createCriteriaQuery(projectionList);
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = cq.from(javaClass);
-        
-        List<HibernateAlias> aliases = new ArrayList<>();
-        if (hibernateQuery != null) {
-            aliases.addAll(hibernateQuery.getAliases());
-        }
-        for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
-            if (criterion instanceof HibernateAlias ha) {
-                aliases.add(ha);
-            }
-        }
 
-        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
-        registerDetachedJoins(context);
-        discoverAliases(detachedCriteria.getCriteria(), context);
+        context = aliasRegistrar.createContext(parentContext, root);
 
         applyEagerFetchJoins(root, projectionList);
 
@@ -163,20 +152,8 @@ public class JpaCriteriaQueryCreator<T> {
         var projectionList = collectProjections();
         Class<?> javaClass = entity.getJavaClass();
         Root<?> root = subquery.from(javaClass);
-        
-        List<HibernateAlias> aliases = new ArrayList<>();
-        if (hibernateQuery != null) {
-            aliases.addAll(hibernateQuery.getAliases());
-        }
-        for (Query.Criterion criterion : detachedCriteria.getCriteria()) {
-            if (criterion instanceof HibernateAlias ha) {
-                aliases.add(ha);
-            }
-        }
 
-        context = JpaQueryContext.forSubquery(parentContext, aliases, root);
-        registerDetachedJoins(context);
-        discoverAliases(detachedCriteria.getCriteria(), context);
+        context = aliasRegistrar.createContext(parentContext, root);
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 
@@ -229,7 +206,7 @@ public class JpaCriteriaQueryCreator<T> {
                         // double quotes is case sensitive, while backquotes (MySQL) and square brackets (SQL Server)
                         // leave a column alias case insensitive
                         String groupBy = sqlGroupProjection.getSql().trim();
-                        String name = SqlProjection.unquote(groupBy);
+                        String name = SqlText.of(groupBy, SqlSyntax.forCriteriaBuilder(criteriaBuilder)).unquoted();
                         boolean caseSensitive = groupBy.startsWith("\"") && !name.equals(groupBy);
                         SqlProjection aliased = findSqlProjection(name, !caseSensitive);
                         return translator.translateSql(aliased != null ? aliased.getSql() : sqlGroupProjection.getSql(), null);
@@ -272,69 +249,62 @@ public class JpaCriteriaQueryCreator<T> {
 
     @SuppressWarnings("unchecked")
     private void assignOrderBy(CriteriaQuery<?> cq, JpaQueryContext context) {
+        if (isCountOnly()) {
+            // a count returns one row whatever the order, and an ORDER BY on a column that is not aggregated fails
+            // on H2 and most other databases, so a count query leaves the criteria's orders out, handled ones too
+            return;
+        }
         List<Query.Order> orders = detachedCriteria.getOrders();
         if (!orders.isEmpty()) {
-            var jpaOrders = orders.stream()
-                    .map(order -> {
-                        var propertyName = order.getProperty();
-                        SqlProjection sqlProjection = findSqlProjection(propertyName, false);
-                        Expression<?> expression = sqlProjection != null ?
-                                context.getSelectionAlias(sqlProjection.getColumnAlias()) :
-                                context.getFullyQualifiedExpression(propertyName);
-                        if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
-                                    criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
-                        } else {
-                            return order.getDirection().equals(Query.Order.Direction.ASC) ?
-                                    criteriaBuilder.asc(expression) :
-                                    criteriaBuilder.desc(expression);
-                        }
-                    })
-                    .toArray(jakarta.persistence.criteria.Order[]::new);
-            cq.orderBy(jpaOrders);
-        }
-    }
-
-    private void discoverAliases(List<Query.Criterion> criteria, JpaQueryContext context) {
-        if (criteria == null) return;
-        for (Query.Criterion criterion : criteria) {
-            if (criterion instanceof HibernateAlias ha) {
-                // If the alias is already defined in parent and materialized, just link it
-                if (!context.hasAlias(ha.alias())) {
-                    context.registerAlias(ha.alias(), ha);
-                }
-            } else if (criterion instanceof DetachedAssociationCriteria<?> dac) {
-                if (dac.getAlias() != null) {
-                    context.registerAlias(dac.getAlias(), new HibernateAlias(dac.getAssociationPath(), dac.getAlias()));
-                }
-                discoverAliases(dac.getCriteria(), context);
-            } else if (criterion instanceof Query.PropertyNameCriterion pnc) {
-                String propertyName = pnc.getProperty();
-                if (propertyName.contains(".")) {
-                    String alias = propertyName.substring(0, propertyName.indexOf("."));
-                    // Only register if not already known in this or parent context
-                    if (!context.hasAlias(alias)) {
-                        context.registerAlias(alias, new HibernateAlias(alias, alias));
+            List<jakarta.persistence.criteria.Order> jpaOrders = new ArrayList<>();
+            for (Query.Order order : orders) {
+                PredicateGenerator.OrderHandler customHandler = PredicateGenerator.orderHandler(order.getClass());
+                if (customHandler != null) {
+                    // the handler of a Query.Order subclass builds its JPA order, or leaves the order out
+                    jakarta.persistence.criteria.Order customOrder =
+                            customHandler.handle(cq, context.getRoot(), criteriaBuilder, order, context);
+                    if (customOrder != null) {
+                        jpaOrders.add(customOrder);
                     }
+                    continue;
                 }
-            } else if (criterion instanceof Query.Junction junction) {
-                discoverAliases(junction.getCriteria(), context);
+                String propertyName = order.getProperty();
+                SqlProjection sqlProjection = findSqlProjection(propertyName, false);
+                Expression<?> expression = sqlProjection != null ?
+                        context.getSelectionAlias(sqlProjection.getColumnAlias()) :
+                        context.getFullyQualifiedExpression(propertyName);
+                jakarta.persistence.criteria.Order jpaOrder;
+                if (order.isIgnoreCase() && expression.getJavaType().equals(String.class)) {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(criteriaBuilder.lower((Expression<String>) expression)) :
+                            criteriaBuilder.desc(criteriaBuilder.lower((Expression<String>) expression));
+                } else {
+                    jpaOrder = order.getDirection().equals(Query.Order.Direction.ASC) ?
+                            criteriaBuilder.asc(expression) :
+                            criteriaBuilder.desc(expression);
+                }
+                jpaOrders.add(jpaOrder);
             }
+            cq.orderBy(jpaOrders.toArray(new jakarta.persistence.criteria.Order[0]));
         }
     }
 
-    private void registerDetachedJoins(JpaQueryContext context) {
-        detachedCriteria.getJoinTypes().forEach((path, joinType) ->
-                context.registerAlias(path, new HibernateAlias(path, path, joinType))
-        );
+    /**
+     * Whether the query selects nothing but counts, as {@code count()} and {@code countDistinct()} do: such a query
+     * has one row, so the criteria's orders do not apply to it. A query that groups and counts keeps its orders.
+     */
+    private boolean isCountOnly() {
+        List<Query.Projection> projectionList = projections.getProjectionList();
+        return !projectionList.isEmpty() && projectionList.stream()
+                .allMatch(projection -> projection instanceof Query.CountProjection ||
+                        projection instanceof Query.CountDistinctProjection);
     }
 
     private void assignCriteria(
             AbstractQuery<?> cq, Root<?> root, JpaQueryContext context, GrailsHibernatePersistentEntity entity) {
         List<Query.Criterion> criteriaList = detachedCriteria.getCriteria();
         if (!criteriaList.isEmpty()) {
-            discoverAliases(criteriaList, context);
+            aliasRegistrar.discover(criteriaList, context);
             var predicateGenerator = new PredicateGenerator(criteriaBuilder, conversionService);
             var predicate = predicateGenerator.generate(cq, root, criteriaList, context, entity);
             if (predicate != null) {

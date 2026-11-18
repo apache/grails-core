@@ -151,7 +151,7 @@ Whether a browser opens is usually one developer's preference rather than the ap
 grails.startup.progress.openBrowser=true
 ----
 
-or for a single run, where a property given without a value is `true`:
+or for a single run, where a switch such as `openBrowser` given without a value is `true`:
 
 [source,console]
 ----

@@ -22,7 +22,7 @@ import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.datastore.rx.RxDatastoreClient
-import rx.Observable
+import io.reactivex.rxjava3.core.Observable
 import spock.lang.Specification
 
 class RxGormInstanceApiSpec extends Specification {
@@ -121,7 +121,7 @@ class RxGormInstanceApiSpec extends Specification {
 
         then:
         1 * datastoreClient.delete(instance, [:]) >> Observable.just(true)
-        result.toBlocking().single()
+        result.blockingSingle()
     }
 
     void "delete with arguments delegates to the datastore client"() {
@@ -134,6 +134,6 @@ class RxGormInstanceApiSpec extends Specification {
 
         then:
         1 * datastoreClient.delete(instance, arguments) >> Observable.just(false)
-        !result.toBlocking().single()
+        !result.blockingSingle()
     }
 }

@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.servlet.View
 
 import grails.plugin.json.view.mvc.JsonViewResolver
 import grails.rest.render.ContainerRenderer
@@ -55,7 +56,7 @@ abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRendere
             }
             def view = jsonViewResolver.resolveView(viewUri, context.locale)
             if (view == null) {
-                view = jsonViewResolver.resolveView(targetType, context.locale)
+                view = resolveTypeView(context.locale)
             }
 
             if (view != null) {
@@ -75,6 +76,18 @@ abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRendere
         } else {
             super.render(object, context)
         }
+    }
+
+    /**
+     * The view of the target type where the controller has no template of its own: the type's template, or else the
+     * object template.
+     *
+     * @param locale the locale of the request
+     * @return the view, or {@code null} where the renderer the type had without JSON views renders it
+     * @since 9.0
+     */
+    protected View resolveTypeView(Locale locale) {
+        jsonViewResolver.resolveView(targetType, locale)
     }
 
     protected String resolveModelName() {

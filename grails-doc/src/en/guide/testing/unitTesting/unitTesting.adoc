@@ -77,7 +77,7 @@ The registrar is applied at the point an application's is at boot: after the dep
 
 ==== Configuration classes
 
-A test's static nested classes annotated `@Configuration` are registered in its context, as are those of any test it extends — the convention Spring's own test support follows. They are registered ahead of the framework's auto-configurations, as an application's own configuration is, so an auto-configuration guarded by `@ConditionalOnMissingBean` backs off from the beans they declare. The class a `beans` block compiles to is one of them.
+A test's static nested classes annotated `@Configuration` are registered in its context, as are those of any test it extends — the convention Spring's own test support follows. They are registered ahead of the framework's auto-configurations, as an application's own configuration is, so an auto-configuration guarded by `@ConditionalOnMissingBean` backs off from the beans they declare. The class a `beans` block compiles to is one of them. A `@Bean` method a configuration class inherits, from a superclass or as a default method of an interface, declares its bean as one the class declares itself does, so that bean too replaces a stand-in of the same name, such as `messageSource`.
 
 [source,groovy]
 ----

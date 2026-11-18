@@ -57,10 +57,13 @@ dependencies {
 
     // the status filter is only loaded in a servlet application, which brings the Servlet API with it
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // the status filter's order, from GrailsFilters, which every Grails servlet application has
+    compileOnly project(':grails-web-common')
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation project(':grails-web-common')
     testImplementation 'org.apache.tomcat.embed:tomcat-embed-core'
     testImplementation 'org.springframework.boot:spring-boot-tomcat'
     testImplementation 'org.spockframework:spock-core'

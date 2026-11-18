@@ -112,7 +112,10 @@ You can also define this parameter in the link:theWebLayer.html#urlmappings[URL 
 
 You could code your controller action to return XML based on this property, but you can also make use of the controller-specific `withFormat()` method:
 
-NOTE: This example requires the addition of the `org.apache.grails:grails-converters` plugin
+NOTE: XML conversion in this example requires `org.apache.grails:grails-xml`, which the web starter and
+`grails-web-boot` bring in Grails 9. Applications without either, and applications upgrading to Grails 10, add it
+explicitly. `grails.converters.XML` is deprecated for removal in Grails 11, with the rest of the legacy XML
+conversion.
 
 [source,groovy]
 ----
@@ -180,7 +183,7 @@ Here `text/html` has the highest quality (`q=1.0` implicitly) and `application/x
 This is a change from Grails 7 and earlier, which ignored the `Accept` header for browser user agents by default. That behavior was a workaround for very old browsers (such as Firefox 2 and 3) that sent headers like `text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,...`, ranking XML above HTML. Modern browsers no longer do this, and ignoring the header prevented browser-issued `fetch`/`XMLHttpRequest` calls that ask for `application/json` from receiving JSON.
 ====
 
-If you need the legacy behavior — ignoring the `Accept` header for specific user agents — configure `grails.mime.disable.accept.header.userAgents` with the user-agent tokens to match (it is unset by default):
+If you need the legacy behavior — ignoring the `Accept` header for specific user agents — configure `grails.mime.disable.accept.header.userAgents` with the user agents to match, as a list or a comma-separated string (it is unset by default). Each is a regular expression of its own, found anywhere in the `User-Agent` header, ignoring case, except that a `java.util.regex.Pattern` given in `application.groovy`, on its own or in the list, is used as it is, with its own case and flags; a blank one is left out. An application that lists one that is not a regular expression fails, naming the setting, as Spring MVC is configured: as it starts, unless its beans are created lazily:
 
 [source,groovy]
 ----
@@ -203,7 +206,14 @@ When this setting is active, `XMLHttpRequest`-style requests (those sending an `
 
 An accept header of '\*/\*' results in a value of `all` for the `format` property.
 
-NOTE: If the accept header is used but contains no registered content types, Grails will assume a broken browser is making the request and will set the HTML format - note that this is different from how the other content negotiation modes work as those would activate the "all" format!
+An accept header that contains no registered content types also results in `all`. The problem types of RFC 9457,
+`application/problem+json` and `application/problem+xml`, result in `json` and `xml`, read as `application/json` and
+`application/xml` where those are configured, and otherwise as the first type of the format, in the accept header and in
+`Content-Type`, unless `grails.mime.types`, or a `MimeTypeProvider` bean, such as a renderer or binding source creator, provides a type of that name, so a client that accepts only a problem type is answered as
+one that asks for that format: an action that does not respond in it answers `406 Not Acceptable`, unless it responds
+with a `ProblemDetail`, which `respond` then writes as `application/problem+json`, since it writes a problem in XML only
+where the action responds in XML (see link:{controllersRef}respond.html[respond]), and
+`withFormat` runs its `*` block where it has none for that format, and no block where it has neither. Media type names in the accept header and in `Content-Type` are matched case-insensitively, so `Application/JSON` results in `json`.
 
 
 

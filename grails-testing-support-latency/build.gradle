@@ -53,8 +53,11 @@ dependencies {
     implementation 'org.slf4j:slf4j-api'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
+    // the filter's order, from GrailsFilters, which every Grails servlet application has
+    compileOnly project(':grails-web-common')
 
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
+    testImplementation project(':grails-web-common')
     testImplementation 'org.assertj:assertj-core' // required by the spring-boot-test context runners
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.springframework:spring-test'

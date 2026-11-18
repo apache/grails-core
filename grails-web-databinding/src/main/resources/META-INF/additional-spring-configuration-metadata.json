@@ -1,0 +1,10 @@
+{
+    "properties": [
+        {
+            "name": "grails.databinding.json.jackson",
+            "type": "java.lang.Boolean",
+            "defaultValue": false,
+            "description": "Parse JSON binding bodies with Boot's Jackson mapper. Opt-in in Grails 9, default in Grails 10; legacy parsing is removed in Grails 11."
+        }
+    ]
+}

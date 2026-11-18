@@ -21,8 +21,10 @@ package grails.gorm.services
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.DeleteImplementer
+import org.grails.datastore.gorm.services.implementers.FindAllPropertyProjectionImplementer
+import org.grails.datastore.gorm.services.implementers.FindOneByInterfaceProjectionImplementer
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import rx.Single
+import io.reactivex.rxjava3.core.Single
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
@@ -37,12 +39,34 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         expect:"the observable returns the correct res"
-        bookService.countByTitleLike("The%").toBlocking().value() == 1
-        bookService.countFor("The Stand").toBlocking().value() == 1
-        bookService.count("The Stand").toBlocking().value() == 1
-        bookService.find("The Stand").toList().toBlocking().single().size() == 1
-        bookService.findOne("The Stand").toBlocking().value().title == "The Stand"
-        bookService.findByTitleLike("The%").toBlocking().first().title == "The Stand"
+        bookService.countByTitleLike("The%").blockingGet() == 1
+        bookService.countFor("The Stand").blockingGet() == 1
+        bookService.count("The Stand").blockingGet() == 1
+        bookService.find("The Stand").toList().blockingGet().size() == 1
+        bookService.findOne("The Stand").blockingGet().title == "The Stand"
+        bookService.findByTitleLike("The%").blockingFirst().title == "The Stand"
+    }
+
+    void "a Single service method signals NoSuchElementException when nothing matches"() {
+        given:
+        new Book(title: "The Stand").save(flush:true)
+        BookService bookService = datastore.getService(BookService)
+
+        when:"an RxJava 3 Single cannot complete without a value"
+        bookService.findOne("Missing").blockingGet()
+
+        then:
+        thrown(NoSuchElementException)
+    }
+
+    void "an Observable service method completes empty when nothing matches"() {
+        given:
+        new Book(title: "The Stand").save(flush:true)
+        BookService bookService = datastore.getService(BookService)
+
+        expect:
+        bookService.find("Missing").toList().blockingGet() == []
+        bookService.find("Missing").firstElement().blockingGet() == null
     }
 
     void "test delete method"() {
@@ -53,14 +77,14 @@ class RxServiceImplSpec extends Specification {
 
 
         when:
-        def result = bookService.delete("The Stand").toBlocking().value()
+        def result = bookService.delete("The Stand").blockingGet()
         def implementer = bookService.getClass().getMethod("delete", String).getAnnotation(Implemented).by()
         then:
         implementer == DeleteImplementer
         result == 1
 
         when:
-        bookService.find("The Stand").toBlocking().first() == null
+        bookService.find("The Stand").blockingFirst()
 
         then:
         thrown(NoSuchElementException)
@@ -74,14 +98,14 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         when:
-        Book result = bookService.deleteOne("The Stand").toBlocking().value()
+        Book result = bookService.deleteOne("The Stand").blockingGet()
 
         then:
         result != null
         result.title == "The Stand"
 
         when:
-        bookService.find("The Stand").toBlocking().first() == null
+        bookService.find("The Stand").blockingFirst()
 
         then:
         thrown(NoSuchElementException)
@@ -95,7 +119,7 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         when:"a string-based @Query method is invoked against SimpleMapDatastore, which only supports DetachedCriteria queries"
-        bookService.findWithQuery("The Stand").toBlocking().first()
+        bookService.findWithQuery("The Stand").blockingFirst()
 
         then:
         thrown(UnsupportedOperationException)
@@ -108,7 +132,7 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         when:
-        Book result = bookService.findWhereTitle("The Shining").toBlocking().first()
+        Book result = bookService.findWhereTitle("The Shining").blockingFirst()
 
         then:
         result != null
@@ -121,8 +145,8 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         when:
-        Book savedBook = bookService.saveBook("The Shining").toBlocking().value()
-        Book result = bookService.findWhereTitle("The Shining").toBlocking().first()
+        Book savedBook = bookService.saveBook("The Shining").blockingGet()
+        Book result = bookService.findWhereTitle("The Shining").blockingFirst()
 
 
         then:
@@ -132,8 +156,8 @@ class RxServiceImplSpec extends Specification {
         result.title == "The Shining"
 
         when:
-        savedBook = bookService.updateBook(result.id, "The Stand").toBlocking().value()
-        result = bookService.findWhereTitle("The Stand").toBlocking().first()
+        savedBook = bookService.updateBook(result.id, "The Stand").blockingGet()
+        result = bookService.findWhereTitle("The Stand").blockingFirst()
 
         then:
         savedBook != null
@@ -142,7 +166,7 @@ class RxServiceImplSpec extends Specification {
         result.title == "The Stand"
 
         when:
-        bookService.findWhereTitle("The Shining").toBlocking().first()
+        bookService.findWhereTitle("The Shining").blockingFirst()
 
         then:
         thrown(NoSuchElementException)
@@ -157,10 +181,53 @@ class RxServiceImplSpec extends Specification {
         BookService bookService = datastore.getService(BookService)
 
         when:
-        String author = bookService.findBookAuthor("The Stand").toBlocking().value()
+        String author = bookService.findBookAuthor("The Stand").blockingGet()
 
         then:
         author == "Stephen King"
+    }
+
+    void "test property projection that returns an observable"() {
+        given:
+        new Book(title: "Along Came a Spider", author: "James Patterson").save(flush:true)
+        new Book(title: "The Stand", author: "Stephen King").save(flush:true)
+        new Book(title: "The Stand", author: "Richard Bachman").save(flush:true)
+        BookProjectionService bookService = datastore.getService(BookProjectionService)
+
+        when:
+        def implementer = bookService.getClass().getMethod("findBookAuthor", String).getAnnotation(Implemented).by()
+        List<String> authors = bookService.findBookAuthor("The Stand").toList().blockingGet()
+
+        then:"every projected value is emitted"
+        implementer == FindAllPropertyProjectionImplementer
+        authors.sort() == ["Richard Bachman", "Stephen King"]
+
+        when:
+        List<String> none = bookService.findBookAuthor("Nothing").toList().blockingGet()
+
+        then:"an observable without a match completes empty"
+        none.empty
+    }
+
+    void "test interface projection that returns a single"() {
+        given:
+        new Book(title: "The Stand", author: "Stephen King").save(flush:true)
+        BookProjectionService bookService = datastore.getService(BookProjectionService)
+
+        when:
+        def implementer = bookService.getClass().getMethod("findByTitle", String).getAnnotation(Implemented).by()
+        BookInfo info = bookService.findByTitle("The Stand").blockingGet()
+
+        then:"a single result implementer is chosen, not the iterable one"
+        implementer == FindOneByInterfaceProjectionImplementer
+        info.title == "The Stand"
+        info.author == "Stephen King"
+
+        when:"a projection that finds nothing is a Single without a value"
+        bookService.findByTitle("Nothing").blockingGet()
+
+        then:
+        thrown(NoSuchElementException)
     }
 }
 
@@ -176,21 +243,21 @@ interface BookService {
 
     Single<String> findBookAuthor(String title)
 
-//    No implementations possible for method 'rx.Observable updateBook(java.lang.String, java.lang.String)'. Please use an abstract class instead and provide an implementation.
+//    No implementations possible for method 'io.reactivex.rxjava3.core.Observable updateBook(java.lang.String, java.lang.String)'. Please use an abstract class instead and provide an implementation.
     //@Query("update ${Book b} set $b.title = $title where $b.title = $oldTitle")
 
-//    No implementations possible for method 'rx.Observable updateBook(java.lang.String, java.lang.String)'. Please use an abstract class instead and provide an implementation.
-    //rx.Observable<Number> updateBook(String oldTitle, String title)
+//    No implementations possible for method 'io.reactivex.rxjava3.core.Observable updateBook(java.lang.String, java.lang.String)'. Please use an abstract class instead and provide an implementation.
+    //io.reactivex.rxjava3.core.Observable<Number> updateBook(String oldTitle, String title)
 
     Single<Book> updateBook(Serializable id, String title)
 
     Single<Book> saveBook(String title)
 
     @Where({ title ==~ pattern})
-    rx.Observable<Book> findWhereTitle(String pattern)
+    io.reactivex.rxjava3.core.Observable<Book> findWhereTitle(String pattern)
 
     @Query("from ${Book b} where $b.title = $title")
-    rx.Observable<Book> findWithQuery(String title)
+    io.reactivex.rxjava3.core.Observable<Book> findWithQuery(String title)
 
     Single<Book> deleteOne(String title)
 
@@ -203,9 +270,22 @@ interface BookService {
     @Where({ title == title})
     Single<Number> countFor(String title)
 
-    rx.Observable<Book> find(String title)
+    io.reactivex.rxjava3.core.Observable<Book> find(String title)
 
-    rx.Observable<Book> findByTitleLike(String pattern)
+    io.reactivex.rxjava3.core.Observable<Book> findByTitleLike(String pattern)
 
     Single<Book> findOne(String title)
+}
+
+interface BookInfo {
+    String getTitle()
+    String getAuthor()
+}
+
+@Service(value = Book)
+interface BookProjectionService {
+
+    io.reactivex.rxjava3.core.Observable<String> findBookAuthor(String title)
+
+    Single<BookInfo> findByTitle(String title)
 }

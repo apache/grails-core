@@ -492,7 +492,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         final boolean hasVersion = AstUtils.hasOrInheritsProperty(classNode, GormProperties.VERSION)
 
         if (!hasVersion) {
-            ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
+            ClassNode parent = AstUtils.getFurthestUnresolvedDomainParent(classNode)
             parent.addProperty(GormProperties.VERSION, Modifier.PUBLIC, new ClassNode(Long), null, null, null)
         }
     }
@@ -501,8 +501,7 @@ class GormEntityTransformation extends AbstractASTTransformation implements Comp
         final boolean hasId = AstUtils.hasOrInheritsProperty(classNode, GormProperties.IDENTITY)
 
         if (!hasId) {
-            // inject into furthest relative
-            ClassNode parent = AstUtils.getFurthestUnresolvedParent(classNode)
+            ClassNode parent = AstUtils.getFurthestUnresolvedDomainParent(classNode)
 
             Class<?> identityType = resolveIdentityType(classNode, sourceUnit, traitProvider)
             parent.addProperty(GormProperties.IDENTITY, Modifier.PUBLIC, new ClassNode(identityType), null, null, null)

@@ -43,6 +43,7 @@ import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingConte
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.web.converters.configuration.ConvertersConfigurationHolder
 import org.grails.web.converters.configuration.ConvertersConfigurationInitializer
+import org.grails.web.converters.marshaller.ObjectMarshaller
 import org.grails.web.json.DateTimeValues
 import org.grails.web.json.PrettyPrintJSONWriter
 
@@ -124,6 +125,37 @@ class Grails8JsonRenderingSpec extends Specification {
         Grails8DomainRendering.renderAll() == GRAILS_8_DOMAIN
     }
 
+    void "the legacy converter writes as Grails 8 did after the converters were initialized with the setting false"() {
+        given: 'the converters initialized with legacy false, then, without being cleared, with legacy true'
+        def nonLegacy = new DefaultGrailsApplication()
+        nonLegacy.config.setAt('grails.converters.json.legacy', false)
+        nonLegacy.initialise()
+        def mappingContext = new KeyValueMappingContext('json')
+        nonLegacy.setApplicationContext(Stub(ApplicationContext) {
+            getBean('grailsDomainClassMappingContext', MappingContext) >> mappingContext
+        })
+        nonLegacy.setMappingContext(mappingContext)
+        new ConvertersConfigurationInitializer(grailsApplication: nonLegacy).initialize()
+        new ConvertersConfigurationInitializer(grailsApplication: grailsApplication).initialize()
+
+        expect: 'with the escapes of Grails 8'
+        new JSON([value: 'esc\u001B']).toString() == '{"value":"esc\\u001b"}'
+    }
+
+    void "a value nested deeper than Jackson limits a mapper to renders as Grails 8 rendered it"() {
+        given:
+        Map root = [:]
+        Map current = root
+        600.times {
+            Map child = [:]
+            current.child = child
+            current = child
+        }
+
+        expect:
+        new JSON(root).toString() == '{"child":' * 600 + '{}' + '}' * 600
+    }
+
     void "domain class instances render as Grails 8 rendered them"() {
         expect: 'associations, embedded values, proxies, includes and excludes, deep, the version and the class name'
         Grails8DomainRendering.renderAll(LEGACY) == GRAILS_8_DOMAIN
@@ -173,6 +205,42 @@ class Grails8JsonRenderingSpec extends Specification {
                 '{"a":5,"x":[7,{"n":2,"other":{"ref":"root.x[1]","class":"' + Link.name + '"}}]}'
     }
 
+    void "with the DEFAULT circular reference behaviour, a bean that references itself renders as a reference to the object that holds the reference, where Grails 8 failed"() {
+        given:
+        def only = new Link(n: 1)
+        only.other = only
+
+        expect: 'Grails 8.0.x failed with an index out of bounds'
+        new JSON(only).toString() == '{"n":1,"other":{"_ref":".","class":"' + Link.name + '"}}'
+    }
+
+    void "the includes the converter is given for a proxy apply to the instance it writes in its place, where Grails 8 ignored them"() {
+        expect: 'Grails 8.0.x kept them for the class of the proxy, which it does not write'
+        Grails8DomainRendering.renderProxyIncluding(LEGACY, ['title']) == '{"title":"The Dispossessed"}'
+    }
+
+    void "with the DEFAULT circular reference behaviour, a reference counts the objects the converter writes, as Grails 8 did, also through a marshaller the application registers"() {
+        given: 'a marshaller that writes a link as a map, which the converter writes in its place'
+        JSON.registerObjectMarshaller(Link) { Link link -> [n: link.n, other: link.other] }
+        def only = new Link(n: 1)
+        only.other = only
+
+        expect: 'the link and the map are two objects, as in Grails 8'
+        new JSON(only).toString() == '{"n":1,"other":{"_ref":"..","class":"' + Link.name + '"}}'
+    }
+
+    void "a circular reference is written by the marshaller the application registers for maps, as in Grails 8"() {
+        given:
+        grailsApplication.config.setAt('grails.converters.json.circular.reference.behaviour', 'PATH')
+        new ConvertersConfigurationInitializer(grailsApplication: grailsApplication).initialize()
+        JSON.registerObjectMarshaller(new SortedKeysMarshaller())
+        def only = new Link(n: 1)
+        only.other = only
+
+        expect:
+        new JSON(only).toString() == '{"n":1,"other":{"class":"' + Link.name + '","ref":"root"}}'
+    }
+
     private static JsonMapper configuredMapper() {
         JsonMapper.builder()
                 .enable(SerializationFeature.INDENT_OUTPUT)
@@ -185,7 +253,8 @@ class Grails8JsonRenderingSpec extends Specification {
 
     private static List<Object> other() {
         [
-                'say "hi"', 'a\\b', 'a/b', 'tab\tnew\nline\u0001', 'caf\u00e9 \u4e2d', 'x\u0085y', '</script>', 'x\u2028y', 42,
+                'say "hi"', 'a\\b', 'a/b', 'tab\tnew\nline\u0001', 'esc\u001Bso\u000Eus\u001Fvt\u000B', [('k\u001F'): 1],
+                'caf\u00e9 \u4e2d', 'x\u0085y', '</script>', 'x\u2028y', 42,
                 9007199254740993L, 1.0d, 2.50d, 1.0e20d, 1.5f, new BigDecimal('1.10'), new BigDecimal('1E+3'),
                 new BigInteger('123456789012345678901234567890'), true, 'c' as char,
                 [1, 2, 3] as byte[], [1, 2] as int[], UUID.fromString('123e4567-e89b-12d3-a456-426614174000'),
@@ -282,6 +351,8 @@ class Grails8JsonRenderingSpec extends Specification {
             '{"value":"a\\\\b"}',
             '{"value":"a/b"}',
             '{"value":"tab\\tnew\\nline\\u0001"}',
+            '{"value":"esc\\u001bso\\u000eus\\u001fvt\\u000B"}',
+            '{"value":{"k\\u001f":1}}',
             '{"value":"caf\u00e9 \u4e2d"}',
             '{"value":"x\u0085y"}',
             '{"value":"<\\u002fscript>"}',
@@ -394,4 +465,23 @@ class Holder {
 class Link {
     int n
     Link other
+}
+
+/**
+ * Writes a map with its keys sorted, as an application may for text that does not depend on the order of a map.
+ */
+class SortedKeysMarshaller implements ObjectMarshaller<JSON> {
+
+    boolean supports(Object object) {
+        object instanceof Map
+    }
+
+    void marshalObject(Object object, JSON json) {
+        json.writer.object()
+        new TreeMap((Map) object).each { key, value ->
+            json.writer.key(key.toString())
+            json.convertAnother(value)
+        }
+        json.writer.endObject()
+    }
 }
