@@ -35,6 +35,11 @@ startup failed:script14738267015581837265078.groovy: 13: unable to resolve class
 ----
 ====
 
+[IMPORTANT]
+====
+`runtime.groovy` is only read when `grails-app/conf/application.groovy` exists. New applications are generated with `application.yml` (or `application.properties`) and no `application.groovy`, so the shared constraints, global constraints, default mappings and other configuration in their `runtime.groovy` are ignored, without any error or warning. To have `runtime.groovy` read, add an `application.groovy` next to it. The file can be empty.
+====
+
 For Groovy configuration the following variables are available to the configuration script:
 
 [format="csv", options="header", separator="|"]
