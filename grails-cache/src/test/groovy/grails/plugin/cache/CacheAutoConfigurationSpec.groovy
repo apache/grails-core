@@ -150,6 +150,19 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    void 'a grailsCacheManager the application defines is used beside another cache manager'() {
+        given: 'a cache manager of the application\'s own as grailsCacheManager, and Spring Security\'s beside it'
+        GrailsCacheManager mine = Mock(GrailsCacheManager)
+        AnnotationConfigApplicationContext context = buildContext([:], mine, [cacheManager: new ConcurrentMapCacheManager()])
+
+        expect: 'it gets the alias too, so the context starts and caches with it'
+        context.getBean(CacheAware).grailsCacheManager.is(mine)
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(mine)
+
+        cleanup:
+        context.close()
+    }
+
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
         given: 'Spring Security defines cacheManager when cacheUsers is set'
         CacheManager other = new ConcurrentMapCacheManager()
