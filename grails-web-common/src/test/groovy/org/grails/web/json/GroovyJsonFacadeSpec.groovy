@@ -38,7 +38,33 @@ class GroovyJsonFacadeSpec extends Specification {
         object.put('name', 'Grails')
         object.put('active', true)
 
-        expect:
-        GroovyJsonFacade.toJson(object) == '{"name":"Grails","active":true}'
+        when:
+        JSONElement rendered = GroovyJsonFacade.parse(GroovyJsonFacade.toJson(object))
+
+        then:
+        rendered instanceof JSONObject
+        rendered.get('name') == 'Grails'
+        rendered.get('active') == true
+    }
+
+    void 'parse rejects invalid JSON with JSONException'() {
+        when:
+        GroovyJsonFacade.parse('{"name":')
+
+        then:
+        JSONException exception = thrown(JSONException)
+        exception.cause != null
+    }
+
+    void 'parse rejects a scalar root with JSONException'() {
+        when:
+        GroovyJsonFacade.parse(json)
+
+        then:
+        JSONException exception = thrown(JSONException)
+        exception.message == 'JSON text must describe an object or array'
+
+        where:
+        json << ['"Grails"', '1', 'true', 'null']
     }
 }
