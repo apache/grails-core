@@ -25,8 +25,7 @@ import org.hibernate.SessionFactory;
 import org.springframework.orm.hibernate5.SessionFactoryUtils;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
-
-import org.grails.orm.hibernate.support.TransactionResources;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Strategy applied when an outer session exists within an active Spring synchronization scope
@@ -43,10 +42,9 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
     NonTransactionalSynchronizationOuterSessionStrategy(
             SessionFactory sessionFactory,
             DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
-        super(sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+        super(sessionFactory, dataSource, previousHolder, lazyConnection);
     }
 
     @Override
@@ -54,7 +52,7 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
         super.prepare();
         disconnectBeforeInnerTransactionCompletes();
         if (lazyConnection && !wasPhysicallyConnectedAtPrepare) {
-            txResources.registerSynchronization(new TransactionSynchronization() {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public int getOrder() {
                     return SessionFactoryUtils.SESSION_SYNCHRONIZATION_ORDER;

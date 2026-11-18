@@ -24,8 +24,6 @@ import org.hibernate.SessionFactory;
 
 import org.springframework.orm.hibernate5.SessionHolder;
 
-import org.grails.orm.hibernate.support.TransactionResources;
-
 /**
  * Strategy applied when the outer session is bound to an active write-bearing physical transaction
  * (such as {@code PROPAGATION_REQUIRED} or {@code PROPAGATION_MANDATORY}).
@@ -38,10 +36,9 @@ class ActiveTransactionOuterSessionStrategy extends AbstractOuterSessionLifecycl
     ActiveTransactionOuterSessionStrategy(
             SessionFactory sessionFactory,
             DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
-        super(sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+        super(sessionFactory, dataSource, previousHolder, lazyConnection);
     }
 
     @Override

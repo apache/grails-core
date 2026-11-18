@@ -33,8 +33,7 @@ import org.hibernate.resource.jdbc.spi.LogicalConnectionImplementor;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
-
-import org.grails.orm.hibernate.support.TransactionResources;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Base strategy handling symmetric capture, unbinding, and restoration of session and connection holders
@@ -50,11 +49,11 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
 
     protected final SessionFactory sessionFactory;
     protected final DataSource dataSource;
-    protected final TransactionResources txResources;
     protected final SessionHolder previousHolder;
     protected final boolean lazyConnection;
 
     private boolean disconnectPending;
+    private boolean suspended;
 
     protected boolean wasPhysicallyConnectedAtPrepare = false;
     protected ConnectionHolder previousConnectionHolder;
@@ -64,12 +63,10 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
     AbstractOuterSessionLifecycleStrategy(
             SessionFactory sessionFactory,
             DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
         this.sessionFactory = sessionFactory;
         this.dataSource = dataSource;
-        this.txResources = txResources;
         this.previousHolder = previousHolder;
         this.lazyConnection = lazyConnection;
     }
@@ -98,10 +95,17 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
      * obtains the connection of that transaction, and the transaction closes it when it completes; disconnecting the
      * session first leaves it without a connection instead of with a closed one.
      *
-     * @return the disconnect of the innermost outer session of this thread, or null
+     * @return the disconnect of every outer session of this thread, or null. Every session of the stack was
+     * disconnected when its scope began and holds no transaction, so a transaction in the innermost scope can
+     * close the connection that any of them took.
      */
     static Runnable pendingDisconnect() {
-        return PENDING_DISCONNECTS.get().peekLast();
+        Deque<Runnable> pending = PENDING_DISCONNECTS.get();
+        if (pending.isEmpty()) {
+            return null;
+        }
+        List<Runnable> disconnects = List.copyOf(pending);
+        return () -> disconnects.forEach(Runnable::run);
     }
 
     /**
@@ -133,21 +137,22 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
 
     @Override
     public void suspendAndUnbind() {
-        previousConnectionHolder = dataSource != null ? (ConnectionHolder) txResources.getResource(dataSource) : null;
-        previousActiveSynchronization = txResources.isSynchronizationActive();
-        transactionSynchronizations = previousActiveSynchronization ? txResources.getSynchronizations() : null;
+        suspended = true;
+        previousConnectionHolder = dataSource != null ? (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource) : null;
+        previousActiveSynchronization = TransactionSynchronizationManager.isSynchronizationActive();
+        transactionSynchronizations = previousActiveSynchronization ? TransactionSynchronizationManager.getSynchronizations() : null;
 
         if (previousActiveSynchronization) {
-            txResources.clearSynchronization();
-            txResources.initSynchronization();
+            TransactionSynchronizationManager.clearSynchronization();
+            TransactionSynchronizationManager.initSynchronization();
         }
 
         if (previousHolder != null) {
-            txResources.unbindResource(sessionFactory);
+            TransactionSynchronizationManager.unbindResource(sessionFactory);
         }
 
         if (previousConnectionHolder != null && dataSource != null) {
-            txResources.unbindResource(dataSource);
+            TransactionSynchronizationManager.unbindResource(dataSource);
         }
     }
 
@@ -161,24 +166,28 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
             }
             disconnectPending = false;
         }
+        if (!suspended) {
+            // prepare() failed before the outer session was unbound: nothing was taken, so nothing is put back
+            return;
+        }
         if (previousActiveSynchronization) {
-            txResources.initSynchronization();
+            TransactionSynchronizationManager.initSynchronization();
             if (transactionSynchronizations != null) {
                 for (TransactionSynchronization transactionSynchronization : transactionSynchronizations) {
-                    txResources.registerSynchronization(transactionSynchronization);
+                    TransactionSynchronizationManager.registerSynchronization(transactionSynchronization);
                 }
             }
         }
 
         if (previousHolder != null) {
-            txResources.bindResource(sessionFactory, previousHolder);
-            if (!wasPhysicallyConnectedAtPrepare && (!lazyConnection || !previousActiveSynchronization)) {
+            TransactionSynchronizationManager.bindResource(sessionFactory, previousHolder);
+            if (!wasPhysicallyConnectedAtPrepare) {
                 disconnectIfConnected();
             }
         }
 
         if (previousConnectionHolder != null && dataSource != null) {
-            txResources.bindResource(dataSource, previousConnectionHolder);
+            TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
         }
     }
 }

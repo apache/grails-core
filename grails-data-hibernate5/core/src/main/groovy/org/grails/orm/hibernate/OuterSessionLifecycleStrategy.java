@@ -23,8 +23,7 @@ import javax.sql.DataSource;
 import org.hibernate.SessionFactory;
 
 import org.springframework.orm.hibernate5.SessionHolder;
-
-import org.grails.orm.hibernate.support.TransactionResources;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 /**
  * Strategy interface governing outer session lifecycle preparation, suspension, and restoration
@@ -53,7 +52,6 @@ interface OuterSessionLifecycleStrategy {
      * @param previousHolder the session holder bound to the outer scope, or null
      * @param sessionFactory the current Hibernate SessionFactory
      * @param dataSource the underlying DataSource
-     * @param txResources the transaction synchronization and resource manager
      * @param lazyConnection whether the datasource is configured with a lazy connection proxy
      * @return the appropriate {@link OuterSessionLifecycleStrategy}
      */
@@ -61,28 +59,32 @@ interface OuterSessionLifecycleStrategy {
             SessionHolder previousHolder,
             SessionFactory sessionFactory,
             DataSource dataSource,
-            TransactionResources txResources,
             boolean lazyConnection) {
 
         boolean hasOpenSession = previousHolder != null && previousHolder.getSession() != null && previousHolder.getSession().isOpen();
-        boolean hasConnectionHolder = dataSource != null && txResources.getResource(dataSource) != null;
-        boolean hasSynchronization = txResources.isSynchronizationActive();
+        boolean hasConnectionHolder = dataSource != null && TransactionSynchronizationManager.getResource(dataSource) != null;
+        boolean hasSynchronization = TransactionSynchronizationManager.isSynchronizationActive();
 
         if (previousHolder == null && !hasConnectionHolder && !hasSynchronization) {
             return new NoOpOuterSessionStrategy();
         }
 
-        if (txResources.isActualTransactionActive()) {
+        // The holder of the outer session says whether that session has a transaction of its own. The thread flag
+        // alone is true for a transaction on another data source as well, which leaves this session without one.
+        boolean outerTransactionActive = previousHolder != null ?
+                previousHolder.getTransaction() != null :
+                TransactionSynchronizationManager.isActualTransactionActive();
+        if (outerTransactionActive) {
             return new ActiveTransactionOuterSessionStrategy(
-                    sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+                    sessionFactory, dataSource, previousHolder, lazyConnection);
         }
 
         if (hasSynchronization && hasOpenSession) {
             return new NonTransactionalSynchronizationOuterSessionStrategy(
-                    sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+                    sessionFactory, dataSource, previousHolder, lazyConnection);
         }
 
         return new DefaultOuterSessionStrategy(
-                sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+                sessionFactory, dataSource, previousHolder, lazyConnection);
     }
 }

@@ -20,10 +20,11 @@ package org.grails.orm.hibernate
 
 import java.sql.SQLException
 
+import javax.sql.DataSource
+
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.testing.tck.domains.Book
 import org.grails.orm.hibernate.cfg.Settings
-import org.grails.orm.hibernate.support.DefaultTransactionResources
 import org.hibernate.HibernateException
 import org.hibernate.Session
 import org.hibernate.SessionFactory
@@ -32,6 +33,8 @@ import org.hibernate.exception.GenericJDBCException
 import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.springframework.dao.DataAccessException
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.jdbc.datasource.ConnectionHandle
+import org.springframework.jdbc.datasource.ConnectionHolder
 import org.springframework.orm.hibernate5.HibernateJdbcException
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -134,24 +137,17 @@ class GrailsHibernateTemplateSpec extends Specification {
         Session outerSession = factory.openSession()
         SessionHolder outerHolder = new SessionHolder(outerSession)
         TransactionSynchronizationManager.bindResource(factory, outerHolder)
-        boolean failedOnce = false
-        DefaultTransactionResources failing = Spy(DefaultTransactionResources) {
-            unbindResourceIfPossible(_) >> { args ->
-                if (!failedOnce) {
-                    failedOnce = true
-                    throw new IllegalStateException('Simulated cleanup failure')
-                }
-                callRealMethod()
-            }
-        }
-        template.txResources = failing
-
+        DataSource dataSource = template.dataSource
         when:
-        template.executeWithNewSession { Session s -> 'done' }
+        template.executeWithNewSession { Session s ->
+            // a holder without a connection: the cleanup asks it for the connection and fails
+            TransactionSynchronizationManager.unbindResourceIfPossible(dataSource)
+            TransactionSynchronizationManager.bindResource(dataSource, new ConnectionHolder((ConnectionHandle) null))
+            'done'
+        }
 
         then: 'the failure of the cleanup is reported, and the outer session is bound again all the same'
-        IllegalStateException e = thrown(IllegalStateException)
-        e.message == 'Simulated cleanup failure'
+        thrown(IllegalArgumentException)
         TransactionSynchronizationManager.getResource(factory) == outerHolder
 
         cleanup:

@@ -24,27 +24,22 @@ import org.hibernate.SessionFactory;
 
 import org.springframework.orm.hibernate5.SessionHolder;
 
-import org.grails.orm.hibernate.support.TransactionResources;
-
 /**
  * Strategy applied when an outer session exists but no Spring transaction synchronization is active.
  *
- * <p>Primes a disconnected outer session so that {@code txResources.getResource(dataSource)} captures
- * its {@code ConnectionHolder} before the new session begins, preventing outer session lazy loading
- * inside {@code withNewSession} from borrowing the inner transaction's connection.</p>
- *
- * <p>A lazy load that still takes the inner transaction's connection is disconnected before that transaction
- * completes, see {@link AbstractOuterSessionLifecycleStrategy#pendingDisconnect()}.</p>
+ * <p>A disconnected outer session takes no connection of its own here. If it connects inside the scope, from a lazy load
+ * for example, it obtains the connection of the transaction that is running in the scope; that transaction
+ * disconnects it before it completes, see {@link AbstractOuterSessionLifecycleStrategy#pendingDisconnect()}, and
+ * {@link #restore()} disconnects it again when the scope ends.</p>
  */
 class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy {
 
     DefaultOuterSessionStrategy(
             SessionFactory sessionFactory,
             DataSource dataSource,
-            TransactionResources txResources,
             SessionHolder previousHolder,
             boolean lazyConnection) {
-        super(sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
+        super(sessionFactory, dataSource, previousHolder, lazyConnection);
     }
 
     @Override
