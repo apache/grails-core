@@ -1208,3 +1208,38 @@ As of Grails 7.0.18, the list of bindable properties that Grails generates for a
 * Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
 * A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== UPGRADE-NUMBER. The query cache follows the `cache` option of a criteria
+
+With Hibernate 5, some queries were put in the query cache against the `cache` argument or the `cache` call that was given for them, and some were put in it that no mapping or argument had asked for. A query is now cached when the mapping of its entity caches, when `cache: true` or `cache(true)` asks for it, or when `grails.hibernate.cache.queries` is `true`, and an explicit `false` always keeps it out. The first two columns below say what changes.
+
+[cols="3,2,2"]
+|===
+|Query |Before |Now
+
+|`createCriteria().list([:]) { cache(false) }` on an entity whose mapping caches
+|cached
+|not cached
+
+|`list(max: 2, sort: 'author.name', cache: false)` or `cache(false)` in a criteria, when `author` is a cached entity
+|cached
+|not cached
+
+|`findAllWhere(props, [sort: 'author.name', cache: false])`
+|cached
+|not cached
+
+|`findWhere`, `findAllWhere`, `find(example, args)` and `findAll(example, args)` with `sort: 'author.name'`, on an entity whose mapping does not cache, when `author` is a cached entity
+|cached
+|not cached
+
+|a criteria list with `sort: 'author.name'` on an entity whose mapping does not cache, when `author` is a cached entity
+|cached
+|not cached
+
+|a criteria list with `lock: true` and `sort: 'author.name'`
+|cached
+|not cached
+|===
+
+To keep the old result for one query, pass `cache: true`, or call `cache(true)` in the criteria. A query that nothing asked to cache, whose entity does not cache, is no longer cached because of the entity it sorts through.
