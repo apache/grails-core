@@ -1,1 +1,0 @@
-../../../.agents/skills/grails-9-upgrade/SKILL.md
