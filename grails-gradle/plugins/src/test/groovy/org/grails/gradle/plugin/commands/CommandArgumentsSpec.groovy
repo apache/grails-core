@@ -84,10 +84,11 @@ class CommandArgumentsSpec extends Specification {
         GrailsCliGradlePlugin.commandArguments(project(argsFile: elsewhere.absolutePath)) == ['greet', 'Alice']
     }
 
-    void 'the system properties among the arguments are set on the command JVM, and stay among the arguments'() {
-        given:
-        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(
-                ['dbm-update', '-Dgrails.env=test', '-Dquery=a=b', '-D', '-Dnovalue', 'first'])
+    void 'the system properties among the arguments are set on the command JVM when it runs, and stay among the arguments'() {
+        given: 'arguments with properties in every form the command line parser reads'
+        List<String> given = ['dbm-update', '-Dgrails.env=test', '-Dquery=a=b', ' -Dtrimmed=yes ', '"-Dquoted=yes"',
+                              '-D', '-Dnovalue', 'first']
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(given)
         Project project = project(argsFile: 'arguments.json')
         JavaExec task = project.tasks.register('commandTask', JavaExec).get()
         task.systemProperty('grails.env', 'development')
@@ -95,10 +96,53 @@ class CommandArgumentsSpec extends Specification {
         when:
         List<Object> arguments = GrailsCliGradlePlugin.commandTaskArguments(task, project)
 
+        then: 'nothing is set while the build is configured, where a setting for every JavaExec task could replace it'
+        arguments == given
+        task.systemProperties == ['grails.env': 'development']
+
+        when: 'the task starts'
+        task.actions.first().execute(task)
+
         then:
-        arguments == ['dbm-update', '-Dgrails.env=test', '-Dquery=a=b', '-D', '-Dnovalue', 'first']
-        task.systemProperties == ['grails.env': 'test', query: 'a=b']
+        task.systemProperties == ['grails.env': 'test', query: 'a=b', trimmed: 'yes', quoted: 'yes']
         task.onlyIf.isSatisfiedBy(task)
+    }
+
+    void 'arguments the command line parser refuses set no system property'() {
+        given:
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(['report', '-Dgrails.env=test', '--dev mode'])
+        Project project = project(argsFile: 'arguments.json')
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+
+        int actions = task.actions.size()
+
+        when:
+        GrailsCliGradlePlugin.commandTaskArguments(task, project)
+
+        then: 'no action is added to set any'
+        task.actions.size() == actions
+    }
+
+    void 'a relative grailsCommandProject is the directory below the root of the build'() {
+        given:
+        Project root = ProjectBuilder.builder().withProjectDir(projectDir).build()
+        File appDir = new File(projectDir, 'apps/app')
+        appDir.mkdirs()
+        Project app = ProjectBuilder.builder().withName('app').withProjectDir(appDir).withParent(root).build()
+        app.extensions.extraProperties.set('grailsCommandProject', named)
+        JavaExec task = app.tasks.register('commandTask', JavaExec).get()
+
+        when:
+        GrailsCliGradlePlugin.commandTaskArguments(task, app)
+
+        then:
+        task.onlyIf.isSatisfiedBy(task) == runs
+
+        where:
+        named        || runs
+        'apps/app'   || true
+        'apps/other' || false
+        'app'        || false
     }
 
     void 'a command task runs only in the project the grailsCommandProject property names: #named'() {

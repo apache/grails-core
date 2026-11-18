@@ -99,6 +99,12 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
                 new File(root, 'gradle'), new File(root, 'buildSrc'),
                 new File(root, 'app/grails-app/commands'), new File(root, 'app/src/main/resources/META-INF'),
                 new File(root, 'manifest-writer/grails-app/commands')])
+
+        and: 'every included build, also those that bring plugins of the build'
+        inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([new File(root, 'shared'), new File(root, 'build-logic')])
+
+        and: 'the sources of the listed commands found in the projects of the build'
+        inputs.sourceFiles.collect { new File(it).canonicalFile } == [new File(root, 'app/src/main/java/org/example/FakeCommand.java')]
     }
 
     void 'the task runs only in the project the grailsCommandProject property names'() {

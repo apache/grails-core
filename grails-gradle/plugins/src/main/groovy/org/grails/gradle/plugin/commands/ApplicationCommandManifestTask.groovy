@@ -42,8 +42,8 @@ import javax.inject.Inject
  *
  * <p>The file also names, under {@code inputs}, the directories whose files decide the commands without
  * being on the classpath yet: those whose build files decide the build, and those that hold the sources
- * of commands or of the build's logic. A tool reading the file runs the task again when one of their
- * files changes.</p>
+ * of commands or of the build's logic, and the source files of the listed commands found in the
+ * projects of the build. A tool reading the file runs the task again when one of their files changes.</p>
  *
  * @since 9.0
  */
@@ -59,6 +59,7 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         mainClass.set(MANIFEST_WRITER_CLASS)
         buildDirectories.convention([])
         sourceDirectories.convention([])
+        commandSourceRoots.convention([])
     }
 
     /**
@@ -82,6 +83,38 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
     @Input
     abstract ListProperty<String> getSourceDirectories()
 
+    /**
+     * @return the source directories of every project of the build, where the source of a command the
+     * manifest lists is looked for by its class, so a change to it counts too
+     */
+    @Input
+    abstract ListProperty<String> getCommandSourceRoots()
+
+    /**
+     * The source files of the listed commands found in the projects of the build; a command of a plugin
+     * from a repository has none.
+     */
+    private List<String> commandSources(Object commands) {
+        List<String> found = []
+        for (Object command : (commands instanceof List ? (List) commands : [])) {
+            Object className = command instanceof Map ? ((Map) command).className : null
+            if (!(className instanceof String)) {
+                continue
+            }
+            // a nested class is in the file of its outermost class
+            String path = ((String) className).replaceFirst(/\$.*/, '').replace('.', '/')
+            for (String root : commandSourceRoots.get()) {
+                for (String extension : ['.groovy', '.java', '.kt']) {
+                    File source = new File(root, path + extension)
+                    if (source.isFile()) {
+                        found << source.absolutePath
+                    }
+                }
+            }
+        }
+        found.unique().sort()
+    }
+
     @Override
     @TaskAction
     void exec() {
@@ -91,7 +124,8 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         args(file.absolutePath)
         super.exec()
         Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(file, 'UTF-8')
-        manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get()]
+        manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get(),
+                           sourceFiles: commandSources(manifest.commands)]
         file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
     }
 }

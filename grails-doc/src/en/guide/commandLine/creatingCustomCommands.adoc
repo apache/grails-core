@@ -226,13 +226,15 @@ echo '["greet", "Alice and Bob"]' > greet-args.json
 However they are given, the command reads the arguments through Grails' command line parser: each is
 trimmed, a pair of double quotes around one is removed, an empty one is left out, and an option's value
 is everything after the first `=`, as in `--filter=status=active`. A word that starts with `-` is an
-option, and one whose name holds a space, such as `--dev mode`, is refused as invalid. An argument `-Dname=value` sets a
+option, and one whose name holds a space, such as `--dev mode`, is refused as invalid. An empty argument
+after an option without a value is that option's empty value. An argument `-Dname=value` sets a
 system property: `runCommand` starts the command with it set, so `-Dgrails.env=test` runs the command in
 the test environment, and the command also finds it in the system properties of its command line.
 
 In a build of several projects, `./gradlew runCommand` from the root runs the task in every project that
-has it. Name one project's directory with the `grailsCommandProject` property to run it there only; the
-other command tasks and `generateCommandManifest` take it too:
+has it. Name one project's directory, absolute or relative to the root of the build, with the
+`grailsCommandProject` property to run it there only; the other command tasks and
+`generateCommandManifest` take it too:
 
 [source,shell]
 ----

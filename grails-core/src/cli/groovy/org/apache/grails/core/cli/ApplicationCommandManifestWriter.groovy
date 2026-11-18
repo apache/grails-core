@@ -79,7 +79,9 @@ final class ApplicationCommandManifestWriter {
             [name: option.name(), description: option.description(), flag: option.flag(),
              values: option.values().toList()] as Map<String, Object>
         }
-        [name: command.name, description: command.description ?: '', arguments: arguments, options: options] as Map<String, Object>
+        // the class lets a build tool find the command's source, whose changes may change this description
+        [name: command.name, description: command.description ?: '', className: type.name, arguments: arguments,
+         options: options] as Map<String, Object>
     }
 
     // Class#getAnnotationsByType would read both forms at once, but the static compiler links it with an

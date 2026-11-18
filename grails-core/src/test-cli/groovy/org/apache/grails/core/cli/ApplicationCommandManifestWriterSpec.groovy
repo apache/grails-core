@@ -60,6 +60,7 @@ class ApplicationCommandManifestWriterSpec extends Specification {
         and:
         with(command(manifest, 'described-manifest')) {
             description == 'Sets up the users of the application'
+            className == DescribedManifestCommand.name
         }
 
         and: "a command without a description of its own is described by the trait's default, its name"

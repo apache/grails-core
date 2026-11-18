@@ -41,7 +41,8 @@ public final class ApplicationCommandManifestWriter {
         Path file = Path.of(args[0]);
         Files.createDirectories(file.getParent());
         // JSON, as the real writer writes, with what the spec checks in place of the commands
-        Files.writeString(file, "{\"version\": 1, \"commands\": [], \"arguments\": \"" + args.length + "\", \"file\": \""
+        Files.writeString(file, "{\"version\": 1, \"commands\": [{\"name\": \"fake\", \"className\": \"org.example.FakeCommand\"},"
+                + " {\"name\": \"elsewhere\", \"className\": \"org.example.NotInTheBuild\"}], \"arguments\": \"" + args.length + "\", \"file\": \""
                 + file.toString().replace("\\", "\\\\") + "\", \"runtimeMarker\": \"" + runtimeMarker + "\"}\n");
     }
 }

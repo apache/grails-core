@@ -55,6 +55,8 @@ import org.grails.gradle.plugin.util.ClasspathUtils
 import org.grails.gradle.plugin.util.SourceSets
 import org.grails.io.support.FactoriesLoaderSupport
 import org.grails.build.parsing.CommandLineParser
+import org.grails.build.parsing.DefaultCommandLine
+import org.grails.build.parsing.ParseException
 
 /**
  * Configures the CLI tier of a Grails application or plugin project: the {@code grailsCli}
@@ -136,7 +138,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     public static final String ARGS_FILE_PROPERTY = 'argsFile'
 
     /**
-     * Set this project property to the directory of a project to run {@code runCommand},
+     * Set this project property to the directory of a project, absolute or relative to the root of the
+     * build, to run {@code runCommand},
      * {@link #COMMAND_MANIFEST_TASK} and the other command tasks only in that project. Without it, a task
      * named without its project path runs in the project Gradle starts in and in every project below it
      * that has the task.
@@ -457,8 +460,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
 
     /**
      * Returns the arguments of a command task, from {@link #commandArguments}, and prepares the task for
-     * them: the system properties they name as {@code -Dname=value} are set on the command's JVM, after
-     * {@code grails.env} from Gradle's own, so {@code -Dgrails.env=test} among them chooses the
+     * them: the system properties they name as {@code -Dname=value} are set on the command's JVM when
+     * the task runs, after every other setting, so {@code -Dgrails.env=test} among them chooses the
      * environment; and the task runs only in the project {@link #COMMAND_PROJECT_PROPERTY} names, when
      * it is set.
      *
@@ -469,25 +472,33 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     @CompileDynamic
     static List<Object> commandTaskArguments(JavaExec task, Project project) {
         List<String> arguments = commandArguments(project)
-        task.systemProperties(commandSystemProperties(arguments))
+        Map<String, String> systemProperties = commandSystemProperties(arguments)
+        if (systemProperties) {
+            // set when the task runs, so no setting of grails.env made for every JavaExec task wins over it
+            task.doFirst { JavaExec running -> running.systemProperties(systemProperties) }
+        }
         runOnlyInNamedProject(task, project)
         new ArrayList<Object>(arguments)
     }
 
     /**
-     * Returns the system properties among a command's arguments: each argument {@code -Dname=value},
-     * which the command also sees in its command line.
+     * Returns the system properties among a command's arguments, as the command's own command line
+     * reads them: each argument {@code -Dname=value}, after the parser has trimmed it and removed the
+     * quotes around it.
      *
      * @param arguments the arguments of the command
-     * @return the properties by name, in the order given
+     * @return the properties by name; none when the parser refuses the arguments, as the command then will
      */
     static Map<String, String> commandSystemProperties(List<String> arguments) {
         Map<String, String> properties = new LinkedHashMap<String, String>()
-        for (String argument : arguments) {
-            int equals = argument.indexOf('=')
-            if (argument.startsWith('-D') && equals > 2) {
-                properties[argument.substring(2, equals)] = argument.substring(equals + 1)
+        try {
+            // a command line of its own, so the parser's current one is left alone
+            new CommandLineParser().parse(new DefaultCommandLine(), arguments as String[]).systemProperties.each { Object name, Object value ->
+                properties[name as String] = value as String
             }
+        }
+        catch (ParseException ignored) {
+            // the command reports it when it parses the same arguments
         }
         properties
     }
@@ -500,7 +511,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     static void runOnlyInNamedProject(org.gradle.api.Task task, Project project) {
         def named = project.findProperty(COMMAND_PROJECT_PROPERTY)
         if (named) {
-            boolean selected = new File(named as String).canonicalFile == project.projectDir.canonicalFile
+            // a relative path is the directory below the root of the build
+            boolean selected = project.rootProject.file(named as String).canonicalFile == project.projectDir.canonicalFile
             task.onlyIf("the ${COMMAND_PROJECT_PROPERTY} property names this project".toString()) { selected }
         }
     }
@@ -756,9 +768,14 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                             [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF')]
                         } + includedBuildDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
+                List<String> commandSourceRoots = root.allprojects.collectMany { Project each ->
+                    SourceSet main = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)?.findByName('main')
+                    main ? main.allSource.srcDirs.collect { File dir -> dir.absolutePath } : []
+                }.unique().sort()
                 manifestTask.configure {
                     it.buildDirectories.set(buildDirectories)
                     it.sourceDirectories.set(sourceDirectories)
+                    it.commandSourceRoots.set(commandSourceRoots)
                 }
             }
         }
