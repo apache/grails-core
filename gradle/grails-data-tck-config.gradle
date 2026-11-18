@@ -30,6 +30,9 @@ configurations {
 dependencies {
     tck project(':grails-datamapping-tck')
     testImplementation project(':grails-datamapping-tck')
+    // Flushes the Introspector's caches after each spec. test-config.gradle adds it too, but most
+    // of the modules that run the TCK do not apply it.
+    testRuntimeOnly project(':grails-test-listener')
 }
 
 // TODO: gradle will happily put the jar file on the classpath, but junit won't find the tests.

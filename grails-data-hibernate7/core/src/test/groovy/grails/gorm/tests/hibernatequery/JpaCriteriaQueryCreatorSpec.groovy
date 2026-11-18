@@ -31,6 +31,7 @@ import org.grails.orm.hibernate.query.JpaCriteriaQueryCreator
 import org.grails.orm.hibernate.query.JpaQueryContext
 import org.grails.orm.hibernate.query.SqlGroupProjection
 import org.grails.orm.hibernate.query.SqlProjection
+import org.grails.orm.hibernate.query.SqlSyntax
 import org.springframework.core.convert.support.DefaultConversionService
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
@@ -40,6 +41,23 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
 
     void setupSpec() {
         manager.registerDomainClasses(JpaCriteriaQueryCreatorSpecPerson, JpaCriteriaQueryCreatorSpecPet, JpaCriteriaQueryCreatorSpecGraded)
+    }
+
+    void 'alias projections retain the requested outer join'() {
+        given:
+        def owner = new JpaCriteriaQueryCreatorSpecPerson(firstName: 'Alice', lastName: 'Owner')
+                .save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPerson(firstName: 'Bob', lastName: 'WithoutPet')
+                .save(failOnError: true)
+        new JpaCriteriaQueryCreatorSpecPet(name: 'pet', owner: owner)
+                .save(flush: true, failOnError: true)
+
+        expect:
+        JpaCriteriaQueryCreatorSpecPet.createCriteria().list {
+            createAlias('owner', 'o', 2)
+            projections { property('o.firstName') }
+            order('o.firstName', 'asc')
+        } == ['Alice', 'Bob']
     }
 
     def "test createQuery"() {
@@ -179,7 +197,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         var projections = new Query.ProjectionList()
         projections.add(new SqlGroupProjection('"full name"'))
         SqlProjection.of('upper(last_name) as "full name", count(*) as [total count]', ["full name", "total count"],
-                [String, Long]).each { projections.add(it) }
+                [String, Long], SqlSyntax.TRANSACT_SQL).each { projections.add(it) }
         var creator = new JpaCriteriaQueryCreator(projections, criteriaBuilder, entity, detachedCriteria, new DefaultConversionService())
 
         when:
@@ -215,7 +233,7 @@ class JpaCriteriaQueryCreatorSpec extends HibernateGormDatastoreSpec {
         groupBy      | groupedBy
         'FULLNAME'   | 'upper(last_name)'
         '`FULLNAME`' | 'upper(last_name)'
-        '[FULLNAME]' | 'upper(last_name)'
+        '[FULLNAME]' | '[FULLNAME]'
         '"fullName"' | 'upper(last_name)'
         '"FULLNAME"' | '"FULLNAME"'
     }

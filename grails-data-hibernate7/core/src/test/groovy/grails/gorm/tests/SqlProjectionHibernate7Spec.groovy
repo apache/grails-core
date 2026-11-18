@@ -19,15 +19,10 @@
 package grails.gorm.tests
 
 import java.sql.Time
-import java.time.Duration
 import java.time.LocalDateTime
 
 import org.hibernate.type.BasicTypeRegistry
 import org.hibernate.type.StandardBasicTypes
-import org.testcontainers.mariadb.MariaDBContainer
-import org.testcontainers.mysql.MySQLContainer
-import org.testcontainers.oracle.OracleContainer
-import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
 import spock.lang.Shared
@@ -38,11 +33,10 @@ import grails.gorm.annotation.Entity
 @Requires({ isDockerAvailable() })
 class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
 
-    @Shared postgres = new PostgreSQLContainer('postgres:16')
-    @Shared mysql = new MySQLContainer('mysql:8.0')
-    @Shared mariadb = new MariaDBContainer('mariadb:10.11')
-    @Shared oracle = new OracleContainer('gvenzl/oracle-free:slim-faststart')
-            .withStartupTimeout(Duration.ofMinutes(3))
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
 
     void setupSpec() {
         manager.registerDomainClasses(SqlProjectionDbBox, SqlProjectionDbShelf)
@@ -109,7 +103,7 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         and: 'grouped by a quoted column alias'
         SqlProjectionDbBox.createCriteria().list {
             projections {
-                sqlGroupProjection 'width as "box width", sum(height) as [total height]', '"box width"',
+                sqlGroupProjection 'width as "box width", sum(height) as "total height"', '"box width"',
                         ['box width', 'total height'], [INTEGER, INTEGER]
             }
             order('total height')
@@ -160,6 +154,13 @@ class SqlProjectionHibernate7Spec extends HibernateGormDatastoreSpec {
         constants*.getAt(1) == [8, 9]
         constants*.getAt(2) == [3L, 1L]
         constants*.getAt(3) == [false, true]
+
+        and: 'a string in single quotes in the group by clause is a literal, not the alias of the projection'
+        db != 'MySQL' || SqlProjectionDbBox.createCriteria().list {
+            projections {
+                sqlGroupProjection 'sum(height) as total', "'total'", ['total'], [INTEGER]
+            }
+        } == [33]
 
         and: 'a paged list counts the total'
         SqlProjectionDbBox.createCriteria().list(max: 2) {

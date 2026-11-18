@@ -77,6 +77,12 @@
       "group": "grails.plugin.springsecurity.general"
     },
     {
+      "name": "grails.plugin.springsecurity.rejectRequestsDuringStartup",
+      "type": "java.lang.Boolean",
+      "description": "Whether to respond with 503 to requests received before the application has started.",
+      "group": "grails.plugin.springsecurity.general"
+    },
+    {
       "name": "grails.plugin.springsecurity.excludeSpringSecurityAutoConfiguration",
       "type": "java.lang.Boolean",
       "description": "Whether to automatically exclude Spring Boot security auto-configuration classes that conflict with the plugin.",
@@ -747,7 +753,7 @@
     {
       "name": "grails.plugin.springsecurity.fii.observeOncePerRequest",
       "type": "java.lang.Boolean",
-      "description": "If false, allow checks to happen multiple times.",
+      "description": "If true, a request is authorized once, on its first dispatch; later dispatches of the same request, such as the ERROR dispatch that renders its error page, are not authorized again. If false, every dispatch is authorized.",
       "group": "grails.plugin.springsecurity.authentication"
     },
     {

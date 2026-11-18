@@ -84,6 +84,9 @@ class CommandSpec extends Specification {
      * hang, reported only as a bare unsatisfied condition with no cause. Keying the early exit on
      * process liveness rather than on a {@code BUILD FAILED} marker matters, because several specs
      * legitimately wait for text from a build that is expected to fail.</p>
+     *
+     * <p>The output holds both streams of the build, so the failure report Gradle writes to stderr
+     * is part of the message when the build exits without the expected text.</p>
      */
     void testOutputContains(String value) {
         long deadline = System.currentTimeMillis() + (POLL_TIMEOUT_SECONDS * 1000L)
@@ -113,6 +116,11 @@ class CommandSpec extends Specification {
     private Process executeCommand(StringBuilder builder) {
         String[] args = builder.toString().split(' ')
         ProcessBuilder pb = new ProcessBuilder(args)
+        // Gradle writes its failure report to stderr. Merge it into the stream the consumer thread
+        // drains, so that the report reaches the assertion message and a failed build cannot sit
+        // on a full pipe nobody reads for the whole poll budget once the report, with -S, outgrows
+        // the pipe buffer.
+        pb.redirectErrorStream(true)
         pb.environment().put('JAVA_HOME', System.getenv('JAVA_HOME') ?: System.getProperty('java.home'))
         pb.environment().put('GRAILS_REPO_URL', System.getenv('GRAILS_REPO_URL') ?: null)
         process = pb.directory(dir).start()

@@ -94,4 +94,49 @@ class AliasRegistrySpec extends Specification {
         child.getRealized("f") == childExpr
         parent.getRealized("f") == parentExpr
     }
+
+    def 'a local definition shadows an inherited realized alias until it is realized locally'() {
+        given:
+        def parent = new AliasRegistry()
+        def child = new AliasRegistry(parent)
+        def parentExpression = Mock(Expression)
+        def childExpression = Mock(Expression)
+        parent.realize('f', parentExpression)
+
+        when:
+        child.define('f', new HibernateAlias('face', 'f'))
+
+        then:
+        child.isDefined('f')
+        !child.hasRealized('f')
+        child.getRealized('f') == null
+        parent.getRealized('f') == parentExpression
+
+        when:
+        child.realize('f', childExpression)
+
+        then:
+        child.getRealized('f') == childExpression
+        parent.getRealized('f') == parentExpression
+    }
+
+    def 'association alias selection follows local declaration order, not alias spelling'() {
+        given:
+        def parent = new AliasRegistry()
+        parent.define('outer', new HibernateAlias('likes', 'outer'))
+        def registry = new AliasRegistry(parent)
+        registry.define('likes', new HibernateAlias('likes', 'likes', JoinType.INNER, false))
+
+        expect:
+        registry.getAssociationAlias('likes') == null
+
+        when:
+        def first = new HibernateAlias('likes', 'likes')
+        registry.define('likes', first)
+        registry.define('other', new HibernateAlias('likes', 'other'))
+
+        then:
+        registry.getAssociationAlias('likes') == first
+        registry.getAssociationAlias('favorite') == null
+    }
 }

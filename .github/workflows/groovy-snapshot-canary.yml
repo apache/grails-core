@@ -51,7 +51,7 @@ jobs:
     needs: [policy]
     if: ${{ needs.policy.outputs.run-tests == 'true' }}
     name: "Build Groovy Snapshot"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       groovyVersion: ${{ steps.groovy-version.outputs.value }}
     steps:
@@ -108,7 +108,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📝 Store Groovy version to use when building Grails"
         id: groovy-version
         run: |
@@ -141,7 +141,10 @@ jobs:
             gradle_task: testShard
           - shard_index: 2
             gradle_task: testShard
-    runs-on: ubuntu-latest
+    # ubuntu-22.04 for the reason gradle.yml's mongodbFunctional job gives: this job runs the MongoDB specifications
+    # against mongo:8.0, and ubuntu-latest is now the ubuntu-26.04 image, whose 7.0.0-1017-azure kernel MongoDB 8.0
+    # refuses to start on (https://github.com/actions/runner-images/issues/15005). Move back with that job.
+    runs-on: ubuntu-22.04
     steps:
       - name: "⚙️ Maximize build space"
         run: |
@@ -180,7 +183,7 @@ jobs:
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
           develocity-access-key: ${{ secrets.GRAILS_DEVELOCITY_ACCESS_KEY }}
       - name: "🔍 Setup TestLens"
-        uses: testlens-app/setup-testlens@d29a2be31512b3aeda3adcef09fbe0d55af90c51 # v1.9.4
+        uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📥 Fetch the locally built Groovy artifacts"
         uses: actions/download-artifact@v8.0.1
         with:

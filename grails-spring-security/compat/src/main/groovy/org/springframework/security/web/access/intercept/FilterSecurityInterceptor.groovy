@@ -35,12 +35,26 @@ import org.springframework.security.web.FilterInvocation
 @CompileStatic
 class FilterSecurityInterceptor extends AbstractSecurityInterceptor implements Filter {
 
+    /**
+     * Marks a request this interceptor has authorized, so that its later dispatches, such as the ERROR dispatch
+     * that renders its error page, pass through when {@code observeOncePerRequest} is set. The attribute is the
+     * one Spring Security's own {@code FilterSecurityInterceptor} used before Spring Security 7 removed it.
+     */
+    private static final String FILTER_APPLIED = '__spring_security_filterSecurityInterceptor_filterApplied'
+
     @Override
     void init(FilterConfig filterConfig) throws ServletException {
     }
 
     @Override
     void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        if (observeOncePerRequest) {
+            if (request.getAttribute(FILTER_APPLIED) != null) {
+                chain.doFilter(request, response)
+                return
+            }
+            request.setAttribute(FILTER_APPLIED, Boolean.TRUE)
+        }
         def invocation = new FilterInvocation(request, response, chain)
         def attributes = ((FilterInvocationSecurityMetadataSource) securityMetadataSource)?.getAttributes(invocation)
         if (attributes == null) {

@@ -182,6 +182,75 @@ class CompositeForeignKeyRegistrationOrderSpec extends Specification {
         order = classes*.simpleName.join(', ')
     }
 
+    /**
+     * The names of the columns the inverse collection {@code role} of an entity is loaded by, in the order
+     * Hibernate binds the identifier values to them.
+     */
+    private static List<String> collectionKeyColumns(HibernateDatastore datastore, Class owner, String property) {
+        datastore.metadata.getCollectionBinding(owner.name + '.' + property).key.columns*.name
+    }
+
+    @Unroll
+    void "the inverse collections of a three level composite chain registered as #order load their elements keyed like their to-one side"() {
+        given:
+        HibernateDatastore datastore = new HibernateDatastore(config(classes), classes as Class[])
+
+        when:
+        PrbGrand.withNewTransaction {
+            PrbGrand grand = new PrbGrand(zeta: 'z', alpha: 'a').save(failOnError: true)
+            PrbMiddle middle = new PrbMiddle(name: 'm', grandParent: grand).save(failOnError: true)
+            grand.addToMiddles(middle)
+            middle.addToLeaves(new PrbLeaf(name: 'l'))
+            grand.save(failOnError: true, flush: true)
+        }
+
+        then: 'the collections load their elements in a new session'
+        PrbGrand.withNewSession {
+            PrbGrand.findByZetaAndAlpha('z', 'a').middles*.name == ['m']
+        }
+        PrbMiddle.withNewSession {
+            PrbMiddle.findByName('m').leaves*.name == ['l']
+        }
+
+        and: 'each collection is loaded by the columns of its to-one side, in the same order'
+        collectionKeyColumns(datastore, PrbGrand, 'middles') == ForeignKeyPairs.of(datastore, 'PRB_MIDDLE')['prb_grand']*.first()
+        collectionKeyColumns(datastore, PrbMiddle, 'leaves') == ForeignKeyPairs.of(datastore, 'PRB_LEAF')['prb_middle']*.first()
+
+        cleanup:
+        datastore?.close()
+
+        where:
+        classes << [PrbGrand, PrbMiddle, PrbLeaf].permutations()
+        order = classes*.simpleName.join(', ')
+    }
+
+    @Unroll
+    void "the children of a hub registered as #order load and are keyed like their to-one side"() {
+        given:
+        HibernateDatastore datastore = new HibernateDatastore(config(classes), classes as Class[])
+
+        when:
+        PrbGrand.withNewTransaction {
+            PrbGrand grand = new PrbGrand(zeta: 'z', alpha: 'a').save(failOnError: true)
+            new PrbHub(zed: 'zz', ace: 'aa', grand: grand)
+                    .addToChildren(new PrbHubChild(name: 'kid'))
+                    .save(failOnError: true, flush: true)
+        }
+
+        then:
+        PrbHub.withNewSession {
+            PrbHub.findByZedAndAce('zz', 'aa').children*.name == ['kid']
+        }
+        collectionKeyColumns(datastore, PrbHub, 'children') == ForeignKeyPairs.of(datastore, 'PRB_HUB_CHILD')['prb_hub']*.first()
+
+        cleanup:
+        datastore?.close()
+
+        where:
+        classes << [PrbGrand, PrbHub, PrbHubChild].permutations()
+        order = classes*.simpleName.join(', ')
+    }
+
     void "the inverse one-to-many of an entity with a simple identifier keeps the one implicitly named key of its to-one side"() {
         given:
         List<Class> classes = [PrbPlainKid, PrbPlainParent]

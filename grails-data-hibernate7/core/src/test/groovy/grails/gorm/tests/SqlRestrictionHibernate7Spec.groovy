@@ -18,12 +18,7 @@
  */
 package grails.gorm.tests
 
-import java.time.Duration
 
-import org.testcontainers.mariadb.MariaDBContainer
-import org.testcontainers.mysql.MySQLContainer
-import org.testcontainers.oracle.OracleContainer
-import org.testcontainers.postgresql.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.Requires
 import spock.lang.Shared
@@ -34,11 +29,10 @@ import grails.gorm.annotation.Entity
 @Requires({ isDockerAvailable() })
 class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
 
-    @Shared postgres = new PostgreSQLContainer('postgres:16')
-    @Shared mysql = new MySQLContainer('mysql:8.0')
-    @Shared mariadb = new MariaDBContainer('mariadb:10.11')
-    @Shared oracle = new OracleContainer('gvenzl/oracle-free:slim-faststart')
-            .withStartupTimeout(Duration.ofMinutes(3))
+    @Shared postgres = DatabaseContainers.POSTGRES
+    @Shared mysql = DatabaseContainers.MYSQL
+    @Shared mariadb = DatabaseContainers.MARIADB
+    @Shared oracle = DatabaseContainers.ORACLE
 
     void setupSpec() {
         manager.registerDomainClasses(SqlRestrictionParent, SqlRestrictionChild)
@@ -118,6 +112,13 @@ class SqlRestrictionHibernate7Spec extends HibernateGormDatastoreSpec {
                 eq('name', 'ABC')
             }
         }*.name == ['ABCDEF']
+
+        and: 'where the database has arrays, the placeholders in an array literal are bound'
+        if (db in ['H2', 'Postgres']) {
+            assert SqlRestrictionParent.createCriteria().list {
+                sqlRestriction('length({alias}.name) = ANY(ARRAY [CAST(? AS INTEGER), CAST(? AS INTEGER)])', [3, 6])
+            }*.name.sort() == ['ABC', 'ABCDEF']
+        }
 
         and: 'a count'
         SqlRestrictionParent.createCriteria().count {

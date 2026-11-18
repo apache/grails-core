@@ -122,15 +122,17 @@ class HibernateRuntimeUtils {
                 continue
             }
 
+            // The inverse object is initialized here, so reading its back-reference never loads a proxy.
+            // A non-null back-reference is left alone whether or not it is itself initialized, and a null
+            // one has nothing to initialize, so there is no proxy check to make before setting it.
+            // The reflector reads through a proxy but writes to the object it is given, so an initialized
+            // proxy is unwrapped once and the back-reference is set on the entity behind it.
             def otherSidePropertyName = otherSide.getName()
-            if (!proxyHandler.isInitialized(inverseObject, otherSidePropertyName)) {
-                continue
-            }
-
             def associationReflector = mappingContext.getEntityReflector(association.associatedEntity)
-            def propertyValue = associationReflector.getProperty(inverseObject, otherSidePropertyName)
+            Object child = proxyHandler.unwrap(inverseObject)
+            def propertyValue = associationReflector.getProperty(child, otherSidePropertyName)
             if (propertyValue == null) {
-                associationReflector.setProperty(inverseObject, otherSidePropertyName, target)
+                associationReflector.setProperty(child, otherSidePropertyName, target)
             }
         }
     }

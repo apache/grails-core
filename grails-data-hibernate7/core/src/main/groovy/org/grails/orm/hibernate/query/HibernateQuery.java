@@ -542,7 +542,7 @@ public class HibernateQuery extends Query {
             JpaSubQuery<Tuple> innerSubquery = countQuery.subquery(Tuple.class);
 
             ConversionService cs = getSession().getMappingContext().getConversionService();
-            var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs);
+            var creator = new JpaCriteriaQueryCreator<>(projections, cb, (GrailsHibernatePersistentEntity) entity, detachedCriteria, cs, this);
             creator.populateSubquery(innerSubquery);
 
             countQuery.from(innerSubquery);
@@ -877,6 +877,7 @@ public class HibernateQuery extends Query {
                         hibernateQuery.offset(this.offset);
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
+                    hibernateQuery.aliases.addAll(this.aliases);
 
                     return hibernateQuery;
                 });

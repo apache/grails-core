@@ -39,7 +39,7 @@ CAUTION: Requires Java 8. Effort has been made to support GORM 6.0.x, however th
 
 - Generates the schema at startup with spring bean configuration to make it easy to extend.
 
-- Includes a link:https://github.com/graphql/graphiql[GraphiQL] browser enabled by default in development. The browser is accessible at `/graphql/browser`.
+- A `browser` action at `/graphql/browser` that serves a link:https://github.com/graphql/graphiql[GraphiQL] page supplied by the application. The plugin does not bundle GraphiQL, so the action responds with a 404 status until the application provides the page. See <<graphiql-browser>>.
 
 - Overrides the default data binder to use the data binding provided by Grails
 
