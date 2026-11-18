@@ -81,6 +81,8 @@ grailsCodeAnalysis {
 | `grails.code-analysis.pitest.threads` | `4` | Number of concurrent mutation threads |
 | `grails.code-analysis.pitest.mutators` | PITest `DEFAULTS` | Comma-separated mutator names or group (`DEFAULTS`, `STRONGER`) |
 
+A module that runs the shared TCK (the data modules: Hibernate 5 and 7, MongoDB, Neo4j and the datamapping test module) extracts the TCK specs from the `tck` configuration for its `Test` tasks. A mutation run extracts them again into `build/pitest-tck-classes` (task `extractTckForPitest`) and puts that directory on the mutation classpath, so `targetTests` can name a TCK spec such as `org.apache.grails.data.testing.tck.tests.RangeQuerySpec`. Without it a TCK spec is not found and every mutant reports no coverage.
+
 ### Reports Location
 
 PITest writes both XML and HTML reports (with `timestampedReports = false`) to:

@@ -30,9 +30,11 @@ import com.github.spotbugs.snom.SpotBugsPlugin
 import com.github.spotbugs.snom.SpotBugsTask
 import info.solidsoft.gradle.pitest.PitestPlugin
 import info.solidsoft.gradle.pitest.PitestPluginExtension
+import info.solidsoft.gradle.pitest.PitestTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.Directory
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileTreeElement
@@ -42,6 +44,8 @@ import org.gradle.api.plugins.quality.Pmd
 import org.gradle.api.plugins.quality.PmdExtension
 import org.gradle.api.plugins.quality.PmdPlugin
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.TaskProvider
 
 /**
  * Convention plugin for Grails byte code analysis (PMD, SpotBugs, and PITest mutation testing).
@@ -319,6 +323,28 @@ class GrailsCodeAnalysisPlugin implements Plugin<Project> {
                 )
                 if (mutatorsProp.present) {
                     pitest.mutators.set(mutatorsProp.map { String val -> val.split(',')*.trim().findAll() as Set<String> })
+                }
+            }
+
+            // A module that runs the shared TCK extracts its test classes from the TCK jar into a directory that only its
+            // own Test tasks read (gradle/grails-data-tck-config.gradle), because JUnit does not find tests inside a jar.
+            // PITest finds tests the same way, so without that directory a mutation run of a TCK spec reports no
+            // coverage for every mutant. It is extracted again here, apart from the Test tasks' directory, which the
+            // cleanup task deletes after them, and put on the mutation classpath.
+            project.afterEvaluate {
+                Configuration tck = project.configurations.findByName('tck')
+                if (tck == null) {
+                    return
+                }
+                TaskProvider<Sync> extractTckForPitest = project.tasks.register('extractTckForPitest', Sync) { Sync sync ->
+                    sync.inputs.files(tck)
+                    sync.from({ project.zipTree(tck.singleFile) })
+                    sync.into(project.layout.buildDirectory.dir('pitest-tck-classes'))
+                    sync.exclude('META-INF/sbom.json')
+                }
+                project.tasks.withType(PitestTask).configureEach { PitestTask task ->
+                    task.additionalClasspath.from(extractTckForPitest.map { Sync sync -> sync.destinationDir })
+                    task.dependsOn(extractTckForPitest)
                 }
             }
 

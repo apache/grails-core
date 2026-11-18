@@ -339,6 +339,98 @@ class GrailsCodeAnalysisPluginSpec extends Specification {
         missing.output.contains('names a project that does not exist: :nowhere')
     }
 
+    def "PITest sees the specs that a module extracts from its tck jar, which no test directory of the module holds"() {
+        given: 'a module that runs the specs of a shared tck project, as the data modules do'
+        testProjectDir.resolve('gradle.properties').toFile().text = '''
+            pitestVersion=1.19.6
+            pitestJunit5PluginVersion=1.2.2
+        '''
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'tckjar', 'selected'"
+        def tckDir = testProjectDir.resolve('tckjar')
+        tckDir.toFile().mkdirs()
+        tckDir.resolve('build.gradle').toFile().text = '''
+            plugins { id 'groovy' }
+            repositories { mavenCentral() }
+            dependencies {
+                implementation localGroovy()
+                implementation platform('org.spockframework:spock-bom:2.4-M6-groovy-4.0')
+                implementation 'org.spockframework:spock-core'
+            }
+        '''
+        def tckSpec = tckDir.resolve('src/main/groovy/org/grails/example/TckCalculatorSpec.groovy').toFile()
+        tckSpec.parentFile.mkdirs()
+        tckSpec.text = '''
+            package org.grails.example
+
+            import spock.lang.Specification
+
+            class TckCalculatorSpec extends Specification {
+                def "adds"() {
+                    expect: 'the class under test belongs to the module that extracts this spec, so it is looked up by name'
+                    Class.forName('org.grails.example.Calculator').getMethod('add', int, int).invoke(null, 2, 3) == 5
+                }
+            }
+        '''
+        def selectedDir = testProjectDir.resolve('selected')
+        selectedDir.toFile().mkdirs()
+        selectedDir.resolve('build.gradle').toFile().text = '''
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-code-analysis'
+            }
+            repositories { mavenCentral() }
+            configurations {
+                tck { transitive = false }
+                testImplementation.extendsFrom(tck)
+            }
+            dependencies {
+                tck project(':tckjar')
+                implementation localGroovy()
+                testImplementation platform('org.spockframework:spock-bom:2.4-M6-groovy-4.0')
+                testImplementation 'org.spockframework:spock-core'
+                testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+            }
+            tasks.withType(Test).configureEach { useJUnitPlatform() }
+        '''
+        def javaFile = selectedDir.resolve('src/main/java/org/grails/example/Calculator.java').toFile()
+        javaFile.parentFile.mkdirs()
+        javaFile.text = '''
+            package org.grails.example;
+
+            public class Calculator {
+                public static int add(int a, int b) {
+                    return a + b;
+                }
+            }
+        '''
+        File mutationsXml = testProjectDir.resolve('build/reports/code-analysis/pitest/selected/mutations.xml').toFile()
+
+        when: 'the spec of the tck jar is the one that runs'
+        def result = run(
+                ':selected:pitest',
+                '-Pgrails.code-analysis.pitest.targetClasses=org.grails.example.*',
+                '-Pgrails.code-analysis.pitest.targetTests=org.grails.example.TckCalculatorSpec',
+                '--configuration-cache'
+        )
+
+        then: 'it kills the mutants, instead of every mutant having no coverage'
+        result.output.contains('BUILD SUCCESSFUL')
+        mutationsXml.text.contains("status='KILLED'")
+        !mutationsXml.text.contains("status='NO_COVERAGE'")
+    }
+
+    def "a module without a tck configuration gets no extraction task for PITest"() {
+        given:
+        writeMultiProjectBuild('pitest', null, ':selected', false)
+
+        when:
+        def result = run('tasks', '--all', '--configuration-cache')
+
+        then:
+        result.output.contains('selected:pitest')
+        !result.output.contains('extractTckForPitest')
+    }
+
     def "enablePmd configures PMD immediately, so the build script customizes pmdMain and the reports directory afterwards"() {
         given:
         testProjectDir.resolve('build.gradle').toFile().text = '''
