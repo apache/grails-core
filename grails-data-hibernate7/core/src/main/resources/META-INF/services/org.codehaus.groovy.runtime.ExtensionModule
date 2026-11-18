@@ -1,0 +1,3 @@
+moduleName=grails-hibernate7-module
+moduleVersion=1.0
+extensionClasses=org.grails.orm.hibernate.query.HibernateDetachedCriteriaExtension

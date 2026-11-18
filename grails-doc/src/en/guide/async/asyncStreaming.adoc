@@ -1,0 +1,112 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A controller action can return a https://www.reactive-streams.org/[Reactive Streams] `Publisher`, such as a Reactor `Flux`, and Grails streams every item it emits to the client as a https://html.spec.whatwg.org/multipage/server-sent-events.html[server-sent event]. An action that returns one no longer renders its view. The request is handled asynchronously, as a returned `Promise` is, so the container thread is released while the stream produces; the response is committed as `text/event-stream` before the first item, and each item is written as soon as it is emitted:
+
+[source,groovy]
+----
+import java.time.Duration
+import reactor.core.publisher.Flux
+
+class ClockController {
+
+    def ticks() {
+        Flux.interval(Duration.ofSeconds(1))
+                .take(10)
+                .map { tick -> "Tick ${tick}" }
+    }
+}
+----
+
+A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed. As Spring MVC does, Grails resolves it and treats its value as the action's result, the way a returned `Promise`'s value is: a `Map` is the model of the view, anything else leaves the response to what the action rendered, and a failure fails the request. Which publishers are single-valued is what Spring's `ReactiveAdapterRegistry` knows, so a Reactor `Mono` and a `CompletableFuture` adapted to one both resolve rather than stream.
+
+Only a result that implements `Publisher` is streamed or resolved. An RxJava 3 `Observable` or `Single` is not a `Publisher`, so Grails neither streams it nor renders a view for it, and the response holds only what the action rendered itself; convert it to one with `toFlowable(..)`, as <<rxjava,RxJava Support>> shows. A `Flowable` is multi-valued whatever it emits, so a `Flowable` of one item is streamed as a single event rather than resolved.
+
+A browser reads the events with `EventSource`:
+
+[source,javascript]
+----
+const source = new EventSource('/clock/ticks');
+source.onmessage = event => console.log(event.data);
+----
+
+==== How Items Are Rendered
+
+Each item becomes the `data` of one event. Text is sent as it is, every line as its own `data:` line, so the client assembles exactly the text that was emitted, line breaks included; numbers, booleans and enum constants are sent as their string form; and, when the application has Jackson, any other item is sent as JSON.
+
+An item that is a Spring `org.springframework.http.codec.ServerSentEvent` is written with its id, event name, retry interval and comment as well, for a client that listens for named events or needs to resume; its builder refuses an id or event name that holds a line break, so neither can forge further fields:
+
+[source,groovy]
+----
+import org.springframework.http.codec.ServerSentEvent
+
+ServerSentEvent.builder([price: 42.5])
+        .id('17')
+        .event('price')
+        .build()
+----
+
+A plugin or an application teaches the stream about its own types by registering a bean implementing `grails.async.web.StreamItemRenderer`. Renderers are consulted in `Ordered` order and the first that returns text wins; the two built-in renderers are always consulted last, so a renderer takes over its types whether or not it is `Ordered`, and leaves the rest to them. The <<usingAi,Using AI in Your Application>> chapter's streaming support is one: it renders the chat responses a model streams as the text they carry.
+
+==== Completion, Failures and Timeouts
+
+Every stream ends with an event named `complete` before the response ends, whatever ended it. An `EventSource` reconnects whenever a connection closes, re-running the action, so a client should close on that event:
+
+[source,javascript]
+----
+source.addEventListener('complete', () => source.close());
+----
+
+The data of the `complete` event says why the stream ended. It is empty when the publisher completed. Once the stream has started, the response is committed and no error status can be sent, so a publisher that fails, or an item that cannot be rendered, ends the stream with a `complete` event whose data is `error`; the failure is logged on the server and nothing of it reaches the client. No event is named `error`, because an `EventSource` dispatches an event of that name for its own connection failures as well. A client that wants to tell a failed stream from a finished one reads the data:
+
+[source,javascript]
+----
+source.addEventListener('complete', event => {
+    source.close();
+    if (event.data === 'error') {
+        showProblem();
+    }
+});
+----
+
+A client that disconnects cancels the stream.
+
+A stream has no timeout unless `grails.async.streaming.timeout` sets one, as a Spring MVC server-sent event stream has none; neither `spring.mvc.async.request-timeout` nor the Servlet container's asynchronous request timeout applies to it. A timeout cancels the stream and ends it with a `complete` event whose data is `timeout`. Set it to bound how long a stream may stay open:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    async:
+        streaming:
+            timeout: 5m
+----
+
+[cols="3,1,4"]
+|===
+| Property | Default | Description
+
+| `grails.async.streaming.enabled`
+| `true`
+| Whether a `Publisher` returned from an action is streamed as server-sent events.
+
+| `grails.async.streaming.timeout`
+|
+| How long a stream may stay open. When not set, a stream has no timeout.
+|===

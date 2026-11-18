@@ -19,14 +19,87 @@
 
 package org.grails.datastore.mapping.reflect
 
+import java.lang.reflect.Modifier
+
+import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.MethodNode
+import org.codehaus.groovy.ast.Parameter
+import org.codehaus.groovy.ast.builder.AstBuilder
+import org.codehaus.groovy.control.CompilePhase
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 19/04/2017.
  */
 class AstUtilsSpec extends Specification {
+
+    void 'domain parent selection skips plain superclasses'() {
+        given:
+        def plain = new ClassNode('SharedDetails', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def root = new ClassNode('RootEntity', Modifier.PUBLIC, plain)
+        root.addAnnotation(new AnnotationNode(ClassHelper.make(annotationName)))
+        def intermediate = new ClassNode('PlainIntermediate', Modifier.PUBLIC, root)
+        def child = new ClassNode('ChildEntity', Modifier.PUBLIC, intermediate)
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(root)
+        AstUtils.getFurthestUnresolvedDomainParent(root).is(root)
+        AstUtils.getFurthestUnresolvedParent(child).is(plain)
+
+        where:
+        annotationName << [
+            'grails.persistence.Entity',
+            'grails.gorm.annotation.Entity',
+            'jakarta.persistence.Entity'
+        ]
+    }
+
+    void 'domain parent selection crosses a plain intermediate in either declaration order'() {
+        given:
+        def nodes = new AstBuilder().buildFromString(CompilePhase.CONVERSION, false, declarations)
+        def root = nodes.find { it instanceof ClassNode && it.name == 'Animal' }
+        def intermediate = nodes.find { it instanceof ClassNode && it.name == 'Mammal' }
+        def child = nodes.find { it instanceof ClassNode && it.name == 'Dog' }
+        intermediate.superClass = root
+        child.superClass = intermediate
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(root)
+        AstUtils.getFurthestUnresolvedDomainParent(root).is(root)
+
+        where:
+        declarations << [
+            '@grails.persistence.Entity abstract class Animal { }; abstract class Mammal extends Animal { }; @grails.persistence.Entity class Dog extends Mammal { }',
+            '@grails.persistence.Entity class Dog extends Mammal { }; abstract class Mammal extends Animal { }; @grails.persistence.Entity abstract class Animal { }'
+        ]
+    }
+
+    void 'domain parent selection does not reuse classification of same-named classes'() {
+        given:
+        def firstParent = new ClassNode('RecompiledParent', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def secondParent = new ClassNode('RecompiledParent', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE)
+        def domainParent = domainFirst ? firstParent : secondParent
+        domainParent.addAnnotation(new AnnotationNode(ClassHelper.make('grails.persistence.Entity')))
+        def firstChild = new ClassNode('FirstChild', Modifier.PUBLIC, firstParent)
+        def secondChild = new ClassNode('SecondChild', Modifier.PUBLIC, secondParent)
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(firstChild).is(domainFirst ? firstParent : firstChild)
+        AstUtils.getFurthestUnresolvedDomainParent(secondChild).is(domainFirst ? secondChild : secondParent)
+
+        where:
+        domainFirst << [false, true]
+    }
+
+    void 'domain parent selection does not modify a resolved superclass'() {
+        given:
+        def child = new ClassNode('ChildEntity', Modifier.PUBLIC, ClassHelper.make(Object))
+
+        expect:
+        AstUtils.getFurthestUnresolvedDomainParent(child).is(child)
+    }
 
     void "test implements interface"() {
         given:
@@ -38,5 +111,88 @@ class AstUtilsSpec extends Specification {
         AstUtils.implementsInterface(node, itfc)
         AstUtils.implementsInterface(node, itfc.name)
         !AstUtils.implementsInterface(node, "Another")
+    }
+
+    void "findInterface finds an interface listed after one with super-interfaces of its own"() {
+        given:
+        ClassNode base = anInterface('Base')
+        ClassNode target = anInterface('grails.gorm.rx.RxEntity')
+        ClassNode entity = new ClassNode('Book', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE,
+                [anInterface('WithSuper', base), target] as ClassNode[], null)
+        ClassNode mixed = new ClassNode('Author', Modifier.PUBLIC, ClassHelper.OBJECT_TYPE,
+                [anInterface('Mixed', anInterface('Deep', base), target)] as ClassNode[], null)
+
+        expect:
+        AstUtils.findInterface(entity, target.name).is(target)
+        AstUtils.findInterface(mixed, target.name).is(target)
+        AstUtils.findInterface(entity, 'Another') == null
+    }
+
+    private static ClassNode anInterface(String name, ClassNode... superInterfaces) {
+        new ClassNode(name, Modifier.PUBLIC | Modifier.INTERFACE | Modifier.ABSTRACT, ClassHelper.OBJECT_TYPE,
+                superInterfaces, null)
+    }
+
+    void "copyAnnotations copies an annotation the target doesn't already carry"() {
+        given:
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("grails.gorm.transactions.NotTransactional")
+        from.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to)
+
+        then:
+        to.getAnnotations(annotationType).size() == 1
+    }
+
+    void "copyAnnotations copies repeatable annotations by default"() {
+        given: "a source carrying the same annotation type twice, as a repeatable annotation legitimately does"
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("jakarta.validation.constraints.Pattern")
+        from.addAnnotation(new AnnotationNode(annotationType))
+        from.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to)
+
+        then: "both are copied - the default must not silently drop all but the first"
+        to.getAnnotations(annotationType).size() == 2
+    }
+
+    void "copyAnnotations with skipExisting does not add a type the target already carries"() {
+        given: "a target that a caller has already annotated directly, e.g. to avoid double-adding @NotTransactional/@ReadOnly"
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("grails.gorm.transactions.NotTransactional")
+        from.addAnnotation(new AnnotationNode(annotationType))
+        to.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to, null, null, true)
+
+        then: "the target keeps its own single instance rather than gaining a duplicate, which Groovy's compiler rejects"
+        to.getAnnotations(annotationType).size() == 1
+    }
+
+    void "copyAnnotations without skipExisting keeps the pre-existing annotation and the copy"() {
+        given:
+        def from = newMethodNode()
+        def to = newMethodNode()
+        def annotationType = ClassHelper.make("grails.gorm.transactions.NotTransactional")
+        from.addAnnotation(new AnnotationNode(annotationType))
+        to.addAnnotation(new AnnotationNode(annotationType))
+
+        when:
+        AstUtils.copyAnnotations(from, to)
+
+        then: "the default is unchanged from the general-purpose contract - callers opt in to deduplication"
+        to.getAnnotations(annotationType).size() == 2
+    }
+
+    private static MethodNode newMethodNode() {
+        new MethodNode("test", 0, ClassHelper.VOID_TYPE, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, null)
     }
 }

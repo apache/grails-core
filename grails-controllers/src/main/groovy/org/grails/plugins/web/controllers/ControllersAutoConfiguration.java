@@ -20,49 +20,43 @@
 package org.grails.plugins.web.controllers;
 
 import java.util.EnumSet;
+import java.util.Properties;
 
 import jakarta.servlet.DispatcherType;
-import jakarta.servlet.Filter;
 import jakarta.servlet.MultipartConfigElement;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration;
-import org.springframework.boot.servlet.filter.OrderedCharacterEncodingFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletAutoConfiguration;
 import org.springframework.boot.webmvc.autoconfigure.DispatcherServletRegistrationBean;
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.env.Environment;
 import org.springframework.util.ClassUtils;
-import org.springframework.web.filter.CharacterEncodingFilter;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import grails.config.Settings;
 import grails.core.GrailsApplication;
-import org.grails.plugins.domain.GrailsDomainClassAutoConfiguration;
+import org.grails.plugins.domain.DomainClassAutoConfiguration;
 import org.grails.web.config.http.GrailsFilters;
-import org.grails.web.filters.HiddenHttpMethodFilter;
+import org.grails.web.errors.GrailsExceptionResolver;
 import org.grails.web.servlet.mvc.GrailsDispatcherServlet;
 import org.grails.web.servlet.mvc.GrailsWebRequestFilter;
+import org.grails.web.util.HiddenHttpMethod;
 
 @AutoConfiguration(
-        before = {DispatcherServletAutoConfiguration.class, HttpEncodingAutoConfiguration.class, WebMvcAutoConfiguration.class},
-        after = {GrailsDomainClassAutoConfiguration.class}
+        before = {DispatcherServletAutoConfiguration.class, WebMvcAutoConfiguration.class},
+        after = {DomainClassAutoConfiguration.class}
 )
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ControllersAutoConfiguration {
-
-    @Value("${" + Settings.FILTER_ENCODING + ":utf-8}")
-    private String filtersEncoding;
-
-    @Value("${" + Settings.FILTER_FORCE_ENCODING + ":false}")
-    private boolean filtersForceEncoding;
 
     @Value("${" + Settings.RESOURCES_CACHE_PERIOD + ":0}")
     private int resourcesCachePeriod;
@@ -73,40 +67,19 @@ public class ControllersAutoConfiguration {
     @Value("${" + Settings.RESOURCES_PATTERN + ":" + Settings.DEFAULT_RESOURCE_PATTERN + "}")
     private String resourcesPattern;
 
-    @Value("${" + Settings.CONTROLLERS_UPLOAD_LOCATION + ":#{null}}")
-    private String uploadTmpDir;
-
-    @Value("${" + Settings.CONTROLLERS_UPLOAD_MAX_FILE_SIZE + ":128000}")
-    private long maxFileSize;
-
-    @Value("${" + Settings.CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE + ":128000}")
-    private long maxRequestSize;
-
-    @Value("${" + Settings.CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD + ":0}")
-    private int fileSizeThreshold;
-
     @Value("${" + Settings.WEB_SERVLET_PATH + ":#{null}}")
     String grailsServletPath;
 
-    @Bean
-    @ConditionalOnMissingBean(CharacterEncodingFilter.class)
-    public CharacterEncodingFilter characterEncodingFilter() {
-        FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
-        OrderedCharacterEncodingFilter characterEncodingFilter = new OrderedCharacterEncodingFilter();
-        characterEncodingFilter.setEncoding(filtersEncoding);
-        characterEncodingFilter.setForceEncoding(filtersForceEncoding);
-        characterEncodingFilter.setOrder(GrailsFilters.CHARACTER_ENCODING_FILTER.getOrder());
-        return characterEncodingFilter;
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(HiddenHttpMethodFilter.class)
-    public FilterRegistrationBean<Filter> hiddenHttpMethodFilter() {
-        FilterRegistrationBean<Filter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new HiddenHttpMethodFilter());
-        registrationBean.addUrlPatterns(Settings.DEFAULT_WEB_SERVLET_PATH);
-        registrationBean.setOrder(GrailsFilters.HIDDEN_HTTP_METHOD_FILTER.getOrder());
-        return registrationBean;
+    // Auto-configured rather than registered by the plugin descriptor so an application- or
+    // plugin-defined 'exceptionHandler' backs this default off instead of overriding it.
+    @Bean(GrailsApplication.EXCEPTION_HANDLER_BEAN)
+    @ConditionalOnMissingBean(name = GrailsApplication.EXCEPTION_HANDLER_BEAN)
+    public GrailsExceptionResolver exceptionHandler() {
+        GrailsExceptionResolver exceptionResolver = new GrailsExceptionResolver();
+        Properties exceptionMappings = new Properties();
+        exceptionMappings.setProperty("java.lang.Exception", "/error");
+        exceptionResolver.setExceptionMappings(exceptionMappings);
+        return exceptionResolver;
     }
 
     // GrailsWebRequestFilter extends RequestContextFilter, so Boot's WebMvcAutoConfiguration backs off
@@ -137,20 +110,16 @@ public class ControllersAutoConfiguration {
     }
 
     @Bean
-    public MultipartConfigElement multipartConfigElement() {
-        if (uploadTmpDir == null) {
-            uploadTmpDir = System.getProperty("java.io.tmpdir");
-        }
-        return new MultipartConfigElement(uploadTmpDir, maxFileSize, maxRequestSize, fileSizeThreshold);
+    public DispatcherServlet dispatcherServlet(Environment environment) {
+        GrailsDispatcherServlet dispatcherServlet = new GrailsDispatcherServlet();
+        // Without a servlet filter doing the rewrite, the override is resolved here instead: after multipart
+        // handling and after the filter chain, rather than ahead of both.
+        dispatcherServlet.setResolveHiddenHttpMethod(!HiddenHttpMethod.isServletFilterMode(environment));
+        return dispatcherServlet;
     }
 
     @Bean
-    public DispatcherServlet dispatcherServlet() {
-        return new GrailsDispatcherServlet();
-    }
-
-    @Bean
-    public DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, MultipartConfigElement multipartConfigElement) {
+    public DispatcherServletRegistrationBean dispatcherServletRegistration(GrailsApplication application, DispatcherServlet dispatcherServlet, ObjectProvider<MultipartConfigElement> multipartConfigElement) {
         if (grailsServletPath == null) {
             boolean isTomcat = ClassUtils.isPresent("org.apache.catalina.startup.Tomcat", application.getClassLoader());
             grailsServletPath = isTomcat ? Settings.DEFAULT_TOMCAT_SERVLET_PATH : Settings.DEFAULT_WEB_SERVLET_PATH;
@@ -158,7 +127,7 @@ public class ControllersAutoConfiguration {
         DispatcherServletRegistrationBean dispatcherServletRegistration = new DispatcherServletRegistrationBean(dispatcherServlet, grailsServletPath);
         dispatcherServletRegistration.setLoadOnStartup(2);
         dispatcherServletRegistration.setAsyncSupported(true);
-        dispatcherServletRegistration.setMultipartConfig(multipartConfigElement);
+        multipartConfigElement.ifAvailable(dispatcherServletRegistration::setMultipartConfig);
         return dispatcherServletRegistration;
     }
 

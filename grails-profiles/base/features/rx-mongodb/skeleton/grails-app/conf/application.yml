@@ -1,7 +1,0 @@
-grails:
-    mongodb:
-        host: localhost
-        port: 27017
-        username: ""
-        password: ""
-        databaseName: "@grails.app.name@"

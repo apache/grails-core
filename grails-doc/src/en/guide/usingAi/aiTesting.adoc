@@ -1,0 +1,77 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Tests should not call a model: answers vary, calls cost money and need credentials, and a test that fails because a provider was slow helps no one. The `grails-testing-support-ai` module gives tests a scripted chat model and a deterministic embedding model instead.
+
+==== Unit Tests
+
+A specification that implements `grails.testing.ai.AiUnitTest` gets a `chatModel`, an `embeddingModel`, a `chatClientBuilder` over the scripted model and, when Spring AI's vector store module is on the classpath, an in-memory `vectorStore` in its application context. A service under test gets them by injection, as it would get the real ones. Script the answers and assert on the prompts:
+
+[source,groovy]
+----
+import grails.testing.ai.AiUnitTest
+import grails.testing.services.ServiceUnitTest
+import spock.lang.Specification
+
+class AnswerServiceSpec extends Specification implements ServiceUnitTest<AnswerService>, AiUnitTest {
+
+    void 'answers with the model'() {
+        given:
+        respondWith('42')
+
+        expect:
+        service.answer('What is six times seven?') == '42'
+        prompts.last().userMessage.text == 'What is six times seven?'
+    }
+}
+----
+
+Scripted answers are consumed in order; an answer may also be a closure that receives the `Prompt` and returns the text. When no answer is left, the model echoes the user's message, so a test that does not care about the answer needs no script; set `chatModel.strict = true`, in the feature method or in `setup()`, for a test that must fail instead when the script runs out; it is turned off again with the script before every feature method. A streamed call answers one word at a time, so code that assembles a stream is exercised as it would be against a real model. The script, the recorded prompts and the contents of the vector store are cleared before every feature method.
+
+The stubs are registered before the specification's `setupSpec`, once the beans of its `doWithSpring()` and `beanRegistrar()` exist, and each only when the context holds no bean of its type, so a chat model, embedding model, chat client builder or vector store the specification defines is used instead. The chat model then has to be a `ScriptedChatModel` for `chatModel` and `respondWith` to find it. The stub embedding model honours `grails.ai.stub.embeddingDimensions` set through `doWithConfig`.
+
+==== Integration and Functional Tests
+
+While `grails-testing-support-ai` is on the test classpath and the application runs in the test environment, every `spring.ai.model.*` selection property and `spring.ai.vectorstore.type` default to `none`, so no provider auto-configures a chat, embedding, image, audio or moderation model and no vector store starter needs a database, and the scripted chat model, the stub embedding model and an in-memory vector store stand in for the chat model, the embedding model and the store. The test environment then needs neither an API key nor a database. A provider or store the application names in its configuration is kept, and the stub for that kind of model backs off. A chat model, embedding model or vector store the application defines itself, in `resources.groovy`, `doWithSpring` or its `beanRegistrar`, is the one injected: the stubs are fallback beans, which Spring passes over whenever another candidate exists. The `org.apache.grails.testing.ai.ScriptedChatModel` bean can be injected into a test and scripted the same way; the in-memory store is a `ResettableSimpleVectorStore`, whose `clear()` empties it between tests that share a context.
+
+Outside the test environment the stubs stay off, and a warning says the module was found, so a production application never has its model replaced; `grails.ai.stub.enabled: true` turns them on there deliberately. To run tests against the real provider instead, disable the stubs for the test environment and configure the provider as usual:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+environments:
+    test:
+        grails:
+            ai:
+                stub:
+                    enabled: false
+----
+
+[cols="3,1,4"]
+|===
+| Property | Default | Description
+
+| `grails.ai.stub.enabled`
+| `true` in the test environment, `false` elsewhere
+| Whether the stubs stand in for the configured provider's models while the module is on the classpath.
+
+| `grails.ai.stub.embeddingDimensions`
+| `64`
+| The number of dimensions of the vectors the stub embedding model produces.
+|===

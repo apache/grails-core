@@ -18,9 +18,9 @@
  */
 package org.grails.web.mapping
 
-import grails.build.logging.GrailsConsole
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
+import grails.util.GrailsWebMockUtil
 import grails.web.CamelCaseUrlConverter
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingsHolder
@@ -29,6 +29,7 @@ import org.grails.web.mapping.DefaultLinkGenerator
 import org.grails.web.mapping.DefaultUrlMappingEvaluator
 import org.grails.web.mapping.DefaultUrlMappingsHolder
 import org.grails.web.util.WebUtils
+import org.springframework.http.HttpMethod
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import spock.lang.IgnoreIf
@@ -56,6 +57,68 @@ class UrlMappingsWithHttpMethodSpec extends Specification{
          "/bar"( controller:"bar", action:"list", method:"*" )
          "/bar2"( controller:"bar", action:"list" )
 
+    }
+
+    void 'the query prefix maps a URL to the QUERY method of RFC 10008 alone'() {
+        given:
+        def holder = urlMappingsHolder {
+            query "/books/search"(controller: 'book', action: 'search')
+            query "/books/find"(controller: 'book') {
+                action = 'find'
+            }
+        }
+
+        expect:
+        holder.matchAll('/books/search', 'QUERY').size() == 1
+        holder.matchAll('/books/search', 'QUERY')[0].actionName == 'search'
+        holder.matchAll('/books/find', 'QUERY')[0].actionName == 'find'
+        !holder.matchAll('/books/search', 'POST')
+        !holder.matchAll('/books/search', 'GET')
+    }
+
+    void 'the method argument maps a URL to the QUERY method of RFC 10008, in any case'() {
+        given:
+        def holder = urlMappingsHolder {
+            "/books/search"(controller: 'book', action: 'search', method: 'QUERY')
+        }
+
+        expect:
+        holder.matchAll('/books/search', 'QUERY')[0].actionName == 'search'
+        holder.matchAll('/books/search', 'query')[0].actionName == 'search'
+        !holder.matchAll('/books/search', 'GET')
+    }
+
+    void 'a mapping for any method matches the QUERY method, and offers it among the methods of its URL'() {
+        given:
+        def holder = urlMappingsHolder {
+            "/books/any"(controller: 'book', action: 'any')
+            query "/books/search"(controller: 'book', action: 'search')
+        }
+
+        expect:
+        holder.matchAll('/books/any', 'QUERY')[0].actionName == 'any'
+        holder.allowedMethods('/books/any').contains(HttpMethod.QUERY)
+        holder.allowedMethods('/books/search') == [HttpMethod.QUERY] as Set
+    }
+
+    void 'a link to a QUERY mapping is generated with the method it is mapped to'() {
+        given:
+        def holder = urlMappingsHolder {
+            query "/books/search"(controller: 'book', action: 'search')
+            "/$controller/$action?"()
+        }
+        def linkGenerator = new DefaultLinkGenerator('http://localhost', '')
+        linkGenerator.urlMappingsHolder = holder
+
+        expect:
+        linkGenerator.link(controller: 'book', action: 'search', method: 'QUERY') == '/books/search'
+        linkGenerator.link(controller: 'book', action: 'search') == '/book/search'
+    }
+
+    private static UrlMappingsHolder urlMappingsHolder(Closure mappings) {
+        def ctx = new MockApplicationContext()
+        ctx.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(ctx).evaluateMappings(mappings))
     }
 
     void "Test that the http method can be used as a prefix to URL mappings"() {
@@ -104,6 +167,51 @@ class UrlMappingsWithHttpMethodSpec extends Specification{
             linkGenerator.link( controller:"bar", action:"patch", method:"PATCH" ) == 'http://localhost/foo'
             linkGenerator.link( controller:"bar", action:"list") == 'http://localhost/bar'
 
+    }
+
+    void "an explicit mapping wins over the wildcard when a method-specific mapping for the action needs other parameters"() {
+        given: 'an explicit mapping for any method, and a GET mapping for the same action that needs a slug'
+        def generator = linkGeneratorFor {
+            "/$controller/$action?/$id?"()
+            "/book-list/$page"(controller: 'book', action: 'list')
+            get "/books/featured/$slug"(controller: 'book', action: 'list')
+        }
+
+        expect: 'a GET link without a slug uses the explicit mapping rather than the wildcard'
+        generator.link(controller: 'book', action: 'list', method: 'GET', params: [page: 2]) == 'http://localhost/book-list/2'
+
+        and: 'as a link naming no method does'
+        generator.link(controller: 'book', action: 'list', params: [page: 2]) == 'http://localhost/book-list/2'
+
+        and: 'a GET link with a slug uses the more specific GET mapping'
+        generator.link(controller: 'book', action: 'list', method: 'GET', params: [slug: 'x']) == 'http://localhost/books/featured/x'
+    }
+
+    void "a cached link naming no method uses the mapping for the method of the request it is generated in"() {
+        given: 'a caching link generator over mappings for one action under POST and under PUT'
+        def generator = new CachingLinkGenerator('http://localhost', null)
+        generator.grailsUrlConverter = new CamelCaseUrlConverter()
+        generator.urlMappingsHolder = urlMappingsHolder
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+
+        when: 'the same link is generated during a POST request and then during a PUT request'
+        webRequest.currentRequest.method = 'POST'
+        def duringPost = generator.link(controller: 'bar', action: 'save')
+        webRequest.currentRequest.method = 'PUT'
+        def duringPut = generator.link(controller: 'bar', action: 'save')
+
+        then: 'each uses the mapping for its own method rather than the URL cached for the first'
+        duringPost == '/foo'
+        duringPut == '/foo2'
+    }
+
+    private LinkGenerator linkGeneratorFor(Closure urlMappings) {
+        def ctx = new MockApplicationContext()
+        ctx.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        def generator = new DefaultLinkGenerator('http://localhost', null)
+        generator.grailsUrlConverter = new CamelCaseUrlConverter()
+        generator.urlMappingsHolder = new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(ctx).evaluateMappings(urlMappings))
+        generator
     }
 
     LinkGenerator getLinkGenerator() {

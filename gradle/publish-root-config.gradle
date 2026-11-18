@@ -27,6 +27,7 @@ def publishedProjects = [
         'grails-async',
         'grails-async-core',
         'grails-async-gpars',
+        'grails-async-groovy-concurrent',
         'grails-async-rxjava',
         'grails-async-rxjava2',
         'grails-async-rxjava3',
@@ -34,6 +35,8 @@ def publishedProjects = [
         'grails-bom',
         'grails-hibernate5-bom',
         'grails-hibernate7-bom',
+        'grails-beans-dsl',
+        'grails-neo4j-bom',
         'grails-bootstrap',
         'grails-cache',
         'grails-codecs',
@@ -43,6 +46,7 @@ def publishedProjects = [
         'grails-controllers',
         'grails-converters',
         'grails-core',
+        'grails-core-cli-legacy',
         'grails-databinding',
         'grails-databinding-core',
         'grails-datasource',
@@ -55,6 +59,7 @@ def publishedProjects = [
         'grails-events-compat',
         'grails-events-core',
         'grails-events-gpars',
+        'grails-events-groovy-concurrent',
         'grails-events-rxjava',
         'grails-events-rxjava2',
         'grails-events-rxjava3',
@@ -71,6 +76,8 @@ def publishedProjects = [
         'grails-logging',
         'grails-mail',
         'grails-mimetypes',
+        'grails-openapi',
+        'grails-quartz',
         'grails-redis',
         'grails-rest-transforms',
         'grails-scaffolding',
@@ -78,6 +85,7 @@ def publishedProjects = [
         'grails-shell-cli',
         'grails-sitemesh3',
         'grails-spring',
+        'grails-spring-ai',
         'grails-spring-security-acl',
         'grails-spring-security-cas',
         'grails-spring-security',
@@ -89,23 +97,27 @@ def publishedProjects = [
         'grails-spring-security-rest-grailscache',
         'grails-spring-security-rest-memcached',
         'grails-spring-security-rest-redis',
-        'grails-spring-security-rest-testapp-profile',
         'grails-spring-security-ui',
         'grails-taglib',
         'grails-test-core',
+        'grails-testing-support-ai',
         'grails-testing-support-core',
         'grails-testing-support-dbcleanup-core',
         'grails-testing-support-dbcleanup-h2',
         'grails-testing-support-dbcleanup-postgresql',
         'grails-testing-support-http-client',
+        'grails-testing-support-latency',
         'grails-testing-support-mongodb',
         'grails-testing-support-views-gson',
         'grails-testing-support-web',
+        'grails-undertow',
+        'grails-undertow-spring-boot',
         'grails-url-mappings',
         'grails-validation',
         'grails-views-core',
         'grails-views-gson',
         'grails-views-markup',
+        'grails-startup-progress',
         'grails-web-boot',
         'grails-web-common',
         'grails-web-core',
@@ -116,13 +128,14 @@ def publishedProjects = [
         'grails-web-mvc',
         'grails-web-taglib',
         'grails-web-url-mappings',
+        'grails-xml',
         // datastore
         'grails-datamapping-async',
         'grails-datamapping-core',
         'grails-datamapping-core-test',
         'grails-datastore-async',
         'grails-datastore-core',
-        //'grails-datamapping-rx',
+        'grails-datamapping-rx',
         'grails-datamapping-support',
         'grails-datamapping-tck',
         'grails-datamapping-validation',
@@ -147,6 +160,7 @@ def publishedProjects = [
         'grails-data-mongodb',
         'grails-data-mongodb-bson',
         'grails-data-mongodb-core',
+        'grails-data-mongodb-embedded',
         'grails-data-mongodb-ext',
         'grails-data-mongodb-gson-templates',
         'grails-data-mongodb-spring-boot',
@@ -154,6 +168,10 @@ def publishedProjects = [
         // graphql
         'grails-data-graphql',
         'grails-data-graphql-core',
+        // neo4j
+        'grails-data-neo4j',
+        'grails-data-neo4j-core',
+        'grails-data-neo4j-spring-boot',
         // wrapper
         'grails-wrapper',
         // profiles
@@ -166,18 +184,8 @@ def publishedProjects = [
         'grails-profiles-web-plugin',
 ]
 
-def skipMicronautProjects = providers.gradleProperty('skipMicronautProjects').isPresent()
-if (!skipMicronautProjects) {
-    publishedProjects.addAll([
-            'grails-hibernate5-micronaut-bom',
-            'grails-hibernate7-micronaut-bom',
-            'grails-micronaut',
-            'grails-micronaut-bom',
-    ])
-}
-
 subprojects {
-    if (name in publishedProjects) {
+    if (name in publishedProjects || name in skillProjects) {
         // This has to be applied here in the root project due to the nexus plugin requirements
         if (name.startsWith('grails-profiles')) {
             apply plugin: 'org.apache.grails.gradle.grails-publish-profile'
@@ -207,11 +215,11 @@ tasks.register('aggregateChecksums').configure {
 
     outputs.upToDateWhen { false } // not worth caching
 
+    List<File> checksumDirs = subprojects.collect { it.layout.buildDirectory.dir('checksums').get().asFile }
     doLast {
         def outputFile = outputFileProvider.get().asFile
         outputFile.withPrintWriter { writer ->
-            subprojects.each { sub ->
-                def checksumDir = sub.layout.buildDirectory.dir('checksums').get().asFile
+            checksumDirs.each { checksumDir ->
                 if (checksumDir.exists()) {
                     checksumDir.eachFileMatch(~/.*\.sha512/) {
                         def jarName = it.name - '.sha512'
@@ -238,12 +246,12 @@ aggregatePublishedArtifacts.configure {
 
     dependsOn(subprojects.findResults { it.tasks.names.contains('savePublishedArtifacts') ? "${it.path}:savePublishedArtifacts" : null })
 
+    List<File> artifactsDirs = subprojects.collect { it.layout.buildDirectory.dir('artifacts').get().asFile }
     doLast {
         def outputFile = outputFileProvider.get().asFile
         outputFile.text = '' // clear previous
         outputFile.withPrintWriter { writer ->
-            subprojects.each { sub ->
-                def artifactsDir = sub.layout.buildDirectory.dir('artifacts').get().asFile
+            artifactsDirs.each { artifactsDir ->
                 if (artifactsDir.exists()) {
                     artifactsDir.eachFileMatch(~/.*\.txt/) {
                         def artifactName = it.name - '.txt'

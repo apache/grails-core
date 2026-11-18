@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-URL mappings can also be configured to map based on the HTTP method (GET, POST, PUT or DELETE). This is very useful for RESTful APIs and for restricting mappings based on HTTP method.
+URL mappings can also be configured to map based on the HTTP method, such as GET, POST, PUT, DELETE or QUERY. This is very useful for RESTful APIs and for restricting mappings based on HTTP method.
 
 As an example the following mappings provide a RESTful API URL mappings for the `ProductController`:
 
@@ -29,3 +29,35 @@ static mappings = {
 ----
 
 Note that if you specify a HTTP method other than GET in your URL mapping, you also have to specify it when creating the corresponding link by passing the `method` argument to `g:link` or `g:createLink` to get a link of the desired format.
+
+The `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008] is a safe, idempotent request with a body, for a search whose criteria do not fit in a URL. Map it with `method: 'QUERY'` or with the `query` prefix, and restrict an action to it with `allowedMethods`:
+
+[source,groovy]
+.grails-app/controllers/UrlMappings.groovy
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+[source,groovy]
+.grails-app/controllers/com/demo/BookController.groovy
+----
+class BookController {
+
+    static allowedMethods = [search: 'QUERY']
+
+    def search(BookSearch criteria) {
+        respond Book.findAllByTitleLike("%${criteria.title}%")
+    }
+}
+----
+
+A JSON body is bound to the command object the action takes, and a form-encoded body is also available in `params`, through the same `FormContentFilter` that parses `PUT`, `PATCH` and `DELETE` bodies. As for `GET`, a domain class the action takes is looked up by its identifier but not bound to the body, because a `QUERY` does not change anything.
+
+Other things to know about `QUERY`:
+
+* A browser cannot send it from an HTML form. Call it from JavaScript or another HTTP client.
+* For a native image, `traceNativeMetadata` reaches it through `requests`, as the <<deploymentAot,ahead-of-time guide>> describes.
+* `grails-openapi` leaves these mappings out of the document it generates, and logs each one, because the OpenAPI versions it writes have no operation for the method.
+* The Spring Security plugin accepts `QUERY` requests. An application that configures Spring Security with its own configuration DSL instead gets a `StrictHttpFirewall`, which rejects the method until it is added with `setAllowedHttpMethods`, and whichever one it uses, `CsrfFilter` asks a `QUERY` for a token where CSRF protection is on.

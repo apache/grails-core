@@ -30,11 +30,11 @@ import org.grails.datastore.mapping.reflect.AstUtils
 /**
  * Utility methods for AST handling in RxGORM
  *
- * @author Graeme Rocher
  * @since 6.1
  */
 @CompileStatic
 class RxAstUtils extends AstUtils {
+
     /**
      * The rx entity class node
      */
@@ -48,7 +48,7 @@ class RxAstUtils extends AstUtils {
      * @return True if is an {@link RxEntity}
      */
     static boolean isRxEntity(ClassNode classNode) {
-        isSubclassOf(classNode, RX_ENTITY.name)
+        isSubclassOfOrImplementsInterface(classNode, RX_ENTITY.name)
     }
     /**
      * Return if the given class is an Observable of domain class
@@ -57,9 +57,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOfDomainClass(ClassNode cls) {
-        if(isObservable(cls)) {
+        if (isObservable(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isDomainClass(type)
             }
@@ -74,9 +74,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isSingleOfDomainClass(ClassNode cls) {
-        if(isSingle(cls)) {
+        if (isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isDomainClass(type)
             }
@@ -91,9 +91,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOf(ClassNode cls, ClassNode parent) {
-        if(isObservable(cls) || isSingle(cls)) {
+        if (isObservable(cls) || isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent)
             }
@@ -107,9 +107,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isSingleOf(ClassNode cls, Class parent) {
-        if(isSingle(cls)) {
+        if (isSingle(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent.name)
             }
@@ -123,9 +123,9 @@ class RxAstUtils extends AstUtils {
      * @return True if it is
      */
     static boolean isObservableOf(ClassNode cls, Class parent) {
-        if(isObservable(cls)) {
+        if (isObservable(cls)) {
             GenericsType[] genericsTypes = cls.genericsTypes
-            if(genericsTypes != null && genericsTypes.length == 1) {
+            if (genericsTypes != null && genericsTypes.length == 1) {
                 ClassNode type = genericsTypes[0].type
                 return type != null && isSubclassOfOrImplementsInterface(type, parent.name)
             }
@@ -133,22 +133,22 @@ class RxAstUtils extends AstUtils {
         return false
     }
     /**
-     * Is the given class a {@link rx.Single}
+     * Is the given class a {@link io.reactivex.rxjava3.core.Single}
      *
      * @param cls The class
      * @return True if it is
      */
     static boolean isSingle(ClassNode cls) {
-        isSubclassOf(cls, "rx.Single")
+        isSubclassOf(cls, 'io.reactivex.rxjava3.core.Single')
     }
 
     /**
-     * Is the given class an {@link rx.Observable}
+     * Is the given class an {@link io.reactivex.rxjava3.core.Observable}
      *
      * @param cls The class
      * @return True if it is
      */
     static boolean isObservable(ClassNode cls) {
-        return isSubclassOf(cls, "rx.Observable")
+        return isSubclassOf(cls, 'io.reactivex.rxjava3.core.Observable')
     }
 }

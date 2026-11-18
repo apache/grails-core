@@ -47,7 +47,35 @@ ext {
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
     doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
-    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 3 : Runtime.runtime.availableProcessors() * 3/4 as int ?: 1)
+    // Half the LOGICAL processors, not 3/4. This separate Gradle build mirrors the root
+    // build.gradle - see it for the full rationale. CI keeps its existing budget.
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?:
+            (isCiBuild ? 3 : Math.max(1, (Runtime.runtime.availableProcessors() / 2) as int))
+}
+
+/** Caps each test fork's view of the machine. See the root build.gradle for the rationale. */
+final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentProvider {
+
+    @Input
+    final int processorCount
+
+    ActiveProcessorCountArgumentProvider(int availableProcessorCount, int maxWorkerCount) {
+        // Floor of 2 keeps G1. -PmaxTestParallel=1 still sees 2 processors when
+        // maxWorkerCount is the usual unrestricted local worker pool.
+        this.processorCount = Math.max(2, (availableProcessorCount / Math.max(1, maxWorkerCount)) as int)
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-XX:ActiveProcessorCount=$processorCount".toString()]
+    }
+}
+
+subprojects {
+    tasks.withType(Test).configureEach { testTask ->
+        testTask.jvmArgumentProviders.add(new ActiveProcessorCountArgumentProvider(
+                Runtime.runtime.availableProcessors(), gradle.startParameter.maxWorkerCount))
+    }
 }
 
 apply {

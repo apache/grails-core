@@ -24,11 +24,14 @@ import groovy.transform.CompileStatic
 
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationRegistry
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
 import org.springframework.web.servlet.HandlerAdapter
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.InternalResourceView
@@ -59,6 +62,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
     protected ObservationRegistry observationRegistry = ObservationRegistry.NOOP
+    protected ActionReturnValues actionReturnValues
 
     void setApplicationContext(ApplicationContext applicationContext) {
         this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
@@ -66,6 +70,7 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
         this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry)
                 .getIfAvailable({ -> ObservationRegistry.NOOP })
+        this.actionReturnValues = new ActionReturnValues(applicationContext)
     }
 
     @Override
@@ -78,11 +83,31 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
 
-        boolean isAsyncRequest = WebUtils.isAsync(request) && !WebUtils.isError(request)
+        // the dispatch that returns the result of asynchronous processing, not a forward or include made during it,
+        // which carries the same request attributes
+        boolean isAsyncRequest = request.dispatcherType == DispatcherType.ASYNC && !WebUtils.isError(request)
         if (isAsyncRequest) {
             Object modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
-            if (modelAndView instanceof ModelAndView) {
-                return (ModelAndView) modelAndView
+            if (modelAndView instanceof ModelAndView resolvedModelAndView) {
+                return resolvedModelAndView
+            }
+            WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
+            if (asyncManager.hasConcurrentResult()) {
+                Object asyncResult = asyncManager.concurrentResult
+                asyncManager.clearConcurrentResult()
+                if (asyncResult instanceof Exception exception) {
+                    throw exception
+                }
+                if (asyncResult instanceof Throwable failure) {
+                    throw new IllegalStateException('Asynchronous controller action failed', failure)
+                }
+                if (asyncResult instanceof ModelAndView resolvedModelAndView) {
+                    return resolvedModelAndView
+                }
+                if (asyncResult != null && actionReturnValues != null && ActionReturnValues.isAsync(request)) {
+                    // the value a CompletableFuture or a DeferredResult an action returned completed with
+                    return actionReturnValues.writeAsync(asyncResult, request, response)
+                }
             }
         }
         else {
@@ -146,8 +171,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
 
                 def modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
+                String methodName = controllerClass.actionUriToViewName(action)
                 if (modelAndView instanceof ModelAndView) {
                     return (ModelAndView) modelAndView
+                }
+                else if (actionReturnValues?.isBody(result, controller, methodName, webRequest)) {
+                    // a ResponseEntity, a ProblemDetail or the value of an action annotated @ResponseBody, which
+                    // Spring MVC writes as the response
+                    return actionReturnValues.write(result, controller, methodName, request, response)
                 }
                 else if (result instanceof Map) {
                     String viewName = controllerClass.actionUriToViewName(action)

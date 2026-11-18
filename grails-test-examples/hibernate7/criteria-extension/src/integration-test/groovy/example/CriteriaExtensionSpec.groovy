@@ -244,4 +244,40 @@ class CriteriaExtensionSpec extends Specification {
         results.size() == 2
         results*.name.sort() == ['Doohickey', 'Gadget']
     }
+
+    void "orderByPriceDistance lists the products nearest to the target price first"() {
+        given:
+        createProducts()
+
+        when: 'prices 9.99, 49.99 and 4.99 are measured from 10'
+        List<Product> results = new DetachedCriteria(Product).build {
+            orderByPriceDistance 10.00
+        }.list()
+
+        then:
+        results*.name == ['Widget', 'Doohickey', 'Gadget']
+    }
+
+    void "orderByPriceDistance keeps its place among the orders of the query"() {
+        given:
+        createProducts()
+        new Product(name: 'Gizmo', price: 10.01).save(flush: true)
+
+        when: 'Widget and Gizmo are both 0.01 from the target, and the name breaks the tie'
+        List<Product> results = new DetachedCriteria(Product).build {
+            orderByPriceDistance 10.00
+            order 'name', 'desc'
+        }.list()
+
+        then:
+        results*.name == ['Widget', 'Gizmo', 'Doohickey', 'Gadget']
+    }
+
+    void "ProductSearchService.findNearestPrice orders through the order handler"() {
+        given:
+        createProducts()
+
+        expect:
+        productSearchService.findNearestPrice(50.00)*.name == ['Gadget', 'Widget', 'Doohickey']
+    }
 }

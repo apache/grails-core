@@ -31,7 +31,10 @@ import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBin
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.SimpleValueColumnBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.util.SimpleValueColumnFetcher;
+
+import static org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder.EMPTY_PATH;
 
 /** Binds the element value for a basic (scalar or enum) collection. */
 public class BasicCollectionElementBinder {
@@ -61,10 +64,10 @@ public class BasicCollectionElementBinder {
 
     /** Creates and binds a {@link BasicValue} element for the given basic collection property. */
     public BasicValue bind(@Nonnull HibernateBasicProperty property) {
-        String columnName = property.joinTableColumName(namingStrategy);
-        if (property.isEnum()) {
-            return enumTypeBinder.bindEnumTypeForColumn(property);
+        if (property instanceof HibernateEnumProperty hibernateEnumProperty) {
+            return enumTypeBinder.bindEnumType(hibernateEnumProperty, EMPTY_PATH);
         } else {
+            String columnName = property.joinTableColumName(namingStrategy);
             final Class<?> referencedType = property.getComponentType();
             String typeName = property.getTypeName(referencedType);
             Collection collection = property.getCollection();

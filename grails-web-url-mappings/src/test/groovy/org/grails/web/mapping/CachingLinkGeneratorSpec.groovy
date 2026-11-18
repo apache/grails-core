@@ -19,7 +19,11 @@
 
 package org.grails.web.mapping
 
+import grails.core.DefaultGrailsApplication
+import grails.core.GrailsApplication
 import grails.util.GrailsWebMockUtil
+import grails.web.CamelCaseUrlConverter
+import org.grails.support.MockApplicationContext
 import org.grails.web.mapping.CachingLinkGenerator
 import org.grails.web.servlet.mvc.DefaultRequestStateLookupStrategy
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -54,16 +58,16 @@ class CachingLinkGeneratorSpec extends Specification {
 
         when: "its in the request"
         request.setControllerName("foo")
-        key = linkGenerator.makeKey([action: "bar"])
+        key = linkGenerator.linkKey([action: "bar"])
 
-        then: "its in the key"
-        key == "link[controller:foo, action:bar]"
+        then: "the controller the link resolves to is in the key"
+        key == "link[action:bar]target[controller:foo, namespace:null, action:bar, method:*]"
 
         when: "its in the params"
-        key = linkGenerator.makeKey([controller: "foo", action: "bar"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar"])
 
         then: "its in the key"
-        key == "link[controller:foo, action:bar]"
+        key == "link[controller:foo, action:bar]target[controller:foo, namespace:null, action:bar, method:*]"
     }
 
     void "test namespace"() {
@@ -71,39 +75,39 @@ class CachingLinkGeneratorSpec extends Specification {
         String key
 
         when: "not in the request or params"
-        key = linkGenerator.makeKey([controller: "foo", action: "bar"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar"])
 
-        then: "its not in the key"
-        key == "link[controller:foo, action:bar]"
+        then: "no namespace is resolved"
+        key == "link[controller:foo, action:bar]target[controller:foo, namespace:null, action:bar, method:*]"
 
         when: "its in the params"
-        key = linkGenerator.makeKey([controller: "foo", action: "bar", namespace: "foo"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar", namespace: "foo"])
 
         then: "its in the key"
-        key == "link[controller:foo, action:bar, namespace:foo]"
+        key == "link[controller:foo, action:bar, namespace:foo]target[controller:foo, namespace:foo, action:bar, method:*]"
 
-        when: "its in the request but the controller doesn't match"
+        when: "its in the request and the target is a controller the application does not define"
         request.setControllerNamespace("fooReq")
         request.setControllerName("x")
-        key = linkGenerator.makeKey([controller: "foo", action: "bar"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar"])
 
-        then: "its not in the key"
-        key == "link[controller:foo, action:bar]"
+        then: "the request namespace is resolved"
+        key == "link[controller:foo, action:bar]target[controller:foo, namespace:fooReq, action:bar, method:*]"
 
         when: "its in the request and the controller matches"
         request.setControllerNamespace("fooReq")
         request.setControllerName("foo")
-        key = linkGenerator.makeKey([controller: "foo", action: "bar"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar"])
 
-        then: "its in the key"
-        key == "link[controller:foo, action:bar, namespace:fooReq]"
+        then: "the resolved namespace is in the key"
+        key == "link[controller:foo, action:bar]target[controller:foo, namespace:fooReq, action:bar, method:*]"
 
         when: "its in the request and the params"
         request.setControllerNamespace("fooReq")
-        key = linkGenerator.makeKey([controller: "foo", action: "bar", namespace: "fooParam"])
+        key = linkGenerator.linkKey([controller: "foo", action: "bar", namespace: "fooParam"])
 
         then: "params wins"
-        key == "link[controller:foo, action:bar, namespace:fooParam]"
+        key == "link[controller:foo, action:bar, namespace:fooParam]target[controller:foo, namespace:fooParam, action:bar, method:*]"
     }
 
     void "test resource with action"() {
@@ -113,20 +117,70 @@ class CachingLinkGeneratorSpec extends Specification {
         when: "the args are a resource and action"
         request.setControllerNamespace("fooReq")
         request.setControllerName("foo")
-        key = linkGenerator.makeKey([resource: new Resource(id: 1), action: "bar"])
+        key = linkGenerator.linkKey([resource: new Resource(id: 1), action: "bar"])
 
-        then: "controller and namespace aren't in the key"
-        key == "link[resource:org.grails.web.mapping.CachingLinkGeneratorSpec\$Resource->1, action:bar]"
+        then: "the key holds the controller the resource resolves to, never the one handling the request"
+        key == "link[resource:org.grails.web.mapping.CachingLinkGeneratorSpec\$Resource->1, action:bar]target[controller:widget, namespace:fooReq, action:bar, method:GET]"
     }
 
+
+    void "a link is cached separately for each encoding it is generated in"() {
+        given: 'a caching link generator over a real URL mapping'
+        def ctx = new MockApplicationContext()
+        ctx.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        def generator = new CachingLinkGenerator('http://localhost', '')
+        generator.grailsUrlConverter = new CamelCaseUrlConverter()
+        generator.urlMappingsHolder = new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(ctx).evaluateMappings {
+            "/$controller/$action?/$id?"()
+        })
+        def attrs = [controller: 'book', action: 'list', params: [q: '\u00e9']]
+
+        expect: 'the same link generated in two encodings encodes its parameters in each'
+        generator.link(attrs, 'UTF-8') == '/book/list?q=%C3%A9'
+        generator.link(attrs, 'ISO-8859-1') == '/book/list?q=%E9'
+    }
+
+    void "a cached link is keyed on what it resolves to when a subclass overrides makeKey"() {
+        given: 'a generator whose makeKey renders only the attributes, as the asset pipeline plugin overrides it'
+        def ctx = new MockApplicationContext()
+        ctx.registerMockBean(GrailsApplication.APPLICATION_ID, new DefaultGrailsApplication())
+        def generator = new AttributesOnlyKeyLinkGenerator('http://localhost', '')
+        generator.grailsUrlConverter = new CamelCaseUrlConverter()
+        generator.urlMappingsHolder = new DefaultUrlMappingsHolder(new DefaultUrlMappingEvaluator(ctx).evaluateMappings {
+            "/$controller/$action?/$id?"()
+        })
+
+        when: 'the same action-only link is generated while two controllers handle the request'
+        request.setControllerName('author')
+        def fromAuthor = generator.link(action: 'create')
+        request.setControllerName('book')
+        def fromBook = generator.link(action: 'create')
+
+        then: 'each targets the controller handling its request, not the one cached first'
+        fromAuthor == '/author/create'
+        fromBook == '/book/create'
+    }
 
     class MyCachingLinkGenerator extends CachingLinkGenerator {
         public MyCachingLinkGenerator(String serverBaseURL) {
             super(serverBaseURL)
         }
+    }
 
-        String makeKey(Map attrs) {
-            super.makeKey(LINK_PREFIX, attrs)
+    /**
+     * Renders a key from the attributes alone, without calling the superclass, as the asset pipeline
+     * plugin's {@code AssetSupportingCachingLinkGenerator} overrides {@code makeKey}.
+     */
+    static class AttributesOnlyKeyLinkGenerator extends CachingLinkGenerator {
+        AttributesOnlyKeyLinkGenerator(String serverBaseURL, String contextPath) {
+            super(serverBaseURL, contextPath)
+        }
+
+        @Override
+        protected String makeKey(String prefix, Map attrs) {
+            StringBuilder sb = new StringBuilder(prefix)
+            appendMapKey(sb, attrs)
+            sb.toString()
         }
     }
 
@@ -135,6 +189,10 @@ class CachingLinkGeneratorSpec extends Specification {
 
         Long ident() {
             id
+        }
+
+        String toString() {
+            'widget'
         }
     }
 }

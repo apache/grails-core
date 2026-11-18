@@ -18,7 +18,6 @@
  */
 package grails.plugin.formfields.taglib
 
-import grails.converters.XML
 import grails.plugin.formfields.FormFieldsTagLib
 import grails.plugin.formfields.FormFieldsTemplateService
 import grails.plugin.formfields.mock.Author
@@ -26,6 +25,7 @@ import grails.plugin.formfields.mock.Book
 import grails.plugin.formfields.mock.Person
 import grails.plugin.formfields.mock.Product
 import grails.testing.web.taglib.TagLibUnitTest
+import groovy.xml.XmlSlurper
 import spock.lang.Issue
 
 @Issue('https://github.com/grails/fields/issues/45')
@@ -56,10 +56,32 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 			result.contains '<div class="property-value" aria-labelledby="gender-label">Male</div>'
 	}
 
+    void 'display tag skips the properties excluded by a list in application.yml with environment #variables'() {
+        given:
+        List<String> defaultExclusions = tagLib.exclusionsDisplay
+        tagLib.environment = applicationYml('grails.plugin.fields.exclusions.display: [version, "${EXAMPLE_EXCLUDED:gender}"]', variables)
+
+        when:
+        def result = applyTemplate('<f:display bean="personInstance" />', [personInstance: personInstance])
+
+        then:
+        tagLib.exclusionsDisplay == ['version', excluded]
+        !result.contains("${excluded}-label")
+        result.contains('name-label')
+
+        cleanup:
+        tagLib.exclusionsDisplay = defaultExclusions
+
+        where:
+        variables                   | excluded
+        [:]                         | 'gender'
+        [EXAMPLE_EXCLUDED: 'minor'] | 'minor'
+    }
+
 	void 'display tag allows to specify order'() {
 		when:"A list is rendered"
 		def result = applyTemplate('<f:display bean="personInstance" order="salutation,name,gender"/>', [personInstance: personInstance])
-		def ol = XML.parse(result)
+		def ol = new XmlSlurper().parseText(result)
 
 		then:
 		ol.li.span.collect {it.text().trim()} == ["Salutation", "Name", "Gender"]
@@ -69,7 +91,7 @@ class DisplayTagSpec extends AbstractFormFieldsTagLibSpec implements TagLibUnitT
 	void "display tag allows to specify the except"() {
 		when:
 		def result = applyTemplate('<f:display bean="personInstance" except="salutation,grailsDeveloper,picture,anotherPicture,password,dateOfBirth,emails"/>', [personInstance: personInstance])
-		def ol = XML.parse(result)
+		def ol = new XmlSlurper().parseText(result)
 
 		then:
 		ol.li.span.collect {it.text().trim()}.sort() == ["Address", "Biography", "Gender", "Minor", "Name"]

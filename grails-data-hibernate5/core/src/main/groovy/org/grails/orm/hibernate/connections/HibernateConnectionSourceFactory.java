@@ -41,6 +41,7 @@ import org.springframework.context.MessageSourceAware;
 import org.springframework.context.support.StaticMessageSource;
 import org.springframework.core.io.Resource;
 
+import org.apache.grails.data.hibernate5.core.querytail.QueryTailSessionFactoryObserver;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.gorm.jdbc.connections.SpringDataSourceConnectionSourceFactory;
 import org.grails.datastore.gorm.validation.jakarta.JakartaValidatorRegistry;
@@ -139,11 +140,14 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
             configuration.getProperties().put("jakarta.persistence.validation.factory", registry);
         }
 
-        if (applicationContext != null && applicationContext.containsBean(dataSourceConnectionSource.getName())) {
-            configuration.setApplicationContext(this.applicationContext);
-        }
-        else {
-            configuration.setDataSourceConnectionSource(dataSourceConnectionSource);
+        configuration.setDataSourceName(name);
+        // The connection source is the DataSource of record: the datastore's connection source
+        // and transaction manager use it, so Hibernate must open sessions against the same instance.
+        configuration.setDataSourceConnectionSource(dataSourceConnectionSource);
+        if (applicationContext != null) {
+            // Resolves resources and class loading through the context, whose loader is the one
+            // the application classes were loaded with, also under a DevTools restart.
+            configuration.setApplicationContext(applicationContext);
         }
 
         Resource[] configLocations = hibernateSettings.getConfigLocations();
@@ -264,6 +268,7 @@ public class HibernateConnectionSourceFactory extends AbstractHibernateConnectio
         configuration.setSessionFactoryBeanName(isDefault ? "sessionFactory" : "sessionFactory_" + name);
         Properties hibernateProperties = settings.toProperties();
         configuration.addProperties(hibernateProperties);
+        QueryTailSessionFactoryObserver.install(settings.getQueryTail(), configuration);
         return configuration;
     }
 

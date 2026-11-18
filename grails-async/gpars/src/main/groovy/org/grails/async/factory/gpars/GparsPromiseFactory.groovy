@@ -19,9 +19,11 @@
 package org.grails.async.factory.gpars
 
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 import groovy.transform.AutoFinal
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import groovyx.gpars.GParsConfig
 import groovyx.gpars.dataflow.Dataflow
@@ -34,9 +36,13 @@ import grails.async.factory.AbstractPromiseFactory
 /**
  * GPars implementation of the {@link grails.async.PromiseFactory} interface
  *
- * @author Graeme Rocher
  * @since 2.3
+ * @deprecated GPars is superseded by Groovy 6's {@code groovy.concurrent} toolkit. Replace the
+ * {@code grails-async-gpars} dependency with {@code grails-async-groovy-concurrent}, which provides
+ * {@code org.grails.async.factory.groovy.AwaitablePromiseFactory}.
  */
+@Deprecated(since = '9.0', forRemoval = true)
+@Slf4j
 @AutoFinal
 @CompileStatic
 class GparsPromiseFactory extends AbstractPromiseFactory {
@@ -48,9 +54,15 @@ class GparsPromiseFactory extends AbstractPromiseFactory {
     }
     static boolean isGparsAvailable() { GPARS_PRESENT }
 
+    private static final AtomicBoolean DEPRECATION_LOGGED = new AtomicBoolean()
+
     private static final Closure<List<?>> originalValuesClosure = { List<?> values -> values } as Closure<List<?>>
 
     GparsPromiseFactory() {
+        if (DEPRECATION_LOGGED.compareAndSet(false, true)) {
+            log.warn('grails-async-gpars is deprecated and will be removed in a future release. ' +
+                'Replace it with grails-async-groovy-concurrent, which uses the groovy.concurrent toolkit built into Groovy 6.')
+        }
         try { GParsConfig.setPoolFactory(new LoggingPoolFactory()) }
         catch (IllegalArgumentException ignore) {}
     }

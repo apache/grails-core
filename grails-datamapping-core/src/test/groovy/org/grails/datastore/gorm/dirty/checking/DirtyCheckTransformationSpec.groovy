@@ -20,6 +20,8 @@ package org.grails.datastore.gorm.dirty.checking
 
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.gorm.DirtyCheckTransformation
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import spock.lang.PendingFeature
 import spock.lang.Specification
@@ -29,6 +31,65 @@ import spock.lang.Issue
  * @author Graeme Rocher
  */
 class DirtyCheckTransformationSpec extends Specification {
+
+    void 'dirty checking does not reuse domain classification across compilations'() {
+        given:
+        def firstLoader = new GroovyClassLoader()
+        def secondLoader = new GroovyClassLoader()
+        def packageName = "recompiled.dirtychecking.order${domainFirst}"
+        def source = { boolean domain ->
+            """
+                package $packageName
+
+                import grails.gorm.annotation.Entity
+                import grails.gorm.dirty.checking.DirtyCheck
+
+                @DirtyCheck
+                class Child extends Parent {
+                    String title
+                }
+
+                ${domain ? '@Entity' : ''}
+                abstract class Parent {
+                    String name
+                }
+            """
+        }
+
+        when:
+        firstLoader.parseClass(source(domainFirst))
+        secondLoader.parseClass(source(!domainFirst))
+        def first = firstLoader.loadClass("${packageName}.Child").getDeclaredConstructor().newInstance()
+        def second = secondLoader.loadClass("${packageName}.Child").getDeclaredConstructor().newInstance()
+        first.trackChanges()
+        second.trackChanges()
+        first.title = 'first'
+        second.title = 'second'
+
+        then:
+        first.listDirtyPropertyNames() == ['title']
+        second.listDirtyPropertyNames() == ['title']
+
+        when:
+        def domainChild = domainFirst ? first : second
+        domainChild.trackChanges()
+        domainChild.name = 'updated'
+
+        then:
+        domainChild.listDirtyPropertyNames() == ['name']
+
+        cleanup:
+        firstLoader.close()
+        secondLoader.close()
+
+        where:
+        domainFirst << [false, true]
+    }
+
+    void "priority orders the transform via DIRTY_CHECK_ORDER"() {
+        expect:
+        new DirtyCheckTransformation().priority() == GroovyTransformOrder.DIRTY_CHECK_ORDER
+    }
     @Issue('https://github.com/apache/grails-data-mapping/issues/894')
     void "Test transform doesn't make getters require static compilation"() {
         when:"A Dirty checkable class with generic types is parsed"

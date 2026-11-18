@@ -20,6 +20,7 @@
 plugins {
     id 'groovy'
     id 'java-library'
+    id 'java-test-fixtures'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
@@ -44,17 +45,22 @@ dependencies {
 
     implementation platform(project(':grails-bom'))
     implementation project(':grails-testing-support-core')
+    implementation 'org.apache.grails.gradle:grails-gradle-common' // XmlParserFeature
     implementation 'org.apache.groovy:groovy'
     implementation 'org.apache.groovy:groovy-json'
     implementation 'org.apache.groovy:groovy-xml'
     implementation "org.opentest4j:opentest4j:$openTest4jVersion" // AssertionFailedError
     implementation 'org.springframework:spring-beans' // @Value
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation "io.github.cjstehno.ersatz:ersatz:$ersatzVersion"
     testImplementation "io.github.cjstehno.ersatz:ersatz-groovy:$ersatzVersion"
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
     testImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Remove annoying warning
+    testFixturesImplementation platform(project(':grails-bom'))
+    testFixturesImplementation 'org.apache.groovy:groovy-json'
 }
 
 apply {

@@ -1,0 +1,40 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// compiles with Gradle's own Groovy, so the build resolves nothing
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+dependencies {
+    implementation localGroovy()
+}
+
+// -PfixtureIndy=<true|false> stands in for an application that sets grails { indy }
+if (providers.gradleProperty('fixtureIndy').present) {
+    grails {
+        indy = providers.gradleProperty('fixtureIndy').get().toBoolean()
+    }
+}
+
+tasks.register('inspectIndy') {
+    def options = providers.provider {
+        project.tasks.withType(GroovyCompile).collect { GroovyCompile task ->
+            Map<String, Boolean> optimization = task.groovyOptions.optimizationOptions
+            "${task.name}=${optimization.containsKey('indy') ? optimization.indy : 'unset'}".toString()
+        }.sort()
+    }
+    doLast {
+        options.get().each { println it }
+    }
+}
+
+tasks.register('inspectBytecode') {
+    dependsOn 'compileGroovy'
+    def classFile = layout.buildDirectory.file('classes/groovy/main/demo/Dynamic.class')
+    doLast {
+        String bytes = new String(classFile.get().asFile.bytes, 'ISO-8859-1')
+        println "CALL_SITES=${bytes.contains('IndyInterface') ? 'indy' : bytes.contains('getCallSiteArray') ? 'classic' : 'none'}"
+    }
+}

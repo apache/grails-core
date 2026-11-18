@@ -32,7 +32,7 @@ import static grails.mongodb.mapping.MappingBuilder.document
  */
 class DocumentMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.registerDomainClasses(CustomMapping)
+        manager.registerDomainClasses(CustomMapping, GlobalEntryMapping)
     }
 
     void "test custom document mapping"() {
@@ -45,6 +45,11 @@ class DocumentMappingSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
         CustomMapping.collection.namespace.databaseName == 'myDb'
         doc.get("my_name") == "test"
         doc.get("loc").inspect() == '[\'type\':\'Point\', \'coordinates\':[10.0, 15.0]]'
+    }
+
+    void "test a property configured after a '*' entry keeps its configuration"() {
+        expect: "the index the property declares, on top of the '*' entry every property starts from"
+        [code: 1] in GlobalEntryMapping.collection.listIndexes()*.key
     }
 }
 
@@ -64,5 +69,16 @@ class CustomMapping implements MongoEntity<CustomMapping> {
         loc property {
             geoIndex "2dsphere"
         }
+    }
+}
+
+@Entity
+class GlobalEntryMapping implements MongoEntity<GlobalEntryMapping> {
+
+    String code
+
+    static mapping = document {
+        '*'(nullable: true)
+        code index: true
     }
 }

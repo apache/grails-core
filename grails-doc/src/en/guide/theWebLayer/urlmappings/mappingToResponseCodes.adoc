@@ -73,6 +73,8 @@ static mappings = {
 
 With this configuration, an `IllegalArgumentException` will be handled by the `illegalArgument` action in `ErrorsController`, a `NullPointerException` will be handled by the `nullPointer` action, and a `MyException` will be handled by the `customException` action. Other exceptions will be handled by the catch-all rule and use the `/errors/serverError` view.
 
+A mapping matches the exception that was thrown or its root cause, so `exception: MyException` handles a `MyException` whatever caused it, and also an exception caused by a `MyException`. Where both have a mapping, the one for the exception that was thrown is used. Where several mappings match the same exception, such as one for `IllegalArgumentException` and one for `RuntimeException`, the one declared last is used.
+
 You can access the exception from your custom error handling view or controller action using the request's `exception` attribute like so:
 
 [source,groovy]
@@ -84,5 +86,7 @@ class ErrorsController {
     }
 }
 ----
+
+NOTE: A problem reaching the error handler does not replace the exception being handled. If the mapping for a status code cannot be resolved for a request, or an error-handling controller cannot be forwarded to because the request did not pass through the Grails filters - a Spring `MockMvc` test that leaves out the application's filters, for example - the problem is logged and the `/error` view renders the original exception instead.
 
 WARNING: If your error-handling controller action throws an exception as well, you'll end up with a `StackOverflowException`.

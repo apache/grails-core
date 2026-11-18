@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import groovy.lang.Closure;
 
@@ -33,6 +34,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.transaction.PlatformTransactionManager;
 
+import org.apache.grails.data.simple.querytail.SimpleMapQueryTail;
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.gorm.GormInstanceApi;
 import org.grails.datastore.gorm.GormStaticApi;
@@ -58,7 +60,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourcesProvider;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.InMemoryConnectionSources;
-import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore;
+import org.grails.datastore.mapping.core.connections.SingleSessionCapableDatastore;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
@@ -79,23 +81,26 @@ import org.grails.datastore.mapping.transactions.TransactionCapableDatastore;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, MultipleConnectionSourceCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
+public class SimpleMapDatastore extends AbstractDatastore implements Closeable, TransactionCapableDatastore, SingleSessionCapableDatastore, SchemaMultiTenantCapableDatastore<Map<String, Map>, ConnectionSourceSettings>, ConnectionSourcesProvider<Map<String, Map>, ConnectionSourceSettings> {
     private final Map<String, Map> inmemoryData;
     private final TenantResolver tenantResolver;
     protected final GormEnhancer gormEnhancer;
     private final ConfigurableApplicationEventPublisher eventPublisher;
     private Map indices = new ConcurrentHashMap();
+    private final Map<String, AtomicLong> lastIdentifiers = new ConcurrentHashMap<>();
     private final PlatformTransactionManager transactionManager;
     private final ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources;
     private final MultiTenancySettings.MultiTenancyMode multiTenancyMode;
     protected final Map<String, SimpleMapDatastore> datastoresByConnectionSource = new LinkedHashMap<>();
     protected final boolean failOnError;
+    private final SimpleMapQueryTail queryTail;
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, MappingContext mappingContext, ConfigurableApplicationEventPublisher eventPublisher) {
         super(mappingContext);
         this.connectionSources = connectionSources;
         ConnectionSource<Map<String, Map>, ConnectionSourceSettings> defaultConnectionSource = connectionSources.getDefaultConnectionSource();
         this.inmemoryData = defaultConnectionSource.getSource();
+        this.queryTail = SimpleMapQueryTail.create(defaultConnectionSource.getName(), defaultConnectionSource.getSettings().getQueryTail());
         DatastoreTransactionManager dtm = new DatastoreTransactionManager();
         dtm.setDatastore(this);
         this.transactionManager = dtm;
@@ -120,6 +125,11 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
                         protected GormEnhancer initialize(ConnectionSourceSettings settings) {
                             return null;
                         }
+
+                        @Override
+                        void openQueryTails() {
+                            // The parent opens the capture of a child, once neither can fail to build.
+                        }
                     };
                 }
                 datastoresByConnectionSource.put(connectionSource.getName(), childDatastore);
@@ -127,6 +137,7 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
         }
         this.eventPublisher = eventPublisher;
         this.gormEnhancer = initialize(defaultConnectionSource.getSettings());
+        openQueryTails();
     }
 
     public SimpleMapDatastore(ConnectionSources<Map<String, Map>, ConnectionSourceSettings> connectionSources, ConfigurableApplicationEventPublisher eventPublisher, Class... classes) {
@@ -301,6 +312,14 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
         return this.eventPublisher;
     }
 
+    /**
+     * @return the query-tail capture of this datastore's connection source, or null when capture is not enabled
+     * @since 9.0
+     */
+    public SimpleMapQueryTail getQueryTail() {
+        return queryTail;
+    }
+
     public Map<String, Map> getBackingMap() {
         return inmemoryData;
     }
@@ -308,6 +327,24 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     public void clearData() {
         inmemoryData.clear();
         indices.clear();
+        lastIdentifiers.clear();
+    }
+
+    /**
+     * Hands out the next generated identifier for the given family. The count is shared by every
+     * session of this datastore, so an identifier is not handed out twice by sessions open at the
+     * same time, whose inserts are not yet written, or reused after a delete. It continues from the
+     * family's size when that is higher, as when entries are put in the backing map directly, and
+     * starts again once {@link #clearData()} empties the datastore.
+     *
+     * @param family the family of the root entity the identifier is for
+     * @return the identifier
+     */
+    public long nextIdentifier(String family) {
+        Map entries = inmemoryData.get(family);
+        long size = entries != null ? entries.size() : 0;
+        return lastIdentifiers.computeIfAbsent(family, f -> new AtomicLong())
+                .updateAndGet(last -> Math.max(last, size) + 1);
     }
 
     @Override
@@ -358,10 +395,19 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
     public Datastore getDatastoreForConnection(String connectionName) {
 
         SimpleMapDatastore childDatastore = datastoresByConnectionSource.get(connectionName);
-        if (childDatastore == null) {
-            throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
+        if (childDatastore != null) {
+            return childDatastore;
         }
-        return childDatastore;
+        // A leaf datastore (one created for a single connection/tenant, e.g. a per-tenant child)
+        // has no children of its own, but it IS the datastore for its own connection. Resolving its
+        // own name to itself keeps nested tenant resolution idempotent: an API already bound to the
+        // tenant's datastore can still be wrapped in Tenants.withId(tenantId) without failing. This
+        // mirrors ChildHibernateDatastore, which delegates the same lookup back through its parent.
+        if (connectionName != null &&
+                connectionName.equals(connectionSources.getDefaultConnectionSource().getName())) {
+            return this;
+        }
+        throw new ConfigurationException("No datastore found for connection named [" + connectionName + "]");
     }
 
     @Override
@@ -370,8 +416,41 @@ public class SimpleMapDatastore extends AbstractDatastore implements Closeable, 
             destroy();
         } catch (Exception e) {
             throw new IOException(e);
+        } finally {
+            closeQueryTails();
         }
         gormEnhancer.close();
+    }
+
+    /**
+     * Opens the query-tail captures of this datastore and of the datastores of its other connection sources, once it
+     * is built, so that one that fails to build leaves every capture file as it was. The datastore of another
+     * connection source it is built with leaves its capture to it, which opens it along with its own.
+     */
+    void openQueryTails() {
+        for (SimpleMapDatastore child : datastoresByConnectionSource.values()) {
+            if (child != this && child.queryTail != null) {
+                child.queryTail.open();
+            }
+        }
+        if (queryTail != null) {
+            queryTail.open();
+        }
+    }
+
+    /**
+     * Closes the query-tail captures of this datastore and of the datastores of its other connection sources,
+     * which close with it.
+     */
+    private void closeQueryTails() {
+        for (SimpleMapDatastore child : datastoresByConnectionSource.values()) {
+            if (child != this && child.queryTail != null) {
+                child.queryTail.close();
+            }
+        }
+        if (queryTail != null) {
+            queryTail.close();
+        }
     }
 
     @Override

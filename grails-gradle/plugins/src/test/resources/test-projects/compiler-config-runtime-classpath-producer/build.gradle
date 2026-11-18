@@ -1,0 +1,49 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+    starImports = ['com.example.custom']
+}
+
+// A task that runs after the classes are compiled and puts its output on the runtime
+// classpath: the shape of asset-pipeline, the exploded plugin directory, or any other
+// post-compile packaging step. Its output reaches compileGroovy only through the
+// runtime classpath, which the compile classpath does not include.
+def packageRuntimeExtra = tasks.register('packageRuntimeExtra') {
+    dependsOn 'classes'
+    def out = layout.buildDirectory.dir('runtime-extra')
+    outputs.dir(out)
+    doLast {
+        def dir = out.get().asFile
+        dir.mkdirs()
+        new File(dir, 'extra.properties').text = 'generated=true'
+    }
+}
+
+dependencies {
+    runtimeOnly files(packageRuntimeExtra)
+}
+
+tasks.register('inspectRuntimeProducer') {
+    dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    def report = providers.provider {
+        def gen = tasks.named('generateCompileGroovyGrailsCompilerConfig').get()
+        def deps = gen.taskDependencies.getDependencies(gen)*.path
+        def runtimeProducers = configurations.runtimeClasspath.buildDependencies.getDependencies(null)*.path
+        [
+                "GENERATOR_DEPENDENCIES=${deps}",
+                "GENERATOR_DEPENDS_ON_RUNTIME_PRODUCER=${deps.any { it == ':packageRuntimeExtra' }}",
+                "RUNTIME_CLASSPATH_BUILT_BY_PRODUCER=${runtimeProducers.any { it == ':packageRuntimeExtra' }}"
+        ]*.toString()
+    }
+    def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+    doLast {
+        report.get().each { println it }
+        println "COMBINED_CONTAINS_GRAILS_IMPORT=${combined.exists() && combined.text.contains(/star 'com.example.custom'/)}"
+    }
+}

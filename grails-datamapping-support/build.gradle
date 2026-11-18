@@ -106,10 +106,11 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'org.spockframework:spock-core'
 
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
 }
 
 tasks.withType(Jar).configureEach {

@@ -59,7 +59,7 @@ Finally, Grails is far more than just a web framework and is made up of various 
 |A View technology for rendering JSON on the server side
 
 |link:async.html#asyncGorm[Async Framework]
-|Asynchronous programming abstraction with support for RxJava, GPars and more
+|Asynchronous programming abstraction with support for RxJava, Groovy concurrency and more
 
 
 |===

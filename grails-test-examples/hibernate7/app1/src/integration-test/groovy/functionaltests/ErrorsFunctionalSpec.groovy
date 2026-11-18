@@ -70,8 +70,8 @@ class ErrorsFunctionalSpec extends ContainerGebSpec {
         when: "An action that throws an exception is requested"
         go('/errors/throwException')
 
-        then:
-        System.properties[ErrorsControllerInterceptor.PROPERTY] == 'Oops!'
+        then: "afterView() runs after the error page's forward has sent and closed the response, so the page can load first"
+        waitFor { System.properties[ErrorsControllerInterceptor.PROPERTY] == 'Oops!' }
 
         cleanup:
         System.clearProperty ErrorsControllerInterceptor.PROPERTY

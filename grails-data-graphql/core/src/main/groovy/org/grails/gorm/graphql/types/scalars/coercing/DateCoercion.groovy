@@ -19,8 +19,11 @@
 
 package org.grails.gorm.graphql.types.scalars.coercing
 
+import graphql.GraphQLContext
+import graphql.execution.CoercedVariables
 import graphql.language.IntValue
 import graphql.language.StringValue
+import graphql.language.Value
 import graphql.schema.Coercing
 import graphql.schema.CoercingParseValueException
 import graphql.schema.CoercingSerializeException
@@ -60,21 +63,21 @@ class DateCoercion implements Coercing<Date, Date> {
     }
 
     @Override
-    Date serialize(Object input) {
+    Date serialize(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingSerializeException("Could not convert ${input.class.name} to a Date")
         }
     }
 
     @Override
-    Date parseValue(Object input) {
+    Date parseValue(Object input, GraphQLContext graphQLContext, Locale locale) {
         convert(input).orElseThrow {
             throw new CoercingParseValueException("Could not convert ${input.class.name} to a Date")
         }
     }
 
     @Override
-    Date parseLiteral(Object input) {
+    Date parseLiteral(Value<?> input, CoercedVariables variables, GraphQLContext graphQLContext, Locale locale) {
         if (input instanceof IntValue) {
             new Date(((IntValue) input).value.longValue())
         }
@@ -89,7 +92,7 @@ class DateCoercion implements Coercing<Date, Date> {
     protected Optional<Date> parseDate(String value) {
         Date dateValue
         if (!value || !formats) {
-            return null
+            return Optional.empty()
         }
         Exception firstException
         for (String format: formats) {

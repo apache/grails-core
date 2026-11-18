@@ -29,9 +29,11 @@ import java.util.concurrent.TimeUnit
 /**
  * Implementation of {@link Promise} interface for Gpars
  *
- * @author Graeme Rocher
  * @since 2.3
+ * @deprecated GPars is superseded by Groovy 6's {@code groovy.concurrent} toolkit. Use
+ * {@code org.grails.async.factory.groovy.AwaitablePromise} from {@code grails-async-groovy-concurrent}.
  */
+@Deprecated(since = '9.0', forRemoval = true)
 @AutoFinal
 @CompileStatic
 class GparsPromise<T> implements Promise<T> {

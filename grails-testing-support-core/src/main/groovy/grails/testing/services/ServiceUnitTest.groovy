@@ -41,7 +41,7 @@ trait ServiceUnitTest<T> extends ParameterizedGrailsUnitTest<T> {
         if (!dataTestLoaded) {
             try {
                 dataTest = ClassUtils.forName(DATATEST_CLASS)
-            } catch (ClassNotFoundException e) {}
+            } catch (ClassNotFoundException ignored) {}
         }
         dataTestLoaded = true
     }

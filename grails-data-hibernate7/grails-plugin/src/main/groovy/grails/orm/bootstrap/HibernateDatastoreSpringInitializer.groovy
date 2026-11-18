@@ -21,7 +21,6 @@ import groovy.transform.CompileStatic
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import grails.spring.BeanBuilder
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.PropertyResolver
@@ -49,16 +48,13 @@ import org.grails.orm.hibernate.support.HibernateDatastoreConnectionSourcesRegis
  */
 class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
 
-    public static final String SESSION_FACTORY_BEAN_NAME = 'sessionFactory'
     public static final String DEFAULT_DATA_SOURCE_NAME = Settings.SETTING_DATASOURCE
     public static final String DATA_SOURCES = Settings.SETTING_DATASOURCES
     public static final String TEST_DB_URL = 'jdbc:h2:mem:grailsDb;LOCK_TIMEOUT=10000;DB_CLOSE_DELAY=-1'
 
     String defaultDataSourceBeanName = ConnectionSource.DEFAULT
-    String defaultSessionFactoryBeanName = SESSION_FACTORY_BEAN_NAME
-    Set<String> dataSources = [defaultDataSourceBeanName] as Set<String>
+    Set<String> dataSources = new LinkedHashSet<String>([defaultDataSourceBeanName])
     boolean enableReload = false
-    boolean grailsPlugin = false
     Closure beanDefinitions
     protected ApplicationContext applicationContext
 
@@ -90,20 +86,14 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     @CompileStatic
     void configureDataSources(PropertyResolver config) {
 
-        Set<String> dataSourceNames = new HashSet<String>()
+        // The datastore always creates the default connection source, whether or not it is configured
+        Set<String> dataSourceNames = new LinkedHashSet<String>([defaultDataSourceBeanName])
 
-        if (config == null) {
-            dataSourceNames = [defaultDataSourceBeanName] as Set
-        }
-        else {
+        if (config != null) {
             Map dataSources = config.getProperty(DATA_SOURCES, Map, Collections.emptyMap())
 
             if (dataSources != null && !dataSources.isEmpty()) {
                 dataSourceNames.addAll(AbstractConnectionSources.toValidConnectionSourceNames(dataSources))
-            }
-            Map dataSource = (Map) config.getProperty(DEFAULT_DATA_SOURCE_NAME, Map, Collections.emptyMap())
-            if (dataSource != null && !dataSource.isEmpty()) {
-                dataSourceNames.add(ConnectionSource.DEFAULT)
             }
         }
         this.dataSources = dataSourceNames
@@ -139,10 +129,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
         }
     }
 
-    protected String getTestDbUrl() {
-        TEST_DB_URL
-    }
-
     @CompileStatic
     ApplicationContext configureForDataSource(DataSource dataSource) {
         GenericApplicationContext applicationContext = createApplicationContext()
@@ -153,7 +139,6 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
     }
 
     Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry) {
-        ApplicationEventPublisher eventPublisher = super.findEventPublisher(beanDefinitionRegistry)
         return { ->
             def common = getCommonConfiguration(beanDefinitionRegistry, 'hibernate')
             common.delegate = delegate
@@ -165,8 +150,14 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             hibernateBytecodeProvider(GrailsBytecodeProvider)
 
             def config = this.configuration
+            Object configurationReference = configurationReference(beanDefinitionRegistry)
             final boolean isGrailsPresent = isGrailsPresent()
             def appContext = this.applicationContext
+            // Registered rather than built here, so what the datastore holds is a reference the
+            // container can build. Holding the publisher itself puts a live object in the
+            // definition, and generating code for a definition means writing out what it holds --
+            // which a publisher bound to a running context is not.
+            grailsDatastoreEventPublisher(findEventPublisherClass(beanDefinitionRegistry))
             dataSourceConnectionSourceFactory(CachedDataSourceConnectionSourceFactory)
             hibernateConnectionSourceFactory(HibernateConnectionSourceFactory, ref('hibernateBytecodeProvider'), persistentClasses as Class[]) { bean ->
                 bean.autowire = true
@@ -175,7 +166,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
                     applicationContext = appContext
                 }
             }
-            hibernateDatastore(HibernateDatastore, config, hibernateConnectionSourceFactory, eventPublisher) { bean ->
+            hibernateDatastore(HibernateDatastore, configurationReference, hibernateConnectionSourceFactory, ref('grailsDatastoreEventPublisher')) { bean ->
                 bean.primary = true
             }
             sessionFactory(hibernateDatastore: 'getSessionFactory') { bean ->
@@ -188,7 +179,7 @@ class HibernateDatastoreSpringInitializer extends AbstractDatastoreInitializer {
             getBeanDefinition('transactionManager').beanClass = PlatformTransactionManager
 
             for (String dataSourceName in dataSources) {
-                if (dataSourceName == ConnectionSource.DEFAULT) continue
+                if (dataSourceName == defaultDataSourceBeanName) continue
 
                 "dataSource_$dataSourceName"(hibernateDatastore: 'getDataSource', dataSourceName)
                 "sessionFactory_$dataSourceName"(hibernateDatastore: 'getSessionFactory', dataSourceName)

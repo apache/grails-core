@@ -24,20 +24,160 @@ This section covers all the new features introduced in Grails {grailsMajorVersio
 Grails {grailsMajorVersion} is a major release that includes new features, improvements, and dependency upgrades.
 This release focuses on enhancing the developer experience, improving performance, and ensuring compatibility with the latest technologies.
 
-For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading80x[Upgrading from Grails 7 to Grails {grailsMajorVersion}] section.
+For detailed information on how to upgrade to Grails {grailsMajorVersion}, including major dependency changes, please see the xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section.
 Notable new features are included below.
 
 ==== Platform Baseline
 
 Grails {grailsMajorVersion} raises the standard build and runtime baseline to Java 21 and uses Gradle {gradleVersion}.
-The standard Grails BOM remains on Groovy {groovyVersion} and Spock {spockVersion}, while Micronaut-enabled Grails applications use Micronaut-specific BOM variants that align with Micronaut 5 and require JDK 25 or later.
+The standard Grails BOM uses Groovy {groovyVersion} and Spock {spockVersion}.
 
-==== Spring Boot 4.1 and Spring Framework 7
+==== Gradle Configuration Cache
+
+Starting with Grails 8.0, the Grails Gradle plugins support the https://docs.gradle.org/{gradleVersion}/userguide/configuration_cache.html[Gradle configuration cache], and new applications and plugins turn it on in their `gradle.properties`.
+A build that runs the same tasks again skips configuring the project, so repeated runs of tasks such as `bootRun` and `test` start faster.
+See xref:commandLine#gradleConfigurationCache[Using the Gradle Configuration Cache] for how to enable it in an existing project and what it asks of build scripts.
+
+==== Grails Micronaut Repository
+
+Grails Micronaut is maintained and released from the https://github.com/apache/grails-micronaut[Apache Grails Micronaut repository] and consumes published Grails Core artifacts.
+
+==== Groovy's invokedynamic default applies again
+
+Grails 7 and 8 compile every Groovy source set of an application without invokedynamic, because Groovy 4 and 5 ran dynamic code markedly slower with it (https://github.com/apache/grails-core/issues/15293[#15293]).
+Grails 9 runs on Groovy 6 and no longer overrides the compiler: unless the build sets `grails { indy }`, each Groovy compile task keeps the Groovy compiler's own default, which is invokedynamic.
+Grails' own published modules are compiled with invokedynamic as well.
+
+To keep compiling classic call sites, set it in `build.gradle`:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    indy = false
+}
+----
+
+On Groovy 6, classic call sites need `org.apache.groovy:groovy-callsite` on the classpath. Grails does not carry it, so an application that opts out declares it, at the version the Grails BOM manages:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    implementation 'org.apache.groovy:groovy-callsite'
+}
+----
+
+An application that keeps the default never ships the module. The same dependency is needed, whatever the application's own setting, for a library that was compiled with classic call sites, because Groovy 6 can load such a class only with the module: `org.testcontainers:testcontainers-spock` is one, so declare the module as `testRuntimeOnly` next to it.
+
+==== Spring Boot 4.2 and Spring Framework 7.1
 
 Grails {grailsMajorVersion} is built on Spring Boot {springBootVersion} and Spring Framework {springVersion}.
-This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.1 dependency management for Spring Security 7.1, Spring Data 2026.0 and Micrometer 1.17.
+This brings the Spring Boot 4 modular artifact layout, Spring Framework 7 API removals, Jackson 3, Tomcat 11 and Jakarta Servlet 6.1, plus Spring Boot 4.2 dependency management for Spring Security 7.2, Spring Data 2026.1 and Micrometer 1.18.
 
 The Grails 8 upgrade guide calls out the major application-impacting changes and links to the Spring Boot 4.0 migration guide, Spring Boot 4.1 release notes and Spring Framework 7.0 release notes.
+For the changes since Spring Boot 4.1, see the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.2-Release-Notes[Spring Boot 4.2 Release Notes] and the https://github.com/spring-projects/spring-framework/wiki/Spring-Framework-7.1-Release-Notes[Spring Framework 7.1 Release Notes].
+The xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails {grailsMajorVersion}] section covers the upgrade, including the graphql-java 26 changes that affect GraphQL applications.
+
+Spring Boot 4.2 can switch metrics and spans to OpenTelemetry's semantic conventions:
+
+[source,yaml]
+----
+management:
+    observations:
+        conventions: open-telemetry
+----
+
+`http.server.requests` then becomes `http.server.request.duration`, tagged with `http.route` and `error.type` in place of `uri` and `exception`.
+In a Grails application `http.route` is `/controller/action`, not the pattern of the URL mapping, which keeps it low in cardinality.
+Spring Boot's https://docs.spring.io/spring-boot/reference/actuator/observability.html#actuator.observability.semantic-conventions[documentation] lists what else changes, such as the properties that customize meter names no longer taking effect.
+
+==== The HTTP QUERY Method
+
+Spring Framework 7.1 supports the `QUERY` method of https://www.rfc-editor.org/info/rfc10008/[RFC 10008], a safe, idempotent request with a body. URL mappings gain a `query` prefix for it, next to `get`, `post` and the others, and a command object is bound to the body of a `QUERY`, which is JSON or form-encoded:
+
+[source,groovy]
+----
+static mappings = {
+    query "/books/search"(controller: 'book', action: 'search')
+}
+----
+
+See xref:theWebLayer#mappingHTTP[Mapping to HTTP methods].
+
+==== JSON Dates and Times Render as Spring Boot Renders Them
+
+`render ... as JSON`, `respond` and JSON views now write `Date`, `Calendar`, `TimeZone`, the `java.sql` date types,
+the `java.time` date, time, duration and zone types and `XMLGregorianCalendar` the same way as Spring Boot's default
+Jackson `JsonMapper`, so a Grails application and a Spring Boot application return the same JSON for the same values:
+`java.sql.Time` as `"01:48:46"`, `LocalTime` as `"01:48:46.407254"`, `Duration` as `"PT1H30M"`, `Year` as a number,
+`ZoneId` and `TimeZone` as their IDs, and `Date`, `Calendar` and `ZonedDateTime` map keys as their values
+render. See the Date and Time Rendering sections of the REST and JSON Views guides, and the upgrade guide for the
+types that render differently than in Grails 7.
+
+==== JSON Responses Through Spring Boot's Jackson Mapper, and RFC 9457 Problems
+
+With `grails.web.rendering.json.spring: true`, `respond` writes JSON through Spring MVC's message converters, with a
+mapper Grails derives from Spring Boot's Jackson `JsonMapper`, so the `spring.jackson.*` settings and the application's
+Jackson modules apply to its responses as they do in a Spring Boot application. `render json: value` writes with the
+same mapper, and `grails.converters.json.legacy: false` makes `grails.converters.JSON` write through Spring Boot's
+mapper as well. Grails 9 keeps Grails 8's JSON by default.
+
+Named Jackson configurations, registered with the `NamedJsonConfigurationRegistry` bean, are selected for each response,
+in place of the thread-local `JSON.use(...)`. Every registry has a `deep` configuration, which writes the associations of
+domain class instances in full:
+
+[source,groovy]
+----
+respond book, jsonConfiguration: 'catalog'
+render json: book, jsonConfiguration: 'deep', excludes: ['isbn']
+----
+
+`respond` writes a Spring `ProblemDetail` as Spring MVC writes one that a handler method returns, with the handler of
+Spring MVC's handler adapter, so the application's `ResponseBodyAdvice` and `ErrorResponse.Interceptor` beans apply to
+it: as `application/problem+json`, or as `application/problem+xml` for a request that asks for a problem in XML where
+the action responds in XML and `jackson-dataformat-xml` is present, with the status the problem carries unless `respond`
+is given one, as a `ResponseEntity` is in Spring MVC. A Spring `ErrorResponse`, such as an `ErrorResponseException`,
+is answered the same way, with its status and headers. `ValidationProblemDetailFactory` creates a problem for
+validation errors.
+
+With `grails.databinding.json.jackson: true`, JSON request bodies are bound as Spring Boot's mapper parses them, with its
+`spring.jackson.*` parser settings, in place of Groovy's `JsonSlurper`.
+
+XML conversion, binding and renderers move to the `grails-xml` module, which the Grails 9 web starter and
+`grails-web-boot` still bring, and which a JSON-only application can exclude. Grails reads the `Accept` and
+`Content-Type` headers with Spring's media type parser, so media type names match whatever their case.
+
+With `grails.exceptionresolver.springHandlers: true`, which Grails 10 makes the default, an exception a controller
+action throws is resolved first as Spring MVC resolves one a handler method throws: by the `@ExceptionHandler` methods
+of the controller and of the `@ControllerAdvice` beans that apply to it, Spring Boot's handler of
+`spring.mvc.problemdetails.enabled` among them, which answers the exceptions of Spring MVC with RFC 9457 problems. See
+xref:theWebLayer#controllerExceptionHandling[Declarative Controller Exception Handling].
+
+With `grails.exceptionresolver.problemDetails: true`, an exception no such method handles is written as a problem to a
+client that does not prefer HTML, with the translation Spring Framework 7.1 adds, which keeps the status and detail of an
+`ErrorResponse` or a `@ResponseStatus` exception and does not expose the message of an unexpected one. The application's
+error page stays for browsers, and for an exception a URL mapping names.
+
+An action can return what a Spring MVC handler method returns to write the response, such as a `ResponseEntity`, a
+`ProblemDetail` or a `StreamingResponseBody`, and Spring MVC writes it with the return value handlers of its handler
+adapter, the `ResponseBodyAdvice` beans that apply to the controller, and the action's `@JsonView` and
+`@ResponseStatus`. With `grails.controllers.responseBody: true`, which Grails 10 makes the default, so does any value of
+an action annotated `@ResponseBody`, a `CompletableFuture` it returns included. The `@JsonView` of an action also
+selects the properties `respond` writes through Spring MVC. See
+xref:theWebLayer#springResponses[Returning Spring MVC Responses].
+
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
+
+==== Hibernate 7 Criteria Queries Can Be Extended
+
+A plugin or an application can add its own criteria and orders to the Hibernate 7 criteria builder. A criterion
+handler now receives the query context, through which it resolves a property path, whether through an alias created
+with `createAlias` or an association, to the join GORM created for it, so a custom criterion and a built-in one on
+the same association restrict the same row. A new order handler turns a `Query.Order` subclass into a JPA order by
+any expression, such as `random()` or a SQL formula, in its place among the query's orders. Both kinds of handler
+are registered in code, or by a plugin through `META-INF/services` providers that are loaded when the first query
+runs. See the section on extending the criteria builder in the GORM for Hibernate 7 guide.
 
 ==== Hibernate 7 Application Generation
 
@@ -49,9 +189,62 @@ The `create-*` commands also accept a new `-d, --data` option (the previous `-g`
 grails -t forge create-app --data=hibernate7 com.example.demo
 ----
 
-Applications generated for Hibernate 7 consume `grails-hibernate7-bom` — or `grails-hibernate7-micronaut-bom` when combined with the `grails-micronaut` feature — consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
+Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
 This avoids the dependency resolution conflicts that occur when an application generated for Hibernate 5 is manually switched to `grails-data-hibernate7` while the default `grails-bom` remains on the build classpath.
 The `database-migration` feature also selects the matching `grails-data-hibernate7-dbmigration` plugin automatically.
+
+==== Asynchronous Grails Data Application Generation
+
+Grails Forge offers a new `gorm-async` feature that adds the asynchronous programming model for Grails Data — the `AsyncEntity` trait and the `async` namespace — to a generated application:
+
+[source,console]
+----
+grails -t forge create-app --features=gorm-async com.example.demo
+----
+
+The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
+The `grails-datamapping-async` artifact it brings in is intended for direct consumption by applications and libraries, so it moved from the `org.apache.grails.data` group to `org.apache.grails`; see the xref:upgrading#upgrading80x[upgrade guide] for the coordinate change.
+
+==== Spring AI Integration
+
+The new `grails-spring-ai` plugin integrates https://spring.io/projects/spring-ai[Spring AI] {springAiVersion}.
+The Spring AI version is managed by the Grails BOM, a `ChatClient.Builder` is auto-configured for whichever provider the application adds, the plugin ships defaults suited to a web application, and `grails-testing-support-ai` gives unit and integration tests a scripted chat model so they need neither a provider nor credentials.
+New applications select it with the `grails-spring-ai`, `spring-ai-openai`, `spring-ai-anthropic` or `spring-ai-ollama` features, and the `org.apache.grails.skills:grails-ai-developer` agent skill teaches AI coding agents the same.
+See xref:usingAi#aiInstallation[Using AI in Your Application].
+
+==== Streaming Responses from Controller Actions
+
+A controller action can return a Reactive Streams `Publisher`, such as a Reactor `Flux`, and Grails streams every item it emits to the client as a server-sent event while the container thread is released.
+Items are rendered as text or JSON, or through a `StreamItemRenderer` bean for a type of its own, which is how `grails-spring-ai` streams the chat responses of a model.
+Such an action streams instead of rendering its view as it did before; set `grails.async.streaming.enabled` to `false` to keep the previous behaviour. A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed but resolved, its value being the action's result as a returned `Promise`'s value is. See xref:upgrading#upgrading81x[the upgrade guide].
+See xref:async#asyncStreaming[Streaming Responses].
+
+==== RxJava Data Services on RxJava 3
+
+`grails-datamapping-rx` is built on RxJava 3 instead of the unmaintained RxJava 1, so a GORM data service
+method can declare `io.reactivex.rxjava3.core.Observable` or `io.reactivex.rxjava3.core.Single` and GORM
+implements it over any GORM datastore. The `RxEntity` reactive domain model in the same module is also
+ported, but still has no datastore implementation behind it and is proposed for removal in 9.0; see the
+xref:upgrading#upgrading90x[upgrade guide] for the import and blocking-call changes an application that
+uses either needs. See <<rxjava,RxJava Support>>.
+
+==== RxJava 1 and RxJava 2 Modules Deprecated
+
+The RxJava 1 and RxJava 2 implementations of the Grails promise and event bus APIs, `grails-async-rxjava`,
+`grails-async-rxjava2`, `grails-events-rxjava` and `grails-events-rxjava2`, are deprecated for removal
+since Grails 9.0. Both RxJava versions are no longer maintained. The implementations keep working, and they
+log a warning when their promise factory or event bus is created. The RxJava 3 implementations,
+`grails-async-rxjava3` and `grails-events-rxjava3`, remain supported and are the replacements:
+
+[source,groovy]
+.build.gradle
+----
+runtimeOnly 'org.apache.grails.async:grails-async-rxjava3'
+runtimeOnly 'org.apache.grails.events:grails-events-rxjava3'
+----
+
+The `Promise` and `EventBus` APIs an application uses are the same, so an application that only uses the
+Grails APIs needs no code change. See <<asyncPromises,Promises>> and <<events,Events>>.
 
 ==== Plugin Beans Register Before Spring Boot Auto-Configuration
 
@@ -81,6 +274,100 @@ class MyGrailsPlugin extends Plugin {
 `beanRegistrar()` replaces the `doWithSpring` bean builder DSL, which is deprecated in Grails {grailsMajorVersion}.
 The DSL continues to work for now, but you are strongly urged to migrate.
 See the xref:upgrading#upgrading80x[upgrade guide] for details.
+
+Unit tests get the same hooks: a test declares its beans in a `beans` block, as an application or plugin does, or overrides `beanRegistrar()`, or declares a static nested `@Configuration` class — and `doWithSpring()` on the testing traits is deprecated to match.
+See <<unitTesting,Unit Testing>>.
+
+==== Fluent Application Builder with Context Hierarchies
+
+`GrailsAppBuilder` is now a complete counterpart of Spring Boot's `SpringApplicationBuilder`. Every builder method returns the Grails builder, the application it runs is a `GrailsApp` with the Grails startup defaults, and a parent/child context hierarchy built with `child()`, `parent()` and `sibling()` starts a `GrailsApp` in every context:
+
+[source,groovy]
+----
+new GrailsAppBuilder(SharedConfiguration)
+        .child(Application)
+        .run(args)
+----
+
+The Grails plugin lifecycle runs in the one context of the hierarchy whose sources include the `Application` class; the other contexts are plain Spring contexts that share the Grails beans through the parent chain, and a second Grails application in the same hierarchy is refused at startup.
+As in Spring Boot, the parent cannot host a web server, so a web application is the child of a shared parent, while a Grails application that serves no web requests, such as a command-line tool built without the web plugins, can be the parent of plain Spring children.
+A Grails application without a web server no longer prints a `Grails application running at ...` line when it starts.
+See <<applicationBuilder,Building the Application>>.
+
+==== CLI Commands Move to Companion `-cli` Artifacts
+
+Grails commands (`ApplicationCommand` implementations such as the `dbm-*` database-migration
+commands, the scaffolding `generate-*` commands, `url-mappings-report`, and `schema-export`) no
+longer ship inside the runtime plugin artifacts.
+Each command-bearing module now publishes a companion artifact under its own Maven coordinate with
+a `-cli` suffix — for example `org.apache.grails:grails-core-cli` and
+`org.apache.grails:grails-data-hibernate7-dbmigration-cli`.
+
+The command contract itself moved from `grails.dev.commands.*` to `org.apache.grails.core.cli.*`
+in the new `grails-core-cli` artifact.
+Applications consume cli artifacts through the new `grailsCli` Gradle configuration, which is
+compile-visible for `grails-app/commands` sources and on the command-runner classpath, but never on
+`runtimeClasspath` — commands and their CLI-only dependencies (such as `grails-shell-cli`) are
+excluded from `bootRun`, `bootJar`, and `bootWar` entirely.
+The Grails Gradle plugin provisions `grailsCli` automatically: it adds `grails-core-cli` and
+`grails-console`, and discovers every companion cli artifact advertised by the application's
+dependency graph — a command-bearing plugin advertises its companion through the
+`Grails-Cli-Artifact` manifest attribute of its runtime jar, and its commands are registered in a
+`META-INF/grails-cli.factories` file inside the companion jar. Declaring a plugin is therefore all
+that is needed; its commands (including the per-command Gradle tasks such as `dbmUpdate`) follow
+automatically, even when the plugin is only a transitive dependency:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    // the dbm-* commands are discovered automatically: the plugin jar advertises
+    // org.apache.grails:grails-data-hibernate7-dbmigration-cli, which is added to grailsCli
+    implementation 'org.apache.grails:grails-data-hibernate7-dbmigration'
+}
+----
+
+The auto-provisioning can be disabled with `grails { cliAutoProvision = false }`, in which case
+`grailsCli` dependencies are declared explicitly.
+
+The plugin can also provision `grails-core-cli-legacy` into a separate execution-only
+`grailsCliLegacy` bucket when both `cliAutoProvision` (default `true`) and
+`legacyCommandSupport` (default `false`) are enabled. That bucket contributes to
+`grailsCliClasspath`, never to application or plugin compile classpaths. Opt in with
+`grails { legacyCommandSupport = true }` so unchanged Grails 7 command plugins keep working
+without a re-release, without leaking `grails.dev.commands.*` into the Grails 8
+command-authoring ABI.
+
+When that bridge is disabled, runtime command discovery still detects plugins that publish legacy
+`grails.dev.commands.ApplicationCommand` factories without loading their command classes. Grails
+logs the originating plugin artifact and appends the exact opt-in or upgrade remediation when an
+unknown command is requested. The detection remains on the resolved command runtime classpath and
+does not add a Gradle configuration-time dependency scan.
+
+Plugin authors get the whole publishing side from the new
+`org.apache.grails.gradle.grails-plugin-cli` Gradle plugin: it creates the `cli` source set as a
+feature variant, wires the command contract onto its compile classpath, advertises the companion
+from the runtime jar, and publishes it (via the Grails publish plugin) under the plugin's
+coordinate with the `-cli` suffix — the framework's own command-bearing modules are built with the
+same plugin.
+
+This removes CLI-only dependencies — and their side effects, such as the WAR-deployment failure
+caused by a CLI Spring Boot initializer on the runtime classpath — from packaged applications.
+
+The split does not hold up application upgrades on plugin re-releases: a plugin that ships no
+commands is unaffected, and a command-bearing plugin that has not yet been rebuilt for Grails 8
+keeps its runtime functionality. Its legacy `grails.dev.commands.ApplicationCommand` registrations
+can continue to work through a deprecated compatibility layer when `legacyCommandSupport` is
+enabled, so those commands remain available without a re-release; publishing a companion `-cli`
+artifact is recommended when migrating to the Grails 8 command API. New commands should use
+`org.apache.grails.core.cli.*`. A plugin that still authors legacy commands must explicitly compile
+against `grails-core-cli-legacy`; consumers of an already-published legacy plugin enable the bridge
+with `grails { legacyCommandSupport = true }` (or declare `grailsCliLegacy` themselves). See the
+xref:upgrading#upgrading80x[upgrade guide] for the migration steps and the full upgrade-impact
+breakdown.
+
+The Grails Data plugin itself (`grails-data-hibernate5` or `grails-data-hibernate7`) is an application dependency only: generated builds no longer place it on the `buildscript` classpath or in `buildSrc`, where Gradle's own Groovy would run the compile-time transformations the plugin carries while compiling the build scripts.
+See the xref:upgrading#upgrading80x[upgrade guide] for the equivalent change in an existing build.
 
 ==== GSP Tag Library Improvements
 
@@ -140,13 +427,239 @@ grails {
 }
 ----
 
-All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in — left dynamically compiled with a build warning — so define tags as methods to opt them in. See the xref:staticTypeCheckingAndCompilation/grailsCompileStatic[GrailsCompileStatic] section for details.
+All three options are disabled by default and independent, or `compileStatic { all = true }` can be used as a shortcut to enable all of them. Any class that declares its own `@CompileDynamic` (or `@GrailsCompileStatic`/`@CompileStatic`/`@GrailsTypeChecked`/`@TypeChecked`) annotation keeps that setting, so the opt-in never overrides an explicit per-class choice. Tag libraries that still declare tags as closure fields (the deprecated form) are skipped automatically by the `tagLibs` opt-in and left dynamically compiled with a build warning, so define tags as methods to opt them in. See the <<grailsCompileStatic,GrailsCompileStatic>> section for details.
+
+==== Generate an Application That Compiles Statically
+
+Grails Forge has a new `grails-compile-static` feature that generates the `compileStatic` block with `controllers`, `services` and `tagLibs` enabled, adding `gsp = true` when the application uses GSP, so the generated controllers, services, tag libraries and views all compile statically:
+
+[source,console]
+----
+grails -t forge create-app --features=grails-compile-static com.example.demo
+----
+
+See <<gspStaticCompilation,Static Compilation>> for what static compilation asks of a GSP page.
+
+==== GORM Domain Classes Can Take Their Identity Type from the Datastore
+
+A domain class that declares no `id` has always been given a `Long` one. That is right for Hibernate and
+wrong for MongoDB, where a `String id` holding a generated `ObjectId` needs no sequence collection and
+shards cleanly — but declaring `String id` ties the source to MongoDB. The nested `gorm` block of the
+`grails` build configuration lets each domain class take the identity type of the GORM implementation it
+is mapped with instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    gorm {
+        defaultIdType = 'native'
+    }
+}
+----
+
+A domain class mapped with MongoDB is then given a `String id` while one mapped with Hibernate keeps
+`Long`, so the same source works against either. The type is resolved when the domain class is compiled,
+from its `mapWith` property and the GORM implementations on the compilation classpath, so an application
+using more than one gets the right type for each domain class from the single setting. A domain class
+that declares an `id` keeps the type it declares.
+
+For a domain class shipped precompiled in a plugin, declare `Serializable id` in the plugin. The same
+build setting is packaged as `grails.gorm.defaultIdType` and selects the effective persistent type at
+runtime; no duplicate application configuration is required. Normal external configuration can still
+override that property.
+
+MongoDB maps that portable declaration to `String` for `native` and to `Long` for `long`; Hibernate
+maps it to its native `Long` identity either way. The resolved type is cached in GORM's mapping metadata,
+so this adds no per-operation type lookup. Concrete identity declarations remain authoritative.
+
+The default is `defaultIdType = 'long'`, which is the behaviour of every earlier release. Turning it on
+changes the type of a field that already holds data, so it is a choice to make when an application is
+written rather than one to switch on over an existing database. See the
+link:{mongodb5Guide}index.html#idGeneration[Identity Generation] section of the GORM for MongoDB guide for
+details.
+
+==== GORM for Hibernate Locking Improvements
+
+GORM for Hibernate 5 and Hibernate 7 gain three related locking capabilities. All of them require an active transaction, hold the lock until that transaction commits or rolls back, and are available on named connections (`Book.secondary.lock(id, refresh: true)`, `book.secondary.refresh(lock: true)`, within a transaction on that connection) and under a bound tenant. Datastores that do not support a capability throw `UnsupportedOperationException` rather than silently falling back to a plain refresh or an ordinary lock. The existing `entity.lock()`, `DomainClass.lock(id)` and `entity.refresh()` methods are unchanged; `entity.mutex` is built on the first of these capabilities and changes behaviour, as described below.
+
+===== Refresh Under a Lock
+
+The instance method link:{domainClassesRef}refresh.html[refresh] accepts a `lock` argument. `lock: true` reloads the entity's database state and version under a pessimistic WRITE lock that is acquired before the state is read, and returns the same instance. It never checks the already-loaded version, which is what `entity.lock()` does and why a concurrent update between `get()` and `lock()` can still cause an optimistic locking failure.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.get(1)
+    book.refresh(lock: true)
+    if (book.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+`lock` also accepts a `jakarta.persistence.LockModeType`, or its name, to refresh under a different mode, for example `book.refresh(lock: LockModeType.PESSIMISTIC_READ)`. `lock: true` is equivalent to `lock: LockModeType.PESSIMISTIC_WRITE`. `lock: false` and `lock: LockModeType.NONE` request no lock, so `entity.refresh([:])`, `entity.refresh(lock: false)` and `entity.refresh(lock: LockModeType.NONE)` behave exactly like `entity.refresh()`. Any other value throws `IllegalArgumentException`.
+
+The instance must be attached to the current session; a detached instance is rejected with `IllegalArgumentException` on both Hibernate versions rather than being silently re-attached. Re-attach it with `attach()` first.
+
+WARNING: Refreshing discards unflushed entity changes, including changes to associated entities reached by configured refresh cascades; it does not refresh the whole object graph. Call `refresh(lock: ...)` or `lock(id, refresh: true)` *before* making decisions based on the entity's state or applying mutations. The lock applies to the refreshed entity's own row; associated entities reloaded through the cascade are not guaranteed to be locked.
+
+On Hibernate 5, a locked refresh also resets GORM's dirty-checking state on the refreshed entity, its embedded components, and every initialized entity the refresh cascade reloaded, including associations reached through an embedded component, so the discarded edits do not schedule an update or bump a version at the next flush. A plain `refresh()` on Hibernate 5 leaves that state in place. Hibernate 7 resets it itself.
+
+===== Lock by Identifier with Refresh
+
+The static link:{domainClassesRef}lock.html[lock] method accepts `refresh: true`. `Book.lock(id, refresh: true)` behaves like `Book.lock(id)`, but when the entity is already managed in the current session it reloads that instance's state and version under the lock instead of locking the already-loaded state, and returns that same managed instance. When the entity is not in the session it is loaded under the lock. `null` is returned when no row exists for the identifier. `DomainClass.lock(id)` and `DomainClass.lock(id, refresh: false)` continue to lock without refreshing.
+
+[source,groovy]
+----
+Book.withTransaction {
+    def book = Book.lock(1, refresh: true)
+    if (book?.title == 'Draft') {
+        book.title = 'Ready for review'
+        book.save(failOnError: true)
+    }
+}
+----
+
+There is no `entity.lock(refresh: true)`. Groovy resolves that call to the static `lock(Serializable id)` method with the options map as the identifier, so GORM now rejects it with an `IllegalArgumentException` naming the two supported forms instead of reporting a missing identifier.
+
+===== Choosing the Lock Mode
+
+The static `lock` method also accepts `type`, a `jakarta.persistence.LockModeType` or its name, to acquire a lock other than the default `PESSIMISTIC_WRITE`. It applies whether the entity is loaded by the call or is already managed in the session, and it can be combined with `refresh: true` to reload a managed instance under that mode. `NONE` is rejected.
+
+Every lock mode is available to `refresh(lock: ...)` and to the static `type` argument on both Hibernate 5 and Hibernate 7:
+
+[cols="2,2,3",options="header"]
+|===
+| Lock mode | Database lock | Effect
+
+| `PESSIMISTIC_WRITE`
+| Exclusive row lock, typically `SELECT ... FOR UPDATE`
+| The default for `lock: true`, `lock(id)` and `lock(id, refresh: true)`. Other transactions cannot update the row or take a pessimistic lock on it until this transaction ends.
+
+| `PESSIMISTIC_READ`
+| Shared row lock, `SELECT ... FOR SHARE` where the database supports it
+| Other transactions cannot update the row but may take the same shared lock. Databases without shared row locks take an exclusive lock instead.
+
+| `PESSIMISTIC_FORCE_INCREMENT`
+| Exclusive row lock
+| As `PESSIMISTIC_WRITE`, and the version is incremented as part of taking the lock, so a transaction still holding the previous version fails its next update.
+
+| `OPTIMISTIC` (JPA alias `READ`)
+| None
+| The version is re-read when the transaction commits, and the commit fails if another transaction changed it.
+
+| `OPTIMISTIC_FORCE_INCREMENT` (JPA alias `WRITE`)
+| None
+| The version is incremented when the transaction commits, so other transactions holding the previous version fail.
+
+| `NONE`
+| None
+| `refresh(lock: LockModeType.NONE)` is a plain refresh, exactly like `refresh(lock: false)`. `lock(id, type: LockModeType.NONE)` is rejected with `IllegalArgumentException`: a lock call must name a lock.
+|===
+
+[source,groovy]
+----
+Book.withTransaction {
+    def shared = Book.lock(1, type: LockModeType.PESSIMISTIC_READ)
+    def current = Book.lock(2, refresh: true, type: LockModeType.PESSIMISTIC_READ)
+}
+----
+
+Without an active transaction, `refresh` with a lock, `lock(id, refresh: true)` and any `lock(id, ...)` call naming a `type` throw `jakarta.persistence.TransactionRequiredException` before anything is loaded. The database and transaction isolation level determine which state is visible. Locking does not guarantee that every concurrent attempt succeeds: deadlocks, lock timeouts, and transaction serialization failures remain possible. See the Optimistic and Pessimistic Locking section of the GORM for link:{hibernate7Guide}index.html#locking[Hibernate 7] or link:{hibernate5Guide}index.html#locking[Hibernate 5] guide for details.
+
+===== Holding a Lock for a Block of Work
+
+`entity.mutex(Closure)` locks an instance for the scope of a closure. It took an exclusive lock on the state already loaded, and because that lock is version-checked, a transaction that committed to the row after the instance was loaded failed the call with an optimistic locking failure and the closure never ran. Where the datastore supports a locked refresh, it now reloads the row under the lock instead, so it waits for the competing writer and the closure runs on the committed state. The lock is always exclusive; there is no argument to select another mode, because a shared or optimistic lock would not give the closure mutual exclusion.
+
+[source,groovy]
+----
+Airport.withTransaction {
+    def airport = Airport.get(10)
+    airport.mutex {
+        airport.name = 'Heathrow'
+        airport.save(failOnError: true)
+    }
+}
+----
+
+WARNING: Reloading discards unflushed changes to the instance, exactly as `refresh(lock: true)` does, so apply them *inside* the closure rather than before the call. `mutex` now also requires an active transaction and an attached instance. See the upgrade notes for the full list of consequences. Datastores that cannot reload under a lock keep their previous behaviour.
+
+
+==== GORM for Hibernate 7 Persist and Merge Events
+
+GORM for Hibernate 7 now starts tracking changes to an entity when it is persisted or merged, not only once its row has been inserted. Previously an entity whose identifier is generated before the insert, such as one mapped with `id generator: 'increment'` or any member of a `tablePerConcreteClass` hierarchy, was written with an `INSERT` immediately followed by an `UPDATE` of the same row and started at `version` 1. It now starts at `version` 0 with a single statement, as on Hibernate 5.
+
+As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+
+==== Default Security Response Headers
+
+Servlet web applications now send a baseline set of browser hardening headers on every response:
+`X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`
+and `X-XSS-Protection: 0`. HSTS and Content Security Policy can be turned on alongside them but are off by default,
+because their right values depend on the deployment. Behind a TLS-terminating proxy, HSTS honors the scheme the proxy
+forwards in `X-Forwarded-Proto` or `Forwarded`.
+
+The headers are written when the response commits, and only if nothing else has set them, so a controller, an
+interceptor, another filter or Spring Security's own header writers at Spring Boot's default filter order win.
+Redirects, error pages, streamed bodies and responses served by other Grails filters, such as asset-pipeline assets,
+are covered too.
+
+Everything is configurable under `grails.security.headers.*`: the whole filter, each header, and its value. A
+deployment whose reverse proxy already sends these headers can set `grails.security.headers.defaults: auto` to send
+only explicitly configured headers on proxied requests. See the xref:security[Security] section of the user guide and
+the xref:upgrading#upgrading80x[upgrade guide] for details.
+
+==== Nonce-based Content Security Policy
+
+`grails.security.headers.content-security-policy.value` can name a per-request nonce with the `+{nonce}+` placeholder
+that Spring Security 7.2 introduced, so a policy can allow an inline script or style by nonce rather than with
+`'unsafe-inline'`:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    security:
+        headers:
+            content-security-policy:
+                enabled: true
+                value: "script-src 'self' 'nonce-{nonce}'"
+----
+
+A view renders the request's nonce with the new `<g:cspNonce/>` tag, as in `<script nonce="${g.cspNonce()}">`, and the
+`<g:javascript>` tag adds it to the inline script it writes. A controller or a service reads it with
+`grails.web.http.ContentSecurityPolicyNonce.nonceOf(request)`. The nonce is carried in the `_csp` request attribute,
+which Spring Security's nonce filter uses as well, so the header and the page carry the same nonce whichever
+generated it. See the xref:security[Security] section of the user guide.
+
+==== Logins Redirect to the Page the User Asked For
+
+Browsers and their tools request paths such as `/apple-touch-icon.png`, `/manifest.json` and
+`/.well-known/appspecific/com.chrome.devtools.json` on their own. With the Spring Security plugin, a denied request for
+one of them was saved like any other, so a login could redirect there instead of to the page the user asked for. As
+Spring Security 7.2's configuration DSL does, the plugin now leaves these requests out of the request cache. The list is
+the `grails.plugin.springsecurity.requestCache.ignoredPatterns` setting.
+
+==== Agent Skills Published with Grails
+
+Grails now publishes its app-facing https://agentskills.io[Agent Skills] with every release: `org.apache.grails.skills:grails-developer`, for building Grails applications, and `org.apache.grails.skills:grails-upgrade`, for upgrading an application from Grails 8 and from one Grails 9 release to a later one. The jars use the https://www.skillsjars.com[SkillsJars] layout and the Grails BOM manages them, so an application applies the SkillsJars Gradle plugin, declares the skills without a version, and runs `./gradlew extractSkillsJars` to write the skills for its Grails version to the directory its AI coding agent reads. See xref:gettingStarted#agentSkills[Agent Skills].
 
 ==== Test HTTP Client Form Requests
 
 Integration tests that implement `HttpClientSupport` can now use `httpPostForm(...)` to send `application/x-www-form-urlencoded`
 request bodies. The helper URL-encodes form fields using UTF-8, and repeated values in a `Collection` or array are encoded as
 repeated keys in insertion order.
+
+==== Latency Testing Support
+
+The new `grails-testing-support-latency` module injects artificial latency into the application under test, so that
+requests randomly take longer. Slower responses widen the window in which timing bugs occur, turning intermittently
+flaky functional tests — assertions that race a navigation, missing waits, ordering assumptions — into deterministic
+failures. The module is inert until `grails.testing.latency.enabled` is set to `true`, and the delay range, the
+fraction of requests affected, and the url patterns are all configurable. See the
+<<functionalTesting,Functional Testing>> section for details.
 
 ==== GORM for MongoDB: TTL, Text, and Reconciled Indexes
 
@@ -170,6 +683,14 @@ A single property can likewise declare a `$text` index — or another special ty
 When the options of an already-created index change between restarts, GORM now reconciles the difference instead of only
 logging a conflict. A changed TTL is applied in place with MongoDB's `collMod` command — no drop, no rebuild — while any
 other option change is applied by declaring `indexAttributes: [recreateOnConflict: true]`.
+
+GORM still never drops an index by itself. `MongoDatastore.findUndeclaredIndexes()` lists the indexes on mapped
+collections whose keys no domain class declares any longer, and `dropUndeclaredIndexes()` drops them, as a deliberate
+step once every instance runs the release that declares the indexes to keep. See the
+link:{mongodb5Guide}index.html#undeclaredIndexes[Finding and Dropping Undeclared Indexes] section of the GORM for MongoDB
+guide. `findMissingIndexes()` lists the declared indexes their collections do not have, which shows when a build has
+been forgotten with `buildIndexes` off, and `buildIndexAsync()` runs the index build in the background and returns a
+`CompletableFuture` of its result, for a caller that needs to know when the build finished and what it applied.
 
 ==== GORM for MongoDB and Spring Data MongoDB Interoperability
 
@@ -196,3 +717,270 @@ be enabled (`grails.mongodb.transactional = true`). Spring Data repositories are
 session are shared, and the two object-mapping models stay separate. See the
 link:{mongodb5Guide}index.html#springDataInterop[Spring Data MongoDB Interoperability] section of the GORM for MongoDB
 guide for details.
+
+==== GORM for MongoDB: Checkpoint and Restore with CRaC
+
+An application using GORM for MongoDB can be checkpointed with https://openjdk.org/projects/crac/[CRaC] and restored,
+both while it is running and as its application context refreshes (`-Dspring.context.checkpoint=onRefresh`). GORM opens
+no connection to MongoDB until the application context starts its datastore, which is also when the declared indexes are
+built, and around a checkpoint it stops the client of every connection and starts it again after the restore. The
+`MongoClient` it hands out, the `mongo` bean among them, stays the same object throughout, so code holding it keeps
+working after a restore. In a Spring Boot application GORM now declares the `MongoClient` bean itself, built from Spring
+Boot's settings the way Spring Boot builds its own, so that client takes part as well. An embedded MongoDB is started
+with the application context when the process is checkpointed as the context refreshes. See the link:{mongodb5Guide}index.html#advancedConfig[Advanced Configuration]
+section of the GORM for MongoDB guide.
+
+==== Read-Only Transactions Do Not Flush the Session
+
+`@ReadOnly` and `@Transactional(readOnly = true)` now mean the same thing on every GORM datastore: a read-only
+transaction commits without flushing the session. Hibernate, Neo4j and the simple map datastore already behaved this
+way, and GORM for MongoDB was the exception — a read-only commit there flushed whatever the session had queued, so
+read-only code could persist another caller's unflushed writes, and a read-only transaction started while a session was
+flushing (for example from a validator or a `beforeInsert` event) could re-enter validation.
+
+`AbstractSession` now passes the transaction definition to `beginTransactionInternal(TransactionDefinition)` rather than
+discarding it, so a datastore can act on `readOnly` and on anything else the definition carries. `Session` also gained
+`hasPendingOperations()`, and `DatastoreTransactionManager` uses it to log a warning when a read-only transaction commits
+while its session still holds queued inserts, updates or deletes, so a write that a read-only transaction used to persist
+by accident is reported rather than silently dropped. This is a behavior change for MongoDB code that saves without
+`flush: true` and relies on a later read-only transaction to persist the write; see the
+xref:upgrading#upgrading80x[upgrade guide] and the
+link:{mongodb5Guide}index.html#readOnlyTransactions[Read-Only Transactions] section of the GORM for MongoDB guide.
+
+==== Ahead-of-Time Processing
+
+A Grails application can now be processed by Spring's ahead-of-time engine. Applying Spring Boot's AOT plugin adds a
+`processAot` task, which generates the bean definitions as Java source at build time instead of deriving them from
+classpath scanning and annotations on every start:
+
+[source,groovy]
+.build.gradle
+----
+apply plugin: 'org.springframework.boot.aot'
+
+tasks.named('processAot') {
+    systemProperty 'grails.env', 'production'
+}
+----
+
+[source,bash]
+----
+java -Dspring.aot.enabled=true -jar build/libs/myapp.jar
+----
+
+AOT processing is also what a GraalVM native image requires: Spring Boot refuses to start an image without a
+build-time generated initializer. Reachability metadata for the application's own artefacts and compiled pages is
+written from the build output, the framework registers the reflection it does on its own behalf while the
+application starts -- finding the plugins, creating their beans and artefacts, and what Groovy does for enums,
+traits and closures -- and `traceNativeMetadata` records what the framework reflects on along a request path.
+
+See the <<deploymentAot,Ahead-of-Time Processing>> section for what it changes at runtime and what it
+does not yet cover.
+
+==== Ahead-of-Time Caching
+
+On JDK 25 or later, `grails.aotCache` trains a JDK AOT cache by running the packaged application once and recording
+the classes it loaded and linked and the methods it ran, so the next start reads that work rather than repeating it:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    aotCache {
+        enabled = true
+        paths = ['/', '/login', '/book/index']
+    }
+}
+----
+
+An application that applies the `war` plugin, as a generated application does, is trained against the executable
+war it ships, `src/main/webapp` included, which Spring Boot 4.2 can extract.
+
+See the <<deploymentAotCache,Ahead-of-Time Caching>> section, which includes measured figures and the
+conditions under which a JVM will decline a cache.
+
+==== Startup Progress Page
+
+With the new `grails-startup-progress` module, which Forge offers as a feature of the same name,
+`./gradlew bootRun` no longer leaves port 8080 closed while the application starts. From the moment the
+application context is prepared, a browser opening the application sees a progress page: the stage the start
+has reached, how many beans have been created and which one is being created now, and the beans that have
+taken longest so far. The page reloads into the application once it is ready, after `BootStrap` has run, and
+shows the exception if the start fails. It is on by default in development mode and can be turned on
+elsewhere with `grails.startup.progress.enabled`. With `grails.startup.progress.openBrowser`, which `bootRun`
+also takes as a Gradle property, for example `./gradlew bootRun -Pgrails.startup.progress.openBrowser`, a
+browser opens on the page as the application starts. Bean names and failures are shown only to a browser signed
+in with the address the application logs, which the browser it opens is. Once the application is running, the
+same view is a report of how long each stage of the start took, at `/__grails/startup`, and a client sending
+`Accept: application/json` gets it as data. Work done during the start can report its own progress with
+`grails.boot.StartupTask`, which the database migration plugin uses to show how many change sets are left to
+run. See <<startupProgress,Watching the Application Start>>.
+
+==== Finding Query-Heavy Pages with query-tail
+
+The new `query-tail` command shows the pages of a running application ranked by the statements they run per
+request, and for each page the statement that repeats most within one request, which is what an N+1 looks like.
+It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cypher through Neo4j and commands
+through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
+`graphql/index (query BookList)`.
+Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
+`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
+`--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
+not boot the application. Capture is off unless the application is started with it, and an application started
+without it carries nothing that records. Statements are captured without their values: literals are recorded as `?`
+and comments are dropped, while the database runs each statement as written. See
+xref:conf#queryTail[Finding Query-Heavy Pages with query-tail].
+
+==== Banner Colour, Container Version and Start Mark
+
+The startup banner is coloured, reports the servlet container it is running on, and says how the application was
+started where that is worth saying — `NATIVE` for an image, `AOT CACHE` for a JVM given a cache to read, `AOT` for one
+running generated bean definitions. An ordinary start says nothing.
+
+Spring Security and the servlet container are also shown by default now. What allows that is a smaller change
+underneath: a version shown by default that cannot be determined is left out rather than shown as `unknown`, so
+an application without Spring Security says nothing about it instead of saying it does not know. One asked for
+by name still reads `unknown`, because saying nothing about what was asked for reads as the option having been
+ignored. See
+<<customizing,Customizing the Application Class>> for the full set of banner options, and the
+xref:upgrading#upgrading80x[upgrade guide] for how to restore the previous output.
+
+==== Message Bundles Resolved by Spring Boot
+
+Internationalization now runs on Spring Boot's own `MessageSourceAutoConfiguration`. Grails' custom
+message source is gone, and with it the `classpath*:*.properties` scan it performed at start-up.
+
+The base names Spring Boot needs are recorded at build time, per application and per plugin, so the
+whole `spring.messages.*` surface works as it does in any Boot application:
+
+[source,yaml]
+----
+spring:
+    messages:
+        cache-duration: 5s
+        use-code-as-default-message: true
+----
+
+Those properties were previously ignored, because Grails' own message source claimed the bean.
+
+Because discovery no longer scans, the message bundles an application and its plugins ship are known
+ahead of time. Grails registers the GraalVM resource hints for them — including plugin bundles and any
+base name an application configures itself, neither of which Spring Boot's own registrar covers.
+
+Plugin message bundles must now be namespaced on the plugin name — `spring-security-core.properties`
+rather than `messages.properties` — so that two plugins cannot shadow one another. See
+<<upgrading80x>> for the details.
+
+==== Quartz Scheduling Survives a Bad Schedule
+
+The Quartz plugin no longer lets one broken schedule take an application with it. A trigger that can
+never fire — a cron expression whose last occurrence has passed, an end time
+already gone by — is reported in the log and left unscheduled instead of stopping startup, and
+`quartz.failOnNeverFiringTriggers` restores the old behaviour for anyone who wants a bad schedule to fail
+a deployment.
+
+Jobs are also stamped with the application that registered them, so an application starting up removes
+only its own jobs from the job store. Two applications, or a clustered application and code scheduling
+through the Quartz API, can now share Quartz tables without one deleting the other's jobs and triggers.
+
+The scheduling methods a job class gets say what is wrong when they are misused: a null repeat interval,
+cron expression, date or trigger names the argument that is missing, and calling them on a job the
+scheduler does not know about explains why it is not registered — neither ends in a `NullPointerException`
+any more. See <<quartzLongRunningJobs,Long-Running Jobs>> for what a job that outlives its trigger's
+interval needs, and <<upgrading80x>> for the details.
+
+==== Faster Configuration Lookups
+
+`grailsApplication.config.getProperty` no longer probes the process environment on every call. The environment is read once, when the configuration is created, and its variable names are indexed, so a property that no variable can match is answered without touching `System.getenv`. A test that installs environment variables installs them before the application context is created, or calls `refresh()` on the configuration afterwards to have them seen; see xref:upgrading#upgrading81x[the upgrade guide].
+
+==== Compiled Tag Resolution
+
+Tag libraries are now described when they are compiled, and that description resolves tag calls in
+pages, tag libraries and controllers compiled afterwards. In a tag library or a controller, a call
+whose namespace and tag are known is compiled into a direct invocation rather than being dispatched
+through the metaclass, and no tag methods are installed onto tag library, page or dispatcher
+metaclasses to make dispatch work:
+
+[source,groovy]
+----
+class BookController {
+    def index() {
+        String markup = g.link(controller: 'book')   // compiled into a direct invocation
+    }
+}
+----
+
+The same applies to a call written without a namespace, to calls written inside a closure such as a
+tag body, and to a tag expression in a GSP declaring `compileStatic`. The tag itself is still selected
+by name when the call runs, so a tag library that overrides another, one registered while the
+application is running, and the order tag libraries are registered in all behave exactly as before. A
+namespace no compiled tag library declares, and a name something else in scope answers to, are left to
+dispatch as they did.
+
+A tag that no compiled tag library declares is left to resolve at runtime with nothing reported, since
+a namespace can legitimately hold tag libraries carrying no description. An application whose tag
+libraries are all described can ask for an error instead:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    compileStatic {
+        strictTags = true
+        dynamicTagNamespaces = ['legacy']   // registered while the application runs
+    }
+}
+----
+
+Defining a tag as a `Closure` field remains supported but is deprecated and now warns at compile time:
+a closure carries no signature, so nothing about a call to such a tag can be checked. Define tags as
+methods taking `Map attrs` and, where a body is needed, `Closure body`. See
+link:theWebLayer.html#compiledTags[Compiled Tag Resolution].
+
+==== Mapping Every Controller as a REST Resource
+
+A `resources` mapping can now be applied to every controller at once by capturing the controller in
+the URL and passing `*` instead of a controller name:
+
+[source,groovy]
+----
+"/$controller"(resources: '*')
+----
+
+This generates the same mappings the named form generates, but resolves the controller from the
+request rather than from the mapping, so an application whose controllers all follow the RESTful
+resource conventions declares them once instead of once per controller. The `includes` and `excludes`
+parameters work as they do for a named resource, and the mapping can be placed inside a `group`:
+
+[source,groovy]
+----
+group "/api/v1", {
+    "/$controller"(resources: '*', excludes: ['create', 'edit'])
+}
+----
+
+The controller and action captured from the URL are validated as they are for any other wildcard
+mapping. Because the controller is not known until a request is matched, the URL must capture it and
+child resources cannot be nested within the mapping. See
+link:theWebLayer.html#restfulMappings[Mapping to REST resources].
+
+==== Separate Recipient and Sender Overrides for Mail
+
+The Mail plugin can now override the recipients and the sender of outgoing mail separately.
+`grails.mail.overrideToAddress` replaces every `to`, `cc` and `bcc` address and keeps the sender the
+application sets, and `grails.mail.overrideFromAddress` replaces the sender without redirecting the
+recipients:
+
+[source,yaml]
+.application-test.yml
+----
+grails:
+    mail:
+        overrideToAddress: test-inbox@example.com
+----
+
+`grails.mail.overrideAddress` still replaces both, and the two new properties take precedence over it when
+both are set. It now also replaces a `from` set in the `sendMail` closure. See
+link:mail.html#mailConfiguration[Mail Configuration], and the link:upgrading.html#upgrading80x[upgrade guide]
+for what this means for an application that sets `overrideAddress`.

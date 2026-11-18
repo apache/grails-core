@@ -21,7 +21,6 @@ package org.grails.taglib
 import groovy.transform.CompileStatic
 
 import grails.core.GrailsApplication
-import grails.util.Environment
 
 /**
  * Allows dispatching to namespaced tag libraries and is used within controllers and tag libraries
@@ -37,30 +36,20 @@ class NamespacedTagDispatcher extends GroovyObjectSupport {
     protected GrailsApplication application
     protected Class type
     protected TagLibraryLookup lookup
-    protected boolean developmentMode
 
     NamespacedTagDispatcher(String ns, Class callingType, GrailsApplication application, TagLibraryLookup lookup) {
         this.namespace = ns
         this.application = application
-        this.developmentMode = Environment.isDevelopmentMode()
         this.lookup = lookup
         this.type = callingType ?: this.getClass()
-        initializeMetaClass()
     }
 
-    void initializeMetaClass() {
-        // use per-instance metaclass
-        ExpandoMetaClass emc = new ExpandoMetaClass(getClass(), false, true)
-        emc.initialize()
-        setMetaClass(emc)
-        registerTagMetaMethods(emc)
-    }
-
-    protected void registerTagMetaMethods(ExpandoMetaClass emc) {
-        TagLibraryMetaUtils.registerTagMetaMethods(emc, lookup, namespace)
-    }
-
+    /**
+     * Every dispatcher used to be given its own ExpandoMetaClass carrying a method for each tag in the
+     * namespace, built and populated as the dispatcher was constructed. Tags are dispatched through
+     * the lookup instead, so no metaclass is created or written to here.
+     */
     def methodMissing(String name, Object args) {
-        TagLibraryMetaUtils.methodMissingForTagLib(getMetaClass(), type, lookup, namespace, name, args, !developmentMode)
+        TagLibraryMetaUtils.methodMissingForTagLib(getMetaClass(), type, lookup, namespace, name, args, false)
     }
 }

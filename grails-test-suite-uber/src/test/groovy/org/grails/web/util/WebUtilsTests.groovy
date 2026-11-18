@@ -34,7 +34,6 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.mock.web.MockServletContext
-import org.grails.web.mime.HttpServletResponseExtension
 import org.springframework.web.context.request.RequestContextHolder
 
 import static org.junit.jupiter.api.Assertions.*
@@ -50,8 +49,6 @@ class WebUtilsTests {
     @BeforeEach
     void setUp() {
         RequestContextHolder.resetRequestAttributes()
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
         config = new ConfigSlurper().parse("""
 grails.mime.file.extensions=false
 grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
@@ -72,8 +69,6 @@ grails.mime.types = [ html: ['text/html','application/xhtml+xml'],
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes()
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
     }
 
     @Test
@@ -206,5 +201,45 @@ grails.mime.file.extensions=true
         WebUtils.clearGrailsWebRequest()
         assertNull RequestContextHolder.getRequestAttributes()
         assertNull mockHttpRequest.getAttribute(GrailsApplicationAttributes.WEB_REQUEST)
+    }
+
+    @Test
+    void clearGrailsWebRequestUnbindsTheThreadWhenTheRequestCannotBeReached() {
+        WebUtils.storeGrailsWebRequest(new GrailsWebRequest(
+                unreachableRequest(),
+                new MockHttpServletResponse(),
+                new MockServletContext()))
+
+        // The thread has to be unbound whatever the request does, or the next request this thread
+        // serves inherits a finished one.
+        assertThrows(IllegalStateException) { WebUtils.clearGrailsWebRequest() }
+        assertNull RequestContextHolder.getRequestAttributes()
+    }
+
+    @Test
+    void clearGrailsWebRequestReportsARequestItCannotReach() {
+        WebUtils.storeGrailsWebRequest(new GrailsWebRequest(
+                unreachableRequest(),
+                new MockHttpServletResponse(),
+                new MockServletContext()))
+
+        // Most callers clear a request they are about to keep using, so a request that cannot be
+        // reached is their bug to see rather than something for this method to decide is expected.
+        def thrown = assertThrows(IllegalStateException) { WebUtils.clearGrailsWebRequest() }
+        assertEquals 'the request has been recycled', thrown.message
+    }
+
+    /**
+     * Stands in for the request a container has already recycled, which answers every call with
+     * IllegalStateException.
+     */
+    private static MockHttpServletRequest unreachableRequest() {
+        new MockHttpServletRequest() {
+
+            @Override
+            void removeAttribute(String name) {
+                throw new IllegalStateException('the request has been recycled')
+            }
+        }
     }
 }

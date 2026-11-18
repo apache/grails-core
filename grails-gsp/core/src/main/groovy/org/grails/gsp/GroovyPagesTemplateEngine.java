@@ -64,7 +64,6 @@ import grails.config.Config;
 import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
-import grails.io.IOUtils;
 import grails.util.CacheEntry;
 import grails.util.Environment;
 import grails.util.GrailsUtil;
@@ -583,8 +582,13 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
         GroovyPageParser parser;
         String path = getPathForResource(res);
+        // Buffer the raw bytes rather than decoding straight off the stream, so the page can be checksummed
+        // exactly as it is stored. The checksum has to be taken over the stored bytes, not over gspSource or
+        // the decorated source below, because the runtime re-reads the resource raw when checking staleness.
+        byte[] gspBytes;
         try {
-            String gspSource = IOUtils.toString(inputStream, getGspEncoding());
+            gspBytes = inputStream.readAllBytes();
+            String gspSource = new String(gspBytes, getGspEncoding());
             parser = new GroovyPageParser(name, path, path, decorateGroovyPageSource(new StringBuilder(gspSource)).toString(),
                     grailsApplication != null ? grailsApplication.getConfig() : null);
         }
@@ -596,7 +600,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
         // Make a new metaInfo
         GroovyPageMetaInfo metaInfo = createPageMetaInfo(parser, in);
-        metaInfo.applyLastModifiedFromResource(res);
+        // A page compiled at runtime is checked for staleness the same way a precompiled one is. It costs
+        // nothing extra -- the bytes are already in hand.
+        metaInfo.setSourceChecksum(GroovyPageParser.checksumOf(gspBytes));
         try {
             metaInfo.setPageClass(compileGroovyPage(in, name, path, metaInfo));
             metaInfo.setHtmlParts(parser.getHtmlPartsArray());

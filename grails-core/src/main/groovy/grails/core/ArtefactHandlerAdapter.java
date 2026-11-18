@@ -79,6 +79,17 @@ public abstract class ArtefactHandlerAdapter implements ArtefactHandler {
     }
 
     /**
+     * The class {@link #newArtefactClass(Class)} creates to represent an artefact of this type, through its
+     * constructor taking the artefact class.
+     *
+     * @return the {@link GrailsClass} implementation this handler creates
+     * @since 9.0
+     */
+    public Class<?> getGrailsClassImpl() {
+        return grailsClassImpl;
+    }
+
+    /**
      * Default implementation of {@link grails.core.ArtefactHandler#isArtefact(org.codehaus.groovy.ast.ClassNode)} which returns true if the ClassNode passes the
      * {@link #isArtefactResource(org.grails.io.support.Resource)} method and the name of the ClassNode ends with the {@link #artefactSuffix}
      *

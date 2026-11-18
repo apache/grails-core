@@ -28,6 +28,10 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Provider
+import org.gradle.api.tasks.PathSensitivity
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.AbstractArchiveTask
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
@@ -39,6 +43,22 @@ import static org.apache.grails.buildsrc.GradleUtils.lookupPropertyByType
 
 @CompileStatic
 class CompilePlugin implements Plugin<Project> {
+
+    /** Root project names of the builds whose code runs inside Gradle; see {@link #configureCallSiteModule}. */
+    private static final Set<String> GRADLE_SIDE_BUILDS = ['build-logic-root', 'grails-gradle'].toSet()
+
+    static final String AUTO_CONFIGURATION_IMPORTS_PATH =
+            'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+    private static final String AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED =
+            'grailsAutoConfigurationImportsInputRegistered'
+
+    static final String GRAILS_FACTORIES_PATH = 'src/main/resources/META-INF/grails.factories'
+    static final List<String> CLI_FACTORIES_PATHS = [
+            'src/main/resources/META-INF/grails-cli.factories',
+            'src/cli/resources/META-INF/grails-cli.factories',
+    ].asImmutable()
+    private static final String GRAILS_FACTORIES_INPUT_REGISTERED = 'grailsFactoriesInputRegistered'
+    private static final String CLI_FACTORIES_INPUT_REGISTERED = 'grailsCliFactoriesInputRegistered'
 
     @Override
     void apply(Project project) {
@@ -54,7 +74,53 @@ class CompilePlugin implements Plugin<Project> {
         configureJavaVersion(project)
         configureJars(project)
         configureCompiler(project)
+        configureCallSiteModule(project)
         configureReproducible(project)
+    }
+
+    /**
+     * Declares {@code org.apache.groovy:groovy-callsite} on every source set when the build runs with
+     * {@code -PgrailsIndy=false}, the CI lane that compiles the Grails plugin modules and example apps
+     * with classic call sites.
+     *
+     * <p>Grails does not carry the module: an application that opts out of invokedynamic declares it
+     * itself. The lane stands in for such an application across the whole build, so every project needs
+     * it, on every source set: the ones compiled classic need it to compile, and every other one may load
+     * a classic-compiled class from them, as a test compiling against a plugin module's test fixtures
+     * does. The version is named outright, read from the map in {@code dependencies.gradle}, because the
+     * ast source set the Grails plugin gives a plugin project has no platform on its configurations.</p>
+     *
+     * <p>Not in the build-logic and grails-gradle builds, whether invoked or included: the property reaches
+     * every included build, but their code runs inside Gradle on its own Groovy, where the Groovy 6
+     * module's copies of the call-site classes collide with Gradle's, and they are never compiled classic.
+     * grails-core itself is injected wherever it is built, including as a build Forge includes.</p>
+     */
+    private static void configureCallSiteModule(Project project) {
+        Boolean indy = lookupPropertyByType(project, 'grailsIndy', Boolean)
+        if (indy == null || indy || project.gradle.rootProject.name in GRADLE_SIDE_BUILDS) {
+            return
+        }
+        project.plugins.withId('java-base') {
+            // A provider, so the version is read once the build scripts have run and the root's map exists.
+            Provider<String> module = project.provider { callSiteModule(project) }
+            project.extensions.getByType(SourceSetContainer).configureEach { SourceSet sourceSet ->
+                project.dependencies.addProvider(sourceSet.implementationConfigurationName, module)
+            }
+        }
+    }
+
+    private static String callSiteModule(Project project) {
+        Project root = project.rootProject
+        if (!root.extensions.extraProperties.has('bomDependencyVersions')) {
+            File versions = root.layout.projectDirectory.file('dependencies.gradle').asFile
+            if (versions.file) {
+                root.apply(from: versions)
+            }
+        }
+        Object version = root.extensions.extraProperties.has('bomDependencyVersions')
+                ? ((Map) root.extensions.extraProperties.get('bomDependencyVersions')).get('groovy.version')
+                : null
+        version ? "org.apache.groovy:groovy-callsite:${version}" as String : 'org.apache.groovy:groovy-callsite'
     }
 
     private static void configureJavaVersion(Project project) {
@@ -83,7 +149,10 @@ class CompilePlugin implements Plugin<Project> {
                     'Implementation-Version': lookupPropertyByType(project, 'grailsVersion', String),
                     'Implementation-Vendor': 'grails.apache.org'
             )
-            if (!jar.archiveClassifier.present) {
+            // archiveClassifier is present on the main jar with an empty value, so present alone
+            // would skip Automatic-Module-Name there and only the classified jars would be considered.
+            String classifier = jar.archiveClassifier.getOrNull()
+            if (classifier == null || classifier.isEmpty()) {
                 jar.manifest.attributes('Automatic-Module-Name': automaticModuleName(project))
             }
             // Explicitly fail since duplicates indicate a double configuration that needs fixed
@@ -123,6 +192,17 @@ class CompilePlugin implements Plugin<Project> {
                 it.groovyOptions.encoding = StandardCharsets.UTF_8.name()
                 // Preserve method parameter names in Groovy/Java classes for IDE parameter hints & bean reflection metadata.
                 it.groovyOptions.parameters = true
+                // groovyOptions only covers Groovy sources; joint-compiled Java sources take their javac flags from here
+                if (!it.options.compilerArgs.contains('-parameters')) {
+                    it.options.compilerArgs.add('-parameters')
+                }
+                // Grails 9 compiles with invokedynamic on. Groovy 6 moved classic call-site
+                // bytecode into the optional groovy-callsite module (GROOVY-11158), which the
+                // framework's library modules do not carry, so they never opt out. -PgrailsIndy
+                // (see grails-extension-gradle-config.gradle) still governs the Grails plugin
+                // modules, which that script gives groovy-callsite when the lane turns indy off,
+                // and applications opt out with grails { indy = false } plus that dependency.
+                it.groovyOptions.optimizationOptions.put('indy', true)
                 // encoding needs to be the same since it's different across platforms
                 it.options.encoding = StandardCharsets.UTF_8.name()
                 it.options.fork = true
@@ -141,7 +221,52 @@ class CompilePlugin implements Plugin<Project> {
                 if (System.getenv('SUPPRESS_DEPRECATION_WARNINGS') == 'true') {
                     it.options.compilerArgs += ['-Xlint:-removal']
                 }
+                // Canonicalize annotation member order for reproducible builds. Annotations copied from
+                // precompiled classes (e.g. @DelegatesTo on trait methods woven into controllers and GORM
+                // entities) have their members ordered by Class.getDeclaredMethods(), which varies between
+                // JVM runs. The GrailsGradlePlugin merges this script with its own configuration script
+                // when both are present.
+                it.groovyOptions.configurationScript =
+                        GradleUtils.findRootGrailsCoreDir(project).file('gradle/groovy-compile-configscript.groovy').asFile
             }
+            project.tasks.named('compileGroovy', GroovyCompile).configure { GroovyCompile task ->
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
+                registerAutoConfigurationImportsInput(project, task)
+                registerFactoriesInputs(project, task)
+            }
+        }
+    }
+
+    static void registerAutoConfigurationImportsInput(Project project, GroovyCompile task) {
+        if (task.extensions.extraProperties.has(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED)) {
+            return
+        }
+        task.extensions.extraProperties.set(AUTO_CONFIGURATION_IMPORTS_INPUT_REGISTERED, true)
+        task.inputs.files(project.layout.projectDirectory.file(AUTO_CONFIGURATION_IMPORTS_PATH))
+                .withPropertyName('grailsAutoConfigurationImports')
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+    }
+
+    /**
+     * Mirrors {@code FactoriesCompileInput} from the Grails Gradle plugins, which is not on build-logic's
+     * classpath, and marks the task the same way, so a module that also applies those plugins registers
+     * each input once. A cli tier's compilation is covered by the plugin that creates it.
+     */
+    static void registerFactoriesInputs(Project project, GroovyCompile task) {
+        if (!task.extensions.extraProperties.has(GRAILS_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(GRAILS_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(project.layout.projectDirectory.file(GRAILS_FACTORIES_PATH))
+                    .withPropertyName('grailsFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
+        }
+        if (!task.extensions.extraProperties.has(CLI_FACTORIES_INPUT_REGISTERED)) {
+            task.extensions.extraProperties.set(CLI_FACTORIES_INPUT_REGISTERED, true)
+            task.inputs.files(CLI_FACTORIES_PATHS.collect { String path -> project.layout.projectDirectory.file(path) })
+                    .withPropertyName('grailsCliFactories')
+                    .withPathSensitivity(PathSensitivity.RELATIVE)
         }
     }
 

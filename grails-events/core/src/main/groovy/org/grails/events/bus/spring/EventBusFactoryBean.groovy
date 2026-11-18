@@ -19,12 +19,14 @@
 
 package org.grails.events.bus.spring
 
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executor
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.beans.factory.FactoryBean
+import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
@@ -36,12 +38,11 @@ import org.grails.events.bus.ExecutorEventBus
 /**
  * Factory bean for usage within Spring
  *
- * @author Graeme Rocher
  * @since 3.3
  */
 @Slf4j
 @CompileStatic
-class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBus>, InitializingBean, ApplicationContextAware {
+class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBus>, InitializingBean, DisposableBean, ApplicationContextAware {
 
     ApplicationContext applicationContext
     EventBus eventBus
@@ -66,13 +67,32 @@ class EventBusFactoryBean extends EventBusBuilder implements FactoryBean<EventBu
         this.eventBus = super.build()
     }
 
+    /**
+     * Closes the event bus with the application context when the implementation owns resources,
+     * such as the actor loop behind the Groovy and GPars event buses.
+     */
+    @Override
+    void destroy() throws Exception {
+        if (eventBus instanceof Closeable) {
+            ((Closeable) eventBus).close()
+        }
+    }
+
     @Override
     protected EventBus createDefaultEventBus() {
         if (applicationContext.containsBean('grailsPromiseFactory')) {
             Object promiseFactory = applicationContext.getBean('grailsPromiseFactory')
-            if (promiseFactory instanceof ExecutorService) {
+            if (promiseFactory instanceof Executor) {
                 log.debug('Creating event bus from PromiseFactory {}', promiseFactory)
-                return new ExecutorEventBus((ExecutorService) promiseFactory)
+                return new ExecutorEventBus((Executor) promiseFactory)
+            }
+            // Keep events independent of the optional async module.
+            def properties = new BeanWrapperImpl(promiseFactory)
+            if (properties.isReadableProperty('executor')) {
+                Object executor = properties.getPropertyValue('executor')
+                if (executor instanceof Executor) {
+                    return new ExecutorEventBus((Executor) executor)
+                }
             }
         }
         return super.createDefaultEventBus()

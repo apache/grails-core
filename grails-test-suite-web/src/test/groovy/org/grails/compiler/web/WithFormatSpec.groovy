@@ -20,20 +20,9 @@ package org.grails.compiler.web
 
 import grails.artefact.Artefact
 import grails.testing.web.controllers.ControllerUnitTest
-import org.grails.web.mime.HttpServletResponseExtension
 import spock.lang.Specification
 
 class WithFormatSpec extends Specification implements ControllerUnitTest<MimeTypesCompiledController> {
-
-    def setup() {
-        // Clear the static mimeTypes cache to prevent test environment pollution
-        HttpServletResponseExtension.@mimeTypes = null
-    }
-
-    def cleanup() {
-        // Clear the static mimeTypes cache after each test for test isolation
-        HttpServletResponseExtension.@mimeTypes = null
-    }
 
     void "Test withFormat method injected at compile time"() {
         when:
@@ -50,6 +39,27 @@ class WithFormatSpec extends Specification implements ControllerUnitTest<MimeTyp
         then:
         format == 'xml'
     }
+
+    void 'a known format without a block of its own falls back to the Accept header'() {
+        given: 'a format the action has no block for, as on 8.0.x'
+        params.format = 'xml'
+        request.addHeader('Accept', 'text/html')
+
+        when:
+        def format = controller.htmlOrJson()
+
+        then:
+        format == 'html'
+        response.mimeTypes*.extension == ['html']
+    }
+
+    void 'a client that asks for a problem in XML, and next for Atom, is answered in Atom, as in Grails 8'() {
+        given:
+        request.addHeader('Accept', 'application/problem+xml, application/atom+xml')
+
+        expect:
+        response.format == 'atom'
+    }
 }
 
 @Artefact('Controller')
@@ -60,5 +70,11 @@ class MimeTypesCompiledController {
             xml { "xml" }
         }
     }
-}
 
+    def htmlOrJson() {
+        withFormat {
+            html { 'html' }
+            json { 'json' }
+        }
+    }
+}

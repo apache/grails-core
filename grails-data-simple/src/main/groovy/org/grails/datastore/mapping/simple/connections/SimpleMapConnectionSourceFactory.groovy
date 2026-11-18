@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 
 import org.springframework.core.env.PropertyResolver
 
+import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
@@ -49,9 +50,20 @@ class SimpleMapConnectionSourceFactory extends AbstractConnectionSourceFactory<M
         return PREFIX + '.connections'
     }
 
+    /**
+     * Builds the settings of a connection source from its configuration alone, but for its query-tail settings,
+     * which are the application's: a connection source whose configuration sets none of them, as one added at
+     * runtime from a map of its own does, captures as the connection source it falls back to does.
+     */
     @Override
     protected <F extends ConnectionSourceSettings> ConnectionSourceSettings buildSettings(String name, PropertyResolver configuration, F fallbackSettings, boolean isDefaultDataSource) {
         ConnectionSourceSettingsBuilder builder = new ConnectionSourceSettingsBuilder(configuration, PREFIX)
-        return builder.build()
+        ConnectionSourceSettings settings = builder.build()
+        QueryTailSettings fallbackQueryTail = fallbackSettings?.queryTail
+        if (fallbackQueryTail != null && !configuration.containsProperty(QueryTailSettings.SETTING_ENABLED) &&
+                !configuration.containsProperty(QueryTailSettings.SETTING_FILE)) {
+            settings.queryTail = fallbackQueryTail.clone()
+        }
+        return settings
     }
 }

@@ -65,7 +65,7 @@ By calling the `tmpl.book(..)` method with the list of books the `grails-app/vie
 
 == Global Default Template
 
-You can also define a `/object/_object` template that is rendered by default if no other template is found during content negotiation. To do this create a file called `/grails-app/views/object/_object.gson` where the name of the model is `object`, for example:
+You can also define a `/object/_object` template that is rendered by default if no other template is found during content negotiation. Validation errors and a Spring `ProblemDetail` are not rendered with it. To do this create a file called `/grails-app/views/object/_object.gson` where the name of the model is `object`, for example:
 
 [source,groovy]
 model {

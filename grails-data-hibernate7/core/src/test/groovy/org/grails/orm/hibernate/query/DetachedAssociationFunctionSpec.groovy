@@ -64,4 +64,23 @@ class DetachedAssociationFunctionSpec extends Specification {
         then: "it should NOT extract the internal association criteria (isolation)"
         result.isEmpty()
     }
+
+    def "apply recursively flattens association criteria nested inside junctions"() {
+        given: "an association criterion, a non-matching criterion, and a nested junction with another association criterion"
+        def association = Mock(org.grails.datastore.mapping.model.types.Association) {
+            getName() >> "test"
+        }
+        def topLevelAssociationCriteria = new DetachedAssociationCriteria(Object, association)
+        def nestedAssociationCriteria = new DetachedAssociationCriteria(Object, association)
+        def nonMatching = new Query.Equals("prop", "value")
+        def nestedJunction = new Query.Conjunction().add(nestedAssociationCriteria)
+        def junction = new Query.Conjunction().add(topLevelAssociationCriteria).add(nonMatching).add(nestedJunction)
+
+        when:
+        def result = function.apply(junction)
+
+        then: "both association criteria are collected, including the one nested in the inner junction"
+        result.size() == 2
+        result.containsAll([topLevelAssociationCriteria, nestedAssociationCriteria])
+    }
 }

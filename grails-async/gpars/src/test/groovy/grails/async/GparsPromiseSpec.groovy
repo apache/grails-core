@@ -19,7 +19,9 @@
 package grails.async
 
 import grails.async.decorator.PromiseDecorator
+import org.grails.async.factory.gpars.GparsPromise
 import org.grails.async.factory.gpars.GparsPromiseFactory
+import org.grails.async.factory.gpars.LoggingPoolFactory
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -27,7 +29,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 /**
- * @author Graeme Rocher
  * @since 2.3
  */
 class GparsPromiseSpec extends Specification {
@@ -35,6 +36,14 @@ class GparsPromiseSpec extends Specification {
     void 'Test that the promise factory is of the correct type'() {
         expect: 'the promise factory to be a GParsPromiseFactory'
             Promises.promiseFactory instanceof GparsPromiseFactory
+    }
+
+    void 'the GPars integration is deprecated for removal in favour of groovy.concurrent'() {
+        expect:
+            [GparsPromiseFactory, GparsPromise, LoggingPoolFactory].every { Class type ->
+                Deprecated deprecated = type.getAnnotation(Deprecated)
+                deprecated.since() == '9.0' && deprecated.forRemoval()
+            }
     }
 
     void 'Test add promise decorator'() {

@@ -22,6 +22,7 @@ import groovy.lang.GroovySystem;
 import groovy.lang.MetaClass;
 import groovy.lang.MetaClassRegistry;
 
+import grails.converters.JSON;
 import grails.util.GrailsNameUtils;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.exceptions.ConverterException;
@@ -48,6 +49,9 @@ public class ProxyUnwrappingMarshaller<C extends Converter> implements ObjectMar
 
     public void marshalObject(Object object, C converter) throws ConverterException {
         Object unwrapped = unwrap(object);
+        if (converter instanceof JSON json && unwrapped != null) {
+            json.standIn(object, unwrapped);
+        }
         converter.lookupObjectMarshaller(unwrapped).marshalObject(unwrapped, converter);
     }
 

@@ -15,7 +15,7 @@ class ${className}Controller {
 
     ${className}Service ${propertyName}Service
 
-    static responseFormats = ['json', 'xml']
+    static responseFormats = ['json']
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
 
     def index(Integer max) {
@@ -23,7 +23,7 @@ class ${className}Controller {
         respond ${propertyName}Service.list(params), model:[${propertyName}Count: ${propertyName}Service.count()]
     }
 
-    def show(Long id) {
+    def show(Serializable id) {
         respond ${propertyName}Service.get(id)
     }
 
@@ -72,7 +72,7 @@ class ${className}Controller {
     }
 
     @Transactional
-    def delete(Long id) {
+    def delete(Serializable id) {
         if (id == null || ${propertyName}Service.delete(id) == null) {
             render status: NOT_FOUND
             return

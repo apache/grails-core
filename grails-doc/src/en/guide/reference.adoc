@@ -88,6 +88,11 @@ include::ref/Command Line/create-integration-test.adoc[]
 
 include::ref/Command Line/create-interceptor.adoc[]
 
+[[ref-command-line-create-job]]
+==== create-job
+
+include::ref/Command Line/create-job.adoc[]
+
 [[ref-command-line-create-plugin]]
 ==== create-plugin
 
@@ -210,6 +215,11 @@ include::ref/Command Line/schema-export.adoc[]
 ==== shell
 
 include::ref/Command Line/shell.adoc[]
+
+[[ref-command-line-query-tail]]
+==== query-tail
+
+include::ref/Command Line/query-tail.adoc[]
 
 [[ref-command-line-stats]]
 ==== stats
@@ -1083,6 +1093,11 @@ include::ref/Tags/createLink.adoc[]
 
 include::ref/Tags/createLinkTo.adoc[]
 
+[[ref-tags-cspNonce]]
+==== cspNonce
+
+include::ref/Tags/cspNonce.adoc[]
+
 [[ref-tags-currencySelect]]
 ==== currencySelect
 
@@ -1342,3 +1357,23 @@ include::ref/Tags/uploadForm.adoc[]
 ==== while
 
 include::ref/Tags/while.adoc[]
+
+[[ref-triggers]]
+=== Triggers
+
+include::ref/Triggers.adoc[]
+
+[[ref-triggers-cron]]
+==== cron
+
+include::ref/Triggers/cron.adoc[]
+
+[[ref-triggers-custom]]
+==== custom
+
+include::ref/Triggers/custom.adoc[]
+
+[[ref-triggers-simple]]
+==== simple
+
+include::ref/Triggers/simple.adoc[]

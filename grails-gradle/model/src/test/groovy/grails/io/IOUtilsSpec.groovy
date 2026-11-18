@@ -43,4 +43,17 @@ class IOUtilsSpec extends Specification {
         result.startsWith('file:')
         result.endsWith('/')
     }
+
+    void 'a class root in a build maps to the resources root of the same build: #classRoot'() {
+        expect:
+        IOUtils.resourcesRootFor(classRoot, classesPath, resourcesPath) == resourcesRoot
+
+        where:
+        classRoot                                               | classesPath                                   | resourcesPath                           | resourcesRoot
+        'file:/app/build/classes/groovy/main'                   | 'build/classes/groovy/main'                   | 'build/resources/main'                  | 'file:/app/build/resources/main'
+        'file:/app/build-parent/build-8070/classes/groovy/main' | 'build-parent/build-8070/classes/groovy/main' | 'build-parent/build-8070/resources/main' | 'file:/app/build-parent/build-8070/resources/main'
+        'file:/app/build/classes/groovy/test'                   | 'build/classes/groovy/main'                   | 'build/resources/main'                  | 'file:/app/build/classes/groovy/test'
+        'file:/app/mybuild/classes/groovy/main'                 | 'build/classes/groovy/main'                   | 'build/resources/main'                  | 'file:/app/mybuild/classes/groovy/main'
+        'jar:file:/lib/plugin.jar!'                             | 'build/classes/groovy/main'                   | 'build/resources/main'                  | 'jar:file:/lib/plugin.jar!'
+    }
 }

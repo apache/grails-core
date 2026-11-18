@@ -19,20 +19,25 @@
 package org.grails.web.converters.marshaller.json;
 
 import java.text.Format;
-import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
+import org.grails.web.json.JsonDateFormat;
 
 /**
  * JSON ObjectMarshaller which converts a Calendar Object to an RFC 3339 / ISO 8601
- * UTC instant string (e.g. {@code 2024-06-15T14:30:45.123Z}).
+ * UTC instant string with millisecond precision (e.g. {@code 2024-06-15T14:30:45.123Z}),
+ * the same as Spring Boot's default Jackson rendering. See {@link JsonDateFormat}.
  *
  * @since 7.0
+ * @deprecated with {@code grails.converters.json.legacy} set to {@code false}, as Grails 10 does by default,
+ *     the converter writes {@code Calendar} values with the application's {@code JsonMapper}; this marshaller is registered while
+ *     it is {@code true}, the default in Grails 9, to render JSON as Grails 8 did.
  */
+@Deprecated(since = "9.0")
 public class CalendarMarshaller implements ObjectMarshaller<JSON> {
 
     private final Format legacyFormatter;
@@ -46,7 +51,7 @@ public class CalendarMarshaller implements ObjectMarshaller<JSON> {
     }
 
     /**
-     * Default constructor — uses {@link DateTimeFormatter#ISO_INSTANT}.
+     * Default constructor — uses {@link JsonDateFormat}.
      */
     public CalendarMarshaller() {
         this(null);
@@ -61,7 +66,7 @@ public class CalendarMarshaller implements ObjectMarshaller<JSON> {
             Calendar calendar = (Calendar) object;
             String formatted = legacyFormatter != null ?
                     legacyFormatter.format(calendar.getTime()) :
-                    DateTimeFormatter.ISO_INSTANT.format(calendar.toInstant());
+                    JsonDateFormat.format(calendar.getTimeInMillis());
             converter.getWriter().value(formatted);
         }
         catch (JSONException e) {

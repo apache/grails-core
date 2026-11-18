@@ -18,6 +18,7 @@
  */
 package org.grails.plugins;
 
+import org.springframework.context.support.ResourceBundleMessageSource;
 import junit.framework.TestCase;
 
 /**
@@ -73,8 +74,10 @@ public class PluginTests {
         CommonsMultipartResolver multipartResolver = (CommonsMultipartResolver)appCtx.getBean("multipartResolver", CommonsMultipartResolver.class);
     }
 
-    public void testReloadableResourceBundleMessageSourceRequired() {
-        ReloadableResourceBundleMessageSource messageSource = (ReloadableResourceBundleMessageSource)appCtx.getBean("messageSource", ReloadableResourceBundleMessageSource.class);
+    public void testResourceBundleMessageSourceRequired() {
+        // Spring Boot's MessageSourceAutoConfiguration owns the messageSource bean; Grails no longer
+        // registers one of its own, so the stock ResourceBundleMessageSource is what should be here.
+        ResourceBundleMessageSource messageSource = appCtx.getBean("messageSource", ResourceBundleMessageSource.class);
     }
 
     public void testLocaleChangeInterceptorRequired() {

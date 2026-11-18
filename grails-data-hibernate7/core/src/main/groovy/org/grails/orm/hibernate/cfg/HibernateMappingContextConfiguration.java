@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Serial;
 import java.io.Serializable;
@@ -46,14 +47,18 @@ import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.AdditionalMappingContributor;
+import org.hibernate.boot.spi.SessionFactoryBuilderFactory;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.cfg.BytecodeSettings;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.cfg.Environment;
 import org.hibernate.cfg.JdbcSettings;
+import org.hibernate.cfg.QuerySettings;
 import org.hibernate.context.spi.CurrentSessionContext;
 import org.hibernate.internal.util.config.ConfigurationHelper;
+import org.hibernate.persister.internal.PersisterClassResolverInitiator;
 import org.hibernate.service.ServiceRegistry;
+import org.hibernate.service.spi.SessionFactoryServiceContributor;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -69,17 +74,21 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.ClassUtils;
 
+import org.apache.grails.data.hibernate7.core.querytail.QueryTailSessionFactoryObserver;
 import org.grails.datastore.gorm.GormEntity;
 import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.reflect.DevToolsClassLoaders;
 import org.grails.orm.hibernate.EventListenerIntegrator;
 import org.grails.orm.hibernate.GrailsSessionContext;
 import org.grails.orm.hibernate.HibernateEventListeners;
 import org.grails.orm.hibernate.MetadataIntegrator;
 import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder;
 import org.grails.orm.hibernate.cfg.domainbinding.util.NamingStrategyProvider;
+import org.grails.orm.hibernate.persister.GormPersisterClassResolver;
 import org.grails.orm.hibernate.proxy.GrailsBytecodeProvider;
+import org.grails.orm.hibernate.query.RestrictedCollectionSqmTranslatorFactory;
 
 /**
  * A Configuration that uses a MappingContext to configure Hibernate
@@ -113,6 +122,7 @@ public class HibernateMappingContextConfiguration extends Configuration
     private transient ResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
     private transient NamingStrategyProvider namingStrategyProvider = new NamingStrategyProvider();
     protected GrailsBytecodeProvider bytecodeProvider;
+    private transient File queryTailFile;
 
     public void setBytecodeProvider(GrailsBytecodeProvider bytecodeProvider) {
         this.bytecodeProvider = bytecodeProvider;
@@ -153,9 +163,13 @@ public class HibernateMappingContextConfiguration extends Configuration
             properties.put("hibernate.enhancer.enableLazyInitialization", FALSE_LITERAL);
             properties.put("hibernate.enhancer.enableDirtyTracking", FALSE_LITERAL);
             properties.put("hibernate.enhancer.enableAssociationManagement", FALSE_LITERAL);
-            ClassLoader classLoader = applicationContext.getClassLoader();
-            if (classLoader != null) {
-                properties.put(AvailableSettings.CLASSLOADERS, classLoader);
+            ClassLoader applicationClassLoader = applicationContext.getClassLoader();
+            // Keep CLASSLOADERS absent when the context loader is null and DevTools restart is not
+            // active so buildSessionFactory can fall back to this class's loader.
+            if (applicationClassLoader != null ||
+                    DevToolsClassLoaders.isRestartClassLoaderOrDescendant(Thread.currentThread().getContextClassLoader())) {
+                properties.put(AvailableSettings.CLASSLOADERS,
+                        DevToolsClassLoaders.preferRestartClassLoader(applicationClassLoader));
             }
         }
     }
@@ -175,16 +189,8 @@ public class HibernateMappingContextConfiguration extends Configuration
         getProperties().put(JdbcSettings.JAKARTA_NON_JTA_DATASOURCE, source);
         getProperties().put(Environment.CURRENT_SESSION_CONTEXT_CLASS, GrailsSessionContext.class.getName());
         setBytecodeProvider(getGrailsBytecodeProvider());
-        final ClassLoader contextClassLoader = Thread.currentThread().getContextClassLoader();
-        if (contextClassLoader != null &&
-                contextClassLoader.getClass().getSimpleName().equalsIgnoreCase("RestartClassLoader")) {
-            getProperties().put(AvailableSettings.CLASSLOADERS, contextClassLoader);
-        } else {
-            getProperties()
-                    .put(
-                            AvailableSettings.CLASSLOADERS,
-                            connectionSource.getClass().getClassLoader());
-        }
+        getProperties().put(AvailableSettings.CLASSLOADERS,
+                DevToolsClassLoaders.preferRestartClassLoader(connectionSource.getClass().getClassLoader()));
     }
 
     /**
@@ -291,16 +297,20 @@ public class HibernateMappingContextConfiguration extends Configuration
         // work around for HHH-2624
         SessionFactory sessionFactory;
 
-        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
-        ClassLoader appClassLoader;
-
-        if (classLoaderObject instanceof ClassLoader) {
-            appClassLoader = (ClassLoader) classLoaderObject;
-        } else {
-            appClassLoader = getClass().getClassLoader();
-        }
+        ClassLoader appClassLoader = resolveSessionFactoryClassLoader();
 
         ConfigurationHelper.resolvePlaceHolders(getProperties());
+
+        // Hibernate 7 tests the emptiness of a collection without its restriction; this translator tests it
+        // with a size subquery instead, which applies the restriction (apache/grails-core#16748)
+        getProperties().putIfAbsent(QuerySettings.SEMANTIC_QUERY_TRANSLATOR,
+                RestrictedCollectionSqmTranslatorFactory.class.getName());
+
+        // Hibernate 7 leaves a nullable element column out of the delete of one row of a set, which then deletes every
+        // row of the owner; this resolver gives a set of entities in a join table a persister that deletes by the
+        // element too (apache/grails-core#16691)
+        getProperties().putIfAbsent(PersisterClassResolverInitiator.IMPL_NAME,
+                GormPersisterClassResolver.class.getName());
 
         final GrailsDomainBinder domainBinder = new GrailsDomainBinder(
                 dataSourceName,
@@ -327,6 +337,8 @@ public class HibernateMappingContextConfiguration extends Configuration
 
         addAnnotatedClasses(annotatedClasses.toArray(new Class[0]));
 
+        QueryTailSessionFactoryObserver queryTail = queryTailFile != null ?
+                new QueryTailSessionFactoryObserver(dataSourceName, queryTailFile) : null;
         ClassLoaderService classLoaderService = new ClassLoaderServiceImpl(appClassLoader) {
             @Override
             public <S> Collection<S> loadJavaServices(Class<S> serviceContract) {
@@ -343,6 +355,18 @@ public class HibernateMappingContextConfiguration extends Configuration
                     allContributors.add(grailsBinder);
                     allContributors.addAll(parentContributors);
                     return allContributors;
+                }
+                if (queryTail != null && SessionFactoryBuilderFactory.class.isAssignableFrom(serviceContract)) {
+                    // The capture observes the session factory being built, whatever observer the configuration holds.
+                    List<S> factories = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    factories.add(serviceContract.cast(queryTail.getSessionFactoryBuilderFactory()));
+                    return factories;
+                }
+                if (queryTail != null && SessionFactoryServiceContributor.class.isAssignableFrom(serviceContract)) {
+                    // The capture records the connections of the session factory, whatever provider hands them out.
+                    List<S> contributors = new ArrayList<>(super.loadJavaServices(serviceContract));
+                    contributors.add(serviceContract.cast(queryTail.getSessionFactoryServiceContributor()));
+                    return contributors;
                 }
                 return super.loadJavaServices(serviceContract);
             }
@@ -366,14 +390,28 @@ public class HibernateMappingContextConfiguration extends Configuration
         standardServiceRegistryBuilder.addService(org.hibernate.bytecode.spi.BytecodeProvider.class, bytecodeProvider);
 
         StandardServiceRegistry ssr = standardServiceRegistryBuilder.build();
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
         try {
+            Thread.currentThread().setContextClassLoader(appClassLoader);
             sessionFactory = super.buildSessionFactory(ssr);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        } finally {
+            Thread.currentThread().setContextClassLoader(previous);
         }
         this.serviceRegistry = ssr;
 
         return sessionFactory;
+    }
+
+    ClassLoader resolveSessionFactoryClassLoader() {
+        Object classLoaderObject = getProperties().get(AvailableSettings.CLASSLOADERS);
+        ClassLoader storedClassLoader = classLoaderObject instanceof ClassLoader ?
+                (ClassLoader) classLoaderObject : getClass().getClassLoader();
+        // addProperties() or a custom configClass may have replaced CLASSLOADERS after the
+        // setters ran. GrailsDomainBinder binds entities by class name and Hibernate resolves
+        // them through this loader, so it has to see the restarted application classes.
+        return DevToolsClassLoaders.preferRestartClassLoader(storedClassLoader);
     }
 
     /**
@@ -417,5 +455,18 @@ public class HibernateMappingContextConfiguration extends Configuration
 
     public ServiceRegistry getServiceRegistry() {
         return serviceRegistry;
+    }
+
+    /**
+     * Sets the file query-tail capture records the statements of the session factories this
+     * configuration builds to. Each session factory is given an observer, and a capture, of its own,
+     * which records the statements run on the connections of its service registry. The observer is
+     * added to the session factory as Hibernate builds it, next to the observer the configuration
+     * holds, which is left as the application set it.
+     *
+     * @param queryTailFile the capture file, or null to record nothing
+     */
+    public void setQueryTailFile(File queryTailFile) {
+        this.queryTailFile = queryTailFile;
     }
 }

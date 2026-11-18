@@ -1,0 +1,44 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+version = '0.0.1'
+group = 'legacy.commands.plugin'
+
+dependencies {
+    implementation platform("org.apache.grails:grails-bom:$projectVersion")
+
+    // This fixture recompiles legacy command sources against Grails 8's grails-core-cli-legacy to
+    // validate discovery, adapter, registry, and runner wiring end-to-end. It does not
+    // re-validate a pre-compiled Grails 7 binary's Groovy-trait ABI. That relies on Groovy's
+    // stable trait encoding across 4->5 and could be strengthened later with a prebuilt Grails 7
+    // fixture jar.
+    compileOnly 'org.apache.grails:grails-core-cli-legacy'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('../gradle/grails-extension-gradle-config.gradle')
+}

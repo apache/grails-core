@@ -23,10 +23,12 @@ import graphql.schema.DataFetcher
 import graphql.schema.GraphQLCodeRegistry
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLNamedType
 import graphql.schema.GraphQLObjectType
 import graphql.schema.GraphQLOutputType
 import graphql.schema.GraphQLSchema
 import graphql.schema.GraphQLType
+import graphql.schema.GraphQLTypeUtil
 import groovy.transform.CompileStatic
 import javassist.Modifier
 import org.grails.datastore.mapping.model.MappingContext
@@ -381,7 +383,7 @@ class Schema {
                     DataFetcher countFetcher = dataFetcherManager.getReadingFetcher(entity, COUNT).orElse(new CountEntityDataFetcher(entity))
 
                     final String countFieldName = namingConvention.getCount(entity)
-                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Integer)
+                    final GraphQLOutputType countOutputType = (GraphQLOutputType) typeManager.getType(Long)
 
                     GraphQLFieldDefinition.Builder queryCount = newFieldDefinition()
                             .name(countFieldName)
@@ -499,11 +501,11 @@ class Schema {
                 }
 
                 for (CustomOperation operation : mapping.customQueryOperations) {
-                    queryFields.add(operation.createField(entity, serviceManager, mappingContext, listArguments))
+                    queryFields.add(operation.createField(entity, serviceManager, mappingContext, listArguments, queryTypeName))
                 }
 
                 for (CustomOperation operation : mapping.customMutationOperations) {
-                    mutationFields.add(operation.createField(entity, serviceManager, mappingContext, Collections.emptyMap()))
+                    mutationFields.add(operation.createField(entity, serviceManager, mappingContext, Collections.emptyMap(), mutationTypeName))
                 }
 
                 for (GraphQLSchemaInterceptor schemaInterceptor : interceptorManager.interceptors) {
@@ -531,9 +533,16 @@ class Schema {
             schemaInterceptor.interceptSchema(queryType, mutationType, additionalTypes)
         }
 
+        // graphql-java only accepts named types as additional types. Unwrapping list and
+        // non-null wrappers adds the type they wrap, which is what a wrapped type
+        // contributed to the schema before graphql-java 26 narrowed the signature.
+        Set<GraphQLNamedType> namedAdditionalTypes = additionalTypes.collect(new LinkedHashSet<GraphQLNamedType>()) { GraphQLType type ->
+            GraphQLTypeUtil.unwrapAll(type)
+        }
+
         GraphQLSchema.Builder schema = GraphQLSchema.newSchema()
                 .codeRegistry(codeRegistry.build())
-                .additionalTypes(additionalTypes)
+                .additionalTypes(namedAdditionalTypes)
 
         GraphQLObjectType mutation = mutationType.build()
         if (mutation.fieldDefinitions) {
@@ -544,6 +553,7 @@ class Schema {
             schema.query(query)
             return schema.build()
         }
+        null
     }
 
 }

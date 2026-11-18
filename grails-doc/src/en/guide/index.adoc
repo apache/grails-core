@@ -240,6 +240,11 @@ include::conf/dataSource/databaseConsole.adoc[]
 
 include::conf/dataSource/multipleDatasources.adoc[]
 
+[[queryTail]]
+==== Finding Query-Heavy Pages with query-tail
+
+include::conf/dataSource/queryTail.adoc[]
+
 [[versioning]]
 === Versioning
 
@@ -1075,11 +1080,6 @@ include::security/securityPlugins.adoc[]
 
 include::security/securityPlugins/springSecurity.adoc[]
 
-[[shiro]]
-==== Shiro
-
-include::security/securityPlugins/shiro.adoc[]
-
 [[mail]]
 == Mail
 
@@ -1109,6 +1109,66 @@ include::mail/mailAttachments.adoc[]
 === Testing
 
 include::mail/mailTesting.adoc[]
+
+[[backgroundJobs]]
+== Background Jobs
+
+include::backgroundJobs.adoc[]
+
+[[backgroundJobsBasic]]
+=== Basic Scheduling
+
+include::backgroundJobs/backgroundJobsBasic.adoc[]
+
+[[backgroundJobsAdvanced]]
+=== Advanced Scheduling
+
+include::backgroundJobs/backgroundJobsAdvanced.adoc[]
+
+[[quartzInstallation]]
+==== Installation
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzInstallation.adoc[]
+
+[[quartzScheduling]]
+==== Writing Jobs
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzScheduling.adoc[]
+
+[[quartzTriggers]]
+==== Triggers
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzTriggers.adoc[]
+
+[[quartzJobProperties]]
+==== Job Properties
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzJobProperties.adoc[]
+
+[[quartzDynamicScheduling]]
+==== Dynamic Job Scheduling
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzDynamicScheduling.adoc[]
+
+[[quartzJobManagerService]]
+==== Managing Jobs at Runtime
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzJobManagerService.adoc[]
+
+[[quartzConfiguration]]
+==== Configuration
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzConfiguration.adoc[]
+
+[[quartzClustering]]
+==== Clustering
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzClustering.adoc[]
+
+[[quartzUsefulLinks]]
+==== Useful Links
+
+include::backgroundJobs/backgroundJobsAdvanced/quartzUsefulLinks.adoc[]
 
 [[redis]]
 == Redis
@@ -1278,17 +1338,32 @@ include::deployment.adoc[]
 [[deploymentStandalone]]
 === Standalone
 
-include::deployment/deploymentStandalone.adoc[]
+include::deployment/deploymentStandalone.adoc[leveloffset=+2]
 
 [[deploymentContainer]]
-=== Container Deployment (e.g. Tomcat)
+=== External Servlet Container Deployment
 
-include::deployment/deploymentContainer.adoc[]
+include::deployment/deploymentContainer.adoc[leveloffset=+2]
+
+[[deploymentLayeredBuilds]]
+=== OCI Images and Layered Builds
+
+include::deployment/deploymentLayeredBuilds.adoc[leveloffset=+2]
 
 [[deploymentTasks]]
-=== Deployment Configuration Tasks
+=== Production Configuration
 
-include::deployment/deploymentTasks.adoc[]
+include::deployment/deploymentTasks.adoc[leveloffset=+2]
+
+[[deploymentAot]]
+=== Ahead-of-Time Processing
+
+include::deployment/deploymentAot.adoc[leveloffset=+1]
+
+[[deploymentAotCache]]
+=== Ahead-of-Time Caching
+
+include::deployment/deploymentAotCache.adoc[leveloffset=+1]
 
 [[contributing]]
 == Contributing to Grails
@@ -1360,6 +1435,11 @@ include::ref/Command Line/create-integration-test.adoc[]
 ==== create-interceptor
 
 include::ref/Command Line/create-interceptor.adoc[]
+
+[[ref-command-line-create-job]]
+==== create-job
+
+include::ref/Command Line/create-job.adoc[]
 
 [[ref-command-line-create-plugin]]
 ==== create-plugin
@@ -1480,6 +1560,11 @@ include::ref/Command Line/schema-export.adoc[]
 ==== shell
 
 include::ref/Command Line/shell.adoc[]
+
+[[ref-command-line-query-tail]]
+==== query-tail
+
+include::ref/Command Line/query-tail.adoc[]
 
 [[ref-command-line-stats]]
 ==== stats
@@ -2608,3 +2693,22 @@ include::ref/Tags/uploadForm.adoc[]
 
 include::ref/Tags/while.adoc[]
 
+[[ref-triggers]]
+=== Triggers
+
+include::ref/Triggers.adoc[]
+
+[[ref-triggers-cron]]
+==== cron
+
+include::ref/Triggers/cron.adoc[]
+
+[[ref-triggers-custom]]
+==== custom
+
+include::ref/Triggers/custom.adoc[]
+
+[[ref-triggers-simple]]
+==== simple
+
+include::ref/Triggers/simple.adoc[]

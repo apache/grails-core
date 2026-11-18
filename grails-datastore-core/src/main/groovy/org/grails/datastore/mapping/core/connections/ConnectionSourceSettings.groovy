@@ -26,6 +26,7 @@ import groovy.transform.builder.SimpleStrategy
 
 import jakarta.persistence.FlushModeType
 
+import org.apache.grails.datastore.core.querytail.QueryTailSettings
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.engine.types.CustomTypeMarshaller
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
@@ -80,6 +81,12 @@ class ConnectionSourceSettings implements Settings {
     Boolean cacheAutoTimestampAnnotations
 
     /**
+     * The identity type to use when a portable, precompiled domain declares
+     * {@code Serializable id}. Accepted values are {@code long} and {@code native}.
+     */
+    String defaultIdType = 'long'
+
+    /**
      * Package names that should fail on error
      */
     List<String> failOnErrorPackages = Collections.emptyList()
@@ -98,6 +105,15 @@ class ConnectionSourceSettings implements Settings {
      * The settings for Multi Tenancy
      */
     MultiTenancySettings multiTenancy = new MultiTenancySettings()
+
+    /**
+     * The query-tail capture settings, read from {@code grails.gorm.queryTail}: bound with the other
+     * settings, so that every connection source of every store, including one added at runtime, takes
+     * them from the settings it falls back to
+     *
+     * @since 9.0
+     */
+    QueryTailSettings queryTail = new QueryTailSettings()
 
     /**
      * @return Any defaults
@@ -143,4 +159,3 @@ class ConnectionSourceSettings implements Settings {
         List<CustomTypeMarshaller> types = []
     }
 }
-

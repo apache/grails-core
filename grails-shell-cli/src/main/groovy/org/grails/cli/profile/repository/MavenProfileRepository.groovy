@@ -40,8 +40,36 @@ import org.grails.cli.profile.Profile
 @CompileStatic
 class MavenProfileRepository extends AbstractJarProfileRepository {
 
-    public static final GrailsRepositoryConfiguration GRAILS_REPO = new GrailsRepositoryConfiguration('grailsRepo', new URI('https://repo.grails.org/grails/restricted'), true)
-    public static final GrailsRepositoryConfiguration APACHE_REPO = new GrailsRepositoryConfiguration('apacheRepository', new URI('https://repository.apache.org/content/groups/public'), true)
+    static final URI GRAILS_REPO_URI = new URI('https://repo.grails.org/grails/restricted')
+    static final URI APACHE_REPO_URI = new URI('https://repository.apache.org/content/groups/public')
+
+    /**
+     * Whether the given Grails version should resolve against snapshot repositories: only a snapshot
+     * build (or an unknown version) does. Kept as a pure function of the version so the decision can
+     * be made during the CLI lifecycle — and unit tested — rather than at class-initialisation time.
+     */
+    static boolean isSnapshotVersion(String grailsVersion) {
+        !grailsVersion || grailsVersion.endsWith('SNAPSHOT')
+    }
+
+    /**
+     * Whether snapshot resolution should be enabled for the running CLI. Reading the version here
+     * (rather than in a static initialiser) keeps the environment access on the startup lifecycle.
+     * For a milestone/release CLI this is {@code false}, which lets Aether use
+     * {@code UPDATE_POLICY_NEVER} and serve fixed versions straight from the local cache instead of
+     * making remote {@code maven-metadata.xml} round-trips on every resolve.
+     */
+    static boolean snapshotsEnabled() {
+        isSnapshotVersion(Environment.grailsVersion)
+    }
+
+    static GrailsRepositoryConfiguration grailsRepo() {
+        new GrailsRepositoryConfiguration('grailsRepo', GRAILS_REPO_URI, snapshotsEnabled())
+    }
+
+    static GrailsRepositoryConfiguration apacheRepo() {
+        new GrailsRepositoryConfiguration('apacheRepository', APACHE_REPO_URI, snapshotsEnabled())
+    }
 
     List<GrailsRepositoryConfiguration> repositoryConfigurations
     MavenResolverGrapeEngine grapeEngine
@@ -62,8 +90,7 @@ class MavenProfileRepository extends AbstractJarProfileRepository {
     MavenProfileRepository() {
         // Use apache repository with SNAPSHOTS when grailsVersion is not set or it ends in SNAPSHOT
         // otherwise use only mavenCentral
-        this((!Environment.grailsVersion || Environment.grailsVersion.endsWith('SNAPSHOT')) ? [APACHE_REPO, GRAILS_REPO] : [GRAILS_REPO])
-        // TODO: Remove GRAILS_REPO in snapshot section when Spring verison is released
+        this(snapshotsEnabled() ? [apacheRepo(), grailsRepo()] : [grailsRepo()])
     }
 
     @Override

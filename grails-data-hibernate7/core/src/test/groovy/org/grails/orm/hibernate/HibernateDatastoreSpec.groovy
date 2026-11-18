@@ -29,6 +29,7 @@ import org.springframework.context.ApplicationContext
 import org.springframework.context.support.GenericApplicationContext
 
 import java.io.IOException
+import java.lang.reflect.UndeclaredThrowableException
 
 class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
 
@@ -150,22 +151,52 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         datastore.hasCurrentSession()
     }
 
-    void "test withFlushMode does not restore mode when callable throws"() {
+    void "withFlushMode rethrows #exception.class.simpleName from the callable and restores the flush mode"() {
         given:
-        def session = datastore.sessionFactory.currentSession
-        def originalMode = session.hibernateFlushMode
+        var session = datastore.sessionFactory.currentSession
+        var originalMode = session.hibernateFlushMode
 
         when:
         datastore.withFlushMode(FlushMode.ALWAYS) {
-            throw new RuntimeException("fail")
+            throw exception
         }
 
         then:
-        // callable threw, so reset=false — mode is NOT restored
-        session.hibernateFlushMode == FlushMode.ALWAYS
+        Throwable e = thrown()
+        e.class == expectedType
+        e.is(exception) || e.cause.is(exception)
+        session.hibernateFlushMode == originalMode
 
         cleanup:
         session.setHibernateFlushMode(originalMode)
+
+        where:
+        exception                         || expectedType
+        new IllegalStateException('boom') || IllegalStateException
+        new IOException('io')             || UndeclaredThrowableException
+    }
+
+    void "withFlushMode restores the previous flush mode unless the callable returns false"() {
+        given:
+        var session = datastore.sessionFactory.currentSession
+        var originalMode = session.hibernateFlushMode
+
+        when:
+        datastore.withFlushMode(FlushMode.ALWAYS) {
+            reset
+        }
+
+        then:
+        session.hibernateFlushMode == (restored ? originalMode : FlushMode.ALWAYS)
+
+        cleanup:
+        session.setHibernateFlushMode(originalMode)
+
+        where:
+        reset || restored
+        true  || true
+        null  || true
+        false || false
     }
 
     void "test setApplicationContext with non-ConfigurableApplicationContext is a no-op"() {
@@ -214,6 +245,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeConnectionSources() throws IOException {
+                // close them first so the failure does not leave this datastore's SessionFactory open
+                super.closeConnectionSources()
                 throw new IOException("connection close failure")
             }
         }
@@ -234,6 +267,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(config, GHUBook) {
             @Override
             protected void closeGormEnhancer() throws IOException {
+                // close it first so the failure does not leave this datastore in the GORM registry
+                super.closeGormEnhancer()
                 throw new IOException("enhancer close failure")
             }
         }
@@ -296,6 +331,8 @@ class HibernateDatastoreSpec extends HibernateGormDatastoreSpec {
         def ds = new HibernateDatastore(Collections.singletonMap(Settings.SETTING_DB_CREATE, "create-drop"), GHUBook) {
             @Override
             void destroy() throws Exception {
+                // release the datastore first so the failure does not leak its SessionFactory
+                super.destroy()
                 throw new RuntimeException("destroy failed")
             }
         }

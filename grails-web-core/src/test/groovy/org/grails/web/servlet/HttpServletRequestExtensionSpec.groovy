@@ -21,14 +21,42 @@ package org.grails.web.servlet
 import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
 
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.mock.web.MockMultipartHttpServletRequest
+import org.springframework.web.multipart.MultipartFile
 
 import net.bytebuddy.ByteBuddy
 
 import spock.lang.Specification
 
 class HttpServletRequestExtensionSpec extends Specification {
+
+    void "request.XML without the XML module names the module it needs, while other properties read the request's attributes"() {
+        given:
+        def request = new MockHttpServletRequest()
+        request.setAttribute('foo', 'bar')
+
+        when:
+        request.XML
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('org.apache.grails:grails-xml')
+
+        when:
+        request['XML']
+
+        then:
+        e = thrown(IllegalStateException)
+        e.message.contains('org.apache.grails:grails-xml')
+
+        expect:
+        request.foo == 'bar'
+        request['foo'] == 'bar'
+    }
 
     void "Test typed converters read and convert request attributes"() {
         given:
@@ -149,5 +177,57 @@ class HttpServletRequestExtensionSpec extends Specification {
         static String readName(HttpServletRequest request) {
             request.string('user', 'anonymous')
         }
+
+        static MultipartFile readFile(HttpServletRequest request, String name) {
+            request.getFile(name)
+        }
+    }
+
+    void "Test multipart accessors read through the request wrapper chain"() {
+        given: 'a multipart request behind the wrappers later filters contribute'
+        HttpServletRequest request = new HttpServletRequestWrapper(multipartRequest())
+
+        expect:
+        request.getFile('file').originalFilename == 'test.txt'
+        request.getFiles('file').size() == 1
+        request.getFileMap().keySet() == ['file'] as Set
+        request.getMultiFileMap().get('file').size() == 1
+        request.getFileNames().toList() == ['file']
+        request.getMultipartContentType('file') == 'text/plain'
+    }
+
+    void "Test getFile is resolved by the static compiler"() {
+        given:
+        HttpServletRequest request = new HttpServletRequestWrapper(multipartRequest())
+
+        expect: 'statically compiled callers get the extension method, not a dynamic dispatch failure'
+        StaticCaller.readFile(request, 'file').originalFilename == 'test.txt'
+    }
+
+    void "Test getFile returns null for a part that was not submitted"() {
+        given:
+        HttpServletRequest request = multipartRequest()
+
+        expect: 'matching Spring, an absent part is null rather than an error'
+        request.getFile('missing') == null
+    }
+
+    void "Test multipart accessors fail loudly when the request is not a resolved multipart request"() {
+        given:
+        HttpServletRequest request = new MockHttpServletRequest()
+
+        when:
+        request.getFile('file')
+
+        then: 'a diagnostic is raised rather than a silent null'
+        IllegalStateException e = thrown()
+        e.message.contains('Not a resolved multipart request')
+    }
+
+    private static MockMultipartHttpServletRequest multipartRequest() {
+        def request = new MockMultipartHttpServletRequest()
+        request.contentType = 'multipart/form-data; boundary=test'
+        request.addFile(new MockMultipartFile('file', 'test.txt', 'text/plain', 'content'.bytes))
+        request
     }
 }

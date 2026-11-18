@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding.util;
 
-import java.util.Map;
 import java.util.Optional;
 
 import org.hibernate.MappingException;
@@ -26,15 +25,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.grails.datastore.mapping.model.types.Association;
-import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
-import org.grails.datastore.mapping.model.types.EmbeddedCollection;
 import org.grails.orm.hibernate.cfg.PropertyConfig;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateManyToOneProperty;
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToManyProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateOneToOneProperty;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentProperty;
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty;
 
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.ALL;
 import static org.grails.orm.hibernate.cfg.domainbinding.util.CascadeBehavior.NONE;
@@ -82,20 +78,13 @@ public class CascadeBehaviorFetcher {
     }
 
     private CascadeBehavior getImpliedBehavior(Association<?> association) {
-        // Handle types that do not require an associated entity first
-        if (association instanceof Basic) {
-            return ALL;
-        }
-
-        if (Map.class.isAssignableFrom(association.getType())) {
-            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
+        // Every to-many shape (Basic, Map-typed, EmbeddedCollection, OneToMany, ManyToMany) knows its
+        // own implied cascade behavior; only the to-one/embedded/hasOne shapes remain here.
+        if (association instanceof HibernateToManyProperty toMany) {
+            return toMany.getImpliedCascadeBehavior();
         }
 
         if (association instanceof Embedded) {
-            return ALL;
-        }
-
-        if (association instanceof EmbeddedCollection) {
             return ALL;
         }
 
@@ -108,10 +97,6 @@ public class CascadeBehaviorFetcher {
             return ALL;
         } else if (association instanceof HibernateOneToOneProperty) {
             return association.isOwningSide() ? ALL : SAVE_UPDATE;
-        } else if (association instanceof HibernateOneToManyProperty) {
-            return association.isCorrectlyOwned() ? ALL : SAVE_UPDATE;
-        } else if (association instanceof HibernateManyToManyProperty) {
-            return association.isCorrectlyOwned() || association.isCircular() ? SAVE_UPDATE : NONE;
         } else if (association instanceof HibernateManyToOneProperty) {
             if (association.isCorrectlyOwned() && !association.isCircular()) {
                 return ALL;

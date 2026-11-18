@@ -20,6 +20,7 @@ package org.grails.orm.hibernate.proxy
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
+import groovy.transform.CompileStatic
 import org.hibernate.Hibernate
 import org.hibernate.proxy.HibernateProxy
 
@@ -27,7 +28,7 @@ import org.hibernate.proxy.HibernateProxy
  * Direct coverage tests for {@link ByteBuddyGroovyInterceptor#intercept}.
  * <p>
  * Tests operate against real Hibernate lazy proxies obtained via
- * {@code hibernateSession.getReference()} and exercise each branch of
+ * {@code hibernateSession.getReference()} or GORM {@code load()} and exercise each branch of
  * {@code intercept()} by calling different method types on the proxy in
  * both the uninitialized and initialized states.
  */
@@ -142,15 +143,14 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
         !Hibernate.isInitialized(proxy)
     }
 
-    void "getIdentifier() on uninitialized proxy returns identifier without initialization"() {
+    void "a user-defined getIdentifier() invokes the entity implementation"() {
         given:
-        def proxy = manager.hibernateSession.getReference(Location, savedId)
+        def proxy = Location.load(savedId)
 
         expect:
         !Hibernate.isInitialized(proxy)
-        // This should trigger the "getIdentifier" branch in the interceptor
         proxy.getIdentifier() == savedId
-        !Hibernate.isInitialized(proxy)
+        Hibernate.isInitialized(proxy)
     }
 
     void "setProperty on uninitialized proxy initializes the proxy"() {
@@ -185,6 +185,33 @@ class ByteBuddyGroovyInterceptorSpec extends HibernateGormDatastoreSpec {
 
         then:
         thrown(RuntimeException)
+    }
+
+    void "an uninitialized proxy serializes to a form that reads back as the same Groovy-aware proxy"() {
+        given:
+        def proxy = manager.hibernateSession.getReference(Location, savedId)
+
+        when:
+        def deserialized = roundTrip(proxy)
+
+        then: 'serialization did not initialize the proxy, and the copy is the same proxy class with the id at hand'
+        !Hibernate.isInitialized(proxy)
+        deserialized instanceof Location
+        deserialized instanceof HibernateProxy
+        deserialized.getClass().is(proxy.getClass())
+        !Hibernate.isInitialized(deserialized)
+        deserialized.id == savedId
+        deserialized.metaClass != null
+        !Hibernate.isInitialized(deserialized)
+    }
+
+    @CompileStatic
+    private static Object roundTrip(Object object) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        new ObjectOutputStream(bytes).withCloseable { ObjectOutputStream out -> out.writeObject(object) }
+        new ObjectInputStream(new ByteArrayInputStream(bytes.toByteArray())).withCloseable { ObjectInputStream input ->
+            input.readObject()
+        }
     }
 }
 

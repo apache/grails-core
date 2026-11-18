@@ -24,6 +24,30 @@ import spock.lang.Specification
 
 class GrailsHttpSessionSpec extends Specification {
 
+    void 'attribute access creates servlet session lazily and delegates to the adaptee'() {
+        given:
+        def request = new MockHttpServletRequest()
+        def session = new GrailsHttpSession(request)
+
+        expect:
+        request.getSession(false) == null
+
+        when:
+        session.setAttribute('name', 'value')
+
+        then:
+        request.getSession(false).getAttribute('name') == 'value'
+        session.getAttribute('name') == 'value'
+        Collections.list(session.getAttributeNames()) == ['name']
+        session.toString().contains('name = value')
+
+        when:
+        session.removeAttribute('name')
+
+        then:
+        session.getAttribute('name') == null
+    }
+
     void 'invalidate does not create a servlet session when none exists'() {
         given:
         def request = new MockHttpServletRequest()

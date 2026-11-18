@@ -1,0 +1,229 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.openapi
+
+import groovy.transform.CompileStatic
+
+import io.swagger.v3.oas.models.Components
+import io.swagger.v3.oas.models.media.ArraySchema
+import io.swagger.v3.oas.models.media.ComposedSchema
+import io.swagger.v3.oas.models.media.Content
+import io.swagger.v3.oas.models.media.IntegerSchema
+import io.swagger.v3.oas.models.media.MediaType
+import io.swagger.v3.oas.models.media.ObjectSchema
+import io.swagger.v3.oas.models.media.Schema
+import io.swagger.v3.oas.models.media.StringSchema
+import io.swagger.v3.oas.models.media.XML
+
+import grails.core.GrailsControllerClass
+
+/**
+ * The validation errors a request that cannot be bound is answered with, described once as a
+ * schema of the document's own.
+ *
+ * <p>The converters render the errors, in JSON and XML, and answer with 422. Where the application
+ * renders with JSON views, a view renders them in JSON instead: the errors view an application is
+ * generated with, which answers with 422, or a controller's own errors view, which answers as it
+ * sets; without either, the converters render them. With {@code grails.web.rendering.json.spring},
+ * {@code respond} writes them in JSON as an RFC 9457 problem, as {@code application/problem+json},
+ * and with {@code grails.converters.json.legacy} false the JSON converter writes them with their
+ * codes and without the rejected value, each described under a schema of its own. A schema the
+ * base document declares under the name describes the errors in every media type, in place of
+ * these.</p>
+ */
+@CompileStatic
+class ValidationErrorsContent {
+
+    private final Components components
+    private final ErrorsViews views
+    private final String schemaName
+    private final boolean declared
+    private final boolean springJson
+    private final String jsonSchemaName
+
+    /** The media type {@code respond} writes a problem in. */
+    static final String PROBLEM_JSON = 'application/problem+json'
+
+    /**
+     * @param views the views that render the errors in JSON
+     * @param schemaName the name the errors are described under
+     * @param declared whether the base document declares the errors, under that name
+     */
+    ValidationErrorsContent(Components components, ErrorsViews views, String schemaName, boolean declared) {
+        this(components, views, schemaName, declared, false, null)
+    }
+
+    /**
+     * @param views the views that render the errors in JSON
+     * @param schemaName the name the errors are described under
+     * @param declared whether the base document declares the errors, under that name
+     * @param springJson whether {@code respond} writes the JSON errors as a problem
+     * @param jsonSchemaName the name the JSON errors are described under where they differ from the XML, or {@code null}
+     */
+    ValidationErrorsContent(Components components, ErrorsViews views, String schemaName, boolean declared,
+                            boolean springJson, String jsonSchemaName) {
+        this.components = components
+        this.views = views
+        this.schemaName = schemaName
+        this.declared = declared
+        this.springJson = springJson
+        this.jsonSchemaName = jsonSchemaName
+    }
+
+    /**
+     * The errors a failed validation answers with, in each media type it answers with 422 in.
+     *
+     * @return the content, or {@code null} where the errors are answered with 422 in none of them
+     */
+    Content content(GrailsControllerClass controller, Map<String, Boolean> mediaTypes) {
+        Content content = new Content()
+        mediaTypes.each { String mediaType, Boolean shaped ->
+            if (!shaped) {
+                content.addMediaType(mediaType, new MediaType())
+            }
+            else if (declared) {
+                content.addMediaType(mediaType, new MediaType().schema(ComponentSchemas.referenceTo(schemaName)))
+            }
+            else if (mediaType in MediaTypes.JSON_MEDIA_TYPES) {
+                addJson(content, mediaType, controller)
+            }
+            else {
+                // The converters render the errors in any other format, which the schema describes
+                // unless it describes the errors view.
+                content.addMediaType(mediaType, new MediaType().schema(views.rendering() == ErrorsRendering.ERRORS_VIEW
+                        ? converterErrors() : reference()))
+            }
+        }
+        content.isEmpty() ? null : content
+    }
+
+    private void addJson(Content content, String mediaType, GrailsControllerClass controller) {
+        if (controller != null && views.hasOwnView(controller)) {
+            // Only the application knows the shape of the controller's own view.
+            content.addMediaType(mediaType, new MediaType())
+        }
+        else if (jsonSchemaName == null) {
+            content.addMediaType(mediaType, new MediaType().schema(reference()))
+        }
+        else {
+            // respond answers a client asking for any JSON type with the problem
+            content.addMediaType(springJson ? PROBLEM_JSON : mediaType, new MediaType().schema(jsonReference()))
+        }
+    }
+
+    private Schema<?> jsonReference() {
+        if (!components.schemas?.containsKey(jsonSchemaName)) {
+            components.addSchemas(jsonSchemaName, springJson ? problemErrors() : mapperErrors())
+        }
+        ComponentSchemas.referenceTo(jsonSchemaName)
+    }
+
+    /** An error as the entries respond and the JSON mapper write it. */
+    private static Schema<?> mapperError(boolean rejectedValue) {
+        Schema<?> error = new ObjectSchema()
+                .addProperty('object', new StringSchema().description('The name of the object that failed validation'))
+                .addProperty('field', new StringSchema().description('The property that failed validation'))
+        if (rejectedValue) {
+            error.addProperty('rejectedValue', new Schema<>().description(
+                    'The value that was rejected, where the application\'s ValidationProblemDetailFactory includes it'))
+        }
+        error.addProperty('codes', new ArraySchema().items(new StringSchema())
+                        .description('The message codes of the error, the most specific first'))
+                .addProperty('message', new StringSchema().description('Why the value was rejected'))
+        error.setRequired(['object', 'codes', 'message'])
+        error
+    }
+
+    /** The errors the JSON converter writes with grails.converters.json.legacy set to false. */
+    private static Schema<?> mapperErrors() {
+        Schema<?> errors = new ObjectSchema().description('The validation errors of a request that could not be bound')
+                .addProperty('errors', new ArraySchema().items(mapperError(false)))
+        errors.setRequired(['errors'])
+        errors
+    }
+
+    /** The RFC 9457 problem respond writes the errors as with grails.web.rendering.json.spring. */
+    private static Schema<?> problemErrors() {
+        Schema<?> problem = new ObjectSchema()
+                .description('The validation errors of a request that could not be bound, as an RFC 9457 problem')
+                .addProperty('type', new StringSchema().format('uri-reference')
+                        .description('The problem type, which is left out where it is about:blank'))
+                .addProperty('title', new StringSchema().description('A summary of the problem, Validation failed'))
+                .addProperty('status', new IntegerSchema().description('The status of the response'))
+                .addProperty('detail', new StringSchema().description('How many errors the request has'))
+                .addProperty('instance', new StringSchema().format('uri-reference')
+                        .description('Identifies the occurrence of the problem, where the application gives one'))
+                .addProperty('errors', new ArraySchema().items(mapperError(true)))
+        problem.setRequired(['title', 'status', 'detail', 'errors'])
+        problem
+    }
+
+    private Schema<?> reference() {
+        if (!components.schemas?.containsKey(schemaName)) {
+            components.addSchemas(schemaName, views.rendering() == ErrorsRendering.ERRORS_VIEW
+                    ? viewErrors() : converterErrors())
+        }
+        ComponentSchemas.referenceTo(schemaName)
+    }
+
+    /**
+     * The errors the converters render: in JSON an object listing them, and in XML an
+     * {@code errors} element holding an {@code error} element for each, naming the object and the
+     * field in its attributes.
+     */
+    private static Schema<?> converterErrors() {
+        Schema<?> error = new ObjectSchema()
+                .addProperty('object', new StringSchema().description('The name of the object that failed validation')
+                        .xml(new XML().attribute(true)))
+                .addProperty('field', new StringSchema().description('The property that failed validation')
+                        .xml(new XML().attribute(true)))
+                .addProperty('rejected-value', new Schema<>().description('The value that was rejected'))
+                .addProperty('message', new StringSchema().description('Why the value was rejected'))
+        error.setRequired(['object', 'message'])
+        error.setXml(new XML().name('error'))
+        Schema<?> errors = new ObjectSchema()
+                .description('The validation errors of a request that could not be bound')
+                .addProperty('errors', new ArraySchema().items(error).xml(new XML().wrapped(false)))
+        errors.setRequired(['errors'])
+        errors.setXml(new XML().name('errors'))
+        errors
+    }
+
+    /**
+     * The errors the errors view of an application with JSON views renders, as the view an
+     * application is generated with renders them: one error on its own, or several embedded.
+     */
+    private static Schema<?> viewErrors() {
+        Schema<?> self = new ObjectSchema()
+                .addProperty('href', new StringSchema().format('uri').description('The URL the request was made to'))
+        Schema<?> error = new ObjectSchema()
+                .addProperty('message', new StringSchema().description('Why the request could not be bound'))
+                .addProperty('path', new StringSchema().description('The path the request was made to'))
+                .addProperty('_links', new ObjectSchema().addProperty('self', self))
+        error.setRequired(['message'])
+        Schema<?> several = new ObjectSchema()
+                .addProperty('total', new IntegerSchema().description('The number of errors'))
+                .addProperty('_embedded', new ObjectSchema().addProperty('errors', new ArraySchema().items(error)))
+        several.setRequired(['total', '_embedded'])
+        Schema<?> errors = new ComposedSchema()
+        errors.setDescription('The validation errors of a request that could not be bound')
+        errors.setOneOf([error, several])
+        errors
+    }
+}

@@ -103,6 +103,34 @@ class DetachedCriteriaCountSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
+    def "criteria builder count ignores firstResult and maxResults"() {
+        given:
+        createTestData()
+
+        expect:
+        CountItem.createCriteria().count { firstResult(10) } == 58
+        CountItem.createCriteria().count { maxResults(2); firstResult(10) } == 58
+        CountItem.createCriteria().count { eq('itemGroup', 1); firstResult(5) } == 10
+    }
+
+    @Rollback
+    def "grouped count ignores max and offset and returns the number of groups"() {
+        given:
+        createTestData()
+
+        when:
+        def c = new DetachedCriteria(CountItem).build {
+            projections {
+                groupProperty 'itemGroup'
+            }
+        }
+
+        then:
+        c.max(2).offset(1).count() == 5
+        c.max(2).offset(10).count() == 5
+    }
+
+    @Rollback
     def "count with single aggregate projection returns 1"() {
         given:
         createTestData()

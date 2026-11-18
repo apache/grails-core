@@ -32,4 +32,5 @@ import java.time.LocalDate
  */
 @CompileStatic
 class LocalDateToLongConverter implements Converter<LocalDate, Long>, LocalDateConverter {
+
 }

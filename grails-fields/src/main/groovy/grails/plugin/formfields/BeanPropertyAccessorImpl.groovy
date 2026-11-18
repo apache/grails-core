@@ -20,6 +20,7 @@ package grails.plugin.formfields
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.MapConstructor
 import groovy.transform.Memoized
 import groovy.transform.TupleConstructor
 
@@ -39,9 +40,24 @@ import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.scaffolding.model.property.Constrained
 
+// Groovy 6.0.0-beta-2: @Canonical no longer auto-generates @MapConstructor
+// under @CompileStatic, so the named-argument call site in
+// `BeanPropertyAccessorFactory.resolvePropertyFromPath` (`new BeanPropertyAccessorImpl(params)`)
+// can't bind to a constructor and the compiler reports
+// "Target constructor for constructor call expression hasn't been set".
+// Declaring @MapConstructor explicitly restores the Groovy 4 / 5 behaviour
+// without changing the positional @TupleConstructor or @Canonical-generated
+// toString / equals / hashCode contract.
 @CompileStatic
 @Canonical
+@MapConstructor
 @TupleConstructor(includes = ['beanType', 'propertyName', 'propertyType'])
+// The map constructor is declared rather than left to @TupleConstructor. Groovy 5 adds a
+// LinkedHashMap constructor only because the first declared property, rootBean, is an Object
+// that `includes` leaves out; Groovy 6 decides from the included properties and adds none, so
+// new BeanPropertyAccessorImpl(params) in BeanPropertyAccessorFactory would no longer compile.
+// With @MapConstructor both versions generate the same BeanPropertyAccessorImpl(Map).
+@MapConstructor
 class BeanPropertyAccessorImpl implements BeanPropertyAccessor {
 
     Object rootBean

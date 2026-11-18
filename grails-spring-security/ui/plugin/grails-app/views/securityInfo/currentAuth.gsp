@@ -23,19 +23,19 @@
 </head>
 <body>
 <s2ui:securityInfoTable type='currentAuth' headerCodes='name,value'>
-	<tr class='even'>
+	<tr>
 		<td><g:message code='spring.security.ui.info.currentAuth.label.authorities'/></td>
 		<td>${auth.authorities}</td>
 	</tr>
-	<tr class='odd'>
+	<tr>
 		<td><g:message code='spring.security.ui.info.currentAuth.label.details'/></td>
 		<td>${auth.details}</td>
 	</tr>
-	<tr class='even'>
+	<tr>
 		<td><g:message code='spring.security.ui.info.currentAuth.label.principal'/></td>
 		<td>${auth.principal}</td>
 	</tr>
-	<tr class='odd'>
+	<tr>
 		<td><g:message code='spring.security.ui.info.currentAuth.label.name'/></td>
 		<td>${auth.name}</td>
 	</tr>

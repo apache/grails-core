@@ -11,8 +11,8 @@
                 <g:if test="${Throwable.isInstance(exception)}">
                     <g:renderException exception="${exception}" detailsClass="alert alert-danger" stackClass="bg-body-secondary" snippetClass="bg-body-secondary snippet" lineErrorClass="bg-danger" />
                 </g:if>
-                <g:elseif test="${request.getAttribute('javax.servlet.error.exception')}">
-                    <g:renderException exception="${request.getAttribute('javax.servlet.error.exception')}" />
+                <g:elseif test="${request.getAttribute('jakarta.servlet.error.exception')}">
+                    <g:renderException exception="${request.getAttribute('jakarta.servlet.error.exception')}" />
                 </g:elseif>
                 <g:else>
                     <ul class="errors">

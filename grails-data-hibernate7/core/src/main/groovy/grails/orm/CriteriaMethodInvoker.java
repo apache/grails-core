@@ -33,6 +33,7 @@ import jakarta.persistence.metamodel.Metamodel;
 import org.springframework.beans.BeanUtils;
 
 import grails.gorm.DetachedCriteria;
+import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.types.Association;
@@ -113,21 +114,23 @@ public class CriteriaMethodInvoker {
                 hibernateQuery.distinct();
                 result = hibernateQuery.list();
             } else if (builder.isCount()) {
-                hibernateQuery.projections().count();
-                result = hibernateQuery.singleResult();
+                // countResults() never pages, so firstResult/maxResults in the closure do not skip the count row
+                result = hibernateQuery.countResults();
             } else if (builder.isPaginationEnabledList()) {
                 Map<?, ?> argMap = (Map<?, ?>) args[0];
+                // the same checks list() and the dynamic finders apply, so sort arguments taken
+                // from request parameters fail the same way on every entry point; the direction
+                // is checked even without a sort key rather than being silently ignored
+                final String direction = DynamicFinder.normalizeDirection(
+                        (String) argMap.get(HibernateQueryArgument.ORDER.value()));
                 final String sortField = (String) argMap.get(HibernateQueryArgument.SORT.value());
                 if (sortField != null) {
                     final boolean ignoreCase =
                             !(argMap.get(HibernateQueryArgument.IGNORE_CASE.value()) instanceof Boolean b) || b;
-                    final String orderParam = (String) argMap.get(HibernateQueryArgument.ORDER.value());
-                    final Query.Order.Direction direction =
-                            Query.Order.Direction.DESC.name().equalsIgnoreCase(orderParam) ?
-                                    Query.Order.Direction.DESC :
-                                    Query.Order.Direction.ASC;
-                    Query.Order order;
-                    order = new Query.Order(sortField, direction);
+                    DynamicFinder.validateSortProperty(hibernateQuery.getEntity(), sortField);
+                    final Query.Order order = DynamicFinder.ORDER_DESC.equals(direction) ?
+                            Query.Order.desc(sortField) :
+                            Query.Order.asc(sortField);
                     if (ignoreCase) {
                         order.ignoreCase();
                     }
@@ -193,21 +196,30 @@ public class CriteriaMethodInvoker {
             final Metamodel metamodel = builder.getSessionFactory().getMetamodel();
             final EntityType<?> entityType = metamodel.entity(builder.getTargetClass());
             final Attribute<?, ?> attribute = entityType.getAttribute(name);
+            // The JPA metamodel does not consider an embedded component an association, but the
+            // GORM model does - an embedded block must build a DetachedAssociationCriteria so its
+            // properties resolve against the component. It needs no join: its columns live in the
+            // owning entity's table, so an explicit join-type argument on the block is
+            // intentionally ignored.
+            final boolean embedded =
+                    attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED;
 
-            if (attribute.isAssociation()) {
+            if (attribute.isAssociation() || embedded) {
                 Class<?> oldTargetClass = builder.getTargetClass();
                 Class<?> associationClass = builder.getClassForAssociationType(attribute);
                 builder.setTargetClass(associationClass);
-                JoinType joinType;
-                if (hasMoreThanOneArg) {
-                    joinType = builder.convertFromInt((Integer) args[0]);
-                } else if (associationClass.equals(oldTargetClass)) {
-                    joinType = JoinType.LEFT; // default to left join if joining on the same table
-                } else {
-                    joinType = builder.convertFromInt(0);
-                }
+                if (!embedded) {
+                    JoinType joinType;
+                    if (hasMoreThanOneArg) {
+                        joinType = builder.convertFromInt((Integer) args[0]);
+                    } else if (associationClass.equals(oldTargetClass)) {
+                        joinType = JoinType.LEFT; // default to left join if joining on the same table
+                    } else {
+                        joinType = builder.convertFromInt(0);
+                    }
 
-                hibernateQuery.join(name, joinType);
+                    hibernateQuery.join(name, joinType);
+                }
 
                 GrailsHibernatePersistentEntity parentEntity = (GrailsHibernatePersistentEntity)
                         hibernateQuery.getSession().getMappingContext().getPersistentEntity(oldTargetClass.getName());

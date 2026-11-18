@@ -43,7 +43,7 @@ public class MapMarshaller implements ObjectMarshaller<JSON> {
         for (Map.Entry<Object, Object> entry : map.entrySet()) {
             Object key = entry.getKey();
             if (key != null) {
-                writer.key(key.toString());
+                writer.key(converter.formatKey(key));
                 converter.convertAnother(entry.getValue());
             }
         }

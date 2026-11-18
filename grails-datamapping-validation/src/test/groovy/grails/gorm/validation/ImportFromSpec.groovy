@@ -23,8 +23,10 @@ import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidato
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.model.MappingContext
+import org.grails.datastore.mapping.validation.ValidationErrors
 import org.grails.datastore.mapping.validation.ValidatorRegistry
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import jakarta.persistence.Entity
 
@@ -42,6 +44,95 @@ class ImportFromSpec extends Specification {
         validator.constrainedProperties['createdDay'].metaConstraints["example"] == "2017-12-31"
     }
 
+    @Unroll
+    void 'an entity importing from an entity gets the configured nullable default (nullable = #defaultNullable)'() {
+        given: 'a validator registry with the nullable default set'
+        var mappingContext = new KeyValueMappingContext('test')
+        mappingContext.addPersistentEntities(ImportFromSourceEntity, ImportFromTargetEntity)
+        var settings = new ConnectionSourceSettings()
+        settings.default.nullable = defaultNullable
+        var registry = new DefaultValidatorRegistry(mappingContext, settings)
+
+        and: 'a target entity with every property left null'
+        var target = new ImportFromTargetEntity()
+        var errors = new ValidationErrors(target)
+
+        when:
+        registry.getValidator(mappingContext.getPersistentEntity(ImportFromTargetEntity.name)).validate(target, errors)
+
+        then: 'the property the source leaves unconstrained follows the configured default'
+        errors.hasFieldErrors('name') == !defaultNullable
+
+        and: 'the constraints the source declares are imported as they are'
+        errors.getFieldError('code')?.code == 'nullable'
+        !errors.hasFieldErrors('description')
+
+        where:
+        defaultNullable << [false, true]
+    }
+
+    @Unroll
+    void 'a command object importing from an entity gets the configured nullable default (nullable = #defaultNullable)'() {
+        given: 'a validator registry with the nullable default set'
+        var mappingContext = new KeyValueMappingContext('test')
+        mappingContext.addPersistentEntity(ImportFromSourceEntity)
+        var settings = new ConnectionSourceSettings()
+        settings.default.nullable = defaultNullable
+        var registry = new DefaultValidatorRegistry(mappingContext, settings)
+
+        when: 'the command object is evaluated as Validateable evaluates it, required by default'
+        var constraints = registry.evaluate(ImportFromCommand, false)
+
+        then: 'the property the source leaves unconstrained follows the configured default'
+        constraints.name.nullable == defaultNullable
+
+        and: 'the constraints the source declares are imported as they are'
+        !constraints.code.nullable
+        constraints.description.nullable
+
+        and: 'the command object property that is not imported keeps the command object default'
+        !constraints.notImported.nullable
+
+        where:
+        defaultNullable << [false, true]
+    }
+}
+
+@Entity
+class ImportFromSourceEntity {
+
+    String name
+    String code
+    String description
+
+    static constraints = {
+        code(nullable: false)
+        description(nullable: true)
+    }
+}
+
+@Entity
+class ImportFromTargetEntity {
+
+    String name
+    String code
+    String description
+
+    static constraints = {
+        importFrom(ImportFromSourceEntity)
+    }
+}
+
+class ImportFromCommand {
+
+    String name
+    String code
+    String description
+    String notImported
+
+    static constraints = {
+        importFrom(ImportFromSourceEntity)
+    }
 }
 
 @Entity

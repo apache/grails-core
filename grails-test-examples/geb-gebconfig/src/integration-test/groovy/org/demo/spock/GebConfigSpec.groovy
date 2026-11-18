@@ -19,6 +19,9 @@
 
 package org.demo.spock
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+
 import org.openqa.selenium.remote.RemoteWebDriver
 import org.demo.spock.pages.HomePage
 
@@ -50,5 +53,14 @@ class GebConfigSpec extends ContainerGebSpec {
 
         then: 'the session should be active'
         driver.sessionId != null
+
+        when: 'a fresh thread reads a system property after the custom driver factory has run'
+        def propertyRead = new CompletableFuture<String>()
+        Thread.startDaemon {
+            propertyRead.complete(System.getProperty('java.version'))
+        }
+
+        then: 'property lookup does not recursively initialize Groovy call sites'
+        propertyRead.get(10, TimeUnit.SECONDS) == System.getProperty('java.version')
     }
 }

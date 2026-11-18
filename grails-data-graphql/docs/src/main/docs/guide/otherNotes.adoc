@@ -21,6 +21,19 @@ under the License.
 
 This section of the documentation is designed to inform you about special circumstances that may impact some use cases.
 
+=== Finding Query-Heavy Operations
+
+The `query-tail` command of Grails ranks the pages of a running application by the statements they run per request. A GraphQL endpoint serves every operation on one page, so while statements are captured, with `grails.gorm.queryTail.enabled` set, the plugin counts the statements of each operation under the operation, after the page of the endpoint: `graphql/index (query BookList)` for an operation its document names, and `graphql/index (query {bookList, authorCount})`, the fields it selects at the top, for one it does not name. An argument, an alias or a variable is never part of it. Everything an operation runs while it executes counts under it, including the associations loaded as their fields are read, which is where an N+1 shows. When capture is off, nothing is added to the GraphQL the plugin builds. See link:https://grails.apache.org/docs/latest/guide/conf.html#queryTail[Finding Query-Heavy Pages with query-tail] in the Grails guide.
+
+For a GraphQL the application builds itself, link:{api}/org/apache/grails/data/graphql/core/querytail/QueryTailInstrumentation.html#install(graphql.GraphQL)[QueryTailInstrumentation.install] returns it with the same instrumentation added after the instrumentation it already has:
+
+[source,groovy]
+----
+import org.apache.grails.data.graphql.core.querytail.QueryTailInstrumentation
+
+GraphQL graphQL = QueryTailInstrumentation.install(GraphQL.newGraphQL(schema).build())
+----
+
 === Metadata
 
 You may come across a time when you would like to supply metadata for a property or type, but because that type is not part of an exposed persistent entity, it is not possible to do so via the mapping DSL. For those use cases, a link:{api}/org/grails/gorm/graphql/GraphQL.html[@GraphQL] annotation exists. The annotation can be applied to related entities or enums, for example.
@@ -48,7 +61,7 @@ For `Map` properties where the keys are not known at all, it is entirely up to t
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
 
 }
 ----
@@ -66,11 +79,11 @@ The property must be modified to contain the definition proposed above. In order
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=associationDefinition]
 
     static graphql = GraphQLMapping.build {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customBooks]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customBooks]
 
     }
 }
@@ -90,7 +103,7 @@ A data binder must be configured to transform the data sent in the `key/value` o
 [source,groovy]
 .src/main/groovy/demo/AuthorDataBinder.groovy
 ----
-include::{sourcedir}/examples/grails-docs-app/src/main/groovy/demo/AuthorDataBinder.groovy[tags=wholeFile]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/main/groovy/demo/AuthorDataBinder.groovy[tags=wholeFile]
 ----
 
 Then to register the data binder, see the section on link:#dataBinders.html[data binders].
@@ -104,11 +117,11 @@ For `Map` properties where the keys of the map are known, the process to handle 
 ----
 class Author {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=locationDefinition]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=locationDefinition]
 
     static graphql = GraphQLMapping.build {
 
-include::{sourcedir}/examples/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customLocation]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/grails-app/domain/demo/Author.groovy[tags=customLocation]
 
     }
 }
@@ -125,14 +138,14 @@ Once all of the above is in place, here is what a create mutation might look lik
 :url: http://localhost:8080/graphql
 [source, bash, subs="attributes"]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createCommand]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createCommand]
 ----
 
 And here is the expected response:
 
 [source, json]
 ----
-include::{sourcedir}/examples/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
+include::{sourcedir}/grails-test-examples/graphql/grails-docs-app/src/integration-test/groovy/demo/AuthorIntegrationSpec.groovy[tags=createResponse]
 ----
 
 === Testing and JSON Serialization

@@ -20,13 +20,18 @@
 plugins {
     id 'groovy'
     id 'java-test-fixtures'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.compile'
 }
 
 dependencies {
     implementation platform(project(':grails-bom'))
+
     testFixturesImplementation platform(project(':grails-bom'))
     testFixturesImplementation testFixtures('org.apache.grails:grails-spring-security')
     testFixturesImplementation testFixtures('org.apache.grails:grails-geb')
+
+    testFixturesCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

@@ -19,6 +19,10 @@
 
 package org.grails.datastore.mapping.mongo.connections
 
+import java.util.function.Consumer
+import java.util.function.Function
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import com.mongodb.MongoClientSettings
@@ -34,7 +38,6 @@ import org.springframework.core.env.PropertyResolver
 import org.grails.datastore.mapping.core.connections.AbstractConnectionSourceFactory
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
-import org.grails.datastore.mapping.core.connections.DefaultConnectionSource
 import org.grails.datastore.mapping.mongo.config.MongoSettings
 
 /**
@@ -97,6 +100,19 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         return settings
     }
 
+    /**
+     * Creates the connection and its client, a {@link RestartableMongoClient} that connects the first time it is
+     * used or its datastore is started, rather than now. The settings are built and checked here, so a connection
+     * string that cannot be parsed is still reported as the datastore is created.
+     *
+     * <p>A subclass that builds the client itself should wrap it the same way, so that it opens no socket before
+     * the datastore starts and can be stopped for a CRaC checkpoint and started again after the restore. A client
+     * that is not one is closed for the checkpoint instead, and a replacement is built for the restore: return a
+     * {@link MongoConnectionSource} for it, so that whatever reads the client from the connection source gets the
+     * replacement. Build it with {@link MongoConnectionSource#create}, which registers the query-tail listener the
+     * settings call for on the client and closes it with the connection source; the commands of a client built
+     * otherwise are not captured, which the datastore warns of when capture is enabled.
+     */
     @Override
     ConnectionSource<MongoClient, MongoConnectionSourceSettings> create(String name, MongoConnectionSourceSettings settings) {
         MongoClientSettings.Builder builder = settings.options
@@ -110,8 +126,11 @@ class MongoConnectionSourceFactory extends AbstractConnectionSourceFactory<Mongo
         for (MongoClientSettingsBuilderCustomizer customizer : clientSettingsCustomizers) {
             customizer.customize(builder)
         }
-        MongoClient client = MongoClients.create(builder.build())
-        return new DefaultConnectionSource<MongoClient, MongoConnectionSourceSettings>(name, client, settings)
+        MongoConnectionSource.create(name, settings, { Consumer<MongoClientSettings.Builder> gormSettings ->
+            gormSettings.accept(builder)
+            MongoClientSettings clientSettings = builder.build()
+            new RestartableMongoClient(name, { MongoClients.create(clientSettings) } as Supplier<MongoClient>)
+        } as Function<Consumer<MongoClientSettings.Builder>, MongoClient>)
     }
 
     @Override

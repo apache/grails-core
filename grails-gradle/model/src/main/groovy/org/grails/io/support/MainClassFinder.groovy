@@ -57,6 +57,30 @@ class MainClassFinder {
      * @return The name of the main class
      */
     static String searchMainClass(URI path, boolean supportCaching = true) {
+        searchMainClass(path, Collections.<File>emptyList(), null, supportCaching)
+    }
+
+    /**
+     * Searches for the main class relative to the given path, as {@link #searchMainClass(URI, boolean)} does, first in
+     * the directories of the compile classpath that belong to the build being compiled. A compile classpath carries the
+     * project's main classes directory wherever the build puts it, where the other places searched are guesses under
+     * {@code build/}.
+     *
+     * <p>A classpath directory belongs to the build when it is next to the compile's own output: Gradle compiles into
+     * {@code <build>/classes/<language>/<sourceSet>}, so the main classes are under the same {@code <build>/classes},
+     * wherever the build directory is (inside the project, at the root of the checkout, outside it). Without a target
+     * directory laid out that way, a directory belongs to the build when its project, the nearest directory above it
+     * with a {@code build.gradle} or {@code grails-app}, is the one {@code path} is in. Either way a directory of
+     * another project, such as a plugin subproject's, is not searched.</p>
+     *
+     * @param path The path as a URI
+     * @param classpath The classpath the path is compiled with
+     * @param targetDirectory The directory the path is compiled into, or null
+     * @param supportCaching Whether to cache the result for future calls
+     * @return The name of the main class
+     */
+    static String searchMainClass(URI path, Collection<File> classpath, File targetDirectory,
+                                  boolean supportCaching = true) {
         if (!path) {
             return null
         }
@@ -84,7 +108,24 @@ class MainClassFinder {
                 searchDirs = [classesDir]
             }
 
+            File buildClassesDir = targetDirectory?.parentFile?.parentFile
+            if (buildClassesDir?.name == 'classes') {
+                String buildClassesPath = buildClassesDir.canonicalPath + File.separator
+                for (File entry in classpath) {
+                    if (entry.isDirectory() && entry.canonicalPath.startsWith(buildClassesPath)) {
+                        searchDirs << entry
+                    }
+                }
+            }
+
             if (rootDir) {
+                File projectDir = rootDir.canonicalFile
+                for (File entry in classpath) {
+                    if (entry.isDirectory() && findRootDirectory(entry)?.canonicalFile == projectDir) {
+                        searchDirs << entry
+                    }
+                }
+
                 def rootClassesDir = new File(rootDir, BuildSettings.BUILD_CLASSES_PATH)
                 if (rootClassesDir.exists()) {
                     searchDirs << rootClassesDir
