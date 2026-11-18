@@ -112,6 +112,15 @@ class SingleTenantSpec extends Specification {
         then:"The results are correct"
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 1 }
 
+        and: "load of the saved id reads the name from the current tenant database"
+        def kingId = SingleTenantAuthor.withTransaction {
+            SingleTenantAuthor.findByName("Stephen King").id
+        }
+        SingleTenantAuthor.withNewSession {
+            assert SingleTenantAuthor.load(kingId).name == "Stephen King"
+            true
+        }
+
         when:"An a transaction is used"
         SingleTenantAuthor.withTransaction{
             new SingleTenantAuthor(name: "James Patterson").save(flush:true)
