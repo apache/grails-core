@@ -25,8 +25,13 @@ import java.lang.reflect.Field
 import java.net.URL
 import java.net.URLClassLoader
 
+import groovy.transform.CompileStatic
+
+import ch.qos.logback.classic.Level
+
 import grails.boot.config.excluded.ExcludedArtefact
 import grails.boot.config.indexed.IncludedArtefact
+import org.apache.grails.core.testing.support.LogCapture
 import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import spock.lang.Specification
 
@@ -103,6 +108,86 @@ grails.boot.config.IndexedSecondArtefact
                 IndexedSecondArtefact.name
         ]
         !classes*.name.contains(FallbackArtefact.name)
+    }
+
+    void 'skips trailing and whitespace-only lines without rejecting the index'() {
+        given:
+        Class<?> applicationClass = applicationClass("DefaultPackageArtefact\n\n   \n\n", null, null, null, true)
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass, [''])
+
+        then:
+        classes*.name.contains('DefaultPackageArtefact')
+    }
+
+    void 'logs at debug when the artefact index is used'() {
+        given:
+        LogCapture logCapture = new LogCapture(ArtefactIndexReader, Level.DEBUG)
+        Class<?> applicationClass = applicationClass("""
+${IndexedFirstArtefact.name}
+${IndexedSecondArtefact.name}
+""")
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
+
+        then:
+        indexedClassNames(classes) == [
+                IndexedFirstArtefact.name,
+                IndexedSecondArtefact.name
+        ]
+        logCapture.events.any {
+            it.level == Level.DEBUG &&
+                    it.formattedMessage.contains('Using artefact index') &&
+                    it.formattedMessage.contains('(2 classes)')
+        }
+
+        cleanup:
+        logCapture?.close()
+    }
+
+    void 'logs at debug when the artefact index is rejected and scanning is used'() {
+        given:
+        LogCapture logCapture = new LogCapture(ArtefactIndexReader, Level.DEBUG)
+        Class<?> applicationClass = applicationClass('grails.boot.config.MissingArtefact')
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
+
+        then:
+        classes*.name.contains(FallbackArtefact.name)
+        logCapture.events.any {
+            it.level == Level.DEBUG &&
+                    it.formattedMessage.contains('is invalid') &&
+                    it.formattedMessage.contains('falling back to classpath scanning')
+        }
+        !logCapture.events.any { it.formattedMessage.contains('Using artefact index') }
+
+        cleanup:
+        logCapture?.close()
+    }
+
+    void 'falls back to classpath scanning when the application class resource cannot be resolved'() {
+        given:
+        LogCapture logCapture = new LogCapture(ArtefactIndexReader, Level.DEBUG)
+        Class<?> applicationClass = applicationClass(IndexedFirstArtefact.name)
+        ((TestApplicationClassLoader) applicationClass.classLoader).failNextApplicationClassResourceLookup = true
+
+        when:
+        Collection<Class> classes = ApplicationArtefactScanner.scanApplicationClasses(applicationClass)
+
+        then:
+        classes*.name.contains(FallbackArtefact.name)
+        !classes*.name.contains(IndexedFirstArtefact.name)
+        logCapture.events.any {
+            it.level == Level.DEBUG &&
+                    it.formattedMessage.contains('could not be read') &&
+                    it.formattedMessage.contains('falling back to classpath scanning')
+        }
+
+        cleanup:
+        logCapture?.close()
     }
 
     void 'forces classpath scanning when the artefact index is disabled via system property'() {
@@ -243,7 +328,7 @@ ${IndexedFirstArtefact.name}
         knownTransformedClassNames.addAll(transformedClassNames)
     }
 
-    private Class<?> applicationClass(String index, String dependencyIndex = null, String linkageErrorClassName = null, String runtimeExceptionClassName = null) {
+    private Class<?> applicationClass(String index, String dependencyIndex = null, String linkageErrorClassName = null, String runtimeExceptionClassName = null, boolean preserveIndexWhitespace = false) {
         File directory = File.createTempDir()
         temporaryDirectories << directory
         [IndexedApplication, IndexedFirstArtefact, IndexedSecondArtefact, FallbackArtefact, ArtefactMarker, IncludedArtefact, ExcludedArtefact].each {
@@ -251,7 +336,7 @@ ${IndexedFirstArtefact.name}
         }
         copyClass(Class.forName('DefaultPackageArtefact', false, ApplicationArtefactScannerSpec.classLoader), directory)
         if (index != null) {
-            writeIndex(directory, index)
+            writeIndex(directory, index, preserveIndexWhitespace)
         }
         ClassLoader parent = ApplicationArtefactScannerSpec.classLoader
         if (dependencyIndex != null) {
@@ -268,10 +353,10 @@ ${IndexedFirstArtefact.name}
         return classLoader.loadClass(IndexedApplication.name)
     }
 
-    private static void writeIndex(File directory, String index) {
+    private static void writeIndex(File directory, String index, boolean preserveWhitespace = false) {
         File indexFile = new File(directory, ArtefactIndexReader.RESOURCE_NAME)
         indexFile.parentFile.mkdirs()
-        indexFile.text = index.stripIndent().trim()
+        indexFile.text = preserveWhitespace ? index : index.stripIndent().trim()
     }
 
     private static Collection<String> knownTransformedClassNames() {
@@ -319,10 +404,12 @@ class FallbackArtefact {
 @interface ArtefactMarker {
 }
 
+@CompileStatic
 class TestApplicationClassLoader extends URLClassLoader {
 
     private final String linkageErrorClassName
     private final String runtimeExceptionClassName
+    boolean failNextApplicationClassResourceLookup
 
     TestApplicationClassLoader(URL[] urls, ClassLoader parent, String linkageErrorClassName, String runtimeExceptionClassName = null) {
         super(urls, parent)
@@ -360,6 +447,10 @@ class TestApplicationClassLoader extends URLClassLoader {
 
     @Override
     URL getResource(String name) {
+        if (failNextApplicationClassResourceLookup && name == IndexedApplication.name.replace('.', '/') + '.class') {
+            failNextApplicationClassResourceLookup = false
+            return null
+        }
         if (isFixtureClassResource(name)) {
             URL resource = findResource(name)
             if (resource != null) {

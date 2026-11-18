@@ -36,20 +36,22 @@ import grails.io.IOUtils;
 /**
  * Reads the optional application artefact index.
  *
- * <p>The index is UTF-8 text at {@value #RESOURCE_NAME}, with one fully qualified
- * class name per line; blank lines are ignored. Any entry that fails to resolve to a
+ * <p>The index is UTF-8 text at {@value #RESOURCE_NAME}. Each line that is not blank is
+ * one fully qualified class name. Blank lines, including trailing blank lines and lines
+ * that contain only whitespace, are ignored. Any other entry that fails to resolve to a
  * loadable class, or any failure while locating or reading the index itself, rejects
  * the complete index so callers fall back to their normal classpath scan. Entries that
  * do not match the given package names are silently excluded from the result without
  * invalidating the index.</p>
  *
  * <p>Unlike {@link grails.boot.config.tools.ClassPathScanner}, which this reader
- * substitutes when a usable index is present, entries are trusted without an artefact
- * annotation check, and the given package names are honored exactly as given rather
- * than also excluding {@code ClassPathScanner}'s default ignored root packages (such as
- * {@code com}, {@code org} and {@code net}). An index producer must reproduce
- * {@code ClassPathScanner}'s selection semantics to keep behavior equivalent to
- * classpath scanning.</p>
+ * substitutes when a usable index is present, the scanner returns only classes whose
+ * annotation name starts with {@code grails.}. This reader trusts every listed entry
+ * and does no annotation check. Package names are honored exactly as given.
+ * {@code ClassPathScanner} skips its default ignored root packages (such as {@code com},
+ * {@code org} and {@code net}) even when those names are passed in; this reader does
+ * not. An index producer must reproduce those selection rules so the indexed result
+ * stays equivalent to classpath scanning.</p>
  *
  * <p>Reading the index can be forced off, in favor of classpath scanning, by setting
  * the {@value #DISABLED_PROPERTY} system property to {@code true}.</p>
@@ -89,7 +91,7 @@ final class ArtefactIndexReader {
              BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
             String className;
             while ((className = reader.readLine()) != null) {
-                if (className.isEmpty()) {
+                if (className.isBlank()) {
                     continue;
                 }
                 if (isInPackage(className, packageNames)) {
