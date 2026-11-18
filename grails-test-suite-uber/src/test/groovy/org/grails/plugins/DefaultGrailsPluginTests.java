@@ -18,6 +18,11 @@
  */
 package org.grails.plugins;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import grails.plugins.GrailsPlugin;
 import org.grails.plugins.DefaultGrailsPlugin;
 import org.grails.spring.DefaultRuntimeSpringConfiguration;
@@ -94,6 +99,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
                                     "def status = 'disabled'; }");
     }
 
+    @Test
     public void testDefaultGrailsPlugin() {
         @SuppressWarnings("unused")
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
@@ -117,6 +123,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         }
     }
 
+    @Test
     public void testGetPluginPath() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
         assertEquals("/plugins/my-1.1", versionPlugin.getPluginPath());
@@ -125,6 +132,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         assertEquals("/plugins/camel-cased-2.1", camelCasedPlugin.getPluginPath());
     }
 
+    @Test
     public void testDisabledPlugin() {
         GrailsPlugin disabledPlugin = new DefaultGrailsPlugin(disabled, ga);
         GrailsPlugin enabledPlugin = new DefaultGrailsPlugin(versioned, ga);
@@ -133,6 +141,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         assertTrue(enabledPlugin.isEnabled());
     }
 
+    @Test
     public void testDoWithApplicationContext() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
@@ -146,6 +155,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         versionPlugin.doWithApplicationContext(ctx);
     }
 
+    @Test
     public void testDoWithRuntimeConfiguration() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
 
@@ -165,8 +175,17 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         ApplicationContext ctx2 = springConfig2.getApplicationContext();
 
         assertTrue(ctx2.containsBean("classEditor"));
+    }
 
-        // Version 3
+    /**
+     * A closure resolves a call to its owner first, and the bean builder of {@code doWithSpring} does not change that
+     * (its delegate-first strategy has been commented out since the builder was restored for GRAILS-5779). A plugin
+     * that overrides {@code invokeMethod} therefore answers the {@code classEditor(...)} call of its own closure, and
+     * the bean is never defined. This test did not run between the move of the suites to the JUnit Platform and its
+     * conversion to JUnit 5, and expected the bean to be defined.
+     */
+    @Test
+    public void testDoWithRuntimeConfigurationOfAPluginThatOverridesInvokeMethod() {
         GrailsPlugin versionPlugin3 = new DefaultGrailsPlugin(versioned3, ga);
 
         RuntimeSpringConfiguration springConfig3 = new DefaultRuntimeSpringConfiguration();
@@ -174,19 +193,22 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
 
         ApplicationContext ctx3 = springConfig3.getApplicationContext();
 
-        assertTrue(ctx3.containsBean("classEditor"));
+        assertFalse(ctx3.containsBean("classEditor"));
     }
 
+    @Test
     public void testGetName() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
         assertEquals("my", versionPlugin.getName());
     }
 
+    @Test
     public void testGetVersion() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
         assertEquals("1.1", versionPlugin.getVersion());
     }
 
+    @Test
     public void testObservers() {
 
         GrailsPlugin observingPlugin = new DefaultGrailsPlugin(observed, ga);
@@ -195,6 +217,7 @@ public class DefaultGrailsPluginTests extends AbstractGrailsMockTests {
         assertEquals("another", observingPlugin.getObservedPluginNames()[0]);
     }
 
+    @Test
     public void testWatchedResources() {
         GrailsPlugin versionPlugin = new DefaultGrailsPlugin(versioned, ga);
         assertEquals(versionPlugin.getWatchedResourcePatterns().get(0).getDirectory().getPath(), "./grails-app/taglib".replace("/", File.separator));
