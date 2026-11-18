@@ -106,7 +106,7 @@ Each entry is an origin alone. The plugin does not compare the path of the `call
 origin can be the `callback` URL, and it ignores an entry that has a path other than `/`, a query, a fragment or user
 information, such as `http://your-frontend-app.com/app`, and logs a warning. It redirects to the `callback` URL with
 every character outside US-ASCII percent-encoded as UTF-8, as browsers send it. Write a host with characters outside
-US-ASCII in its ASCII form, such as `https://xn--bcher-kva.example` for `https://bücher.example`; the plugin ignores
+US-ASCII in its ASCII form, such as `+https://xn--bcher-kva.example+` for `https://bücher.example`; the plugin ignores
 an entry or a `callback` URL whose host is not ASCII.
 
 It compares the scheme and the host without regard to case, applies the scheme's default port when a URL has none, and
