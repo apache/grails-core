@@ -247,10 +247,10 @@ This allows you to create more versatile and interactive custom commands for you
 **Describing Arguments and Options**
 
 A command can describe the arguments and options it takes with the
-link:{api}org/apache/grails/core/cli/CommandArgument.html[CommandArgument] and
+link:{api}org/apache/grails/core/cli/CommandParameter.html[CommandParameter] and
 link:{api}org/apache/grails/core/cli/CommandOption.html[CommandOption] annotations. Tools that offer the
 commands of a project, such as the <<projectCommands,Grails Forge CLI>>, show them in the
-command's help, check them and complete them. Declare one `@CommandArgument` per argument, in the order
+command's help, check them and complete them. Declare one `@CommandParameter` per argument, in the order
 the arguments are given, and one `@CommandOption` per option:
 
 [source,groovy]
@@ -258,11 +258,11 @@ the arguments are given, and one `@CommandOption` per option:
 // grails-app/commands/com/example/GreetCommand.groovy
 package com.example
 
-import org.apache.grails.core.cli.CommandArgument
 import org.apache.grails.core.cli.CommandOption
+import org.apache.grails.core.cli.CommandParameter
 import org.apache.grails.core.cli.GrailsApplicationCommand
 
-@CommandArgument(name = 'name', required = false, description = 'Who to greet')
+@CommandParameter(name = 'name', required = false, description = 'Who to greet')
 @CommandOption(name = 'loud', flag = true, description = 'Greet in capitals')
 @CommandOption(name = 'language', values = ['en', 'de', 'fr'], description = 'The language of the greeting')
 class GreetCommand implements GrailsApplicationCommand {
@@ -296,7 +296,7 @@ grails> greet Alice --language=<TAB>
 The Forge CLI passes a declared option on as `--name=value`, after the arguments. The annotations only describe the command: it still reads its arguments and options from the
 command line as before.
 
-A command that declares no `@CommandArgument` takes any arguments, and one that declares no
+A command that declares no `@CommandParameter` takes any arguments, and one that declares no
 `@CommandOption` takes any options and is given its command line in the order it was typed, so a command
 without the annotations works as it always has.
 

@@ -71,7 +71,7 @@ final class ApplicationCommandManifestWriter {
 
     private static Map<String, Object> describe(ApplicationCommand command) {
         Class<?> type = command.class
-        List<Map<String, Object>> arguments = declaredArguments(type).collect { CommandArgument argument ->
+        List<Map<String, Object>> arguments = declaredArguments(type).collect { CommandParameter argument ->
             [name: argument.name(), description: argument.description(), required: argument.required(),
              values: argument.values().toList()] as Map<String, Object>
         }
@@ -87,9 +87,9 @@ final class ApplicationCommandManifestWriter {
     // Class#getAnnotationsByType would read both forms at once, but the static compiler links it with an
     // Object[] return type, which the JDK method does not have, so the call fails with NoSuchMethodError.
     // getAnnotation returns a single annotation and links correctly.
-    private static List<CommandArgument> declaredArguments(Class<?> type) {
-        CommandArgument single = type.getAnnotation(CommandArgument)
-        single ? [single] : (type.getAnnotation(CommandArguments)?.value()?.toList() ?: [])
+    private static List<CommandParameter> declaredArguments(Class<?> type) {
+        CommandParameter single = type.getAnnotation(CommandParameter)
+        single ? [single] : (type.getAnnotation(CommandParameters)?.value()?.toList() ?: [])
     }
 
     private static List<CommandOption> declaredOptions(Class<?> type) {

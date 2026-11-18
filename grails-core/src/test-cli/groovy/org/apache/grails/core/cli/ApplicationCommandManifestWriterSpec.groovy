@@ -155,8 +155,8 @@ class UndescribedManifestCommand implements ApplicationCommand {
     }
 }
 
-@CommandArgument(name = 'package', description = 'The package of the domain classes')
-@CommandArgument(name = 'user-class-name', description = 'The name of the user class', required = false)
+@CommandParameter(name = 'package', description = 'The package of the domain classes')
+@CommandParameter(name = 'user-class-name', description = 'The name of the user class', required = false)
 @CommandOption(name = 'groupClassName', description = 'Also generate role group classes')
 @CommandOption(name = 'uiOnly', description = 'Configure without generating classes', flag = true)
 @CommandOption(name = 'format', values = ['json', 'yaml'])
@@ -170,7 +170,7 @@ class DescribedManifestCommand implements ApplicationCommand {
     }
 }
 
-@CommandArgument(name = 'domain-class', values = ['Book', 'Author'])
+@CommandParameter(name = 'domain-class', values = ['Book', 'Author'])
 @CommandOption(name = 'force', flag = true)
 class SingleDeclarationManifestCommand implements ApplicationCommand {
 

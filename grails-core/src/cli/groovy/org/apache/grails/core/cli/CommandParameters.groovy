@@ -25,17 +25,17 @@ import java.lang.annotation.RetentionPolicy
 import java.lang.annotation.Target
 
 /**
- * Holds the {@link CommandArgument} annotations of a command that declares more than one.
+ * Holds the {@link CommandParameter} annotations of a command that declares more than one.
  *
  * @since 9.0
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@interface CommandArguments {
+@interface CommandParameters {
 
     /**
      * @return the arguments of the command, in the order they are given on the command line
      */
-    CommandArgument[] value()
+    CommandParameter[] value()
 }

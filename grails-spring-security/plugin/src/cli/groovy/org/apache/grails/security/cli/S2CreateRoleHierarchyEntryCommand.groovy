@@ -18,7 +18,7 @@ package org.apache.grails.security.cli
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
-import org.apache.grails.core.cli.CommandArgument
+import org.apache.grails.core.cli.CommandParameter
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import groovy.transform.CompileStatic
 
@@ -29,7 +29,7 @@ import groovy.transform.CompileStatic
  *
  * @since 6.0.0
  */
-@CommandArgument(name = 'domain-class-name',
+@CommandParameter(name = 'domain-class-name',
         description = 'The fully qualified name of the role hierarchy domain class, e.g. com.yourapp.RoleHierarchyEntry')
 @CompileStatic
 class S2CreateRoleHierarchyEntryCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {

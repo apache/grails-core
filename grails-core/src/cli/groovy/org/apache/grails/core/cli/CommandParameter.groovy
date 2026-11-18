@@ -32,8 +32,8 @@ import java.lang.annotation.Target
  * <p>Declare one annotation per argument, in the order the arguments are given on the command line:</p>
  *
  * <pre>
- * &#64;CommandArgument(name = 'package', description = 'The package of the domain classes')
- * &#64;CommandArgument(name = 'user-class-name', description = 'The name of the user class')
+ * &#64;CommandParameter(name = 'package', description = 'The package of the domain classes')
+ * &#64;CommandParameter(name = 'user-class-name', description = 'The name of the user class')
  * class SetupUsersCommand implements GrailsApplicationCommand { ... }
  * </pre>
  *
@@ -46,8 +46,8 @@ import java.lang.annotation.Target
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-@Repeatable(CommandArguments)
-@interface CommandArgument {
+@Repeatable(CommandParameters)
+@interface CommandParameter {
 
     /**
      * @return the name of the argument, shown in the command's help

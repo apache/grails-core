@@ -384,7 +384,7 @@ grails> s2-quickstart com.example User Role --groupClassName=RoleGroup
 The Forge CLI reads the commands from a manifest that the project's build writes with the new
 `generateCommandManifest` task, so it never loads the project's classpath itself, and runs a command
 through the project's `runCommand` task. A command describes the arguments and options it takes with
-the new `@CommandArgument` and `@CommandOption` annotations, which the Forge CLI shows in the command's
+the new `@CommandParameter` and `@CommandOption` annotations, which the Forge CLI shows in the command's
 help, checks and completes. Commands without them, such as those of plugins built for an earlier
 release, are offered too and take any arguments.
 

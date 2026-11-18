@@ -18,8 +18,8 @@ package org.apache.grails.security.cli
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
-import org.apache.grails.core.cli.CommandArgument
 import org.apache.grails.core.cli.CommandOption
+import org.apache.grails.core.cli.CommandParameter
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import groovy.transform.CompileStatic
 
@@ -36,11 +36,11 @@ import groovy.transform.CompileStatic
  *
  * @since 6.0.0
  */
-@CommandArgument(name = 'domain-class-package', required = false,
+@CommandParameter(name = 'domain-class-package', required = false,
         description = 'The package of the domain classes')
-@CommandArgument(name = 'user-class-name', required = false, description = 'The name of the user class')
-@CommandArgument(name = 'role-class-name', required = false, description = 'The name of the role class')
-@CommandArgument(name = 'requestmap-class-name', required = false,
+@CommandParameter(name = 'user-class-name', required = false, description = 'The name of the user class')
+@CommandParameter(name = 'role-class-name', required = false, description = 'The name of the role class')
+@CommandParameter(name = 'requestmap-class-name', required = false,
         description = 'The name of the request map class, when request maps secure the URLs')
 @CommandOption(name = 'groupClassName', description = 'Also creates role group classes with this name')
 @CommandOption(name = 'uiOnly', flag = true,
