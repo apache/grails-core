@@ -39,8 +39,9 @@ import picocli.CommandLine.Model.PositionalParamSpec
  * does through {@code runCommand}.</p>
  *
  * <p>The arguments reach {@code runCommand} in a file, so they need no quoting for the shell or the
- * wrapper script. {@code -D} sets a system property of the build, such as {@code -Dgrails.env=test},
- * which {@code runCommand} passes on to the command.</p>
+ * wrapper script. {@code -D} sets a system property of the command, such as {@code -Dgrails.env=test}:
+ * it is passed among the arguments, as {@code -Dname=value}, and {@code runCommand} starts the
+ * command with it set.</p>
  */
 @CompileStatic
 class ProjectCommand extends BaseCommand implements Callable<Integer> {
@@ -74,7 +75,7 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
                 .paramLabel('<property>=<value>')
                 .type(Map)
                 .auxiliaryTypes(String, String)
-                .description('Sets a system property of the build, such as -Dgrails.env=test to run the command in the test environment.')
+                .description('Sets a system property of the command, such as -Dgrails.env=test to run it in the test environment.')
                 .build()
         this.commandSpec = createSpec(command)
         this.spec = commandSpec
@@ -94,9 +95,7 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
         File argumentsFile = File.createTempFile('grails-command-arguments', '.json')
         try {
             argumentsFile.setText(JsonOutput.toJson(commandArguments), 'UTF-8')
-            List<String> gradleArguments = givenSystemProperties()
-            gradleArguments << RUN_COMMAND_TASK << "-P${ARGS_FILE_PROPERTY}=${argumentsFile.absolutePath}".toString()
-            return gradle.run(gradleArguments)
+            return gradle.run([RUN_COMMAND_TASK, "-P${ARGS_FILE_PROPERTY}=${argumentsFile.absolutePath}".toString()])
         }
         finally {
             argumentsFile.delete()
@@ -128,23 +127,24 @@ class ProjectCommand extends BaseCommand implements Callable<Integer> {
                     : "${option.longestName()}=${option.stringValues().first()}".toString())
         }
         given.addAll(parsed.unmatched())
+        given.addAll(givenSystemProperties())
         given
     }
 
     /**
-     * The words typed after the command's name, without those of {@code -D}: picocli cannot tell which
-     * word of an undeclared option is its value, so the command gets them in their order, as it does from
-     * {@code runCommand}.
+     * The words typed after the command's name: picocli cannot tell which word of an undeclared option
+     * is its value, so the command gets them in their order, as it does from {@code runCommand}. Only
+     * {@code -D name=value}, given as two words, is joined into the one word {@code runCommand} reads.
      */
     private List<String> typedArguments(List<String> commandLine) {
         List<String> typed = []
         List<String> afterName = commandLine.subList(commandLine.indexOf(name) + 1, commandLine.size())
         for (int i = 0; i < afterName.size(); i++) {
             String word = afterName[i]
-            if (word == SYSTEM_PROPERTY_OPTION) {
-                i++
+            if (word == SYSTEM_PROPERTY_OPTION && i + 1 < afterName.size()) {
+                typed << SYSTEM_PROPERTY_OPTION + afterName[++i]
             }
-            else if (!word.startsWith(SYSTEM_PROPERTY_OPTION)) {
+            else {
                 typed << word
             }
         }

@@ -18,9 +18,13 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import groovy.json.JsonException
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.EqualsAndHashCode
 
 import org.grails.forge.io.ConsoleOutput
 
@@ -29,9 +33,10 @@ import org.grails.forge.io.ConsoleOutput
  * plugins, which {@code runCommand} runs.
  *
  * <p>The project's build describes them in a manifest, written by the Grails Gradle plugin's
- * {@code generateCommandManifest} task. The manifest is read as long as it is newer than the files
- * that decide the project's build and its own commands; otherwise the task is run first, so a plugin
- * added to the build brings its commands with it. When the build fails, the commands of the last
+ * {@code generateCommandManifest} task, which also names the directories whose files decide the
+ * commands. Each time the build runs, the files of those directories are recorded, with their times and
+ * sizes; the manifest is read as long as they are unchanged, and otherwise the task is run first, so a
+ * plugin added to the build brings its commands with it. When the build fails, the commands of the last
  * manifest are kept, and the build is not run for them again until one of those files changes.</p>
  */
 @CompileStatic
@@ -46,28 +51,24 @@ class ProjectCommands {
     /** Where the manifest is kept, relative to the project directory */
     static final String MANIFEST_PATH = 'build/grails/commands.json'
 
-    /** Kept next to the manifest when the build could not write it, so the build is not run again for nothing */
-    static final String FAILED_PATH = 'build/grails/commands.failed'
-
     /**
-     * Kept next to the manifest: the build files in the project and build root directories when the build
-     * was last run, so that one deleted since, which leaves nothing newer behind, is noticed
+     * Where the files the commands depend on are recorded when the build runs, relative to the project
+     * directory: outside the build directory, so that cleaning the build does not forget a failed build
      */
-    static final String BUILD_FILES_PATH = 'build/grails/commands.inputs'
+    static final String RECORD_PATH = '.gradle/grails/commands.record'
+
+    /** Kept next to the record when the build could not write the manifest, so it is not run again for nothing */
+    static final String FAILED_PATH = '.gradle/grails/commands.failed'
 
     /** The newest version of the manifest's format this CLI reads */
     static final int FORMAT_VERSION = 1
 
     private static final List<String> BUILD_FILE_SUFFIXES = ['.gradle', '.gradle.kts', '.properties', '.toml']
 
-    /** Directories of the build whose files change the build: scripts applied from them, and build logic */
-    private static final List<String> BUILD_DIRS = ['gradle', 'buildSrc']
+    private static final List<String> BUILD_SCRIPTS = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts']
 
-    /** Directories under the build directories that the build writes, rather than reads */
-    private static final List<String> OUTPUT_DIRS = ['build', '.gradle']
-
-    /** Where an application keeps its own commands */
-    private static final String COMMAND_SOURCES = 'grails-app/commands'
+    /** What builds and tools write next to a build script, rather than read */
+    private static final List<String> OUTPUT_DIRS = ['build', '.gradle', '.kotlin', 'out', 'bin', '.git', '.idea', 'node_modules']
 
     private final File projectDir
     private final ProjectGradle gradle
@@ -90,8 +91,8 @@ class ProjectCommands {
     }
 
     /**
-     * Reads the commands of the project, after updating the manifest when it is missing or older than
-     * the project's build or its commands.
+     * Reads the commands of the project, after updating the manifest when it is missing or one of the
+     * files it depends on changed.
      *
      * @param console where to say that the build is being run, and why the commands could not be read
      * @return the commands, or none when the directory holds no Grails project or none could be read
@@ -124,7 +125,9 @@ class ProjectCommands {
     }
 
     private void update(File manifest, ConsoleOutput console) {
-        File failed = new File(projectDir, FAILED_PATH)
+        // the files are recorded before the build runs, so one changed while it runs counts next time
+        Inputs before = inputsOf(manifest)
+        List<String> recorded = snapshot(before)
         console.out('Reading the commands of the project from its build...')
         String problem
         try {
@@ -134,22 +137,46 @@ class ProjectCommands {
         catch (IOException e) {
             problem = e.message
         }
-        record(buildFiles())
-        if (problem == null && manifest.isFile()) {
-            // the task is up to date when the classpath is, without writing the manifest again
-            manifest.setLastModified(System.currentTimeMillis())
-            failed.delete()
+        if (problem == null && !manifest.isFile()) {
+            problem = 'its build wrote no manifest'
+        }
+        if (problem == null) {
+            Inputs after = inputsOf(manifest)
+            save(after == before ? recorded : snapshot(after), null, console)
             return
         }
-        failed.parentFile.mkdirs()
-        failed.setText((problem ?: 'its build wrote no manifest') + '\n', 'UTF-8')
+        save(recorded, problem, console)
         String kept = manifest.isFile() ? 'The commands it listed before are offered' : 'Its commands are not offered'
-        console.warning("Could not read the commands of the project: ${problem ?: 'its build wrote no manifest'}. ${kept}, " +
-                'and the build is not run for them again until a build file changes. A project of Grails 9 or ' +
-                "later lists them with its ${MANIFEST_TASK} Gradle task; run it to see what went wrong.")
+        console.warning("Could not read the commands of the project: ${problem}. ${kept}, and the build is not run " +
+                'for them again until a build file changes. A project of Grails 9 or later lists them with its ' +
+                "${MANIFEST_TASK} Gradle task; run it to see what went wrong.")
+    }
+
+    /**
+     * Records the files the commands depend on, and whether the build failed. When they cannot be
+     * written, the build is run again next time, which is said.
+     */
+    private void save(List<String> recorded, String problem, ConsoleOutput console) {
+        File record = new File(projectDir, RECORD_PATH)
+        File failed = new File(projectDir, FAILED_PATH)
+        try {
+            Files.createDirectories(record.parentFile.toPath())
+            Files.write(record.toPath(), recorded.collect { String line -> line + '\n' }.join('').getBytes('UTF-8'))
+            if (problem == null) {
+                Files.deleteIfExists(failed.toPath())
+            }
+            else {
+                Files.write(failed.toPath(), (problem + '\n').getBytes('UTF-8'))
+            }
+        }
+        catch (IOException e) {
+            console.warning("Could not record what the commands of the project depend on in ${record.parentFile}: " +
+                    "${e.message ?: e.class.simpleName}. The build is run for them again next time.")
+        }
     }
 
     private List<ProjectCommand> read(File manifest, ConsoleOutput console) {
+        List<Object> commands
         try {
             Object parsed = new JsonSlurper().parse(manifest, 'UTF-8')
             if (!(parsed instanceof Map)) {
@@ -164,92 +191,167 @@ class ProjectCommands {
                 throw new IllegalArgumentException("it was written in format ${version}, by a newer Grails, and this " +
                         "Grails Forge CLI reads up to format ${FORMAT_VERSION}")
             }
-            Object commands = content.commands
-            if (!(commands instanceof List)) {
+            if (!(content.commands instanceof List)) {
                 throw new IllegalArgumentException('it has no list of commands')
             }
-            return ((List<Object>) commands).collect { Object command -> create(command) }
+            commands = (List<Object>) content.commands
         }
-        catch (JsonException | RuntimeException e) {
+        catch (JsonException | IOException | RuntimeException e) {
             console.warning("Could not read the commands of the project from ${manifest}, so they are not offered: ${e.message}")
             return []
         }
+        // a command picocli cannot take, such as one declaring an option twice, costs only that command
+        List<ProjectCommand> created = []
+        for (Object command : commands) {
+            try {
+                created << create(command)
+            }
+            catch (RuntimeException e) {
+                console.warning("The command ${nameOf(command)} of the project is not offered: ${e.message}")
+            }
+        }
+        created
     }
 
     private ProjectCommand create(Object command) {
         if (!(command instanceof Map) || !(((Map) command).name instanceof String) || !((Map) command).name) {
-            throw new IllegalArgumentException("a command has no name: ${command}")
+            throw new IllegalArgumentException("it has no name: ${command}")
         }
         new ProjectCommand((Map<String, Object>) command, gradle)
     }
 
+    private static String nameOf(Object command) {
+        Object name = command instanceof Map ? ((Map) command).name : null
+        name instanceof String && name ? (String) name : 'without a name'
+    }
+
+    /**
+     * Whether the manifest needs the build to run: there is none and the build did not fail last time,
+     * nothing was recorded, or a recorded file changed.
+     */
     private boolean outdated(File manifest) {
-        File failed = new File(projectDir, FAILED_PATH)
-        long lastRead = Math.max(manifest.isFile() ? manifest.lastModified() : 0L, failed.isFile() ? failed.lastModified() : 0L)
-        if (lastRead == 0L) {
+        if (!manifest.isFile() && !new File(projectDir, FAILED_PATH).isFile()) {
             return true
         }
-        List<String> buildFiles = buildFiles()
-        File recorded = new File(projectDir, BUILD_FILES_PATH)
-        if (!recorded.isFile()) {
-            // a manifest the project's own build wrote: its build files are taken to be those there now
-            record(buildFiles)
+        File record = new File(projectDir, RECORD_PATH)
+        try {
+            // without a record, as when the project's own build wrote the manifest, a file deleted since
+            // cannot be told from one that was never there
+            return !record.isFile() || Files.readAllLines(record.toPath()) != snapshot(inputsOf(manifest))
         }
-        else if (recorded.readLines('UTF-8') != buildFiles) {
+        catch (IOException ignored) {
             return true
         }
-        ([projectDir, gradle.rootDir] as LinkedHashSet<File>).any { File dir -> changedBuild(dir, lastRead) } ||
-                changedSources(lastRead)
     }
 
     /**
-     * Whether the commands of the application changed. When their directory is gone, {@code grails-app},
-     * which every project has, changed when it was removed.
+     * The directories the commands depend on: those the manifest names, or, for a manifest that names
+     * none, those of the project and the root of its build.
      */
-    private boolean changedSources(long since) {
-        File sources = new File(projectDir, COMMAND_SOURCES)
-        sources.isDirectory() ? changed(sources, since) : sources.parentFile.lastModified() > since
+    private Inputs inputsOf(File manifest) {
+        if (manifest.isFile()) {
+            try {
+                Object parsed = new JsonSlurper().parse(manifest, 'UTF-8')
+                Object inputs = parsed instanceof Map ? ((Map) parsed).inputs : null
+                if (inputs instanceof Map) {
+                    List<File> buildDirectories = files(((Map) inputs).buildDirectories)
+                    List<File> sourceDirectories = files(((Map) inputs).sourceDirectories)
+                    if (buildDirectories != null && sourceDirectories != null) {
+                        return new Inputs(buildDirectories, sourceDirectories)
+                    }
+                }
+            }
+            catch (JsonException | IOException | RuntimeException ignored) {
+                // the manifest is reported when it is read
+            }
+        }
+        File rootDir = gradle.rootDir
+        new Inputs([projectDir, rootDir].unique(),
+                [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
+                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')])
+    }
+
+    private static List<File> files(Object paths) {
+        if (!(paths instanceof List) || ((List) paths).any { !(it instanceof String) }) {
+            return null
+        }
+        ((List<String>) paths).collect { String path -> new File(path) }
     }
 
     /**
-     * The build files directly in the project and build root directories, which a deleted one leaves no
-     * trace of; those under the build directories change the time of the directory that held them.
+     * What the files the commands depend on are now: the build files directly in each build directory,
+     * and every file and directory below each source directory, apart from what builds and tools write
+     * next to a build script. Each file is listed with its time and size, so a deleted, added, replaced
+     * or changed file changes the list, whatever the clock said when it was written.
      */
-    private List<String> buildFiles() {
-        ([projectDir, gradle.rootDir] as LinkedHashSet<File>).collectMany { File dir ->
-            (dir.listFiles() ?: new File[0]).findAll { File file -> buildFile(file) }*.absolutePath
-        }.sort()
-    }
-
-    private void record(List<String> buildFiles) {
-        File recorded = new File(projectDir, BUILD_FILES_PATH)
-        recorded.parentFile.mkdirs()
-        recorded.setText(buildFiles.collect { String path -> path + '\n' }.join(''), 'UTF-8')
-    }
-
-    private static boolean buildFile(File file) {
-        file.isFile() && BUILD_FILE_SUFFIXES.any { String suffix -> file.name.endsWith(suffix) }
-    }
-
-    private static boolean changedBuild(File dir, long since) {
-        dir.listFiles()?.any { File file ->
-            buildFile(file) && file.lastModified() > since
-        } || BUILD_DIRS.any { String name -> changed(new File(dir, name), since) }
-    }
-
-    /**
-     * Whether a file in the directory, or the directory itself or one below it, changed: a directory
-     * changes when a file in it is added, deleted or renamed.
-     */
-    private static boolean changed(File dir, long since) {
-        if (!dir.isDirectory()) {
-            return false
+    private static List<String> snapshot(Inputs inputs) {
+        List<String> lines = []
+        for (File dir : inputs.buildDirectories) {
+            File[] files = dir.listFiles()
+            if (files == null) {
+                lines << "absent\t${dir.absolutePath}".toString()
+                continue
+            }
+            for (File file : files.sort(false) { File it -> it.name }) {
+                if (file.isFile() && BUILD_FILE_SUFFIXES.any { String suffix -> file.name.endsWith(suffix) }) {
+                    lines << describe(file)
+                }
+            }
         }
-        if (dir.lastModified() > since) {
-            return true
+        for (File dir : inputs.sourceDirectories) {
+            walk(dir, lines)
         }
-        dir.listFiles()?.any { File file ->
-            file.isDirectory() ? !(file.name in OUTPUT_DIRS) && changed(file, since) : file.lastModified() > since
+        lines
+    }
+
+    private static void walk(File file, List<String> lines) {
+        Path path = file.toPath()
+        if (Files.isSymbolicLink(path)) {
+            // not followed, so a link to a directory above it cannot loop
+            String target
+            try {
+                target = Files.readSymbolicLink(path).toString()
+            }
+            catch (IOException | UnsupportedOperationException ignored) {
+                target = ''
+            }
+            lines << "link\t${file.absolutePath}\t${target}".toString()
+        }
+        else if (file.isDirectory()) {
+            File[] children = file.listFiles()
+            if (children == null) {
+                lines << "unreadable\t${file.absolutePath}".toString()
+                return
+            }
+            lines << "directory\t${file.absolutePath}".toString()
+            boolean buildRoot = file.name == 'buildSrc' || BUILD_SCRIPTS.any { String script -> new File(file, script).isFile() }
+            for (File child : children.sort(false) { File it -> it.name }) {
+                if (!(buildRoot && child.name in OUTPUT_DIRS && child.isDirectory())) {
+                    walk(child, lines)
+                }
+            }
+        }
+        else if (file.isFile()) {
+            lines << describe(file)
+        }
+        else {
+            lines << "absent\t${file.absolutePath}".toString()
+        }
+    }
+
+    private static String describe(File file) {
+        "file\t${file.absolutePath}\t${file.lastModified()}\t${file.length()}".toString()
+    }
+
+    @EqualsAndHashCode
+    private static final class Inputs {
+
+        final List<File> buildDirectories
+        final List<File> sourceDirectories
+
+        Inputs(List<File> buildDirectories, List<File> sourceDirectories) {
+            this.buildDirectories = buildDirectories
+            this.sourceDirectories = sourceDirectories
         }
     }
 }

@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import java.util.function.BiFunction
+import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -59,6 +60,14 @@ final class ForgeCli {
             CreateJobCommand,
             AddPropertyCommand
     ] as List<Class<? extends CodeGenCommand>>
+
+    /**
+     * The names of the code-gen commands, which are the Forge CLI's own even where they do not apply, so
+     * naming one never runs the project's build
+     */
+    private static final Set<String> CODE_GEN_COMMAND_NAMES = CODE_GEN_COMMANDS
+            .collect { Class<? extends CodeGenCommand> type -> type.getAnnotation(CommandLine.Command).name() }
+            .toSet().asImmutable()
 
     private static final BiFunction<Throwable, CommandLine, Integer> EXCEPTION_HANDLER = { Throwable e, CommandLine commandLine ->
         BaseCommand command = commandLine.getCommand()
@@ -108,7 +117,7 @@ final class ForgeCli {
                 addProjectCommands(commandLine, false)
             }
         }
-        else if (!commandLine.subcommands.containsKey(command)) {
+        else if (!commandLine.subcommands.containsKey(command) && !CODE_GEN_COMMAND_NAMES.contains(command)) {
             addProjectCommands(commandLine, true)
         }
         return commandLine.execute(args)
@@ -116,13 +125,13 @@ final class ForgeCli {
 
     /**
      * The command a command line names: its first word that is neither one of the Forge CLI's options
-     * nor the value of one.
+     * nor the value of one. None follows {@code --}, after which picocli takes every word as a parameter.
      */
     private static String commandName(CommandLine commandLine, String... args) {
         for (int i = 0; i < args.length; i++) {
             String word = args[i]
             if (word == '--') {
-                return i + 1 < args.length ? args[i + 1] : null
+                return null
             }
             if (!word.startsWith('-')) {
                 return word
@@ -140,7 +149,16 @@ final class ForgeCli {
      */
     static void interactive(ApplicationContext context) {
         CommandLine commandLine = createCommandLine(context, true)
-        new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER).start()
+        // a line may run the build and change the project's commands, so the prompt then completes those
+        // of the manifest as it is, read quietly, since a problem with it was reported already
+        CommandLine[] offered = [commandLine] as CommandLine[]
+        Supplier<CommandLine> current = { -> offered[0] } as Supplier<CommandLine>
+        new InteractiveShell(commandLine, current, { String[] commandArgs ->
+            execute(context, commandArgs)
+            CommandLine refreshed = createForgeCommandLine(context, true)
+            addProjectCommands(refreshed, false, ConsoleOutput.NOOP)
+            offered[0] = refreshed
+        }, EXCEPTION_HANDLER, InteractiveShell.DEFAULT_PROMPT).start()
     }
 
     /**
@@ -185,6 +203,10 @@ final class ForgeCli {
      * @param runBuild whether the project's build may run to update the commands
      */
     private static void addProjectCommands(CommandLine commandLine, boolean runBuild) {
+        addProjectCommands(commandLine, runBuild, (ForgeCommand) commandLine.getCommand())
+    }
+
+    private static void addProjectCommands(CommandLine commandLine, boolean runBuild, ConsoleOutput console) {
         File projectDir
         try {
             projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
@@ -192,7 +214,6 @@ final class ForgeCli {
         catch (IOException ignored) {
             return
         }
-        ConsoleOutput console = (ForgeCommand) commandLine.getCommand()
         for (ProjectCommand command : new ProjectCommands(projectDir).load(console, runBuild)) {
             if (!commandLine.subcommands.containsKey(command.name)) {
                 commandLine.addSubcommand(command.name, command.commandSpec)

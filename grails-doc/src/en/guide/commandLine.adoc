@@ -214,13 +214,15 @@ grails> s2-quickstart com.example User Role --<TAB>
 
 Each command shows its usage with `--help`, and runs through the project's `runCommand` Gradle task,
 as `./gradlew runCommand -Pargs="s2-quickstart com.example User Role"` would run it. The Forge CLI hands
-the arguments to the task in a file, so an argument with spaces or quotes reaches the command as typed,
-on every operating system. The Forge CLI's own commands keep their name: a project command named like
-one of them is not offered.
+the arguments to the task in a file, so an argument with spaces or quotes reaches `runCommand` as typed,
+on every operating system, and the command reads it as `runCommand` always has: trimmed, with a pair of
+double quotes around it removed, and left out when it is empty. In a build of several projects, the task
+runs in the project of the current directory only, not also in the projects below it. The Forge CLI's
+own commands keep their name: a project command named like one of them is not offered.
 
 A command runs in the development environment unless `-D` says otherwise. `-D` sets a system property
-of the project's build, which `runCommand` passes on to the command, as `./gradlew -Dgrails.env=test
-runCommand` does:
+of the command: it reaches `runCommand` among the arguments, as `-Dname=value`, and `runCommand` starts
+the command with the property set, as `./gradlew runCommand -Pargs="dbm-update -Dgrails.env=test"` does:
 
 [source,shell]
 ----
@@ -228,31 +230,36 @@ grails> dbm-update -Dgrails.env=test
 ----
 
 The Forge CLI learns the commands from the project's build: the Grails Gradle plugin's
-`generateCommandManifest` task writes them to `build/grails/commands.json`. The Forge CLI runs the task
-when the file is missing, or older than one of the files that decide the build or the application's
-commands:
+`generateCommandManifest` task writes them to `build/grails/commands.json`, with the directories whose
+files decide them:
 
-* the `.gradle`, `.gradle.kts`, `.properties` and `.toml` files of the project directory and of the
-  root directory of its build, such as `build.gradle`, `settings.gradle` and `gradle.properties`;
-* the files under their `gradle` and `buildSrc` directories, such as `gradle/libs.versions.toml` and
-  scripts applied from there;
-* the files under `grails-app/commands`, including a command deleted from there, or the whole directory removed.
+* the directory of every project of the build, for its `.gradle`, `.gradle.kts`, `.properties` and
+  `.toml` files, such as `build.gradle`, `settings.gradle`, `gradle.properties` and `libs.versions.toml`;
+* everything under the `gradle` and `buildSrc` directories of the build's root, under
+  `grails-app/commands` and `src/main/resources/META-INF` of every project, and under every included
+  build, apart from what builds and tools write next to a build script, such as `build`, `.gradle` and
+  `.kotlin`.
 
-A file of these deleted, or moved in with an older time, counts as a change too.
-
-So a plugin added to the build brings its commands the next time a project command is asked for. A
-change the Forge CLI cannot see, such as a new snapshot of a plugin, is picked up by running
-`./gradlew generateCommandManifest`.
+Each time it runs the task, the Forge CLI records those files, with their times and sizes, in the
+project's `.gradle/grails` directory. It runs the task again when one of them is added, changed, replaced
+or deleted, whatever time the file has, and when a manifest has no record, as one written by
+`./gradlew generateCommandManifest` alone. So a plugin added to the build brings its commands the next
+time a project command is asked for. A change the Forge CLI cannot see, such as a new snapshot of a
+plugin, is picked up by running `./gradlew generateCommandManifest`.
 
 The build runs only when the interactive prompt starts or a command the Forge CLI does not have is
 named, also after the Forge CLI's own options, as in `grails-forge-cli -x dbm-update`. Its own commands,
-such as `create-controller`, and its options alone, such as `--help`, never run it.
-`grails-forge-cli --help` lists the project's commands from the file the build last wrote.
+such as `create-controller`, never run it, even in a project they do not apply to, and neither do its
+options alone, such as `--help`, or a command line after `--`. `grails-forge-cli --help` lists the
+project's commands from the file the build last wrote. When a command at the prompt runs the build, the
+prompt then completes the commands it found.
 
 When the build fails, as it does while the application does not compile or in a project of a Grails
 release without `generateCommandManifest`, the Forge CLI says so once and keeps offering the commands of
 the file the build last wrote, if any. It does not run the build for them again until one of the files
-above changes; run `./gradlew generateCommandManifest` to see what went wrong.
+above changes, also after `./gradlew clean`; run `./gradlew generateCommandManifest` to see what went
+wrong. A command of the file that the Forge CLI cannot offer, such as one declaring an option named
+`help`, is reported and left out, and the others are offered.
 
 The build runs through the Gradle wrapper of the project, or of the build it belongs to: the wrapper in
 the first directory above it with a `settings.gradle` file. A project whose build has no wrapper has no

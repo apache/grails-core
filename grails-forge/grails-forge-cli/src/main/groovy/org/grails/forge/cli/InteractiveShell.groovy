@@ -29,17 +29,20 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import picocli.CommandLine
+import picocli.CommandLine.Model.CommandSpec
 import java.util.function.BiFunction
 import java.util.function.Consumer
+import java.util.function.Supplier
 
 import static picocli.CommandLine.Help.Ansi.AUTO
 
 @CompileStatic
 class InteractiveShell {
 
-    private static final String DEFAULT_PROMPT = '@|blue grails>|@ '
+    static final String DEFAULT_PROMPT = '@|blue grails>|@ '
 
     private final CommandLine commandLine
+    private final Supplier<CommandLine> offered
     private final Consumer<String[]> executor
     private final BiFunction<Throwable, CommandLine, Integer> onError
     private final String prompt
@@ -54,7 +57,23 @@ class InteractiveShell {
                             Consumer<String[]> executor,
                             BiFunction<Throwable, CommandLine, Integer> onError,
                             String prompt) {
+        this(commandLine, { -> commandLine } as Supplier<CommandLine>, executor, onError, prompt)
+    }
+
+    /**
+     * @param commandLine the command line whose help and colors the prompt starts with
+     * @param offered the command line of the commands offered now, which the prompt completes
+     * @param executor runs each line entered
+     * @param onError reports what ends the prompt
+     * @param prompt the prompt, with picocli's markup
+     */
+    InteractiveShell(CommandLine commandLine,
+                            Supplier<CommandLine> offered,
+                            Consumer<String[]> executor,
+                            BiFunction<Throwable, CommandLine, Integer> onError,
+                            String prompt) {
         this.commandLine = commandLine
+        this.offered = offered
         this.executor = executor
         this.onError = onError
         this.prompt = prompt
@@ -65,7 +84,7 @@ class InteractiveShell {
             Terminal terminal = TerminalBuilder.terminal()
             LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
-                    .completer(new CommandLineCompleter(commandLine.commandSpec))
+                    .completer(new CommandLineCompleter({ -> offered.get().commandSpec } as Supplier<CommandSpec>))
                     .parser(new DefaultParser())
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
                     .build()

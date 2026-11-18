@@ -25,6 +25,9 @@ import groovy.transform.CompileStatic
  * directory, or the one in the root directory of the build the project belongs to, the first
  * directory above it with a settings file. No wrapper outside the build is ever run, and neither is
  * a {@code gradle} found on the path.
+ *
+ * <p>Every run names the project with the Grails Gradle plugin's {@code grailsCommandProject} property,
+ * so the tasks it runs run in that project only, and not also in the projects below it.</p>
  */
 @CompileStatic
 class ProjectGradle {
@@ -33,12 +36,17 @@ class ProjectGradle {
 
     private static final List<String> SETTINGS_FILES = ['settings.gradle', 'settings.gradle.kts']
 
+    /** The project property of the Grails Gradle plugin that runs its command tasks in one project only */
+    static final String COMMAND_PROJECT_PROPERTY = 'grailsCommandProject'
+
     private final File projectDir
     private final File wrapper
+    private final File rootDir
 
     ProjectGradle(File projectDir) {
         this.projectDir = projectDir
         this.wrapper = findWrapper(projectDir)
+        this.rootDir = findSettingsDir(projectDir) ?: projectDir
     }
 
     /**
@@ -49,11 +57,11 @@ class ProjectGradle {
     }
 
     /**
-     * @return the root directory of the build the project belongs to: the directory of its Gradle
-     * wrapper, or the project directory when it has none
+     * @return the root directory of the build the project belongs to: the first directory, from the
+     * project's upward, with a settings file, as Gradle finds it, or the project directory when there is none
      */
     File getRootDir() {
-        wrapper?.parentFile ?: projectDir
+        rootDir
     }
 
     /**
@@ -84,7 +92,8 @@ class ProjectGradle {
         if (wrapper == null) {
             throw new IOException("The build of ${projectDir} has no Gradle wrapper")
         }
-        List<String> command = [wrapper.path, '-p', projectDir.path, '-q', '--console=plain']
+        List<String> command = [wrapper.path, '-p', projectDir.path, '-q', '--console=plain',
+                "-P${COMMAND_PROJECT_PROPERTY}=${projectDir.path}".toString()]
         command.addAll(arguments)
         ProcessBuilder builder = new ProcessBuilder(command).directory(projectDir)
         redirect.call(builder)
@@ -109,10 +118,15 @@ class ProjectGradle {
         }
         // the build's root is the first directory with a settings file, as Gradle finds it; a wrapper
         // further up belongs to something else
+        File settingsDir = findSettingsDir(projectDir)
+        File rootWrapper = settingsDir == null ? null : new File(settingsDir, name)
+        rootWrapper?.isFile() ? rootWrapper : null
+    }
+
+    private static File findSettingsDir(File projectDir) {
         for (File dir = projectDir; dir != null; dir = dir.parentFile) {
             if (SETTINGS_FILES.any { new File(dir, it).isFile() }) {
-                File rootWrapper = new File(dir, name)
-                return rootWrapper.isFile() ? rootWrapper : null
+                return dir
             }
         }
         null

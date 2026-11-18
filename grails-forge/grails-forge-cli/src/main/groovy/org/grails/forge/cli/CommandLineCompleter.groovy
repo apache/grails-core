@@ -18,6 +18,8 @@
  */
 package org.grails.forge.cli
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 
 import org.jline.reader.Candidate
@@ -30,14 +32,22 @@ import picocli.CommandLine.Model.CommandSpec
 /**
  * Completes the word under the cursor at the interactive prompt from the picocli commands, their
  * subcommands and their options.
+ *
+ * <p>The commands can be given as a supplier, so the prompt completes the commands offered now, such as
+ * those of a project whose build changed since the prompt started.</p>
  */
 @CompileStatic
 class CommandLineCompleter implements Completer {
 
-    private final CommandSpec spec
+    private final Supplier<CommandSpec> specs
 
     CommandLineCompleter(CommandSpec spec) {
-        this.spec = Objects.requireNonNull(spec, 'spec')
+        Objects.requireNonNull(spec, 'spec')
+        this.specs = { -> spec } as Supplier<CommandSpec>
+    }
+
+    CommandLineCompleter(Supplier<CommandSpec> specs) {
+        this.specs = Objects.requireNonNull(specs, 'specs')
     }
 
     @Override
@@ -56,7 +66,7 @@ class CommandLineCompleter implements Completer {
             wordIndex++
         }
         List<CharSequence> suggestions = []
-        AutoComplete.complete(spec, words.toArray(new String[0]), wordIndex, 0, line.cursor(), suggestions)
+        AutoComplete.complete(specs.get(), words.toArray(new String[0]), wordIndex, 0, line.cursor(), suggestions)
         suggestions.each { CharSequence suggestion ->
             candidates.add(new Candidate(prefix + suggestion))
         }
