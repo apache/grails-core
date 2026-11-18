@@ -28,7 +28,7 @@ import spock.lang.Issue
 class MergeDetachedDirtyFieldsSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MergeDirtyData, MergePrimitiveIdData])
+        manager.domainClasses.addAll([MergeDirtyData, MergePrimitiveIdData, MergeAssignedStringId, MergeAssignedLongId])
     }
 
     void "merge writes the changed fields of a detached instance"() {
@@ -107,6 +107,59 @@ class MergeDetachedDirtyFieldsSpec extends GrailsDataTckSpec<GrailsDataHibernate
         MergePrimitiveIdData.count() == 1
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/17045')
+    void "merge of a new instance with an assigned id is inserted once, as save is"() {
+        when: 'a new instance with an assigned id is merged, and another is saved'
+        MergeAssignedStringId merged = new MergeAssignedStringId(id: 'merged', title: 'x').merge(flush: true)
+        MergeAssignedStringId saved = new MergeAssignedStringId(id: 'saved', title: 'x').save(flush: true, failOnError: true)
+
+        then: 'the insert is not followed by an update'
+        merged.version == 0
+        saved.version == 0
+        MergeAssignedStringId.count() == 2
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/17045')
+    void "merge of a new instance with an assigned numeric id is inserted once"() {
+        when:
+        MergeAssignedLongId merged = new MergeAssignedLongId(id: 42L, title: 'x').merge(flush: true)
+
+        then:
+        merged.version == 0
+        MergeAssignedLongId.count() == 1
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/17045')
+    void "an instance inserted by merge with an assigned id is updated by a later change"() {
+        given:
+        MergeAssignedStringId merged = new MergeAssignedStringId(id: 'later', title: 'x').merge(flush: true)
+
+        when: 'it is changed and saved'
+        merged.title = 'changed'
+        merged.save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        then: 'the change is written once, so the version is 1'
+        MergeAssignedStringId.get('later').title == 'changed'
+        MergeAssignedStringId.get('later').version == 1
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/17045')
+    void "merge of a detached instance with an assigned id still writes its changes"() {
+        given:
+        new MergeAssignedStringId(id: 'detached', title: 'a').save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        MergeAssignedStringId detached = new MergeAssignedStringId(id: 'detached', title: 'b')
+        detached.version = 0L
+        detached.merge(flush: true)
+        manager.session.clear()
+
+        then:
+        MergeAssignedStringId.get('detached').title == 'b'
+    }
+
     void "merge of an instance the session already manages keeps its changes"() {
         given:
         MergeDirtyData data = new MergeDirtyData(name: 'a', number: 1).save(flush: true)
@@ -140,4 +193,26 @@ class MergeDirtyData implements Serializable {
 class MergePrimitiveIdData implements Serializable {
     long id
     String name
+}
+
+@Entity
+class MergeAssignedStringId {
+    String id
+    Long version
+    String title
+
+    static mapping = {
+        id generator: 'assigned'
+    }
+}
+
+@Entity
+class MergeAssignedLongId {
+    Long id
+    Long version
+    String title
+
+    static mapping = {
+        id generator: 'assigned'
+    }
 }

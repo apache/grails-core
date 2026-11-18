@@ -286,6 +286,9 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
                     changed.each { String name -> ((DirtyCheckable) merged).markDirty(name) }
                 }
             }
+            if (inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
+                ((DirtyCheckable) merged).trackChanges()
+            }
             session.lock(merged, LockMode.NONE)
             if (flush) {
                 flushSession(session)

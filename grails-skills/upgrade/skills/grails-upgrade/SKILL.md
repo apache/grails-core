@@ -856,7 +856,7 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 Search the application for `merge(` and check each call whose instance was changed before it:
 
 - An application that changes an instance it keeps in the HTTP session, for example to render a page, and calls `merge()` only to attach it again, now writes those changes. Call `discard()` on the instance, or load it again, to keep the row as it is.
-- `merge()` of a new instance is unchanged: it is inserted once and is not followed by an update.
+- `merge()` of a new instance is inserted once and is not followed by an update. For a new instance with an assigned id the insert used to be followed by an update, so its version was 1; it is 0 now, as after `save()`. Search for code that reads the version after such a `merge()`.
 - An instance that the session already manages is returned as it is.
 
 GORM for Hibernate 5 only. The guide gives no setting that restores the old result.
