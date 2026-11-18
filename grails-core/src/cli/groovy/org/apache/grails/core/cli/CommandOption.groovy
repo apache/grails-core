@@ -32,8 +32,8 @@ import java.lang.annotation.Target
  * <p>An option is given as {@code --name=value}, or as {@code --name} when it is a {@link #flag()}:</p>
  *
  * <pre>
- * &#64;CommandOption(name = 'group-class-name', description = 'Also generate role group classes with this name')
- * &#64;CommandOption(name = 'ui-only', flag = true, description = 'Configure the plugin without generating classes')
+ * &#64;CommandOption(name = 'groupClassName', description = 'Also generate role group classes with this name')
+ * &#64;CommandOption(name = 'uiOnly', flag = true, description = 'Configure the plugin without generating classes')
  * class SetupUsersCommand implements GrailsApplicationCommand { ... }
  * </pre>
  *

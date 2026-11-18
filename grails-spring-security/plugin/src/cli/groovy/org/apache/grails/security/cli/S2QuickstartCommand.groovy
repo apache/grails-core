@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
  * Usage: <code>./grailsw s2-quickstart [DOMAIN_CLASS_PACKAGE] [USER_CLASS_NAME] [ROLE_CLASS_NAME] [REQUEST_MAP_CLASS_NAME] --groupClassName=[GROUP_CLASS_NAME]</code> or
- * <code>s2-quickstart --ui-only</code>
+ * <code>./grailsw s2-quickstart --uiOnly</code>
  *
  * For Example:
  * 1. <code>./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup</code>
