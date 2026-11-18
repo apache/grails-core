@@ -18,13 +18,54 @@
  */
 package org.apache.grails.gradle.plugin.aot
 
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpServer
 import org.gradle.api.GradleException
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * Covers refusing a port something else is already answering on.
+ * Covers refusing a port something else is already answering on, and asking whether what answers on one is ready.
  */
 class RunPortSpec extends Specification {
+
+    @Unroll
+    void 'an application answering #status is #description'() {
+        given:
+            HttpServer server = HttpServer.create(new InetSocketAddress('localhost', 0), 0)
+            server.createContext('/') { HttpExchange exchange ->
+                if (retryAfter) {
+                    exchange.responseHeaders.add('Retry-After', '1')
+                }
+                exchange.sendResponseHeaders(status, -1)
+                exchange.close()
+            }
+            server.start()
+
+        expect:
+            RunPort.answersNotReady(server.address.port) == notReady
+
+        cleanup:
+            server?.stop(0)
+
+        where:
+            status | retryAfter | notReady | description
+            503    | true       | true     | 'not ready where it says to come back, as the Spring Security plugin does until the application has started'
+            503    | false      | false    | 'ready where it does not say to come back, since that is the application\'s own answer'
+            200    | false      | false    | 'ready'
+            302    | false      | false    | 'ready, wherever it sends the request'
+            404    | false      | false    | 'ready, whatever it has at its home page'
+            500    | false      | false    | 'ready, since only 503 says to come back'
+            500    | true       | false    | 'ready even with Retry-After, since only a 503 says it is not ready yet'
+    }
+
+    void 'a port nothing answers on is not said to be not ready'() {
+        given:
+            int free = new ServerSocket(0).withCloseable { ServerSocket socket -> socket.localPort }
+
+        expect: 'whether anything listens is what the wait for the port itself is for'
+            !RunPort.answersNotReady(free)
+    }
 
     void 'a free port is not refused'() {
         given: 'a port nothing is listening on, found by letting the system choose one and closing it'

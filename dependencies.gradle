@@ -25,7 +25,7 @@ ext {
             'ant.version'                   : '1.10.18',
             'asciidoctor-gradle-jvm.version': '4.0.5',
             'asciidoctorj.version'          : '3.0.1',
-            'asm.version'                   : '9.10.1',
+            'asm.version'                   : '9.11.1',
             'asset-pipeline-gradle.version' : '5.2.3',
             'commons-text.version'          : '1.15.0',
             'directory-watcher.version'     : '0.19.1',
@@ -39,7 +39,7 @@ ext {
             'jna.version'                   : '5.19.1',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.6',
-            'spring-boot.version'           : '4.2.0-RC1',
+            'spring-boot.version'           : '4.2.0-RC2',
     ]
 
     // Note: the name of the dependency must be the prefix of the property name so properties in the pom are resolved correctly
@@ -86,17 +86,17 @@ ext {
             'groovy.version'                : '6.0.0',
             // Security: 33.7.2 addresses CVE-2026-102554 (uncontrolled resource consumption).
             'guava.version'                 : '33.7.2-jre',
-            // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.7 Spring Boot 4.2
+            // Groovy YAML 6.0.0 depends on Jackson 2.22.2, which wins over the 2.21.8 Spring Boot 4.2
             // manages, so the BOM must manage at least that. Jackson 2 only releases
             // jackson-annotations on the minor, hence the separate 2.22 below. 2.22.4 also fixes
-            // CVE-2026-110879 (type id validation in jackson-databind), which 2.21.7 does not carry.
+            // CVE-2026-110879 (type id validation in jackson-databind).
             'jackson-2-bom.version'         : '2.22.4',
             'jackson2-annotations.version'  : '2.22',
-            // Overrides the 3.1.7 Spring Boot 4.2 manages. Pinned first as a security override of
+            // Overrides the 3.1.8 Spring Boot 4.2 manages. Pinned first as a security override of
             // 3.1.6 (CVE-2026-89425, CVE-2026-89407, CVE-2026-91777 and CVE-2026-91776), which 3.1.7
-            // also fixes; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from the 3.2
-            // line Grails 8 and 9.0 manage back to 3.1. 3.2.4 also fixes CVE-2026-110879, which 3.1.7
-            // does not carry, and CVE-2026-110729, which affects only jackson-core 3.2.0 to 3.2.3.
+            // and later also fix; kept so that moving to Spring Boot 4.2 does not take Jackson 3 from
+            // the 3.2 line Grails 8 and 9.0 manage back to 3.1. 3.2.4 also fixes CVE-2026-110879, and
+            // CVE-2026-110729, which affects only jackson-core 3.2.0 to 3.2.3.
             'jackson-bom.version'           : '3.2.4',
             'jquery.version'                : '4.0.0',
             'nimbus-jose-jwt.version'       : '10.10',
@@ -189,7 +189,7 @@ ext {
             'groovy-xml'               : "org.apache.groovy:groovy-xml:${bomDependencyVersions['groovy.version']}",
             'groovy-yaml'              : "org.apache.groovy:groovy-yaml:${bomDependencyVersions['groovy.version']}",
             'guava'                       : "com.google.guava:guava:${bomDependencyVersions['guava.version']}",
-            // Overrides the 2.21.7 spring-boot-dependencies imports through
+            // Overrides the 2.21.8 spring-boot-dependencies imports through
             // com.fasterxml.jackson:jackson-bom - see jackson-2-bom.version. groovy-yaml 6.0.0
             // also pulls jackson-dataformat-yaml, so the BOM must manage it at >= the resolved version.
             'jackson2-annotations'     : "com.fasterxml.jackson.core:jackson-annotations:${bomDependencyVersions['jackson2-annotations.version']}",
@@ -197,7 +197,7 @@ ext {
             'jackson-2-bom-databind'   : "com.fasterxml.jackson.core:jackson-databind:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-dataformat-yaml': "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:${bomDependencyVersions['jackson-2-bom.version']}",
             'jackson-2-bom-datatype-jsr310': "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${bomDependencyVersions['jackson-2-bom.version']}",
-            // Override of the 3.1.7 spring-boot-dependencies imports through
+            // Override of the 3.1.8 spring-boot-dependencies imports through
             // tools.jackson:jackson-bom - see jackson-bom.version
             'jackson-bom-core'         : "tools.jackson.core:jackson-core:${bomDependencyVersions['jackson-bom.version']}",
             'jackson-bom-databind'     : "tools.jackson.core:jackson-databind:${bomDependencyVersions['jackson-bom.version']}",
@@ -264,8 +264,8 @@ ext {
             // Drift tripwire for extended-scalars compatibility on later Boot graphql-java bumps,
             // not an equal-version upgrade of extended-scalars - see graphql-java.version.
             'graphql-java.version',
-            // The Hibernate 7 BOM strictly re-declares the version so enforcedPlatform consumers are
-            // forced to it, so the pin stays even when it matches the version Spring Boot manages.
+            // The Hibernate 7 BOM strictly re-declares the version Spring Boot manages, so that
+            // enforcedPlatform consumers are forced to it - see hibernate7VersionOverride.
             'hibernate.version',
     ]
 
@@ -319,16 +319,26 @@ ext {
         ]
         combinedDependencies += customBomDependencies
     } else if (project.name in ['grails-hibernate7-bom'] || project.name.startsWith('grails-data-hibernate7')) {
+        // Hibernate ORM follows the version spring-boot-dependencies manages. grails-hibernate7-bom reads it
+        // from that POM's own entries and re-declares these modules at it, strictly, under Spring Boot's
+        // hibernate.version.
+        hibernateOrmModules = ['hibernate-core', 'hibernate-envers', 'hibernate-jcache']
+        // A Hibernate ORM 7 release to manage instead, for when Spring Boot lags behind one Grails needs.
+        // It must be newer than the version Spring Boot manages, so validateHibernateVersion, which
+        // check and the BOM's POM generation run, fails once Spring Boot catches up with it: remove it then.
+        // Set, it moves every org.hibernate.orm module spring-boot-dependencies manages in its own POM,
+        // not only the ones above, as setting hibernate.version moves them all for a Maven consumer.
+        hibernate7VersionOverride = null
         customBomVersions = [
                 'cache-ri-impl.version'         : '1.1.1',
                 'derby.version'                 : '10.17.1.0',
                 // Spring Boot 4.2 can select Hibernate ORM 7.4.x through Spring Dependency
                 // Management, and Hibernate ORM 7.4.x requires hibernate-models 1.1.x. This BOM
                 // strictly re-declares the version so enforcedPlatform consumers are forced to it; a
-                // platform() import is not enforced.
+                // platform() import is not enforced. validateHibernateVersion fails when it differs
+                // from the version the managed Hibernate ORM release depends on.
                 'hibernate-models.version'      : '1.1.2',
                 'hibernate-tools.version'       : '7.3.13.Final',
-                'hibernate.version'             : '7.4.13.Final',
                 'jandex.version'                : '3.6.0',
                 'liquibase-test-harness.version': '1.0.11',
                 'liquibase.version'             : '4.27.0', // liquibase-hibernate5 stops at 4.27.0, and Spring Boot's Liquibase 5.0.4 is a new major.
@@ -341,9 +351,6 @@ ext {
                 'derbyclient'           : "org.apache.derby:derbyclient:${combinedVersions['derby.version']}",
                 'derbyshared'           : "org.apache.derby:derbyshared:${combinedVersions['derby.version']}",
                 'derbytools'            : "org.apache.derby:derbytools:${combinedVersions['derby.version']}",
-                'hibernate-core'        : "org.hibernate.orm:hibernate-core:${combinedVersions['hibernate.version']}",
-                'hibernate-envers'      : "org.hibernate.orm:hibernate-envers:${combinedVersions['hibernate.version']}",
-                'hibernate-jcache'      : "org.hibernate.orm:hibernate-jcache:${combinedVersions['hibernate.version']}",
                 'hibernate-models'      : "org.hibernate.models:hibernate-models:${combinedVersions['hibernate-models.version']}",
                 'hibernate-tools-orm'   : "org.hibernate.tool:hibernate-tools-orm:${combinedVersions['hibernate-tools.version']}",
                 'hibernate-tools-utils' : "org.hibernate.tool:hibernate-tools-utils:${combinedVersions['hibernate-tools.version']}",

@@ -23,17 +23,14 @@ import org.hibernate.HibernateException;
 import org.hibernate.criterion.CriteriaQuery;
 import org.hibernate.criterion.Criterion;
 import org.hibernate.criterion.MatchMode;
-import org.hibernate.dialect.DB2390Dialect;
-import org.hibernate.dialect.DB2Dialect;
 import org.hibernate.dialect.Dialect;
-import org.hibernate.dialect.H2Dialect;
-import org.hibernate.dialect.MySQLDialect;
-import org.hibernate.dialect.Oracle8iDialect;
-import org.hibernate.dialect.PostgreSQL81Dialect;
 import org.hibernate.engine.spi.TypedValue;
 
+import org.grails.orm.hibernate.dialect.SupportedDatabase;
+
 /**
- * Adds support for rlike to Hibernate in supported dialects.
+ * Adds support for rlike to Hibernate. On a database with no regular expression operator that Grails uses, rlike
+ * falls back to like, as it does with Hibernate 7.
  *
  * @author Graeme Rocher
  * @since 1.1.1
@@ -61,32 +58,11 @@ public class RlikeExpression implements Criterion {
             throw new HibernateException("rlike may only be used with single-column properties");
         }
 
-        if (dialect instanceof MySQLDialect) {
-            return columns[0] + " rlike ?";
-        }
-
-        if (isOracleDialect(dialect)) {
-            return " REGEXP_LIKE (" + columns[0] + ", ?)";
-        }
-
-        if (dialect instanceof PostgreSQL81Dialect) {
-            return columns[0] + " ~* ?";
-        }
-
-        if (dialect instanceof H2Dialect) {
-            return columns[0] + " REGEXP ?";
-        }
-        // Db2 for Linux, UNIX and Windows (11.1 and later) and Db2 for IBM i; Db2 for z/OS runs REGEXP_LIKE only
-        // through the Db2 Analytics Accelerator, so it stays unsupported
-        if (dialect instanceof DB2Dialect && !(dialect instanceof DB2390Dialect)) {
-            return " REGEXP_LIKE (" + columns[0] + ", ?)";
-        }
-
-        throw new HibernateException("rlike is not supported with the configured dialect " + dialect.getClass().getCanonicalName());
-    }
-
-    private boolean isOracleDialect(Dialect dialect) {
-        return (dialect instanceof Oracle8iDialect);
+        // the value marker is replaced first: a column or a formula that contains the text ?2 would otherwise be rewritten
+        // as well, and the query would name a column that does not exist
+        String pattern = SupportedDatabase.forDialect(dialect).regexPattern();
+        int column = pattern.indexOf("?1");
+        return pattern.substring(0, column).replace("?2", "?") + columns[0] + pattern.substring(column + 2).replace("?2", "?");
     }
 
     public TypedValue[] getTypedValues(Criteria criteria, CriteriaQuery criteriaQuery) throws HibernateException {

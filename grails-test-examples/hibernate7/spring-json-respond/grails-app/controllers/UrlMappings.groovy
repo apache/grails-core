@@ -17,9 +17,13 @@
  *  under the License.
  */
 
+import springjson.BookArchivedException
+
 class UrlMappings {
 
     static mappings = {
         "/$controller/$action?/$id?(.$format)?"()
+        "500"(controller: 'errors', action: 'serverError')
+        "500"(controller: 'errors', action: 'archived', exception: BookArchivedException)
     }
 }

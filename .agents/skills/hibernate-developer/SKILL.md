@@ -1,6 +1,6 @@
 ---
 name: hibernate-developer
-description: Guide for working in the grails-data-hibernate7 module on the 8.0.x line, covering Hibernate 7 domain binding, transaction and session lifecycle management, criteria and SQM subquery correlation, dialect-specific semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate7.
+description: Guide for working in the grails-data-hibernate modules (Hibernate 7 on 8.0.x and Hibernate 5 on 7.0.x), covering domain binding, session and transaction lifecycle management across GrailsHibernateTemplate and executeWithNewSession, criteria and SQM subquery correlation, patch-line API minimalism, dialect semantics, and integration testing. Use this when changing code or tests under grails-data-hibernate*.
 license: Apache-2.0
 ---
 <!--
@@ -21,13 +21,15 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 ## When to Use Me
 
-Activate this skill when working on the Hibernate 7 module, especially for:
+Activate this skill when working on the Hibernate modules, especially for:
 
-- Changes under `grails-data-hibernate7/**`.
-- Hibernate 7 mapping and metadata binding work.
+- Changes under `grails-data-hibernate7/**` or `grails-data-hibernate5/**`.
+- Session and transaction lifecycle management across `GrailsHibernateTemplate`, `executeWithNewSession`, and `OuterSessionLifecycleStrategy`.
+- Hibernate mapping and metadata binding work.
 - Identifier, version, collection, association, or generator binding changes.
-- Hibernate 7 regression fixes and migration follow-up tasks.
-- Specs that exercise Hibernate-backed mapping behavior rather than lightweight unit behavior.
+- Criteria, DetachedCriteria, SQM AST, alias scoping, and subquery correlation.
+- Hibernate regression fixes and migration follow-up tasks.
+- Specs that exercise Hibernate-backed mapping behavior or transaction lifecycle rather than lightweight unit behavior.
 
 ## Module Context
 
@@ -95,6 +97,11 @@ Framework code touching `GrailsHibernateTemplate`, `executeWithNewSession`, or s
 - **Prevent pool starvation on non-lazy data sources**: Calling connection probes (such as `con.getAutoCommit()` or `con.getMetaData()`) on a datasource that is *not* wrapped in `LazyConnectionDataSourceProxy` immediately checks out a physical connection from the pool. If the outer session is idle and the pool is small, this starves the pool and deadlocks inner sessions.
 - **Save and restore connection holders and synchronizations symmetrically**: In `executeWithNewSession`, capture the previous `ConnectionHolder` and Spring `TransactionSynchronization` list before rebinding, and strictly restore them in a `finally` block.
 - **Coordinate with `SESSION_SYNCHRONIZATION_ORDER`**: When registering synchronizations with Spring's `TransactionSynchronizationManager`, ensure the logical connection disconnects before Spring's `ConnectionSynchronization` closes the physical connection, without interfering with active flushes.
+- **Suspend and restore closed bound holders**: When a `SessionHolder` is bound to the thread in Spring's `TransactionSynchronizationManager`, it must be suspended and restored across `withNewSession` even if its underlying session is closed, preventing `IllegalStateException: Already value bound to thread`.
+- **Translate post-callback flush exceptions**: Call `flushIfNecessary` inside the exception-translation block (`executeInSession`) so Hibernate flush exceptions (e.g. database constraint overruns) are converted to Spring's `DataAccessException` hierarchy (`DataIntegrityViolationException`) rather than escaping unconverted.
+- **Strict patch-line API minimalism**: On maintenance and patch branches (`7.0.x` or `8.0.x`), never introduce new public or protected methods, classes, or extension points. Never introduce fields or internal state that are assigned but never read. Keep bugfix diffs strictly minimal.
+- **Avoid test-driven production pollution**: Do not add multi-argument constructor or method overloads to production classes solely to facilitate unit-test mocks; test behavior through real entity execution or pass necessary runtime flags directly.
+- **Authentic exception testing**: Exercise real database/ORM constraint overruns (e.g. column length violation) in tests rather than throwing mock `HibernateException` instances directly, verifying real exception conversion paths.
 
 ## Criteria, SQM AST, and Subquery Correlation
 

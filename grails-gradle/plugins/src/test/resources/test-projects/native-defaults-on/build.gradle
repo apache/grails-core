@@ -34,6 +34,24 @@ if (providers.gradleProperty('fixtureLateTaskIndy').present) {
     }
 }
 
+// -PfixtureTraceDirectory records the traced metadata somewhere else, and -PfixtureTraceRoot names the classpath
+// entry expected for it
+if (providers.gradleProperty('fixtureTraceDirectory').present) {
+    grails {
+        nativeMetadata {
+            outputDirectory = layout.projectDirectory.dir(providers.gradleProperty('fixtureTraceDirectory').get())
+        }
+    }
+}
+
+tasks.register('inspectNativeClasspath') {
+    def expected = layout.projectDirectory.dir(providers.gradleProperty('fixtureTraceRoot').getOrElse('src/native/resources'))
+    def classpath = graalvmNative.binaries.named('main').map { it.classpath }
+    doLast {
+        println "TRACED_METADATA_ON_CLASSPATH=${classpath.get().files.contains(expected.asFile)}"
+    }
+}
+
 tasks.register('inspectDefaults') {
     def indyOption = providers.provider {
         Map<String, Boolean> options = project.tasks.named('compileGroovy', GroovyCompile).get().groovyOptions.optimizationOptions
