@@ -82,7 +82,16 @@ public class CriteriaMethodInvoker {
         if (method == null || !isCriteriaConstructionMethod(method, args)) {
             return UNHANDLED;
         }
+        try {
+            return runCriteria(method, args);
+        } catch (RuntimeException e) {
+            // the session the builder opened is closed when the call throws, as it is when the call returns
+            builder.closeSessionAfterFailure();
+            throw e;
+        }
+    }
 
+    private Object runCriteria(CriteriaMethods method, Object... args) {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         switch (method) {
             case GET_CALL -> builder.setUniqueResult(true);

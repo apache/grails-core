@@ -566,6 +566,25 @@ class CriteriaMethodInvokerSpec extends Specification {
         e.message == 'Invalid sort property'
     }
 
+    void "test invokeMethod asks the builder to close its session when a criteria call throws"() {
+        when:
+        invoker.invokeMethod("list", [[sort: 'name, e.id'], { }] as Object[])
+
+        then:
+        1 * builder.isPaginationEnabledList() >> true
+        1 * builder.isUniqueResult() >> false
+        thrown(IllegalArgumentException)
+        1 * builder.closeSessionAfterFailure()
+    }
+
+    void "test invokeMethod does not close the session when a criteria call returns"() {
+        when:
+        invoker.invokeMethod("list", [{ }] as Object[])
+
+        then:
+        0 * builder.closeSessionAfterFailure()
+    }
+
     void "test invokeMethod rejects a list order direction other than asc or desc before ordering the query"() {
         when:
         invoker.invokeMethod("list", [[sort: 'name', order: 'sideways'], { }] as Object[])
