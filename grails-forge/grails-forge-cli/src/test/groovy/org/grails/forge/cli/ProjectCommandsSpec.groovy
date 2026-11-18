@@ -19,6 +19,8 @@
 package org.grails.forge.cli
 
 import java.nio.file.Files
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.nio.file.attribute.PosixFilePermission
 
 import groovy.json.JsonOutput
@@ -40,6 +42,7 @@ import spock.lang.AutoCleanup
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Timeout
 import spock.util.environment.RestoreSystemProperties
 
 // the project's build is a shell script standing in for the Gradle wrapper
@@ -82,6 +85,12 @@ class ProjectCommandsSpec extends Specification {
             'grails-app/commands/example/HelloCommand.groovy', 'grails-app/commands/com/acme/build/DeployCommand.groovy',
             'src/main/resources/META-INF/grails-cli.factories'
     ]
+
+    /** What a terminal writes to ask the emulator for the position of the cursor */
+    private static final String CURSOR_POSITION_QUESTION = '\u001b[6n'
+
+    /** What the prompt writes when it is ready for a line: it turns on bracketed paste */
+    private static final String PROMPT_SHOWN = '\u001b[?2004h'
 
     private static final Map PLUGIN_CREATE_APP = [
             name: 'create-app', description: 'A plugin command named like a Forge command', arguments: [], options: []
@@ -861,27 +870,20 @@ class ProjectCommandsSpec extends Specification {
         commandLine.subcommands.containsKey('create-app')
     }
 
+    @Timeout(120)
     void 'after a line that runs the build, the prompt completes the commands the build found'() {
-        given: 'the prompt started with the commands of the last manifest'
+        given: 'the prompt starts with the commands of the last manifest'
         writeManifest(URL_MAPPINGS_REPORT)
-        CommandLine[] offered = [ForgeCli.createCommandLine(context, true)] as CommandLine[]
-        assert !complete(offered[0], 's2-q').contains('s2-quickstart')
-        buildWrites(URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
-        new File(dir, 'build.gradle') << '// a plugin added\n'
 
-        when: 'a line names a command the Forge CLI does not have, which runs the build'
-        ForgeCli.runLine(context, offered, ['s2-quickstart', '--help'] as String[])
+        when: 'a plugin is added while it waits, a line names a command the Forge CLI does not have, which runs the build, the next completes s2-q, and the last runs no build'
+        prompt({
+            buildWrites(URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
+            new File(dir, 'build.gradle') << '// a plugin added\n'
+        }, 's2-quickstart --help\n', 's2-q\t\n', '--help\n')
 
-        then:
-        gradleInvocations()*.get(5) == ['generateCommandManifest']
-        complete(offered[0], 's2-q').contains('s2-quickstart')
-
-        when: 'a line runs no build'
-        ForgeCli.runLine(context, offered, ['--help'] as String[])
-
-        then: 'the commands stay those of the manifest'
-        complete(offered[0], 's2-q').contains('s2-quickstart')
-        gradleInvocations().size() == 1
+        then: 'the build ran once, and the completed line ran the command it found'
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+        commandArguments() == ['s2-quickstart']
     }
 
     void 'the prompt completes project commands, their options and the values they declare'() {
@@ -1067,6 +1069,61 @@ class ProjectCommandsSpec extends Specification {
             '''.stripIndent()
         Files.setPosixFilePermissions(wrapper.toPath(), [PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE,
                                                          PosixFilePermission.OWNER_EXECUTE] as Set)
+    }
+
+    /**
+     * Runs the interactive prompt on a terminal that a user types the given lines on, each once the prompt
+     * shows, and then {@code exit}.
+     *
+     * @param whileWaiting runs once the prompt first shows, before a line is typed
+     */
+    private void prompt(Closure<?> whileWaiting, String... lines) {
+        Deque<String> toType = new ArrayDeque<String>(lines.toList() + ['exit\n'])
+        LinkedBlockingQueue<Integer> typed = new LinkedBlockingQueue<Integer>()
+        boolean[] waited = [false] as boolean[]
+        // what the terminal writes, read as a user and their terminal emulator would
+        OutputStream screen = new OutputStream() {
+            private final StringBuilder recent = new StringBuilder()
+
+            @Override
+            synchronized void write(int b) {
+                recent.append((char) (b & 0xff))
+                if (endsWith(CURSOR_POSITION_QUESTION)) {
+                    // the emulator answers where the cursor is
+                    type('\u001b[1;1R')
+                }
+                else if (endsWith(PROMPT_SHOWN) && !toType.empty) {
+                    if (!waited[0]) {
+                        waited[0] = true
+                        whileWaiting.call()
+                    }
+                    type(toType.poll())
+                }
+            }
+
+            private boolean endsWith(String text) {
+                recent.length() >= text.length() && recent.substring(recent.length() - text.length()) == text
+            }
+
+            private void type(String text) {
+                text.getBytes('UTF-8').each { byte b -> typed.put(b & 0xff) }
+            }
+        }
+        InputStream keyboard = new InputStream() {
+            @Override
+            int read() {
+                Integer next = typed.poll(30, TimeUnit.SECONDS)
+                next == null ? -1 : next
+            }
+        }
+        // a terminal that completes on tab, as a dumb one does not
+        Terminal terminal = TerminalBuilder.builder().system(false).type('xterm').streams(keyboard, screen).build()
+        try {
+            ForgeCli.interactive(context, terminal)
+        }
+        finally {
+            terminal.close()
+        }
     }
 
     private List<String> complete(CommandLine commandLine, String typed) {

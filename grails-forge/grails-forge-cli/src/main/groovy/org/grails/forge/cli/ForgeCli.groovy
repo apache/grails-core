@@ -21,7 +21,7 @@ package org.grails.forge.cli
 import java.util.function.BiFunction
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
+import org.jline.terminal.Terminal
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
@@ -159,13 +159,22 @@ final class ForgeCli {
      * Runs the interactive shell on a running context until the user leaves it.
      */
     static void interactive(ApplicationContext context) {
+        interactive(context, null)
+    }
+
+    /**
+     * Runs the interactive shell on a running context until the user leaves it or its input ends.
+     *
+     * @param terminal the terminal the shell reads and writes, or {@code null} for the terminal of the JVM
+     */
+    static void interactive(ApplicationContext context, Terminal terminal) {
         CommandLine commandLine = createCommandLine(context, true)
         // a line may run the build and change the project's commands, so the prompt then completes those
         // of the manifest as it is, read quietly, since a problem with it was reported already
         CommandLine[] offered = [commandLine] as CommandLine[]
         Supplier<CommandLine> current = { -> offered[0] } as Supplier<CommandLine>
         new InteractiveShell(commandLine, current, { String[] commandArgs -> runLine(context, offered, commandArgs) },
-                EXCEPTION_HANDLER, InteractiveShell.DEFAULT_PROMPT).start()
+                EXCEPTION_HANDLER, InteractiveShell.DEFAULT_PROMPT, terminal).start()
     }
 
     /**
@@ -174,8 +183,7 @@ final class ForgeCli {
      *
      * @param offered holds the command line the prompt completes from
      */
-    @PackageScope
-    static void runLine(ApplicationContext context, CommandLine[] offered, String[] commandArgs) {
+    private static void runLine(ApplicationContext context, CommandLine[] offered, String[] commandArgs) {
         execute(context, commandArgs)
         try {
             CommandLine refreshed = createForgeCommandLine(context, true)
