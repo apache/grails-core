@@ -1208,3 +1208,15 @@ As of Grails 7.0.18, the list of bindable properties that Grails generates for a
 * Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
 * A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== UPGRADE-NUMBER. A remember-me login is redirected only for a GET page request
+
+Before, every request that logged in through the remember-me cookie was handed to the authentication success handler, which redirected it and stopped the filter chain. A POST, PUT, PATCH, DELETE, HEAD or Ajax request was turned into a GET, or into the Ajax success URL, and its action never ran. The request for the login form was redirected as well, which sent a remembered user from the login form back to the page that had asked for a full login, and back again.
+
+Now only a GET that is not an Ajax call and not the request for the login form is redirected:
+
+* a remember-me login on a POST, PUT, PATCH, DELETE or HEAD request, or on an Ajax request, goes on to the controller as the remembered user, and nothing is saved in the request cache for it;
+* a remember-me login on the request for the login form (`auth.loginFormUrl`, compared by its path) reaches the login controller;
+* `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler. The redirect is decided in `onSuccessfulAuthentication`, so a subclass that overrides that method without calling `super` no longer redirects at all.
+
+To keep the old result for a kind of request, extend `GrailsRememberMeAuthenticationFilter`, override `redirects(request)` to return `true` for it, and register the subclass as the `rememberMeAuthenticationFilter` bean.

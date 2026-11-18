@@ -305,6 +305,10 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             rememberMeAuthenticationFilter(classFor('rememberMeAuthenticationFilter', GrailsRememberMeAuthenticationFilter),
                     ref('authenticationManager'), ref('rememberMeServices'), ref('requestCache')) {
                 authenticationSuccessHandler = ref('authenticationSuccessHandler')
+                // The filter saves a remember-me login through the plugin's repository, so its scr.* settings apply, also in a
+                // filter chain without securityContextPersistenceFilter; left alone, it would use a repository of its own
+                securityContextRepository = ref('securityContextRepository')
+                loginFormUrl = conf.auth.loginFormUrl // /login/auth
                 createSessionOnSuccess = conf.rememberMe.createSessionOnSuccess // true
             }
 
