@@ -1453,7 +1453,33 @@ With `cacheUsers` enabled, the Spring Security plugin's user cache now stores us
 * Code that changed a user it read from `userCache` and expected the cache to see the change puts the user back with `userCache.putUserInCache`.
 * To store users by reference, as Grails 8 did, set `cacheConfig` on the `userCache` bean to a `MutableConfiguration` with `setStoreByValue(false)`.
 
-==== 25. Opt Into Spring MVC Content Negotiation for Grails Formats
+==== 25. A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
+
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` now stays on its own datastore inside a block that binds a tenant, such as `Tenants.withId('acme') { }`, as it does outside one. Only the classes that implement `MultiTenant` follow the tenant. This is what Grails 7 did and what the multi-tenancy guide describes; Grails 8.0 changed it, so an application upgrading from Grails 7 sees no change.
+
+In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block reached the tenant's database instead: `save`, `get`, `list`, `count`, `where` queries, data service methods, `withSession` and `GormEnhancer.findDatastore`. With GORM for Hibernate, `save`, `get`, `list` and `count` already used the default database, while `where` queries and data service methods did not work, because the tenant's session factory does not map the class; they now use the default database too.
+
+Writes of such a class inside the block go to the default datastore, so they run in a transaction of that datastore:
+
+* A data service of such a class runs its transactions in its own datastore, not the tenant's.
+* A transaction of the class's own datastore begun inside the tenant's transaction, such as a `withTransaction` or `withNewTransaction` block of the class or a method of its data service, is independent of the tenant's transaction. What it saves is written when it commits, and stays when the tenant's transaction then rolls back.
+* A write of such a class inside the tenant's transaction but outside a transaction of its own datastore, such as a `save()` in a method annotated `@Transactional` that runs in the tenant's transaction, now fails with an `IllegalTransactionStateException`. In Grails 8 the tenant's transaction wrote it to the tenant's database. The tenant's transaction cannot commit or roll back a write to another datastore, so the write would otherwise be lost, or written although the tenant's transaction rolled back. This applies to `save`, `insert`, `delete`, `saveAll` and `deleteAll` without `flush: true`, with GORM for MongoDB and the in-memory datastore of unit tests. With GORM for Hibernate, such a save already failed in Grails 8 and still does.
+
+===== Required Actions
+
+For most applications **no changes are required**.
+
+Move a write of such a class that runs inside a tenant's transaction into a transaction of the class's own datastore: call its data service, or wrap the write in the class's `withTransaction { }` block. A save with `flush: true` also works: it writes at once, and the write stays when the tenant's transaction rolls back.
+
+With GORM for MongoDB, a class that is not multi-tenant and was saved inside a tenant block in Grails 8 has its documents in that tenant's database. Grails 9 reads the class from the default database only, so `list`, `get`, `count` and queries no longer find those documents, although they are still in the tenant's database. Decide what the class is for before upgrading:
+
+* When each tenant should have its own instances, implement `MultiTenant` on the class, which then reads and writes the tenant's database again. Without it, every tenant reads and changes the same instances, in the default database.
+* A class that a multi-tenant class references, such as a `Country` of a multi-tenant `Book`, is loaded through the tenant's session, from the tenant's database, so it has to implement `MultiTenant` as well, even when it holds shared data.
+* When the instances are shared by every tenant and no multi-tenant class references them, move the documents from the tenants' databases into the default database.
+
+Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
+==== 26. Opt Into Spring MVC Content Negotiation for Grails Formats
 
 Set `grails.mime.negotiation.spring: true` to resolve `request.format`, `response.format`, `withFormat` and the format
 `respond` writes in with Spring MVC's content negotiation manager, and to have the `format` parameter, URL extensions and

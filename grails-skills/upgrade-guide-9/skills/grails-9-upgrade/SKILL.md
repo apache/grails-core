@@ -470,6 +470,14 @@ With `cacheUsers`, the Spring Security plugin's user cache stores users by value
 - `cacheConfig` on the `userCache` bean, a `MutableConfiguration` with `setStoreByValue(false)`, restores storing by reference.
 - In a native image, the plugin registers `User`, `GrailsUser` with a `Long` id and `SimpleGrantedAuthority` for serialization; a custom user class or id type needs metadata, which `traceNativeMetadata` records when the login form is in `forms`.
 
+## A Class That Is Not Multi-Tenant Keeps Its Datastore Inside a Tenant Block
+
+With a database or a schema per tenant, a domain class that does not implement `MultiTenant` stays on its own datastore inside `Tenants.withId(...) { }` and other blocks that bind a tenant, as in Grails 7. Only classes that implement `MultiTenant` follow the tenant. In Grails 8, with GORM for MongoDB and the in-memory datastore of unit tests, every operation on such a class inside the block went to the tenant's database; with GORM for Hibernate, `where` queries and data service methods failed there and now use the default database.
+
+- Writes of such a class inside the block go to the default datastore and run in a transaction of that datastore. Its data service runs in its own datastore's transaction. Its own `withTransaction`, `withNewTransaction` or data service inside the tenant's transaction is independent: what it saves stays when the tenant's transaction rolls back. A `save`, `insert`, `delete`, `saveAll` or `deleteAll` of the class inside the tenant's transaction but outside one of its own, such as in a `@Transactional` method running in the tenant's transaction, now throws `IllegalTransactionStateException` with GORM for MongoDB and the in-memory datastore (in Grails 8 the tenant's transaction wrote it to the tenant's database). Move it into the class's data service or `withTransaction`, or save with `flush: true`, which writes at once. With GORM for Hibernate such a save already failed in Grails 8.
+- With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
+- A data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -499,6 +507,8 @@ With `cacheUsers`, the Spring Security plugin's user cache stores users by value
 - [ ] No code reads a child of a string or closure configuration value expecting the parent
 - [ ] No code reads a whole list through a key ending in a whole number, such as `server.ports.0`
 - [ ] No typed read with a default, such as `getProperty('x.y.enabled', Boolean, true)`, names a key below a configuration value that is not a map
+- [ ] With a database or a schema per tenant, every domain class saved inside a tenant block whose instances belong to a tenant, or that a multi-tenant class references, implements `MultiTenant`
+- [ ] Every write of a class that is not multi-tenant inside a tenant's transaction runs in the class's data service or its own `withTransaction`, or uses `flush: true`
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

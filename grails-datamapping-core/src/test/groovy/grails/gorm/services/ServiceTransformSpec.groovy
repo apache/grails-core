@@ -191,6 +191,7 @@ return BookService
     void 'the transaction manager of a data service is the one of the tenant bound for its datastore while another datastore has a different tenant'() {
         given:
         var service = new GroovyClassLoader().parseClass('''
+import grails.gorm.MultiTenant
 import grails.gorm.services.Service
 import grails.gorm.annotation.Entity
 
@@ -201,7 +202,7 @@ interface TenantBookService {
 }
 
 @Entity
-class TenantBook {
+class TenantBook implements MultiTenant<TenantBook> {
 
     String title
 }
@@ -233,6 +234,44 @@ class TenantBook {
 
         and: 'a tenant bound for the default datastore only does not count'
         CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            instance.transactionManager
+        } == serviceTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
+    void 'the transaction manager of a data service of a class that is not multi-tenant is its datastore\'s while a tenant is bound'() {
+        given:
+        var service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+
+@Service(SharedBook)
+interface SharedBookService {
+
+    SharedBook find(Serializable id)
+}
+
+@Entity
+class SharedBook {
+
+    String title
+}
+''')
+        var instance = service.classLoader.loadClass('$SharedBookServiceImplementation').getDeclaredConstructor().newInstance()
+        var serviceTransactionManager = Stub(PlatformTransactionManager)
+        var serviceDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> serviceTransactionManager
+        }
+        GormRegistry.instance.initializeDatastore(serviceDatastore)
+        GormRegistry.instance.registerEntityDatastore(service.classLoader.loadClass('SharedBook').name, ConnectionSource.DEFAULT, serviceDatastore)
+        GormRegistry.instance.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        })
+
+        expect: 'the class keeps its own datastore inside a tenant block, so its writes commit in that datastore\'s transaction'
+        CurrentTenantHolder.withTenant(serviceDatastore, 'ds1') {
             instance.transactionManager
         } == serviceTransactionManager
 
