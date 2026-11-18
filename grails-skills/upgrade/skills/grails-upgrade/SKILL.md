@@ -516,8 +516,8 @@ Search `application.yml` and `application.groovy` for `org.hibernate.cache.ehcac
 Preferred fix: change the region factory to `jcache` and add the Ehcache dependency.
 
 ```yaml
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
@@ -525,6 +525,8 @@ Preferred fix: change the region factory to `jcache` and add the Ehcache depende
         region:
             factory_class: 'jcache'
 ```
+
+The `cache` block belongs under `hibernate`, since the setting is `hibernate.cache.region.factory_class`. Change `factory_class` where the application already has it and keep its other cache settings.
 
 ```groovy
     implementation 'org.ehcache:ehcache', {
