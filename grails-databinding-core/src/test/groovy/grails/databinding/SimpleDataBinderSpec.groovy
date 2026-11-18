@@ -20,7 +20,9 @@ package grails.databinding
 
 import grails.databinding.converters.ValueConverter
 import grails.databinding.errors.BindingError
+import grails.databinding.events.DataBindingListener
 import grails.databinding.events.DataBindingListenerAdapter
+import org.grails.databinding.IndexedPropertyReferenceDescriptor
 import org.grails.databinding.converters.DateConversionHelper
 import org.grails.databinding.converters.LocalDateTimeConverter
 import spock.lang.Issue
@@ -633,6 +635,68 @@ class SimpleDataBinderSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers writes into a map the object already holds'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(columns: [[data: 'old', keep: 'me']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['columns[0][data]': 'new'])
+
+        then: 'the entry is replaced and the others stay'
+        table.columns == [[data: 'new', keep: 'me']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers keeps the data source setting of the caller'() {
+        given:
+        def binder = new RecordingBinder()
+        def table = new IndexedTable()
+        def source = new SimpleMapDataBindingSource(['ignored[0][name]': 'x', 'columns[0][data]': 'id'])
+        source.dataSourceAware = aware
+
+        when:
+        binder.bind table, source
+
+        then:
+        binder.seenDataSourceAware.every { it == aware }
+        !binder.seenDataSourceAware.isEmpty()
+
+        where:
+        aware << [false, true]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with a space in the second index is skipped and does not stop the bind'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['ignored[0][first name]': 'x', 'columns[0][data]': 'id'])
+
+        then:
+        table.columns == [[data: 'id']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A name with two indexers applies to an object that the source supplies for the element'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable()
+        def factory = new Factory(name: 'Uno')
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(['factories[0]': factory, 'factories[0][isActive]': true])
+
+        then: 'the supplied factory keeps its identity and its other fields'
+        table.factories.size() == 1
+        table.factories[0].is(factory)
+        factory.name == 'Uno'
+        factory.isActive
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
     void 'names with one indexer are bound as before'() {
         given:
         def binder = new SimpleDataBinder()
@@ -839,6 +903,16 @@ class DateCollection {
 class IndexedTable {
     List<Map> columns
     List<Factory> factories
+}
+
+class RecordingBinder extends SimpleDataBinder {
+    List<Boolean> seenDataSourceAware = []
+
+    @Override
+    protected processIndexedProperty(obj, MetaProperty metaProperty, IndexedPropertyReferenceDescriptor descriptor, val, DataBindingSource source, DataBindingListener listener, errors) {
+        seenDataSourceAware << source.dataSourceAware
+        super.processIndexedProperty(obj, metaProperty, descriptor, val, source, listener, errors)
+    }
 }
 
 class Comment {

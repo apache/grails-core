@@ -128,7 +128,7 @@ assert band.albums[1].numberOfTracks == 7
 
 That code would work in the same way if `albums` were an array instead of a `List`.
 
-A name may carry a second index, as form libraries that send `columns[0][data]` do. The first index selects the element and the second one is a key inside that element, so `columns[0][data]` binds the same as `columns[0].data` does. Names that share the first index are gathered into one element:
+A name may carry a second index, as form libraries that send `columns[0][data]` do. The first index selects the element and the second one is a key inside that element, so `columns[0][data]` binds the same as `columns[0].data` does. Names that share the first index are gathered into one element. When the object already holds a map at that index, the entries are written into that map and its other entries stay, and when the request supplies an object for the element, the entries are bound as that object's properties. A name whose second index holds a space is skipped:
 
 [source,groovy]
 ----

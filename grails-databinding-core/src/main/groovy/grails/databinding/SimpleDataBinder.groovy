@@ -224,7 +224,8 @@ class SimpleDataBinder implements DataBinder {
 
     protected void doBind(obj, DataBindingSource source, String filter, List whiteList, List blackList, DataBindingListener listener, errors) {
 
-        source = groupMultipleIndexers(source)
+        Map<Object, Map<String, Object>> deferred = new IdentityHashMap<Object, Map<String, Object>>()
+        source = groupMultipleIndexers(obj, source, filter, whiteList, blackList, deferred)
         def keys = source.getPropertyNames()
         for (String key in keys) {
             if (!filter || key.startsWith(filter + '.')) {
@@ -270,16 +271,24 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         }
+
+        deferred.each { Object target, Map<String, Object> entries ->
+            SimpleMapDataBindingSource deferredSource = new SimpleMapDataBindingSource(entries)
+            deferredSource.dataSourceAware = source.dataSourceAware
+            doBind(target, deferredSource, null, null, null, listener, errors)
+        }
     }
 
     /**
      * Binds the first indexer of a name that has several, so {@code columns[0][data]} sets the
      * {@code data} entry of the element at {@code columns[0]}, the same as {@code columns[0].data}
-     * does. The entries of one element are gathered into a map under {@code columns[0]}.
+     * does. The entries of one element are gathered into a map under {@code columns[0]}. When that element
+     * is a map that the object already holds, the entries are written into it, and when the source supplies
+     * the element as an object that is not a map, the entries are put in {@code deferred}, to be bound as its properties.
      *
      * @return the source itself when no name has more than one indexer, else a copy where those names are grouped
      */
-    protected DataBindingSource groupMultipleIndexers(DataBindingSource source) {
+    protected DataBindingSource groupMultipleIndexers(obj, DataBindingSource source, String filter, List whiteList, List blackList, Map<Object, Map<String, Object>> deferred) {
         Set<String> names = source.getPropertyNames()
         if (!names.any { String name -> name =~ MULTIPLE_INDEXERS_REGEX }) {
             return source
@@ -288,9 +297,8 @@ class SimpleDataBinder implements DataBinder {
         Map<String, Map<String, Object>> elements = new LinkedHashMap<String, Map<String, Object>>()
         for (String name in names) {
             def matcher = name =~ MULTIPLE_INDEXERS_REGEX
-            if (matcher) {
-                def rest = matcher.group(2) =~ /^\[\s*([^\s\]]*)\s*\](.*)$/
-                rest.matches()
+            def rest = matcher ? (matcher.group(2) =~ /^\[\s*([^\s\]]*)\s*\](.*)$/) : null
+            if (rest != null && rest.matches()) {
                 String key = rest.group(1)
                 if (key.size() > 2 && ((key.startsWith("'") && key.endsWith("'")) || (key.startsWith('"') && key.endsWith('"')))) {
                     key = key[1..-2]
@@ -301,13 +309,60 @@ class SimpleDataBinder implements DataBinder {
             }
         }
         elements.each { String element, Map<String, Object> entries ->
-            def existing = grouped.get(element)
-            if (existing instanceof Map) {
-                entries.putAll((Map) existing)
+            def supplied = grouped.get(element)
+            if (supplied != null && !(supplied instanceof Map)) {
+                def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+                if (descriptor && isOkToBind(descriptor.propertyName, whiteList, blackList)) {
+                    deferred.computeIfAbsent(supplied) { new LinkedHashMap<String, Object>() }.putAll(entries)
+                }
+                return
             }
-            grouped.put(element, entries)
+            if (supplied instanceof Map) {
+                entries.putAll((Map) supplied)
+            }
+            Map held = findHeldMap(obj, element, filter)
+            if (held != null) {
+                held.putAll(entries)
+                grouped.remove(element)
+            } else {
+                grouped.put(element, entries)
+            }
         }
-        new SimpleMapDataBindingSource(grouped)
+        SimpleMapDataBindingSource result = new SimpleMapDataBindingSource(grouped)
+        result.dataSourceAware = source.dataSourceAware
+        result
+    }
+
+    private static String elementPath(String element, String filter) {
+        if (filter) {
+            return element.startsWith(filter + '.') ? element[(1 + filter.size())..-1] : element
+        }
+        element
+    }
+
+    private Map findHeldMap(obj, String element, String filter) {
+        if (filter && !element.startsWith(filter + '.')) {
+            return null
+        }
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+        MetaProperty metaProperty = descriptor ? obj.metaClass.getMetaProperty(descriptor.propertyName) : null
+        if (metaProperty == null) {
+            return null
+        }
+        def held
+        try {
+            held = metaProperty.getProperty(obj)
+        } catch (Exception ignored) {
+            return null
+        }
+        def index = descriptor.index
+        def selected = null
+        if (held instanceof Map) {
+            selected = ((Map) held).get(index)
+        } else if (held instanceof List && index ==~ /\d+/ && index.toInteger() < ((List) held).size()) {
+            selected = ((List) held).get(index.toInteger())
+        }
+        selected instanceof Map ? (Map) selected : null
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
