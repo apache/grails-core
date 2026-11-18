@@ -89,6 +89,45 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         new File(appDir, 'grails-app/init/inplaceapp/Application.groovy').exists()
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/14872')
+    void "test --inplace without a name keeps a dot of the directory name in the application name"() {
+        given:
+        File appDir = new File(dir, 'bookstore.demo')
+        appDir.mkdirs()
+        System.setProperty('user.dir', appDir.absolutePath)
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "--inplace")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+        new File(appDir, 'build.gradle').exists()
+        new File(appDir, 'grails-app/init/bookstoredemo/Application.groovy').exists()
+        !new File(appDir, 'grails-app/init/demo').exists()
+        new File(appDir, 'grails-app/init/bookstoredemo/Application.groovy').text.contains('class Application')
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/14872')
+    void "test --inplace with a name given on the command uses that name, not the directory name"() {
+        given:
+        File appDir = new File(dir, 'bookstore.demo')
+        appDir.mkdirs()
+        System.setProperty('user.dir', appDir.absolutePath)
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        PicocliRunner.run(CreateAppCommand, ctx, "--inplace", "given")
+
+        then:
+        noExceptionThrown()
+        new File(appDir, 'build.gradle').exists()
+        new File(appDir, 'grails-app/init/given/Application.groovy').exists()
+    }
+
     void "test --inplace with a name creates the application in the current directory"() {
         given:
         ByteArrayOutputStream out = new ByteArrayOutputStream()
