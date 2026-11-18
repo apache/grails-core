@@ -1,6 +1,6 @@
 ---
-name: grails-9-upgrade
-description: Guide for upgrading Grails applications from Grails 8.x to Grails 9, covering the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, the character encoding filter Spring Boot now registers, configuration keys below a value that is not a map, which are absent, and list elements read by index as in Spring Boot
+name: grails-upgrade
+description: Guide for upgrading Grails applications from Grails 8.x to Grails 9 and from one Grails 9 release to a later one, covering the changes of each Grails 9 release, the Groovy 6 baseline, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, named JSON configurations, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3 (imports, blocking calls, subscribers, empty results), the deprecated RxJava 1 and RxJava 2 async and events modules, the character encoding filter Spring Boot now registers, configuration keys below a value that is not a map, which are absent, and list elements read by index as in Spring Boot
 license: Apache-2.0
 ---
 
@@ -13,6 +13,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 ## What I Do
 
 - Guide upgrades of Grails applications from Grails 8.x to Grails 9.
+- Guide upgrades from one Grails 9 release to a later one, with the changes of each release listed under that release.
 - Turn the Grails 9 upgrade guide into a practical migration checklist.
 - Identify the Groovy 6, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, and character encoding changes that can break an application.
 - Prepare an application for the defaults Grails 10 changes, by checking each Grails 9 opt-in setting while the Grails 8 behaviour is still the default.
@@ -23,6 +24,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 Activate this skill when:
 
 - Updating an application to Grails 9.
+- Updating a Grails 9 application to a later Grails 9 release.
 - Reviewing a Grails 9 upgrade branch or pull request.
 - Fixing tests, build failures, runtime failures, or behavior changes after moving from Grails 8.x to Grails 9.
 - Deciding whether an application keeps or excludes `grails-xml`.
@@ -33,7 +35,19 @@ Activate this skill when:
 - Replacing GPars (`grails-async-gpars`, `grails-events-gpars`, or direct `GParsPool` use) with Groovy's `groovy.concurrent` toolkit.
 - Fixing form input or request bodies decoded in the wrong charset, or moving `grails.filter.encoding` and `grails.filter.forceEncoding` to `spring.servlet.encoding`.
 
-For an application still on Grails 7, apply the `grails-8-upgrade` skill first and move to Grails 8 before using this one.
+## Which Parts Apply
+
+Find the Grails version the application is on, the `grailsVersion` in its `gradle.properties`, and the version it is going to.
+
+- From Grails 8.x: apply everything from [Upgrade Baseline](#upgrade-baseline) on, then every section of [Changes Within Grails 9 Releases](#changes-within-grails-9-releases) up to the target version.
+- From an earlier Grails 9 release: apply the sections of [Changes Within Grails 9 Releases](#changes-within-grails-9-releases) for every release after the current version, up to and including the target version. The rest of this skill has already been applied.
+- From Grails 7 or earlier: upgrade to the last Grails 8 release first, with the `grails-upgrade` skill of that release.
+
+## Changes Within Grails 9 Releases
+
+Each change is listed under the release that first carried it. A change that adds a configuration setting names the setting and its default. Where there is a way to keep the previous result, the entry gives it.
+
+No Grails 9 release has changed anything after 9.0.0 yet.
 
 ## Primary Sources
 
