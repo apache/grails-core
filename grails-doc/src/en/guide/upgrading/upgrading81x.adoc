@@ -21,6 +21,13 @@ under the License.
 
 This guide outlines the changes introduced in Grails 8.1 that can affect an application upgrading from Grails 8.0.
 
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-8-1-0]]
+=== Grails 8.1.0
+
+This release carries the changes of every Grails 8.0 release up to <<grails-8-0-1,Grails 8.0.1>>.
+
 ==== 1. A `Publisher` Returned from a Controller Action Streams
 
 Grails 8.1 streams any Reactive Streams `Publisher` that a controller action returns, such as a Reactor `Flux`, to the client as server-sent events; see xref:async#asyncStreaming[Streaming Responses]. In Grails 8.0 such a return value was ignored and the action's view rendered. A publisher that emits at most one item, such as a Reactor `Mono`, is not streamed: it is resolved and its value is the action's result, as a returned `Promise`'s value is, so a `Mono` of a `Map` is the model of the view.
