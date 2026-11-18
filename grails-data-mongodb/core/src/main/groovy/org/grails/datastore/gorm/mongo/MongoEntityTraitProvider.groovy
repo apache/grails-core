@@ -36,4 +36,19 @@ class MongoEntityTraitProvider implements GormEntityTraitProvider {
     final Class entityTrait = MongoEntity
 
     final boolean available = ClassUtils.isPresent('com.mongodb.client.MongoClient')
+
+    /**
+     * {@code String}, not {@code ObjectId}.
+     *
+     * <p>A Mongo entity declaring a String id is given a generated {@code ObjectId} in its
+     * hexadecimal form, so it reads and binds as an ordinary String - in URLs, in JSON, and as a
+     * request parameter. An {@code ObjectId}-typed id is generated the same way and gives up that
+     * convenience everywhere else: it serializes as its component fields rather than a hex string, and
+     * every caller has to construct one. Neither involves the sequence collection a {@code Long} id
+     * needs. An entity wanting the String form in code and a native {@code ObjectId} in storage asks
+     * for it with {@code id storedAs: ObjectId}.</p>
+     *
+     * @since 8.0
+     */
+    final Class<?> defaultIdentityType = String
 }

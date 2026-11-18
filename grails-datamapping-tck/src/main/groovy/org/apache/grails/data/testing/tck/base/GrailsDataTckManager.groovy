@@ -31,8 +31,7 @@ abstract class GrailsDataTckManager {
 
     abstract Session createSession()
 
-    private Set<Class> domainClasses = [
-    ]
+    private Set<Class> domainClasses = []
 
     /**
      * Returns a defensive copy of the registered domain classes.
@@ -42,9 +41,16 @@ abstract class GrailsDataTckManager {
         domainClasses as Class[]
     }
 
+    @Deprecated
+    void addAllDomainClasses(Collection<Class> classes) {
+        if (classes) {
+            registerDomainClasses(classes as Class[])
+        }
+    }
+
     /**
-     * Registers the domain classes that will be available when testing.
-     * @param classes The classes to register
+     * Adds all the specified classes to the domain classes list.
+     * @param classes The classes to add
      */
     void registerDomainClasses(Class... classes) {
         if (classes) {

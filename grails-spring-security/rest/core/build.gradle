@@ -42,8 +42,9 @@ dependencies {
         // impl: BeanTypeResolver, @Secured(runtime), SecurityFilterPosition, SpringSecurityUtils
     }
     api "com.nimbusds:nimbus-jose-jwt", {
-        // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet
-        // impl: EncryptedJWT, EncryptionMethod, JWEHeader, JWSHeader, JWTParser, MACSigner, MACVerifier, PlainJWT, RSADecrypter, RSAEncrypter, SignedJWT
+        // api: EncryptionMethod, JOSEException, JWEAlgorithm, JWEObject, JWSAlgorithm, JWSSigner, JWT, JWTClaimsSet, SignedJWT
+        // impl: EncryptedJWT, EncryptionMethod, JWEAlgorithm, JWEHeader, JWEObject, JWSAlgorithm, JWSHeader, JWTParser, MACSigner,
+        //       MACVerifier, Payload, PlainJWT, RSADecrypter, RSAEncrypter, RSASSASigner, RSASSAVerifier, SignedJWT
     }
     api project(':grails-web-url-mappings'), {
         // api: LinkGenerator
@@ -115,6 +116,7 @@ dependencies {
     compileOnly 'jakarta.servlet:jakarta.servlet-api', { // Provided by Tomcat
         // api: FilterChain, HttpServletResponse, HttpServletRequest, ServletException, ServletRequest, ServletResponse
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation "org.pac4j:pac4j-oauth", {
         // impl: CasOAuthWrapperClient
@@ -122,6 +124,8 @@ dependencies {
     testImplementation project(':grails-testing-support-datamapping')
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }

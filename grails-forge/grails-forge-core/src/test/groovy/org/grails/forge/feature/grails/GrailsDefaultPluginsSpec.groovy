@@ -47,7 +47,7 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
 
         expect:
         output.containsKey("grails-app/i18n/messages.properties")
-        !(Arrays.asList("cs", "da", "de", "es", "fr", "it", "ja", "nb", "nl", "pl", "pt_BR", "pt_PT", "ru", "sk", "sv", "th", "zh_CN")
+        !(Arrays.asList("cs", "da", "de", "es", "fr", "it", "ja", "nb", "nl", "pl", "pt_BR", "pt_PT", "ru", "sk", "sv", "th", "zh_CN", "zh_TW")
                 .findAll {prop -> { !output.containsKey("grails-app/i18n/messages_" + prop + ".properties") }})
     }
 
@@ -95,12 +95,18 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         given:
         final Map<String, String> output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS))
         final List<String> suffixes = [""] + Arrays.asList("cs", "da", "de", "es", "fr", "it", "ja", "nb", "nl",
-                "pl", "pt_BR", "pt_PT", "ru", "sk", "sv", "th", "zh_CN").collect { "_" + it }
+                "pl", "pt_BR", "pt_PT", "ru", "sk", "sv", "th", "zh_CN", "zh_TW").collect { "_" + it }
 
         expect: "each bundle carries the welcome-page keys the default index.gsp renders through"
         suffixes.every { suffix ->
             final String bundle = output["grails-app/i18n/messages" + suffix + ".properties"]
             ["welcome.title", "welcome.congratulations", "welcome.controllers.title",
+             "welcome.domains.title", "welcome.services.title", "welcome.taglibs.title",
+             "welcome.artefacts.switch", "welcome.artefacts.none",
+             "welcome.listeners.title", "welcome.binding.title", "welcome.beans.none",
+             "welcome.mime.types.title", "welcome.datastores.title",
+             "welcome.filters.title", "welcome.registrations.title", "welcome.securitychain.title",
+             "welcome.urlmappings.title", "welcome.urlmappings.resolve.hint", "welcome.urlmappings.resolve.result",
              "welcome.filter.name", "welcome.plugins.title"].every { key ->
                 bundle.contains(key + "=")
             }
@@ -111,6 +117,9 @@ class GrailsDefaultPluginsSpec extends ApplicationContextSpec implements Command
         output["grails-app/i18n/messages_ja.properties"].contains("welcome.title=Grailsへようこそ")
         output["grails-app/i18n/messages_th.properties"].contains("welcome.title=ยินดีต้อนรับสู่ Grails")
         output["grails-app/i18n/messages_zh_CN.properties"].contains("welcome.title=欢迎使用 Grails")
+        output["grails-app/i18n/messages_ru.properties"].contains("welcome.domains.title=Доступные домены")
+        output["grails-app/i18n/messages_zh_CN.properties"].contains("welcome.taglibs.title=可用标签库")
+        output["grails-app/i18n/messages_zh_TW.properties"].contains("welcome.title=歡迎使用 Grails")
     }
 
 }

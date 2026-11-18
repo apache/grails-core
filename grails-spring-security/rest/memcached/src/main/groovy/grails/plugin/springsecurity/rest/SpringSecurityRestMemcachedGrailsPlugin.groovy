@@ -39,20 +39,20 @@ class SpringSecurityRestMemcachedGrailsPlugin extends Plugin {
     ]
 
     String title = 'Spring Security REST Plugin - Memcached support'
-    String author = 'Alvaro Sanchez-Mariscal'
+    String author = 'Apache Grails Team'
     String authorEmail = ''
     String description = 'Implements authentication for REST APIs based on Spring Security. It uses a token-based workflow'
 
     def profiles = ['web']
 
     // URL to the plugin's documentation
-    String documentation = 'https://apache.github.io/grails-spring-security'
+    String documentation = 'https://grails.apache.org/documentation.html'
 
     // Extra (optional) plugin metadata
     String license = 'APACHE'
-    def organization = [name: 'Grails', url: 'https://www.grails.org']
+    def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
 
-    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-spring-security/issues']
+    def issueManagement = [system: 'GitHub', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-spring-security-rest']
 
     Closure doWithSpring() {

@@ -19,21 +19,13 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.context.ApplicationContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.io.ConsoleOutput
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 
 class CreateInterceptorCommandSpec extends CommandSpec implements CommandFixture {
-
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
-
 
     void "test creating a service"() {
 
@@ -73,7 +65,6 @@ class TestController {
 
 }'''
 
-
         when:
         command.interceptorName  = 'test'
         Integer exitCode = command.call()
@@ -107,7 +98,7 @@ class TestInterceptorSpec extends Specification implements InterceptorUnitTest<T
     
     void "test controller execution with interceptors"() {
         given:
-        def controller = (TestController)mockController(TestController)
+        def controller = mockController(TestController)
     
         when:
         withInterceptors([controller: "test"]) {

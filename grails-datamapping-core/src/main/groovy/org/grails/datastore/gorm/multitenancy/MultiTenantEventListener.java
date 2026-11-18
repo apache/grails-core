@@ -16,17 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package org.grails.datastore.gorm.multitenancy;
 
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.context.ApplicationEvent;
 
 import grails.gorm.multitenancy.Tenants;
-import org.grails.datastore.gorm.GormEnhancer;
+import org.grails.datastore.gorm.GormRegistry;
 import org.grails.datastore.mapping.core.Datastore;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.engine.event.AbstractPersistenceEvent;
@@ -38,6 +40,7 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore;
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException;
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
 
@@ -48,6 +51,7 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 6.0
  */
 public class MultiTenantEventListener implements PersistenceEventListener {
+    private static final Logger LOG = LoggerFactory.getLogger(MultiTenantEventListener.class);
     protected final Datastore datastore;
     public static final List<Class<? extends ApplicationEvent>> SUPPORTED_EVENTS = Arrays.asList(PreQueryEvent.class, ValidationEvent.class, PreInsertEvent.class, PreUpdateEvent.class);
 
@@ -62,13 +66,22 @@ public class MultiTenantEventListener implements PersistenceEventListener {
 
     @Override
     public boolean supportsSourceType(Class<?> sourceType) {
-        return Datastore.class.isAssignableFrom(sourceType);
+        return datastore.getClass().isAssignableFrom(sourceType);
+    }
+
+    private boolean isValidSource(ApplicationEvent event) {
+        Object source = event.getSource();
+        if (source instanceof Datastore) {
+            Datastore eventDatastore = (Datastore) source;
+            return this.datastore.equals(eventDatastore);
+        }
+        return false;
     }
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        Class<? extends ApplicationEvent> eventClass = event.getClass();
-        if (supportsEventType(eventClass)) {
+        if (isValidSource(event)) {
+            Class<? extends ApplicationEvent> eventClass = event.getClass();
             Datastore datastore = (Datastore) event.getSource();
             if (event instanceof PreQueryEvent) {
                 PreQueryEvent preQueryEvent = (PreQueryEvent) event;
@@ -77,20 +90,26 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 PersistentEntity entity = query.getEntity();
                 if (entity.isMultiTenant()) {
                     if (datastore == null) {
-                        datastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        datastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
                         TenantId tenantId = entity.getTenantId();
                         if (tenantId != null) {
                             Serializable currentId;
-
                             if (datastore instanceof MultiTenantCapableDatastore) {
                                 currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
-                            }
-                            else {
+                            } else {
                                 currentId = Tenants.currentId(datastore.getClass());
                             }
-                            query.eq(tenantId.getName(), currentId);
+
+                            if (currentId != null) {
+                                // Without a tenant, a numeric tenant id is compared with 0. A tenant id that only
+                                // equals ConnectionSource.DEFAULT is a tenant id like any other.
+                                if (Tenants.isWithoutId(datastore) && Number.class.isAssignableFrom(tenantId.getType())) {
+                                    currentId = 0L;
+                                }
+                                query.eq(tenantId.getName(), currentId);
+                            }
                         }
                     }
                 }
@@ -101,26 +120,36 @@ public class MultiTenantEventListener implements PersistenceEventListener {
                 if (entity.isMultiTenant()) {
                     TenantId tenantId = entity.getTenantId();
                     if (datastore == null) {
-                        datastore = GormEnhancer.findDatastore(entity.getJavaClass());
+                        datastore = GormRegistry.getInstance().getApiResolver().findDatastore(entity.getJavaClass());
                     }
                     if (supportsSourceType(datastore.getClass()) && this.datastore.equals(datastore)) {
-                        Serializable currentId;
+                        Serializable currentId = null;
+                        try {
+                            if (datastore instanceof MultiTenantCapableDatastore) {
+                                currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
+                            } else {
+                                currentId = Tenants.currentId(datastore.getClass());
+                            }
 
-                        if (datastore instanceof MultiTenantCapableDatastore) {
-                            currentId = Tenants.currentId((MultiTenantCapableDatastore) datastore);
-                        }
-                        else {
-                            currentId = Tenants.currentId(datastore.getClass());
-                        }
-                        if (currentId != null) {
-                            try {
-                                if (currentId == ConnectionSource.DEFAULT) {
-                                    currentId = (Serializable) preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                            if (currentId != null) {
+                                // The current tenant decides the tenant id. Only without a tenant, inside
+                                // Tenants.withoutId, is a tenant id set on the instance kept.
+                                if (Tenants.isWithoutId(datastore)) {
+                                    Object existingId = preInsertEvent.getEntityAccess().getProperty(tenantId.getName());
+                                    if (existingId != null) {
+                                        currentId = (Serializable) existingId;
+                                    }
+                                }
+                                if (Tenants.isWithoutId(datastore) && ConnectionSource.DEFAULT.equals(currentId) &&
+                                        Number.class.isAssignableFrom(tenantId.getType())) {
+                                    currentId = 0L;
                                 }
                                 preInsertEvent.getEntityAccess().setProperty(tenantId.getName(), currentId);
-                            } catch (Exception e) {
-                                throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                             }
+                        } catch (TenantNotFoundException e) {
+                            throw e;
+                        } catch (Exception e) {
+                            throw new TenantException("Could not assigned tenant id [" + currentId + "] to property [" + tenantId + "], probably due to a type mismatch. You should return a type from the tenant resolver that matches the property type of the tenant id!: " + e.getMessage(), e);
                         }
                     }
                 }
@@ -133,4 +162,3 @@ public class MultiTenantEventListener implements PersistenceEventListener {
         return DEFAULT_ORDER;
     }
 }
-

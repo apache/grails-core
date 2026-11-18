@@ -1,0 +1,59 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== cron
+
+=== Purpose
+
+Declares a trigger that fires according to a cron expression.
+
+=== Examples
+
+[source,groovy]
+----
+class MyJob {
+
+    static triggers = {
+        cron(
+            name: 'cronTrigger',
+            startDelay: 10000,
+            cronExpression: '0/6 * 15 * * ?',
+            timeZone: TimeZone.getTimeZone('GMT-8') // optional
+        )
+    }
+
+    void execute() {
+        println 'Job run!'
+    }
+}
+----
+
+=== Description
+
+Accepted attributes:
+
+* `name` — uniquely identifies the trigger; must be unique across the whole application. Defaults to the job name followed by a counter.
+* `group` — the trigger group. Defaults to `GRAILS_TRIGGERS`.
+* `startDelay` — delay in milliseconds between scheduler startup and the first execution. Defaults to `0`.
+* `cronExpression` — the cron expression determining the firing schedule. Defaults to `0 0 6 * * ?` (6:00am every day). An invalid expression fails at startup.
+* `timeZone` — the `java.util.TimeZone` the expression is evaluated in. Defaults to the system time zone.
+
+The fields of a cron expression are, in order: seconds, minutes, hours, day-of-month, month, day-of-week, and an optional year. Either day-of-month or day-of-week must be `?`.
+
+Refer to the user guide topic on link:{guidePath}backgroundJobs.html#quartzTriggers[Triggers] for more information.

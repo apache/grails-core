@@ -18,10 +18,11 @@
  */
 package org.grails.exception.reporting
 
-import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import spock.lang.Specification
 
+import org.grails.exceptions.reporting.DefaultStackTraceFilterer
 import org.grails.exceptions.reporting.StackTraceFilterer
+import org.apache.grails.core.testing.support.LogCapture
 
 class StackTraceFiltererSpec extends Specification {
 
@@ -64,55 +65,48 @@ class StackTraceFiltererSpec extends Specification {
     }
 
     def 'filter emits a StackTrace log entry for a single throwable by default'() {
-        given: 'captured System.err'
-            def originalErr = System.err
-            def baos = new ByteArrayOutputStream()
-            System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+            def logCapture = new LogCapture('StackTrace')
 
         and: 'an exception whose stack trace mixes application and internal frames'
             def exception = new RuntimeException('boom')
             exception.stackTrace = [
-                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooController', 'show', 'FooController.groovy', 6],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
         when: 'the exception is filtered'
             filterer.filter(exception)
 
         then: "a 'Full Stack Trace:' entry is emitted by the filterer for backwards compatibility"
-            System.err.flush()
-            baos.toString().contains('Full Stack Trace:')
+            logCapture.events.any { it.formattedMessage.contains('Full Stack Trace:') }
 
         cleanup:
-            System.setErr(originalErr)
+            logCapture.close()
     }
 
     def 'filter does not emit a StackTrace log entry when logFullStackTraceOnFilter is disabled'() {
-        given: 'captured System.err'
-            def originalErr = System.err
-            def baos = new ByteArrayOutputStream()
-            System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+            def logCapture = new LogCapture('StackTrace')
 
         and: 'a filterer with the side-effect emission disabled'
-            def quietFilterer = new DefaultStackTraceFilterer()
-            quietFilterer.logFullStackTraceOnFilter = false
+            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: false)
 
         and: 'an exception whose stack trace mixes application and internal frames'
             def exception = new RuntimeException('boom')
             exception.stackTrace = [
-                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooController', 'show', 'FooController.groovy', 6],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
         when: 'the exception is filtered'
             quietFilterer.filter(exception)
 
         then: "no 'Full Stack Trace:' entry is emitted by the filterer"
-            System.err.flush()
-            !baos.toString().contains('Full Stack Trace:')
+            logCapture.events.count { it.formattedMessage.contains('Full Stack Trace:') } == 0
 
         cleanup:
-            System.setErr(originalErr)
+            logCapture.close()
     }
 
     def 'retains controller frames across wrapped exceptions during recursive filtering'() {
@@ -163,67 +157,60 @@ class StackTraceFiltererSpec extends Specification {
     }
 
     def 'filter emits one StackTrace log entry per throwable when walking the cause chain by default'() {
-        given: 'captured System.err'
-            def originalErr = System.err
-            def baos = new ByteArrayOutputStream()
-            System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+            def logCapture = new LogCapture('StackTrace')
 
         and: 'a wrapped exception whose wrapper and cause mix application and internal frames'
             def rootCause = new IllegalStateException('root cause')
             rootCause.stackTrace = [
-                new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooService', 'doStuff', 'FooService.groovy', 3],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
             def exception = new RuntimeException('boom', rootCause)
             exception.stackTrace = [
-                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooController', 'show', 'FooController.groovy', 6],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
         when: 'recursive filtering is applied to the top-level exception'
             filterer.filter(exception, true)
 
         then: "a 'Full Stack Trace:' entry is emitted per throwable in the chain (pre-7.1 behaviour)"
-            System.err.flush()
-            baos.toString().count('Full Stack Trace:') == 2
+            logCapture.events.count { it.formattedMessage.contains('Full Stack Trace:') } == 2
 
         cleanup:
-            System.setErr(originalErr)
+            logCapture.close()
     }
 
     def 'filter does not emit a StackTrace log entry when walking the cause chain with logFullStackTraceOnFilter disabled'() {
-        given: 'captured System.err'
-            def originalErr = System.err
-            def baos = new ByteArrayOutputStream()
-            System.setErr(new PrintStream(baos, true))
+        given: 'a configured log appender to capture the StackTrace log entry'
+            def logCapture = new LogCapture('StackTrace')
 
         and: 'a filterer with the side-effect emission disabled'
-            def quietFilterer = new DefaultStackTraceFilterer()
-            quietFilterer.logFullStackTraceOnFilter = false
+            def quietFilterer = new DefaultStackTraceFilterer(logFullStackTraceOnFilter: false)
 
         and: 'a wrapped exception whose wrapper and cause mix application and internal frames'
             def rootCause = new IllegalStateException('root cause')
             rootCause.stackTrace = [
-                new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooService', 'doStuff', 'FooService.groovy', 3],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
             def exception = new RuntimeException('boom', rootCause)
             exception.stackTrace = [
-                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 6),
-                new StackTraceElement('java.lang.reflect.Method', 'invoke', 'Method.java', 580)
+                ['test.FooController', 'show', 'FooController.groovy', 6],
+                ['java.lang.reflect.Method', 'invoke', 'Method.java', 580]
             ] as StackTraceElement[]
 
         when: 'recursive filtering is applied to the top-level exception'
             quietFilterer.filter(exception, true)
 
         then: "no 'Full Stack Trace:' entry is emitted for any throwable in the chain"
-            System.err.flush()
-            !baos.toString().contains('Full Stack Trace:')
+            logCapture.events.count { it.formattedMessage.contains('Full Stack Trace:') } == 0
 
         cleanup:
-            System.setErr(originalErr)
+            logCapture.close()
     }
 
     def 'recursive filtering visits every throwable in the cause chain and sanitizes each'() {
@@ -231,28 +218,30 @@ class StackTraceFiltererSpec extends Specification {
             def filterer = new CountingStackTraceFilterer()
             def rootCause = new IllegalStateException('root cause')
             rootCause.stackTrace = [
-                new StackTraceElement('test.FooService', 'doStuff', 'FooService.groovy', 3),
-                new StackTraceElement('org.codehaus.groovy.runtime.InvokerHelper', 'invokeMethod', 'InvokerHelper.java', 12)
+                ['test.FooService', 'doStuff', 'FooService.groovy', 3],
+                ['org.codehaus.groovy.runtime.InvokerHelper', 'invokeMethod', 'InvokerHelper.java', 12]
             ] as StackTraceElement[]
 
             def wrappedCause = new RuntimeException('wrapped cause', rootCause)
             wrappedCause.stackTrace = [
-                new StackTraceElement('test.FooController', 'display', 'FooController.groovy', 11),
-                new StackTraceElement('org.codehaus.groovy.runtime.callsite.CallSiteArray', 'defaultCall', 'CallSiteArray.java', 15)
+                ['test.FooController', 'display', 'FooController.groovy', 11],
+                ['org.codehaus.groovy.runtime.callsite.CallSiteArray', 'defaultCall', 'CallSiteArray.java', 15]
             ] as StackTraceElement[]
 
             def exception = new RuntimeException('top level', wrappedCause)
             exception.stackTrace = [
-                new StackTraceElement('test.FooController', 'show', 'FooController.groovy', 7),
-                new StackTraceElement('org.codehaus.groovy.runtime.ScriptBytecodeAdapter', 'unwrap', 'ScriptBytecodeAdapter.java', 20)
+                ['test.FooController', 'show', 'FooController.groovy', 7],
+                ['org.codehaus.groovy.runtime.ScriptBytecodeAdapter', 'unwrap', 'ScriptBytecodeAdapter.java', 20]
             ] as StackTraceElement[]
 
         when: 'recursive filtering is applied to the top-level exception'
             filterer.filter(exception, true)
 
         then: 'filter is invoked once per throwable in the cause chain, in cause-chain order'
-            filterer.singleExceptionFilterInvocations == 3
-            filterer.filteredSources == [exception, wrappedCause, rootCause]
+            with(filterer) {
+                singleExceptionFilterInvocations == 3
+                filteredSources == [exception, wrappedCause, rootCause]
+            }
 
         and: 'application stack frames are retained across the full cause chain'
             with(exception) {

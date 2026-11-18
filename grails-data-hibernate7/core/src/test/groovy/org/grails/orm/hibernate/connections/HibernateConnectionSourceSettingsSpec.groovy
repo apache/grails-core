@@ -57,7 +57,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         expectedHibernateProperties.put('hibernate.naming_strategy','org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy')
         expectedHibernateProperties.put('hibernate.entity_dirtiness_strategy', 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy')
         expectedHibernateProperties.put('hibernate.configLocations','file:hibernate.cfg.xml')
-        expectedHibernateProperties.put('hibernate.use_query_cache','true')
+        expectedHibernateProperties.put('hibernate.cache.use_query_cache','true')
         expectedHibernateProperties.put("hibernate.connection.handling_mode", "DELAYED_ACQUISITION_AND_HOLD")
         expectedHibernateProperties.put('hibernate.cache.region.factory_class','org.hibernate.cache.jcache.internal.JCacheRegionFactory')
         expectedHibernateProperties.put('hibernate.jpa.compliance.cascade', 'true')
@@ -82,7 +82,7 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
         hibernateProperties['hibernate.naming_strategy'] == 'org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl'
         hibernateProperties['hibernate.entity_dirtiness_strategy'] == 'org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy'
         hibernateProperties['hibernate.configLocations'] == 'file:hibernate.cfg.xml'
-        hibernateProperties['hibernate.use_query_cache'] == 'true'
+        hibernateProperties['hibernate.cache.use_query_cache'] == 'true'
         hibernateProperties["hibernate.connection.handling_mode"] == "DELAYED_ACQUISITION_AND_HOLD"
         hibernateProperties['hibernate.cache.region.factory_class'] == 'org.hibernate.cache.jcache.internal.JCacheRegionFactory'
         hibernateProperties['hibernate.jpa.compliance.cascade'] == 'true'
@@ -91,10 +91,31 @@ class HibernateConnectionSourceSettingsSpec extends Specification {
     void "test toHibernateEventListeners"() {
         given:
         def interceptor = Mock(org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor)
+        def onFlushListener = Mock(org.hibernate.event.spi.PersistEventListener)
+        interceptor.persistOnFlushEventListener >> onFlushListener
 
         expect:
         HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(null).isEmpty()
-        HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor).size() == 8
+
+        when:
+        def listeners = HibernateConnectionSourceSettings.HibernateSettings.toHibernateEventListeners(interceptor)
+
+        then:
+        // merge, create (Hibernate's internal event name for PERSIST), create-onflush, pre/post-load,
+        // pre/post-insert, pre/post-update, pre/post-delete: 11 entries. See issue #16349 - merge/persist
+        // were previously left unregistered here, so GORM dirty-check tracking was never activated before
+        // Hibernate's flush-time dirty check for entities using a pre-insert id generator.
+        listeners.size() == 11
+        listeners.keySet() == [
+                'merge', 'create', 'create-onflush',
+                'pre-load', 'post-load',
+                'pre-insert', 'post-insert',
+                'pre-update', 'post-update',
+                'pre-delete', 'post-delete',
+        ] as Set
+        listeners['merge'].is(interceptor)
+        listeners['create'].is(interceptor)
+        listeners['create-onflush'].is(onFlushListener)
     }
 
     void "test toProperties with dirty checking and custom config"() {

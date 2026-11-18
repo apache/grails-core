@@ -45,7 +45,7 @@ grails test-app Foo Bar
 Usage:
 [source,groovy]
 ----
-grails <<environment>>* test-app <<names>>* [-unit|-integration]
+grails <<environment>>* test-app <<names>>* [-unit] [-integration] [-continuous]
 ----
 
 Fired Events:
@@ -71,11 +71,18 @@ grails test-app -unit
 grails test-app -integration
 ----
 
-If you only wish to re-run failed tests use the -rerun flag
+=== Continuous Testing
 
 [source,groovy]
 ----
-grails test-app -rerun
+grails
+grails> test-app -continuous
 ----
+
+The `-continuous` option starts Grails' `DirectoryWatcher`. It watches `.groovy` and `.java` files in `grails-app`, `src/main/groovy`, `src/test/groovy`, and `src/integration-test/groovy`. Creating or changing a watched file reruns the tests selected by the command options and test name patterns.
+
+Continuous mode does not run tests when it starts. It is intended for the Grails interactive CLI, where the watcher remains active until you exit the CLI. A one-off `grails test-app -continuous` command exits immediately because `DirectoryWatcher` runs on a daemon thread. Stop interactive continuous testing by exiting the CLI or pressing Ctrl+C.
+
+This is not Gradle's `--continuous` mode. Grails does not pass `--continuous` to Gradle, and `--watch` is not an alias for `-continuous`. Files outside the watched directories, including Java source directories such as `src/main/java`, do not trigger a rerun.
 
 See the link:{guidePath}testing.html[Testing] section for examples on how to combine the different options to target tests.

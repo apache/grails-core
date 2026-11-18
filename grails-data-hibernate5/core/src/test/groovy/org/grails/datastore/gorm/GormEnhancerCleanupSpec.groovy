@@ -20,7 +20,7 @@ package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
 import grails.gorm.tests.HibernateGormDatastoreSpec
-import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 class GormEnhancerCleanupSpec extends HibernateGormDatastoreSpec {
 
@@ -28,56 +28,33 @@ class GormEnhancerCleanupSpec extends HibernateGormDatastoreSpec {
         manager.registerDomainClasses(CleanupEntity)
     }
 
-    void "Test that GormEnhancer.close() removes datastore from DATASTORES registry"() {
+    void "GormRegistry tracks entity-to-datastore mapping for registered entities"() {
         given:
-        def enhancerClass = GormEnhancer.class
-        def datastoresField = enhancerClass.getDeclaredField("DATASTORES")
-        datastoresField.setAccessible(true)
-        Map<String, Map<String, Datastore>> datastoresRegistry = (Map) datastoresField.get(null)
+        def registry = GormRegistry.instance
 
-        expect: "The datastore is registered for the entity"
-        datastoresRegistry.get("default")?.get(CleanupEntity.name) == datastore
+        expect: "CleanupEntity maps to the active datastore"
+        registry.getDatastore(CleanupEntity, ConnectionSource.DEFAULT) == datastore
 
-        when: "The datastore is closed"
-        datastore.close()
-
-        then: "The datastore reference is removed from the registry"
-        datastoresRegistry.get("default")?.get(CleanupEntity.name) == null
+        and: "A static API is registered for CleanupEntity"
+        registry.getStaticApi(CleanupEntity) != null
     }
 
-    void "Test that GormEnhancer.close() does not mutate maps via withDefault"() {
+    void "GormRegistry.removeDatastore clears entity and static API entries"() {
         given:
-        def enhancerClass = GormEnhancer.class
-        def staticApisField = enhancerClass.getDeclaredField("STATIC_APIS")
-        staticApisField.setAccessible(true)
-        Map staticApisRegistry = (Map) staticApisField.get(null)
+        def registry = GormRegistry.instance
 
-        String unknownQualifier = "unknown_tenant_" + System.currentTimeMillis()
-        
-        expect: "The unknown qualifier is not in the map"
-        !staticApisRegistry.containsKey(unknownQualifier)
+        expect: "entries are present before removal"
+        registry.getDatastore(CleanupEntity, ConnectionSource.DEFAULT) == datastore
+        registry.getStaticApi(CleanupEntity) != null
 
-        when: "Closing a datastore with an unknown qualifier (simulated)"
-        // This is tricky because we need a datastore that 'claims' to have this qualifier
-        // We'll just manually call close() with a mock/stub if possible, 
-        // but GormEnhancer uses 'this.datastore' internally.
-        
-        // Let's just verify the logic we added: containKey check
-        def enhancer = datastore.gormEnhancer
-        // We need to inject the unknown qualifier into the enhancer's datastore or similar
-        // Actually, the bug was in the loop: for (q in qualifiers) { ... STATIC_APIS.get(q) ... }
-        // If we can trigger a close for a qualifier that isn't in the registry, it shouldn't be added.
-        
-        // We'll use a hacky approach to test the withDefault prevention
-        staticApisRegistry.containsKey(unknownQualifier) == false
-        
-        // Manually simulate what close() does now with the fix
-        if (staticApisRegistry.containsKey(unknownQualifier)) {
-             staticApisRegistry.get(unknownQualifier).remove("SomeClass")
-        }
+        when: "the datastore is removed from the registry"
+        registry.removeDatastore(datastore)
 
-        then: "The qualifier was NOT added to the map"
-        !staticApisRegistry.containsKey(unknownQualifier)
+        then: "entity-to-datastore mapping is cleared"
+        registry.getDatastore(CleanupEntity, ConnectionSource.DEFAULT) == null
+
+        and: "static API is also cleared"
+        registry.getStaticApi(CleanupEntity) == null
     }
 }
 

@@ -26,7 +26,9 @@ import org.grails.datastore.gorm.services.implementers.CountWhereImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllByImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllByInterfaceProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
+import org.grails.datastore.gorm.services.implementers.FindAllPropertyProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.FindAllWhereImplementer
+import org.grails.datastore.gorm.services.implementers.FindOneByInterfaceProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
 import org.grails.datastore.gorm.services.implementers.FindOnePropertyProjectionImplementer
 import org.grails.datastore.gorm.services.implementers.UpdateStringQueryImplementer
@@ -392,6 +394,86 @@ return Book.classLoader
 
         when:"The observable result is produced"
         def result = o.toBlocking().value()
+
+        then:"A GORM method is invoked"
+        def e = thrown(IllegalStateException)
+        e.message.startsWith('No GORM implementations configured')
+    }
+
+    void "test property projection that returns an Observable"() {
+        given:
+        ClassLoader cl = new GroovyShell().evaluate('''
+import grails.gorm.annotation.Entity
+import grails.gorm.services.Service
+import rx.Observable
+import org.grails.gorm.rx.services.implementers.*
+
+@Entity
+class Book {
+  String title
+  String author
+}
+@Service(value=Book,adapters= [ObservableServiceImplementerAdapter])
+interface BookService {
+    Observable<String> findBookAuthor(String title)
+    Observable<String> listBookAuthor(String title)
+}
+return Book.classLoader
+''')
+
+        when:
+        Class impl = cl.loadClass('$BookServiceImplementation')
+
+        then:"every projected value is listed rather than a single one found"
+        impl.getMethod("findBookAuthor", String).getAnnotation(Implemented).by() == FindAllPropertyProjectionImplementer
+        impl.getMethod("listBookAuthor", String).getAnnotation(Implemented).by() == FindAllPropertyProjectionImplementer
+
+        when:"A method is invoked that returns an observable"
+        def instance = impl.newInstance()
+        Observable o = instance.findBookAuthor("test")
+
+        then:"an observable is returned"
+        o != null
+
+        when:"The observable result is produced"
+        o.toBlocking().first()
+
+        then:"A GORM method is invoked"
+        def e = thrown(IllegalStateException)
+        e.message.startsWith('No GORM implementations configured')
+    }
+
+    void "test interface projection that returns a Single"() {
+        when:
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.*
+import grails.gorm.annotation.Entity
+import org.grails.gorm.rx.services.implementers.*
+
+@Service(value = Foo, adapters = [ObservableServiceImplementerAdapter])
+interface MyService {
+    rx.Single<IFoo> findByNameLike(String n)
+}
+@Entity
+class Foo {
+    String title
+    String name
+}
+
+interface IFoo {
+    String getTitle()
+}
+''')
+        Class impl = service.classLoader.loadClass("\$MyServiceImplementation")
+        def instance = impl.newInstance()
+        Single o = instance.findByNameLike("test")
+
+        then:"a single result implementer is chosen rather than the iterable one"
+        impl.getMethod("findByNameLike", String).getAnnotation(Implemented).by() == FindOneByInterfaceProjectionImplementer
+        o != null
+
+        when:"The single result is produced"
+        o.toBlocking().value()
 
         then:"A GORM method is invoked"
         def e = thrown(IllegalStateException)

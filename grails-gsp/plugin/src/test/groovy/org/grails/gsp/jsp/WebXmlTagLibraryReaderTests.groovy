@@ -33,6 +33,26 @@ class WebXmlTagLibraryReaderTests extends Specification {
         webXmlReader.tagLocations['jakarta.tags.core'] == '/WEB-INF/tld/c.tld'
     }
 
+    void 'a web.xml declaring a doctype is read without retrieving the dtd'() {
+        given: 'a Servlet 2.3 descriptor, whose DOCTYPE names a DTD that must never be fetched'
+        def webXml = '''<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE web-app PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+  "http://java.sun.com/dtd/web-app_2_3.dtd">
+<web-app>
+    <taglib>
+        <taglib-uri>http://java.sun.com/jstl/core</taglib-uri>
+        <taglib-location>/WEB-INF/tld/c.tld</taglib-location>
+    </taglib>
+</web-app>
+'''
+
+        when:
+        WebXmlTagLibraryReader webXmlReader = new WebXmlTagLibraryReader(new ByteArrayInputStream(webXml.getBytes('UTF-8')))
+
+        then:
+        webXmlReader.tagLocations == ['http://java.sun.com/jstl/core': '/WEB-INF/tld/c.tld']
+    }
+
     def testWebXml = '''\
         |<?xml version="1.0" encoding="UTF-8"?>
         |<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"

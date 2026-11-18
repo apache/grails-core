@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.grails
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -28,7 +28,7 @@ import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
 
-class GrailsBaseSpec extends BeanContextSpec implements CommandOutputFixture {
+class GrailsBaseSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     void "test grails base dependencies"() {
 

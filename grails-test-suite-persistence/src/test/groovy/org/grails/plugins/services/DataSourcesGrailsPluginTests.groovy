@@ -18,14 +18,20 @@
  */
 package org.grails.plugins.services
 
+import org.junit.jupiter.api.Test
+import static org.junit.jupiter.api.Assertions.assertTrue
 import org.grails.commons.test.AbstractGrailsMockTests
 import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockGrailsPluginManager
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
+import org.springframework.context.support.GenericApplicationContext
 
 class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
 
+    @Test
     void testSingleDataSource() {
         def appCtx = initializeContext([
                 dataSource: [
@@ -38,6 +44,7 @@ class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
         ])
         assertTrue appCtx.containsBean("dataSource")
     }
+    @Test
     void testMultipleDataSources() {
         def appCtx = initializeContext([
                 dataSource: [
@@ -75,6 +82,12 @@ class DataSourcesGrailsPluginTests  extends AbstractGrailsMockTests {
         corePlugin.doWithRuntimeConfiguration(springConfig)
         dataSourcePlugin.manager = new MockGrailsPluginManager(ga)
         dataSourcePlugin.doWithRuntimeConfiguration(springConfig)
+
+        // the dataSource beans come from the registrar of the plugin, which the runtime applies after doWithSpring
+        def context = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
+        BeanRegistrar registrar = dataSourcePlugin.beanRegistrar
+        new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
+                .register(registrar)
 
         springConfig.getApplicationContext()
     }

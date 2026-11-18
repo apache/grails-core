@@ -45,32 +45,60 @@ public class DirectoryWatcher extends Thread {
      */
     public DirectoryWatcher() {
         setDaemon(true);
-        AbstractDirectoryWatcher directoryWatcherDelegate;
-        try {
-            if (System.getProperty("os.name").equals("Mac OS X")) {
-                Boolean jnaAvailable = false;
-                try {
-                    Class.forName("com.sun.jna.Pointer");
-                    jnaAvailable = true;
-                } catch (ClassNotFoundException e) {
-                    if (LOG.isWarnEnabled()) {
-                        LOG.warn("Error Initializing Native OS X File Event Watcher. Add JNA to classpath for Faster File Watching performance.");
-                    }
+        this.directoryWatcherDelegate = createDelegate();
+    }
 
-                }
-                if (jnaAvailable) {
-                    directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.MacOsWatchServiceDirectoryWatcher").getDeclaredConstructor().newInstance();
-                } else {
-                    directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").getDeclaredConstructor().newInstance();
-                }
-            } else {
-                directoryWatcherDelegate = (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.WatchServiceDirectoryWatcher").getDeclaredConstructor().newInstance();
+    /**
+     * Selects the best available watcher implementation.
+     *
+     * <p>On macOS the native FSEvents based watcher is preferred, but it requires the optional
+     * {@code io.methvin:directory-watcher} dependency. When that isn't available the JDK
+     * {@link java.nio.file.WatchService} is used instead. Polling is only a last resort.</p>
+     *
+     * @return the watcher to delegate to
+     */
+    private static AbstractDirectoryWatcher createDelegate() {
+        if (System.getProperty("os.name").equals("Mac OS X")) {
+            AbstractDirectoryWatcher macOsWatcher = createMacOsWatcher();
+            if (macOsWatcher != null) {
+                return macOsWatcher;
             }
-        } catch (Throwable e) {
-            LOG.info("Exception while trying to load WatchServiceDirectoryWatcher (this is probably Java 6 and WatchService isn't available). Falling back to PollingDirectoryWatcher.", e);
-            directoryWatcherDelegate = new PollingDirectoryWatcher();
         }
-        this.directoryWatcherDelegate = directoryWatcherDelegate;
+        try {
+            return new WatchServiceDirectoryWatcher();
+        } catch (Throwable e) {
+            LOG.warn("Could not create a WatchService based directory watcher. Falling back to PollingDirectoryWatcher.", e);
+            return new PollingDirectoryWatcher();
+        }
+    }
+
+    /**
+     * @return the native macOS watcher, or {@code null} if it is unavailable
+     */
+    private static AbstractDirectoryWatcher createMacOsWatcher() {
+        try {
+            // MacOsWatchServiceDirectoryWatcher delegates to io.methvin's MacOSXListeningWatchService,
+            // an optional dependency of this module. Probe for that class rather than for JNA: JNA is
+            // frequently present transitively (Testcontainers, docker-java, ...) without the watcher
+            // library, and using it as the signal sends those applications down a load that can't succeed.
+            // A LinkageError means the class is present but its own dependencies (JNA) are not, which is
+            // equally unusable, so treat both as simply unavailable.
+            Class.forName("io.methvin.watchservice.MacOSXListeningWatchService");
+        } catch (ClassNotFoundException | LinkageError e) {
+            // Warn rather than debug: the JDK supplies no native WatchService on macOS, so the fallback
+            // polls and file changes take seconds to be noticed. The message names the one dependency
+            // that fixes that, and adding it silences this. The cause is debug detail, not the point.
+            LOG.warn("Native macOS file event watching is unavailable, so the JDK WatchService is used instead, " +
+                    "which polls on macOS. Add 'io.methvin:directory-watcher' to the classpath for event driven file watching.");
+            LOG.debug("io.methvin.watchservice.MacOSXListeningWatchService could not be loaded.", e);
+            return null;
+        }
+        try {
+            return (AbstractDirectoryWatcher) Class.forName("org.grails.io.watch.MacOsWatchServiceDirectoryWatcher").getDeclaredConstructor().newInstance();
+        } catch (Throwable e) {
+            LOG.warn("Could not create the native macOS directory watcher. Falling back to the JDK WatchService.", e);
+            return null;
+        }
     }
 
     /**

@@ -19,11 +19,11 @@
 
 package org.grails.forge.feature.cache
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import spock.lang.Ignore
 import spock.lang.Unroll
 
-class CacheSpec extends BeanContextSpec {
+class CacheSpec extends ApplicationContextSpec {
 
     @Ignore("There is only one cache implementation right now")
     void 'test there can only be one cache feature'() {

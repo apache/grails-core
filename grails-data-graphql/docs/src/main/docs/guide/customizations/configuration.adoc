@@ -74,14 +74,23 @@ The following options are available to configure for Grails applications using t
 |The default arguments in link:{api}/org/grails/gorm/graphql/fetcher/impl/EntityDataFetcher.html#ARGUMENTS[EntityDataFetcher.ARGUMENTS]
 |
 |`grails.gorm.graphql.browser`
-| Boolean
-| True (only in development)
-|Whether the `GraphqlController.browser` action which by default responds on the `graphql/browser` endpoint is enabled
+|Boolean
+|True in the `development` environment, False otherwise
+|Whether the `GraphqlController.browser` action, which by default responds on the `graphql/browser` endpoint, is enabled. The action also needs a `graphiql.html` resource supplied by the application; see <<graphiql-browser>>.
 |===
+
+[[graphiql-browser]]
+=== GraphiQL Browser
+
+The `browser` action of the `GraphqlController` responds on `/graphql/browser` by default. Earlier releases of the plugin bundled the link:https://github.com/graphql/graphiql[GraphiQL] browser; the plugin no longer ships it, so the action responds with a 404 status until the application supplies the page.
+
+To serve a GraphiQL browser, place a `graphiql.html` resource on the root of the application classpath, for example at `src/main/resources/graphiql.html`, and make sure `grails.gorm.graphql.browser` is `true` in every environment that should serve it: the plugin sets it in the `development` environment, and it is `false` everywhere else unless the application configures it. Before the page is rendered, the `+{endpoint}+` placeholder in it is replaced with the URL of the GraphQL endpoint and the `+{staticBase}+` placeholder with the base URL of the application's static resources, so the page can load GraphiQL from a CDN or from the application's own static resources and send its requests to `+{endpoint}+`.
 
 === Fetching Context
 
 Data fetchers in GraphQL have a "context". The context is really just an Object field that can contain anything you like with the purpose of exposing it to the data fetching environment. For example, the default context created by the plugin is a Map that contains the request locale. The locale is used to render validation error messages.
+
+The plugin passes the context object to graphql-java as both the execution context and the execution root. `DataFetchingEnvironment.getContext()` is deprecated in graphql-java, so read the object from `environment.root` in data fetchers. The default validation errors response handler reads the locale from `environment.root` as well.
 
 TIP: If you prefer to set the context to a custom class, implement link:{api}/org/grails/gorm/graphql/fetcher/context/LocaleAwareContext.html[LocaleAwareContext] and the default validation errors response handler will retrieve the locale from the object.
 
@@ -121,6 +130,6 @@ Then in a data fetcher:
 [source,groovy]
 ----
 T get(DataFetchingEnvironment environment) {
-    ((Map) environment.context).springSecurityService
+    ((Map) environment.root).springSecurityService
 }
 ----

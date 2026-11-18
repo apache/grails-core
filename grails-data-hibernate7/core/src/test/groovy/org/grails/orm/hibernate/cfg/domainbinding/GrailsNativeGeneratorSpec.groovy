@@ -18,29 +18,76 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding
 
+import grails.gorm.annotation.Entity
+import grails.gorm.tests.HibernateGormDatastoreSpec
+import jakarta.persistence.GenerationType
 import org.grails.orm.hibernate.cfg.domainbinding.generator.GrailsNativeGenerator
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
 import org.hibernate.engine.spi.SharedSessionContractImplementor
 import org.hibernate.generator.EventType
+import org.hibernate.generator.Generator
 import org.hibernate.generator.GeneratorCreationContext
-import org.hibernate.id.enhanced.SequenceStyleGenerator
-import spock.lang.Specification
+import org.hibernate.mapping.Column
+import org.hibernate.mapping.Property
+import org.hibernate.mapping.Value
+import org.hibernate.type.Type
 import spock.lang.Subject
-import jakarta.persistence.GenerationType
 
-class GrailsNativeGeneratorSpec extends Specification {
+import java.lang.reflect.Field
+
+class GrailsNativeGeneratorSpec extends HibernateGormDatastoreSpec {
+
+    void setupSpec() {
+        manager.registerDomainClasses(NativeGeneratorSpecEntity)
+    }
+
+    /** A creation context backed by the running H2 datastore, whose native strategy is IDENTITY. */
+    private GeneratorCreationContext buildContext() {
+        def column = new Column("id")
+        def value = Mock(Value) {
+            getColumns() >> [column]
+        }
+        def property = Mock(Property) {
+            getName() >> "id"
+            getValue() >> value
+        }
+        def type = Mock(Type) {
+            getReturnedClass() >> Long
+        }
+        Mock(GeneratorCreationContext) {
+            getServiceRegistry() >> serviceRegistry
+            getDatabase() >> datastore.metadata.database
+            getProperty() >> property
+            getValue() >> value
+            getType() >> type
+        }
+    }
+
+    private JdbcEnvironment jdbcEnvironment() {
+        serviceRegistry.requireService(JdbcEnvironment)
+    }
+
+    def "should mark the identifier column as identity when the dialect generates identity values"() {
+        given:
+        def context = buildContext()
+
+        when:
+        def generator = new GrailsNativeGenerator(context, jdbcEnvironment())
+
+        then:
+        generator.generationType == GenerationType.IDENTITY
+        context.property.value.columns[0].identity
+    }
 
     def "should return currentValue if not null (assigned identifier)"() {
         given:
-        def context = Mock(GeneratorCreationContext)
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
         def currentValue = "assigned-id"
-        def eventType = EventType.INSERT
-        
-        def generator = new GrailsNativeGenerator(context)
+        def generator = new GrailsNativeGenerator(buildContext(), jdbcEnvironment())
 
         when:
-        def result = generator.generate(session, entity, currentValue, eventType)
+        def result = generator.generate(session, entity, currentValue, EventType.INSERT)
 
         then:
         result == currentValue
@@ -48,88 +95,44 @@ class GrailsNativeGeneratorSpec extends Specification {
 
     def "should return null if generation type is IDENTITY"() {
         given:
-        def context = Mock(GeneratorCreationContext)
-        def database = Mock(org.hibernate.boot.model.relational.Database)
-        context.getDatabase() >> database
-        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
-        
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
-        def eventType = EventType.INSERT
-        
+
         @Subject
-        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+        def generator = Spy(GrailsNativeGenerator, constructorArgs: [buildContext(), jdbcEnvironment()])
         generator.getGenerationType() >> GenerationType.IDENTITY
 
         when:
-        def result = generator.generate(session, entity, null, eventType)
+        def result = generator.generate(session, entity, null, EventType.INSERT)
 
         then:
         result == null
     }
 
-    def "should throw HibernateException if SequenceStyleGenerator is not initialized"() {
+    def "should delegate to the standard logic when the delegate is not an identity generator"() {
         given:
-        def context = Mock(GeneratorCreationContext)
-        def database = Mock(org.hibernate.boot.model.relational.Database)
-        context.getDatabase() >> database
-        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
-        
         def session = Mock(SharedSessionContractImplementor)
         def entity = new Object()
-        def eventType = EventType.INSERT
-        
-        @Subject
-        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
-        def ssg = Mock(SequenceStyleGenerator)
-        
-        // We need to mock the private field access or ensure getDelegate() returns ssg
-        // Since we are using Spy and getDelegate is not easily overridable if private
-        // but our implementation uses reflection. In the test, we'll mock the field.
-        
-        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
-        field.setAccessible(true)
-        field.set(generator, ssg)
-
-        generator.getGenerationType() >> GenerationType.SEQUENCE
-        ssg.getDatabaseStructure() >> null
-
-        when:
-        generator.generate(session, entity, null, eventType)
-
-        then:
-        def e = thrown(org.hibernate.HibernateException)
-        e.message.contains("was not properly initialized")
-    }
-
-    def "should proceed past non-SequenceStyleGenerator delegate without exception"() {
-        given:
-        def context = Mock(GeneratorCreationContext)
-        def database = Mock(org.hibernate.boot.model.relational.Database)
-        context.getDatabase() >> database
-        database.getDialect() >> new org.hibernate.dialect.H2Dialect()
-
-        def session = Mock(SharedSessionContractImplementor)
-        def entity = new Object()
-        def eventType = EventType.INSERT
 
         @Subject
-        def generator = Spy(GrailsNativeGenerator, constructorArgs: [context])
+        def generator = Spy(GrailsNativeGenerator, constructorArgs: [buildContext(), jdbcEnvironment()])
 
-        java.lang.reflect.Field field = org.hibernate.id.NativeGenerator.class.getDeclaredField("dialectNativeGenerator")
+        Field field = org.hibernate.id.NativeGenerator.getDeclaredField("dialectNativeGenerator")
         field.setAccessible(true)
-        // A Generator that is NOT a SequenceStyleGenerator — instanceof branch returns false
-        def nonSsgDelegate = Mock(org.hibernate.generator.Generator)
-        field.set(generator, nonSsgDelegate)
+        field.set(generator, Mock(Generator))
 
         generator.getGenerationType() >> GenerationType.SEQUENCE
 
         when:
-        // super.generate() will be called with invalid session — expect some exception
-        generator.generate(session, entity, null, eventType)
+        // super.generate() casts the delegate to BeforeExecutionGenerator, which the mock is not
+        generator.generate(session, entity, null, EventType.INSERT)
 
         then:
-        // Any exception is acceptable — we verified the non-SSG branch executed
-        thrown(Exception)
+        thrown(ClassCastException)
     }
+}
+
+@Entity
+class NativeGeneratorSpecEntity {
+    String name
 }

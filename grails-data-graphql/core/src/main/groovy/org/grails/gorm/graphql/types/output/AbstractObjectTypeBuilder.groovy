@@ -101,44 +101,36 @@ abstract class AbstractObjectTypeBuilder implements ObjectTypeBuilder {
 
     @Override
     GraphQLOutputType build(PersistentEntity entity) {
-
-        GraphQLOutputType objectType
-
         if (objectTypeCache.containsKey(entity)) {
-            objectTypeCache.get(entity)
+            return objectTypeCache.get(entity)
         }
-        else {
-            final String description = GraphQLEntityHelper.getDescription(entity)
-            final String name = typeManager.namingConvention.getType(entity, type)
 
-            List<GraphQLFieldDefinition> fields = new ArrayList<>(properties.size() + 1)
+        final String description = GraphQLEntityHelper.getDescription(entity)
+        final String name = typeManager.namingConvention.getType(entity, type)
 
-            List<GraphQLDomainProperty> properties = builder.getProperties(entity)
-            for (GraphQLDomainProperty prop: properties) {
-                if (prop.output) {
-                    GraphQLFieldDefinition.Builder field = buildField(prop, name)
-                    addFieldArgs(field, prop, entity.mappingContext)
-                    fields.add(field.build())
-                }
+        List<GraphQLDomainProperty> properties = builder.getProperties(entity)
+        List<GraphQLFieldDefinition> fields = new ArrayList<>(properties.size() + 1)
+        for (GraphQLDomainProperty prop: properties) {
+            if (prop.output) {
+                GraphQLFieldDefinition.Builder field = buildField(prop, name)
+                addFieldArgs(field, prop, entity.mappingContext)
+                fields.add(field.build())
             }
-
-            if (errorsResponseHandler != null) {
-                GraphQLFieldDefinition fieldDefinition = errorsResponseHandler.getFieldDefinition(typeManager, name)
-                fields.add(fieldDefinition)
-            }
-
-            boolean hasChildEntities = entity.root && !entity.mappingContext.getDirectChildEntities(entity).empty
-
-            if (hasChildEntities && !type.embedded) {
-                objectType = buildInterfaceType(entity, name, description, fields)
-            }
-            else {
-                objectType = buildObjectType(entity, name, description, fields)
-            }
-
-            objectTypeCache.put(entity, objectType)
-            objectType
         }
+
+        if (errorsResponseHandler != null) {
+            GraphQLFieldDefinition fieldDefinition = errorsResponseHandler.getFieldDefinition(typeManager, name)
+            fields.add(fieldDefinition)
+        }
+
+        boolean hasChildEntities = entity.root && !entity.mappingContext.getDirectChildEntities(entity).empty
+
+        GraphQLOutputType objectType = hasChildEntities && !type.embedded ?
+                buildInterfaceType(name, description, fields) :
+                buildObjectType(entity, name, description, fields)
+
+        objectTypeCache.put(entity, objectType)
+        objectType
     }
 
     GraphQLObjectType buildObjectType(final PersistentEntity entity, final String name, final String description, final List<GraphQLFieldDefinition> fields) {
@@ -155,15 +147,16 @@ abstract class AbstractObjectTypeBuilder implements ObjectTypeBuilder {
         obj.build()
     }
 
-    GraphQLInterfaceType buildInterfaceType(final PersistentEntity entity, final String name, final String description, final List<GraphQLFieldDefinition> fields) {
+    GraphQLInterfaceType buildInterfaceType(final String name, final String description, final List<GraphQLFieldDefinition> fields) {
 
         GraphQLInterfaceType.Builder obj = newInterface()
                 .name(name)
                 .description(description)
                 .fields(fields)
-                .typeResolver(buildEntityTypeResolver())
 
-        obj.build()
+        GraphQLInterfaceType interfaceType = obj.build()
+        codeRegistry.typeResolver(name, buildEntityTypeResolver())
+        interfaceType
     }
 
     protected TypeResolver buildEntityTypeResolver() {

@@ -173,12 +173,13 @@ public interface LinkGenerator {
      * <ul>
      *    <li>If the target controller is the controller currently handling the request, the current
      *        request namespace is returned.</li>
-     *    <li>Otherwise, if exactly one controller has the given name, that controller's namespace is
-     *        returned (which may be {@code null} when that single controller is non-namespaced).</li>
-     *    <li>Otherwise the name is defined by more than one controller in different namespaces - a
-     *        discouraged design - so a sensible default is chosen: the non-namespaced controller if one
-     *        exists, then a controller in the current request namespace; any remaining ambiguity yields
-     *        {@code null} and must be disambiguated by specifying the namespace explicitly.</li>
+     *    <li>Otherwise the name is resolved nearest scope first: the current request namespace if a
+     *        controller with the name is defined there, then the default namespace ({@code null}) if one
+     *        is defined there, then the namespace of the only controller with the name.</li>
+     *    <li>A name no registered controller has resolves to the current request namespace.</li>
+     *    <li>A name defined in several namespaces, none of them the current request namespace or the
+     *        default one, is ambiguous: {@code null} is returned and the namespace must be specified
+     *        explicitly.</li>
      * </ul>
      *
      * <p>Callers must only use this when no explicit {@code namespace} attribute was supplied; an

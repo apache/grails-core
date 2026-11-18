@@ -21,7 +21,7 @@ If you wish to use GORM for Neo4j outside of a Grails application you should dec
 
 [source,groovy,subs="attributes"]
 ----
-compile "org.grails:grails-datastore-gorm-neo4j:{version}"
+implementation "org.apache.grails.data:grails-data-neo4j-core:{version}"
 ----
 
 Then annotate your entities with the `grails.gorm.annotation.Entity` annotation and implement the link:../api/grails/neo4j/Node.html[Node] trait:

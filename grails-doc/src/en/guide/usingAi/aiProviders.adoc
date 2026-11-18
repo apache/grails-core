@@ -1,0 +1,213 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The `grails-spring-ai` plugin is provider-neutral on purpose. It brings the `ChatClient` API and the auto-configuration every provider shares, but no model: Spring AI implements each provider as a module of its own, with that provider's SDK or HTTP client, its auto-configuration and its `spring.ai.<provider>.*` properties. A provider's starter bundles those, and the `ChatClient.Builder` is only auto-configured once a `ChatModel` bean exists, which is what the starter contributes. The plugin does not choose one for the application because each starter carries its own dependencies and credentials, and because many applications use one provider in development and another in production.
+
+So an application declares the plugin plus one starter per kind of model it uses, chat and embedding being the common pair. Every starter below is managed by the Grails BOM, so none needs a version. The property shown is the one a provider needs at a minimum; each provider's page in the Spring AI reference lists the rest, including how to pick a model with `spring.ai.<provider>.chat.model` and the generation options.
+
+==== Chat Models
+
+[cols="2,3,3,2"]
+|===
+| Provider | Starter | Needs | Spring AI reference
+
+| OpenAI
+| `spring-ai-starter-model-openai`
+| `spring.ai.openai.api-key`
+| {springAiReference}api/chat/openai-chat.html[OpenAI Chat]
+
+| Anthropic
+| `spring-ai-starter-model-anthropic`
+| `spring.ai.anthropic.api-key`
+| {springAiReference}api/chat/anthropic-chat.html[Anthropic Chat]
+
+| Ollama, local models
+| `spring-ai-starter-model-ollama`
+| `spring.ai.ollama.base-url`, a running Ollama
+| {springAiReference}api/chat/ollama-chat.html[Ollama Chat]
+
+| Google GenAI, Gemini on AI Studio or Vertex AI
+| `spring-ai-starter-model-google-genai`
+| `spring.ai.google.genai.api-key`, or a project and location for Vertex AI
+| {springAiReference}api/chat/google-genai-chat.html[Google GenAI Chat]
+
+| Amazon Bedrock Converse
+| `spring-ai-starter-model-bedrock-converse`
+| AWS credentials and `spring.ai.bedrock.aws.region`
+| {springAiReference}api/chat/bedrock-converse.html[Amazon Bedrock Converse]
+
+| Mistral AI
+| `spring-ai-starter-model-mistral-ai`
+| `spring.ai.mistralai.api-key`
+| {springAiReference}api/chat/mistralai-chat.html[Mistral AI Chat]
+
+| DeepSeek
+| `spring-ai-starter-model-deepseek`
+| `spring.ai.deepseek.api-key`
+| {springAiReference}api/chat/deepseek-chat.html[DeepSeek Chat]
+|===
+
+The {springAiReference}api/chat/comparison.html[chat model comparison] in the Spring AI reference shows which providers support images and other media, tool calling, structured JSON output and local deployment.
+
+==== OpenAI-Compatible Services
+
+Many services speak the OpenAI API. They need no starter of their own: the OpenAI starter is pointed at them with a base URL and the service's key, and the model is named with `spring.ai.openai.chat.model`. Groq, for example:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+spring:
+    ai:
+        openai:
+            base-url: https://api.groq.com/openai/v1
+            api-key: ${GROQ_API_KEY}
+            chat:
+                model: llama-3.3-70b-versatile
+----
+
+The Spring AI reference has a page per service with its base URL and model names: {springAiReference}api/chat/azure-openai-chat.html[Azure OpenAI], {springAiReference}api/chat/groq-chat.html[Groq], {springAiReference}api/chat/nvidia-chat.html[NVIDIA], {springAiReference}api/chat/perplexity-chat.html[Perplexity] and {springAiReference}api/chat/dmr-chat.html[Docker Model Runner]. {springAiReference}api/chat/minimax-chat.html[MiniMax] works the same way through the Anthropic starter, with `spring.ai.anthropic.base-url`. {springAiReference}api/chat/oci-genai-chat.html[OCI Generative AI] is maintained outside Spring AI since 2.0 and is not managed by the Grails BOM.
+
+A server on the developer's own machine, such as vLLM, LM Studio, Docker Model Runner or Ollama's OpenAI endpoint, usually wants no key at all. An empty key puts the client in no-auth mode, and it sends no `Authorization` header:
+
+[source,yaml]
+----
+spring:
+    ai:
+        openai:
+            base-url: http://localhost:12434/engines/v1
+            api-key: ''
+            chat:
+                model: ai/llama3.2
+----
+
+Each kind of model can go to a different service, since `spring.ai.openai.chat.base-url`, `spring.ai.openai.embedding.base-url` and the matching `api-key` properties override the shared ones per kind.
+
+Compatibility is a floor, not the provider. What a provider adds beyond the OpenAI API, such as Anthropic's prompt caching and PDF input, Bedrock's IAM credentials, Gemini's audio and video input or Ollama's model pulling, is only reachable through that provider's own starter in the tables above.
+
+==== Embedding Models
+
+An embedding model turns text into the vectors a vector store searches by meaning. Most chat providers offer one, and the chat starter brings it along; the dedicated starters are for embedding-only services.
+
+[cols="2,3,3,2"]
+|===
+| Provider | Starter | Needs | Spring AI reference
+
+| OpenAI
+| `spring-ai-starter-model-openai`
+| `spring.ai.openai.api-key`
+| {springAiReference}api/embeddings/openai-embeddings.html[OpenAI Embeddings]
+
+| Ollama
+| `spring-ai-starter-model-ollama`
+| `spring.ai.ollama.base-url`
+| {springAiReference}api/embeddings/ollama-embeddings.html[Ollama Embeddings]
+
+| Google GenAI
+| `spring-ai-starter-model-google-genai-embedding`
+| `spring.ai.google.genai.api-key`
+| {springAiReference}api/embeddings/google-genai-embeddings-text.html[Google GenAI Text Embeddings]
+
+| Vertex AI, text and multimodal
+| `spring-ai-starter-model-vertex-ai-embedding`
+| A Google Cloud project and location
+| {springAiReference}api/embeddings/vertexai-embeddings-text.html[Vertex AI Text Embeddings]
+
+| Amazon Bedrock, Cohere and Titan
+| `spring-ai-starter-model-bedrock`
+| AWS credentials and `spring.ai.bedrock.aws.region`
+| {springAiReference}api/embeddings/bedrock-titan-embedding.html[Bedrock Titan Embeddings]
+
+| Mistral AI
+| `spring-ai-starter-model-mistral-ai`
+| `spring.ai.mistralai.api-key`
+| {springAiReference}api/embeddings/mistralai-embeddings.html[Mistral AI Embeddings]
+
+| Transformers, ONNX models in the JVM
+| `spring-ai-starter-model-transformers`
+| Nothing, the model runs locally
+| {springAiReference}api/embeddings/onnx.html[Transformers Embeddings]
+
+| PostgresML
+| `spring-ai-starter-model-postgresml-embedding`
+| A PostgreSQL database with the PostgresML extension
+| {springAiReference}api/embeddings/postgresml-embeddings.html[PostgresML Embeddings]
+|===
+
+==== Image, Audio and Moderation Models
+
+[cols="2,2,3,2"]
+|===
+| Kind | Provider | Starter | Spring AI reference
+
+| Image generation
+| OpenAI
+| `spring-ai-starter-model-openai`
+| {springAiReference}api/image/openai-image.html[OpenAI Image]
+
+| Image generation
+| Google GenAI
+| `spring-ai-starter-model-google-genai-image`
+| {springAiReference}api/image/google-genai-image.html[Google GenAI Image]
+
+| Image generation
+| Stability AI
+| `spring-ai-starter-model-stability-ai`
+| {springAiReference}api/image/stabilityai-image.html[Stability AI Image]
+
+| Transcription
+| OpenAI
+| `spring-ai-starter-model-openai`
+| {springAiReference}api/audio/transcriptions/openai-transcriptions.html[OpenAI Transcriptions]
+
+| Text to speech
+| OpenAI
+| `spring-ai-starter-model-openai`
+| {springAiReference}api/audio/speech/openai-speech.html[OpenAI Speech]
+
+| Text to speech
+| ElevenLabs
+| `spring-ai-starter-model-elevenlabs`
+| {springAiReference}api/audio/speech/elevenlabs-speech.html[ElevenLabs Speech]
+
+| Moderation
+| OpenAI
+| `spring-ai-starter-model-openai`
+| {springAiReference}api/moderation/openai-moderation.html[OpenAI Moderation]
+
+| Moderation
+| Mistral AI
+| `spring-ai-starter-model-mistral-ai`
+| {springAiReference}api/moderation/mistral-ai-moderation.html[Mistral AI Moderation]
+|===
+
+==== Several Providers at Once
+
+Two starters that both provide a chat model would both auto-configure one, and the `ChatClient.Builder` needs a single `ChatModel`. The selection properties say which provider configures which kind of model, and `none` turns a kind off:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+spring:
+    ai:
+        model:
+            chat: anthropic
+            embedding: openai
+----
+
+Each kind of model has a selection property of its own; <<aiConfiguration,Configuration>> lists them. To use two chat providers side by side, build a second `ChatClient` from the other provider's model bean, as the {springAiReference}api/chatclient.html[ChatClient reference] shows. The test environment uses the same mechanism: the testing support sets `spring.ai.model.chat` and `spring.ai.model.embedding` to `none` so the provider backs off and its stubs take over, see <<aiTesting,Testing>>.

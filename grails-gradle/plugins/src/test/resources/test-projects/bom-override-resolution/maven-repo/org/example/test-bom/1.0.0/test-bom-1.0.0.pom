@@ -11,6 +11,7 @@
     <properties>
         <mylib.version>2.0.0</mylib.version>
         <childbom.version>1.0.0</childbom.version>
+        <grouplib.version>1.0.0</grouplib.version>
     </properties>
 
     <dependencyManagement>
@@ -20,8 +21,15 @@
                 <artifactId>mylib</artifactId>
                 <version>${mylib.version}</version>
             </dependency>
+            <!-- written as ${project.groupId}, the way the Kotlin, Brave, Zipkin Reporter and
+                 Querydsl BOMs write their own group -->
             <dependency>
-                <groupId>org.example</groupId>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>grouplib</artifactId>
+                <version>${grouplib.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
                 <artifactId>child-bom</artifactId>
                 <version>${childbom.version}</version>
                 <type>pom</type>

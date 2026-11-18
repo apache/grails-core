@@ -19,7 +19,13 @@
 
 package org.grails.plugins.events
 
-import grails.config.Config
+import groovy.transform.CompileStatic
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.BeanRegistry
+import org.springframework.core.env.Environment
+
+import grails.events.bus.EventBus
 import grails.plugins.Plugin
 import org.grails.events.bus.spring.EventBusFactoryBean
 import org.grails.events.gorm.GormDispatcherRegistrar
@@ -31,9 +37,10 @@ import org.grails.events.spring.SpringEventTranslator
  * @author Graeme Rocher
  * @since 3.0
  */
+@CompileStatic
 class EventBusGrailsPlugin extends Plugin {
 
-    def grailsVersion = '7.0.0-SNAPSHOT > *'
+    def grailsVersion = '8.0.0-SNAPSHOT > *'
 
     /**
      * Whether to translate GORM events into reactor events
@@ -41,15 +48,22 @@ class EventBusGrailsPlugin extends Plugin {
     public static final String TRANSLATE_SPRING_EVENTS = 'grails.events.spring'
 
     @Override
-    Closure doWithSpring() {
-        { ->
-            Config config = grailsApplication.config
-            grailsEventBus(EventBusFactoryBean)
-            gormDispatchEventRegistrar(GormDispatcherRegistrar, ref('grailsEventBus'))
+    BeanRegistrar beanRegistrar() {
+        return { BeanRegistry registry, Environment environment ->
+            registry.registerBean('grailsEventBus', EventBusFactoryBean)
+            registry.registerBean('gormDispatchEventRegistrar', GormDispatcherRegistrar) {
+                it.supplier {
+                    new GormDispatcherRegistrar(it.bean('grailsEventBus', EventBus))
+                }
+            }
 
             // make it possible to enable reactor events
-            if (config.getProperty(TRANSLATE_SPRING_EVENTS, Boolean, false)) {
-                springEventTranslator(SpringEventTranslator, ref('grailsEventBus'))
+            if (environment.getProperty(TRANSLATE_SPRING_EVENTS, Boolean, false)) {
+                registry.registerBean('springEventTranslator', SpringEventTranslator) {
+                    it.supplier {
+                        new SpringEventTranslator(it.bean('grailsEventBus', EventBus))
+                    }
+                }
             }
         }
     }

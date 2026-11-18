@@ -20,8 +20,15 @@ package org.grails.gradle.plugin.core
 
 /**
  * Functional test verifying that {@code grails.bom = null} suppresses the automatic
- * application of the Grails platform BOM and the
- * {@code org.apache.grails.gradle.bom-property-overrides} plugin.
+ * application of the Grails platform BOM and, in effect, all bom-property-overrides behavior.
+ *
+ * <p>{@code org.apache.grails.gradle.bom-property-overrides} is applied unconditionally by
+ * {@link GrailsGradlePlugin#applyGrailsBom} (see that method for why - applying it eagerly,
+ * before {@code GrailsCliGradlePlugin}, avoids an {@code afterEvaluate} ordering race in
+ * multi-project builds), so {@code project.plugins.findPlugin(...)} alone can no longer be used
+ * to verify the opt-out. What matters is the functional outcome: with no declared Grails BOM (and
+ * none declared by hand), bom-property-overrides' own auto-detection finds nothing to override,
+ * so it adds zero constraints - opting out is still fully effective.</p>
  *
  * @since 8.0
  * @see GrailsExtension#getBom
@@ -29,7 +36,7 @@ package org.grails.gradle.plugin.core
  */
 class BomOptOutFunctionalSpec extends GradleSpecification {
 
-    def "grails.bom = null suppresses the platform BOM and bom-property-overrides plugin"() {
+    def "grails.bom = null suppresses the platform BOM and any property-based version overrides"() {
         given:
         setupTestResourceProject('auto-apply-bom-disabled')
 
@@ -39,8 +46,8 @@ class BomOptOutFunctionalSpec extends GradleSpecification {
         then: 'no Grails platform BOM is added to implementation'
         result.output.contains('HAS_PLATFORM_BOM=false')
 
-        and: 'the bom-property-overrides plugin is NOT applied'
-        result.output.contains('HAS_BOM_PROPERTY_OVERRIDES=false')
+        and: 'bom-property-overrides finds no declared platform, so it adds no version-override constraints'
+        result.output.contains('HAS_BOM_OVERRIDE_CONSTRAINTS=false')
 
         and: 'Spring DM is also not applied (regardless of the bom setting)'
         result.output.contains('HAS_SPRING_DM=false')

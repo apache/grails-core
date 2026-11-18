@@ -35,10 +35,13 @@ import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.control.messages.SimpleMessage;
 import org.codehaus.groovy.transform.GroovyASTTransformation;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import grails.artefact.Artefact;
-import grails.build.logging.GrailsConsole;
 import grails.compiler.ast.AllArtefactClassInjector;
 import grails.compiler.ast.ClassInjector;
 import grails.compiler.ast.GlobalClassInjector;
@@ -56,6 +59,8 @@ import org.apache.grails.common.compiler.GroovyTransformOrder;
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
 public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransformation implements CompilationUnitAware {
     private static final ClassNode MY_TYPE = new ClassNode(Artefact.class);
+
+    private static final Logger LOG = LoggerFactory.getLogger(ArtefactTypeAstTransformation.class);
 
     protected CompilationUnit compilationUnit;
 
@@ -179,10 +184,22 @@ public class ArtefactTypeAstTransformation extends AbstractArtefactTypeAstTransf
                 }
             }
         } catch (RuntimeException e) {
+            // This runs inside the Groovy compiler, so the CLI console is not available - it belongs to
+            // the cli tier and is off an application's compile classpath. Report through the build's
+            // logger, which carries the stack trace wherever a binding exists, and through the source
+            // unit's error collector, which is what the compiler actually surfaces to the user when
+            // slf4j is unbound (plain groovyc, Ant, embedded compilation).
+            //
+            // Every channel is best-effort and guarded: diagnostics must never replace the failure they
+            // describe, which is why the original exception is always the one rethrown.
             try {
-                GrailsConsole.getInstance().error("Error occurred calling AST injector: " + e.getMessage(), e);
-            } catch (Throwable t) {
-                // ignore it
+                LOG.error("Error occurred calling AST injector: {}", e.getMessage(), e);
+                if (sourceUnit != null) {
+                    sourceUnit.getErrorCollector().addErrorAndContinue(
+                            new SimpleMessage("Error occurred calling AST injector: " + e.getMessage(), sourceUnit));
+                }
+            } catch (Throwable ignored) {
+                // reporting failed; the original exception below is what matters
             }
             throw e;
         }

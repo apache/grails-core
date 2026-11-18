@@ -19,6 +19,15 @@
 
 package grails.plugin.json.view
 
+import java.sql.Time
+import java.time.Duration
+import java.time.MonthDay
+import java.time.Year
+import java.time.YearMonth
+import java.time.ZoneId
+
+import javax.xml.datatype.XMLGregorianCalendar
+
 import groovy.json.JsonGenerator
 import groovy.text.Template
 import groovy.transform.CompileStatic
@@ -45,6 +54,7 @@ import grails.views.ViewConfiguration
 import grails.views.WritableScriptTemplate
 import grails.views.api.GrailsView
 import grails.views.compiler.ViewsTransform
+import org.apache.grails.views.gson.internal.converters.SimpleTypeJsonConverter
 
 /**
  * A template engine for parsing JSON views
@@ -112,13 +122,22 @@ class JsonViewTemplateEngine extends ResolvableGroovyTemplateEngine {
         converters.add(new OffsetDateTimeJsonConverter())
         converters.add(new OffsetTimeJsonConverter())
         converters.add(new PeriodJsonConverter())
+        converters.add(new SimpleTypeJsonConverter<>(Time, Time::toString))
         converters.add(new ZonedDateTimeJsonConverter())
+        converters.add(new SimpleTypeJsonConverter<>(Year, Year::getValue))
+        converters.add(new SimpleTypeJsonConverter<>(YearMonth, YearMonth::toString))
+        converters.add(new SimpleTypeJsonConverter<>(MonthDay, MonthDay::toString))
+        converters.add(new SimpleTypeJsonConverter<>(Duration, Duration::toString))
+        converters.add(new SimpleTypeJsonConverter<>(ZoneId, ZoneId::getId))
+        converters.add(new SimpleTypeJsonConverter<>(TimeZone, TimeZone::getID))
+        converters.add(new SimpleTypeJsonConverter<>(XMLGregorianCalendar, XMLGregorianCalendar::toGregorianCalendar))
+        converters.add(new SimpleTypeJsonConverter<>(javax.xml.datatype.Duration, javax.xml.datatype.Duration::toString))
         OrderComparator.sort(converters)
         converters.each {
             options.addConverter(it)
         }
 
-        this.generator = options.build()
+        this.generator = new JsonViewGenerator(options)
     }
 
     private static void registerConverters(Iterable<? extends JsonGenerator.Converter> source,

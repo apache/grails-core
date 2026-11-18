@@ -118,6 +118,37 @@ class HibernateRuntimeUtilsSpec extends HibernateGormDatastoreSpec {
         !errors.hasErrors()
     }
 
+    void "setupErrorsProperty does not copy global errors"() {
+        given:
+        def profile = new HibernateRuntimeUtilsSpecProfile(name: "Alice")
+        profile.errors.addError(new org.springframework.validation.ObjectError("profile", "global error"))
+        profile.errors.reject("stale.global")
+
+        when:
+        def errors = HibernateRuntimeUtils.setupErrorsProperty(profile)
+
+        then:
+        !errors.hasErrors()
+        errors.globalErrorCount == 0
+    }
+
+    void "setupErrorsProperty keeps only binding failures from a mix of errors"() {
+        given:
+        def profile = new HibernateRuntimeUtilsSpecProfile(name: "Alice")
+        profile.errors.reject("stale.global")
+        profile.errors.addError(new FieldError("profile", "name", "bad", false, null, null, "validation error"))
+        profile.errors.addError(new FieldError("profile", "other", "worse", true, null, null, "binding failure"))
+
+        when:
+        def errors = HibernateRuntimeUtils.setupErrorsProperty(profile)
+
+        then:
+        errors.errorCount == 1
+        errors.getFieldError("other").bindingFailure
+        errors.getFieldError("name") == null
+        errors.globalErrorCount == 0
+    }
+
     // ─── autoAssociateBidirectionalOneToOnes ──────────────────────────────────
 
     void "autoAssociateBidirectionalOneToOnes sets inverse side when null"() {
@@ -233,18 +264,17 @@ class HibernateRuntimeUtilsSpec extends HibernateGormDatastoreSpec {
         errors.getFieldErrors("name").size() == 1
     }
 
-    void "setupErrorsProperty copies ObjectError"() {
+    void 'validation resets an existing ObjectError'() {
         given:
-        def profile = new HibernateRuntimeUtilsSpecProfile(name: "Alice")
-        def existing = new ValidationErrors(profile)
-        existing.addError(new org.springframework.validation.ObjectError("profile", "global error"))
-        profile.errors = existing
+        def profile = new HibernateRuntimeUtilsSpecProfile(name: 'Alice')
+        profile.errors.reject('global.error')
 
         when:
-        def errors = HibernateRuntimeUtils.setupErrorsProperty(profile)
+        boolean valid = profile.validate()
 
         then:
-        errors.getGlobalErrors().size() == 1
+        valid
+        !profile.hasErrors()
     }
 
     void "convertValueToType converts String to other Number types"() {

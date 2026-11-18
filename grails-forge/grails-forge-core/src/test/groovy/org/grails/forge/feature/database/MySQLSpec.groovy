@@ -37,7 +37,7 @@ class MySQLSpec extends ApplicationContextSpec {
 
     void "test there can only be one of DatabaseDriverFeature"() {
         when:
-        getFeatures(beanContext.getBeansOfType(DatabaseDriverFeature)*.name)
+        getFeatures(beanContext.getBeansOfType(DatabaseDriverFeature).values()*.name)
 
         then:
         def ex = thrown(IllegalArgumentException)

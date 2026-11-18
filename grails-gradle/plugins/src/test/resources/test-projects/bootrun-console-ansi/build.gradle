@@ -3,9 +3,10 @@ plugins {
 }
 
 tasks.register('inspectBootRunSysProps') {
+    def consoleAvailable = providers.provider {
+        String.valueOf(tasks.named('bootRun', JavaExec).get().systemProperties.get('spring.output.ansi.console-available'))
+    }
     doLast {
-        def bootRunTask = tasks.named('bootRun', JavaExec).get()
-        def sysProps = bootRunTask.systemProperties
-        println "CONSOLE_AVAILABLE=${sysProps.get('spring.output.ansi.console-available')}"
+        println "CONSOLE_AVAILABLE=${consoleAvailable.get()}"
     }
 }

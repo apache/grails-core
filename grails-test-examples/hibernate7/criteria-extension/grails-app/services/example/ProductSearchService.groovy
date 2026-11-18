@@ -62,4 +62,15 @@ class ProductSearchService {
             numberLike 'price', pricePattern
         }.list() as List<Product>
     }
+
+    /**
+     * Lists every product, the one priced nearest to {@code target} first, through the
+     * {@code orderByPriceDistance} extension and the order handler behind it.
+     */
+    @ReadOnly
+    List<Product> findNearestPrice(BigDecimal target) {
+        new DetachedCriteria(Product).build {
+            orderByPriceDistance target
+        }.list() as List<Product>
+    }
 }

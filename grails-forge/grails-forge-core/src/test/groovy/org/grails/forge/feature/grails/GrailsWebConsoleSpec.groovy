@@ -19,12 +19,12 @@
 
 package org.grails.forge.feature.grails
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Features
 
-class GrailsWebConsoleSpec extends BeanContextSpec {
+class GrailsWebConsoleSpec extends ApplicationContextSpec {
 
     void "test grails-web-console feature"() {
         when:

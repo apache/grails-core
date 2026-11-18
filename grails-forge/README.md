@@ -20,38 +20,75 @@ limitations under the License.
 
 Generates Grails applications.
 
+Forge is itself built with Grails: `grails-forge-core` is a Grails plugin holding the feature catalogue, the
+project generator and the templates, `grails-forge-web` is the Grails web application serving the hosted
+generator's HTTP API, and `grails-forge-cli` is a Grails application without a web server that runs the
+same generator from the command line. Both applications consume the framework the way a generated
+application does, by Maven coordinates, so building Forge is also the first use of the Grails that was just
+built. The `grails` launcher (`grails-cli`) assembles the CLI with the Grails shell CLI into one distribution.
+
+The files the generator writes are rendered from GSPs under `grails-app/views/forge` of `grails-forge-core`
+(and, for the CLI's code generation commands, of `grails-forge-cli`). Each page declares the model it is
+rendered with and is compiled with its module, so a page that does not type check fails the build. The pages
+are rendered by the GSP engine alone, without a web request, and declare `trimLogicLines="true"`: a line
+holding only a scriptlet, a directive or a comment writes nothing, so the line breaks of a generated file are
+the ones its page shows as text. A feature renders a page through `GspView.of(uri, model)`, written as a file
+of the generated project by `GspTemplate`.
+
+## Building
+
+Forge is a separate Gradle build next to the framework build, run with its own wrapper from this directory:
+
+```bash
+$ ./gradlew build
+```
+
+The framework it consumes is substituted from the root build (`includeBuild('..')`), so a change to the
+framework is visible here without publishing. Specs that build generated applications publish the framework to
+`build/local-maven` first, which is why a first `test` run takes a while. To start the hosted generator locally
+run `./gradlew :grails-forge-web:bootRun`; to run the CLI from this build, `./gradlew :grails-cli:installDist`
+and use `grails-cli/build/install/apache-grails-bin/bin/grails-forge-cli`.
+
+Use `-PskipForgeTests` to skip Forge tests and their local-Maven publication prerequisites.
+
 ## Installation
 
-The CLI application comes in various flavours from a universal Java applications to native applications for Windows, Linux and OS X. These are available for direct download on the [releases page](https://github.com/apache/grails-core/releases). For installation see the [Grails documentation](https://grails.apache.org/docs/latest/guide/index.html#buildCLI).
+The CLI is a Java application distributed with Grails for Windows, Linux and macOS. Download it from the [releases page](https://github.com/apache/grails-core/releases). For installation see the [Grails documentation](https://grails.apache.org/docs/latest/guide/index.html#buildCLI).
+
+The Forge CLI defaults to classpath application configuration (`spring.config.location=classpath:/`), so local `application.yml` and `config/` files are not loaded into the generator's context.
 
 If you prefer not to install an application to create Grails applications you can do so with `curl` directly from the API:
 
 ```bash
-$ curl 'https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/demo.zip' -o demo.zip
+$ curl 'https://latest.grails.org/demo.zip' -o demo.zip
 $ unzip demo.zip -d demo
 $ cd demo
 $ ./gradlew run
 ```
 
-Run `curl https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/` for more information on how to use the API or see the API documentation referenced below.
+Run `curl https://latest.grails.org/` for more information on how to use the API.
 
 ## UI
 
 If you prefer a browser based user interface you can visit [Grails Forge](https://start.grails.org).
 
-The user interface is [written in React](https://github.com/apache/grails-forge-ui/tree/main/app/launch) and is a static single page application that simply interacts with the https://start.grails.org API.
+The user interface is [written in React](https://github.com/apache/grails-forge-ui/tree/main/app/launch) and is a static single page application. It lives at https://start.grails.org and calls the Forge APIs at `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `next-snapshot.grails.org`, `prev.grails.org`, `prev-snapshot.grails.org`, and `older.grails.org`.
 
 ## API
 
-API documentation for the production instance can be found at:
+The hosted generator answers `GET /` with a plain-text usage summary. Its OpenAPI description is derived from the application itself by the `grails-openapi` module, from the URL mappings and the controllers of `grails-forge-web` and the OpenAPI annotations they carry, and is served by springdoc with Swagger UI beside it.
 
-* [Swagger / OpenAPI Doc](https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/swagger-ui/index.html)
-* [RAPI Doc](https://grailsforge-latest-cjmq3uyfcq-uc.a.run.app/rapidoc/index.html)
+API documentation for the production instance:
 
-API documentation for the snapshot /development instance can be found at:
+* [Swagger UI](https://latest.grails.org/swagger-ui/index.html)
+* [OpenAPI document](https://latest.grails.org/v3/api-docs)
+* [Plain-text usage](https://latest.grails.org/)
 
-* [Swagger / OpenAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/swagger-ui/index.html)
-* [RAPI Doc](https://grailsforge-snapshot-cjmq3uyfcq-uc.a.run.app/rapidoc/index.html)
+API documentation for the snapshot / development instance:
+
+* [Swagger UI](https://snapshot.grails.org/swagger-ui/index.html)
+* [OpenAPI document](https://snapshot.grails.org/v3/api-docs)
+* [Plain-text usage](https://snapshot.grails.org/)
 
 ## Snapshots and Releases
 
@@ -63,188 +100,12 @@ A release is performed with the following steps:
 * [Monitor the Workflow](https://github.com/apache/grails-core/actions?query=workflow%3ARelease) to check it passed successfully.
 * Celebrate!
 
-## Architecture
+## Distribution to AWS Elastic Beanstalk
 
-![Grails Forge Architecture](grailsforgearchitecture.jpeg)
+The seven Forge API slots run on AWS Elastic Beanstalk behind one shared application load balancer. The UI remains at `https://start.grails.org`.
 
-## Distribution to Google Cloud Run via GitHub Actions
+The API hosts are `latest.grails.org`, `snapshot.grails.org`, `next.grails.org`, `next-snapshot.grails.org`, `prev.grails.org`, `prev-snapshot.grails.org`, and `older.grails.org`. GitHub Actions authenticates to AWS through OIDC using the repository variable `AWS_FORGE_DEPLOY_ROLE_ARN`; it does not use static AWS access keys.
 
+Deployments package the Grails 8 `grails-forge-web` Tomcat `bootJar` as `app.jar` in the `grails-forge-web-aws.zip` source bundle. The bundle also contains `Procfile` and `start.sh`. Analytics is not deployed.
 
-### Cloud Run
-
-To make your life easier, export these environment variables so that you can copy and paste the commands used here. Choose whatever name you want, but the $PROJECT_ID has to be a unique name, because project IDs can't be reused in Google Cloud.
-
-```
-export PROJECT_ID=
-export ACCOUNT_NAME=
-```
-
-For example, your commands should look something like this:
-
-```
-export PROJECT_ID=grailsforge
-export ACCOUNT_NAME=grailsforge
-```
-
-Log in with your Google account:
-
-```
-gcloud auth login
-```
-
-```
-gcloud projects create $PROJECT_ID
-gcloud config set project $PROJECT_ID
-```
-
-Enable billing for your project, and create a billing profile if you don’t have one:
-
-```
-open "https://console.cloud.google.com/billing/linkedaccount?project=$PROJECT_ID"
-```
-
-Enable the necessary services:
-
-```
-gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerregistry.googleapis.com
-```
-
-Create a service account:
-
-```
-gcloud iam service-accounts create $ACCOUNT_NAME \
---description="Cloud Run deploy account" \
---display-name="Cloud-Run-Deploy"
-Give the service account Cloud Run Admin, Storage Admin, and Service Account User roles. You can’t set all of them at once, so you have to run separate commands:
-
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
---member=serviceAccount:$ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com \
---role=roles/run.admin
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
---member=serviceAccount:$ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com \
---role=roles/storage.admin
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
---member=serviceAccount:$ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com \
---role=roles/iam.serviceAccountUser
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
---member=serviceAccount:$ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com \
---role=roles/artifactregistry.writer
-```
-
-Generate a key.json file with your credentials, so your GitHub workflow can authenticate with Google Cloud:
-
-```
-gcloud iam service-accounts keys create key.json \
---iam-account $ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com
-```
-
-### GitHub Actions
-
-GitHub, you need to set up a secrets environment in your repository, with the following values:
-
-- `GCP_PROJECT_ID` is your `$PROJECT_ID`.
-- `GCP_APP_NAME` is your app name.
-- `GCP_EMAIL` is the email from the service account you created, which should look like this: `$ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com`
-- `GCP_CREDENTIALS` is the content from the key.json file that you just created.
-- 
-For example, your settings should look something like this:
-
-`GCP_PROJECT_ID = grailsforge`  
-`GCP_APP_NAME = grailsforge`  
-`GCP_EMAIL = account-name@project-example.iam.gserviceaccount.com`    
-
-Cat the `key.json` content and paste it into the `GCP_CREDENTIALS` secret value.
-
-Now you just need to create a YAML file telling which commands your workflow should run. In your project directory, create a folder called `.github` and create another one inside it called `workflows`.
-
-See the workflows in this project for examples.
-
-## Cloud SQL Setup
-
-![Cloud SQL Admin API Enable Screenshot](docs/enable-cloud-sql-admin-api.png)
-
-### Cloud SQL Instance
-
-Create an instance of Cloud SQL:
-
-![](docs/cloud_sql_create_intance.png)
-
-Choose PostgreSQL as your database engine: 
-
-![](docs/choose-postgresql.png)
-
-![Enable Compute Engine API](docs/enable-compute-engine-api.png)
-
-Configure it with the following options: 
-
-![](docs/dbinstance-options.png)
-
-### Databases
-
-Create two databases `grailsforge-production` and `grailsforge-snapshot`
-
-![Cloud SQL Databases Screenshot](docs/create-two-databases.png)
-
-## Cloud Run environment variables
-
-### Latest Env
-
-#### Cloud Run grailsforge-latest
-
-| Name                                             | Value                                                                                                                                  | 
-|:-------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------|
-| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                                                                                |
-| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-latest`                                                                                        |
-| `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                   |
-| `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                           |
-| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://start.grails.org/`. |
-| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. For example, `https://start.grails.org/`. The default value is `https://start.grails.org/`. |
-
-### Cloud Run grailsforge-analytics-latest
-
-| Name                           | Value                                            | 
-|:-------------------------------|:-------------------------------------------------|
-| `CLOUD_SQL_CONNECTION_NAME`    | `grailsforge:us-central1:grailsforge-postgresdb` |
-| `DB_NAME`                      | `grailsforge-production`                         |
-| `MICRONAUT_ENV_DEDUCTION`      | `false`                                          |
-| `MICRONAUT_ENVIRONMENTS`       | `gcp`                                            |
-| `DATASOURCES_DEFAULT_USERNAME` | `***`                                            |
-| `DATASOURCES_DEFAULT_PASSWORD` | `***`                                            |
-| `DATASOURCES_DEFAULT_URL`      | `jdbc:postgresql:///grailsforge-production`      |
-
-
-### Snapshot Env
-
-### Cloud Run grailsforge-snapshot
-
-| Name                                             | Value                                                                                                                                                  | 
-|:-------------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `MICRONAUT_ENV_DEDUCTION`                        | `false`                                                                                                                                                |
-| `MICRONAUT_ENVIRONMENTS`                         | `gcp`                                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_READ_TIMEOUT` | `20s`                                                                                                                                                  |
-| `MICRONAUT_HTTP_SERVICES_ANALYTICS_URL`          | URL of cloud run `grailsforge-analytics-snapshot`                                                                                                      |
-| `GITHUB_OAUTH_APP_CLIENT_ID`                     | The Client ID shared after creating GitHub OAuth App                                                                                                   |
-| `GITHUB_OAUTH_APP_CLIENT_SECRET`                 | The Client secret shared after creating the GitHub OAuth app                                                                                           |
-| `GITHUB_USER_AGENT`                              | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
-| `GITHUB_REDIRECT_URL`                            | URL of the grails-forge-ui static website. The default value is `https://start.grails.org/`. |
-
-
-### Cloud Run grailsforge-analytics-latest
-
-| Name                           | Value                                            | 
-|:-------------------------------|:-------------------------------------------------|
-| `CLOUD_SQL_CONNECTION_NAME`    | `grailsforge:us-central1:grailsforge-postgresdb` |
-| `DB_NAME`                      | `grailsforge-snapshot`                           |
-| `MICRONAUT_ENV_DEDUCTION`      | `false`                                          |
-| `MICRONAUT_ENVIRONMENTS`       | `gcp`                                            |
-| `DATASOURCES_DEFAULT_USERNAME` | `***`                                            |
-| `DATASOURCES_DEFAULT_PASSWORD` | `***`                                            |
-| `DATASOURCES_DEFAULT_URL`      | `jdbc:postgresql:///grailsforge-snapshot`        |
-
-
+For deployment, rollback, monitoring, and GCP decommissioning, see [AWS Elastic Beanstalk Deployment Runbook](docs/aws-elastic-beanstalk.md).

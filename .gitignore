@@ -54,6 +54,7 @@ _alternativeTable.gsp
 **/src/en/ref/Versions/Grails BOM.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate5.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate7.adoc
+**/src/en/ref/Versions/Grails BOM Neo4j.adoc
 **/src/en/ref/Versions/Grails BOM Micronaut.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate5 Micronaut.adoc
 **/src/en/ref/Versions/Grails BOM Hibernate7 Micronaut.adoc
@@ -62,6 +63,10 @@ stacktrace.log
 target
 tmp/
 !grails-fields/src/main/groovy/org/grails/scaffolding/registry/output
+!grails-forge/*/src/**/build/
+!grails-forge/*/grails-app/**/build/
+# copied from the grails-wrapper build by the Forge plugin's copyGrailsWrapper task
+grails-forge/grails-forge-core/src/main/resources/grails-wrapper/
 !etc/bin
 etc/bin/results
 .vscode/
@@ -70,3 +75,11 @@ etc/bin/results
 node_modules/
 local-tasks.gradle
 local-init.gradle
+
+# Local agent work state
+.omo/
+# Standard location for agent/tooling git worktrees
+.worktrees/
+# Claude Code's default worktree location and personal settings
+.claude/worktrees/
+.claude/settings.local.json

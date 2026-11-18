@@ -33,9 +33,7 @@ import org.hibernate.type.CompositeType;
  */
 public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
-    private static final String GET_ID_METHOD = "getId";
-    private static final String GET_IDENTIFIER_METHOD = "getIdentifier";
-
+    private final Class<?>[] interfaces;
     private final boolean lazyToString;
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -60,6 +58,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
                 componentIdType,
                 session,
                 overridesEquals);
+        this.interfaces = interfaces;
         this.lazyToString = lazyToString;
     }
 
@@ -67,10 +66,8 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
 
-        // Answer identifier access from the LazyInitializer so it never initializes the proxy
-        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName())) ||
-                GET_ID_METHOD.equals(methodName) ||
-                GET_IDENTIFIER_METHOD.equals(methodName)) {
+        // Only the mapped getter can return the identifier without invoking the entity.
+        if (getIdentifierMethod != null && getIdentifierMethod.equals(method)) {
             return getIdentifier();
         }
 
@@ -84,5 +81,26 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         }
 
         return super.intercept(proxy, method, args);
+    }
+
+    /**
+     * Writes the proxy as a {@link SerializableGroovyProxy}, which reads back through
+     * {@link ByteBuddyGroovyProxyFactory} as the same Groovy-aware proxy. Hibernate's own serialized form
+     * only rebuilds stock proxies, through the global bytecode provider.
+     */
+    @Override
+    protected Object serializableProxy() {
+        return new SerializableGroovyProxy(
+                getEntityName(),
+                persistentClass,
+                interfaces,
+                getInternalIdentifier(),
+                isReadOnlySettingAvailable() ? Boolean.valueOf(isReadOnly()) : isReadOnlyBeforeAttachedToSession(),
+                getSessionFactoryUuid(),
+                isAllowLoadOutsideTransaction(),
+                getIdentifierMethod,
+                setIdentifierMethod,
+                componentIdType,
+                lazyToString);
     }
 }

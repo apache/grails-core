@@ -19,15 +19,21 @@
 package org.grails.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
-import java.util.StringTokenizer;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 import groovy.util.ConfigObject;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -53,15 +59,119 @@ import org.grails.core.exceptions.GrailsConfigurationException;
 @Deprecated
 public abstract class NavigableMapConfig implements Config {
     protected static final Logger LOG = LoggerFactory.getLogger(NavigableMapConfig.class);
+
+    /**
+     * A key in brackets that is not an index and holds no dot, {@code [x]} of {@code routes[x]}.
+     */
+    private static final Pattern NAMED_SUBSCRIPT = Pattern.compile("\\[([^.\\[\\]]*[^.\\[\\]0-9][^.\\[\\]]*)]");
     protected ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
     protected ConfigurableConversionService conversionService = new DefaultConversionService();
+    private volatile SystemEnvironmentIndex systemEnvironment = new SystemEnvironmentIndex(System.getenv());
+
     protected NavigableMap configMap = new NavigableMap() {
+
+        /**
+         * The texts the merge in progress has resolved, by the full name of the entry and the text. The merge writes one
+         * entry under several keys: a dotted key under the whole key and in its nested map, and a list element in its
+         * list in the nested map, in its list under the flat key and under its indexed key. Every write takes one value,
+         * even for {@code ${random.uuid}}. A value written below a subscript, {@code db.host} of
+         * {@code rows[0].db.host}, is written again into its element as it was resolved, so each resolved text is also
+         * recorded as resolved for its entry, and an escaped placeholder kept as text is not resolved a second time.
+         */
+        private Map<List<String>, String> resolvedTexts;
+
         @Override
-        protected Object mergeMapEntry(NavigableMap targetMap, String sourceKey, Object newValue) {
-            if (newValue instanceof CharSequence) {
-                newValue = resolvePlaceholders(newValue.toString());
+        public void merge(Map sourceMap, boolean parseFlatKeys) {
+            resolvedTexts = new HashMap<>();
+            try {
+                super.merge(sourceMap, parseFlatKeys);
+            } finally {
+                resolvedTexts = null;
             }
-            return super.mergeMapEntry(targetMap, sourceKey, newValue);
+        }
+
+        /**
+         * Resolves the placeholders in a value before it is written: in a string, in the strings of a list, through
+         * the maps and lists it holds, and in a map written under an indexed key, {@code rows[0]}, which is written into
+         * its list as it is. A map written under a plain key is merged entry by entry, through this method.
+         */
+        @Override
+        protected void mergeMapEntry(NavigableMap rootMap, String path, NavigableMap targetMap, String sourceKey,
+                Object sourceValue, boolean parseFlatKeys, boolean isNestedSet) {
+            Object value = sourceValue;
+            if (sourceValue instanceof CharSequence || sourceValue instanceof List ||
+                    (sourceValue instanceof Map && isIndexed(sourceKey))) {
+                // the full name of the entry, also for a value written below a subscript into its element, db.host of rows[0]
+                List<String> targetPath = targetMap.getPath();
+                value = resolved(targetPath.isEmpty() ? sourceKey : String.join(".", targetPath) + '.' + sourceKey, sourceValue);
+            }
+            super.mergeMapEntry(rootMap, path, targetMap, sourceKey, value, parseFlatKeys, isNestedSet);
+        }
+
+        private boolean isIndexed(String sourceKey) {
+            int subscriptStart = sourceKey.indexOf('[');
+            return subscriptStart > -1 && sourceKey.indexOf(']') > subscriptStart;
+        }
+
+        /**
+         * The value with the placeholders in its strings resolved, through the lists and maps it holds. A list or map
+         * holding no placeholder is the one given, and any other is a copy of the same kind, so the property source
+         * keeps what it holds.
+         */
+        @SuppressWarnings("unchecked")
+        private Object resolved(String name, Object value) {
+            if (value instanceof CharSequence) {
+                return resolvedText(name, value.toString());
+            }
+            if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                List<Object> resolved = null;
+                for (int i = 0; i < list.size(); i++) {
+                    Object element = resolved(name + '[' + i + ']', list.get(i));
+                    if (resolved == null && !Objects.equals(element, list.get(i))) {
+                        resolved = new ArrayList<>(list);
+                    }
+                    if (resolved != null) {
+                        resolved.set(i, element);
+                    }
+                }
+                return resolved != null ? resolved : list;
+            }
+            if (value instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) value;
+                Map<Object, Object> resolved = null;
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    Object element = resolved(name + '.' + entry.getKey(), entry.getValue());
+                    if (resolved == null && !Objects.equals(element, entry.getValue())) {
+                        resolved = map instanceof NavigableMap ? (Map<Object, Object>) (Map<?, ?>) ((NavigableMap) map).clone() : new LinkedHashMap<>(map);
+                    }
+                    if (resolved != null) {
+                        resolved.put(entry.getKey(), element);
+                    }
+                }
+                return resolved != null ? resolved : map;
+            }
+            return value;
+        }
+
+        private String resolvedText(String name, String text) {
+            if (resolvedTexts == null) {
+                return resolvePlaceholders(text);
+            }
+            String entry = entryName(name);
+            String resolved = resolvedTexts.computeIfAbsent(Arrays.asList(entry, text), key -> resolvePlaceholders(text));
+            resolvedTexts.putIfAbsent(Arrays.asList(entry, resolved), resolved);
+            return resolved;
+        }
+
+        /**
+         * The name with each key in brackets that is not an index and holds no dot written as a part of a dotted name.
+         * {@code routes[x]} names the entry {@code x} of the map {@code routes}, and an element of a list from
+         * application.yml holds it under both names, so both take one resolution. A key with a dot, {@code [a.b]}, stays
+         * in its brackets, so it is not taken for the entry {@code b} of a map {@code a}.
+         */
+        private String entryName(String name) {
+            return name.indexOf('[') < 0 ? name : NAMED_SUBSCRIPT.matcher(name).replaceAll(".$1");
         }
     };
 
@@ -217,65 +327,28 @@ public abstract class NavigableMapConfig implements Config {
         return value;
     }
 
+    /**
+     * Reads the process environment again, so that a variable installed after this config was
+     * created, as a test can do reflectively, is seen by the lookups that follow.
+     */
+    void refreshSystemEnvironment() {
+        systemEnvironment = new SystemEnvironmentIndex(System.getenv());
+    }
+
     @Override
     public <T> T getProperty(String key, Class<T> targetType, T defaultValue) {
-        Object value = findInSystemEnvironment(key);
+        Object value = systemEnvironment.get(key);
         if (value == null) {
             value = getValueWithDotNotatedKeySupport(configMap, key);
         }
         if (value == null) {
             value = configMap.get(key);
         }
+        if (value instanceof List && isWrittenByIndexedKeys(key, (List<?>) value)) {
+            value = withPlainMaps((List<?>) value);
+        }
 
         return convertValueIfNecessary(value, targetType, defaultValue);
-    }
-
-    private Object findInSystemEnvironment(String key) {
-        String propertyName = resolvePropertyName(key);
-        return propertyName != null ? System.getenv(propertyName) : null;
-    }
-
-    private String resolvePropertyName(String name) {
-        String resolvedName = checkPropertyName(name);
-        if (resolvedName != null) {
-            return resolvedName;
-        }
-        String uppercasedName = name.toUpperCase();
-        if (!name.equals(uppercasedName)) {
-            resolvedName = checkPropertyName(uppercasedName);
-            if (resolvedName != null) {
-                return resolvedName;
-            }
-        }
-        return name;
-    }
-
-    private String checkPropertyName(String name) {
-        // Check name as-is
-        if (containsKey(name)) {
-            return name;
-        }
-        // Check name with just dots replaced
-        String noDotName = name.replace('.', '_');
-        if (!name.equals(noDotName) && containsKey(noDotName)) {
-            return noDotName;
-        }
-        // Check name with just hyphens replaced
-        String noHyphenName = name.replace('-', '_');
-        if (!name.equals(noHyphenName) && containsKey(noHyphenName)) {
-            return noHyphenName;
-        }
-        // Check name with dots and hyphens replaced
-        String noDotNoHyphenName = noDotName.replace('-', '_');
-        if (!noDotName.equals(noDotNoHyphenName) && containsKey(noDotNoHyphenName)) {
-            return noDotNoHyphenName;
-        }
-        // Give up
-        return null;
-    }
-
-    private boolean containsKey(String name) {
-        return System.getenv(name) != null;
     }
 
     private Map<Object, Object> convertToMap(NavigableMap from, IdentityHashMap<NavigableMap, Map<Object, Object>> cache) {
@@ -302,6 +375,41 @@ public abstract class NavigableMapConfig implements Config {
         }
         cache.put(from, to);
         return to;
+    }
+
+    /**
+     * Whether the list holds a nested map for an element that indexed keys alone wrote, {@code rows[0].name}. The flat
+     * key of such a list holds the plain maps the subscripts wrote, which getProperty gave before the nested maps held
+     * the list. A list from application.yml, or merged as a list, holds its nested maps under the flat key too, and is
+     * given as it is held, as before.
+     */
+    private boolean isWrittenByIndexedKeys(String key, List<?> list) {
+        if (!holdsNavigableMap(list)) {
+            return false;
+        }
+        Object flat = configMap.get(key);
+        return flat instanceof List && !holdsNavigableMap((List<?>) flat);
+    }
+
+    /**
+     * The list with its maps as plain maps, as getProperty gives a map, whatever type the list is read as.
+     */
+    private List<Object> withPlainMaps(List<?> list) {
+        final IdentityHashMap<NavigableMap, Map<Object, Object>> cache = new IdentityHashMap<>();
+        final List<Object> converted = new ArrayList<>(list.size());
+        for (Object o: list) {
+            converted.add(o instanceof NavigableMap ? convertToMap((NavigableMap) o, cache) : o);
+        }
+        return converted;
+    }
+
+    private static boolean holdsNavigableMap(List<?> list) {
+        for (Object o: list) {
+            if (o instanceof NavigableMap) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ConfigObject convertPropsToMap(ConfigObject config) {
@@ -404,27 +512,142 @@ public abstract class NavigableMapConfig implements Config {
             return null;
         }
 
-        List<String> keys = convertTokensIntoArrayList(new StringTokenizer(key, "."));
-        if (keys.size() == 0) {
-            return null;
-        }
-
         Object value = null;
-        for (int i = 0; i < keys.size(); i++) {
-            if (i == 0) {
-                value = configMap.get(keys.get(i));
-            } else if (value instanceof Map) {
-                value = ((Map) value).get(keys.get(i));
+        boolean first = true;
+        int length = key.length();
+        int start = 0;
+        while (start < length) {
+            int end = key.indexOf('.', start);
+            if (end < 0) {
+                end = length;
             }
+            if (end > start) {
+                String segment = key.substring(start, end);
+                if (first) {
+                    value = configMap.get(segment);
+                    first = false;
+                } else if (value instanceof Map) {
+                    value = ((Map<?, ?>) value).get(segment);
+                } else {
+                    break;
+                }
+            }
+            start = end + 1;
         }
         return value;
     }
 
-    private List<String> convertTokensIntoArrayList(StringTokenizer st) {
-        List<String> elements = new ArrayList<>();
-        while (st.hasMoreTokens()) {
-            elements.add(st.nextToken());
+    /**
+     * The process environment as it stood when this config was created, indexed so that a key no
+     * variable can match is answered without allocating.
+     * <p>
+     * A key matches a variable in any of the spellings Spring's {@code SystemEnvironmentPropertySource}
+     * accepts: as written, with dots replaced by underscores, with hyphens replaced by underscores,
+     * with both replaced, and the upper-cased form of each. Every one of those spellings has the same
+     * canonical name, so a key whose canonical name belongs to no variable cannot match and is
+     * rejected without probing: the hash of its canonical name is computed over its characters and
+     * looked up among the hashes of the variables' canonical names. Only a key whose hash is present
+     * builds the canonical name for the exact check and then runs the spelling-by-spelling resolution,
+     * which keeps the precedence between spellings as it was.
+     * <p>
+     * The environment of a running JVM cannot change, so one snapshot per config instance is exact;
+     * {@link #refreshSystemEnvironment()} takes a new one for a test that installs variables
+     * reflectively. The memory it takes is proportional to the number of environment variables, not
+     * to the size of the configuration or to the number of keys looked up.
+     */
+    private static final class SystemEnvironmentIndex {
+
+        /**
+         * {@code System.getenv(String)} matches a variable name case-insensitively on Windows, where
+         * the operating system does, and exactly everywhere else. The snapshot keeps that contract.
+         */
+        private static final boolean IS_WINDOWS = System.getProperty("os.name", "").startsWith("Windows");
+
+        private final Map<String, String> variables;
+        private final Set<String> canonicalNames;
+        private final int[] canonicalHashes;
+
+        SystemEnvironmentIndex(Map<String, String> environment) {
+            this.variables = IS_WINDOWS ? new TreeMap<>(String.CASE_INSENSITIVE_ORDER) : HashMap.newHashMap(environment.size());
+            this.variables.putAll(environment);
+            this.canonicalNames = HashSet.newHashSet(variables.size());
+            for (String name : variables.keySet()) {
+                canonicalNames.add(canonicalName(name));
+            }
+            this.canonicalHashes = canonicalNames.stream().mapToInt(String::hashCode).sorted().toArray();
         }
-        return elements;
+
+        String get(String key) {
+            if (key == null || !mayMatch(key)) {
+                return null;
+            }
+            return variables.get(resolvePropertyName(key));
+        }
+
+        /**
+         * Whether the canonical name of the key belongs to a variable. The name's hash is computed
+         * over the key's characters without building the name, and only a key whose hash is present
+         * builds it for the exact check. A character above ASCII can upper-case to more than one
+         * character, as {@code ß} does, so a key that contains one takes the exact check directly.
+         */
+        private boolean mayMatch(String key) {
+            int hash = 0;
+            for (int i = 0, length = key.length(); i < length; i++) {
+                char c = key.charAt(i);
+                if (c > 127) {
+                    return canonicalNames.contains(canonicalName(key));
+                }
+                if (c == '.' || c == '-') {
+                    c = '_';
+                } else if (c >= 'a' && c <= 'z') {
+                    c = (char) (c - ('a' - 'A'));
+                }
+                hash = 31 * hash + c;
+            }
+            return Arrays.binarySearch(canonicalHashes, hash) >= 0 && canonicalNames.contains(canonicalName(key));
+        }
+
+        private static String canonicalName(String name) {
+            return name.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+        }
+
+        private String resolvePropertyName(String name) {
+            String resolvedName = checkPropertyName(name);
+            if (resolvedName != null) {
+                return resolvedName;
+            }
+            String uppercasedName = name.toUpperCase(Locale.ROOT);
+            if (!name.equals(uppercasedName)) {
+                resolvedName = checkPropertyName(uppercasedName);
+                if (resolvedName != null) {
+                    return resolvedName;
+                }
+            }
+            return name;
+        }
+
+        private String checkPropertyName(String name) {
+            // Check name as-is
+            if (variables.containsKey(name)) {
+                return name;
+            }
+            // Check name with just dots replaced
+            String noDotName = name.replace('.', '_');
+            if (!name.equals(noDotName) && variables.containsKey(noDotName)) {
+                return noDotName;
+            }
+            // Check name with just hyphens replaced
+            String noHyphenName = name.replace('-', '_');
+            if (!name.equals(noHyphenName) && variables.containsKey(noHyphenName)) {
+                return noHyphenName;
+            }
+            // Check name with dots and hyphens replaced
+            String noDotNoHyphenName = noDotName.replace('-', '_');
+            if (!noDotName.equals(noDotNoHyphenName) && variables.containsKey(noDotNoHyphenName)) {
+                return noDotNoHyphenName;
+            }
+            // Give up
+            return null;
+        }
     }
 }

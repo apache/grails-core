@@ -133,6 +133,45 @@ class JpaProjectionAdapterSpec extends HibernateGormDatastoreSpec {
         !subquery.getSelection().isCompoundSelection()
         subquery.getSelection().getAlias() == "col_0"
     }
+
+    void "test adapt SQL projections with the queried entity selects each SQL column under its alias"() {
+        given:
+        def cb = getCriteriaBuilder()
+        def query = cb.createTupleQuery()
+        def root = query.from(AdapterTestEntity)
+        def context = JpaQueryContext.forRoot(root)
+        def adapter = new JpaProjectionAdapter(cb, context, getPersistentEntity(AdapterTestEntity))
+
+        def projectionList = new Query.ProjectionList()
+        projectionList.add(new SqlGroupProjection("upper({alias}.category)"))
+        projectionList.add(new SqlProjection("upper({alias}.category)", "category", String))
+        projectionList.add(new SqlProjection("sum({alias}.amount)", "total", Long))
+
+        when:
+        adapter.adapt(projectionList, query)
+
+        then:
+        query.getSelection().isCompoundSelection()
+        query.getSelection().getCompoundSelectionItems()*.alias == ["category", "total"]
+        query.getSelection().getCompoundSelectionItems()*.javaType == [String, Long]
+    }
+
+    void "test adapt a SQL projection with {alias} needs the queried entity"() {
+        given:
+        def cb = getCriteriaBuilder()
+        def query = cb.createQuery(String.class)
+        def root = query.from(AdapterTestEntity)
+        def adapter = new JpaProjectionAdapter(cb, JpaQueryContext.forRoot(root))
+
+        def projectionList = new Query.ProjectionList()
+        projectionList.add(new SqlProjection("upper({alias}.name)", "name", String))
+
+        when:
+        adapter.adapt(projectionList, query)
+
+        then:
+        thrown(IllegalStateException)
+    }
 }
 
 @Entity

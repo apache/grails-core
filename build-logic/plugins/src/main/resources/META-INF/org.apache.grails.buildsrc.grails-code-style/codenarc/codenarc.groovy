@@ -26,6 +26,10 @@ ruleset {
     }
     ClosureStatementOnOpeningLineOfMultipleLineClosure
     ConsecutiveBlankLines
+    EmptyCatchBlock {
+        ignoreRegex = 'ignore|ignored'
+        priority = 3
+    }
     FileEndsWithoutNewline
     NoTabCharacter
     DuplicateImport

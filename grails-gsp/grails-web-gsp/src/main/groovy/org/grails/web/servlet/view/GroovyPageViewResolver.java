@@ -152,7 +152,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
             StringBuilder stringBuilder = new StringBuilder();
             namespace = webRequest.getControllerNamespace();
             controller = webRequest.getControllerName();
-            pluginContextPath = (webRequest.getAttributes() != null && webRequest.getCurrentRequest() != null) ? webRequest.getAttributes().getPluginContextPath(webRequest.getCurrentRequest()) : null;
+            pluginContextPath = (webRequest.getAttributes() != null && webRequest.getRequest() != null) ? webRequest.getAttributes().getPluginContextPath(webRequest.getRequest()) : null;
 
             stringBuilder.append(GrailsStringUtils.isNotEmpty(pluginContextPath) ? pluginContextPath : "-");
             stringBuilder.append(',');
@@ -190,7 +190,7 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup();
         if (webRequest != null) {
-            HttpServletRequest request = webRequest.getCurrentRequest();
+            HttpServletRequest request = webRequest.getRequest();
             controller = webRequest.getAttributes().getController(request);
         }
 
@@ -213,7 +213,14 @@ public class GroovyPageViewResolver extends InternalResourceViewResolver impleme
         return createFallbackView(viewName);
     }
 
-    private View createGroovyPageView(String gspView, ScriptSource scriptSource) {
+    /**
+     * Creates the view that renders a located page.
+     *
+     * @param gspView the URI the page was located by
+     * @param scriptSource the page
+     * @return the initialised view
+     */
+    protected View createGroovyPageView(String gspView, ScriptSource scriptSource) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Resolved GSP view at URI [" + gspView + "]");
         }

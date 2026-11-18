@@ -1,0 +1,9 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    i18n {
+        basenames = ['api', 'api_errors']
+    }
+}

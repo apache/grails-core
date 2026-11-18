@@ -66,7 +66,7 @@ abstract class AbstractJsonViewContainerRenderer<C,T> extends DefaultJsonRendere
                     model.putAll((Map) contextModel)
                 }
 
-                def request = webRequest.currentRequest
+                def request = webRequest.request
                 def response = webRequest.currentResponse
                 view.render(model, request, response)
             } else {

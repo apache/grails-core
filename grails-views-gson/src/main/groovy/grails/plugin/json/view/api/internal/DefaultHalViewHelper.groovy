@@ -34,7 +34,6 @@ import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.plugin.json.view.api.HalViewHelper
 import grails.plugin.json.view.api.JsonView
 import grails.rest.Link
-import grails.util.GrailsNameUtils
 import grails.views.WritableScriptTemplate
 import grails.views.api.GrailsView
 import grails.views.api.HttpView
@@ -110,7 +109,9 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                     builder.call {
                         helper.setDelegate((StreamingJsonBuilder.StreamingJsonDelegate) delegate)
                         if (firstObject != null) {
-                            helper.links(GrailsNameUtils.getPropertyName(firstObject.getClass()))
+                            // The element class rather than a controller named after it, so the collection
+                            // links to the controller serving its elements, as each element's self link does.
+                            helper.links(firstObject.getClass())
                         }
                         call(EMBEDDED_ATTRIBUTE, jsonWritable)
 
@@ -190,7 +191,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     //TODO: Once GROOVY-9662 is fixed, remove explicit delegate call and typecast to StreamingJsonDelegate
-    void links(Map model, Object paginationObject, Number total, String contentType = this.contentType) {
+    void links(Map model, Object paginationObject, Long total, String contentType = this.contentType) {
         def jsonView = view
         jsonDelegate.call(LINKS_ATTRIBUTE) {
             def linkGenerator = jsonView.linkGenerator
@@ -226,7 +227,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
                 }
 
                 if (paginationObject != null) {
-                    List<Link> links = getPaginationLinks(paginationObject, total.intValue(), jsonView.params) as List<Link>
+                    List<Link> links = getPaginationLinks(paginationObject, total, jsonView.params) as List<Link>
                     for (link in links) {
                         ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(link.rel) {
                             ((StreamingJsonBuilder.StreamingJsonDelegate) delegate).call(HREF_ATTRIBUTE, link.href)
@@ -244,7 +245,7 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
     }
 
     void links(Map model, String contentType = this.contentType) {
-        links(model, null, 0)
+        links(model, null, 0L)
     }
 
     /**
@@ -258,12 +259,12 @@ class DefaultHalViewHelper extends DefaultJsonViewHelper implements HalViewHelpe
      * @param order The order in which the results are to be sorted eg: DESC or ASC
      */
     //TODO: Once GROOVY-9662 is fixed, remove explicit delegate call and typecast to StreamingJsonDelegate
-    void paginate(Object object, Integer total, Integer offset = null, Integer max = null,  String sort = null, String order = null) {
+    void paginate(Object object, Long total, Long offset = null, Integer max = null,  String sort = null, String order = null) {
         Map<String, Object> linkParams = buildPaginateParams(max, offset, sort, order)
 
         GrailsView jsonView = view
         Parameters httpParams = jsonView.params
-        offset = offset ?: httpParams.int(PAGINATION_OFFSET, 0)
+        offset = offset ?: httpParams.long(PAGINATION_OFFSET, 0L)
         max = max ?: httpParams.int(PAGINATION_MAX, 10)
         sort = sort ?: httpParams.get(PAGINATION_SORT)
         order = order ?: httpParams.get(PAGINATION_ORDER)

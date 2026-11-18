@@ -467,8 +467,18 @@ class Book {
     static hasMany = [authors: Author, tags: Tag, basics: String, otherBookTypes: BookType]
 
     static constraints = {
-        description nullable: true
-        nullBookType nullable: true
+        title nullable: false
+        metadata nullable: false
+        bookType nullable: false
+
+        otherMetadata nullable: false
+        otherMetadata2 nullable: false
+        someOtherMetadata nullable: false
+
+        authors nullable: false
+        tags nullable: false
+        basics nullable: false
+        otherBookTypes nullable: false
     }
 
     static embedded = ['otherMetadata2', 'someOtherMetadata']
@@ -485,6 +495,10 @@ class Book2 implements Serializable {
 
     static mapping = {
         id composite: ['title', 'description']
+        title nullable: false
+        description nullable: false
+        metadata nullable: false
+        bookType nullable: false
     }
 
     int hashCode() {

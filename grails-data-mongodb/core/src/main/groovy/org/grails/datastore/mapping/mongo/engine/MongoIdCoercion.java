@@ -90,4 +90,28 @@ public final class MongoIdCoercion {
             return key;
         }
     }
+
+    /**
+     * Inverse of {@link #coerceIdToStoredType}: convert a value just read from BSON back to
+     * the entity's declared identifier type, so that association properties hold the type the
+     * domain class declares ({@code String}) regardless of how {@code _id} is stored on disk
+     * ({@code ObjectId}).
+     *
+     * <p>Returns the original {@code value} when it is {@code null}, already an instance of
+     * the declared type, the entity declares no identity, or the converter throws.
+     */
+    public static Object coerceIdToDeclaredType(Object value, PersistentEntity entity) {
+        if (value == null || entity == null) return value;
+        try {
+            if (entity.getIdentity() == null) return value;
+            Class<?> declared = entity.getIdentity().getType();
+            if (declared == null || declared.isInstance(value)) return value;
+            ConversionService cs = entity.getMappingContext().getConversionService();
+            Object converted = cs.convert(value, declared);
+            return converted != null ? converted : value;
+        }
+        catch (Exception ignored) {
+            return value;
+        }
+    }
 }

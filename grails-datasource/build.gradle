@@ -34,6 +34,11 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails'
 
+grailsCodeAnalysis {
+    // PMD baseline is clean for this module; keep it blocking.
+    enablePmd()
+}
+
 dependencies {
 
     implementation platform(project(':grails-bom'))
@@ -46,17 +51,19 @@ dependencies {
     api project(':grails-datastore-core')
 
     compileOnly 'org.apache.tomcat:tomcat-jdbc'
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     api project(':grails-core')
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
 
     testImplementation 'com.h2database:h2'
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.apache.groovy:groovy-json', {
+        // impl: JsonSlurper
+    }
+    testRuntimeOnly 'org.apache.tomcat:tomcat-jdbc'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

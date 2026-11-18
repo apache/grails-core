@@ -19,12 +19,11 @@ tasks.register('customExec', JavaExec) {
 }
 
 tasks.register('checkOverride') {
-    doLast {
+    def overrideVersion = providers.provider {
         def launcher = tasks.named('customExec', JavaExec).get().javaLauncher
-        if (launcher.isPresent()) {
-            println "OVERRIDE_VERSION=${launcher.get().metadata.languageVersion.asInt()}"
-        } else {
-            println 'OVERRIDE_VERSION=none'
-        }
+        launcher.isPresent() ? String.valueOf(launcher.get().metadata.languageVersion.asInt()) : 'none'
+    }
+    doLast {
+        println "OVERRIDE_VERSION=${overrideVersion.get()}"
     }
 }

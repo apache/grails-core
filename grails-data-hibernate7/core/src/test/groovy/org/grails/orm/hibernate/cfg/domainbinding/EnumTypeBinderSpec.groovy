@@ -18,35 +18,34 @@
  */
 package org.grails.orm.hibernate.cfg.domainbinding
 
-import org.hibernate.type.descriptor.WrapperOptions
-
-import grails.gorm.tests.HibernateGormDatastoreSpec
-import grails.persistence.Entity
-import org.grails.datastore.mapping.model.PersistentProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
-import org.grails.orm.hibernate.cfg.IdentityEnumType
-import jakarta.persistence.EnumType
-import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
-import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateToManyProperty
-import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
-import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
-import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
-import org.hibernate.engine.spi.SharedSessionContractImplementor
-import org.hibernate.mapping.Table
-import org.hibernate.mapping.RootClass
-import org.hibernate.usertype.UserType
-import spock.lang.Subject
-import spock.lang.Unroll
-
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.SQLException
 
+import jakarta.persistence.EnumType
+
+import org.hibernate.mapping.RootClass
+import org.hibernate.mapping.Table
+import org.hibernate.type.descriptor.WrapperOptions
+import org.hibernate.usertype.UserType
+import spock.lang.Subject
+import spock.lang.Unroll
+
+import grails.gorm.tests.HibernateGormDatastoreSpec
+import grails.persistence.Entity
+import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.orm.hibernate.cfg.IdentityEnumType
 import org.grails.orm.hibernate.cfg.domainbinding.binder.ColumnConfigToColumnBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.EnumTypeBinder
+import org.grails.orm.hibernate.cfg.domainbinding.binder.GrailsDomainBinder
 import org.grails.orm.hibernate.cfg.domainbinding.binder.IndexBinder
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateBasicProperty
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernateEnumProperty
+import org.grails.orm.hibernate.cfg.domainbinding.util.BackticksRemover
+import org.grails.orm.hibernate.cfg.domainbinding.util.ColumnNameForPropertyAndPathFetcher
+import org.grails.orm.hibernate.cfg.domainbinding.util.CreateKeyForProps
+import org.grails.orm.hibernate.cfg.domainbinding.util.DefaultColumnNameFetcher
 
 class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
 
@@ -55,6 +54,10 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
 
     @Subject
     EnumTypeBinder binder
+
+    void setupSpec() {
+        manager.registerDomainClasses(PersonWithColumnExtras)
+    }
 
     def setup() {
         def grailsDomainBinder = getGrailsDomainBinder()
@@ -81,12 +84,13 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         def table = new Table("person_statuses")
         def property = setupProperty(PersonWithCollection, "statuses", table)
 
-        expect: "The property is a ToMany property"
+        expect: "The property is both a ToMany and an enum property"
         property instanceof HibernateBasicProperty == true
+        property instanceof HibernateEnumProperty == true
 
         when: "the enum is bound for the collection column"
         // This will now successfully call property.getComponentType() internally
-        def result = binder.bindEnumTypeForColumn(property as HibernateBasicProperty)
+        def result = binder.bindEnumType(property as HibernateEnumProperty, GrailsDomainBinder.EMPTY_PATH)
 
         then: "The BasicValue is configured correctly"
         result.getEnumerationStyle() == EnumType.STRING
@@ -160,28 +164,97 @@ class EnumTypeBinderSpec extends HibernateGormDatastoreSpec {
         1 * columnBinder.bindColumnConfigToColumn(_, _, _)
         1 * indexBinder.bindIndex("status_col", _, _, _)
     }
+
+    def "should apply the comment, default value and read and write expressions of the column config"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(PersonWithColumnExtras, "status", table)
+
+        when:
+        def column = binder.bindEnumType(property as HibernateEnumProperty, "").getColumns()[0] as org.hibernate.mapping.Column
+
+        then:
+        column.getComment() == "the status"
+        column.getDefaultValue() == "'AVAILABLE'"
+        column.getCustomRead() == "lower(status)"
+        column.getCustomWrite() == "upper(?)"
+    }
+
+    def "should leave the column extras unset when the enum property has no column config"() {
+        given:
+        def table = new Table("person")
+        def property = setupProperty(Person01, "status", table)
+
+        when:
+        def column = binder.bindEnumType(property as HibernateEnumProperty, "").getColumns()[0] as org.hibernate.mapping.Column
+
+        then:
+        column.getComment() == null
+        column.getDefaultValue() == null
+        column.getCustomRead() == null
+        column.getCustomWrite() == null
+    }
+
+    def "the column extras of an enum property reach the bound column and the schema"() {
+        given:
+        def column = getPersistentEntity(PersonWithColumnExtras).persistentClass.getProperty("status").columns[0] as org.hibernate.mapping.Column
+        def metadata = sessionFactory.currentSession
+                .createNativeQuery("select column_default, remarks from information_schema.columns " +
+                        "where table_name = 'PERSON_WITH_COLUMN_EXTRAS' and column_name = 'STATUS'", Object[])
+                .uniqueResult() as Object[]
+
+        expect:
+        column.getComment() == "the status"
+        column.getDefaultValue() == "'AVAILABLE'"
+        column.getCustomRead() == "lower(status)"
+        column.getCustomWrite() == "upper(?)"
+        metadata[0].toString().contains("AVAILABLE")
+        metadata[1] == "the status"
+    }
+
+    def "should create the unique group key for the enum column on the bound table"() {
+        given:
+        def grailsDomainBinder = getGrailsDomainBinder()
+        def namingStrategy = grailsDomainBinder.getNamingStrategy()
+        def defaultColumnNameFetcher = new DefaultColumnNameFetcher(namingStrategy, new BackticksRemover())
+        def columnNameFetcher = new ColumnNameForPropertyAndPathFetcher(namingStrategy, defaultColumnNameFetcher, new BackticksRemover())
+        def createKeyForProps = Mock(CreateKeyForProps)
+        def keyBinder = new EnumTypeBinder(grailsDomainBinder.getMetadataBuildingContext(), columnNameFetcher,
+                indexBinder, columnBinder, namingStrategy, createKeyForProps)
+        def table = new Table("person")
+        def property = setupProperty(Person01, "status", table)
+
+        when:
+        keyBinder.bindEnumType(property as HibernateEnumProperty, "myPath")
+
+        then:
+        1 * createKeyForProps.createKeyForProps(property, "myPath", table, "my_path_status")
+    }
 }
 
 // --- Supporting Classes ---
 
 enum Status01 { AVAILABLE, OUT_OF_STOCK }
 
-@Entity class Person01 { Long id; Status01 status }
+@Entity class Person01 {
+    Long id; Status01 status
+    static constraints = { status nullable: false }
+}
 @Entity class Person02 {
     Long id; Status01 status
-    static mapping = { status enumType: "string", nullable: true }
+    static mapping = { status enumType: "string" }
 }
 @Entity class Person03 {
     Long id; Status01 status
-    static mapping = { status enumType: "ordinal", nullable: true }
+    static mapping = { status enumType: "ordinal" }
 }
 @Entity class Person04 {
     Long id; Status01 status
-    static mapping = { status enumType: "identity" }
+    static mapping = { status enumType: "identity", nullable: false }
 }
 @Entity class Person05 {
     Long id; Status01 status
-    static mapping = { status type: UserTypeEnumType }
+    static mapping = { status type: UserTypeEnumType, nullable: false }
 }
 @Entity class PersonWithCollection {
     Long id
@@ -190,6 +263,12 @@ enum Status01 { AVAILABLE, OUT_OF_STOCK }
 @Entity class PersonWithExplicitColumn {
     Long id; Status01 status
     static mapping = { status column: "status_col", index: "idx_status" }
+}
+@Entity class PersonWithColumnExtras {
+    Long id; Status01 status
+    static mapping = {
+        status comment: "the status", defaultValue: "'AVAILABLE'", read: "lower(status)", write: "upper(?)"
+    }
 }
 @Entity class Clown01 extends Person01 { String clownName }
 

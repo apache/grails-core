@@ -29,7 +29,7 @@
 </s2ui:securityInfoTable>
 </g:if>
 <g:else>
-<h3><g:message code='spring.security.ui.info.secureChannel.disabled'/></h3>
+<h1 class="h4 mb-3"><g:message code='spring.security.ui.info.secureChannel.disabled'/></h1>
 </g:else>
 </body>
 </html>

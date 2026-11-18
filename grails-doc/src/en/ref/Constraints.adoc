@@ -118,6 +118,9 @@ class UserCommand {
 
 This will import all the constraints from the `User` domain class and apply them to `UserCommand`. The import will ignore any constraints in the source class (`User`) that don't have corresponding properties in the importing class (`UserCommand`). In the above case, only the 'firstName' and 'lastName' constraints will be imported into `UserCommand`.
 
+A property for which the source domain class declares no `nullable` constraint is imported with the domain class's nullable default.
+It is nullable, unless `grails.gorm.default.nullable` is set to `false` or a `+'*'(nullable: false)+` global constraint is defined, in which case it is required.
+
 If you want more control over which constraints are imported, use the `include` and `exclude` named arguments. Both of these accept a list of simple or regular expression strings that are matched against the property names in the source constraints. So for example, if you only wanted to import the 'lastName' constraint you would use:
 
 [source,groovy]

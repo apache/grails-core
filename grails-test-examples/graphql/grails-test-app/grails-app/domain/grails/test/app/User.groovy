@@ -32,7 +32,8 @@ class User {
     Address address //embedded domain class
 
     static constraints = {
-        manager nullable: true
+        profile nullable: false
+        address nullable: false
     }
 
     static embedded = ['address', 'profile']

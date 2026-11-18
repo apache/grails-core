@@ -88,6 +88,11 @@ include::ref/Command Line/create-integration-test.adoc[]
 
 include::ref/Command Line/create-interceptor.adoc[]
 
+[[ref-command-line-create-job]]
+==== create-job
+
+include::ref/Command Line/create-job.adoc[]
+
 [[ref-command-line-create-plugin]]
 ==== create-plugin
 
@@ -1342,3 +1347,23 @@ include::ref/Tags/uploadForm.adoc[]
 ==== while
 
 include::ref/Tags/while.adoc[]
+
+[[ref-triggers]]
+=== Triggers
+
+include::ref/Triggers.adoc[]
+
+[[ref-triggers-cron]]
+==== cron
+
+include::ref/Triggers/cron.adoc[]
+
+[[ref-triggers-custom]]
+==== custom
+
+include::ref/Triggers/custom.adoc[]
+
+[[ref-triggers-simple]]
+==== simple
+
+include::ref/Triggers/simple.adoc[]

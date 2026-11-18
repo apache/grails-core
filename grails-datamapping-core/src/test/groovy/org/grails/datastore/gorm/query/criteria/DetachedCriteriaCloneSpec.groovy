@@ -116,8 +116,3 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.defaultOffset == 10
     }
 }
-
-class TestEntity {
-    Long id
-    String name
-}
