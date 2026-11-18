@@ -31,7 +31,8 @@ import spock.lang.Unroll
 /**
  * Whether a query is put in the query cache, by what asks for it: the mapping of the entity, the cache argument and the
  * cache call inside a criteria, at each way in. An explicit false wins over a mapping that caches, an explicit true over
- * a mapping that does not, and the total count of a paged list follows the list.
+ * a mapping that does not, and the argument wins over the call inside the criteria. The total
+ * count of a paged list is never put in the query cache, also when the list is.
  */
 @Issue(['https://github.com/apache/grails-core/issues/14472', 'https://github.com/apache/grails-core/issues/14458'])
 class QueryCacheOptionSpec extends Specification {
@@ -114,6 +115,16 @@ class QueryCacheOptionSpec extends Specification {
         'a static list sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.list(max: 2, sort: 'author.name', cache: false) } || false
         'a dynamic finder sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.findAllByTitle('b1', [sort: 'author.name', cache: false]) } || false
         'a criteria list sorted through a cached association' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { } } || true
+        'findAllWhere sorted through a cached association with cache: false' | 'a cached mapping' | datastore | QcBook | { Class t -> t.findAllWhere([title: 'b1'], [sort: 'author.name', cache: false]) } || false
+        'findAllWhere sorted through a cached association' | 'a cached mapping' | datastore | QcBook | { Class t -> t.findAllWhere([title: 'b1'], [sort: 'author.name']) } || true
+        'findAllWhere sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.findAllWhere([title: 'b1'], [sort: 'author.name']) } || false
+        'findAllWhere sorted through a cached association with cache: true' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.findAllWhere([title: 'b1'], [sort: 'author.name', cache: true]) } || true
+        'findWhere sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.findWhere([title: 'b1'], [sort: 'author.name']) } || false
+        'find by example sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.find(new QcNote(title: 'b1'), [sort: 'author.name']) } || false
+        'findAll by example sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.findAll(new QcNote(title: 'b1'), [sort: 'author.name']) } || false
+        'a criteria list sorted through a cached association with lock: true' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name', lock: true) { } } || false
+        'a criteria list with cache: true and cache(false) in the closure' | 'a cached mapping' | datastore | QcCached | { Class t -> t.createCriteria().list([cache: true]) { cache(false) } } || true
+        'a criteria list with cache: false and cache(true) in the closure' | 'an uncached mapping' | datastore | QcPlain | { Class t -> t.createCriteria().list([cache: false]) { cache(true) } } || false
         'a criteria list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { } } || false
         'a static list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.list(max: 2, sort: 'author.name') } || false
         'a criteria list sorted through a cached association with cache(true)' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { cache(true) } } || true
@@ -145,6 +156,8 @@ class QueryCacheOptionSpec extends Specification {
         'a static list with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.list(max: 2, cache: false) }                               || 0
         'a static list with cache: false, with every query cached'   | cachingEverything | QcgCached | { Class t -> t.list(max: 2, cache: false) }                               || 0
         'a where query with cache: false on a cached mapping'        | datastore         | QcCached  | { Class t -> t.where { name != 'x' }.list(max: 2, cache: false) }         || 0
+        'a criteria list on a cached mapping, which is itself put in the cache'      | datastore         | QcCached  | { Class t -> t.createCriteria().list(max: 2) { } }                        || 1
+        'a static list on a cached mapping, which is itself put in the cache'        | datastore         | QcCached  | { Class t -> t.list(max: 2) }                                             || 1
     }
 }
 
