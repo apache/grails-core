@@ -91,11 +91,12 @@ class StartupProgressSpec extends Specification {
         '''
 
     @Shared
+    @TempDir
     File browserDir
 
     /**
-     * This feature's own directory for the file the recording browser writes. Named after the port, a file
-     * shared by the spec was still there when a later feature drew a port an earlier one had opened a browser on.
+     * This feature's own directory for the file the recording browser writes, so that no feature finds the
+     * file of a browser an earlier feature opened.
      */
     @TempDir
     File openedDir
@@ -119,12 +120,7 @@ class StartupProgressSpec extends Specification {
     String cookie
 
     void setupSpec() {
-        browserDir = Files.createTempDirectory('startup-progress-browser').toFile()
         new File(browserDir, 'RecordingBrowser.java').text = RECORDING_BROWSER
-    }
-
-    void cleanupSpec() {
-        browserDir?.deleteDir()
     }
 
     /** What the application logs, which the test logger writes to standard error. */
@@ -1127,8 +1123,8 @@ class StartupProgressSpec extends Specification {
 
     /**
      * The ports features have drawn in this JVM. A browser is opened once per address for the life of the JVM,
-     * and the address is the port, so a feature that drew a port an earlier one had opened a browser on would
-     * get no browser.
+     * and the address carries the port, so a feature that drew a port an earlier one had opened a browser on
+     * would get no browser.
      */
     private static final Set<Integer> PORTS_DRAWN = ConcurrentHashMap.newKeySet()
 
