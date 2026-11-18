@@ -182,7 +182,7 @@ class GormStaticApi<D> extends AbstractGormApi<D> implements GormAllOperations<D
      */
     @Override
     AutoTimestampEventListener getAutoTimestampEventListener() {
-        // An instance is saved through execute(), which routes to the datastore of a bound tenant when there is one,
+        // An instance is saved through execute(), which routes a multi-tenant class to the datastore of a bound tenant,
         // so a session of that routing is asked for its datastore, rather than taking the one this API was made for.
         autoTimestampEventListenerOf(execute({ Session session -> session.datastore } as SessionCallback<Datastore>))
     }
