@@ -18,14 +18,15 @@
  */
 package grails.plugin.springsecurity.rest.token.generation
 
+import java.security.KeyPairGenerator
+import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
+
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWSAlgorithm
-import com.nimbusds.jose.crypto.RSADecrypter
-import com.nimbusds.jwt.EncryptedJWT
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
-import com.nimbusds.jwt.JWTParser
 import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -42,6 +43,7 @@ import grails.plugin.springsecurity.rest.token.generation.jwt.CustomClaimProvide
 import grails.plugin.springsecurity.rest.token.generation.jwt.DefaultRSAKeyProvider
 import grails.plugin.springsecurity.rest.token.generation.jwt.EncryptedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.generation.jwt.IssuerClaimProvider
+import grails.plugin.springsecurity.rest.token.generation.jwt.RSAKeyProvider
 import grails.plugin.springsecurity.rest.token.generation.jwt.SignedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.spring.BeanBuilder
@@ -78,15 +80,9 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
 
         when:
         AccessToken accessToken = jwtTokenGenerator.generateAccessToken(userDetails)
-        JWT accessTokenJwt = JWTParser.parse(accessToken.accessToken)
-        JWT refreshTokenJwt = JWTParser.parse(accessToken.refreshToken)
-        [accessTokenJwt, refreshTokenJwt].each { JWT jwt ->
-            if (jwt instanceof EncryptedJWT) {
-                EncryptedJWT encryptedJWT = jwt as EncryptedJWT
-                RSADecrypter decrypter = new RSADecrypter((jwtTokenGenerator as EncryptedJwtTokenGenerator).keyProvider.privateKey)
-                encryptedJWT.decrypt(decrypter)
-            }
-        }
+        JwtService jwtService = jwtTokenGenerator.jwtTokenStorageService.jwtService
+        JWT accessTokenJwt = jwtService.parse(accessToken.accessToken)
+        JWT refreshTokenJwt = jwtService.parse(accessToken.refreshToken)
 
         then:
         accessTokenJwt.JWTClaimsSet.expirationTime
@@ -103,15 +99,9 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
 
         when:
         AccessToken accessToken = jwtTokenGenerator.generateAccessToken(userDetails, true, 3600, 7200)
-        JWT accessTokenJwt = JWTParser.parse(accessToken.accessToken)
-        JWT refreshTokenJwt = JWTParser.parse(accessToken.refreshToken)
-        [accessTokenJwt, refreshTokenJwt].each { JWT jwt ->
-            if (jwt instanceof EncryptedJWT) {
-                EncryptedJWT encryptedJWT = jwt as EncryptedJWT
-                RSADecrypter decrypter = new RSADecrypter((jwtTokenGenerator as EncryptedJwtTokenGenerator).keyProvider.privateKey)
-                encryptedJWT.decrypt(decrypter)
-            }
-        }
+        JwtService jwtService = jwtTokenGenerator.jwtTokenStorageService.jwtService
+        JWT accessTokenJwt = jwtService.parse(accessToken.accessToken)
+        JWT refreshTokenJwt = jwtService.parse(accessToken.refreshToken)
 
         then:
         accessTokenJwt.JWTClaimsSet.expirationTime
@@ -129,15 +119,9 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
 
         when:
         AccessToken accessToken = jwtTokenGenerator.generateAccessToken(userDetails)
-        JWT accessTokenJwt = JWTParser.parse(accessToken.accessToken)
-        JWT refreshTokenJwt = JWTParser.parse(accessToken.refreshToken)
-        [accessTokenJwt, refreshTokenJwt].each { JWT jwt ->
-            if (jwt instanceof EncryptedJWT) {
-                EncryptedJWT encryptedJWT = jwt as EncryptedJWT
-                RSADecrypter decrypter = new RSADecrypter((jwtTokenGenerator as EncryptedJwtTokenGenerator).keyProvider.privateKey)
-                encryptedJWT.decrypt(decrypter)
-            }
-        }
+        JwtService jwtService = jwtTokenGenerator.jwtTokenStorageService.jwtService
+        JWT accessTokenJwt = jwtService.parse(accessToken.accessToken)
+        JWT refreshTokenJwt = jwtService.parse(accessToken.refreshToken)
 
         then: "refresh token has custom claim"
         refreshTokenJwt.JWTClaimsSet.getBooleanClaim(AbstractJwtTokenGenerator.REFRESH_ONLY_CLAIM)
@@ -179,8 +163,10 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
         then:
         accessToken.accessTokenJwt
         accessToken.accessTokenJwt.serialize() == accessToken.accessToken
+        accessToken.accessTokenJwt.JWTClaimsSet.subject == 'username'
         accessToken.refreshTokenJwt
         accessToken.refreshTokenJwt.serialize() == accessToken.refreshToken
+        accessToken.refreshTokenJwt.JWTClaimsSet.subject == 'username'
 
         where:
         jwtTokenGenerator << [setupSignedJwtTokenGenerator(), setupEncryptedJwtTokenGenerator()]
@@ -197,6 +183,26 @@ class JwtTokenGeneratorSpec extends Specification implements TokenGeneratorSuppo
 
         then:
         jwt.JWTClaimsSet.issuer == 'Spring Security REST test'
+    }
+
+    void "an encrypted JWT needs a private key of at least 2048 bits"() {
+        given:
+        final keyPairGenerator = KeyPairGenerator.getInstance('RSA').tap {
+            initialize(1024)
+        }
+        final keyPair = keyPairGenerator.generateKeyPair()
+        final keyProvider = [
+                getPublicKey : { keyPair.public as RSAPublicKey },
+                getPrivateKey: { keyPair.private as RSAPrivateKey }
+        ] as RSAKeyProvider
+        final tokenGenerator = setupEncryptedJwtTokenGenerator(keyProvider)
+
+        when:
+        tokenGenerator.generateAccessToken(new User('username', 'password', []))
+
+        then:
+        final exception = thrown(IllegalArgumentException)
+        exception.message.contains('2048')
     }
 
     private AbstractJwtTokenGenerator getTokenGenerator(boolean useEncryptedJwt) {
