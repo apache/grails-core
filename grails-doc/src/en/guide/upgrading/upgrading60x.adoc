@@ -1208,3 +1208,14 @@ As of Grails 7.0.18, the list of bindable properties that Grails generates for a
 * Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
 * A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== 22. The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins
+
+The Spring Security REST plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin, that is its scheme, host and port, is listed in the new setting `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, and the URL has a path, a query or a fragment after the host. It ignores any other `callback` URL, and every `callback` URL when the setting is missing, and redirects to the `frontendCallbackUrl` instead, as it does without the parameter. It checks the URL when the login starts and again when it completes, and a new login drops the `callback` URL of an earlier login that was not completed. An application that passes the `callback` parameter lists the origins of its frontend:
+
+[source,groovy]
+----
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+----
+
+Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
