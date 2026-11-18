@@ -231,12 +231,6 @@ final class ForgeCli {
     }
 
     /**
-     * Adds the commands of the Grails project in the current directory, which run through the project's
-     * build. A command named like one of the Forge CLI's own is left out: the Forge CLI's command runs.
-     *
-     * @param runBuild whether the project's build may run to update the commands
-     */
-    /**
      * Whether the build of the project may run to update the project's commands: unless
      * {@link #RUN_BUILD_PROPERTY}, or else {@link #RUN_BUILD_VARIABLE}, is {@code false}.
      */
@@ -245,6 +239,12 @@ final class ForgeCli {
         !'false'.equalsIgnoreCase(setting?.trim())
     }
 
+    /**
+     * Adds the commands of the Grails project in the current directory, which run through the project's
+     * build. A command named like one of the Forge CLI's own is left out: the Forge CLI's command runs.
+     *
+     * @param runBuild whether the project's build may run to update the commands
+     */
     private static void addProjectCommands(CommandLine commandLine, boolean runBuild) {
         addProjectCommands(commandLine, runBuild, (ForgeCommand) commandLine.getCommand())
     }
