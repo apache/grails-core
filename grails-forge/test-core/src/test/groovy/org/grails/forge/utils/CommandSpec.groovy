@@ -29,9 +29,11 @@ import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
+import org.grails.forge.options.ServletImpl
 import org.grails.forge.options.TestFramework
 import org.grails.forge.util.NameUtils
 import spock.lang.AutoCleanup
@@ -86,10 +88,11 @@ abstract class CommandSpec extends Specification {
                          List<String> features = [],
                          ApplicationType applicationType = ApplicationType.WEB,
                          DevelopmentReloading reloading = DevelopmentReloading.DEFAULT_OPTION,
-                         JdkVersion javaVersion = JdkVersion.DEFAULT_OPTION) {
+                         JdkVersion javaVersion = JdkVersion.DEFAULT_OPTION,
+                         GormImpl gormImpl = GormImpl.DEFAULT_OPTION) {
         applicationContext.getBean(ProjectGenerator).generate(applicationType,
                 NameUtils.parse("example.grails.foo"),
-                new Options(reloading, javaVersion),
+                new Options(reloading, gormImpl, ServletImpl.DEFAULT_OPTION, javaVersion),
                 operatingSystem,
                 features,
                 new FileSystemOutputHandler(dir, ConsoleOutput.NOOP),

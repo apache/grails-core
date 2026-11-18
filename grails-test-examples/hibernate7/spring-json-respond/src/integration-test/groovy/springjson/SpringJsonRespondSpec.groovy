@@ -30,13 +30,18 @@ import org.apache.grails.testing.http.client.HttpClientSupport
  * grails.databinding.json.jackson, the defaults later releases change to, as application.yml sets them: respond writes JSON
  * through Spring MVC's converter with the Grails mapper, binds JSON bodies with Jackson, and Spring MVC writes the
  * problems it responds with, with the application's advice. With grails.exceptionresolver.springHandlers, the exception
- * handlers of the application and of spring.mvc.problemdetails.enabled answer the exceptions an action throws. What an
+ * handlers of the application and of spring.mvc.problemdetails.enabled answer the exceptions an action throws, and with
+ * grails.exceptionresolver.problemDetails, a problem answers one they do not, unless the error page is for it. What an
  * action returns, where Spring MVC writes what a handler method returns as the response, such as a ResponseEntity, Spring
  * MVC writes, and with grails.controllers.responseBody, so is the value of an action annotated @ResponseBody.
  */
 @Integration(applicationClass = Application)
 @Tag('http-client')
 class SpringJsonRespondSpec extends Specification implements HttpClientSupport {
+
+    private static final String HTML = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+
+    private static final String BROWSER = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36'
 
     Long bookId
 
@@ -163,12 +168,67 @@ class SpringJsonRespondSpec extends Specification implements HttpClientSupport {
         response.json().bookId == 42
     }
 
-    void 'an exception no exception handler answers is resolved as without the setting'() {
+    void 'an exception no exception handler answers is written as a problem that does not expose its message to #client'() {
         when:
-        def response = http('/book/broken')
+        def response = http(headers, '/book/broken')
 
         then:
         response.assertStatus(500)
+        response.contentType == 'application/problem+json'
+        response.headerValue('X-Advised-By') == 'ProblemAdvice'
+        response.json().status == 500
+        response.json().title == 'Internal Server Error'
+        response.json().advisedBy == 'ProblemAdvice'
+        !response.body().contains('Not handled by any exception handler')
+
+        where:
+        client                              | headers
+        'a client without an Accept header' | [:]
+        'a client that accepts any type'    | [Accept: '*/*']
+        'a client that asks for JSON'       | [Accept: 'application/json']
+        'a browser that asks for JSON'      | [Accept: 'application/json', 'User-Agent': BROWSER]
+    }
+
+    void 'an action named with the json extension is answered with a problem, whatever the Accept header prefers'() {
+        when:
+        def response = http([Accept: HTML], '/book/broken.json')
+
+        then:
+        response.assertStatus(500)
+        response.contentType == 'application/problem+json'
+    }
+
+    void 'the status and detail of a ResponseStatusException are those of the problem'() {
+        when:
+        def response = http('/book/gone')
+
+        then:
+        response.assertStatus(410)
+        response.contentType == 'application/problem+json'
+        response.json().detail == 'The book was withdrawn'
+    }
+
+    void 'an exception no exception handler answers renders the error page for #client'() {
+        when:
+        def response = http(headers, '/book/broken')
+
+        then:
+        response.assertStatus(500)
+        response.body() == 'the error page'
+
+        where:
+        client                       | headers
+        'a client that asks for HTML' | [Accept: 'text/html']
+        'a browser'                  | [Accept: HTML, 'User-Agent': BROWSER]
+    }
+
+    void 'an exception a URL mapping names is answered by that mapping, whatever the client asks for'() {
+        when:
+        def response = http([Accept: 'application/json'], '/book/archived')
+
+        then:
+        response.assertStatus(500)
+        response.body() == 'the mapping for an archived book'
     }
 
     void 'a ResponseEntity an action returns is written by Spring MVC, with the advice of the application'() {

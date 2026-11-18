@@ -55,6 +55,9 @@ dependencies {
     implementation 'org.slf4j:slf4j-api', {
         // impl: Logger, LoggerFactory
     }
+    implementation 'io.netty:netty-buffer', {
+        // impl: ByteBufAllocator — mongo-java-server only brings it to the runtime classpath
+    }
 
     // This module is written in Java so that a plain Spring Boot application can use it,
     // but every published module still produces a groovydoc jar, and groovydoc needs

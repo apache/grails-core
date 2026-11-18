@@ -197,6 +197,8 @@ If the `cacheUsers` configuration property is set to `true`, Spring Security cac
 
 If you enable this feature, you must remove any cached instances after making a change that affects login. If you do not remove cached instances, even though a user's account is locked or disabled, logins succeed because the database is bypassed. By removing the cached data, you force at trip to the database to retrieve the latest updates.
 
+The cache stores users by value: each lookup is given a copy, made by serializing the user, so erasing the password of the user that is signed in, which the authentication manager does by default, leaves the cached user with the password it is checked against. A user with a field that cannot be serialized is not cached and is loaded on every sign-in, with a warning; mark such a field `transient`. Changing a user read from the cache changes only that copy, so put it back with `userCache.putUserInCache` to change what is cached. In a native image the plugin registers its own user classes for this. A user class or id type of your own needs serialization metadata, which `traceNativeMetadata` records when the login form is listed in `forms`.
+
 Here is a sample Quartz job that demonstrates how to find and disable users with passwords that are too old:
 
 [source,groovy]

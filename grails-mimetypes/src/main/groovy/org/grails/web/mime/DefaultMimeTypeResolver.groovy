@@ -34,13 +34,36 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 class DefaultMimeTypeResolver implements MimeTypeResolver {
 
     /**
+     * Resolve the {@link grails.web.mime.MimeType} to be used for the response of the current request. Written out, as
+     * is {@link #resolveRequestMimeType()}, because Groovy compiles a default argument dynamically even in a statically
+     * compiled class, which in a native image needs a reflection hint that binding a command object and resolving a
+     * view would otherwise depend on.
+     *
+     * @return the {@link grails.web.mime.MimeType}
+     */
+    @Override
+    MimeType resolveResponseMimeType() {
+        resolveResponseMimeType(GrailsWebRequest.lookup())
+    }
+
+    /**
+     * Resolve the {@link MimeType} to be used for the request of the current request.
+     *
+     * @return the {@link MimeType}
+     */
+    @Override
+    MimeType resolveRequestMimeType() {
+        resolveRequestMimeType(GrailsWebRequest.lookup())
+    }
+
+    /**
      * Resolve the {@link grails.web.mime.MimeType} to be used for the response, typically established from the ACCEPT header
      *
      * @since 2.3
      * @return the {@link grails.web.mime.MimeType}
      */
     @Override
-    MimeType resolveResponseMimeType(GrailsWebRequest webRequest = GrailsWebRequest.lookup()) {
+    MimeType resolveResponseMimeType(GrailsWebRequest webRequest) {
         if (webRequest != null) {
             return HttpServletResponseExtension.getMimeType(webRequest.response)
         }
@@ -54,7 +77,7 @@ class DefaultMimeTypeResolver implements MimeTypeResolver {
      * @return the {@link MimeType}
      */
     @Override
-    MimeType resolveRequestMimeType(GrailsWebRequest webRequest = GrailsWebRequest.lookup()) {
+    MimeType resolveRequestMimeType(GrailsWebRequest webRequest) {
         if (webRequest != null) {
             final allMimeTypes = HttpServletRequestExtension.getMimeTypes(webRequest.request)
             if (allMimeTypes) {
