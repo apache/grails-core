@@ -388,8 +388,8 @@ the new `@CommandArgument` and `@CommandOption` annotations, which the Forge CLI
 help, checks and completes. Commands without them, such as those of plugins built for an earlier
 release, are offered too and take any arguments.
 
-See xref:commandLine#projectCommands[Commands of the Project] and
-xref:commandLine#creatingCustomCommands[Creating Custom Commands].
+See <<projectCommands,Commands of the Project>> and
+<<creatingCustomCommands,Creating Custom Commands>>.
 
 ==== GSP Tag Library Improvements
 

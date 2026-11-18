@@ -234,7 +234,8 @@ the test environment, and the command also finds it in the system properties of 
 In a build of several projects, `./gradlew runCommand` from the root runs the task in every project that
 has it. Name one project's directory, absolute or relative to the root of the build, with the
 `grailsCommandProject` property to run it there only; the other command tasks and
-`generateCommandManifest` take it too:
+`generateCommandManifest` take it too. In the other projects the task is skipped together with the
+tasks it would depend on, so a project that does not compile leaves the command of another alone:
 
 [source,shell]
 ----
@@ -248,7 +249,7 @@ This allows you to create more versatile and interactive custom commands for you
 A command can describe the arguments and options it takes with the
 link:{api}org/apache/grails/core/cli/CommandArgument.html[CommandArgument] and
 link:{api}org/apache/grails/core/cli/CommandOption.html[CommandOption] annotations. Tools that offer the
-commands of a project, such as the xref:commandLine#projectCommands[Grails Forge CLI], show them in the
+commands of a project, such as the <<projectCommands,Grails Forge CLI>>, show them in the
 command's help, check them and complete them. Declare one `@CommandArgument` per argument, in the order
 the arguments are given, and one `@CommandOption` per option:
 
@@ -462,7 +463,7 @@ dependencies {
 ./gradlew auditReport
 ----
 +
-Inside the application, the xref:commandLine#projectCommands[Grails Forge CLI] offers and completes the
+Inside the application, the <<projectCommands,Grails Forge CLI>> offers and completes the
 command as well, and runs it through `runCommand`:
 +
 [source,shell]

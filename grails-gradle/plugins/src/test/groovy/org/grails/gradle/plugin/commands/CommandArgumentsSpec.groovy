@@ -25,6 +25,7 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.JavaExec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 import spock.lang.TempDir
 
 class CommandArgumentsSpec extends Specification {
@@ -121,6 +122,46 @@ class CommandArgumentsSpec extends Specification {
 
         then: 'no action is added to set any'
         task.actions.size() == actions
+    }
+
+    @RestoreSystemProperties
+    void 'configuring a command task with #given leaves the environment of the build alone'() {
+        given:
+        System.setProperty('grails.env', 'development')
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(given)
+        Project project = project(argsFile: 'arguments.json')
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+
+        when:
+        GrailsCliGradlePlugin.commandTaskArguments(task, project)
+        task.actions.first().execute(task)
+
+        then: 'the JVM that configures the build keeps its environment'
+        System.getProperty('grails.env') == 'development'
+
+        and: 'the command JVM gets the one it names'
+        task.systemProperties == properties
+
+        where:
+        given                                   || properties
+        ['dbm-update', '-Dgrails.env=test']     || ['grails.env': 'test']
+        ['test', 'dbm-update', '-Dother=value'] || [other: 'value']
+    }
+
+    void 'a command task of a project the grailsCommandProject property does not name depends on nothing'() {
+        given:
+        Project project = project(grailsCommandProject: new File(projectDir, 'other').absolutePath)
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+        task.dependsOn('classes')
+        task.classpath = project.files('classes')
+
+        when:
+        GrailsCliGradlePlugin.commandTaskArguments(task, project)
+
+        then: 'nothing is compiled or resolved for it'
+        task.dependsOn.empty
+        task.classpath.empty
+        !task.onlyIf.isSatisfiedBy(task)
     }
 
     void 'a relative grailsCommandProject is the directory below the root of the build'() {

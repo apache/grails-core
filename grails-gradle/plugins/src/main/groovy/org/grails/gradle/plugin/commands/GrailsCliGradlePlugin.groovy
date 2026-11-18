@@ -414,17 +414,6 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     }
 
     /**
-     * Returns the application main class for a task that runs against the application, or fails the task with
-     * an explanation when the project has none, as is the case for a plugin without an {@code Application} class.
-     *
-     * <p>Task actions call it qualified with the class name: with the configuration cache, an action's closure
-     * does not keep its owner, so an unqualified call would be looked up on the task instead.</p>
-     *
-     * @param mainClass the main class found by the {@code findMainClass} task
-     * @param taskName the name of the task that requires the main class
-     * @return the name of the main class
-     */
-    /**
      * Returns the arguments a command task passes to its command: those of {@link #ARGS_PROPERTY}, split
      * as a shell would, then those of the file {@link #ARGS_FILE_PROPERTY} names, unchanged.
      *
@@ -492,8 +481,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     static Map<String, String> commandSystemProperties(List<String> arguments) {
         Map<String, String> properties = new LinkedHashMap<String, String>()
         try {
-            // a command line of its own, so the parser's current one is left alone
-            new CommandLineParser().parse(new DefaultCommandLine(), arguments as String[]).systemProperties.each { Object name, Object value ->
+            new CommandLineParser().parse(new BuildCommandLine(), arguments as String[]).systemProperties.each { Object name, Object value ->
                 properties[name as String] = value as String
             }
         }
@@ -505,18 +493,57 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
 
     /**
      * Skips the task unless {@link #COMMAND_PROJECT_PROPERTY} is unset or names the directory of the
-     * task's project.
+     * task's project. A skipped task depends on nothing and has no classpath, so the build neither
+     * compiles nor resolves anything for it: a project below the named one that does not compile
+     * leaves the named one's command alone.
+     *
+     * <p>Call it after the task's classpath is set.</p>
      */
     @CompileDynamic
     static void runOnlyInNamedProject(org.gradle.api.Task task, Project project) {
-        def named = project.findProperty(COMMAND_PROJECT_PROPERTY)
-        if (named) {
-            // a relative path is the directory below the root of the build
-            boolean selected = project.rootProject.file(named as String).canonicalFile == project.projectDir.canonicalFile
-            task.onlyIf("the ${COMMAND_PROJECT_PROPERTY} property names this project".toString()) { selected }
+        if (isNamedCommandProject(project)) {
+            return
+        }
+        task.onlyIf("the ${COMMAND_PROJECT_PROPERTY} property names this project".toString()) { false }
+        task.setDependsOn([])
+        if (task instanceof JavaExec) {
+            task.classpath = project.files()
         }
     }
 
+    /**
+     * Returns whether the commands of the project run: when {@link #COMMAND_PROJECT_PROPERTY} is unset,
+     * or names the directory of the project, either absolute or relative to the root of the build.
+     */
+    private static boolean isNamedCommandProject(Project project) {
+        def named = project.findProperty(COMMAND_PROJECT_PROPERTY)
+        !named || project.rootProject.file(named as String).canonicalFile == project.projectDir.canonicalFile
+    }
+
+    /**
+     * A command line that keeps the environment it reads to itself, where the command line the
+     * command reads sets {@code grails.env} on its JVM. Here that JVM is the one that configures the
+     * build, whose other tasks read {@code grails.env} for their own environment.
+     */
+    @CompileStatic
+    private static class BuildCommandLine extends DefaultCommandLine {
+
+        @Override
+        void setEnvironment(String environment) {
+        }
+    }
+
+    /**
+     * Returns the application main class for a task that runs against the application, or fails the task with
+     * an explanation when the project has none, as is the case for a plugin without an {@code Application} class.
+     *
+     * <p>Task actions call it qualified with the class name: with the configuration cache, an action's closure
+     * does not keep its owner, so an unqualified call would be looked up on the task instead.</p>
+     *
+     * @param mainClass the main class found by the {@code findMainClass} task
+     * @param taskName the name of the task that requires the main class
+     * @return the name of the main class
+     */
     @PackageScope
     static String requireMainClass(Provider<String> mainClass, String taskName) {
         def mainClassName = mainClass.orNull
@@ -745,7 +772,6 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             Directory projectDirectory = project.layout.projectDirectory
             manifestTask.configure {
                 it.description = 'Writes the Grails commands of the application, which the Grails Forge CLI offers'
-                GrailsCliGradlePlugin.runOnlyInNamedProject(it, project)
                 it.manifestFile.convention(project.providers.gradleProperty(COMMAND_MANIFEST_PROPERTY)
                         .map { String path -> projectDirectory.file(path) }
                         .orElse(project.layout.buildDirectory.file(COMMAND_MANIFEST_PATH)))
@@ -754,6 +780,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 manifestTask.configure {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
+                    GrailsCliGradlePlugin.runOnlyInNamedProject(it, project)
                 }
             }
             // every project of the build is known only once all are evaluated

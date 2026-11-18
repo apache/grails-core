@@ -127,6 +127,41 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         new File(app, 'build/grails/commands.json').exists()
     }
 
+    void 'a project below the named one that does not compile leaves the named one alone'() {
+        given: 'a project below the application whose source does not compile'
+        def runner = setupTestResourceProject('command-manifest')
+        File root = runner.projectDir
+        new File(root, 'settings.gradle') << "\ninclude 'app:broken'\n"
+        File broken = new File(root, 'app/broken')
+        new File(broken, 'src/main/java/org/example').mkdirs()
+        new File(broken, 'build.gradle').text = """
+            plugins {
+                id 'java'
+                id 'org.apache.grails.gradle.grails-cli'
+            }
+        """.stripIndent()
+        new File(broken, 'src/main/java/org/example/Broken.java').text = 'class Broken { not java }'
+
+        when: 'the command list of the application is written by name, from its directory'
+        def manifest = executeTask('generateCommandManifest', ['-p', 'app', '-PgrailsCommandProject=app'])
+
+        then: 'the project below is skipped, and nothing of it is compiled'
+        manifest.task(':app:generateCommandManifest').outcome == TaskOutcome.SUCCESS
+        manifest.task(':app:broken:generateCommandManifest').outcome == TaskOutcome.SKIPPED
+        !manifest.tasks*.path.contains(':app:broken:compileJava')
+
+        when: 'a command of the application is planned the same way'
+        ['app', 'app/broken'].each {
+            new File(root, "${it}/build.gradle") << "\ntasks.register('findMainClass', org.grails.gradle.plugin.run.FindMainClassTask)\n"
+        }
+        def command = executeTask('runCommand', ['-m', '-p', 'app', '-PgrailsCommandProject=app'])
+        List<String> planned = command.output.readLines().findAll { it.startsWith(':') }*.tokenize(' ')*.first()
+
+        then: 'the project below brings only its own command task, which is skipped, and nothing it would depend on'
+        planned.containsAll([':app:compileJava', ':app:runCommand'])
+        planned.findAll { it.startsWith(':app:broken:') } == [':app:broken:runCommand']
+    }
+
     private static Map<String, Object> read(Path file) {
         (Map<String, Object>) new JsonSlurper().parse(file.toFile(), 'UTF-8')
     }

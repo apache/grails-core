@@ -268,7 +268,7 @@ The build runs through the Gradle wrapper of the project, or of the build it bel
 the first directory above it with a `settings.gradle` or `settings.gradle.kts` file. A project whose build has no wrapper has no
 commands offered, and no `gradle` found on the path is run instead.
 
-A command that describes its arguments and options, as xref:commandLine#creatingCustomCommands[Creating Custom Commands]
+A command that describes its arguments and options, as <<creatingCustomCommands,Creating Custom Commands>>
 shows, has them checked and completed. A command that declares no options takes any arguments and
 options, and is given the words of its command line in the order they were typed, as `runCommand`
 gives them.
