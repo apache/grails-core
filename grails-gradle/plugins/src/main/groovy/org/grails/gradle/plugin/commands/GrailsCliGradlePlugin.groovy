@@ -790,11 +790,19 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 List<File> includedBuildDirs = gradle.includedBuilds*.projectDir
                 List<String> buildDirectories = ([root.projectDir] + projectDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
+                // the hand-written registrations in either META-INF are merged into the generated ones
                 List<String> sourceDirectories = ([new File(root.projectDir, 'gradle'), new File(root.projectDir, 'buildSrc')] +
                         projectDirs.collectMany { File dir ->
-                            [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF')]
+                            [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF'),
+                             new File(dir, 'src/cli/resources/META-INF')]
                         } + includedBuildDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
+                // a command compiled from the cli source set registers itself, so a new one adds a command
+                List<String> commandDirectories = root.allprojects.collectMany { Project each ->
+                    def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
+                    SourceSet cli = sourceSets?.findByName(GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME)
+                    cli ? cli.allSource.srcDirs*.absolutePath : []
+                }.unique().sort()
                 // every source set, as a plugin keeps its commands in its cli source set, src/cli/groovy
                 List<String> commandSourceRoots = root.allprojects.collectMany { Project each ->
                     def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
@@ -803,6 +811,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 manifestTask.configure {
                     it.buildDirectories.set(buildDirectories)
                     it.sourceDirectories.set(sourceDirectories)
+                    it.commandDirectories.set(commandDirectories)
                     it.commandSourceRoots.set(commandSourceRoots)
                 }
             }

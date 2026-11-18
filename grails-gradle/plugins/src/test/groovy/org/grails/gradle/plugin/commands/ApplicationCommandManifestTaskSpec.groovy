@@ -98,7 +98,13 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([
                 new File(root, 'gradle'), new File(root, 'buildSrc'),
                 new File(root, 'app/grails-app/commands'), new File(root, 'app/src/main/resources/META-INF'),
-                new File(root, 'manifest-writer/grails-app/commands')])
+                new File(root, 'app/src/cli/resources/META-INF'),
+                new File(root, 'manifest-writer/grails-app/commands'),
+                new File(root, 'manifest-writer/src/cli/resources/META-INF')])
+
+        and: 'the directories of the cli source sets, where a new source can be a new command'
+        inputs.commandDirectories.collect { new File(it).canonicalFile } as Set ==
+                [new File(root, 'app/src/cli/java'), new File(root, 'app/src/cli/resources')] as Set
 
         and: 'every included build, also those that bring plugins of the build'
         inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([new File(root, 'shared'), new File(root, 'build-logic')])

@@ -266,9 +266,10 @@ class ProjectCommands {
                     Map given = (Map) inputs
                     List<File> buildDirectories = files(given.buildDirectories)
                     List<File> sourceDirectories = files(given.sourceDirectories)
+                    List<File> commandDirectories = given.containsKey('commandDirectories') ? files(given.commandDirectories) : []
                     List<File> sourceFiles = given.containsKey('sourceFiles') ? files(given.sourceFiles) : []
-                    if (buildDirectories != null && sourceDirectories != null && sourceFiles != null) {
-                        return new Inputs(buildDirectories, sourceDirectories, sourceFiles)
+                    if (buildDirectories != null && sourceDirectories != null && commandDirectories != null && sourceFiles != null) {
+                        return new Inputs(buildDirectories, sourceDirectories, commandDirectories, sourceFiles)
                     }
                 }
             }
@@ -279,7 +280,8 @@ class ProjectCommands {
         File rootDir = gradle.rootDir
         new Inputs([projectDir, rootDir].unique(),
                 [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
-                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')], [])
+                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')],
+                [new File(projectDir, 'src/cli')], [])
     }
 
     /** The files of a list of absolute paths, or none when one is not such a path, such as a mistyped one */
@@ -309,7 +311,7 @@ class ProjectCommands {
     /**
      * What the files the commands depend on are now: the build files directly in each build directory,
      * and every file and directory below each source directory, apart from what builds and tools write
-     * next to a build script. Each file is listed with its time and size, so a deleted, added, replaced
+     * next to a build script, and below each directory of commands, all of which are sources. Each file is listed with its time and size, so a deleted, added, replaced
      * or changed file changes the list, whatever the clock said when it was written.
      */
     private static List<String> snapshot(Inputs inputs) {
@@ -329,6 +331,9 @@ class ProjectCommands {
         for (File dir : inputs.sourceDirectories) {
             // the sources of commands are sources from the start; a tree of a build becomes so below src
             walk(dir, lines, dir.name == 'META-INF' || (dir.name == 'commands' && dir.parentFile?.name == 'grails-app'))
+        }
+        for (File dir : inputs.commandDirectories) {
+            walk(dir, lines, true)
         }
         for (File file : inputs.sourceFiles) {
             walk(file, lines, true)
@@ -390,11 +395,14 @@ class ProjectCommands {
 
         final List<File> buildDirectories
         final List<File> sourceDirectories
+        final List<File> commandDirectories
         final List<File> sourceFiles
 
-        Inputs(List<File> buildDirectories, List<File> sourceDirectories, List<File> sourceFiles) {
+        Inputs(List<File> buildDirectories, List<File> sourceDirectories, List<File> commandDirectories,
+               List<File> sourceFiles) {
             this.buildDirectories = buildDirectories
             this.sourceDirectories = sourceDirectories
+            this.commandDirectories = commandDirectories
             this.sourceFiles = sourceFiles
         }
     }

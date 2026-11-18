@@ -74,6 +74,8 @@ class ProjectCommandsSpec extends Specification {
             name: 'url-mappings-report', description: 'url-mappings-report', arguments: [], options: []
     ]
 
+    private static final Map AUDIT = [name: 'audit', description: 'Audits the application', arguments: [], options: []]
+
     private static final List<String> MANIFEST_TASK = ['generateCommandManifest', '-PgrailsCommandManifest=build/grails/commands.json']
 
     /** Files the commands depend on, in every place the Forge CLI watches without a manifest naming them */
@@ -360,6 +362,42 @@ class ProjectCommandsSpec extends Specification {
 
         when: 'the command gains an option'
         source.text = 'class AuditCommand { /* @CommandOption */ }'
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+    }
+
+    void "a command a plugin project of the build adds to its cli source set is offered and runs"() {
+        given: "a manifest naming the cli source set of a plugin project next to the application"
+        File plugin = new File(dir, 'plugins/audit')
+        File groovy = new File(plugin, 'src/cli/groovy')
+        File resources = new File(plugin, 'src/cli/resources')
+        new File(resources, 'META-INF').mkdirs()
+        groovy.mkdirs()
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [], commandDirectories: [groovy.path, resources.path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'a command class is added, in a package named like an output directory'
+        File command = new File(groovy, 'com/acme/build/AuditCommand.groovy')
+        command.parentFile.mkdirs()
+        command.text = 'class AuditCommand {}'
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, AUDIT)
+        int exitCode = ForgeCli.execute(context, 'audit')
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the build runs once, and the new command runs instead of being rejected'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+        commandArguments() == ['audit']
+
+        when: 'a command is registered by hand in the factories file'
+        forgetInvocations()
+        new File(resources, 'META-INF/grails-cli.factories').text =
+                'org.apache.grails.core.cli.ApplicationCommand=com.acme.ExportCommand\n'
+        ForgeCli.createCommandLine(context, false)
         ForgeCli.createCommandLine(context, false)
 
         then:

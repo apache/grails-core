@@ -236,10 +236,13 @@ files decide them:
 * the directory of every project of the build, for its `.gradle`, `.gradle.kts`, `.properties` and
   `.toml` files, such as `build.gradle`, `settings.gradle`, `gradle.properties` and `libs.versions.toml`;
 * everything under the `gradle` and `buildSrc` directories of the build's root, under
-  `grails-app/commands` and `src/main/resources/META-INF` of every project, and under every included
-  build, also one included with `pluginManagement { includeBuild }`, apart from what builds and tools
+  `grails-app/commands`, `src/main/resources/META-INF` and `src/cli/resources/META-INF` of every
+  project, and under every included build, also one included with `pluginManagement { includeBuild }`, apart from what builds and tools
   write outside a `src` or `grails-app` directory, such as `build`, `.gradle` and `.kotlin`, and from
   `node_modules`;
+* everything under the directories of the `cli` source set of every project that has one, such as
+  `src/cli/groovy` and `src/cli/resources`, where a command a plugin project of the build adds registers
+  itself;
 * the source file of each command it lists that one of the projects of the build compiles, such as a
   command of a plugin project in `src/main/groovy`.
 
@@ -248,7 +251,8 @@ project's `.gradle/grails` directory. It runs the task again when one of them is
 its time or size changes, whether the time goes forward or back, and when a manifest has no record, as
 one written by `./gradlew generateCommandManifest` alone. So a plugin added to the build brings its commands the next
 time a project command is asked for. A change the Forge CLI cannot see, such as a new snapshot of a
-plugin, is picked up by running `./gradlew generateCommandManifest`.
+plugin, or a command added to a project's `src/main/groovy` rather than to `grails-app/commands` or a
+`cli` source set, is picked up by running `./gradlew generateCommandManifest`.
 
 The build runs only when the interactive prompt starts or a command the Forge CLI does not have is
 named, also after the Forge CLI's own options, as in `grails-forge-cli -x dbm-update`. Its own commands,

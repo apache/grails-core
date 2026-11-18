@@ -41,9 +41,9 @@ import javax.inject.Inject
  * {@code runCommand} can run. The task is up to date while that classpath is unchanged.</p>
  *
  * <p>The file also names, under {@code inputs}, the directories whose files decide the commands without
- * being on the classpath yet: those whose build files decide the build, and those that hold the sources
- * of commands or of the build's logic, and the source files of the listed commands found in the
- * projects of the build. A tool reading the file runs the task again when one of their files changes.</p>
+ * being on the classpath yet: those whose build files decide the build, those that hold the sources
+ * of commands or of the build's logic, those of the {@code cli} source sets, where every source can be a
+ * command, and the source files of the listed commands found in the projects of the build. A tool reading the file runs the task again when one of their files changes.</p>
  *
  * @since 9.0
  */
@@ -59,6 +59,7 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         mainClass.set(MANIFEST_WRITER_CLASS)
         buildDirectories.convention([])
         sourceDirectories.convention([])
+        commandDirectories.convention([])
         commandSourceRoots.convention([])
     }
 
@@ -82,6 +83,13 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
      */
     @Input
     abstract ListProperty<String> getSourceDirectories()
+
+    /**
+     * @return the directories of the {@code cli} source set of every project of the build, which hold
+     * commands and what they use, so a command added there, which registers itself, counts too
+     */
+    @Input
+    abstract ListProperty<String> getCommandDirectories()
 
     /**
      * @return the source directories of every project of the build, where the source of a command the
@@ -125,7 +133,7 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         super.exec()
         Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(file, 'UTF-8')
         manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get(),
-                           sourceFiles: commandSources(manifest.commands)]
+                           commandDirectories: commandDirectories.get(), sourceFiles: commandSources(manifest.commands)]
         file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
     }
 }
