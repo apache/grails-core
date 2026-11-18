@@ -194,6 +194,10 @@ jobs:
             noted[$number]+=$'\n'"$merges"
           }
           git init --quiet --bare merges.git
+          # Every fetch adds a pack, and once there are enough of them git would start a gc in the background, which
+          # holds the lock of the shallow commits that the next fetch has to take, and that fetch would then fail.
+          git -C merges.git config gc.auto 0
+          git -C merges.git config maintenance.auto false
           git -C merges.git remote add origin "$GITHUB_SERVER_URL/$REPO"
           git -C merges.git config "http.$GITHUB_SERVER_URL/.extraheader" "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           # The approvals given to another commit than the head, of every open pull request or of the ones whose head
