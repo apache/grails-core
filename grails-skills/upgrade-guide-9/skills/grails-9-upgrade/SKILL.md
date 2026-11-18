@@ -474,6 +474,14 @@ Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is 
 - Remove dependencies on `org.jline:jline-terminal-jna` and `org.jline:jline-terminal-jansi`, which have no JLine 4 version.
 - `info.picocli:picocli-shell-jline3` still runs, but its `PicocliCommands` implements the deprecated `org.jline.console.CommandRegistry`; `org.jline:jline-picocli`, at the JLine version the Grails BOM manages, is the JLine 4 bridge to move to.
 
+## Command Lines of Application Commands
+
+The command line parser of the `grails` tool and of `runCommand`, which application and plugin commands read their command line through, changed in Grails 9:
+
+- An empty argument after an option without a value is that option's empty value: `--name "" value` gives an empty `name` and the argument `value`, where it used to give `name=value`.
+- The text inside a pair of double quotes is trimmed: `" a "` reaches the command as `a`, where it used to be ` a `.
+- `--name=` gives an empty `name` (it threw `ArrayIndexOutOfBoundsException`), a lone `"` argument is passed on (it threw `StringIndexOutOfBoundsException`), and an option's value is everything after the first `=`: `--filter=status=active` gives `status=active`, where it gave `status`. Remove workarounds for these.
+
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.8 or later
@@ -506,6 +514,7 @@ Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is 
 - [ ] With a database or a schema per tenant, every domain class saved inside a tenant block whose instances belong to a tenant, or that a multi-tenant class references, implements `MultiTenant`
 - [ ] Every write of a class that is not multi-tenant inside a tenant's transaction runs in the class's data service or its own `withTransaction`, or uses `flush: true`
 - [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
+- [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

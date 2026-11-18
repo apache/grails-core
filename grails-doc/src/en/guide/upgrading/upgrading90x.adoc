@@ -1489,3 +1489,21 @@ Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is 
 * JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
 
 picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
+
+==== 27. Command Lines of Application Commands
+
+The command line parser of the `grails` command line tool and of `runCommand`, which reads the command line of an application or plugin command, reads two kinds of input differently:
+
+* An empty argument after an option without a value is that option's value, an empty one. `--name "" value` used to give the option `name` the value `value`; now `name` is empty, and `value` is an argument.
+* The text inside a pair of double quotes is trimmed, as an argument without quotes always was. `" a "` used to reach the command as ` a `, and now reaches it as `a`.
+
+It also reads three kinds of input it used to fail on or cut short:
+
+* `--name=`, an option with an empty value, threw an `ArrayIndexOutOfBoundsException`, and is now the option `name` with an empty value.
+* An argument that is a single `"` threw a `StringIndexOutOfBoundsException`, and is now passed on as it is.
+* The value of an option is everything after the first `=`: `--filter=status=active` used to give `status`, and now gives `status=active`.
+
+===== Required Actions
+
+* Check commands that read an option followed by an empty argument, or arguments with spaces inside quotes, and expect the values above.
+* Remove workarounds for the three failures, such as passing `--filter=status%3Dactive` and decoding it in the command.
