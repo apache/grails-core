@@ -19,11 +19,18 @@
 # approval to the new head by itself after a push that leaves the diff of the pull request as it was, such as a rebase
 # or a merge of the base branch, so those approvals are kept.
 #
+# GitHub does not move an approval over a merge of the base branch that had conflicts, since resolving them changes
+# the diff of the pull request. Such an update merge is not a change of the pull request to review again, so the
+# approval is kept as well, as long as every commit pushed after it is a merge of the base branch that differs from
+# the merge git makes by itself only in the files git could not merge. A merge that also changes another file, or
+# that merges anything but the base branch, dismisses the approval like any other push.
+#
 # A pull_request run from a fork gets a read-only token that cannot dismiss a review, so this workflow does not react
 # to the pull request. It reacts to the Code Style workflow being requested for one, which a push to a pull request
 # does, even for a draft or a pull request labelled "no ci", whose jobs are then skipped. A workflow_run run uses the
 # workflow file of the default branch and a token of this repository, and it never checks out or runs anything of the
-# pull request: it only reads commit ids through the API.
+# pull request: it reads commit ids through the API and, to repeat a merge, fetches the trees of its commits and
+# merges them in a bare repository, which runs no hook and no filter.
 #
 # Not every push requests the Code Style workflow: GitHub starts no pull_request workflow for a commit whose message
 # asks to skip them ("[skip ci]" and its variants), nor for a pull request that conflicts with its base branch. So
@@ -61,13 +68,42 @@ jobs:
           # Empty on a scheduled and on a manual run, which look at every open pull request.
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
+          # by hand outside the files git could not merge. Each commit on the way has to have two parents, the
+          # second one a commit of the base branch, and its tree is compared with the one git merges from those
+          # parents: the files that differ have to be among the conflicted ones. Three commits are fetched for a
+          # merge, its parents and their merge base, without history and without file contents; git then asks for
+          # the contents of the files changed on both sides only. Anything unexpected, such as a failed request,
+          # an unknown commit or more merges than the limit, answers no, and the approval is dismissed.
+          only_merges_base() {
+            local base=$1 approved=$2 commit=$3 merges=0 first second other fork merged tree changed
+            while [[ "$commit" != "$approved" ]]; do
+              (( ++merges <= 20 )) || return 1
+              read -r first second other < <(gh api "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")')
+              [[ -n "$second" && -z "$other" ]] || return 1
+              [[ "$(gh api "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by')" == 0 ]] || return 1
+              fork=$(gh api "repos/$REPO/compare/$first...$second?per_page=1" --jq '.merge_base_commit.sha') || return 1
+              [[ -n "$fork" ]] || return 1
+              git -C merges.git fetch --quiet --depth=1 --filter=blob:none origin "$commit" "$first" "$second" "$fork" || return 1
+              # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
+              merged=$(git -C merges.git merge-tree --write-tree --name-only --no-messages --merge-base="$fork" "$first" "$second") || [[ $? == 1 ]] || return 1
+              tree=${merged%%$'\n'*}
+              changed=$(git -C merges.git diff --name-only --no-renames "$tree" "$commit^{tree}") || return 1
+              [[ -z "$(comm -23 <(sort <<< "$changed") <(tail -n +2 <<< "$merged" | sort))" ]] || return 1
+              commit=$first
+            done
+          }
+          git init --quiet --bare merges.git
+          git -C merges.git remote add origin "$GITHUB_SERVER_URL/$REPO"
+          git -C merges.git config "http.$GITHUB_SERVER_URL/.extraheader" "AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
           # The approvals given to another commit than the head, of every open pull request or of the ones whose head
           # is the pushed commit. A review dismissed earlier is no longer an approval. GitHub has already moved an
           # approval to the head when the push left the diff of the pull request as it was, so an approval still at
-          # another commit was given to other changes. Nothing is compared here but the trees of the two commits: an
-          # approval is kept when its commit has the very tree of the head, which holds the content, the name and
-          # the mode of every file, and dismissed otherwise, also when either tree is unknown. One query serves a
-          # hundred pull requests, so that the hourly run does not spend a request of the token's rate limit on each.
+          # another commit was given to other changes. Only two of those are kept: an approval whose commit has the
+          # very tree of the head, which holds the content, the name and the mode of every file, and an approval
+          # that only merges of the base branch separate from the head (see only_merges_base). Every other one is
+          # dismissed, also when a tree is unknown. One query serves a hundred pull requests, so that the hourly run
+          # does not spend a request of the token's rate limit on each.
           gh api graphql --paginate -f owner="${REPO%/*}" -f name="${REPO#*/}" -f query='
             query($owner: String!, $name: String!, $endCursor: String) {
               repository(owner: $owner, name: $name) {
@@ -75,6 +111,7 @@ jobs:
                   pageInfo { hasNextPage endCursor }
                   nodes {
                     number headRefOid
+                    baseRef { target { oid } }
                     commits(last: 1) { nodes { commit { oid tree { oid } } } }
                     reviews(states: APPROVED, first: 100) { nodes { databaseId author { login } commit { oid tree { oid } } } }
                   }
@@ -84,10 +121,13 @@ jobs:
               | ([.commits.nodes[].commit | select(.oid == $pull.headRefOid) | .tree.oid][0] // "-") as $tree
               | .reviews.nodes[] | select(.commit.oid != $pull.headRefOid)
               | [$pull.number, $pull.headRefOid, .databaseId, .author.login // "ghost", .commit.oid // "-",
-                  (if $tree != "-" and .commit.tree.oid == $tree then "same" else "changed" end)] | @tsv' > stale.tsv
-          while IFS=$'\t' read -r number head review login commit tree; do
+                  (if $tree != "-" and .commit.tree.oid == $tree then "same" else "changed" end),
+                  $pull.baseRef.target.oid // "-"] | @tsv' > stale.tsv
+          while IFS=$'\t' read -r number head review login commit tree base; do
             if [[ "$tree" == same ]]; then
               echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} has the same files"
+            elif [[ "$commit" != - && "$base" != - ]] && only_merges_base "$base" "$commit" "$head" < /dev/null; then
+              echo "#$number: approval of $login at ${commit:0:10} kept, ${head:0:10} only merges the base branch"
             elif [[ "$DRY_RUN" == true ]]; then
               echo "#$number: approval of $login at ${commit:0:10} would be dismissed, the head is ${head:0:10}" | tee -a "$GITHUB_STEP_SUMMARY"
             elif gh api -X PUT "repos/$REPO/pulls/$number/reviews/$review/dismissals" -f event=DISMISS \
