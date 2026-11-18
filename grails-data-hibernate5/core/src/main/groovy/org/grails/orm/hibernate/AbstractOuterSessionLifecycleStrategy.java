@@ -18,6 +18,8 @@
  */
 package org.grails.orm.hibernate;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 import javax.sql.DataSource;
@@ -40,11 +42,19 @@ import org.grails.orm.hibernate.support.TransactionResources;
  */
 abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLifecycleStrategy {
 
+    /**
+     * The disconnect of each outer session whose scope is running on this thread, innermost last. A transaction that
+     * begins inside the scope registers the innermost one, see {@link #pendingDisconnect()}.
+     */
+    private static final ThreadLocal<Deque<Runnable>> PENDING_DISCONNECTS = ThreadLocal.withInitial(ArrayDeque::new);
+
     protected final SessionFactory sessionFactory;
     protected final DataSource dataSource;
     protected final TransactionResources txResources;
     protected final SessionHolder previousHolder;
     protected final boolean lazyConnection;
+
+    private boolean disconnectPending;
 
     protected boolean wasPhysicallyConnectedAtPrepare = false;
     protected ConnectionHolder previousConnectionHolder;
@@ -80,6 +90,30 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
         }
 
         return jdbcCoordinator.getLogicalConnection();
+    }
+
+    /**
+     * The disconnect that a transaction beginning in the scope of a {@code withNewSession} call has to run before it
+     * completes, or null when no such scope is running. A disconnected outer session that connects inside the scope
+     * obtains the connection of that transaction, and the transaction closes it when it completes; disconnecting the
+     * session first leaves it without a connection instead of with a closed one.
+     *
+     * @return the disconnect of the innermost outer session of this thread, or null
+     */
+    static Runnable pendingDisconnect() {
+        return PENDING_DISCONNECTS.get().peekLast();
+    }
+
+    /**
+     * Makes the disconnect of the outer session available to the transactions that begin before {@link #restore()}.
+     * It applies only to an outer session that is disconnected now and a lazy data source, the case in which a
+     * connection of the session is fetched from the inner transaction.
+     */
+    protected void disconnectBeforeInnerTransactionCompletes() {
+        if (lazyConnection && !wasPhysicallyConnectedAtPrepare && getLogicalConnection() != null) {
+            PENDING_DISCONNECTS.get().addLast(this::disconnectIfConnected);
+            disconnectPending = true;
+        }
     }
 
     protected void disconnectIfConnected() {
@@ -119,6 +153,14 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
 
     @Override
     public void restore() {
+        if (disconnectPending) {
+            Deque<Runnable> pending = PENDING_DISCONNECTS.get();
+            pending.removeLast();
+            if (pending.isEmpty()) {
+                PENDING_DISCONNECTS.remove();
+            }
+            disconnectPending = false;
+        }
         if (previousActiveSynchronization) {
             txResources.initSynchronization();
             if (transactionSynchronizations != null) {

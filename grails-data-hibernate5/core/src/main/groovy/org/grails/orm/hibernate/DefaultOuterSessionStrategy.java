@@ -32,6 +32,9 @@ import org.grails.orm.hibernate.support.TransactionResources;
  * <p>Primes a disconnected outer session so that {@code txResources.getResource(dataSource)} captures
  * its {@code ConnectionHolder} before the new session begins, preventing outer session lazy loading
  * inside {@code withNewSession} from borrowing the inner transaction's connection.</p>
+ *
+ * <p>A lazy load that still takes the inner transaction's connection is disconnected before that transaction
+ * completes, see {@link AbstractOuterSessionLifecycleStrategy#pendingDisconnect()}.</p>
  */
 class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy {
 
@@ -47,5 +50,6 @@ class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy 
     @Override
     public void prepare() {
         super.prepare();
+        disconnectBeforeInnerTransactionCompletes();
     }
 }
