@@ -19,10 +19,13 @@
 package org.grails.plugins.sitemesh3
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import org.springframework.boot.SpringApplication
-import org.springframework.boot.env.EnvironmentPostProcessor
+import org.apache.commons.logging.Log
+import org.apache.commons.logging.LogFactory
+
+import org.springframework.boot.EnvironmentPostProcessor
+import org.springframework.boot.logging.DeferredLogFactory
 import org.springframework.core.Ordered
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.core.env.MapPropertySource
@@ -47,8 +50,24 @@ import org.grails.web.util.WebUtils
  * configuration always wins.</p>
  */
 @CompileStatic
-@Slf4j
 class Sitemesh3EnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
+
+    /**
+     * An EnvironmentPostProcessor runs before Spring Boot initialises logging
+     * (its listener orders ahead of LoggingApplicationListener), so a plain
+     * static logger writes into a logging system that does not exist yet and
+     * the message is lost. Spring Boot passes a DeferredLogFactory to whichever
+     * constructor accepts one; those records are replayed once logging is up.
+     */
+    private final Log log
+
+    Sitemesh3EnvironmentPostProcessor() {
+        this.log = LogFactory.getLog(Sitemesh3EnvironmentPostProcessor)
+    }
+
+    Sitemesh3EnvironmentPostProcessor(DeferredLogFactory logFactory) {
+        this.log = logFactory.getLog(Sitemesh3EnvironmentPostProcessor)
+    }
 
     static final String PROPERTY_SOURCE_NAME = 'defaultSitemesh3Properties'
 
@@ -79,12 +98,13 @@ class Sitemesh3EnvironmentPostProcessor implements EnvironmentPostProcessor, Ord
     @Override
     void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         if (isSiteMesh2Present()) {
-            log.warn('Both grails-sitemesh3 and grails-layout (SiteMesh 2) are on the classpath. ' +
-                    'grails-sitemesh3 is a drop-in replacement and the two are mutually exclusive; ' +
-                    'the SiteMesh 2 integration stays active and SiteMesh 3 view-resolver decoration ' +
-                    'is disabled. Remove the grails-layout dependency, or exclude grails-sitemesh3 ' +
-                    '(it arrives via grails-dependencies-starter-web) to silence this warning - ' +
-                    'tolerance for the combined classpath may be removed in a future release.')
+            log.error('Both grails-sitemesh3 and grails-layout (SiteMesh 2) are on the classpath. ' +
+                    'They are mutually exclusive - grails-sitemesh3 is a drop-in replacement for ' +
+                    'grails-layout - and an application should never depend on both. SiteMesh 2 ' +
+                    'keeps decorating and SiteMesh 3 view-resolver decoration is disabled, but this ' +
+                    'is a broken build rather than a supported configuration: remove the ' +
+                    'grails-layout dependency, or exclude grails-sitemesh3, which arrives ' +
+                    'transitively through grails-dependencies-starter-web.')
         }
         MapPropertySource defaults = getDefaultPropertySource(environment)
         if (!defaults.source.isEmpty()) {

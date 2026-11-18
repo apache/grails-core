@@ -1,0 +1,18 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+grails {
+    importGrailsCommonAnnotations = true
+    starImports = ['com.example.custom']
+}
+
+tasks.register('inspectImports') {
+    dependsOn 'generateCompileGroovyGrailsCompilerConfig'
+    def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+    doLast {
+        def script = combined.text
+        def stars = (script =~ /star '([^']+)'/).collect { it[1] }.sort()
+        println "STAR_IMPORTS=${stars}"
+    }
+}

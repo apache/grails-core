@@ -44,3 +44,43 @@ GSP also supports the contentType directive:
 ----
 
 The contentType directive allows using GSP to render other formats.
+
+Starting with Grails 8.1, the preprocessing settings `trimLogicLines` and `grailsLayoutPreprocess` may appear in any `<%@ %>` page directive. For each setting, the last value takes precedence, ignoring case in the name and surrounding whitespace in the value. Directives inside either GSP comment syntax are ignored. Previously, only the first page directive was checked for preprocessing settings. In particular, a later `grailsLayoutPreprocess="false"` now disables layout preprocessing even when `trimLogicLines` is not enabled. See link:#upgrading81x[Upgrading to Grails 8.1].
+
+This does not change how `contentType`, codecs such as `defaultCodec`, or `compileStatic` are processed: those settings already supported later page directives, and a later value still replaces an earlier one. Imports and model declarations continue to accumulate across directives.
+
+GSP writes the text of a page exactly as it is written, including the line breaks around scriptlets, directives and comments. That does not matter for HTML, but it does for text in which every line counts, such as a source file or a build script. The `trimLogicLines` directive makes a line holding only `<%@ %>` page directives, scriptlets (`<% %>` or `%{ }%`) and comments (`%{-- --}%` or `<%-- --%>`) write nothing, neither its indentation nor its line break:
+
+[,xml]
+----
+<%@ page trimLogicLines="true" expressionCodec="none" %>
+<%@ model="List<String> pluginIds" %>
+plugins {
+    <% for (String pluginId : pluginIds) { %>
+    id '${pluginId}'
+    <% } %>
+}
+----
+
+renders, with `pluginIds` holding `java` and `groovy`:
+
+[,groovy]
+----
+plugins {
+    id 'java'
+    id 'groovy'
+}
+----
+
+A line holding text, an expression (`${}` or `<%= %>`) or a tag besides the logic is written as it is. Only the lines of the page's text are trimmed: a line inside an expression, a tag, a scriptlet or a comment is never changed, even when it looks like a scriptlet. Source line breaks are retained for error reporting, but existing scanner limitations around comments can still affect reported line numbers.
+
+Logic-line trimming recognizes LF (`\n`) and CRLF (`\r\n`) line endings. A lone CR (`\r`) is not treated as a line ending.
+
+The short-form `@{ page ... }` syntax does not enable trimming and its lines are not trimmed. GSP tag-only lines also retain their line breaks. For example, the following renders a blank line before and after `text`, even with trimming enabled:
+
+[,xml]
+----
+<g:if test="${true}">
+text
+</g:if>
+----

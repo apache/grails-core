@@ -20,14 +20,19 @@ package org.grails.test.io
 
 import groovy.transform.CompileStatic
 
-import org.grails.build.logging.GrailsConsolePrintStream
-
 /**
  * Convenience class to temporarily swap in an output stream
  * for standard error and standard out.
  */
 @CompileStatic
 class SystemOutAndErrSwapper {
+
+    /**
+     * Mirrors {@code grails.build.logging.GrailsConsole.SUSPEND_SYSTEM_OUT_REDIRECT}. Declared as a
+     * literal rather than a reference because the console ships in the cli tier, which is deliberately
+     * absent from an application's production and test compile classpath.
+     */
+    static final String SUSPEND_CONSOLE_REDIRECT = 'grails.console.suspend.system.out.redirect'
 
     final boolean echoOut
     final boolean echoErr
@@ -82,6 +87,12 @@ class SystemOutAndErrSwapper {
         System.out = swappedInOut
         System.err = swappedInErr
 
+        // GrailsConsole re-installs its own streams whenever it does not recognise the current
+        // System.out, which would silently discard the capture above. Ask it to stand down for the
+        // duration of the swap; a property rather than a shared marker type keeps this module off the
+        // cli tier, where the console now lives.
+        System.setProperty(SUSPEND_CONSOLE_REDIRECT, 'true')
+
         swapped = true
 
         [swappedInOutStream, swappedInErrStream]
@@ -98,6 +109,8 @@ class SystemOutAndErrSwapper {
 
         System.out = swappedOutOut
         System.err = swappedOutErr
+
+        System.clearProperty(SUSPEND_CONSOLE_REDIRECT)
 
         swappedOutOut = null
         swappedOutErr = null
@@ -117,8 +130,13 @@ class SystemOutAndErrSwapper {
         streams
     }
 
+    /**
+     * Captures everything written to the swapped stream. This used to extend GrailsConsolePrintStream,
+     * but every method that routed output through the CLI console was overridden here anyway, so the
+     * inheritance only coupled test support to the console. A plain PrintStream is equivalent.
+     */
     @CompileStatic
-    static class TestOutputCapturingPrintStream extends GrailsConsolePrintStream {
+    static class TestOutputCapturingPrintStream extends PrintStream {
         BufferedWriter textOut
 
         TestOutputCapturingPrintStream(PrintStream out) {

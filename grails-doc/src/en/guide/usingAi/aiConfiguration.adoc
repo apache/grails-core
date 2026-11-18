@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Spring AI is configured through its own `spring.ai` properties, which the {springAiReference}[Spring AI reference] documents provider by provider. The plugin ships defaults below the application's configuration, so anything set in `application.yml` wins:
+
+[source,yaml]
+----
+spring:
+    ai:
+        retry:
+            max-attempts: 3
+
+environments:
+    development:
+        spring:
+            ai:
+                chat:
+                    client:
+                        observations:
+                            log-prompt: true
+                            log-completion: true
+                    observations:
+                        include-error-logging: true
+----
+
+* Spring AI retries a failed model call ten times, backing off for up to three minutes. A web request cannot wait that long, so the plugin retries three times. Set `spring.ai.retry.max-attempts` to change it.
+* Spring AI logs neither prompts nor completions. In the development environment the plugin turns both on, along with the logging of errors from the model, so a developer sees what was sent and what came back; in test and production nothing is logged. Spring AI logs through Micrometer observations, which need an `ObservationRegistry` bean; the plugin brings Spring Boot's auto-configuration of one, so the logging works without the actuator.
+
+==== Choosing the Provider and the Model
+
+The plugin selects no provider and no credential; the starter the application adds does, see <<aiProviders,Model Providers>>. Every provider auto-configures each kind of model it offers, so with one starter nothing more is needed. With more than one starter on the classpath, or to turn a kind of model off, the selection properties name the provider for each kind. Their value is the provider's name, such as `openai`, `anthropic`, `ollama`, `google-genai`, `bedrock-converse`, `mistral` or `deepseek`, or `none`:
+
+[cols="3,4"]
+|===
+| Property | Selects the provider of
+
+| `spring.ai.model.chat`
+| the chat model, which the `ChatClient` uses
+
+| `spring.ai.model.embedding`
+| the embedding model, which vector stores use
+
+| `spring.ai.model.image`
+| the image generation model
+
+| `spring.ai.model.audio.transcription`
+| the transcription model
+
+| `spring.ai.model.audio.speech`
+| the text to speech model
+
+| `spring.ai.model.moderation`
+| the moderation model
+|===
+
+Which model a provider uses, and with what options, is set under the provider's own prefix, for example `spring.ai.openai.chat.model` and `spring.ai.openai.chat.temperature`, or `spring.ai.anthropic.chat.model`; each provider's page in the Spring AI reference lists them with their defaults.
+
+Streaming is configured under `grails.async.streaming`, see <<aiStreaming,Streaming Model Responses>>, and the test stubs under `grails.ai.stub`, see <<aiTesting,Testing>>.

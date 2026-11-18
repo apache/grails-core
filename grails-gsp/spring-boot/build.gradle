@@ -43,6 +43,12 @@ dependencies {
     // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
     // WebMvc auto-configuration classes (e.g., WebMvcAutoConfiguration) moved to spring-boot-webmvc.
     api 'org.springframework.boot:spring-boot-webmvc'
+
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework.boot:spring-boot-test' // ApplicationContextRunner
+    testImplementation 'org.assertj:assertj-core' // required by the spring-boot-test context runners
+    testImplementation project(':grails-web-url-mappings') // UrlMappingsHolder, DefaultLinkGenerator
+    testRuntimeOnly 'org.slf4j:slf4j-nop'
 }
 
 apply {

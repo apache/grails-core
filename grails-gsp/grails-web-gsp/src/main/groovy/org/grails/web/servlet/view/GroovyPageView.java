@@ -43,6 +43,7 @@ import org.grails.gsp.GroovyPagesException;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.web.pages.GSPResponseWriter;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.WebUtils;
 
 /**
  * A Spring View that renders Groovy Server Pages to the response. It requires an instance
@@ -94,7 +95,9 @@ public class GroovyPageView extends AbstractGrailsView {
         try {
             out = createResponseWriter(webRequest, response);
             final GroovyPageWritable writable = template.make(model);
-            writable.setShowSource(developmentMode && request.getParameter("showSource") != null);
+            // Read tolerantly: the view may be an error page rendered for a multipart request whose body
+            // the container refused to parse, where any parameter read fails - see WebUtils.readParameter.
+            writable.setShowSource(developmentMode && WebUtils.readParameter(request, "showSource") != null);
             writable.writeTo(out);
         }
         catch (Exception e) {

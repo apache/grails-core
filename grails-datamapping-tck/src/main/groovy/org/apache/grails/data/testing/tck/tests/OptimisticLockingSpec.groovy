@@ -64,8 +64,17 @@ class OptimisticLockingSpec extends GrailsDataTckSpec {
         o.version == 1
     }
 
-    // hibernate has a customized version of this
-    @IgnoreIf({ System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite') })
+    @IgnoreIf({
+        // Neo4j runs every test inside a transaction that is only committed during cleanup, and it
+        // gives read-committed isolation, so the node created above is invisible to the second
+        // thread's own transaction: its OptLockVersioned.get(o.id) returns null, the background
+        // save never runs, and the main thread's save therefore never conflicts. Neo4j has a
+        // customized version of this that commits first - grails.gorm.tests.OptimisticLockingSpec
+        // in grails-data-neo4j-core.
+        Boolean.getBoolean('neo4j.gorm.suite') ||
+                // Hibernate has a customized version of this
+                System.getProperty('hibernate5.gorm.suite') || System.getProperty('hibernate7.gorm.suite')
+    })
     void "Test optimistic locking"() {
 
         given:

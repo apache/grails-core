@@ -36,9 +36,49 @@ public class GrailsUtil {
 
     private static final Log LOG = LogFactory.getLog(GrailsUtil.class);
     private static final boolean LOG_DEPRECATED = Boolean.valueOf(System.getProperty("grails.log.deprecated", String.valueOf(Environment.isDevelopmentMode())));
-    private static final StackTraceFilterer stackFilterer = new DefaultStackTraceFilterer();
+
+    /**
+     * Default filterer used before {@link #initializeStackFilterer(StackTraceFilterer)} runs — that
+     * is, in any context not started through {@code SpringApplication} (CLI, plain {@code main()}
+     * usage, Grails unit tests). Preserves the pre-PR behaviour of a single hardcoded
+     * {@link DefaultStackTraceFilterer} instance for the JVM lifetime when no application is wired.
+     */
+    private static final StackTraceFilterer FALLBACK_FILTERER = new DefaultStackTraceFilterer();
+
+    /**
+     * Active filterer for {@link #printSanitizedStackTrace}, {@link #sanitizeRootCause} and
+     * {@link #deepSanitize}. Starts as {@link #FALLBACK_FILTERER} and is replaced with a
+     * config-driven instance when {@link #initializeStackFilterer(StackTraceFilterer)} runs during
+     * Grails bootstrap. Volatile so the bootstrap-time write publishes safely to the request
+     * threads that read it later.
+     */
+    private static volatile StackTraceFilterer stackFilterer = FALLBACK_FILTERER;
 
     private GrailsUtil() {
+    }
+
+    /**
+     * Installs the given {@link StackTraceFilterer}, replacing the default fallback, so that
+     * request-time callers of the static {@code sanitize}/{@code deepSanitize} methods see the
+     * configured instance. Called by {@link org.apache.grails.core.GrailsBootstrapRegistryInitializer}
+     * once the config-resolved filterer is available — before the {@code ApplicationContext}
+     * refreshes, so every app type (web or not) is covered, not just apps that wire a
+     * {@code GrailsExceptionResolver} bean.
+     *
+     * <p>{@code GrailsUtil} intentionally has no dependency on {@code GrailsApplication} or Spring's
+     * {@code Environment} here — the caller is responsible for resolving the configured class and
+     * {@code logFullStackTraceOnFilter} flag and handing over a ready-to-use instance.
+     *
+     * <p>No-ops when {@code filterer} is null. Safe to call more than once — the last call wins.
+     * The installed filterer is JVM-global rather than per-context, so in a JVM hosting more than
+     * one application context the last one booted supplies the filterer for all of them.
+     *
+     * @since 8.0
+     */
+    public static void initializeStackFilterer(StackTraceFilterer filterer) {
+        if (filterer != null) {
+            stackFilterer = filterer;
+        }
     }
 
     /**

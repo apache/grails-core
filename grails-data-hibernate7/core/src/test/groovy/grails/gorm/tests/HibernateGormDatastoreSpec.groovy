@@ -35,12 +35,14 @@ import org.hibernate.boot.internal.BootstrapContextImpl
 import org.hibernate.boot.internal.InFlightMetadataCollectorImpl
 import org.hibernate.boot.internal.MetadataBuilderImpl
 import org.hibernate.boot.registry.BootstrapServiceRegistry
+import org.hibernate.boot.registry.StandardServiceRegistry
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder
 import org.hibernate.boot.registry.classloading.spi.ClassLoaderService
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.internal.SessionFactoryImpl
 import org.hibernate.service.spi.ServiceRegistryImplementor
 import org.hibernate.boot.spi.AdditionalMappingContributor
+import org.testcontainers.DockerClientFactory
 
 /**
  * Base Spock spec for Hibernate 7 GORM tests.
@@ -50,6 +52,8 @@ import org.hibernate.boot.spi.AdditionalMappingContributor
  * need via {@code setupSpec}, keeping tests isolated and the schema minimal.
  */
 class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
+
+    private final List<StandardServiceRegistry> collectorRegistries = []
 
     void setupSpec() {
         manager.grailsConfig = [
@@ -63,6 +67,13 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 'hibernate.jpa.compliance.cascade': 'true',
                 'hibernate.proxy_factory_class' : 'org.grails.orm.hibernate.proxy.ByteBuddyGroovyProxyFactory'
         ]
+    }
+
+    void cleanup() {
+        // Each registry from getCollector() runs its own JDBC connection pool, whose validation
+        // thread keeps the registry and everything it references alive until it is destroyed.
+        collectorRegistries.each { StandardServiceRegistryBuilder.destroy(it) }
+        collectorRegistries.clear()
     }
 
     GrailsHibernatePersistentEntity createPersistentEntity(GrailsDomainBinder binder
@@ -121,6 +132,7 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
                 .addService(org.hibernate.bytecode.spi.BytecodeProvider.class, new org.grails.orm.hibernate.proxy.GrailsBytecodeProvider())
                 .applySetting("hibernate.bytecode.allow_enhancement_as_proxy", "false")
                 .build()
+        collectorRegistries << serviceRegistry
         def options = new MetadataBuilderImpl(
                 new MetadataSources(serviceRegistry)
         ).getMetadataBuildingOptions()
@@ -186,17 +198,19 @@ class HibernateGormDatastoreSpec extends GrailsDataTckSpec<GrailsDataHibernate7T
     /**
      * Returns true when a Docker daemon is reachable on this machine.
      * <p>
-     * Checks the well-known socket paths used by Docker Desktop on macOS and Linux.
-     * Prefer this over calling {@code DockerClientFactory.instance().client()} directly,
-     * which can throw a 500 error on macOS when the daemon API version doesn't match
-     * the docker-java client version bundled with Testcontainers.
+     * A socket file at the well-known path of Docker Desktop or Linux answers yes without a call. Without one the
+     * daemon may still be there: on Windows it listens on a named pipe, and {@code DOCKER_HOST} can name a TCP address,
+     * neither of which is a file, so then the daemon itself is asked, and an error from the client means it is not
+     * reachable.
      */
     static boolean isDockerAvailable() {
-        def candidates = [
-            System.getProperty('user.home') + '/.docker/run/docker.sock',
-            '/var/run/docker.sock',
-            System.getenv('DOCKER_HOST') ?: ''
-        ]
-        candidates.any { it && new File(it).exists() }
+        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
+            return true
+        }
+        try {
+            return DockerClientFactory.instance().isDockerAvailable()
+        } catch (Throwable ignored) {
+            return false
+        }
     }
 }

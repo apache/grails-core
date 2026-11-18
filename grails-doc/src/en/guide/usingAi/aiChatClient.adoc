@@ -1,0 +1,87 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A `ChatClient.Builder` is auto-configured over the provider's chat model. Inject it into a service and build a client; the builder is a prototype, so each service can give its client its own defaults:
+
+[source,groovy]
+.grails-app/services/my/app/AnswerService.groovy
+----
+package my.app
+
+import org.springframework.ai.chat.client.ChatClient
+
+class AnswerService {
+
+    ChatClient chatClient
+
+    AnswerService(ChatClient.Builder chatClientBuilder) {
+        chatClient = chatClientBuilder
+                .defaultSystem('You answer questions about the Grails framework, briefly.')
+                .build()
+    }
+
+    String answer(String question) {
+        chatClient.prompt()
+                .user(question)
+                .call()
+                .content()
+    }
+}
+----
+
+The fluent API maps a response onto a class as well. Spring AI derives a JSON schema from the class, asks the model to follow it and converts the answer:
+
+[source,groovy]
+----
+class Summary {
+    String title
+    List<String> keyPoints
+}
+
+Summary summarise(String text) {
+    chatClient.prompt()
+            .user("Summarise the following text.\n\n$text")
+            .call()
+            .entity(Summary)
+}
+----
+
+Methods of a service become tools the model may call when they carry Spring AI's `@Tool` annotation and the service is passed to the client:
+
+[source,groovy]
+----
+import org.springframework.ai.tool.annotation.Tool
+import org.springframework.ai.tool.annotation.ToolParam
+
+class BookService {
+
+    @Tool(description = 'Finds the books of an author')
+    List<String> findBooks(@ToolParam(description = 'The name of the author') String author) {
+        Book.findAllByAuthor(author)*.title
+    }
+}
+
+chatClient.prompt()
+        .user('Which books did Graeme Rocher write?')
+        .tools(bookService)
+        .call()
+        .content()
+----
+
+Chat memory, retrieval augmented generation, the MCP client and the other Spring AI features work as the {springAiReference}api/chatclient.html[Spring AI reference] describes them. A memory advisor needs a conversation id on every call; derive it from the current user and session rather than a constant, so conversations stay apart.

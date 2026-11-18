@@ -42,23 +42,33 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
     }
 
     @Unroll
-    void "test logback-spring.xml config file is present for #applicationType application"() {
+    void "test no logback-spring.xml config file is generated for #applicationType application"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
-        output.containsKey("grails-app/conf/logback-spring.xml")
+        !output.containsKey("grails-app/conf/logback-spring.xml")
 
         where:
         applicationType << ApplicationType.values().toList()
     }
 
-    @Unroll
-    void "test logback-spring.xml composes Spring Boot defaults with an INFO root level for #applicationType application"() {
+    void "test logback-config feature is visible so it can be searched and selected"() {
         when:
-        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+        def feature = beanContext.getBean(LogbackConfig)
+
+        then:
+        feature.name == "logback-config"
+        feature.visible
+    }
+
+    @Unroll
+    void "test logback-config feature generates logback-spring.xml composing Spring Boot defaults for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ["logback-config"])
 
         then: "the file reuses Spring Boot's own defaults and console appender instead of duplicating them"
+        output.containsKey("grails-app/conf/logback-spring.xml")
         def logback = output.get("grails-app/conf/logback-spring.xml")
         logback.contains('<include resource="org/springframework/boot/logging/logback/defaults.xml"/>')
         logback.contains('<include resource="org/springframework/boot/logging/logback/console-appender.xml"/>')
@@ -71,6 +81,20 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
 
         and: "Jansi is not used; its global System.out replacement breaks console logging after a Spring Boot DevTools restart (issue #15663)"
         !logback.contains("withJansi")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "test logback-config feature keeps the grails-logging dependency exactly once for #applicationType application"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS), ["logback-config"])
+
+        then:
+        output.containsKey("build.gradle")
+        def build = output.get("build.gradle")
+        build.count("implementation \"org.apache.grails:grails-logging\"") == 1
 
         where:
         applicationType << ApplicationType.values().toList()

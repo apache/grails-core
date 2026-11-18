@@ -23,6 +23,7 @@ import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.tests.HibernateGormDatastoreSpec
 import jakarta.persistence.FlushModeType
+import org.hibernate.FlushMode
 import org.grails.orm.hibernate.query.HibernateQuery
 
 class HibernateSessionSpec extends HibernateGormDatastoreSpec {
@@ -113,21 +114,83 @@ class HibernateSessionSpec extends HibernateGormDatastoreSpec {
     // Flush mode
     // -------------------------------------------------------------------------
 
-    void "getFlushMode and setFlushMode round-trip correctly"() {
+    void "setFlushMode sets the flush mode of the Hibernate session bound to the current thread"() {
         given:
-        def session = getSession()
+        var session = getSession()
+        var nativeSession = sessionFactory.currentSession
+        var originalMode = nativeSession.hibernateFlushMode
 
         when:
         session.setFlushMode(FlushModeType.AUTO)
 
         then:
+        nativeSession.hibernateFlushMode == FlushMode.AUTO
         session.getFlushMode() == FlushModeType.AUTO
 
         when:
         session.setFlushMode(FlushModeType.COMMIT)
 
         then:
+        nativeSession.hibernateFlushMode == FlushMode.COMMIT
         session.getFlushMode() == FlushModeType.COMMIT
+
+        cleanup:
+        nativeSession.hibernateFlushMode = originalMode
+    }
+
+    void "setFlushMode does not change the flush mode of the template the datastore shares"() {
+        given:
+        var nativeSession = sessionFactory.currentSession
+        var originalMode = nativeSession.hibernateFlushMode
+        var templateMode = datastore.hibernateTemplate.flushMode
+
+        when:
+        getSession().setFlushMode(FlushModeType.AUTO)
+
+        then:
+        datastore.hibernateTemplate.flushMode == templateMode
+
+        cleanup:
+        nativeSession.hibernateFlushMode = originalMode
+    }
+
+    void "getFlushMode returns #expected when the bound Hibernate session uses #nativeMode"() {
+        given:
+        var nativeSession = sessionFactory.currentSession
+        var originalMode = nativeSession.hibernateFlushMode
+        nativeSession.hibernateFlushMode = nativeMode
+
+        expect:
+        getSession().getFlushMode() == expected
+
+        cleanup:
+        nativeSession.hibernateFlushMode = originalMode
+
+        where:
+        nativeMode       || expected
+        FlushMode.AUTO   || FlushModeType.AUTO
+        FlushMode.ALWAYS || FlushModeType.AUTO
+        FlushMode.COMMIT || FlushModeType.COMMIT
+        FlushMode.MANUAL || FlushModeType.COMMIT
+    }
+
+    void "without a bound Hibernate session getFlushMode returns the datastore default and setFlushMode fails"() {
+        when: 'the session is used on a thread without a bound Hibernate session'
+        FlushModeType mode = null
+        Throwable failure = null
+        Thread.start {
+            var session = datastore.currentSession
+            mode = session.flushMode
+            try {
+                session.flushMode = FlushModeType.AUTO
+            } catch (Throwable e) {
+                failure = e
+            }
+        }.join()
+
+        then: 'the default flush mode of the datastore is COMMIT'
+        mode == FlushModeType.COMMIT
+        failure instanceof IllegalStateException
     }
 
     // -------------------------------------------------------------------------

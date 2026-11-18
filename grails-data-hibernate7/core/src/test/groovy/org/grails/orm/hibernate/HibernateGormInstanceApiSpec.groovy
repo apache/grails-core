@@ -22,8 +22,12 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.annotation.Entity
 import grails.gorm.hibernate.HibernateEntity
 import grails.gorm.transactions.Rollback
+import org.grails.datastore.gorm.GormRegistry
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 import org.hibernate.FlushMode
+import org.hibernate.Hibernate
+import org.hibernate.LockMode
 import org.grails.orm.hibernate.query.SelectHqlQuery
 
 class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
@@ -34,19 +38,19 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     void "Test that HibernateGormInstanceApi uses the shared template from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getInstanceApi(PersonInstanceApi)
+        def api = (HibernateGormInstanceApi) GormRegistry.instance.getInstanceApi(PersonInstanceApi.name)
 
         expect:
+        api instanceof HibernateGormInstanceApi
         api.hibernateTemplate.is(manager.hibernateDatastore.getHibernateTemplate())
     }
 
     void "Test that HibernateGormInstanceApi uses the shared InstanceApiHelper from the datastore"() {
         given:
-        def enhancer = manager.hibernateDatastore.gormEnhancer
-        def api = enhancer.getInstanceApi(PersonInstanceApi)
+        def api = (HibernateGormInstanceApi) GormRegistry.instance.getInstanceApi(PersonInstanceApi.name)
 
         expect:
+        api instanceof HibernateGormInstanceApi
         api.instanceApiHelper.is(manager.hibernateDatastore.getInstanceApiHelper())
     }
 
@@ -295,20 +299,29 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
     }
 
     @Rollback
-    def "lock acquires a pessimistic write lock on the entity"() {
+    def "lock acquires a pessimistic write lock without refreshing the entity"() {
         given:
         Long savedId = PersonInstanceApi.withTransaction {
             new PersonInstanceApi(name: 'LockUser', age: 22).save(flush: true, failOnError: true)
         }.id
 
         when:
-        PersonInstanceApi.withTransaction {
+        Map outcome = PersonInstanceApi.withTransaction {
+            PersonInstanceApi.withSession { it.clear() }
             def person = PersonInstanceApi.get(savedId)
-            person.lock()
+            person.name = 'Pending change'
+            def result = person.lock()
+            [sameInstance: result.is(person),
+             name        : person.name,
+             version     : person.version,
+             lockMode    : PersonInstanceApi.withSession { it.getCurrentLockMode(person) }]
         }
 
         then:
-        noExceptionThrown()
+        outcome.sameInstance
+        outcome.name == 'Pending change'
+        outcome.version == 0
+        outcome.lockMode == LockMode.PESSIMISTIC_WRITE
     }
 
     @Rollback
@@ -481,18 +494,45 @@ class HibernateGormInstanceApiSpec extends HibernateGormDatastoreSpec {
 
     @Rollback
     def "handleValidationError sets association to read-only"() {
-        given:
-        def author = new PersonInstanceApi(name: 'Valid Author', age: 30)
-        def book = new ConstrainedBook(title: '', author: author)
+        given: "a persisted author with an unsaved change"
+        def author = new PersonInstanceApi(name: 'Original', age: 30).save(flush: true)
+        author.name = 'Changed'
 
-        when:
-        def result = ConstrainedBook.withTransaction {
-            book.save(flush: true)
-        }
+        when: "a book referencing the author fails validation"
+        def book = new ConstrainedBook(title: '', author: author)
+        def result = book.save()
 
         then:
         result == null
         book.hasErrors()
+        sessionFactory.currentSession.isReadOnly(author)
+
+        when: "the session is flushed explicitly and the author reloaded"
+        sessionFactory.currentSession.flush()
+        sessionFactory.currentSession.clear()
+
+        then: "the change to the author was not written"
+        PersonInstanceApi.get(author.id).name == 'Original'
+    }
+
+    @Rollback
+    def "handleValidationError leaves an uninitialized association proxy uninitialized"() {
+        given: "a book whose author is loaded as an uninitialized proxy"
+        def authorId = new PersonInstanceApi(name: 'Original', age: 30).save(flush: true).id
+        sessionFactory.currentSession.clear()
+        def author = PersonInstanceApi.load(authorId)
+
+        expect:
+        !Hibernate.isInitialized(author)
+
+        when: "the book fails validation"
+        def book = new ConstrainedBook(title: '', author: author)
+        def result = book.save()
+
+        then: "the proxy was not loaded to mark it read-only"
+        result == null
+        book.hasErrors()
+        !Hibernate.isInitialized(author)
     }
 
     @Rollback

@@ -116,7 +116,7 @@ class WebSetupSpecInterceptor implements IMethodInterceptor {
             try {
                 Class viewResolver = classLoader.loadClass('grails.plugin.json.view.mvc.JsonViewResolver')
                 jsonSmartViewResolver(viewResolver)
-            } catch (ClassNotFoundException e) { }
+            } catch (ClassNotFoundException ignored) { }
 
             localeResolver(SessionLocaleResolver)
             multipartResolver(StandardServletMultipartResolver)

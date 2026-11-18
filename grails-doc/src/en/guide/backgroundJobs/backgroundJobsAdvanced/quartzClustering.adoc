@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+By default the Quartz plugin uses Quartz's in-memory `RAMJobStore`: the schedule is rebuilt from your source at every startup and lives entirely inside one process. That is fine for a single instance, but it means a deployment of three instances fires every trigger three times, exactly as xref:backgroundJobs.adoc#backgroundJobsBasic[Basic Scheduling] does.
+
+Clustering fixes that. It is not on by default and requires deliberate configuration.
+
+WARNING: Duplicate firing is a quiet failure. Nothing throws, nothing is logged, and it usually does not surface in a single-instance test environment. It shows up in production as duplicated emails, double-counted totals, or deadlocks between instances competing for the same rows.
+
+===== How Quartz clustering works
+
+Quartz clusters through the database. Every instance is configured with the *same* scheduler name and points at the *same* set of Quartz tables. When a trigger's firing time arrives, each instance races to acquire a row lock on it; the first to take the lock is the one that fires it, and the others move on. The result is load balancing across the cluster with exactly-once firing per trigger.
+
+Failover works from the same mechanism. Instances check in on an interval; when one stops checking in, another detects the failure and recovers its work — re-firing the jobs that declared `requestsRecovery`.
+
+===== Enabling clustering
+
+Three things are required.
+
+*1. A JDBC job store.* Clustering works only with the JDBC job store — the default in-memory `RAMJobStore` cannot cluster, because there is nothing shared to coordinate through.
+
+[source,yaml]
+.application.yml
+----
+quartz:
+    jdbcStore: true
+----
+
+*2. The Quartz tables.* Quartz ships a schema script for each supported database with its distribution; create the `QRTZ_*` tables before starting the application.
+
+*3. Clustering configuration.* Every key under `quartz` is passed through to Quartz with an `org.quartz.` prefix, so the standard clustering properties are set the same way:
+
+[source,yaml]
+.application.yml
+----
+quartz:
+    jdbcStore: true
+    scheduler:
+        instanceName: myAppScheduler   # identical on every instance
+        instanceId: AUTO               # unique per instance; AUTO generates one
+    jobStore:
+        isClustered: true
+        clusterCheckinInterval: 20000  # milliseconds
+----
+
+Every instance must use the same `instanceName` and the same tables. Only `instanceId` and the thread-pool size should differ.
+
+===== Requirements and pitfalls
+
+[IMPORTANT]
+====
+* *Clocks must be synchronized.* Cluster nodes coordinate on time; their clocks must be within about a second of each other. Run NTP or an equivalent time-sync service on every node.
+* *Never point a non-clustered scheduler at clustered tables.* Starting an instance with `isClustered` disabled against the same tables another instance is using causes data corruption and erratic firing. If one instance is clustered, all of them must be.
+* *`instanceId` must be unique per node.* `AUTO` generates one; a hard-coded value copied across nodes breaks failover detection.
+* *Set `requestsRecovery` on jobs that must not be lost.* Without it, work that was executing when a node died is not re-run after failover. See <<quartzJobProperties,Job Properties>>.
+* *Jobs must be idempotent anyway.* Clustering guarantees one node fires a trigger, not that the work is never repeated — a node can die mid-execution and, with `requestsRecovery`, the job runs again from the start.
+* *Clustering does not spread a single execution across nodes.* One firing runs entirely on one node. Load balancing happens across separate firings, not within one.
+* *Every application sharing the tables needs its own name.* Each instance removes the jobs of *its* application which are no longer declared, and recognises them by the application name — so instances of one application share a name, while two different applications on the same tables must not. See <<_jobs_in_a_shared_job_store,The application only removes its own jobs>>.
+====
+
+===== If you are not clustering
+
+A single-instance deployment does not need any of this, and `quartz.jdbcStore` should be left at its default of `false` — the in-memory store is simpler and faster, and the schedule is rebuilt from your source at every startup.
+
+If you have a single instance but need the schedule itself to survive restarts — because it is modified at runtime — enable `jdbcStore` without `isClustered`.

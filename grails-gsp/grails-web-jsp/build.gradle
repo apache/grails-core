@@ -45,6 +45,8 @@ dependencies {
     api project(':grails-web-common')
     api project(':grails-web-gsp')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     // Required for JSP support
     compileOnly "jakarta.servlet.jsp:jakarta.servlet.jsp-api:$jspApiVersion"
     compileOnly "jakarta.el:jakarta.el-api:$elApiVersion"

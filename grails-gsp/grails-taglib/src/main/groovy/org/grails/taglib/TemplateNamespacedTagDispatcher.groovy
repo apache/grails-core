@@ -21,7 +21,6 @@ package org.grails.taglib
 import groovy.transform.CompileStatic
 
 import grails.core.GrailsApplication
-import grails.util.Environment
 import org.grails.taglib.encoder.OutputContextLookupHelper
 
 @CompileStatic
@@ -29,21 +28,18 @@ class TemplateNamespacedTagDispatcher extends NamespacedTagDispatcher {
 
     public static final String TEMPLATE_NAMESPACE = 'tmpl'
 
-    private boolean developmentMode = Environment.current.isDevelopmentMode()
-
     TemplateNamespacedTagDispatcher(Class callingType, GrailsApplication application, TagLibraryLookup lookup) {
         super(TEMPLATE_NAMESPACE, callingType, application, lookup)
     }
 
+    /**
+     * A template name used once used to be installed onto this dispatcher's metaclass so that the next
+     * use of the same name bypassed methodMissing. Rendering goes through the render tag either way,
+     * and installing the name made every template a caller referenced a write to an
+     * ExpandoMetaClass whose reads are then guarded by a lock.
+     */
     def methodMissing(String name, Object args) {
-        ((GroovyObject) getMetaClass()).setProperty(name, { Object[] varArgs ->
-            callRender(argsToAttrs(name, varArgs), filterBodyAttr(varArgs))
-        })
         callRender(argsToAttrs(name, args), filterBodyAttr(args))
-    }
-
-    protected void registerTagMetaMethods(ExpandoMetaClass emc) {
-
     }
 
     protected callRender(Map attrs, Object body) {

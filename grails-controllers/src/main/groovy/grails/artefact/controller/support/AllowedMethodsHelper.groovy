@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 
 import jakarta.servlet.http.HttpServletRequest
 
+import org.grails.web.util.HiddenHttpMethod
+
 /**
  * A helper class for interrogating the allowedMethods property.
  *
@@ -35,7 +37,9 @@ class AllowedMethodsHelper {
     static boolean isAllowed(final String actionName, final HttpServletRequest request, final Map allowedMethods) {
         boolean isAllowed = true
         if (allowedMethods?.containsKey(actionName)) {
-            def method = request.method
+            // The method the handler was selected for: the overridden one where the dispatcher resolved a
+            // _method, and the request's own where a servlet filter already rewrote it.
+            def method = HiddenHttpMethod.effectiveMethod(request)
             def value = allowedMethods[actionName]
             if (value instanceof String) {
                 isAllowed = method.equalsIgnoreCase(value)

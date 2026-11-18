@@ -18,6 +18,8 @@
  */
 package org.grails.commons
 
+import org.codehaus.groovy.runtime.GStringImpl
+import org.codehaus.groovy.runtime.InvokerHelper
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,6 +39,9 @@ class DefaultGrailsCodecClassTests {
 
     @AfterEach
     protected void tearDown() {
+        [String, GStringImpl, StringBuffer, StringBuilder, Object].each { Class targetClass ->
+            GroovySystem.metaClassRegistry.removeMetaClass(targetClass)
+        }
         ExpandoMetaClass.disableGlobally()
     }
 
@@ -54,6 +59,17 @@ class DefaultGrailsCodecClassTests {
         codecClass.afterPropertiesSet();
         assertEquals "encoded", codecClass.encoder.encode("stuff")
         assertEquals "decoded", codecClass.decoder.decode("stuff")
+    }
+
+    @Test
+    void testConfigureCodecMethodsRegistersDynamicMethodsThroughPublicCodecClass() {
+        def codecClass = new DefaultGrailsCodecClass(CodecWithClosuresCodec)
+
+        codecClass.configureCodecMethods()
+        codecClass.configureCodecMethods()
+
+        assertEquals 'encoded', InvokerHelper.invokeMethod('stuff', 'encodeAsCodecWithClosures', null)
+        assertEquals 'decoded', InvokerHelper.invokeMethod('stuff', 'decodeCodecWithClosures', null)
     }
 }
 

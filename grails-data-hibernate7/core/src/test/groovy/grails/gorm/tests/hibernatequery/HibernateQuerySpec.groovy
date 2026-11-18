@@ -29,6 +29,7 @@ import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.HibernateSession
+import org.grails.orm.hibernate.query.HibernateAlias
 import org.grails.orm.hibernate.query.HibernateQuery
 import jakarta.persistence.criteria.JoinType
 import java.io.Serializable
@@ -57,6 +58,25 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         def newBob = hibernateQuery.singleResult()
         then:
         oldBob == newBob
+    }
+
+    def 'eqIgnoreCase(#property, #value.inspect()) matches the whole value in any case'() {
+        given: 'a person whose first name starts with the value'
+        new Person(firstName: 'Bobby', lastName: 'Rogers', age: 51).save(flush: true)
+        hibernateQuery.eqIgnoreCase(property, value)
+
+        when:
+        var results = hibernateQuery.list()
+
+        then:
+        results*.firstName == expected
+
+        where:
+        property    | value  || expected
+        'firstName' | 'BOB'  || ['Bob']
+        'firstName' | 'bob%' || []
+        'age'       | 50     || ['Bob']
+        'age'       | '50'   || ['Bob']
     }
 
     def equalsJoins() {
@@ -946,21 +966,121 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     }
 
     def addDetachedCriteria() {
-        given:
-        hibernateQuery.add(new DetachedCriteria(Person).eq("firstName", "Bob"))
+        given: 'a second person the detached criteria does not match'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        hibernateQuery.add(new DetachedCriteria(Person).eq('firstName', 'Bob'))
+
         when:
-        def bob = hibernateQuery.singleResult()
-        then:
-        bob == oldBob
+        var results = hibernateQuery.list()
+
+        then: 'the criteria of the detached criteria restrict the query'
+        results == [oldBob]
     }
 
     def addJunctionCriterion() {
-        given:
-        hibernateQuery.add(new Query.Disjunction(), new Query.Equals("firstName", "Bob"))
+        given: 'two people besides oldBob and a disjunction of two of them'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var disjunction = hibernateQuery.disjunction()
+        hibernateQuery.add(disjunction, new Query.Equals('firstName', 'Bob'))
+        hibernateQuery.add(disjunction, new Query.Equals('firstName', 'Fred'))
+
         when:
-        def bob = hibernateQuery.singleResult()
+        var results = hibernateQuery.list()
+
         then:
-        bob == oldBob
+        results*.firstName.sort() == ['Bob', 'Fred']
+    }
+
+    def 'add(junction, criterion) adds the criterion to the given junction, not to an earlier disjunction'() {
+        given: 'a disjunction on last name followed by a second disjunction that criteria are added to'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var lastNames = hibernateQuery.disjunction()
+        lastNames.add(new Query.Equals('lastName', 'Builder'))
+        lastNames.add(new Query.Equals('lastName', 'Rogers'))
+        var ages = hibernateQuery.disjunction()
+        hibernateQuery.add(ages, new Query.Equals('age', 51))
+        hibernateQuery.add(ages, new Query.Equals('age', 52))
+
+        when:
+        var results = hibernateQuery.list()
+
+        then: 'only Fred matches both disjunctions'
+        results*.firstName == ['Fred']
+    }
+
+    def 'add(junction, criterion) adds the criterion to a conjunction'() {
+        given:
+        new Person(firstName: 'Bob', lastName: 'Rogers', age: 51).save(flush: true)
+        var conjunction = hibernateQuery.conjunction()
+        hibernateQuery.add(conjunction, new Query.Equals('firstName', 'Bob'))
+        hibernateQuery.add(conjunction, new Query.Equals('lastName', 'Rogers'))
+
+        when:
+        var results = hibernateQuery.list()
+
+        then: 'only the person matching every criterion of the conjunction is returned'
+        results*.lastName == ['Rogers']
+    }
+
+    def 'countByXOrY on a where query keeps its Or apart from the where query\'s or block'() {
+        given: 'Fred matches the or block and the dynamic finder, Walt matches only the dynamic finder'
+        new Person(firstName: 'Fred', lastName: 'Rogers', age: 51).save(flush: true)
+        new Person(firstName: 'Walt', lastName: 'Disney', age: 52).save(flush: true)
+        var query = Person.where {
+            or {
+                eq('lastName', 'Builder')
+                eq('lastName', 'Rogers')
+            }
+        }
+
+        when:
+        var count = query.countByFirstNameOrAge('Walt', 51)
+
+        then: 'only Fred matches both the or block and the dynamic finder'
+        count == 1
+    }
+
+    def "countByXOrY exercises disjunction() through a dynamic finder"() {
+        given: "one person matching only the age side of the Or, one matching only the name side, and one matching neither"
+        new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+        new Person(firstName: "Walt", lastName: "Disney", age: 52).save(flush: true)
+
+        when: "counting by a condition oldBob satisfies through age and Fred satisfies through firstName"
+        def count = Person.countByFirstNameOrAge("Fred", 50)
+
+        then: "only the two matching rows are counted; a disjunction dropped onto the unused base criteria field would count every row"
+        count == 2
+    }
+
+    def "conjunction() combines added criteria so only rows matching all of them are returned"() {
+        given: "a second person who satisfies only one of the two criteria added to the conjunction"
+        new Person(firstName: "Fred", lastName: "Rogers", age: 50).save(flush: true)
+
+        when: "adding two criteria directly to the Junction returned by conjunction()"
+        def conjunction = hibernateQuery.conjunction()
+        conjunction.add(new Query.Equals("firstName", "Bob"))
+        conjunction.add(new Query.Equals("age", 50))
+        def results = hibernateQuery.list()
+
+        then: "only the row matching both criteria is returned; a conjunction dropped onto the unused base criteria field would return every row"
+        results.size() == 1
+        results[0] == oldBob
+    }
+
+    def "negation() excludes rows matching the added criterion"() {
+        given: "a second person who would incorrectly remain excluded if the negation were silently dropped"
+        def fred = new Person(firstName: "Fred", lastName: "Rogers", age: 51).save(flush: true)
+
+        when: "negating a criterion that matches oldBob"
+        def negation = hibernateQuery.negation()
+        negation.add(new Query.Equals("firstName", "Bob"))
+        def results = hibernateQuery.list()
+
+        then: "oldBob is excluded and only the non-matching row remains; a negation dropped onto the unused base criteria field would return every row"
+        results.size() == 1
+        results[0] == fred
     }
 
     def andList() {
@@ -1003,6 +1123,8 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
     def cloneQuery() {
         given:
         hibernateQuery.eq("firstName", "Bob").max(10).offset(5)
+        def alias = new HibernateAlias('pets', 'p', JoinType.LEFT)
+        hibernateQuery.addAlias(alias)
         when:
         HibernateQuery cloned = (HibernateQuery) hibernateQuery.clone()
         then:
@@ -1010,6 +1132,14 @@ class HibernateQuerySpec extends HibernateGormDatastoreSpec {
         cloned.max == hibernateQuery.max
         cloned.offset == hibernateQuery.offset
         cloned.hibernateCriteria != null
+        cloned.aliases == [alias]
+
+        when:
+        cloned.addAlias(new HibernateAlias('pets', 'other'))
+
+        then:
+        cloned.aliases.size() == 2
+        hibernateQuery.aliases == [alias]
     }
 
     def "cloneQuery with order then clearOrders produces no ORDER BY in count"() {

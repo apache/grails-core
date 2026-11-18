@@ -22,6 +22,8 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 import java.time.*
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 class Jsr310ConvertersConfigurationSpec extends Specification {
 
@@ -241,6 +243,27 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         date.second == 0
     }
 
+    void "value converters read #value as ISO 8601 writes a #type.simpleName, as Grails renders it"() {
+        expect:
+        converter.call(config).convert(value) == type.parse(value)
+
+        where:
+        type           | value                               | converter
+        OffsetDateTime | '2024-05-01T10:00:00Z'              | { it.offsetDateTimeValueConverter() }
+        OffsetDateTime | '2024-05-01T10:00:00+02:00'         | { it.offsetDateTimeValueConverter() }
+        ZonedDateTime  | '2024-05-01T10:00:00+02:00'         | { it.zonedDateTimeValueConverter() }
+        LocalDateTime  | '2024-05-01T10:00:00.250'           | { it.localDateTimeValueConverter() }
+        OffsetTime     | '10:00:00+02:00'                    | { it.offsetTimeValueConverter() }
+        LocalTime      | '10:00:00.5'                        | { it.localTimeValueConverter() }
+        LocalDate      | '2024-05-01'                        | { it.localDateValueConverter() }
+    }
+
+    void "value converters still read the configured date formats"() {
+        expect: 'a form ISO 8601 does not write, which a configured format reads'
+        config.offsetDateTimeValueConverter().convert('1941-01-05T08:00:00+0000') ==
+                OffsetDateTime.parse('1941-01-05T08:00:00Z')
+    }
+
     void "periodValueConverter"() {
         def converter = config.periodValueConverter()
 
@@ -271,5 +294,63 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         converter.canConvert(2)
         !converter.canConvert("23")
         converter.convert(1) instanceof Instant
+    }
+
+    void "monthValueConverter binds a month number, as Spring Boot renders a Month"() {
+        def converter = config.monthValueConverter()
+
+        expect:
+        converter.targetType == Month
+        converter.canConvert(9)
+        converter.canConvert('9')
+        !converter.canConvert('SEPTEMBER')
+        converter.convert(1) == Month.JANUARY
+        converter.convert(9) == Month.SEPTEMBER
+        converter.convert(9.0) == Month.SEPTEMBER
+        converter.convert(' 12 ') == Month.DECEMBER
+    }
+
+    void "monthValueConverter rejects #value, as it rejects a number out of range"() {
+        when:
+        config.monthValueConverter().convert(value)
+
+        then:
+        thrown(RuntimeException)
+
+        where:
+        value << [9.7, 9.7d, 9.5f, Double.NaN, 13, 0]
+    }
+
+    void "a Jsr310DateValueConverter subclass written for Grails 7, calling convert(value, callable) with the format pattern, reads only the configured formats"() {
+        given:
+        def converter = new FormatsOnlyLocalTimeConverter(config)
+
+        expect:
+        converter.convert('10:00:00') == LocalTime.of(10, 0)
+
+        when: 'a value that only ISO 8601 reads'
+        converter.convert('10:00:00.5')
+
+        then:
+        thrown(DateTimeParseException)
+    }
+}
+
+class FormatsOnlyLocalTimeConverter extends Jsr310ConvertersConfiguration.Jsr310DateValueConverter<LocalTime> {
+
+    FormatsOnlyLocalTimeConverter(Jsr310ConvertersConfiguration configuration) {
+        super(configuration)
+    }
+
+    @Override
+    LocalTime convert(Object value) {
+        convert(value) { String format ->
+            LocalTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
+        }
+    }
+
+    @Override
+    Class<?> getTargetType() {
+        LocalTime
     }
 }

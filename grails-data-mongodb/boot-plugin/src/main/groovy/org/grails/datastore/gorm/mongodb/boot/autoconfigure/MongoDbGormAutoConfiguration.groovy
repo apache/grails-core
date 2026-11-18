@@ -16,27 +16,28 @@
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
 import java.beans.Introspector
+import java.util.function.Function
+import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
 
 import com.mongodb.MongoClientSettings
 import com.mongodb.client.MongoClient
-import com.mongodb.client.MongoClients
 
-import org.springframework.beans.BeansException
-import org.springframework.beans.factory.DisposableBean
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
-import org.springframework.boot.autoconfigure.AutoConfigureAfter
+import org.springframework.boot.autoconfigure.AutoConfigureBefore
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
-import org.springframework.boot.mongodb.autoconfigure.MongoProperties
+import org.springframework.boot.mongodb.autoconfigure.MongoClientFactory
+import org.springframework.boot.mongodb.autoconfigure.MongoClientSettingsBuilderCustomizer
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
 import org.springframework.core.env.ConfigurableEnvironment
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -45,8 +46,15 @@ import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.services.Service
 
 /**
+ * Configures GORM for MongoDB in a Spring Boot application.
  *
- * Auto configurer that configures GORM for MongoDB for use in Spring Boot
+ * <p>Ordered before Spring Boot's {@link MongoAutoConfiguration}. Unless the application declares a
+ * {@link MongoClient} bean of its own, GORM builds the client - from Spring Boot's {@link MongoClientSettings} and
+ * {@link MongoClientSettingsBuilderCustomizer}s, the way Spring Boot builds its own - and publishes it as the
+ * {@code mongo} bean, so Spring Boot's client steps aside and everything that injects a {@code MongoClient} shares
+ * GORM's. GORM then owns it: it connects when the datastore starts, and it is stopped for a CRaC checkpoint and
+ * started again after the restore. A client the application declares is used as it is, and closing it, or stopping
+ * it for a checkpoint, is left to the application.
  *
  * @author Graeme Rocher
  * @since 1.0
@@ -54,58 +62,74 @@ import org.grails.datastore.mapping.services.Service
 @CompileStatic
 @Configuration
 @ConditionalOnMissingBean(MongoDatastore)
-@AutoConfigureAfter(MongoAutoConfiguration)
-class MongoDbGormAutoConfiguration implements ApplicationContextAware, DisposableBean {
-
-    @Autowired(required = false)
-    private MongoProperties mongoProperties
-
-    @Autowired(required = false)
-    MongoClient mongo
-
-    @Autowired(required = false)
-    MongoClientSettings mongoOptions
-
-    ConfigurableApplicationContext applicationContext
-
-    /**
-     * Whether the {@link #mongo} client was created by this auto-configuration rather than supplied
-     * as an existing bean. Only an internally created client is closed on shutdown; a client provided
-     * as a bean is owned by the application context (or the user), and GORM no longer closes a client
-     * it did not create.
-     */
-    private boolean mongoClientCreatedInternally = false
+@AutoConfigureBefore(MongoAutoConfiguration)
+class MongoDbGormAutoConfiguration {
 
     @Bean
-    MongoDatastore mongoDatastore() {
-        ConfigurableApplicationContext context = applicationContext
-        if (!(context instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
+    PlatformTransactionManager mongoTransactionManager(MongoDatastore mongoDatastore) {
+        mongoDatastore.getTransactionManager()
+    }
+
+    /**
+     * The datastore around a {@link MongoClient} bean the application declares. Processed before
+     * {@link GormClientConfiguration}, which declares one of its own otherwise.
+     */
+    @Order(1)
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnBean(MongoClient)
+    static class ApplicationClientConfiguration {
+
+        @Bean
+        MongoDatastore mongoDatastore(MongoClient mongo, ApplicationContext applicationContext) {
+            createDatastore(applicationContext) { ConfigurableApplicationContext context ->
+                new MongoDatastore(mongo, context.environment, new ConfigurableApplicationContextEventPublisher(context),
+                        packagesOf(context))
+            }
         }
-        ConfigurableListableBeanFactory beanFactory = context.beanFactory
-        List<String> packageNames = AutoConfigurationPackages.get(beanFactory)
-        List<Package> packages = []
-        for (name in packageNames) {
-            Package pkg = Package.getPackage(name)
-            if (pkg != null) {
-                packages.add(pkg)
+    }
+
+    /**
+     * The datastore around a client GORM builds and owns, which it publishes as the {@code mongo} bean.
+     */
+    @Order(2)
+    @Configuration(proxyBeanMethods = false)
+    @ConditionalOnMissingBean(MongoClient)
+    static class GormClientConfiguration {
+
+        @Bean
+        MongoDatastore mongoDatastore(ApplicationContext applicationContext,
+                                      ObjectProvider<MongoClientSettings> mongoClientSettings,
+                                      ObjectProvider<MongoClientSettingsBuilderCustomizer> customizers) {
+            createDatastore(applicationContext) { ConfigurableApplicationContext context ->
+                ConfigurableEnvironment environment = context.environment
+                ConfigurableApplicationContextEventPublisher eventPublisher = new ConfigurableApplicationContextEventPublisher(context)
+                MongoClientSettings settings = mongoClientSettings.getIfAvailable()
+                if (settings == null) {
+                    // Spring Boot's MongoDB support is not configured, so the client is built from grails.mongodb.
+                    return new MongoDatastore(environment, eventPublisher, packagesOf(context))
+                }
+                List<MongoClientSettingsBuilderCustomizer> builderCustomizers = customizers.orderedStream().toList()
+                new MongoDatastore({ new MongoClientFactory(builderCustomizers).createMongoClient(settings) } as Supplier<MongoClient>,
+                        environment, eventPublisher, packagesOf(context))
             }
         }
 
-        MongoDatastore datastore
-        ConfigurableEnvironment environment = context.environment
-        ConfigurableApplicationContextEventPublisher eventPublisher = new ConfigurableApplicationContextEventPublisher(context)
-        if (mongo != null) {
-            datastore = new MongoDatastore(mongo, environment, eventPublisher, packages as Package[])
+        /**
+         * The datastore's own client, which it closes; Spring is not to close it as well.
+         */
+        @Bean(destroyMethod = '')
+        MongoClient mongo(MongoDatastore mongoDatastore) {
+            mongoDatastore.getMongoClient()
         }
-        else if (mongoProperties != null) {
-            this.mongo = MongoClients.create(mongoOptions)
-            this.mongoClientCreatedInternally = true
-            datastore = new MongoDatastore(mongo, environment, eventPublisher, packages as Package[])
+    }
+
+    private static MongoDatastore createDatastore(ApplicationContext applicationContext,
+                                                  Function<ConfigurableApplicationContext, MongoDatastore> factory) {
+        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
+            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
         }
-        else {
-            datastore = new MongoDatastore(environment, eventPublisher, packages as Package[])
-        }
+        ConfigurableApplicationContext context = (ConfigurableApplicationContext) applicationContext
+        MongoDatastore datastore = factory.apply(context)
 
         for (Service service in datastore.getServices()) {
             Class serviceClass = service.getClass()
@@ -124,30 +148,15 @@ class MongoDbGormAutoConfiguration implements ApplicationContextAware, Disposabl
         return datastore
     }
 
-    @Bean
-    PlatformTransactionManager mongoTransactionManager() {
-        mongoDatastore().getTransactionManager()
-    }
-
-    @Override
-    void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        if (!(applicationContext instanceof ConfigurableApplicationContext)) {
-            throw new IllegalArgumentException('MongoDbGormAutoConfiguration requires an instance of ConfigurableApplicationContext')
+    private static Package[] packagesOf(ConfigurableApplicationContext context) {
+        ConfigurableListableBeanFactory beanFactory = context.beanFactory
+        List<Package> packages = []
+        for (String name in AutoConfigurationPackages.get(beanFactory)) {
+            Package pkg = Package.getPackage(name)
+            if (pkg != null) {
+                packages.add(pkg)
+            }
         }
-        this.applicationContext = (ConfigurableApplicationContext) applicationContext
+        packages as Package[]
     }
-
-    /**
-     * Closes the {@link MongoClient} only when it was created by this auto-configuration. A client
-     * supplied as an existing bean is owned by the application context (or the user) and must not be
-     * closed here. The {@code mongoDatastore} bean is created after this configuration, so it is
-     * destroyed first, leaving its sessions closed before the client itself is closed.
-     */
-    @Override
-    void destroy() throws Exception {
-        if (mongoClientCreatedInternally && mongo != null) {
-            mongo.close()
-        }
-    }
-
 }

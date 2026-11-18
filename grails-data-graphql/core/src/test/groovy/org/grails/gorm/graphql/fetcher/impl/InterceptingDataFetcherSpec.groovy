@@ -19,7 +19,7 @@
 
 package org.grails.gorm.graphql.fetcher.impl
 
-import graphql.language.Field
+import graphql.execution.MergedField
 import graphql.schema.DataFetcher
 import graphql.schema.DataFetchingEnvironment
 import org.grails.gorm.graphql.GraphQLServiceManager
@@ -36,9 +36,9 @@ class InterceptingDataFetcherSpec extends Specification {
 
     private DataFetchingEnvironment buildMockEnvironment() {
         Stub(DataFetchingEnvironment) {
-            getFields() >> [Stub(Field) {
+            getMergedField() >> Stub(MergedField) {
                 getName() >> 'foo'
-            }]
+            }
         }
     }
 

@@ -43,14 +43,35 @@ class SecurityUiTagLib {
         String paramName = getRequiredAttribute(attrs, 'paramName', 'ajaxSearch')
         int minLength = (attrs.remove('minLength') as Integer) ?: 3
 
-        String focus = attrs.remove('focus') != 'false' ? '.focus()' : ''
+        if (attrs.remove('focus') != 'false') {
+            writeDocumentReady out, "\t\$('#$paramName').focus();"
+        }
+
+        String url = createLink('ajaxSearch', null, [paramName: paramName])
 
         writeDocumentReady out, """\
-    \$("#$paramName")${focus}.autocomplete({
-        minLength: $minLength,
-        cache: false,
-        source: "${createLink('ajaxSearch', null, [paramName: paramName])}"
-    });"""
+    (function() {
+        var input = document.getElementById('$paramName');
+        if (!input) return;
+        var list = document.createElement('datalist');
+        list.id = '${paramName}_datalist';
+        input.setAttribute('list', list.id);
+        input.parentNode.appendChild(list);
+        input.addEventListener('input', function() {
+            var term = input.value;
+            if (term.length < $minLength) return;
+            fetch('$url&term=' + encodeURIComponent(term), { headers: { Accept: 'application/json' } })
+                .then(function(response) { return response.json(); })
+                .then(function(items) {
+                    list.replaceChildren();
+                    (items || []).forEach(function(item) {
+                        var option = document.createElement('option');
+                        option.value = (item && item.value) || item;
+                        list.appendChild(option);
+                    });
+                });
+        });
+    })();"""
     }
 
     /**
@@ -64,16 +85,14 @@ class SecurityUiTagLib {
         String name = getRequiredAttribute(attrs, 'name', 'checkboxRow')
         String labelCodeDefault = attrs.remove('labelCodeDefault')
 
+        String invalid = fieldHasErrors(bean, name) ? ' is-invalid' : ''
+
         out << """
-            <tr class="prop">
-                <td valign="top" class="name">
-                    <label for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
-                </td>
-                <td valign="top" class="value ${hasErrors(bean: bean, field: name, 'errors')}">
-                    ${checkBox([name: name, value: uiPropertiesStrategy.getProperty(bean, name)] + attrs)}
-                    ${fieldErrors(bean, name)}
-                </td>
-            </tr>"""
+            <div class="mb-3 form-check">
+                ${g.checkBox([name: name, value: uiPropertiesStrategy.getProperty(bean, name), class: 'form-check-input' + invalid] + attrs)}
+                <label class="form-check-label" for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
+                ${fieldErrors(bean, name)}
+            </div>"""
     }
 
     /**
@@ -87,21 +106,17 @@ class SecurityUiTagLib {
         String labelCodeDefault = attrs.remove('labelCodeDefault')
         String name = getRequiredAttribute(attrs, 'name', 'dateFieldRow')
 
-        def value = formatDate(date: uiPropertiesStrategy.getProperty(bean, name),
+        def value = g.formatDate(date: uiPropertiesStrategy.getProperty(bean, name),
                 formatName: 'spring.security.ui.dateFormatGsp')
 
-        out << """
-            <tr class="prop">
-                <td valign="top" class="name">
-                    <label for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
-                </td>
-                <td valign="top" class="value ${hasErrors(bean: bean, field: name, 'errors')}">
-                    ${textField([name: name, value: value, maxlength: '20'] + attrs)}
-                    ${fieldErrors(bean, name)}
-                </td>
-            </tr>"""
+        String invalid = fieldHasErrors(bean, name) ? ' is-invalid' : ''
 
-        writeDocumentReady out, "\t\$('#$name').datepicker({ dateFormat: '${message(code: 'spring.security.ui.dateFormatJs')}' });"
+        out << """
+            <div class="mb-3">
+                <label class="form-label" for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
+                ${g.textField([name: name, value: value, maxlength: '20', class: 'form-control' + invalid] + attrs)}
+                ${fieldErrors(bean, name)}
+            </div>"""
     }
 
     /**
@@ -129,7 +144,7 @@ class SecurityUiTagLib {
     /**
      */
     def deleteButton = { attrs ->
-        out << """<a id="deleteButton">${message(code: 'spring.security.ui.button.delete.label')}</a>"""
+        out << """<button type="button" id="deleteButton" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">${message(code: 'spring.security.ui.button.delete.label')}</button>"""
     }
 
     /**
@@ -152,21 +167,24 @@ class SecurityUiTagLib {
         out << """
                 <input type="hidden" name="id" value="$id" />
             </form>
-            <div id="deleteConfirmDialog" title="${message(code: 'default.button.delete.confirm.message')}"></div>"""
+            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5" id="deleteConfirmLabel">${message(code: 'default.button.delete.confirm.message')}</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${message(code: 'spring.security.ui.button.cancel.label')}"></button>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${message(code: 'spring.security.ui.button.cancel.label')}</button>
+                            <button type="button" class="btn btn-danger" id="confirmDelete">${message(code: 'spring.security.ui.button.delete.label')}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>"""
 
         writeDocumentReady out, """
-    \$("#deleteButton").button().bind('click', function() {
-        \$('#deleteConfirmDialog').dialog('open');
-    });
-
-    \$("#deleteConfirmDialog").dialog({
-        autoOpen: false, resizable: false, height: 100, modal: true,
-        buttons: [
-            { text: "${message(code: 'spring.security.ui.button.delete.label')}", id: '#confirmDelete',
-              click: function() { document.forms.deleteForm.submit(); } },
-            { text: "${message(code: 'spring.security.ui.button.cancel.label')}",
-              click: function() { \$(this).dialog('close'); } }
-        ]
+    \$('#confirmDelete').on('click', function() {
+        document.forms.deleteForm.submit();
     });"""
     }
 
@@ -207,8 +225,8 @@ class SecurityUiTagLib {
 
         if (type == 'update') {
             out << """
-                ${hiddenField(name: idName ?: 'id', value: id)}
-                ${hiddenField(name: 'version', value: bean?.version)}"""
+                ${g.hiddenField(name: idName ?: 'id', value: id)}
+                ${g.hiddenField(name: 'version', value: bean?.version)}"""
         }
 
         out << """
@@ -230,8 +248,8 @@ class SecurityUiTagLib {
         if (useToken) {
             def tokensHolder = SynchronizerTokensHolder.store(session)
             out << """
-                    ${hiddenField(name: SynchronizerTokensHolder.TOKEN_KEY, value: tokensHolder.generateToken(request.forwardURI))}
-                    ${hiddenField(name: SynchronizerTokensHolder.TOKEN_URI, value: request.forwardURI)}"""
+                    ${g.hiddenField(name: SynchronizerTokensHolder.TOKEN_KEY, value: tokensHolder.generateToken(request.forwardURI))}
+                    ${g.hiddenField(name: SynchronizerTokensHolder.TOKEN_URI, value: request.forwardURI)}"""
         }
     }
 
@@ -299,8 +317,8 @@ class SecurityUiTagLib {
      * @attr beanType when type is 'search' this is the bean type, e.g. aclEntry, registrationCode, etc. and when
      *                it's 'save' or 'update' it's the model name for the bean
      * @attr focus    the element to focus on document ready
-     * @attr height   the height, to override the CSS default
-     * @attr width    the width (defaults to '100%'
+     * @attr height   ignored (retained for backwards compatibility)
+     * @attr width    the max width (defaults to '100%')
      */
     def formContainer = { attrs, body ->
         attrs = [:] + attrs
@@ -325,20 +343,18 @@ class SecurityUiTagLib {
             title = message(code: 'default.' + (type == 'save' ? 'create' : 'edit') + '.label', args: [pageScope.entityName])
         }
 
-        Integer height = attrs.remove('height') as Integer
+        attrs.remove('height')
         def width = attrs.remove('width') ?: '100%'
 
-        String heightStyle = height ? " height: ${height}px;" : ''
-
         out << """
-            <div class="ui-widget-content s2ui_form s2ui_center" id="formContainer" style="width: $width;$heightStyle">
-                <div class="ui-dialog-titlebar ui-widget-header ui-corner-all ui-helper-clearfix s2ui_center" style='padding: 10px;'>
-                    <span style="-moz-user-select: none;" unselectable="on" class="ui-dialog-title">$title</span>
+            <div class="card shadow-sm mx-auto mb-4" id="formContainer" style="max-width: $width;">
+                <div class="card-header">
+                    <h1 class="h5 mb-0">$title</h1>
                 </div>
+                <div class="card-body">
                 ${body()}
+                </div>
             </div>"""
-
-        writeDocumentReady out, "\t\$('#formContainer').resizable();"
 
         String focus = attrs.remove('focus')
         if (focus) {
@@ -374,27 +390,22 @@ class SecurityUiTagLib {
         String elementId = getRequiredAttribute(attrs, 'elementId', 'linkButton')
 
         def out = getOut()
-        out << """<a href="${createLink(attrs).encodeAsHTML()}" id="$elementId" """
-// TODO encodeAsHTML
-
+        out << """<a href="${createLink(attrs).encodeAsHTML()}" id="${elementId.encodeAsHTML()}" class="btn btn-outline-secondary" """
         writeRemainingAttributes out, attrs
-        out << '>' << text << '</a>'
-
-        writeDocumentReady out, """\t\$("#$elementId").button();"""
+        out << '>' << (text?.encodeAsHTML() ?: '') << '</a>'
     }
 
     /**
      * @attr controller   REQUIRED the controller name
      * @attr itemAction   if present render just a menu item
      * @attr searchOnly   if true omit the item to create (defaults to false)
-     * @attr submenu      if true renders nested (defaults to false)
+     * @attr submenu      if true renders items for a parent dropdown with a header (defaults to false)
      */
     def menu = { attrs ->
         attrs = [:] + attrs
 
         String controller = getRequiredAttribute(attrs, 'controller', 'submenu')
         String itemAction = attrs.remove('itemAction')
-        String indent = '\t\t\t\t\t'
 
         String messageKey = 'spring.security.ui.menu.' + controller
         if (itemAction) {
@@ -403,7 +414,7 @@ class SecurityUiTagLib {
         String caption = message(code: messageKey)
 
         if (itemAction) {
-            out << '<li><a href="' << createLink(itemAction, controller) << '">' << caption << '</a></li>'
+            out << """<li><a class="dropdown-item" href="${createLink(itemAction, controller)}">$caption</a></li>"""
             return
         }
 
@@ -412,27 +423,28 @@ class SecurityUiTagLib {
         boolean noSearch = attrs.remove('noSearch')
         boolean submenu = attrs.remove('submenu')
 
-        def lines = []
-        if (submenu) {
-            lines << "<li>$caption &raquo;"
-            indent += '\t\t'
-        } else {
-            lines << """<li><a class="accessible">$caption</a>"""
-        }
-        lines << indent + '\t<ul>'
+        def items = []
         if (!noSearch) {
-            lines << """$indent\t\t<li><a href="${createLink('search', controller)}">${message(code: 'spring.security.ui.search')}</a></li>"""
+            items << """<li><a class="dropdown-item" href="${createLink('search', controller)}">${message(code: 'spring.security.ui.search')}</a></li>"""
         }
         if (showList) {
-            lines << """$indent\t\t<li><a href="${createLink('index', controller)}">${message(code: 'spring.security.ui.list')}</a></li>"""
+            items << """<li><a class="dropdown-item" href="${createLink('index', controller)}">${message(code: 'spring.security.ui.list')}</a></li>"""
         }
         if (!searchOnly) {
-            lines << """$indent\t\t<li><a href="${createLink('create', controller)}">${message(code: 'spring.security.ui.create')}</a></li>"""
+            items << """<li><a class="dropdown-item" href="${createLink('create', controller)}">${message(code: 'spring.security.ui.create')}</a></li>"""
         }
-        lines << indent + '\t</ul>'
-        lines << indent + '</li>'
 
-        lines.each { out << it << '\n' }
+        if (submenu) {
+            // items for a parent dropdown, grouped under a header
+            out << """<li><h6 class="dropdown-header">$caption</h6></li>\n"""
+            items.each { out << it << '\n' }
+        } else {
+            out << """<li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">$caption</a>
+                <ul class="dropdown-menu">\n"""
+            items.each { out << it << '\n' }
+            out << '</ul>\n</li>\n'
+        }
     }
 
     /**
@@ -457,12 +469,12 @@ class SecurityUiTagLib {
             summary = message(code: 'spring.security.ui.search.summary', args: [from, to, total])
 
             out << """
-                <div class="paginateButtons">
+                <nav class="d-flex justify-content-center gap-2 my-2" aria-label="${message(code: 'spring.security.ui.search')}">
                     ${g.paginate(total: total, params: pageScope.queryParams)}
-                </div>"""
+                </nav>"""
         }
 
-        out << """\n\t\t\t\t\t\t<div style="text-align:center;">$summary</div>"""
+        out << """\n\t\t\t\t\t\t<p id="searchSummary" class="text-center text-body-secondary small">$summary</p>"""
     }
 
     /**
@@ -479,50 +491,37 @@ class SecurityUiTagLib {
 
         String id = attrs.remove('id') ?: name
 
+        String invalid = fieldHasErrors(bean, name) ? ' is-invalid' : ''
+
         out << """
-            <tr class="prop">
-                <td valign="top" class="name">
-                    <label for="$id">${message(code: labelCode(name), default: labelCodeDefault)}</label>
-                </td>
-                <td valign="top" class="value ${hasErrors(bean: bean, field: name, 'errors')}">
-                    ${passwordField([name: name, id: id, value: uiPropertiesStrategy.getProperty(bean, name)] + attrs)}
-                    ${fieldErrors(bean, name)}
-                </td>
-            </tr>"""
+            <div class="mb-3">
+                <label class="form-label" for="$id">${message(code: labelCode(name), default: labelCodeDefault)}</label>
+                ${g.passwordField([name: name, id: id, value: uiPropertiesStrategy.getProperty(bean, name), class: 'form-control' + invalid] + attrs)}
+                ${fieldErrors(bean, name)}
+            </div>"""
     }
 
     /**
      */
     def required = { attrs ->
         // TODO use this
-        out << "<span class='s2ui_required'>*&nbsp;</span>"
+        out << "<span class='text-danger'>*&nbsp;</span>"
     }
 
     /**
-     * @attr colspan REQUIRED number of td elements per tr row
+     * @attr colspan ignored (retained for backwards compatibility)
      */
     def searchForm = { attrs, body ->
         attrs = [:] + attrs
 
-        int colspan = getRequiredAttribute(attrs, 'colspan', 'searchForm') as int
+        attrs.remove('colspan')
 
         pageScope.s2uiFormName = 'search'
 
         out << """
             <form action="${createLink('search')}" method="post" name="search" id="search">
-                <br/>
-                <table>
-                    <tbody>
-                    ${body()}
-                    <tr><td colspan="$colspan">&nbsp;</td></tr>
-                    <tr>
-                        <td colspan="$colspan">
-                            ${s2ui:
-        submitButton(elementId: 'searchButton', messageCode: 'spring.security.ui.search')}
-                        </td>
-                    </tr>
-                    </tbody>
-                </table>
+                ${body()}
+                <button type="submit" id="searchButton" class="btn btn-primary">${message(code: 'spring.security.ui.search')}</button>
             </form>"""
 
         pageScope.s2uiFormName = null
@@ -543,8 +542,8 @@ class SecurityUiTagLib {
         def captionArgs = attrs.remove('captionArgs')
 
         out << """
-            <table class='info'>
-                <caption>${message(code: 'spring.security.ui.menu.securityInfo.' + type, args: captionArgs)}</caption>"""
+            <table class="table table-striped table-hover align-middle">
+                <caption class="caption-top">${message(code: 'spring.security.ui.menu.securityInfo.' + type, args: captionArgs)}</caption>"""
 
         if (headerCodes) {
             out << '''
@@ -553,7 +552,7 @@ class SecurityUiTagLib {
 
             for (code in headerCodes.split(',')) {
                 out << """
-                        <th>${message(code: 'spring.security.ui.info.' + type + '.header.' + code)}</th>"""
+                        <th scope="col">${message(code: 'spring.security.ui.info.' + type + '.header.' + code)}</th>"""
             }
 
             out << '''
@@ -566,8 +565,8 @@ class SecurityUiTagLib {
 
         if (items) {
             items.eachWithIndex { item, int i ->
-                out << """
-                    <tr class="${(i % 2) == 0 ? 'even' : 'odd'}">"""
+                out << '''
+                    <tr>'''
 
                 out << body(item)
 
@@ -613,30 +612,24 @@ class SecurityUiTagLib {
             selectAttrs.value = value?.id
         }
 
+        String invalid = fieldHasErrors(bean, fieldName) ? ' is-invalid' : ''
+        selectAttrs.class = 'form-select' + invalid
+
         out << """
-            <tr class="prop">
-                <td valign="top" class="name">
-                    <label for="$name">${message(code: labelCode(fieldName), default: labelCodeDefault)}</label>
-                </td>
-                <td valign="top" class="value ${hasErrors(bean: bean, field: fieldName, 'errors')}">
-                    ${select(selectAttrs)} ${fieldError(bean: bean, field: fieldName)}
-                </td>
-            </tr>"""
+            <div class="mb-3">
+                <label class="form-label" for="$name">${message(code: labelCode(fieldName), default: labelCodeDefault)}</label>
+                ${g.select(selectAttrs)}
+                ${fieldErrors(bean, fieldName)}
+            </div>"""
     }
 
     /**
+     * Renders any flash message/error as a Bootstrap alert. Prefer the core
+     * <g:flashMessages/> tag; this remains for backwards compatibility and
+     * delegates to it.
      */
     def showFlash = { attrs ->
-        String message = flash.remove('message')
-        String error = flash.remove('error')
-        if (!message && !error) {
-            return
-        }
-
-        String clazz = message ? 'icon icon_info' : 'icon icon_error'
-        String text = (message ?: error).encodeAsHTML()
-
-        writeDocumentReady out, """\t\$.jGrowl('<span class="$clazz">$text</span>', { life: 10000 });"""
+        out << g.flashMessages([:])
     }
 
     /**
@@ -705,59 +698,59 @@ class SecurityUiTagLib {
         }
 
         def out = getOut()
-        out << """<a id="$elementId" """
+        out << """<button type="submit" id="${elementId.encodeAsHTML()}" class="btn btn-primary" """
         writeRemainingAttributes out, attrs
-        out << ">$text</a><input type='submit' value=' ' id='${elementId}_submit' class='s2ui_hidden_button'>"
-
-        writeDocumentReady out, """\
-    \$("#$elementId").button();
-    \$('#$elementId').bind('click', function() {
-        document.forms.${formName}.submit();
-    });"""
+        out << ">${text?.encodeAsHTML() ?: ''}</button>"
     }
 
     /**
      * @attr name   REQUIRED the name
-     * @attr height REQUIRED the height
+     * @attr height ignored (retained for backwards compatibility)
      */
     def tab = { attrs, body ->
         attrs = [:] + attrs
 
         String name = getRequiredAttribute(attrs, 'name', 'tab')
-        def height = getRequiredAttribute(attrs, 'height', 'tab')
+        attrs.remove('height')
+
+        String active = ''
+        if (pageScope._s2uiTabFirst == null || pageScope._s2uiTabFirst) {
+            active = ' show active'
+            pageScope._s2uiTabFirst = false
+        }
 
         out << """
-            <div id="tab-$name">
-                <div class="s2ui_section" style="height: $height; overflow: auto;">
+            <div class="tab-pane fade$active" id="tab-$name" role="tabpanel">
                 ${body()}
-                </div>
             </div>"""
     }
 
     /**
      * @attr data      REQUIRED a list of maps with data to build the tabs
      * @attr elementId REQUIRED the HTML id
-     * @attr height    REQUIRED minimum height (int)
+     * @attr height    ignored (retained for backwards compatibility)
      */
     def tabs = { attrs, body ->
         attrs = [:] + attrs
 
         def id = getRequiredAttribute(attrs, 'elementId', 'tabs')
         def data = getRequiredAttribute(attrs, 'data', 'tabs')
-        int height = getRequiredAttribute(attrs, 'height', 'tabs') as int
+        attrs.remove('height')
 
         def out = getOut()
-        out << """<div style='display: none;' id="$id">\n"""
-        out << '\t\t\t\t\t\t<ul>\n'
-        for (element in data) {
-            out << """\t\t\t\t\t\t\t<li><a href="#tab-$element.name" class="icon $element.icon">$element.message</a></li>\n"""
+        out << """<ul class="nav nav-tabs" id="$id" role="tablist">\n"""
+        data.eachWithIndex { element, int i ->
+            String active = i == 0 ? ' active' : ''
+            String selected = i == 0 ? 'true' : 'false'
+            out << """\t<li class="nav-item" role="presentation"><button class="nav-link$active" id="tab-$element.name-tab" data-bs-toggle="tab" data-bs-target="#tab-$element.name" type="button" role="tab" aria-controls="tab-$element.name" aria-selected="$selected">$element.message</button></li>\n"""
         }
-        out << '\t\t\t\t\t\t</ul>\n'
+        out << '</ul>\n'
 
+        pageScope._s2uiTabFirst = true
+        out << '<div class="tab-content pt-3">\n'
         out << body()
         out << '</div>\n'
-
-        writeDocumentReady out, """\t\$("#$id").tabs().show().resizable({minHeight: $height, minWidth: 100});"""
+        pageScope._s2uiTabFirst = null
     }
 
     def cmdValidationFields = { attrs ->
@@ -782,7 +775,6 @@ class SecurityUiTagLib {
 
                     outtxt += this.textFieldRow([value: validationItems[idx]?.valueTxt, errorMsg: validationItems[idx]?.errorMsg, size: 25, labelCodeDefault: label, name: name, useBean: false])
                 }
-                outtxt = '<table>' + outtxt + '</table>'
             } else {
                 outtxt = '<div>' + message(code: 'spring.security.ui.securityQuestion.MissingQuestions') + '</div>'
             }
@@ -823,16 +815,15 @@ class SecurityUiTagLib {
             textFieldAttrs.value = value?.id
         }
 
+        String invalid = useBean ? (fieldHasErrors(bean, fieldName) ? ' is-invalid' : '') : (errors ? ' is-invalid' : '')
+        textFieldAttrs.class = 'form-control' + invalid
+
         out << """
-            <tr class="prop">
-                <td valign="top" class="name">
-                    <label for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
-                </td>
-                <td valign="top" class="value ${useBean ? hasErrors(bean: bean, field: fieldName, 'errors') : errors.size() > 0 ? 'error' : ''}">
-                    ${textField(textFieldAttrs)}
-                    ${useBean ? fieldErrors(bean, fieldName) : "<span class='s2ui_error'>${errors}</span>"}
-                </td>
-            </tr>"""
+            <div class="mb-3">
+                <label class="form-label" for="$name">${message(code: labelCode(name), default: labelCodeDefault)}</label>
+                ${g.textField(textFieldAttrs)}
+                ${useBean ? fieldErrors(bean, fieldName) : "<div class='invalid-feedback d-block'>${errors}</div>"}
+            </div>"""
     }
 
     /**
@@ -851,10 +842,17 @@ class SecurityUiTagLib {
         if (entityNameMessageCode) {
             String entityName = message(code: entityNameMessageCode, default: entityNameDefault)
             args = [entityName]
-            set(var: 'entityName', value: entityName)
+            pageScope.entityName = entityName
         }
 
-        out << "<title>${message(code: messageCode, args: args)}</title>"
+        // A literal <title> in GSP source is rewritten by the compile-time
+        // preprocessor into grailsLayout:wrapTitleTag/captureTitle so layouts
+        // can read it through g:layoutTitle; a taglib-emitted <title> bypasses
+        // that capture, so invoke the same tags directly.
+        String titleText = message(code: messageCode, args: args)
+        out << grailsLayout.wrapTitleTag([:], { ->
+            grailsLayout.captureTitle([:], { -> titleText })
+        })
     }
 
     protected getRequiredAttribute(attrs, String name, String tagName) {
@@ -870,31 +868,42 @@ class SecurityUiTagLib {
     }
 
     protected void writeDocumentReady(writer, javascript) {
+        // DOMContentLoaded fires after the host layout's classic end-of-body
+        // scripts (jQuery included), so plugin pages rendered through a host
+        // layout can rely on jQuery inside the callback regardless of where
+        // this inline script lands in the document.
         writer << asset.script {
             """
-\$(function() {
+document.addEventListener('DOMContentLoaded', function() {
 $javascript
 });\n"""
         }
     }
 
     protected void writeRemainingAttributes(writer, attrs) {
-        writer << attrs.collect { k, v -> """ $k="$v" """ }.join('')
+        writer << attrs.collect { k, v -> """ ${k.toString().encodeAsHTML()}="${v.toString().encodeAsHTML()}" """ }.join('')
     }
 
     protected String createLink(String action, String controller = controllerName, Map params = null) {
         g.createLink(action: action, controller: controller, params: params)
     }
 
+    protected boolean fieldHasErrors(bean, String field) {
+        if (bean == null || !bean.hasProperty('errors')) {
+            return false
+        }
+        bean.errors?.hasFieldErrors(field)
+    }
+
     protected String fieldErrors(bean, field) {
         if (!bean) {
-            return
+            return ''
         }
 
         def attrs = [bean: bean, field: field]
         def sb = new StringBuilder()
-        eachError attrs, { sb << "<span class='s2ui_error'>${message(error: it, encodeAs: 'HTML')}</span>" }
-        sb
+        g.eachError(attrs, { sb << "<div class='invalid-feedback d-block'>${message(error: it, encodeAs: 'HTML')}</div>" })
+        sb.toString()
     }
 
     protected beanFromModel() {

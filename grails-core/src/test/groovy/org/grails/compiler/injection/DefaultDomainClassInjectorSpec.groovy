@@ -28,6 +28,17 @@ import spock.lang.Specification
  */
 class DefaultDomainClassInjectorSpec extends Specification {
 
+    void "test default id and version"() {
+        expect:
+        Test.getDeclaredField('id').type == Long
+        Test.getDeclaredField('version').type == Long
+    }
+
+    void "test a declared id is left alone"() {
+        expect: 'the injector only supplies what is missing, which is what lets GORM decide the type first'
+        TestWithStringId.getDeclaredField('id').type == String
+    }
+
     void "test default toString"() {
         when:
         Test test = new Test()
@@ -59,5 +70,10 @@ class DefaultDomainClassInjectorSpec extends Specification {
     @Entity
     @ToString(includes = ["id"])
     class TestWithGroovy {
+    }
+
+    @Entity
+    class TestWithStringId {
+        String id
     }
 }

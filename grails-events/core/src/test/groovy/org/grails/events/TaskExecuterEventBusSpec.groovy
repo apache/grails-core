@@ -18,13 +18,50 @@
  */
 package org.grails.events
 
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+
+import org.springframework.context.support.GenericApplicationContext
+
 import org.grails.events.bus.ExecutorEventBus
+import org.grails.events.bus.spring.EventBusFactoryBean
 import spock.lang.Specification
 
 /**
  * Created by graemerocher on 28/03/2017.
  */
 class TaskExecuterEventBusSpec  extends Specification {
+
+    void 'Spring event bus shares a promise factory executor without requiring ExecutorService'() {
+        given:
+        def executor = Executors.newSingleThreadExecutor()
+        def context = new GenericApplicationContext()
+        context.beanFactory.registerSingleton('grailsPromiseFactory', new ExecutorHolder(executor: executor))
+        context.registerBean('eventBus', EventBusFactoryBean)
+        context.refresh()
+        def eventBus = context.getBean('eventBus', grails.events.bus.EventBus)
+        def delivered = new LinkedBlockingQueue<Thread>()
+        eventBus.on('test') { delivered.add(Thread.currentThread()) }
+
+        when:
+        eventBus.notify('test', 'value')
+        Thread worker = delivered.poll(5, TimeUnit.SECONDS)
+
+        then:
+        worker != null
+        !worker.is(Thread.currentThread())
+        worker.is(executor.submit({ Thread.currentThread() } as java.util.concurrent.Callable<Thread>).get())
+
+        cleanup:
+        context.close()
+        executor.shutdownNow()
+    }
+
+    static class ExecutorHolder {
+        Executor executor
+    }
 
     void 'Test task executor event bus single arg'() {
 
@@ -122,4 +159,3 @@ class TaskExecuterEventBusSpec  extends Specification {
         ex.message == 'bad'
     }
 }
-

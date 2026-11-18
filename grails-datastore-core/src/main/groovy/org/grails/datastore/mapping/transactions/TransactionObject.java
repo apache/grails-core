@@ -18,6 +18,8 @@
  */
 package org.grails.datastore.mapping.transactions;
 
+import jakarta.persistence.FlushModeType;
+
 import org.springframework.transaction.support.SmartTransactionObject;
 
 import org.grails.datastore.mapping.core.Session;
@@ -32,21 +34,69 @@ public class TransactionObject implements SmartTransactionObject {
     private SessionHolder sessionHolder;
     private boolean newSessionHolder;
     private boolean newSession;
+    private Transaction<?> transaction;
+    private Session transactionSession;
+    private FlushModeType previousFlushMode;
 
     public SessionHolder getSessionHolder() {
         return sessionHolder;
     }
 
+    /**
+     * @return the transaction this object began, once it has begun one; otherwise the transaction of
+     * the held session, if it has one
+     */
     public Transaction<?> getTransaction() {
-        return getSessionHolder().getTransaction();
+        if (transaction != null) {
+            return transaction;
+        }
+        return sessionHolder != null ? sessionHolder.getTransaction() : null;
     }
 
     /**
-     * @deprecated Here for binary compatibility, doesn't actually do anything
-     * @param transaction
+     * Records the transaction begun for this object, which its commit or rollback then completes.
+     * Asking the session instead finds whichever transaction was begun on it last, which is not this
+     * one when another transaction has been begun on the same session since.
+     *
+     * @param transaction the transaction begun for this object
      */
-    @Deprecated
     public void setTransaction(Transaction<?> transaction) {
+        this.transaction = transaction;
+    }
+
+    /**
+     * The session the transaction began on, which its commit and {@link #flush()} flush, its rollback
+     * clears and its rollback-only mark belongs to, even if another has been bound on top of it
+     * since. For a transaction that joined another, the holder's current session, which is the one it
+     * joined; the same for a transaction begun by a subclass that does not record its session.
+     */
+    Session getTransactionSession() {
+        if (transactionSession != null) {
+            return transactionSession;
+        }
+        return sessionHolder != null ? sessionHolder.getSession() : null;
+    }
+
+    void setTransactionSession(Session transactionSession) {
+        this.transactionSession = transactionSession;
+    }
+
+    /**
+     * @return the flush mode the session had before a read-only transaction changed it, which is put
+     * back when the transaction completes; {@code null} when the transaction did not change it
+     */
+    public FlushModeType getPreviousFlushMode() {
+        return previousFlushMode;
+    }
+
+    /**
+     * Records the flush mode a transaction manager changes on beginning a read-only transaction, so
+     * that {@link DatastoreTransactionManager} puts it back when the transaction completes.
+     *
+     * @param previousFlushMode the session's flush mode before the change
+     */
+    public void setPreviousFlushMode(FlushModeType previousFlushMode) {
+        this.previousFlushMode = previousFlushMode;
     }
 
     public void setSession(Session session) {
@@ -77,11 +127,11 @@ public class TransactionObject implements SmartTransactionObject {
 
     @Override
     public boolean isRollbackOnly() {
-        return sessionHolder.isRollbackOnly();
+        return sessionHolder != null && sessionHolder.isRollbackOnly(getTransactionSession());
     }
 
     @Override
     public void flush() {
-        sessionHolder.getSession().flush();
+        getTransactionSession().flush();
     }
 }

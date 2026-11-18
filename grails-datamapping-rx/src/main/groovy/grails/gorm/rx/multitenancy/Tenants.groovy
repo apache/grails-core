@@ -18,6 +18,7 @@
  */
 package grails.gorm.rx.multitenancy
 
+import grails.gorm.multitenancy.CurrentTenantHolder
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -27,15 +28,16 @@ import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.TenantResolver
 import org.grails.datastore.rx.RxDatastoreClient
 import org.grails.gorm.rx.api.RxGormEnhancer
+
 /**
  * Tenants implementation for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
 @Slf4j
 class Tenants {
+
     /**
      * Execute the given closure for each tenant.
      *
@@ -63,13 +65,7 @@ class Tenants {
      */
     static Serializable currentId() {
         RxDatastoreClient datastoreClient = RxGormEnhancer.findSingleDatastoreClient()
-        def tenantId = grails.gorm.multitenancy.Tenants.CurrentTenant.get()
-        if(tenantId != null) {
-            return tenantId
-        }
-        else {
-            return datastoreClient.getTenantResolver().resolveTenantIdentifier()
-        }
+        return currentId(datastoreClient)
     }
 
     /**
@@ -77,17 +73,24 @@ class Tenants {
      */
     static Serializable currentId(Class<? extends RxDatastoreClient> datastoreClass) {
         RxDatastoreClient datastore = RxGormEnhancer.findDatastoreClientByType(datastoreClass)
-        def tenantId = grails.gorm.multitenancy.Tenants.CurrentTenant.get()
-        if(tenantId != null) {
+        return currentId(datastore)
+    }
+
+    private static Serializable currentId(RxDatastoreClient datastoreClient) {
+        Serializable tenantId = CurrentTenant.get(datastoreClient)
+        if (tenantId != null) {
             log.debug "Found tenant id [$tenantId] bound to thread local"
             return tenantId
         }
-        else {
-            def tenantResolver = datastore.getTenantResolver()
-            def tenantIdentifier = tenantResolver.resolveTenantIdentifier()
-            log.debug "Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]"
-            return tenantIdentifier
+        tenantId = CurrentTenantHolder.get()
+        if (tenantId != null) {
+            log.debug "Found tenant id [$tenantId] bound to core thread local"
+            return tenantId
         }
+        TenantResolver tenantResolver = datastoreClient.getTenantResolver()
+        Serializable tenantIdentifier = tenantResolver.resolveTenantIdentifier()
+        log.debug "Resolved tenant id [$tenantIdentifier] from resolver [${tenantResolver.getClass().simpleName}]"
+        return tenantIdentifier
     }
 
     /**
@@ -98,7 +101,7 @@ class Tenants {
      */
     static <T> T withCurrent(@DelegatesTo(RxDatastoreClient) Closure<T> callable) {
         RxDatastoreClient datastoreClient = RxGormEnhancer.findSingleDatastoreClient()
-        def tenantIdentifier = datastoreClient.getTenantResolver().resolveTenantIdentifier()
+        Serializable tenantIdentifier = datastoreClient.getTenantResolver().resolveTenantIdentifier()
         return withTenantIdInternal(datastoreClient, tenantIdentifier, callable)
     }
 
@@ -111,7 +114,7 @@ class Tenants {
      */
     static <T> T withCurrent(Class<? extends RxDatastoreClient> datastoreClass, @DelegatesTo(RxDatastoreClient) Closure<T> callable) {
         RxDatastoreClient datastoreClient = RxGormEnhancer.findDatastoreClientByType(datastoreClass)
-        def tenantIdentifier = datastoreClient.getTenantResolver().resolveTenantIdentifier()
+        Serializable tenantIdentifier = datastoreClient.getTenantResolver().resolveTenantIdentifier()
         return withTenantIdInternal(datastoreClient, tenantIdentifier, callable)
 
     }
@@ -138,7 +141,7 @@ class Tenants {
     }
 
     private static <T> T withTenantIdInternal(RxDatastoreClient datastoreClient, Serializable tenantIdentifier, Closure<T> callable) {
-        return grails.gorm.multitenancy.Tenants.CurrentTenant.withTenant(tenantIdentifier) {
+        return CurrentTenant.withTenant(datastoreClient, tenantIdentifier) {
             callable.setDelegate(datastoreClient)
             def i = callable.parameterTypes.length
             switch (i) {
@@ -149,7 +152,38 @@ class Tenants {
                     return callable.call(tenantIdentifier)
                     break
                 default:
-                    throw new IllegalArgumentException("Provided closure accepts too many arguments")
+                    throw new IllegalArgumentException('Provided closure accepts too many arguments')
+            }
+        }
+    }
+
+    private static final class CurrentTenant {
+        private static final ThreadLocal<IdentityHashMap<RxDatastoreClient, Serializable>> currentTenantThreadLocal = new ThreadLocal<>()
+
+        static Serializable get(RxDatastoreClient datastoreClient) {
+            IdentityHashMap<RxDatastoreClient, Serializable> tenants = currentTenantThreadLocal.get()
+            return tenants?.get(datastoreClient)
+        }
+
+        static <T> T withTenant(RxDatastoreClient datastoreClient, Serializable tenantId, Closure<T> callable) {
+            IdentityHashMap<RxDatastoreClient, Serializable> tenants = currentTenantThreadLocal.get()
+            if (tenants == null) {
+                tenants = new IdentityHashMap<>()
+                currentTenantThreadLocal.set(tenants)
+            }
+            boolean hadPrevious = tenants.containsKey(datastoreClient)
+            Serializable previous = tenants.put(datastoreClient, tenantId)
+            try {
+                return callable.call(tenantId)
+            } finally {
+                if (hadPrevious) {
+                    tenants.put(datastoreClient, previous)
+                } else {
+                    tenants.remove(datastoreClient)
+                }
+                if (tenants.isEmpty()) {
+                    currentTenantThreadLocal.remove()
+                }
             }
         }
     }

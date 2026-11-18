@@ -17,4 +17,4 @@
 #  under the License.
 #
 
-org.grails.plugins.domain.GrailsDomainClassAutoConfiguration
+org.grails.plugins.domain.DomainClassAutoConfiguration

@@ -22,24 +22,22 @@
 	<s2ui:title messageCode='default.edit.label' entityNameMessageCode='role.label' entityNameDefault='Role'/>
 </head>
 <body>
-<h3><g:message code='default.edit.label' args='[entityName]'/></h3>
+<h1 class="h4 mb-3"><g:message code='default.edit.label' args='[entityName]'/></h1>
 <s2ui:form type='update' beanName='role' useToken="true">
-	<s2ui:tabs elementId='tabs' height='150' data='${tabData}'>
-		<s2ui:tab name='roleinfo' height='150'>
-			<table>
-				<tbody>
-				<s2ui:textFieldRow name='authority' labelCodeDefault='Authority'/>
-				</tbody>
-			</table>
+	<s2ui:tabs elementId='tabs' data='${tabData}'>
+		<s2ui:tab name='roleinfo'>
+			<s2ui:textFieldRow name='authority' labelCodeDefault='Authority'/>
 		</s2ui:tab>
-		<s2ui:tab name='users' height='150'>
-			<g:if test='${users.empty}'><g:message code='spring.security.ui.role_no_users'/></g:if>
+		<s2ui:tab name='users'>
+			<g:if test='${users.empty}'><p class="text-body-secondary"><g:message code='spring.security.ui.role_no_users'/></p></g:if>
+			<ul class="list-unstyled">
 			<g:each var='u' in='${users}'>
-			<g:link controller='user' action='edit' id='${u.id}'>${uiPropertiesStrategy.getProperty(u, 'username')}</g:link><br/>
+				<li><g:link controller='user' action='edit' id='${u.id}'>${uiPropertiesStrategy.getProperty(u, 'username')}</g:link></li>
 			</g:each>
+			</ul>
 		</s2ui:tab>
 	</s2ui:tabs>
-	<div style='float:left; margin-top: 10px;'>
+	<div class="mt-3 d-flex gap-2">
 		<s2ui:submitButton/>
 		<g:if test='${role}'><s2ui:deleteButton/></g:if>
 	</div>

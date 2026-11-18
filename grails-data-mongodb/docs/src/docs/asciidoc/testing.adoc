@@ -22,7 +22,7 @@ To write unit tests with MongoDB and Spock you can simply extend from `grails.te
 
 `MongoSpec` is an abstract class that will initialise GORM in the setup phase of the specification being executed. It
 uses by default a `MongoClient` instance that connects to a MongoDB instance as defined in your configuration
-(by default, `localhost` and port `27017`, see <<gettingStarted>> for more details):
+(by default, `127.0.0.1` and port `27017`, see <<gettingStarted>> for more details):
 
 It is preferable to use testcontainers to automatically run MongoDB in a containerized environment and not have to run a MongoDB instance locally. The following examples use testcontainers:
 

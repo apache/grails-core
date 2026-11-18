@@ -57,6 +57,8 @@ import org.grails.datastore.bson.query.BsonQuery;
 import org.grails.datastore.bson.query.EmbeddedQueryEncoder;
 import org.grails.datastore.gorm.mongo.geo.GeoJSONType;
 import org.grails.datastore.gorm.query.AbstractResultList;
+import org.grails.datastore.mapping.core.DatastoreUtils;
+import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.SessionImplementor;
 import org.grails.datastore.mapping.engine.EntityAccess;
 import org.grails.datastore.mapping.engine.EntityPersister;
@@ -133,6 +135,9 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
     public static final String NEAR_SPHERE_OPERATOR = "$nearSphere";
 
     static {
+        // Geospatial criteria carry shape documents by design and are exempt from criterion value validation.
+        VALUE_VALIDATION_EXEMPT_CRITERIA.add(GeoCriterion.class);
+
         queryHandlers.put(IdEquals.class, new QueryHandler<IdEquals>() {
             // Exercised end-to-end by StringIdWithObjectIdStorageSpec:
             //   - "with storedAs ObjectId, point lookup by hex string works" (happy path)
@@ -173,12 +178,16 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 Document inQuery = new Document();
                 List<Object> values = getInListQueryValues(entity, in);
 
-                PersistentProperty identityProp = entity.getIdentity();
-                boolean isIdInList = identityProp != null && identityProp.getName().equals(in.getProperty());
-                if (isIdInList && MongoIdCoercion.resolveStoredAs(entity) != null) {
+                // getInListQueryValues unwraps association instances to their *declared*
+                // identifier, so the storage type has to be applied afterwards -- for the
+                // entity's own identity (findAllByIdInList) and equally for a to-one
+                // association (`child in [childInstance]`, findAllByChildInList(..)), whose
+                // ids are governed by the associated entity's mapping, not this one's.
+                PersistentEntity idTarget = resolveIdCriterionTarget(entity, in.getProperty());
+                if (idTarget != null && MongoIdCoercion.resolveStoredAs(idTarget) != null) {
                     List<Object> coerced = new ArrayList<>(values.size());
                     for (Object v : values) {
-                        coerced.add(MongoIdCoercion.coerceIdToStoredType(v, entity));
+                        coerced.add(MongoIdCoercion.coerceIdToStoredType(v, idTarget));
                     }
                     values = coerced;
                 }
@@ -457,8 +466,12 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
     @Override
     protected void flushBeforeQuery() {
-        // with Mongo we only flush the session if a transaction is not active to allow for session-managed transactions
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+        // Within a transaction the session is not flushed ahead of a query, so that a rollback can still
+        // discard what is queued: without a server-side transaction, a flushed write cannot be taken
+        // back. Inside one it is aborted with the transaction, so the query sees the transaction's own
+        // writes, as on Hibernate.
+        if (!TransactionSynchronizationManager.isSynchronizationActive() ||
+                (mongoSession != null && mongoSession.hasActiveTransaction())) {
             super.flushBeforeQuery();
         }
     }
@@ -474,8 +487,26 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         return query;
     }
 
+    /**
+     * The codec engine decodes the associations of what it reads in the session bound to the thread,
+     * which need not be this query's: a proxy or a collection loads through the session its owner was
+     * read in, which by then may be closed and not bound. With no session bound, this reads in a
+     * session of its own, and reads every result before that session closes: MongoDB returns the
+     * first 101 documents with the query, and the cursor decodes the rest as they are read.
+     */
     @Override
     protected List executeQuery(final PersistentEntity entity, final Junction criteria) {
+        if (isCodecPersister && !session.getDatastore().hasCurrentSession()) {
+            return DatastoreUtils.execute(session.getDatastore(), (Session bound) -> {
+                final List results = readResults(entity, criteria);
+                results.size(); // reads every result
+                return results;
+            });
+        }
+        return readResults(entity, criteria);
+    }
+
+    private List readResults(final PersistentEntity entity, final Junction criteria) {
         final AbstractMongoSession mongoSession = this.mongoSession;
         com.mongodb.client.MongoCollection<Document> collection = mongoSession.getCollection(entity);
 
@@ -651,7 +682,17 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
         return iterable;
     }
 
-    private Document getClassFieldDocument(final PersistentEntity entity) {
+    /**
+     * Creates the query that restricts the collection of an inheritance hierarchy to the documents
+     * of the given entity and its subclasses.
+     *
+     * @param entity The entity
+     * @return The query, which is empty for a root entity
+     */
+    public static Document createClassFieldQuery(final PersistentEntity entity) {
+        if (entity.isRoot()) {
+            return new Document();
+        }
         Object classFieldValue;
         Collection<PersistentEntity> childEntities = entity.getMappingContext().getChildEntities(entity);
         if (childEntities.size() > 0) {
@@ -670,13 +711,7 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
     }
 
     protected Document createQueryObject(PersistentEntity persistentEntity) {
-        Document query;
-        if (persistentEntity.isRoot()) {
-            query = new Document();
-        } else {
-            query = getClassFieldDocument(persistentEntity);
-        }
-        return query;
+        return createClassFieldQuery(persistentEntity);
     }
 
     public static void populateMongoQuery(final AbstractMongoSession session, Document query, Junction criteria, final PersistentEntity entity) {
@@ -731,6 +766,9 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                     subList.add(dbo);
                 }
 
+                coerceIdCriterion(criterion, entity);
+                validateCriterionValues(criterion, entity);
+
                 if (criterion instanceof PropertyCriterion && !(criterion instanceof GeoCriterion)) {
                     PropertyCriterion pc = (PropertyCriterion) criterion;
                     PersistentProperty property = entity.getPropertyByName(pc.getProperty());
@@ -747,6 +785,61 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
                 throw new InvalidDataAccessResourceUsageException("Queries of type " + criterion.getClass().getSimpleName() + " are not supported by this implementation");
             }
         }
+    }
+
+    /**
+     * Sends identifier-bearing criteria in the type the target's {@code _id} is actually stored
+     * as, the same way the {@code IdEquals} handler does for {@code _id} itself.
+     *
+     * <p>Two kinds of criterion carry an identifier without being routed through that handler:
+     * a filter on a to-one association (the associated entity's id, as used by bidirectional
+     * one-to-many and {@code hasOne} lookups) and a dynamic finder such as
+     * {@code findAllById(hex)}, which builds {@code Equals('id', ..)} rather than
+     * {@code IdEquals}. Left uncoerced they send a hex String against an ObjectId and silently
+     * match nothing.
+     *
+     * <p>Recurses through junctions so criteria nested inside {@code not { }},
+     * {@code and { }} and {@code or { }} are covered as well -- the inherited negation handler
+     * dispatches nested criteria itself, so they never reach this preprocessing otherwise, and
+     * an uncoerced negated id predicate fails to exclude the document it names.
+     */
+    private static void coerceIdCriterion(Criterion criterion, PersistentEntity entity) {
+        if (criterion instanceof Junction) {
+            for (Criterion nested : ((Junction) criterion).getCriteria()) {
+                coerceIdCriterion(nested, entity);
+            }
+            return;
+        }
+        if (!(criterion instanceof PropertyCriterion) ||
+                criterion instanceof GeoCriterion ||
+                criterion instanceof SubqueryCriterion) {
+            return;
+        }
+        PropertyCriterion pc = (PropertyCriterion) criterion;
+        PersistentEntity idTarget = resolveIdCriterionTarget(entity, pc.getProperty());
+        if (idTarget == null || MongoIdCoercion.resolveStoredAs(idTarget) == null) {
+            return;
+        }
+        Object raw = pc.getValue();
+        if (raw != null) {
+            pc.setValue(MongoIdCoercion.coerceIdToStoredType(raw, idTarget));
+        }
+    }
+
+    /**
+     * The entity whose identifier mapping governs a criterion on {@code propertyName}: the
+     * associated entity for a to-one association, the queried entity for its own identity,
+     * otherwise {@code null}.
+     */
+    private static PersistentEntity resolveIdCriterionTarget(PersistentEntity entity, String propertyName) {
+        PersistentProperty property = entity.getPropertyByName(propertyName);
+        if (property instanceof ToOne) {
+            return ((ToOne) property).getAssociatedEntity();
+        }
+        if (entity.getIdentity() != null && entity.getIdentity().getName().equals(propertyName)) {
+            return entity;
+        }
+        return null;
     }
 
     /**
@@ -1431,10 +1524,24 @@ public class MongoQuery extends BsonQuery implements QueryArgumentsAware {
 
         @SuppressWarnings("unchecked")
         public MongoResultList(MongoCursor cursor, Integer offset, EntityPersister mongoEntityPersister) {
-            super(offset == null ? 0 : offset, cursor);
-            this.cursor = cursor;
+            super(offset == null ? 0 : offset, boundToSession(cursor, mongoEntityPersister));
+            this.cursor = (MongoCursor) super.getCursor();
             this.mongoEntityPersister = mongoEntityPersister;
             this.isCodecPersister = mongoEntityPersister instanceof MongoCodecEntityPersister;
+        }
+
+        /**
+         * The results are read after the query returns, by which time a session it opened for itself
+         * is closed. The codec engine decodes each batch, associations included, as the cursor fetches
+         * it, and needs a session to do so; the other engine decodes documents as they are read, in the
+         * query's session.
+         */
+        @SuppressWarnings("unchecked")
+        private static MongoCursor boundToSession(MongoCursor cursor, EntityPersister mongoEntityPersister) {
+            if (mongoEntityPersister instanceof MongoCodecEntityPersister) {
+                return new SessionBoundCursor<>(cursor, mongoEntityPersister.getSession().getDatastore());
+            }
+            return cursor;
         }
 
         @Override

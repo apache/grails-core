@@ -1,0 +1,76 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'groovy'
+    id 'java-library'
+    id 'project-report'
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.buildsrc.vulnerability-scan'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+ext {
+    pomTitle = 'Grails AI Testing Support'
+    pomDescription = 'Testing support for Grails applications that use Spring AI: a scripted chat model and a ' +
+            'deterministic embedding model for unit tests, and stubs that stand in for the configured provider ' +
+            'in the test environment'
+}
+
+dependencies {
+
+    implementation platform(project(':grails-bom'))
+
+    api project(':grails-testing-support-core') // GrailsUnitTest, which AiUnitTest extends
+    api 'org.springframework.ai:spring-ai-client-chat' // ChatClient
+    api 'org.springframework.ai:spring-ai-model' // ChatModel, EmbeddingModel, Prompt, ChatResponse
+    api 'io.projectreactor:reactor-core' // Flux, what a streamed response is
+    api 'org.springframework.boot:spring-boot-autoconfigure' // @AutoConfiguration
+    api 'org.spockframework:spock-core' // IGlobalExtension
+
+    implementation 'org.apache.groovy:groovy'
+    implementation 'org.springframework:spring-beans' // BeanRegistrar
+    implementation 'org.springframework:spring-context' // @Primary
+    implementation 'org.springframework:spring-core' // Environment, Ordered
+    implementation 'org.springframework.boot:spring-boot' // EnvironmentPostProcessor
+
+    compileOnly 'org.springframework.ai:spring-ai-vector-store' // SimpleVectorStore, registered when present
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    testImplementation 'org.springframework.ai:spring-ai-vector-store'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+
+    testRuntimeOnly 'org.assertj:assertj-core' // required by the spring-boot-test context runners
+    testRuntimeOnly 'org.slf4j:slf4j-nop' // Remove annoying warning
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
+}

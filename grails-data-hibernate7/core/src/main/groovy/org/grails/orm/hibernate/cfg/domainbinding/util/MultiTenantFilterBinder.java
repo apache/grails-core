@@ -41,7 +41,7 @@ import org.grails.orm.hibernate.cfg.domainbinding.hibernate.HibernatePersistentP
 /**
  * Utility class for binding multi-tenant filters to the Hibernate meta model.
  *
- * @since 7.0
+ * @since 8.0
  */
 public class MultiTenantFilterBinder {
 

@@ -208,84 +208,84 @@ class SimpleMapQuery extends Query {
                 throw new InvalidDataAccessResourceUsageException("Unsupported function '$function' used in query")
             }
         },
-        (Query.Like): { allEntities, Association association, Query.Like like, Closure function = {it} ->
+        (Query.Like): { allEntities, Association association, Query.Like like, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 def regexFormat = like.pattern.replaceAll('%', '.*?')
                 function(resolveIfEmbedded(like.property, it)) ==~ regexFormat
             }
         },
-        (Query.RLike): { allEntities, Association association, Query.RLike like, Closure function = {it} ->
+        (Query.RLike): { allEntities, Association association, Query.RLike like, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 def regexFormat = like.pattern
                 function(resolveIfEmbedded(like.property, it)) ==~ regexFormat
             }
         },
-        (Query.ILike): { allEntities, Association association, Query.Like like, Closure function = {it} ->
+        (Query.ILike): { allEntities, Association association, Query.Like like, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 def regexFormat = like.pattern.replaceAll('%', '.*?')
                 def pattern = Pattern.compile(regexFormat, Pattern.CASE_INSENSITIVE)
                 pattern.matcher(function(resolveIfEmbedded(like.property, it))).find()
             }
         },
-        (Query.Equals): { allEntities, Association association, Query.Equals eq, Closure function = {it} ->
+        (Query.Equals): { allEntities, Association association, Query.Equals eq, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(eq)
                 function(resolveIfEmbedded(eq.property, it)) == value
             }
         },
-        (Query.IsNull): { allEntities, Association association, Query.IsNull eq, Closure function = {it} ->
+        (Query.IsNull): { allEntities, Association association, Query.IsNull eq, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 function(resolveIfEmbedded(eq.property, it)) == null
             }
         },
-        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = {it} ->
+        (Query.NotEquals): { allEntities, Association association, Query.NotEquals eq , Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(eq)
                 function(resolveIfEmbedded(eq.property, it)) != value
             }
         },
-        (Query.IsNotNull): { allEntities, Association association, Query.IsNotNull eq , Closure function = {it} ->
+        (Query.IsNotNull): { allEntities, Association association, Query.IsNotNull eq , Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 function(resolveIfEmbedded(eq.property, it)) != null
             }
         },
-        (Query.IdEquals): { allEntities, Association association, Query.IdEquals eq , Closure function = {it} ->
+        (Query.IdEquals): { allEntities, Association association, Query.IdEquals eq , Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 function(resolveIfEmbedded(eq.property, it)) == eq.value
             }
         },
-        (Query.Between): { allEntities, Association association, Query.Between between, Closure function = {it} ->
+        (Query.Between): { allEntities, Association association, Query.Between between, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 def from = between.from
                 def to = between.to
                 function(resolveIfEmbedded(between.property, it)) >= from && function(resolveIfEmbedded(between.property, it)) <= to
             }
         },
-        (Query.GreaterThan): { allEntities, Association association, Query.GreaterThan gt, Closure function = {it} ->
+        (Query.GreaterThan): { allEntities, Association association, Query.GreaterThan gt, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(gt)
                 function(resolveIfEmbedded(gt.property, it)) > value
             }
         },
-        (Query.LessThan): { allEntities, Association association, Query.LessThan lt, Closure function = {it} ->
+        (Query.LessThan): { allEntities, Association association, Query.LessThan lt, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(lt)
                 function(resolveIfEmbedded(lt.property, it)) < value
             }
         },
-        (Query.GreaterThanEquals): { allEntities, Association association, Query.GreaterThanEquals gt, Closure function = {it} ->
+        (Query.GreaterThanEquals): { allEntities, Association association, Query.GreaterThanEquals gt, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(gt)
                 function(resolveIfEmbedded(gt.property, it)) >= value
             }
         },
-        (Query.LessThanEquals): { allEntities, Association association, Query.LessThanEquals lt, Closure function = {it} ->
+        (Query.LessThanEquals): { allEntities, Association association, Query.LessThanEquals lt, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 final value = subqueryIfNecessary(lt)
                 function(resolveIfEmbedded(lt.property, it)) <= value
             }
         },
-        (Query.In): { allEntities, Association association, Query.In inList, Closure function = {it} ->
+        (Query.In): { allEntities, Association association, Query.In inList, Closure function = { it } ->
             queryAssociation(allEntities, association) {
                 inList.values?.contains(function(resolveIfEmbedded(inList.property, it)))
             }

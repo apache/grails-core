@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.lang
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -29,7 +29,7 @@ import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
 
-class GrailsApplicationSpec extends BeanContextSpec implements CommandOutputFixture {
+class GrailsApplicationSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Unroll
     void 'Application file is generated for a #applicationType application for language: groovy'() {

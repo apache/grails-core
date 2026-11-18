@@ -67,13 +67,14 @@ th.sortable[data-sort-dir="desc"] .sort-hint::before {
    the warm halo picks up the brand accent from the logo. */
 .welcome-hero {
     color: #fff;
+    /* Same border the cards use, so the hero reads as part of the same set —
+       most visibly on its right edge, where the light cups would otherwise
+       blend into the page. --bs-border-color-translucent is theme-aware, so one
+       rule matches the cards in both light and dark. */
+    border: 1px solid var(--bs-border-color-translucent);
     background:
         radial-gradient(46rem 30rem at 74% 52%, rgba(254, 182, 114, .32), transparent 58%),
         linear-gradient(135deg, #14161b 0%, #1e222a 58%, #262b35 100%);
-}
-
-[data-bs-theme="dark"] .welcome-hero {
-    border: 1px solid rgba(255, 255, 255, .08);
 }
 
 .welcome-hero-cups {
@@ -90,6 +91,14 @@ th.sortable[data-sort-dir="desc"] .sort-hint::before {
 
 .welcome-hero-body {
     max-width: 30rem;
+    /* Keep the white hero copy legible where it crosses the light cups. A pure
+       stroke would leave the letters' interiors white (same as the cups), so pair
+       a hairline dark stroke (Photoshop's "stroke"/outline) with a soft dark halo:
+       the halo darkens the area around each glyph so the fill still reads. Both are
+       invisible on the dark panel and only do visible work over the artwork. */
+    -webkit-text-stroke: 0.6px rgba(0, 0, 0, 0.6);
+    paint-order: stroke fill;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.85);
 }
 
 .welcome-hero-note {
@@ -128,4 +137,72 @@ th.sortable[data-sort-dir="desc"] .sort-hint::before {
 
 .filter-input {
     min-width: 12rem;
+}
+
+/* Jump-to-id control on controllers that expose a `show` action.
+   Collapsed it is a compact "id" pill; focusing or typing widens it, and
+   the Show button is revealed only once an id has been entered. Colors and
+   focus ring come from Bootstrap's form-control/btn, so light & dark both work. */
+.show-jump {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.show-jump-input {
+    width: 2.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.show-jump-input:focus,
+.show-jump-input:not(:placeholder-shown) {
+    width: 8.5rem;
+}
+
+.show-jump-input:focus {
+    position: relative;
+    z-index: 2;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .show-jump-input {
+        transition: width .18s ease;
+    }
+}
+
+/* Hidden until the field holds an id; then it joins the input as one control. */
+.show-jump-go {
+    display: none;
+    white-space: nowrap;
+}
+
+.show-jump-input:not(:placeholder-shown) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.show-jump-input:not(:placeholder-shown) + .show-jump-go {
+    display: inline-flex;
+    align-items: center;
+    margin-left: -1px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* Reserve the input's height on every controller row so revealing the control
+   never changes the row height, and rows stay a uniform size. */
+.controller-row {
+    min-height: 2rem;
+}
+
+/* Responsive visibility is Bootstrap's job: the form carries `d-lg-none`, so it
+   is always visible below lg — the same breakpoint at which the navbar collapses
+   to a hamburger ("mobile"). At lg and up (no hamburger) the control is hidden and
+   revealed on row hover or keyboard focus instead, so the two behaviors agree on
+   what "mobile" means. Bootstrap has no hover utility, so this stays custom;
+   !important beats d-lg-none's own rule. */
+@media (min-width: 992px) {
+    .list-group-item:hover .show-jump,
+    .list-group-item:focus-within .show-jump {
+        display: inline-flex !important;
+    }
 }

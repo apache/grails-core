@@ -20,6 +20,7 @@ package org.grails.core
 
 import grails.config.Settings
 import grails.core.DefaultGrailsApplication
+import grails.web.Action
 import spock.lang.Specification
 
 /**
@@ -81,10 +82,129 @@ class DefaultGrailsControllerClassSpec extends Specification {
         configScopeValue << [SINGLETON, SESSION]
     }
 
+    void "an action that fails throws its own exception from a #description"() {
+        when:
+        new DefaultGrailsControllerClass(controller).invoke(controller.newInstance(), 'failing')
+
+        then:
+        def exception = thrown(IllegalStateException)
+        exception.message == 'thrown by the action'
+
+        where:
+        description                     | controller
+        'public controller'             | ActionsController
+        'controller that is not public' | Class.forName('org.grails.core.nonpublic.NonPublicController')
+    }
+
+    void "an action of a controller that is not public is invoked"() {
+        given:
+        def controller = Class.forName('org.grails.core.nonpublic.NonPublicController')
+
+        expect:
+        new DefaultGrailsControllerClass(controller).invoke(controller.newInstance(), 'index') == 'answered by a controller that is not public'
+    }
+
+    void "the #action action returns #expected"() {
+        given:
+        def controllerClass = new DefaultGrailsControllerClass(ActionsController)
+
+        expect:
+        controllerClass.invoke(new ActionsController(name: 'the controller'), action) == expected
+
+        where:
+        action        || expected
+        'show'        || 'shown by the controller'
+        'count'       || 42
+        'nothing'     || null
+        'staticModel' || [answeredBy: 'a static action']
+    }
+
+    void "the default action is invoked when no action is named"() {
+        expect:
+        new DefaultGrailsControllerClass(ActionsController).invoke(new ActionsController(name: 'the controller'), null) == 'index of the controller'
+    }
+
+    void "an action name that is not an action is rejected"() {
+        when:
+        new DefaultGrailsControllerClass(ActionsController).invoke(new ActionsController(), 'notAnAction')
+
+        then:
+        def exception = thrown(IllegalArgumentException)
+        exception.message == 'Invalid action name: notAnAction'
+    }
+
+    void "an inherited action runs the code of the controller it is invoked on"() {
+        given:
+        def controllerClass = new DefaultGrailsControllerClass(OverridingController)
+        def controller = new OverridingController()
+
+        expect:
+        controllerClass.actions == ['overridden', 'inherited'] as Set
+        controllerClass.invoke(controller, 'overridden') == 'overridden by the subclass'
+        controllerClass.invoke(controller, 'inherited') == 'inherited from the superclass'
+    }
+
     class NotSpecifiedController {
     }
 
     class PrototypeController {
         static scope = "prototype"
+    }
+
+    static class ActionsController {
+        String name
+
+        @Action
+        String index() {
+            "index of ${name}"
+        }
+
+        @Action
+        String show() {
+            "shown by ${name}"
+        }
+
+        @Action
+        int count() {
+            42
+        }
+
+        @Action
+        void nothing() {
+        }
+
+        @Action
+        static Map staticModel() {
+            [answeredBy: 'a static action']
+        }
+
+        @Action
+        void failing() {
+            throw new IllegalStateException('thrown by the action')
+        }
+
+        String notAnAction() {
+            'not an action'
+        }
+    }
+
+    static abstract class BaseController {
+        @Action
+        String overridden() {
+            'declared by the superclass'
+        }
+
+        @Action
+        String inherited() {
+            'inherited from the superclass'
+        }
+    }
+
+    static class OverridingController extends BaseController {
+        @Override
+        @Action
+        String overridden() {
+            'overridden by the subclass'
+        }
     }
 }

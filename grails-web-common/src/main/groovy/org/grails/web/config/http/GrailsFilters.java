@@ -18,28 +18,80 @@
  */
 package org.grails.web.config.http;
 
+import org.springframework.core.Ordered;
+
 /**
- * Stores the default order numbers of all Grails filters for use in configuration.
- * These filters are run prior to the Spring Security Filter Chain which is at DEFAULT_FILTER_ORDER.
+ * The orders of the servlet filters in a Grails application, listed in the order they run: those Grails and the
+ * plugins in the Grails repository register, and the slots Grails gives to Spring Boot's own. Place a filter of
+ * your own relative to them, for example at {@code GrailsFilters.CHARACTER_ENCODING_FILTER.getOrder() + 1} to run
+ * right after the character encoding filter.
+ *
+ * <p>Several filters share {@link Ordered#HIGHEST_PRECEDENCE}. Among filters of the same order, Spring Boot runs
+ * the ones registered through a {@code FilterRegistrationBean} first and plain {@code Filter} beans after them;
+ * within each kind, the order their beans are defined in decides.</p>
+ *
+ * <p>The filters from {@link #FIRST} to {@link #LAST} run before the Spring Security filter chain.</p>
  *
  * @since 7.0
  */
 public enum GrailsFilters {
 
-    FIRST,
-    ASSET_PIPELINE_FILTER,
-    CHARACTER_ENCODING_FILTER,
-    HIDDEN_HTTP_METHOD_FILTER,
-    SITEMESH_FILTER,
-    GRAILS_WEB_REQUEST_FILTER,
-    LAST(GrailsFilterOrder.DEFAULT_FILTER_ORDER - 10);
+    /**
+     * The startup progress filter, a {@code FilterRegistrationBean}. It answers requests while the application
+     * starts, without passing them on.
+     */
+    STARTUP_PROGRESS_FILTER(Ordered.HIGHEST_PRECEDENCE),
 
-    private static final int INTERVAL = 10;
+    /**
+     * The latency filter of {@code grails-testing-support-latency}, a {@code FilterRegistrationBean}, so that the
+     * delay it adds covers the whole request.
+     */
+    LATENCY_FILTER(Ordered.HIGHEST_PRECEDENCE),
+
+    /**
+     * Grails' CORS filter, a plain {@code Filter} bean, registered unless {@code grails.cors.filter} is false. It
+     * reads no request parameters.
+     */
+    CORS_FILTER(Ordered.HIGHEST_PRECEDENCE),
+
+    /**
+     * Runs ahead of every other filter, as Spring Boot's own encoding filter does. A filter that reads a request
+     * parameter before the encoding is set makes the servlet container decode the request body with its default
+     * charset (ISO-8859-1), for the rest of the request.
+     */
+    CHARACTER_ENCODING_FILTER(Ordered.HIGHEST_PRECEDENCE),
+
+    /**
+     * The CAS plugin's single sign-out filter, right after the character encoding filter, because it reads the
+     * {@code logoutRequest} parameter of every POST.
+     */
+    CAS_SINGLE_SIGN_OUT_FILTER(Ordered.HIGHEST_PRECEDENCE + 1),
+
+    /**
+     * Spring's {@code FormContentFilter}, which parses the form of a PUT, PATCH or DELETE request into request
+     * parameters: Spring Boot's, at its default order, or Grails' at the same order when Spring Boot registers none.
+     */
+    FORM_CONTENT_FILTER(-9900),
+
+    /**
+     * The first of the Grails filter slots. A filter at this order runs ahead of the other Grails filters, and after
+     * the character encoding filter, with the request encoding already set. Grails' security headers filter is
+     * registered here.
+     */
+    FIRST(-200),
+
+    ASSET_PIPELINE_FILTER(-190),
+    HIDDEN_HTTP_METHOD_FILTER(-170),
+    SITEMESH_FILTER(-160),
+    GRAILS_WEB_REQUEST_FILTER(-150),
+    LAST(GrailsFilterOrder.DEFAULT_FILTER_ORDER - 10),
+
+    /**
+     * The Spring Security filter chain, registered by the Spring Security plugin.
+     */
+    SPRING_SECURITY_FILTER_CHAIN(GrailsFilterOrder.DEFAULT_FILTER_ORDER);
+
     private final int order;
-
-    GrailsFilters() {
-        this.order = GrailsFilterOrder.DEFAULT_FILTER_ORDER - 100 + ordinal() * INTERVAL;
-    }
 
     GrailsFilters(int order) {
         this.order = order;

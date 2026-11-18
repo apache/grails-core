@@ -25,6 +25,17 @@ Renders fields for all properties of an object by using `f:field` for each prope
 
 The `id`, `version`, `dateCreated` and `lastUpdated` properties are skipped on domain classes. Additionally any property with a `display: false` constraint set will be skipped.
 
+The skipped `version`, `dateCreated` and `lastUpdated` properties are the default of the `grails.plugin.fields.exclusions.input` setting. Set it to a list in `application.yml`, or to a comma-separated value, to skip other properties:
+
+[source,yaml]
+----
+grails:
+    plugin:
+        fields:
+            exclusions:
+                input: [version, dateCreated, lastUpdated, password]
+----
+
 
 ===== Attributes
 

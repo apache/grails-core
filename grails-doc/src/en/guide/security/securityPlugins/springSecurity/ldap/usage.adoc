@@ -52,7 +52,7 @@ dependencies {
 
 ==== Configure parameters
 
-Configure any required parameters and any optional parameters you want in application.yml or application.groovy. These are described in detail in the <<configuration>> section, but typically you only need to set these properties:
+Configure any required parameters and any optional parameters you want in application.yml or application.groovy. These are described in detail in the <<ldap-configuration,Configuration>> section, but typically you only need to set these properties:
 
 [source,yaml]
 ----

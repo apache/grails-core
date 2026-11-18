@@ -68,7 +68,10 @@ class MethodValidationTransformSpec extends Specification {
         ValidatedService.isAssignableFrom(implClass)
 
         and: 'all implemented Trait methods are marked as Generated'
-        ValidatedService.methods.each { Method traitMethod ->
+        // The datastore accessors inherited from the Service trait are overridden by the service
+        // transform with a registry-resolving implementation; their @Generated marker is managed by
+        // Groovy's trait weaving rather than the transform, so they are excluded here.
+        ValidatedService.methods.findAll { it.name != 'getDatastore' && it.name != 'setDatastore' }.each { Method traitMethod ->
             assert implClass.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
 

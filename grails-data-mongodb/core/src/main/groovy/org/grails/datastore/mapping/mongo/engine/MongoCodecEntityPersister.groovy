@@ -36,7 +36,10 @@ import org.springframework.dao.DataIntegrityViolationException
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.mapping.cache.TPCacheAdapterRepository
 import org.grails.datastore.mapping.config.Property
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.IdentityGenerationException
+import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.SessionImplementor
 import org.grails.datastore.mapping.core.impl.PendingDeleteAdapter
 import org.grails.datastore.mapping.core.impl.PendingInsertAdapter
@@ -159,9 +162,14 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     .withDocumentClass(persistentEntity.javaClass)
                     .withCodecRegistry(mongoDatastore.codecRegistry)
             Document idQuery = createIdQuery(coerceIdToStoredType(key, pe))
-            o = mongoSession.find(mongoCollection, idQuery, pe.javaClass)
-                    .limit(1)
-                    .first()
+            // a subclass shares its root's collection, so a document of another class must not match
+            idQuery.putAll(MongoQuery.createClassFieldQuery(pe))
+            // with no session bound, decode in a session of its own, as MongoQuery.executeQuery does
+            o = DatastoreUtils.execute(mongoDatastore, { Session bound ->
+                mongoSession.find(mongoCollection, idQuery, pe.javaClass)
+                        .limit(1)
+                        .first()
+            } as SessionCallback<Object>)
 
             if (o != null) {
                 if (!cancelLoad(pe, createEntityAccess(pe, o))) {

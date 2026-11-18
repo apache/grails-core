@@ -126,6 +126,56 @@ class CommandObjectInstantiationSpec extends Specification implements Controller
         where:
         requestMethod << ['POST', 'PUT', 'GET', 'DELETE']
     }
+
+    @Issue('https://github.com/apache/grails-core/issues/16280')
+    void 'Test a parameter named identifier does not resolve a domain command object'() {
+        given: 'a saved domain object a request could try to address'
+        def decoy = new DomainClassCommandObject(name: 'Decoy')
+        decoy.save(flush: true)
+
+        expect:
+        decoy.id != null
+
+        when: 'a GET submits only identifier, so the binding source has no id and the id fallback runs'
+        request.method = 'GET'
+        params.identifier = decoy.id
+        controller.domainCommandObject()
+
+        then: 'the identifier parameter is not treated as the entity id'
+        response.status == HttpServletResponse.SC_OK
+        model.commandObject == null
+
+        and: 'and it is still readable as an ordinary request parameter'
+        params['identifier'] == decoy.id
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16280')
+    void 'Test id wins over a parameter named identifier when resolving a domain command object'() {
+        given:
+        def target = new DomainClassCommandObject(name: 'Target')
+        def decoy = new DomainClassCommandObject(name: 'Decoy')
+        target.save()
+        decoy.save(flush: true)
+
+        expect:
+        target.id != null
+        decoy.id != null
+        target.id != decoy.id
+
+        when:
+        request.method = 'GET'
+        params.id = target.id
+        params.identifier = decoy.id
+        controller.domainCommandObject()
+
+        then:
+        response.status == HttpServletResponse.SC_OK
+        model.commandObject.id == target.id
+        model.commandObject.name == 'Target'
+
+        and:
+        params['identifier'] == decoy.id
+    }
 }
 
 @Artefact('Controller')

@@ -112,41 +112,26 @@ class PublishPlugin implements Plugin<Project> {
 
     private static TaskProvider<Task> configurePublishedArtifacts(Project project) {
         def artifactsDir = project.layout.buildDirectory.dir('artifacts')
+        def publishingExtension = project.extensions.getByType(PublishingExtension)
+        // The publications are walked when the task graph is stored, not when the task runs: the
+        // configuration cache does not keep the publishing model, only the coordinates read from it.
+        Provider<Map<String, String>> coordinates = project.providers.provider {
+            collectPublishedArtifactCoordinates(publishingExtension)
+        }
         def artifactsTask = project.tasks.register('savePublishedArtifacts')
         artifactsTask.configure { Task task ->
             task.group = 'publishing'
+            task.inputs.property('artifactCoordinates', coordinates)
             task.outputs.dir(artifactsDir)
             task.dependsOn(project.tasks.withType(Jar))
 
-            // Capture publishing extension at configuration time to avoid Task.project access at execution time
-            // See: https://docs.gradle.org/current/userguide/configuration_cache.html#config_cache:requirements:use_project_during_execution
-            def publishingExtension = project.extensions.getByType(PublishingExtension)
-
             task.doLast {
-                Map<String, String> artifacts = [:]
-                publishingExtension.publications.withType(MavenPublication).each { MavenPublication publication ->
-                    publication.artifacts.each { MavenArtifact artifact ->
-                        if (!artifact.file.exists() || artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
-                            return
-                        }
-                        if (artifact.classifier) {
-                            artifacts.put(
-                                    artifact.file.name,
-                                    "$publication.groupId:$publication.artifactId:$publication.version:$artifact.classifier" as String
-                            )
-                        } else {
-                            artifacts.put(
-                                    artifact.file.name,
-                                    "$publication.groupId:$publication.artifactId:$publication.version" as String
-                            )
-                        }
-                    }
-                }
-
-                artifactsDir.get().asFile.with { dir ->
-                    dir.mkdirs()
-                    artifacts.each { key, value ->
-                        new File(dir, "${key}.txt").text = value
+                File dir = artifactsDir.get().asFile
+                dir.mkdirs()
+                coordinates.get().each { String path, String coordinate ->
+                    File artifact = new File(path)
+                    if (artifact.exists()) {
+                        new File(dir, "${artifact.name}.txt").text = coordinate
                     }
                 }
             }
@@ -154,9 +139,31 @@ class PublishPlugin implements Plugin<Project> {
         artifactsTask
     }
 
+    /**
+     * Maps the absolute path of every artifact of the project's Maven publications to the coordinate it is
+     * published under. Publication metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are left out.
+     */
+    protected static Map<String, String> collectPublishedArtifactCoordinates(PublishingExtension publishing) {
+        Map<String, String> coordinates = [:]
+        publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
+            publication.artifacts.each { MavenArtifact artifact ->
+                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                    return
+                }
+                String coordinate = "$publication.groupId:$publication.artifactId:$publication.version"
+                coordinates.put(
+                        artifact.file.absolutePath,
+                        artifact.classifier ? "$coordinate:$artifact.classifier" as String : coordinate
+                )
+            }
+        }
+        coordinates
+    }
+
     private static void configureChecksums(Project project, TaskProvider<Task> artifactsTask) {
         project.pluginManager.apply(ChecksumPlugin)
 
+        def publishing = project.extensions.getByType(PublishingExtension)
         def checksumTask = project.tasks.register('publishedChecksums', Checksum)
         checksumTask.configure { Checksum check ->
             check.group = 'publishing'
@@ -164,30 +171,35 @@ class PublishPlugin implements Plugin<Project> {
             check.outputDirectory.set(project.layout.buildDirectory.dir('checksums'))
             check.dependsOn(project.tasks.withType(Jar))
             check.finalizedBy(artifactsTask)
-        }
-
-        project.gradle.taskGraph.whenReady {
-            project.extensions.configure(PublishingExtension) {
-                it.publications.withType(MavenPublication).configureEach {
-                    project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, it.name)
-                    List<File> filesToChecksum = []
-                    it.artifacts.each {
-                        if (it.file.name in ['grails-plugin.xml', 'profile.yml']) {
-                            return
-                        }
-                        filesToChecksum << it.file
-                    }
-
-                    checksumTask.configure { Checksum check ->
-                        check.inputFiles.setFrom(filesToChecksum.unique())
-                    }
-                }
-            }
+            check.inputFiles.from(project.provider { collectChecksumInputFiles(project, publishing) })
         }
 
         project.tasks.withType(AbstractPublishToMaven).configureEach {
             it.finalizedBy(checksumTask)
         }
+    }
+
+    /**
+     * Collects the artifact files to checksum across <em>all</em> Maven publications of the project,
+     * including additional publications such as the {@code cli} companion coordinate. Publication
+     * metadata sidecars ({@code grails-plugin.xml}, {@code profile.yml}) are excluded.
+     *
+     * Accumulating across every publication is essential: earlier revisions set the checksum inputs
+     * per publication, so only the last-configured publication survived and companion artifacts
+     * (e.g. {@code grails-core-cli-*.jar}) went unchecksummed.
+     */
+    protected static List<File> collectChecksumInputFiles(Project project, PublishingExtension publishing) {
+        List<File> filesToChecksum = []
+        publishing.publications.withType(MavenPublication).each { MavenPublication publication ->
+            project.logger.lifecycle('Maven Publication Found for project: {} with name {}', project.name, publication.name)
+            publication.artifacts.each { MavenArtifact artifact ->
+                if (artifact.file.name in ['grails-plugin.xml', 'profile.yml']) {
+                    return
+                }
+                filesToChecksum << artifact.file
+            }
+        }
+        filesToChecksum.unique(false)
     }
 
     private static void disableSigningWhenTesting(Project project) {
@@ -304,6 +316,7 @@ class PublishPlugin implements Plugin<Project> {
             emeritus('smaldini','Stephane Maldini', project),
             emeritus('tkvw','Dennie de Lange', project),
             emeritus('tomwidmer','Tom Widmer', project),
+            emeritus('vitaliisamolovskikh','Vitalii Samolovskikh', project),
             emeritus('yamkazu','Kazuki Yamamoto', project),
             emeritus('zanthrash','Zan Thrash', project),
             emeritus('ziegfried', 'Siegfried Puchbauer', project),
@@ -427,21 +440,24 @@ class PublishPlugin implements Plugin<Project> {
                     spec.include { needsNotice.get() }
                 }
 
-                jar.doFirst {
+                String sourceSetName = sourceSet?.name
+                String projectName = project.name
+                jar.doFirst { Task task ->
+                    String archiveFileName = ((Jar) task).archiveFileName.orNull
                     if (needsLicense.get()) {
-                        jar.logger.info(
+                        task.logger.info(
                                 'No META-INF/LICENSE in the [{}] source set of [{}], adding fallback license to [{}].',
-                                sourceSet?.name,
-                                project.name,
-                                jar.archiveFileName.orNull
+                                sourceSetName,
+                                projectName,
+                                archiveFileName
                         )
                     }
                     if (needsNotice.get()) {
-                        jar.logger.info(
+                        task.logger.info(
                                 'No META-INF/NOTICE in the [{}] source set of [{}], adding default NOTICE to [{}].',
-                                sourceSet?.name,
-                                project.name,
-                                jar.archiveFileName.orNull
+                                sourceSetName,
+                                projectName,
+                                archiveFileName
                         )
                     }
                 }
