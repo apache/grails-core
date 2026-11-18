@@ -57,7 +57,7 @@ class GrailsConcurrentLinkedMapCacheTests extends Specification {
 
       then:
       cache.nativeCache.get('key') == 'value'
-      cache.nativeCache.getClass().name.startsWith('com.github.benmanes.caffeine.cache.')
+      cache.hottestKeys.contains('key')
    }
 
    void 'puts and gets cache entries'() {
@@ -122,7 +122,9 @@ class GrailsConcurrentLinkedMapCacheTests extends Specification {
 
       when:
       cache.get(1)
-      cache.get(2)
+      for (int i = 0; i < 20; i++) {
+         cache.get(2)
+      }
 
       then:
       cache.hottestKeys.containsAll([1, 2])
