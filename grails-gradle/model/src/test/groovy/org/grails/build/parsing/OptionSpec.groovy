@@ -16,33 +16,43 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.build.parsing;
+package org.grails.build.parsing
 
-/**
- * Represents a command line option.
- *
- * @author Graeme Rocher
- * @since 2.0
- */
-public class Option {
+import spock.lang.Specification
 
-    private String name;
-    private String description;
+class OptionSpec extends Specification {
 
-    public Option(String name, String description) {
-        if (name == null || name.length() == 0) {
-            throw new IllegalArgumentException("illegal option specified");
-        }
+    void 'stores the given name and description'() {
+        when:
+        Option option = new Option('offline', 'Run offline')
 
-        this.name = name;
-        this.description = description == null ? "" : description;
+        then:
+        option.name == 'offline'
+        option.description == 'Run offline'
     }
 
-    public String getName() {
-        return name;
+    void 'defaults a null description to an empty string'() {
+        when:
+        Option option = new Option('offline', null)
+
+        then:
+        option.description == ''
     }
 
-    public String getDescription() {
-        return description;
+    void 'rejects a null name'() {
+        when:
+        new Option(null, 'desc')
+
+        then:
+        thrown(IllegalArgumentException)
     }
+
+    void 'rejects an empty name'() {
+        when:
+        new Option('', 'desc')
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

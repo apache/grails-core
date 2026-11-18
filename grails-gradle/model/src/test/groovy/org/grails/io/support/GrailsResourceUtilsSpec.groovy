@@ -22,6 +22,7 @@ import groovy.util.ConfigObject
 
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 
 class GrailsResourceUtilsSpec extends Specification {
 
@@ -258,5 +259,80 @@ class GrailsResourceUtilsSpec extends Specification {
         GrailsResourceUtils.instantiateFromFlatConfig([type: 'java.lang.StringBuilder'], 'type', 'java.util.ArrayList') instanceof StringBuilder
         GrailsResourceUtils.instantiateFromFlatConfig([type: 42], 'type', 'java.util.ArrayList') instanceof ArrayList
         GrailsResourceUtils.instantiateFromFlatConfig([:], 'type', 'java.util.ArrayList') instanceof ArrayList
+    }
+
+    private static URL urlWithProtocol(String protocol, String spec) {
+        // "zip:"/"wsjar:" are not registered on a plain JVM - build the URL with a
+        // no-op handler so only the protocol name is exercised, not real resolution.
+        URLStreamHandler noopHandler = new URLStreamHandler() {
+            @Override
+            protected URLConnection openConnection(URL u) {
+                return null
+            }
+        }
+        return new URL(null, protocol + ':' + spec, noopHandler)
+    }
+
+    void 'isJarURL is true for jar:/zip:/wsjar: protocols and false otherwise'() {
+        expect:
+        GrailsResourceUtils.isJarURL(new URL('jar:file:/foo.jar!/Bar.class'))
+        GrailsResourceUtils.isJarURL(urlWithProtocol('zip', 'file:/foo.jar!/Bar.class'))
+        GrailsResourceUtils.isJarURL(urlWithProtocol('wsjar', 'file:/foo.jar!/Bar.class'))
+        !GrailsResourceUtils.isJarURL(new URL('file:///tmp/foo.txt'))
+    }
+
+    void 'COMPILER_ROOT_PATTERNS contains the spring scripts and resource path patterns'() {
+        expect:
+        GrailsResourceUtils.COMPILER_ROOT_PATTERNS.length == 2
+        GrailsResourceUtils.COMPILER_ROOT_PATTERNS[1].matcher(
+                '/project/grails-app/controllers/com/example/BookController.groovy').find()
+    }
+
+    void 'getFile falls back to the URL file when the URL is not a valid URI'() {
+        expect:
+        GrailsResourceUtils.getFile(new URL('file:/tmp/a|b.txt'), 'desc') == new File('/tmp/a|b.txt')
+    }
+
+    void 'isFileURL also accepts the vfs family of protocols'() {
+        expect:
+        GrailsResourceUtils.isFileURL(urlWithProtocol('vfs', '/tmp/x'))
+        GrailsResourceUtils.isFileURL(urlWithProtocol('vfszip', '/tmp/x'))
+        !GrailsResourceUtils.isFileURL(urlWithProtocol('other', '/tmp/x'))
+    }
+
+    void 'isJarURL accepts a code-source URL only when it points inside a jar'() {
+        expect:
+        GrailsResourceUtils.isJarURL(urlWithProtocol('code-source', '/x/y.jar!/z'))
+        !GrailsResourceUtils.isJarURL(urlWithProtocol('code-source', '/x/y'))
+    }
+
+    @Unroll
+    void 'extractJarFileURL(#protocol:#spec) is #expected'() {
+        expect:
+        GrailsResourceUtils.extractJarFileURL(urlWithProtocol(protocol, spec)).toString() == expected
+
+        where:
+        protocol | spec                          | expected
+        'jar'    | 'file:/tmp/a.jar!/x/y.txt'    | 'file:/tmp/a.jar'
+        'jar'    | 'C:/mypath/myjar.jar!/x.txt'  | 'file:/C:/mypath/myjar.jar'
+        'jar'    | '/mypath/myjar.jar!/x.txt'    | 'file:/mypath/myjar.jar'
+        'http'   | '//example.com/a.jar'         | 'http://example.com/a.jar'
+    }
+
+    void 'getPathFromBaseDir makes other paths relative to the base directory when there is one'() {
+        given:
+        File baseDir = grails.util.BuildSettings.BASE_DIR
+
+        expect:
+        baseDir == null ? GrailsResourceUtils.getPathFromBaseDir('x/y.txt') == null :
+                GrailsResourceUtils.getPathFromBaseDir(new File(baseDir, 'x/y.txt').path) == 'x/y.txt'
+    }
+
+    void 'instantiateFromFlatConfig fails for an unknown class'() {
+        when:
+        GrailsResourceUtils.instantiateFromFlatConfig([k: 'no.such.Type'], 'k', 'java.util.HashMap')
+
+        then:
+        thrown(ClassNotFoundException)
     }
 }
