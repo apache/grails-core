@@ -1484,6 +1484,7 @@ With GORM for MongoDB, a class that is not multi-tenant and was saved inside a t
 
 Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+[[upgradingSpringFormatNegotiation]]
 ==== 26. Opt Into Spring MVC Content Negotiation for Grails Formats
 
 Set `grails.mime.negotiation.spring: true` to resolve `request.format`, `response.format`, `withFormat` and the format
