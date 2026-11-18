@@ -40,6 +40,8 @@ public final class ApplicationCommandManifestWriter {
         }
         Path file = Path.of(args[0]);
         Files.createDirectories(file.getParent());
-        Files.writeString(file, "arguments=" + args.length + "\nfile=" + file + "\nruntimeMarker=" + runtimeMarker + "\n");
+        // JSON, as the real writer writes, with what the spec checks in place of the commands
+        Files.writeString(file, "{\"version\": 1, \"commands\": [], \"arguments\": \"" + args.length + "\", \"file\": \""
+                + file.toString().replace("\\", "\\\\") + "\", \"runtimeMarker\": \"" + runtimeMarker + "\"}\n");
     }
 }

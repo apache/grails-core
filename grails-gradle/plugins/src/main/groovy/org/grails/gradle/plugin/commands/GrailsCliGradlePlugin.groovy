@@ -135,6 +135,14 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      */
     public static final String ARGS_FILE_PROPERTY = 'argsFile'
 
+    /**
+     * Set this project property to the directory of a project to run {@code runCommand},
+     * {@link #COMMAND_MANIFEST_TASK} and the other command tasks only in that project. Without it, a task
+     * named without its project path runs in the project Gradle starts in and in every project below it
+     * that has the task.
+     */
+    public static final String COMMAND_PROJECT_PROPERTY = 'grailsCommandProject'
+
     @Override
     void apply(Project project) {
         // self-sufficient when applied standalone: the auto-provisioning behavior is configured
@@ -447,6 +455,56 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         arguments
     }
 
+    /**
+     * Returns the arguments of a command task, from {@link #commandArguments}, and prepares the task for
+     * them: the system properties they name as {@code -Dname=value} are set on the command's JVM, after
+     * {@code grails.env} from Gradle's own, so {@code -Dgrails.env=test} among them chooses the
+     * environment; and the task runs only in the project {@link #COMMAND_PROJECT_PROPERTY} names, when
+     * it is set.
+     *
+     * @param task the command task
+     * @param project the project the task belongs to
+     * @return the arguments, to which the task adds the application class
+     */
+    @CompileDynamic
+    static List<Object> commandTaskArguments(JavaExec task, Project project) {
+        List<String> arguments = commandArguments(project)
+        task.systemProperties(commandSystemProperties(arguments))
+        runOnlyInNamedProject(task, project)
+        new ArrayList<Object>(arguments)
+    }
+
+    /**
+     * Returns the system properties among a command's arguments: each argument {@code -Dname=value},
+     * which the command also sees in its command line.
+     *
+     * @param arguments the arguments of the command
+     * @return the properties by name, in the order given
+     */
+    static Map<String, String> commandSystemProperties(List<String> arguments) {
+        Map<String, String> properties = new LinkedHashMap<String, String>()
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=')
+            if (argument.startsWith('-D') && equals > 2) {
+                properties[argument.substring(2, equals)] = argument.substring(equals + 1)
+            }
+        }
+        properties
+    }
+
+    /**
+     * Skips the task unless {@link #COMMAND_PROJECT_PROPERTY} is unset or names the directory of the
+     * task's project.
+     */
+    @CompileDynamic
+    static void runOnlyInNamedProject(org.gradle.api.Task task, Project project) {
+        def named = project.findProperty(COMMAND_PROJECT_PROPERTY)
+        if (named) {
+            boolean selected = new File(named as String).canonicalFile == project.projectDir.canonicalFile
+            task.onlyIf("the ${COMMAND_PROJECT_PROPERTY} property names this project".toString()) { selected }
+        }
+    }
+
     @PackageScope
     static String requireMainClass(Provider<String> mainClass, String taskName) {
         def mainClassName = mainClass.orNull
@@ -488,7 +546,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         it.classpath = fileCollection
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-                        List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
+                        List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
 
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -620,7 +678,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
-                    List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
+                    List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -649,7 +707,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     // with Grails' plugin management and bean wiring when running CLI commands via Gradle
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
-                    List<Object> args = new ArrayList<Object>(GrailsCliGradlePlugin.commandArguments(project))
+                    List<Object> args = GrailsCliGradlePlugin.commandTaskArguments(it, project)
 
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
@@ -675,6 +733,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
             Directory projectDirectory = project.layout.projectDirectory
             manifestTask.configure {
                 it.description = 'Writes the Grails commands of the application, which the Grails Forge CLI offers'
+                GrailsCliGradlePlugin.runOnlyInNamedProject(it, project)
                 it.manifestFile.convention(project.providers.gradleProperty(COMMAND_MANIFEST_PROPERTY)
                         .map { String path -> projectDirectory.file(path) }
                         .orElse(project.layout.buildDirectory.file(COMMAND_MANIFEST_PATH)))
@@ -683,6 +742,23 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                 manifestTask.configure {
                     SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
                     it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName(GRAILS_CLI_CLASSPATH_CONFIGURATION)
+                }
+            }
+            // every project of the build is known only once all are evaluated
+            project.gradle.projectsEvaluated { gradle ->
+                Project root = gradle.rootProject
+                List<File> projectDirs = root.allprojects*.projectDir
+                List<File> includedBuildDirs = gradle.includedBuilds*.projectDir
+                List<String> buildDirectories = ([root.projectDir] + projectDirs)
+                        .collect { File dir -> dir.absolutePath }.unique().sort()
+                List<String> sourceDirectories = ([new File(root.projectDir, 'gradle'), new File(root.projectDir, 'buildSrc')] +
+                        projectDirs.collectMany { File dir ->
+                            [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF')]
+                        } + includedBuildDirs)
+                        .collect { File dir -> dir.absolutePath }.unique().sort()
+                manifestTask.configure {
+                    it.buildDirectories.set(buildDirectories)
+                    it.sourceDirectories.set(sourceDirectories)
                 }
             }
         }

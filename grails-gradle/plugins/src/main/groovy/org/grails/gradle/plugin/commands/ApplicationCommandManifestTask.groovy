@@ -18,9 +18,13 @@
  */
 package org.grails.gradle.plugin.commands
 
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
@@ -36,6 +40,11 @@ import javax.inject.Inject
  * <p>Runs on the classpath {@code runCommand} uses, so the file lists exactly the commands
  * {@code runCommand} can run. The task is up to date while that classpath is unchanged.</p>
  *
+ * <p>The file also names, under {@code inputs}, the directories whose files decide the commands without
+ * being on the classpath yet: those whose build files decide the build, and those that hold the sources
+ * of commands or of the build's logic. A tool reading the file runs the task again when one of their
+ * files changes.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -48,6 +57,8 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
     @Inject
     ApplicationCommandManifestTask() {
         mainClass.set(MANIFEST_WRITER_CLASS)
+        buildDirectories.convention([])
+        sourceDirectories.convention([])
     }
 
     /**
@@ -56,12 +67,31 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
     @OutputFile
     abstract RegularFileProperty getManifestFile()
 
+    /**
+     * @return the directories whose build files, such as {@code build.gradle} and
+     * {@code gradle.properties}, decide the build: those of every project of the build
+     */
+    @Input
+    abstract ListProperty<String> getBuildDirectories()
+
+    /**
+     * @return the directories whose files, at any depth, decide the commands or the build: the sources of
+     * the commands of every project, the build's {@code gradle} and {@code buildSrc} directories, and
+     * every included build
+     */
+    @Input
+    abstract ListProperty<String> getSourceDirectories()
+
     @Override
     @TaskAction
     void exec() {
         // the file is the task's output, so it is given to the writer here rather than as an
         // argument input, which would make the absolute path part of the task's inputs
-        args(manifestFile.get().asFile.absolutePath)
+        File file = manifestFile.get().asFile
+        args(file.absolutePath)
         super.exec()
+        Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(file, 'UTF-8')
+        manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get()]
+        file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
     }
 }

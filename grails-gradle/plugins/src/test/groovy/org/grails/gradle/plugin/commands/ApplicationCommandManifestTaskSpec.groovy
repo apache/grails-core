@@ -20,6 +20,7 @@ package org.grails.gradle.plugin.commands
 
 import java.nio.file.Path
 
+import groovy.json.JsonSlurper
 import org.gradle.testkit.runner.TaskOutcome
 
 import org.grails.gradle.plugin.core.GradleSpecification
@@ -80,10 +81,47 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         !runner.projectDir.toPath().resolve('app/build/grails/commands.json').toFile().exists()
     }
 
-    private static Map<String, String> read(Path file) {
-        file.toFile().readLines().collectEntries { String line ->
-            int separator = line.indexOf('=')
-            [(line.substring(0, separator)): line.substring(separator + 1)]
-        }
+    void 'the manifest names the directories whose files decide the commands and the build'() {
+        given:
+        def runner = setupTestResourceProject('command-manifest')
+        File root = runner.projectDir.canonicalFile
+
+        when:
+        executeTask(':app:generateCommandManifest')
+        Map<String, List<String>> inputs = (Map<String, List<String>>) read(root.toPath().resolve('app/build/grails/commands.json')).inputs
+
+        then: 'the directories of every project, for their build files'
+        inputs.buildDirectories.collect { new File(it).canonicalFile } as Set ==
+                [root, new File(root, 'app'), new File(root, 'manifest-writer')] as Set
+
+        and: 'the sources of commands of every project, and the logic of the build'
+        inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([
+                new File(root, 'gradle'), new File(root, 'buildSrc'),
+                new File(root, 'app/grails-app/commands'), new File(root, 'app/src/main/resources/META-INF'),
+                new File(root, 'manifest-writer/grails-app/commands')])
+    }
+
+    void 'the task runs only in the project the grailsCommandProject property names'() {
+        given:
+        def runner = setupTestResourceProject('command-manifest')
+        File app = new File(runner.projectDir, 'app')
+
+        when: 'another project is named'
+        def other = executeTask(':app:generateCommandManifest', ["-PgrailsCommandProject=${new File(runner.projectDir, 'manifest-writer').absolutePath}".toString()])
+
+        then:
+        other.task(':app:generateCommandManifest').outcome == TaskOutcome.SKIPPED
+        !new File(app, 'build/grails/commands.json').exists()
+
+        when: 'the application is named'
+        def named = executeTask(':app:generateCommandManifest', ["-PgrailsCommandProject=${app.absolutePath}".toString()])
+
+        then:
+        named.task(':app:generateCommandManifest').outcome == TaskOutcome.SUCCESS
+        new File(app, 'build/grails/commands.json').exists()
+    }
+
+    private static Map<String, Object> read(Path file) {
+        (Map<String, Object>) new JsonSlurper().parse(file.toFile(), 'UTF-8')
     }
 }

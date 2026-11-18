@@ -214,12 +214,29 @@ Now you can run the `greet` command with arguments and options:
 
 `args` is split into words as a shell would split it. A tool that passes arguments it cannot quote for
 every shell can put them in a JSON file as an array of strings and name it with `argsFile`, a path
-relative to the project directory. Each is passed on unchanged, after those of `args`:
+relative to the project directory or an absolute one. Each reaches the command's command line as it is in
+the file, after those of `args`:
 
 [source,shell]
 ----
 echo '["greet", "Alice and Bob"]' > greet-args.json
 ./gradlew runCommand -PargsFile=greet-args.json
+----
+
+However they are given, the command reads the arguments through Grails' command line parser: each is
+trimmed, a pair of double quotes around one is removed, an empty one is left out, and an option's value
+is everything after the first `=`, as in `--filter=status=active`. A word that starts with `-` is an
+option, and one whose name holds a space, such as `--dev mode`, is refused as invalid. An argument `-Dname=value` sets a
+system property: `runCommand` starts the command with it set, so `-Dgrails.env=test` runs the command in
+the test environment, and the command also finds it in the system properties of its command line.
+
+In a build of several projects, `./gradlew runCommand` from the root runs the task in every project that
+has it. Name one project's directory with the `grailsCommandProject` property to run it there only; the
+other command tasks and `generateCommandManifest` take it too:
+
+[source,shell]
+----
+./gradlew runCommand -Pargs="greet Alice" -PgrailsCommandProject=app
 ----
 
 This allows you to create more versatile and interactive custom commands for your Grails application.

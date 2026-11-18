@@ -22,6 +22,7 @@ import groovy.json.JsonOutput
 
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.tasks.JavaExec
 import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -71,6 +72,50 @@ class CommandArgumentsSpec extends Specification {
         'is not JSON'                  | 'not json'   || 'is not JSON'
         'is not an array of strings'   | '["a", 1]'   || 'must hold a JSON array of strings'
         'is an object'                 | '{"a": "b"}' || 'must hold a JSON array of strings'
+    }
+
+    void 'an args file given by its absolute path, as the Grails Forge CLI gives it, is read'() {
+        given:
+        File elsewhere = new File(projectDir, 'elsewhere/arguments.json')
+        elsewhere.parentFile.mkdirs()
+        elsewhere.text = JsonOutput.toJson(['greet', 'Alice'])
+
+        expect:
+        GrailsCliGradlePlugin.commandArguments(project(argsFile: elsewhere.absolutePath)) == ['greet', 'Alice']
+    }
+
+    void 'the system properties among the arguments are set on the command JVM, and stay among the arguments'() {
+        given:
+        new File(projectDir, 'arguments.json').text = JsonOutput.toJson(
+                ['dbm-update', '-Dgrails.env=test', '-Dquery=a=b', '-D', '-Dnovalue', 'first'])
+        Project project = project(argsFile: 'arguments.json')
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+        task.systemProperty('grails.env', 'development')
+
+        when:
+        List<Object> arguments = GrailsCliGradlePlugin.commandTaskArguments(task, project)
+
+        then:
+        arguments == ['dbm-update', '-Dgrails.env=test', '-Dquery=a=b', '-D', '-Dnovalue', 'first']
+        task.systemProperties == ['grails.env': 'test', query: 'a=b']
+        task.onlyIf.isSatisfiedBy(task)
+    }
+
+    void 'a command task runs only in the project the grailsCommandProject property names: #named'() {
+        given:
+        Project project = project(grailsCommandProject: new File(projectDir, named).absolutePath)
+        JavaExec task = project.tasks.register('commandTask', JavaExec).get()
+
+        when:
+        GrailsCliGradlePlugin.commandTaskArguments(task, project)
+
+        then:
+        task.onlyIf.isSatisfiedBy(task) == runs
+
+        where:
+        named   || runs
+        ''      || true
+        'other' || false
     }
 
     private Project project(Map<String, String> properties) {
