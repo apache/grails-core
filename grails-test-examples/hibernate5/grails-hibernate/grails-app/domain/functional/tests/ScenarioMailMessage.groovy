@@ -16,22 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
-package org.grails.core.nonpublic
-
-import groovy.transform.PackageScope
-
-import grails.web.Action
+package functional.tests
 
 /**
- * A class in another package than {@code DefaultGrailsControllerClass} and not public, so it cannot look up a method
- * handle for the action and invokes it by reflection, which is how it invokes every action in development mode.
+ * A message whose recipient lists are element collections stored in explicit join tables.
  */
-@PackageScope
-class ReflectivelyInvokedController {
+class ScenarioMailMessage {
 
-    @Action
-    void failing() {
-        throw new IllegalStateException('thrown by the action')
+    String subject
+
+    static hasMany = [tos: String, ccs: String]
+
+    static mapping = {
+        tos joinTable: [name: 'scenario_mail_to', key: 'message_id', column: 'addr', type: 'text']
+        ccs joinTable: [name: 'scenario_mail_cc', key: 'message_id', column: 'addr', type: 'text']
     }
 }
