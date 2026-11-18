@@ -1469,6 +1469,12 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
+===== 26.14 Subqueries in MongoDB and Neo4j where queries
+
+`Person.where { age > avg(age) }` and the other aggregate subqueries documented for `where` returned no rows on MongoDB and Neo4j, because the subquery was compared as an object instead of being run (issue https://github.com/apache/grails-core/issues/16809[#16809]). Both datastores now run the subquery first and compare with its result: `==`, `!=`, `>`, `>=`, `<` and `<=` against `avg`, `max`, `min` and `sum`, and `inList` / `notIn` against a subquery that selects a property. A comparison against a subquery that returns more than one row, and the `exists`, `notExists`, `all` and `some` forms, now throw an `InvalidDataAccessResourceUsageException` that names the form.
+
+A comparison against a subquery that returns no row matches no row, as in SQL, where the comparison is unknown. Its negation is unknown too, so `not { age > (an empty subquery) }` matches no row either, and `not { (an empty comparison) && name == 'x' }` matches the rows whose name is not `x`, as SQL does. A subquery runs on the connection of its own criteria: a subquery written with `Person.where { }` or `avg(age).of { }` runs on the default connection, so for a query on another connection build the subquery with `withConnection`, as in `Person.where { }.withConnection('archive').property('age')`. A subquery inside an association block, such as `address { inList('city', City.where { }.property('name')) }`, is run too, and so is one used with `get()`.
+
 ==== 27. GORM Properties Are Nullable by Default
 
 Grails 8 changes the validation default so that an *unconstrained persistent (domain) property is nullable by default* rather than required.
