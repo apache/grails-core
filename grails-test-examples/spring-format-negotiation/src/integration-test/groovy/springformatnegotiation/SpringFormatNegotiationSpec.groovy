@@ -39,9 +39,9 @@ class SpringFormatNegotiationSpec extends Specification implements HttpClientSup
         http('/springWritten/entity.json', Accept: 'text/html').assertStatus(200).contentType.startsWith('application/json')
     }
 
-    void 'a text Spring MVC writes for an action is labelled with the format of its URL extension'() {
+    void 'a text Spring MVC writes for an action is in the format of its URL extension, whatever the Accept header asks for'() {
         expect:
-        http('/springWritten/text.json', Accept: 'text/plain').assertStatus(200).contentType.startsWith('application/json')
+        http('/springWritten/text.text', Accept: 'application/json').assertStatus(200).contentType.startsWith('text/plain')
     }
 
     void 'a request that names a format no type is configured for is not acceptable'() {
