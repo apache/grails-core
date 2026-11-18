@@ -40,6 +40,7 @@ import spock.lang.AutoCleanup
 import spock.lang.IgnoreIf
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.util.environment.RestoreSystemProperties
 
 // the project's build is a shell script standing in for the Gradle wrapper
 @IgnoreIf({ os.windows })
@@ -580,6 +581,29 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         commandArguments() == ['url-mappings-report'] + arguments
+    }
+
+    @RestoreSystemProperties
+    void 'with grails.forge.runBuild=false the build runs only for a command the user names'() {
+        given: 'a project whose build has not described its commands'
+        System.setProperty('grails.forge.runBuild', 'false')
+        buildWrites(URL_MAPPINGS_REPORT)
+
+        when: 'the prompt starts, and a word that is no command of the Forge CLI is named'
+        ForgeCli.createCommandLine(context, true)
+        int unknown = ForgeCli.execute(context, ['url-mappings-report'] as String[])
+
+        then: 'the build does not run, so the Forge CLI knows no such command'
+        gradleInvocations().empty
+        unknown != 0
+
+        when: 'the user runs the build that describes the commands, which then are out of date'
+        writeManifestOfTheBuild(URL_MAPPINGS_REPORT)
+        ForgeCli.execute(context, ['url-mappings-report'] as String[])
+
+        then: 'the command of that manifest runs, and the build is not run to describe them again'
+        gradleInvocations().size() == 1
+        gradleInvocations().first().contains('runCommand')
     }
 
     void 'the file that passes the arguments, which can hold a password, is readable by its owner only, and removed after the command'() {

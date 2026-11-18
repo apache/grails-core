@@ -257,6 +257,17 @@ options alone, such as `--help`, or a command line after `--`. `grails-forge-cli
 project's commands from the file the build last wrote. When a command at the prompt runs the build, the
 prompt then completes the commands it found.
 
+Since the build is code of the project, the Forge CLI runs it as `./gradlew` would. In a checkout you
+do not trust, set the environment variable `GRAILS_FORGE_RUN_BUILD`, or the system property
+`grails.forge.runBuild`, to `false`. The Forge CLI then never runs the build on its own: it offers the
+commands of the file the build last wrote, which `./gradlew generateCommandManifest` writes, and runs the
+build only for a project command you name.
+
+[source,shell]
+----
+$ GRAILS_FORGE_RUN_BUILD=false grails-forge-cli
+----
+
 When the build fails, as it does while the application does not compile or in a project of a Grails
 release without `generateCommandManifest`, the Forge CLI says so once and keeps offering the commands of
 the file the build last wrote, if any. It does not run the build for them again until one of the files

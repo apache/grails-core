@@ -70,6 +70,16 @@ final class ForgeCli {
             .collect { Class<? extends CodeGenCommand> type -> type.getAnnotation(CommandLine.Command).name() }
             .toSet().asImmutable()
 
+    /**
+     * The environment variable that, set to {@code false}, keeps the Forge CLI from running the build of the
+     * project on its own to update the project's commands: it offers those of a manifest the build already
+     * wrote, and runs the build only for a project command the user names.
+     */
+    static final String RUN_BUILD_VARIABLE = 'GRAILS_FORGE_RUN_BUILD'
+
+    /** The system property that does what {@link #RUN_BUILD_VARIABLE} does, and wins over it */
+    static final String RUN_BUILD_PROPERTY = 'grails.forge.runBuild'
+
     private static final BiFunction<Throwable, CommandLine, Integer> EXCEPTION_HANDLER = { Throwable e, CommandLine commandLine ->
         BaseCommand command = commandLine.getCommand()
         command.err(e.message)
@@ -218,11 +228,21 @@ final class ForgeCli {
      *
      * @param runBuild whether the project's build may run to update the commands
      */
+    /**
+     * Whether the build of the project may run to update the project's commands: unless
+     * {@link #RUN_BUILD_PROPERTY}, or else {@link #RUN_BUILD_VARIABLE}, is {@code false}.
+     */
+    private static boolean buildMayRun() {
+        String setting = System.getProperty(RUN_BUILD_PROPERTY) ?: System.getenv(RUN_BUILD_VARIABLE)
+        !'false'.equalsIgnoreCase(setting?.trim())
+    }
+
     private static void addProjectCommands(CommandLine commandLine, boolean runBuild) {
         addProjectCommands(commandLine, runBuild, (ForgeCommand) commandLine.getCommand())
     }
 
     private static void addProjectCommands(CommandLine commandLine, boolean runBuild, ConsoleOutput console) {
+        runBuild = runBuild && buildMayRun()
         File projectDir
         try {
             projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
