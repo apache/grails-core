@@ -528,11 +528,17 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         Map<String, Object> leaves = new LinkedHashMap<>()
         collectLeaves(sourceValue, '', leaves)
+        Object nestedForm = targetMap.get(sourceKey)
         Set<String> written = new HashSet<>()
         leaves.each { String name, Object leaf ->
-            String heldKey = prefix + name
-            if (targetMap.containsKey(heldKey)) {
-                mergeMapEntry(rootMap, path, targetMap, heldKey, leaf, parseFlatKeys)
+            if (nestedForm instanceof Map && nestedHolds((Map) nestedForm, name)) {
+                // the block holds the nested form of this name too: it stays nested, so that the key with dots and the
+                // nested path are written in step and a read of either gives the value merged last
+                if (writeIntoHeldPrefix(rootMap, path, targetMap, prefix, name, leaf, parseFlatKeys)) {
+                    return
+                }
+            }
+            if (writeIntoHeldPrefix(rootMap, path, targetMap, prefix, name, leaf, parseFlatKeys)) {
                 written.add(name)
             }
         }
@@ -541,6 +547,45 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         }
         Map<String, Object> remaining = withoutLeaves(sourceValue, '', written)
         remaining.isEmpty() ? null : remaining
+    }
+
+    /**
+     * Writes a leaf into the key with dots that the block holds for the front of its name: the whole name, or, when the
+     * key holds a map, the part of the name that the key does not spell, merged into that map so its other entries stay.
+     *
+     * @return whether a held key took the leaf
+     */
+    private boolean writeIntoHeldPrefix(NavigableMap rootMap, String path, NavigableMap targetMap, String prefix, String name, Object leaf, boolean parseFlatKeys) {
+        if (targetMap.containsKey(prefix + name)) {
+            mergeMapEntry(rootMap, path, targetMap, prefix + name, leaf, parseFlatKeys)
+            return true
+        }
+        int dot = name.lastIndexOf('.')
+        while (dot > 0) {
+            String heldKey = prefix + name.substring(0, dot)
+            if (targetMap.get(heldKey) instanceof Map) {
+                Object rest = leaf
+                List<String> parts = name.substring(dot + 1).split('\\.').toList()
+                for (String part in parts.reverse()) {
+                    rest = [(part): rest]
+                }
+                mergeMapEntry(rootMap, path, targetMap, heldKey, rest, parseFlatKeys)
+                return true
+            }
+            dot = name.lastIndexOf('.', dot - 1)
+        }
+        false
+    }
+
+    private static boolean nestedHolds(Map map, String name) {
+        Object current = map
+        for (String part in name.split('\\.')) {
+            if (!(current instanceof Map) || !((Map) current).containsKey(part)) {
+                return false
+            }
+            current = ((Map) current).get(part)
+        }
+        true
     }
 
     private static void collectLeaves(Map map, String prefix, Map<String, Object> leaves) {

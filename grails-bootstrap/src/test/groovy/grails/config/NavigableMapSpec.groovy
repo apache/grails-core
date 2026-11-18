@@ -478,4 +478,60 @@ class NavigableMapSpec extends Specification {
         then:
         config.navigate('logging', 'level') == [root: 'warn', org: [hibernate: [SQL: 'info']]]
     }
+
+    @Issue('#16766')
+    void 'a nested map merged over a key with dots that holds a map writes into that map and keeps its other entries'() {
+        given: 'a block with the key a.b holding a map'
+        NavigableMap config = new NavigableMap()
+        config.merge([block: ['a.b': [x: 'old', sibling: 'keep']]], false)
+
+        when:
+        config.merge([block: [a: [b: [x: 'new']]]], false)
+
+        then: 'one key, with the new value and the sibling kept'
+        config.navigate('block') == ['a.b': [x: 'new', sibling: 'keep']]
+        config.getProperty('block.a.b.x') == 'new'
+    }
+
+    @Issue('#16766')
+    void 'a nested map merged deeper than a key with dots that holds a map writes into the map at that depth'() {
+        given:
+        NavigableMap config = new NavigableMap()
+        config.merge([block: ['a.b': [x: [y: 'old', keep: 1], sibling: 'keep']]], false)
+
+        when:
+        config.merge([block: [a: [b: [x: [y: 'new'], added: 'yes']]]], false)
+
+        then:
+        config.navigate('block') == ['a.b': [x: [y: 'new', keep: 1], sibling: 'keep', added: 'yes']]
+    }
+
+    @Issue('#16766')
+    void 'a block that holds both the key with dots and the nested path is written in both, so either read gives the value merged last'() {
+        given: 'both shapes are present, as a path merged first and a key with dots merged after leave them'
+        NavigableMap config = new NavigableMap()
+        config.merge([block: [a: [b: [x: 'old']]]], false)
+        config.merge([block: ['a.b': [x: 'old', sibling: 'keep']]], false)
+
+        when:
+        config.merge([block: [a: [b: [x: 'new']]]], false)
+
+        then:
+        config.navigate('block', 'a', 'b', 'x') == 'new'
+        config.navigate('block').get('a.b').x == 'new'
+        config.navigate('block').get('a.b').sibling == 'keep'
+    }
+
+    @Issue('#16766')
+    void 'a nested map merged over a key with dots that holds a scalar replaces the scalar when the name ends there'() {
+        given:
+        NavigableMap config = new NavigableMap()
+        config.merge([block: ['a.b': 'old']], false)
+
+        when:
+        config.merge([block: [a: [b: 'new']]], false)
+
+        then:
+        config.navigate('block') == ['a.b': 'new']
+    }
 }
