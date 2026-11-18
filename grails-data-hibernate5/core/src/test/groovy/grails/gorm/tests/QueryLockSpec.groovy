@@ -19,43 +19,143 @@
 
 package grails.gorm.tests
 
-import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
-import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import grails.gorm.transactions.Rollback
+import org.grails.datastore.mapping.core.DatastoreUtils
+import org.grails.orm.hibernate.HibernateDatastore
+import org.grails.orm.hibernate.cfg.Settings
 import org.grails.orm.hibernate.query.HibernateQuery
-import org.hibernate.LockMode
+import org.hibernate.internal.CriteriaImpl
+import org.hibernate.resource.jdbc.spi.StatementInspector
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.AutoCleanup
 import spock.lang.Issue
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
 
+/**
+ * The {@code lock} argument of the finders takes a write lock for true and none for false. A finder asked not to lock
+ * must not end in {@code for update}, whatever the code does with a flag that is only a value of a request parameter.
+ */
 @Issue('https://github.com/apache/grails-core/issues/14501')
-class QueryLockSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
+class QueryLockSpec extends Specification {
 
-    void setupSpec() {
-        manager.domainClasses.addAll([Club])
+    @Shared SqlCapture sqlCapture = new SqlCapture()
+
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(
+            DatastoreUtils.createPropertyResolver(
+                    (Settings.SETTING_DB_CREATE): 'create-drop',
+                    'hibernate.session_factory.statement_inspector': sqlCapture
+            ),
+            Club
+    )
+
+    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
+
+    private List<String> selects(Closure query) {
+        sqlCapture.clear()
+        query.call()
+        sqlCapture.statements.findAll { it.toLowerCase().startsWith('select') }
     }
 
-    void 'lock(#flag) sets the lock mode #mode on the query'() {
+    @Rollback
+    @Unroll
+    void 'findByName with lock: #flag #outcome'() {
         given:
-        HibernateQuery query = manager.session.createQuery(Club)
+        new Club(name: 'a').save(flush: true)
 
         when:
-        query.lock(flag)
+        List<String> sql = selects { Club.findByName('a', [lock: flag]) }
 
         then:
-        query.hibernateCriteria.@lockModes.values().first() == mode
+        sql.any { it.toLowerCase().contains('for update') } == flag
 
         where:
-        flag  | mode
-        true  | LockMode.PESSIMISTIC_WRITE
-        false | LockMode.NONE
+        flag << [true, false]
+        outcome = flag ? 'takes a write lock' : 'takes no lock'
     }
 
-    void 'lock(false) after lock(true) releases the lock'() {
+    @Rollback
+    @Unroll
+    void 'findAllByName with max and lock: #flag #outcome'() {
         given:
-        HibernateQuery query = manager.session.createQuery(Club)
+        new Club(name: 'a').save(flush: true)
+        new Club(name: 'a').save(flush: true)
 
         when:
-        query.lock(true).lock(false)
+        List<String> sql = selects { Club.findAllByName('a', [max: 1, lock: flag]) }
 
         then:
-        query.hibernateCriteria.@lockModes.values().first() == LockMode.NONE
+        sql.any { it.toLowerCase().contains('for update') } == flag
+
+        where:
+        flag << [true, false]
+        outcome = flag ? 'takes a write lock' : 'takes no lock'
+    }
+
+    @Rollback
+    void 'a finder that is not asked to lock takes no lock'() {
+        given:
+        new Club(name: 'a').save(flush: true)
+
+        when:
+        List<String> sql = selects { Club.findByName('a') }
+
+        then:
+        !sql.any { it.toLowerCase().contains('for update') }
+    }
+
+    @Rollback
+    void 'lock(false) after lock(true) takes no lock'() {
+        given:
+        new Club(name: 'a').save(flush: true)
+
+        when:
+        List<String> sql = selects {
+            HibernateQuery query = hibernateDatastore.currentSession.createQuery(Club) as HibernateQuery
+            query.lock(true).lock(false)
+            query.list()
+        }
+
+        then:
+        !sql.any { it.toLowerCase().contains('for update') }
+    }
+
+    @Rollback
+    @Unroll
+    void 'a query that was cached is #outcome after lock(true).lock(false)'() {
+        given:
+        HibernateQuery query = hibernateDatastore.currentSession.createQuery(Club) as HibernateQuery
+        query.cache(cached)
+
+        when:
+        query.lock(true)
+
+        then: 'a locking query is never cached'
+        !((CriteriaImpl) query.hibernateCriteria).cacheable
+
+        when:
+        query.lock(false)
+
+        then: 'a query that does not lock is cached as it was before it was asked to lock'
+        ((CriteriaImpl) query.hibernateCriteria).cacheable == cached
+
+        where:
+        cached << [true, false]
+        outcome = cached ? 'cached again' : 'still not cached'
+    }
+
+    static class SqlCapture implements StatementInspector {
+        final List<String> statements = Collections.synchronizedList(new ArrayList<String>())
+
+        @Override
+        String inspect(String sql) {
+            statements.add(sql)
+            return sql
+        }
+
+        void clear() {
+            statements.clear()
+        }
     }
 }

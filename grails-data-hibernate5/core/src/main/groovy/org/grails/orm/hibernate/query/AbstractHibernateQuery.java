@@ -42,6 +42,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.TypeResolver;
@@ -94,6 +95,7 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     protected Criteria criteria;
+    private Boolean cacheableBeforeLock;
     protected org.hibernate.criterion.DetachedCriteria detachedCriteria;
     protected AbstractHibernateQuery.HibernateProjectionList hibernateProjectionList;
     protected String alias;
@@ -602,10 +604,18 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     public Query lock(boolean lock) {
         if (lock) {
+            if (cacheableBeforeLock == null) {
+                cacheableBeforeLock = ((CriteriaImpl) criteria).getCacheable();
+            }
             criteria.setCacheable(false);
             criteria.setLockMode(LockMode.PESSIMISTIC_WRITE);
         }
         else {
+            // a query that does not lock is cached as it was before it was asked to lock
+            if (cacheableBeforeLock != null) {
+                criteria.setCacheable(cacheableBeforeLock);
+                cacheableBeforeLock = null;
+            }
             criteria.setLockMode(LockMode.NONE);
         }
         return super.lock(lock);
