@@ -192,10 +192,10 @@ public class CommandLineParser {
         for (String arg : args) {
             if (arg == null) continue;
             String trimmed = arg.trim();
-            if (trimmed != null && trimmed.length() > 0) {
-                if (trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
-                    trimmed = trimmed.substring(1, trimmed.length() - 1);
-                }
+            if (trimmed.length() > 1 && trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
+                trimmed = trimmed.substring(1, trimmed.length() - 1).trim();
+            }
+            if (trimmed.length() > 0) {
                 if (trimmed.charAt(0) == '-') {
                     lastWasOption = processOption(cl, trimmed);
                 }

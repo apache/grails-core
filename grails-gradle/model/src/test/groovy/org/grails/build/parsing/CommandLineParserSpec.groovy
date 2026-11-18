@@ -435,4 +435,21 @@ class CommandLineParserSpec extends Specification {
         cl.optionValue('filter') == 'a=b c'
         cl.remainingArgs == ['first']
     }
+
+    void "An argument of quotes or spaces alone is read without failing, for #arguments"() {
+        when:
+        def cl = new CommandLineParser().parse(arguments as String[])
+
+        then:
+        cl.commandName == 'report'
+        cl.remainingArgs == remaining
+
+        where:
+        arguments                                      || remaining
+        ['report', '"', 'first']                       || ['"', 'first']
+        ['report', '""', 'first']                      || ['first']
+        ['report', '"  "', 'first']                    || ['first']
+        ['report', '   ', 'first']                     || ['first']
+        ['report', '"two words"', 'first']             || ['two words', 'first']
+    }
 }
