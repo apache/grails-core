@@ -195,7 +195,14 @@ public class CommandLineParser {
             if (trimmed.length() > 1 && trimmed.charAt(0) == '"' && trimmed.charAt(trimmed.length() - 1) == '"') {
                 trimmed = trimmed.substring(1, trimmed.length() - 1).trim();
             }
-            if (trimmed.length() > 0) {
+            if (trimmed.isEmpty()) {
+                // an empty word after an option without a value is that option's value, not nothing
+                if (lastWasOption != null) {
+                    cl.addUndeclaredOption(lastWasOption, "");
+                    lastWasOption = null;
+                }
+            }
+            else {
                 if (trimmed.charAt(0) == '-') {
                     lastWasOption = processOption(cl, trimmed);
                 }

@@ -452,4 +452,16 @@ class CommandLineParserSpec extends Specification {
         ['report', '   ', 'first']                     || ['first']
         ['report', '"two words"', 'first']             || ['two words', 'first']
     }
+
+    void "An empty word after an option is its empty value, and the next word stays an argument, for #arguments"() {
+        when:
+        def cl = new CommandLineParser().parse(arguments as String[])
+
+        then:
+        cl.optionValue('other') == ''
+        cl.remainingArgs == ['first']
+
+        where:
+        arguments << [['report', '--other', '', 'first'], ['report', '--other', '""', 'first'], ['report', '--other', '  ', 'first']]
+    }
 }
