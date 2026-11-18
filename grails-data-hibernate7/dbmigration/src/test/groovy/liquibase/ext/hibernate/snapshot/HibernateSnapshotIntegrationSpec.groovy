@@ -27,6 +27,7 @@ import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.plugins.databasemigration.liquibase.GormDatabase
 import org.hibernate.boot.Metadata
 import org.hibernate.dialect.PostgreSQLDialect
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.spock.Testcontainers
 import spock.lang.AutoCleanup
@@ -71,11 +72,13 @@ abstract class HibernateSnapshotIntegrationSpec extends Specification {
      * Returns true when a Docker daemon is reachable on this machine.
      */
     static boolean isDockerAvailable() {
-        def candidates = [
-            System.getProperty('user.home') + '/.docker/run/docker.sock',
-            '/var/run/docker.sock',
-            System.getenv('DOCKER_HOST') ?: ''
-        ]
-        candidates.any { it && new File(it).exists() }
+        if ([System.getProperty('user.home') + '/.docker/run/docker.sock', '/var/run/docker.sock'].any { new File(it).exists() }) {
+            return true
+        }
+        try {
+            return DockerClientFactory.instance().isDockerAvailable()
+        } catch (Throwable ignored) {
+            return false
+        }
     }
 }
