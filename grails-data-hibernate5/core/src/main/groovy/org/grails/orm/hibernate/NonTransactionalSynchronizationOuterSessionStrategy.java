@@ -52,6 +52,7 @@ class NonTransactionalSynchronizationOuterSessionStrategy extends AbstractOuterS
     @Override
     public void prepare() {
         super.prepare();
+        disconnectBeforeInnerTransactionCompletes();
         if (lazyConnection && !wasPhysicallyConnectedAtPrepare) {
             txResources.registerSynchronization(new TransactionSynchronization() {
                 @Override

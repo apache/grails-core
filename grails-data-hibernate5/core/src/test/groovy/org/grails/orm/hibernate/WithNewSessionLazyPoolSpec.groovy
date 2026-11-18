@@ -146,6 +146,26 @@ class WithNewSessionLazyPoolSpec extends Specification {
         requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
     }
 
+    void "an outer session is usable after the inner transaction ends inside a SUPPORTS scope"() {
+        given:
+        LazyPoolBook book = LazyPoolBook.withTransaction { LazyPoolBook.first() }
+        requestSession.disconnect()
+
+        when:
+        int seen = LazyPoolBook.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_SUPPORTS, readOnly: true) {
+            LazyPoolBook.withNewSession {
+                LazyPoolBook.withTransaction {
+                    assert book.author.name == 'Stephen King'
+                }
+                requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size()
+            }
+        }
+
+        then:
+        seen == 1
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
+    }
+
     void "an outer session that lazy loads outside any transaction in the scope keeps no connection after it"() {
         given:
         LazyPoolBook book = LazyPoolBook.withTransaction { LazyPoolBook.first() }

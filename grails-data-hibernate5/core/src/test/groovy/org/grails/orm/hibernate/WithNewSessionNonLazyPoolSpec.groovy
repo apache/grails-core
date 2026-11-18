@@ -143,6 +143,53 @@ class WithNewSessionNonLazyPoolSpec extends Specification {
         NonLazyAuthor.count() == 2
     }
 
+    void "an outer session is usable after the inner transaction ends inside the scope with a non-lazy pool"() {
+        given: "a seeded author and book, and a request session holding the book"
+        NonLazyAuthor.withTransaction {
+            NonLazyAuthor author = new NonLazyAuthor(name: 'Stephen King').save(flush: true)
+            new NonLazyBook(title: 'The Stand', author: author).save(flush: true)
+        }
+        NonLazyBook book = requestSession.createQuery('from NonLazyBook', NonLazyBook).list().first()
+        requestSession.disconnect()
+        assert tomcatDataSource.pool.active == 0
+
+        when: "the inner transaction lazy-loads on the outer session and the outer session is queried afterwards in the scope"
+        int seen = NonLazyBook.withNewSession {
+            NonLazyBook.withTransaction {
+                assert book.author.name == 'Stephen King'
+            }
+            requestSession.createQuery('from NonLazyAuthor', NonLazyAuthor).list().size()
+        }
+
+        then: "the outer session got a connection of its own and none is held after the scope"
+        seen == 1
+        tomcatDataSource.pool.active == 0
+    }
+
+    void "an outer session is usable after the inner transaction ends inside a SUPPORTS scope with a non-lazy pool"() {
+        given:
+        NonLazyAuthor.withTransaction {
+            NonLazyAuthor author = new NonLazyAuthor(name: 'Stephen King').save(flush: true)
+            new NonLazyBook(title: 'The Stand', author: author).save(flush: true)
+        }
+        NonLazyBook book = requestSession.createQuery('from NonLazyBook', NonLazyBook).list().first()
+        requestSession.disconnect()
+
+        when:
+        int seen = NonLazyBook.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_SUPPORTS, readOnly: true) {
+            NonLazyBook.withNewSession {
+                NonLazyBook.withTransaction {
+                    assert book.author.name == 'Stephen King'
+                }
+                requestSession.createQuery('from NonLazyAuthor', NonLazyAuthor).list().size()
+            }
+        }
+
+        then:
+        seen == 1
+        requestSession.createQuery('from NonLazyAuthor', NonLazyAuthor).list().size() == 1
+    }
+
     void "withNewSession runs and rebinds holder when outer request session was closed before scope"() {
         given: "a closed outer request session with holder still bound"
         SessionHolder boundHolder =

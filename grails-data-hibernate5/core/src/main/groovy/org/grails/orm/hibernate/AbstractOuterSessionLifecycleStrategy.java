@@ -106,11 +106,11 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
 
     /**
      * Makes the disconnect of the outer session available to the transactions that begin before {@link #restore()}.
-     * It applies only to an outer session that is disconnected now and a lazy data source, the case in which a
-     * connection of the session is fetched from the inner transaction.
+     * It applies only to an outer session that is disconnected now: a connection that the session fetches in the scope
+     * is the one of the inner transaction, whether or not the data source is lazy.
      */
     protected void disconnectBeforeInnerTransactionCompletes() {
-        if (lazyConnection && !wasPhysicallyConnectedAtPrepare && getLogicalConnection() != null) {
+        if (!wasPhysicallyConnectedAtPrepare && getLogicalConnection() != null) {
             PENDING_DISCONNECTS.get().addLast(this::disconnectIfConnected);
             disconnectPending = true;
         }
