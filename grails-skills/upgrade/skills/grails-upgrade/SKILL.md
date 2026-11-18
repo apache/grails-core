@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: Guide for upgrading Grails applications to and within Grails 7, from Grails 6 and between Grails 7.x releases, covering Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, and multi-tenancy behavior changes
+description: Guide for upgrading Grails applications to and within Grails 7, from Grails 6, from Grails 7.0 to 7.1 and between Grails 7.x releases, covering Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, URL mappings, scaffolding, audit annotations, exception logging, and multi-tenancy behavior changes
 license: Apache-2.0
 ---
 
@@ -14,7 +14,8 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 
 - Guide upgrades of Grails applications from Grails 6 to Grails 7.
 - Guide upgrades between releases of the Grails 7 line, with one section per release that changed something an application can notice.
-- Turn the "Upgrading from Grails 6 to Grails 7" chapter of the Grails user guide into ordered steps for an agent working in an application's source tree.
+- Turn the "Upgrading from Grails 6 to Grails 7.0" chapter of the Grails user guide into ordered steps for an agent working in an application's source tree.
+- Cover the "Upgrading from Grails 7.0 to Grails 7.1" chapter of the guide in the release sections.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
 ## When to Use Me
@@ -22,6 +23,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 Activate this skill when:
 
 - Updating an application from Grails 6 to Grails 7.
+- Updating an application from Grails 7.0 to Grails 7.1.
 - Updating an application from one Grails 7 release to a newer one.
 - Reviewing a Grails 7 upgrade branch or pull request.
 - Fixing build failures, test failures, runtime failures, or behavior changes after either kind of upgrade.
@@ -29,16 +31,16 @@ Activate this skill when:
 ## Which Parts Apply
 
 1. Read the application's current Grails version from `grailsVersion` in `gradle.properties`.
-2. Establish the target Grails 7 version.
+2. Establish the target Grails 7 version. This skill covers targets up to Grails 7.1.
 3. If the current version is Grails 6, apply "Upgrading from Grails 6 to Grails 7", then every release section of "Changes Within Grails 7 Releases" up to and including the target version.
-4. If the current version is already Grails 7, apply every release section of "Changes Within Grails 7 Releases" that is newer than the current version, up to and including the target version.
+4. If the current version is already Grails 7, apply every release section of "Changes Within Grails 7 Releases" that is newer than the current version, up to and including the target version. An application on Grails 7.0 that moves to Grails 7.1 applies the 7.1.0 section and every section above it.
 5. Finish with the "Verification Checklist".
 
-The upgrade guide chapter of the target version is the source of truth. Where this skill writes `<groovyVersion>` or `<gradleVersion>`, take the value from that chapter.
+The upgrade guide of the target version is the source of truth. Where this skill writes `<groovyVersion>` or `<gradleVersion>`, take the value from its chapter "Upgrading from Grails 6 to Grails 7.0". The chapters for the later Grails 7 releases name no Groovy or Gradle version.
 
 ## Changes Within Grails 7 Releases
 
-An entry is listed under the release that first carried the change. On this branch an entry sits under the first release of this release line that carries the change, and names the release that carried it first. A change that adds a configuration setting names the setting and its default. A release without a section here has no change attributed to it by the upgrade guide.
+An entry is listed under the release that first carried the change. On this branch an entry sits under the first release of this release line that carries the change, and names the release that carried it first. A change that adds a configuration setting names the setting and its default. A release of an earlier release line has no section of its own here when its changes are carried under a later section. Any other release without a section has no change attributed to it by the upgrade guide.
 
 The guide does not name a release for every change made after 7.0.0. It attributes the BOM property renames only to "later versions" of Grails 7; they are described under "Grails BOM" below. If an application that is already on Grails 7 shows a behavior described under "Upgrading from Grails 6 to Grails 7", treat that section as applying to it too.
 
@@ -65,6 +67,39 @@ Check the compiler output for two warnings:
 - A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
 
 The guide gives no setting that restores the previous behavior. Use typed properties, `bindable: true`, and explicit `include` lists.
+
+_First released in Grails 7.0.18._
+
+The OAuth `callback` parameter of the Spring Security REST plugin needs allowed origins.
+
+- New setting: `grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins`, a list of origins. An origin is the scheme, host and port of a URL. When the setting is missing, every `callback` URL is ignored.
+- The plugin redirects to the URL in the `callback` parameter of `/oauth/authenticate/<provider>`, with the token appended, only when the URL's origin is listed in the setting and the URL has a path, a query or a fragment after the host. For any other `callback` URL it redirects to the `frontendCallbackUrl`, as it does without the parameter.
+- The URL is checked when the login starts and again when it completes. A new login drops the `callback` URL of an earlier login that was not completed.
+- Since the plugin became part of Grails, the `callback` parameter failed with a `MissingMethodException`. It works again within these limits.
+
+Search frontend code and API clients for requests to `/oauth/authenticate/` that pass a `callback` parameter. If the application uses the parameter, list the origins of its frontend:
+
+```groovy
+grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins = ['https://my.frontend-app.com']
+```
+
+_First released in Grails 7.0.18._
+
+Encrypted JWTs of the Spring Security REST plugin are signed.
+
+As of 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.useEncryptedJwt` enabled, the plugin signs the claims with the RSA private key, using RS256, before it encrypts them with the RSA public key. It accepts an encrypted JWT only when the JWT inside carries a valid signature made with the private key.
+
+Search the configuration for `useEncryptedJwt`. If it is enabled, check each point:
+
+- Access and refresh tokens issued before the upgrade are no longer accepted, so users have to log in again. When several instances of an application share the keys, upgrade them together: an instance that was not upgraded rejects the tokens of an upgraded one, and the other way round.
+- An application that generates or validates encrypted JWTs needs both keys, also when a custom `RSAKeyProvider` provides them. Search for `RSAKeyProvider` implementations and confirm that each provides the private key and the public key.
+- The private key must be at least 2048 bits long. A shorter key fails with an `IllegalArgumentException` when a token is generated.
+- Use the key pair for these tokens only. The plugin accepts any JWT that is signed with the private key and encrypted with the public key, whatever issued it.
+- Search for `JwtService.parse`, `accessTokenJwt` and `com.nimbusds.jwt.EncryptedJWT`. For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
+- With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
+- An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+The guide gives no setting that restores encrypted JWTs without a signature.
 
 ### 7.1.1
 
@@ -109,6 +144,197 @@ grails:
 
 ### 7.1.0
 
+The entries below come from the guide chapter "Upgrading from Grails 7.0 to Grails 7.1". The first seven change what an application does by default, break compilation, or deprecate an API. The rest are additions that change nothing until the application uses them.
+
+The Grails Gradle plugins disable invokedynamic.
+
+- The Grails Gradle plugins now disable invokedynamic for all `GroovyCompile` tasks.
+- Search `build.gradle` for a `tasks.withType(GroovyCompile)` block that sets `indy = false`. It is no longer needed. Remove it:
+
+```groovy
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.optimizationOptions.indy = false
+}
+```
+
+- New setting: `indy` on the `grails` extension in `build.gradle`. Set it to `true` to compile with invokedynamic again:
+
+```groovy
+grails {
+    indy = true
+}
+```
+
+Plugin loading and plugin configuration are split.
+
+- Annotations such as `@ConditionalOnProperty` can now be used with configuration stored in a plugin's `plugin.groovy` or `plugin.yml`. To support this, plugin loading and plugin configuration were split, and the plugin loading code was reworked.
+- Search the application for classes that extend `GrailsApplicationPostProcessor` or `DefaultGrailsPluginManager`, and for code that calls their constructors. The constructors changed. A new class, `PluginDiscovery`, was extracted from the plugin manager and is now a dependency of both classes. The guide does not list the new constructor signatures. Take them from the API documentation of the target version.
+- An application that relies on its own plugin loader may break. The guide gives no setting that restores the previous plugin loading.
+
+The `resource` field of `GormService` is the domain class.
+
+`grails.plugin.scaffolding.GormService` changed to fix a thread-safety issue:
+
+- The type of the `resource` field changed from `GormAllOperations<T>` to `Class<T>`.
+- A new field `gormStaticApi` of type `GormAllOperations<T>` provides the GORM operations. It is initialized lazily and thread-safely.
+- The constructor no longer instantiates the resource class. It stores the class.
+
+Search the application for classes that extend `GormService` and for code that reads its `resource` field:
+
+- Change GORM calls on `resource` to `gormStaticApi`.
+- Where the code needs the domain class, use `resource` itself instead of `resource.getClass()`.
+
+```groovy
+class MyService extends GormService<MyDomain> {
+    void myMethod() {
+        // Before: def result = resource.list()
+        def result = gormStaticApi.list()
+
+        // Before: Class<MyDomain> clazz = resource.getClass()
+        Class<MyDomain> clazz = resource
+    }
+}
+```
+
+The guide gives no way to keep the previous field type.
+
+URL mapping variables captured by a wildcard are validated.
+
+- Grails now validates the URL mapping variables `$controller`, `$action` and `$namespace` against the registered controller artefacts at request time. When a captured value does not match a registered artefact, the mapping is skipped and the next mapping is tried.
+- Controller and action values that a mapping hardcodes are not affected.
+- New setting: `grails.urlmapping.validateWildcards`. The validation is enabled by default.
+- Search `UrlMappings` for mappings that use `$controller`, `$action` or `$namespace`, and check requests whose captured value names no registered controller or action. They now fall through to a later mapping.
+
+The validation allows mappings such as:
+
+```groovy
+group "/topics", {
+    "/$action"(controller: 'topic')              // tried first, only matches real actions
+    "/$id"(controller: 'topic', action: 'show')  // fallback for values that are not actions
+}
+```
+
+To keep the previous matching, disable the validation in `application.yml`:
+
+```yaml
+grails:
+    urlmapping:
+        validateWildcards: false
+```
+
+`ContainerGebSpec` includes the context path in the base URL.
+
+- `ContainerGebSpec` now appends the servlet context path of the server to the browser's base URL. The context path is looked up from the Spring `Environment` at test setup time. Previously the base URL held only the protocol, hostname and port, so with `server.servlet.context-path` set, page navigation missed the context path and ended in 404 errors.
+- Search `application.yml` for `server.servlet.context-path`. If it is set, search the functional tests that extend `ContainerGebSpec` and their Geb pages for URLs.
+- Page URLs stay relative to the context root, such as `static url = 'greeting'`. Do not include the context path in them. With the context path `/myapp`, `to(GreetingPage)` resolves to `http://host:port/myapp/greeting`.
+- The guide gives no setting that restores the previous base URL.
+
+The exception log line can include per-request context.
+
+- `GrailsExceptionResolver` can append a parenthesised clause with the current auditor and the remote client address to its exception log headline:
+
+```
+RuntimeException occurred when processing request: [GET] /admin/users/42 (ip: 198.51.100.42, user: alice)
+```
+
+- New settings, both disabled by default: `grails.exceptionresolver.logAuditor` adds `user: <value>` when an `AuditorAware` bean is registered, and `grails.exceptionresolver.logRemoteAddr` adds `ip: <value>`. With both disabled the headline has the form it had before 7.1.
+- The auditor is resolved through the same `AuditorAware` bean that populates `@CreatedBy` and `@LastModifiedBy` fields (see the audit annotations entry below).
+- The address is `HttpServletRequest.getRemoteAddr()`. Behind a reverse proxy, set `server.forward-headers-strategy: native` so that it is the address of the real client.
+- Before enabling either setting, search log parsers, alert rules and log-aggregation queries that match the exact headline. They have to tolerate the ` (ip: <value>, user: <value>)` suffix. User identifiers are typically personal data; enabling `logAuditor` writes them into exception logs.
+
+```yaml
+grails:
+    exceptionresolver:
+        logAuditor: true
+        logRemoteAddr: true
+```
+
+Stack trace filtering emits to the `StackTrace` logger under a setting.
+
+- `DefaultStackTraceFilterer.filter(Throwable)` emits the unfiltered stack trace to the `StackTrace` logger as a side effect of cleaning the trace, as it did before 7.1. Code paths outside the exception resolver rely on this, such as a scheduled job that calls `GrailsUtil.sanitizeRootCause(ex)` before it logs through its own logger.
+- New setting: `grails.exceptionresolver.logFullStackTraceOnFilter`. The default is `true`, which keeps the emission. Set it to `false` to disable the emission and rely on `logFullStackTrace` alone for the output of the exception resolver.
+- The two settings interact. With both enabled, a request exception with N causes produces N+1 `StackTrace` records: one from the resolver and one for each throwable the filter visits.
+- Search the logging configuration for the `StackTrace` logger and for tooling that counts or parses its records. The "Logging Full Stack Traces" section of the guide has a matrix of the four combinations.
+
+`@AutoTimestamp` is deprecated in favor of audit annotations.
+
+- New annotations in `grails.gorm.annotation`: `@CreatedDate` (creation timestamp, set on insert), `@LastModifiedDate` (modification timestamp, set on insert and update), `@CreatedBy` (current auditor, set on insert) and `@LastModifiedBy` (current auditor, set on insert and update). The date annotations work with `Date`, `LocalDateTime`, `Instant`, `OffsetDateTime` and `ZonedDateTime`.
+- `@AutoTimestamp` is marked `@Deprecated(forRemoval = true)` and will be removed in Grails 8.0. It still works in Grails 7.1.
+
+Search the domain classes for `@AutoTimestamp` and migrate:
+
+1. Replace `@AutoTimestamp(AutoTimestamp.EventType.CREATED)` with `@CreatedDate`.
+2. Replace `@AutoTimestamp`, or `@AutoTimestamp(EventType.UPDATED)`, with `@LastModifiedDate`.
+3. Optionally add `@CreatedBy` and `@LastModifiedBy` fields for auditor tracking.
+4. Implement and register an `AuditorAware` bean if the application uses auditor fields.
+5. Remove `nullable: true` constraints from timestamp fields. They are no longer needed.
+6. Keep `nullable: true` on auditor fields. Operations without a current auditor need it.
+
+```groovy
+// Deprecated
+@AutoTimestamp(AutoTimestamp.EventType.CREATED)
+LocalDateTime created
+
+@AutoTimestamp
+LocalDateTime modified
+
+// Replacement
+@CreatedDate
+LocalDateTime created
+
+@LastModifiedDate
+LocalDateTime modified
+```
+
+For auditor fields:
+
+- Implement `org.grails.datastore.gorm.timestamp.AuditorAware<T>`. Its method `Optional<T> getCurrentAuditor()` returns the current auditor, or `Optional.empty()` when there is none, for example for an anonymous user. Register the implementation as a Spring bean, for example with a `@Bean` method in `Application.groovy`.
+- An auditor field can be a `String` for a username, a `Long` for a user id, or a custom type.
+- Unlike timestamp fields, auditor fields can have constraints, such as `maxSize: 100`.
+
+Two opt-in settings on the `grails` extension in `build.gradle` reduce imports:
+
+- `importGrailsCommonAnnotations = true` imports `jakarta.validation.constraints.*`, `grails.gorm.annotation.*` and, when `grails-scaffolding` is on the classpath, `grails.plugin.scaffolding.annotation.*` automatically.
+- `starImports = ['java.util.concurrent', 'groovy.transform', 'com.myapp.annotations']` adds star imports for the listed packages. It is combined with the imports of `importGrailsCommonAnnotations` and `importJavaTime` when those are enabled.
+
+URL mappings have a greedy extension marker.
+
+- Without the marker, a mapping with an optional extension, `"/$id(.$format)?"`, splits at the first dot: `/test.test.json` gives `id` = `test` and `format` = `test.json`. This is unchanged.
+- The new `+` marker after the variable name splits at the last dot: `"/$id+(.$format)?"` gives `id` = `test.test` and `format` = `json`. For an optional parameter write `"/$id+?(.$format)?"`.
+- A URL without a dot matches entirely as the parameter, with no format.
+- The marker is opt-in for each mapping. Search `UrlMappings` for `(.$format)?` mappings whose ids contain dots, such as file names, qualified class names or version numbers, and add the marker where the last dot should separate the extension.
+
+Scaffolding can prefer namespace-specific scaffolded templates.
+
+- New setting: `grails.scaffolding.enableNamespaceViewDefaults`. The default is `false`, which keeps the previous view resolution.
+- When it is `true`, a namespace controller resolves a view in this order: the namespace-specific view (`grails-app/views/admin/event/index.gsp`), the namespace-specific scaffolded template (`src/main/templates/scaffolding/admin/index.gsp`), the non-namespaced view (`grails-app/views/event/index.gsp`), the non-namespaced scaffolded template (`src/main/templates/scaffolding/index.gsp`).
+- Previously a scaffolded view was generated only when no view existed at all, so the non-namespaced view won over the namespace-specific scaffolded template.
+
+The `display` constraint accepts a `DisplayType`.
+
+- `grails.gorm.validation.DisplayType` has the values `ALL` (display in all views, also for properties such as `dateCreated` and `lastUpdated` that scaffolding leaves out by default), `NONE` (never display), `INPUT_ONLY` (create and edit forms only) and `OUTPUT_ONLY` (show and index views only).
+- Boolean values work as before. `display: false` is equivalent to `DisplayType.NONE`. No change is required.
+
+`@Scaffold` is the preferred way to enable scaffolding.
+
+- The legacy `static scaffold = Book` syntax is still supported. No change is required.
+- `grails.plugin.scaffolding.annotation.Scaffold` works on controllers and on services: `@Scaffold(Book)`.
+- `@Scaffold(RestfulServiceController<Book>)` on a controller delegates to the service. `@Scaffold(MyCustomService<Book>)` extends a custom class. `@Scaffold(domain = Book, readOnly = true)` scaffolds read-only.
+- New CLI commands: `grails create-scaffold-controller Book`, `grails create-scaffold-service Book` and `grails generate-scaffold-all Book`. They support `--extends`, `--namespace` and `--service`.
+
+URL mapping groups accept defaults.
+
+- `group` accepts default parameters that all child mappings inherit: `group "/api", namespace: 'api', controller: 'resource', { "/list"(action: 'list') }`.
+- Nested groups merge defaults. An inner group inherits the defaults of the outer group and can extend or override them. A child mapping can override any default.
+- Existing URL mappings are not affected.
+
+A `<g:flashMessages />` tag renders flash messages.
+
+- The tag renders `flash.message`, `flash.error` and `flash.warning` as Bootstrap 5 dismissible alerts, styled as success, danger and warning. The content is HTML-encoded. When a page and its layout both call the tag, only the first call produces output.
+- The default layout (`main.gsp`) and all scaffolding templates now use the tag. This matters when comparing the application with a freshly generated one.
+- Custom views that render flash messages by hand keep working. They can replace a block such as `<g:if test="${flash.message}"><div class="alert alert-primary" role="alert">${flash.message}</div></g:if>` with `<g:flashMessages />`.
+- The tag has optional attributes for CSS classes, icons, the ARIA role and dismissibility. An application that does not use Bootstrap can override the defaults under `grails.views.gsp.flashMessages` in `application.yml`, with the keys `messageClass`, `messageIcon`, `errorClass`, `errorIcon`, `warningClass` and `warningIcon`.
+
 _First released in Grails 7.0.4._
 
 BOM version properties restored.
@@ -123,6 +349,7 @@ Enum JSON and XML serialization can use a simple format.
 
 - New settings: `grails.converters.json.enum.format` and `grails.converters.xml.enum.format`. Set them to `simple` to opt in. The default remains the legacy format.
 - The legacy marshallers `org.grails.web.converters.marshaller.json.EnumMarshaller` and `org.grails.web.converters.marshaller.xml.EnumMarshaller` are deprecated for removal since 7.0.2. Search the application for references to them.
+- Deprecation timeline: in 7.0.2 the legacy `EnumMarshaller` is deprecated and remains the default, and `SimpleEnumMarshaller` is available through the settings. In Grails 8.0 `SimpleEnumMarshaller` becomes the default and the legacy `EnumMarshaller` classes are removed. Clients that read the legacy structure have to change before an upgrade to Grails 8.0.
 
 Legacy output, still the default:
 
@@ -198,13 +425,7 @@ configurations.configureEach {
 }
 ```
 
-- Groovy 4 uses invokedynamic by default instead of callsite optimizations. This can cause performance regressions compared to Grails 6. To disable it for Groovy 4, add to `build.gradle`:
-
-```groovy
-tasks.withType(GroovyCompile).configureEach {
-    groovyOptions.optimizationOptions.indy = false
-}
-```
+- Groovy 4 uses invokedynamic by default instead of callsite optimizations. This can cause performance regressions compared to Grails 6. As of Grails 7.1 the Grails Gradle plugins disable invokedynamic for all `GroovyCompile` tasks themselves. Do not add a `tasks.withType(GroovyCompile)` block that sets `indy = false` to `build.gradle`, and remove one that is there. To compile with invokedynamic, set `indy = true` on the `grails` extension. See the 7.1.0 release section.
 
 ### 3. Set the unified project version
 
@@ -809,4 +1030,10 @@ Run verification through public application behavior, not only compilation.
 - With multi-tenancy, exercise code that runs without a tenant, lookups by id across tenants, and the tenant resolver in development.
 - Exercise binding of command objects, nested `Validateable` objects and entities compiled outside `grails-app/domain`, with both allowed and protected properties.
 - Run the functional tests with a container runtime available when they extend `ContainerGebSpec`.
+- With the Spring Security REST plugin, exercise an OAuth login that passes a `callback` parameter, and with encrypted JWTs a login, a token refresh and a request with a token issued before the upgrade, which must be rejected.
+- `build.gradle` has no `tasks.withType(GroovyCompile)` block that sets `indy = false`.
+- No application class extends `GrailsApplicationPostProcessor` or `DefaultGrailsPluginManager` with a constructor call that no longer compiles, and no code calls GORM operations on the `resource` field of a `GormService`.
+- Exercise URL mappings that capture `$controller`, `$action` or `$namespace`, with values that name a controller or action and with values that do not.
+- With `server.servlet.context-path` set, the `ContainerGebSpec` tests navigate to pages under the context path.
+- Log parsers and alert rules still match the exception log headline and the records of the `StackTrace` logger.
 - With Micronaut, confirm that the build applies `grails-micronaut-bom` as `enforcedPlatform` and that `java -jar` starts the packaged application.
