@@ -98,6 +98,96 @@ class WithNewSessionLazyPoolSpec extends Specification {
         name == 'Stephen King'
         tomcatDataSource.pool.active == 0
     }
+
+    private LazyPoolBook bookOfADisconnectedRequestSession() {
+        LazyPoolBook book = LazyPoolBook.withTransaction { LazyPoolBook.first() }
+        LogicalConnectionImplementor logicalConnection = ((SessionImplementor) requestSession).jdbcCoordinator.logicalConnection
+        if (logicalConnection.isOpen() && logicalConnection.isPhysicallyConnected()) {
+            logicalConnection.manualDisconnect()
+        }
+        book
+    }
+
+    void "an outer session that lazy loads as the first use in the inner transaction is left without a connection"() {
+        given:
+        LazyPoolBook book = bookOfADisconnectedRequestSession()
+
+        when:
+        LazyPoolBook.withNewSession {
+            LazyPoolBook.withTransaction {
+                assert book.author.name == 'Stephen King'
+                new LazyPoolAuthor(name: 'Tenar').save(flush: true)
+            }
+        }
+
+        then: 'the next query of the outer session gets a connection of its own'
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 2
+    }
+
+    void "an outer session that lazy loads after sql ran in the inner transaction is left without a connection"() {
+        given:
+        LazyPoolBook book = bookOfADisconnectedRequestSession()
+
+        when:
+        LazyPoolBook.withNewSession {
+            LazyPoolBook.withTransaction {
+                new LazyPoolAuthor(name: 'Tenar').save(flush: true)
+                assert book.author.name == 'Stephen King'
+            }
+        }
+
+        then:
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 2
+    }
+
+    void "an outer session is usable after the inner transaction ends but inside the scope"() {
+        given:
+        LazyPoolBook book = bookOfADisconnectedRequestSession()
+
+        when:
+        int seen = LazyPoolBook.withNewSession {
+            LazyPoolBook.withTransaction {
+                assert book.author.name == 'Stephen King'
+            }
+            requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size()
+        }
+
+        then:
+        seen == 1
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
+    }
+
+    void "an outer session is usable after the inner transaction ends inside a SUPPORTS scope"() {
+        given:
+        LazyPoolBook book = bookOfADisconnectedRequestSession()
+
+        when:
+        int seen = LazyPoolBook.withTransaction(propagationBehavior: TransactionDefinition.PROPAGATION_SUPPORTS, readOnly: true) {
+            LazyPoolBook.withNewSession {
+                LazyPoolBook.withTransaction {
+                    assert book.author.name == 'Stephen King'
+                }
+                requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size()
+            }
+        }
+
+        then:
+        seen == 1
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
+    }
+
+    void "an outer session that lazy loads outside any transaction in the scope keeps no connection after it"() {
+        given:
+        LazyPoolBook book = bookOfADisconnectedRequestSession()
+
+        when:
+        LazyPoolBook.withNewSession {
+            assert book.author.name == 'Stephen King'
+        }
+
+        then:
+        tomcatDataSource.pool.active == 0
+    }
 }
 
 @Entity

@@ -32,6 +32,9 @@ import org.grails.orm.hibernate.support.hibernate7.TransactionResources;
  * It does not prime the outer session, so an idle session never checks out a pooled connection. If the outer
  * session was not connected on entry and is connected when the scope ends, it is disconnected on restore so
  * that connection returns to the pool. A bound holder whose session is closed is unbound and rebound the same way.</p>
+ *
+ * <p>A lazy load that takes the inner transaction's connection is disconnected before that transaction completes,
+ * see {@link AbstractOuterSessionLifecycleStrategy#pendingDisconnect()}.</p>
  */
 class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy {
 
@@ -47,5 +50,6 @@ class DefaultOuterSessionStrategy extends AbstractOuterSessionLifecycleStrategy 
     @Override
     public void prepare() {
         super.prepare();
+        disconnectBeforeInnerTransactionCompletes();
     }
 }

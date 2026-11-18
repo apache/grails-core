@@ -422,8 +422,8 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
     }
 
     private static boolean hasActiveTransaction(Session session) {
-        org.hibernate.Transaction transaction = session.getTransaction();
-        return transaction != null && transaction.isActive();
+        // not getTransaction(): a session that Hibernate does not let its transaction be asked for throws there
+        return session.isJoinedToTransaction();
     }
 
     protected boolean isSessionTransactional(Session session) {
