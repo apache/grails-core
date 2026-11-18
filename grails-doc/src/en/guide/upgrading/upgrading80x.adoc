@@ -41,14 +41,14 @@ Remove the dependency once your configuration is clean.
 [TIP]
 ====
 **Let your coding agent work through this guide.**
-Grails publishes the `grails-8-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent.
+Grails publishes the `grails-upgrade` agent skill, which turns this guide into a migration checklist for an AI coding agent, and lists the changes of each Grails 8 release.
 Extract it with the SkillsJars Gradle plugin, as xref:gettingStarted#agentSkills[Agent Skills] describes.
-While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM does not manage it:
+While the application is still on Grails 7, declare the skill with its version, since the Grails 7 BOM manages the upgrade skill of Grails 7:
 
 [source,groovy,subs="attributes"]
 .build.gradle
 ----
-skill 'org.apache.grails.skills:grails-8-upgrade:{version}'
+skill 'org.apache.grails.skills:grails-upgrade:{version}'
 ----
 ====
 
