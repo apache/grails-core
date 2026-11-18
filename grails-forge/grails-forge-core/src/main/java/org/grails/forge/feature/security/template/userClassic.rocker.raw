@@ -18,8 +18,9 @@ under the License.
 *@
 
 @import org.grails.forge.application.Project
+@import org.grails.forge.feature.Features
 
-@args (Project project)
+@args (Project project, Features features)
 
 package @project.getPackageName()
 
@@ -52,9 +53,17 @@ class User implements Serializable {
         UserRole.findAllByUser(this)*.role
     }
 
+@if (features.contains("gorm-mongodb")) {
+    static mapping = {
+        collection 'user'
+    }
+
+} else if (features.contains("gorm-hibernate5") || features.contains("gorm-hibernate7")) {
     static mapping = {
         table name: '`user`'
     }
+
+}
 
     static constraints = {
         email nullable: true, email: true, unique: true

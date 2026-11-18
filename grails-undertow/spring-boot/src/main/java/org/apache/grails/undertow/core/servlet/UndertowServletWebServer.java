@@ -16,11 +16,14 @@
 
 package org.apache.grails.undertow.core.servlet;
 
+import jakarta.servlet.ServletException;
+
 import io.undertow.Handlers;
 import io.undertow.Undertow.Builder;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.api.DeploymentManager;
 
+import org.springframework.boot.web.server.WebServerException;
 import org.springframework.util.StringUtils;
 
 import org.apache.grails.undertow.core.HttpHandlerFactory;
@@ -90,6 +93,31 @@ public class UndertowServletWebServer extends UndertowWebServer {
 
     public DeploymentManager getDeploymentManager() {
         return this.manager;
+    }
+
+    /**
+     * Stops the server, which undeploys the deployment of a server that started, and stops
+     * and undeploys a deployment the server left behind, so that the listeners of its
+     * servlet context are destroyed and its temporary directories deleted. A server that
+     * never started leaves its deployment deployed, and one whose handlers failed to build
+     * after the deployment started leaves it started.
+     */
+    @Override
+    public void destroy() {
+        super.destroy();
+        if (this.manager == null) {
+            return;
+        }
+        try {
+            if (this.manager.getState() == DeploymentManager.State.STARTED) {
+                this.manager.stop();
+            }
+        } catch (ServletException ex) {
+            throw new WebServerException("Unable to stop Undertow deployment", ex);
+        }
+        if (this.manager.getState() != DeploymentManager.State.UNDEPLOYED) {
+            this.manager.undeploy();
+        }
     }
 
 }

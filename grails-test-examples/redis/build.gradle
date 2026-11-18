@@ -46,6 +46,8 @@ dependencies {
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
@@ -58,6 +60,8 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails.testing:grails-testing-support-redis'
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     // This project also has unit tests in it, so we must define the launcher per
     // https://docs.gradle.org/8.3/userguide/upgrading_version_8.html#test_framework_implementation_dependencies

@@ -309,14 +309,13 @@ public abstract class DatastoreUtils {
      */
     public static Object doWithSession(final Datastore datastore, final Closure c) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             return c.call(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(session.getDatastore());
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
     }
@@ -330,14 +329,13 @@ public abstract class DatastoreUtils {
      */
     public static <T> T execute(final Datastore datastore, final SessionCallback<T> callback) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             return callback.doInSession(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(session.getDatastore());
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
     }
@@ -349,16 +347,44 @@ public abstract class DatastoreUtils {
      */
     public static void execute(final Datastore datastore, final VoidSessionCallback callback) {
         boolean existing = datastore.hasCurrentSession();
-        Session session = existing ? datastore.getCurrentSession() : bindSession(datastore.connect());
+        Session session = existing ? datastore.getCurrentSession() : bindNewSession(datastore.connect());
         try {
             callback.doInSession(session);
         }
         finally {
             if (!existing) {
-                TransactionSynchronizationManager.unbindResource(datastore);
-                closeSessionOrRegisterDeferredClose(session, datastore);
+                unbindSession(session);
             }
         }
+    }
+
+    /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     * @param <T> The return type
+     * @return The result of the callback
+     */
+    public static <T> T executeWithNewSession(Datastore datastore, SessionCallback<T> callback) {
+        Session session = bindNewSession(datastore.connect());
+        try {
+            return callback.doInSession(session);
+        }
+        finally {
+            unbindSession(session);
+        }
+    }
+
+    /**
+     * Execute the given callback with a new session, regardless of whether an existing session is present
+     * @param datastore The datastore
+     * @param callback The callback
+     */
+    public static void executeWithNewSession(Datastore datastore, VoidSessionCallback callback) {
+        executeWithNewSession(datastore, (SessionCallback<Void>) session -> {
+            callback.doInSession(session);
+            return null;
+        });
     }
 
     /**

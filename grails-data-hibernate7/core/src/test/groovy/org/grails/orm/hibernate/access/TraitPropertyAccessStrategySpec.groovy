@@ -23,6 +23,7 @@ import org.hibernate.property.access.spi.GetterFieldImpl
 import org.hibernate.property.access.spi.GetterMethodImpl
 import org.hibernate.property.access.spi.SetterFieldImpl
 import org.hibernate.property.access.spi.SetterMethodImpl
+import spock.lang.Issue
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -144,6 +145,19 @@ class TraitPropertyAccessStrategySpec extends Specification {
         access.getter.getMember() instanceof java.lang.reflect.Field
         (access.getter.getMember() as java.lang.reflect.Field).name ==
             'org_grails_orm_hibernate_access_HasName__name'
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/16615')
+    void "setter writes and getter reads back the value of a trait property"() {
+        given:
+        def entity = new NamedEntity()
+        def access = strategy.buildPropertyAccess(NamedEntity, 'name')
+
+        when:
+        access.setter.set(entity, 'value')
+
+        then:
+        access.getter.get(entity) == 'value'
     }
 
     // ─── buildPropertyAccess: primitive boolean trait property ───────────────

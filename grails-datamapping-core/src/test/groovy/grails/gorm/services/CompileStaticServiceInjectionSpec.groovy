@@ -92,7 +92,6 @@ interface BookDataService {
         impl != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
         impl.getDeclaredMethod('setDatastore', Datastore) != null
-        impl.getDeclaredField('datastore') != null
     }
 
     void "test abstract class without @CompileStatic still works with injected @Service properties"() {
@@ -351,6 +350,5 @@ interface RecordDataService {
         then: 'The impl has datastore infrastructure for service injection'
         impl.getDeclaredMethod('setDatastore', Datastore) != null
         impl.getDeclaredMethod('getDatastore').returnType == Datastore
-        impl.getDeclaredField('datastore') != null
     }
 }

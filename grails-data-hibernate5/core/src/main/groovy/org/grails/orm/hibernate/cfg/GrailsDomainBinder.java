@@ -476,13 +476,19 @@ public class GrailsDomainBinder implements MetadataContributor {
         }
 
         final boolean isManyToMany = property instanceof ManyToMany;
-        if (referenced != null && !isManyToMany && referenced.isMultiTenant()) {
+        if (referenced != null && referenced.isMultiTenant()) {
             String filterCondition = getMultiTenantFilterCondition(sessionFactoryBeanName, referenced);
             if (filterCondition != null) {
-                if (isUnidirectionalOneToMany(property)) {
+                if (isManyToMany || isUnidirectionalOneToMany(property)) {
                     collection.addManyToManyFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
                 } else {
                     collection.addFilter(GormProperties.TENANT_IDENTITY, filterCondition, true, Collections.emptyMap(), Collections.emptyMap());
+                }
+                if (collection.getFetchMode() == FetchMode.JOIN) {
+                    // Hibernate does not apply the tenant filter to a collection that it fetches by join with an
+                    // instance loaded by id, so the collection is loaded eagerly with a select of its own instead
+                    collection.setFetchMode(FetchMode.SELECT);
+                    collection.setLazy(false);
                 }
             }
         }
@@ -1111,6 +1117,7 @@ public class GrailsDomainBinder implements MetadataContributor {
 
             if (!property.isOwningSide()) {
                 collection.setInverse(true);
+                warnIfManyToManyHasNoOwningSide(property);
             }
         }
 
@@ -1131,6 +1138,35 @@ public class GrailsDomainBinder implements MetadataContributor {
         else { // Collection -> Bag
             mappings.addSecondPass(new GrailsCollectionSecondPass(property, mappings, collection, sessionFactoryBeanName));
         }
+    }
+
+    /**
+     * A bidirectional many-to-many is written by its owning side, which {@code belongsTo} designates. When neither
+     * side declares {@code belongsTo}, both sides are inverse and the relationship is never stored, so warn about it
+     * once per relationship. A Map-valued side is never inverse once its second pass has run, because
+     * {@code bindMapSecondPass} makes it write the join table, so a relationship with a Map on either side is stored
+     * and gets no warning. A circular many-to-many, whose two properties are on the same class, gets none either:
+     * {@code bindCollectionSecondPass} makes every circular collection non-inverse, so both properties write their own
+     * join table and the relationship is stored with or without {@code belongsTo}. Declaring {@code belongsTo} there
+     * would swap the names of the two join tables and break an existing schema.
+     */
+    protected void warnIfManyToManyHasNoOwningSide(ToMany property) {
+        if (!(property instanceof ManyToMany) || !property.isBidirectional() || property.isCircular()) {
+            return;
+        }
+        Association otherSide = property.getInverseSide();
+        if (otherSide == null || otherSide.isOwningSide() ||
+                Map.class.isAssignableFrom(property.getType()) || Map.class.isAssignableFrom(otherSide.getType())) {
+            return;
+        }
+        if (property.getOwner().getName().compareTo(otherSide.getOwner().getName()) > 0) {
+            return;
+        }
+        LOG.warn("Neither side of the many-to-many between [{}.{}] and [{}.{}] declares belongsTo, so the relationship " +
+                "is not stored. Declare belongsTo on the owned side, for example in {}: static belongsTo = {}",
+                property.getOwner().getName(), property.getName(),
+                otherSide.getOwner().getName(), otherSide.getName(),
+                otherSide.getOwner().getJavaClass().getSimpleName(), property.getOwner().getJavaClass().getSimpleName());
     }
 
     /*
@@ -1158,17 +1194,29 @@ public class GrailsDomainBinder implements MetadataContributor {
         String owningTableSchema = ownerTable.getSchema();
         PropertyConfig config = getPropertyConfig(property);
         JoinTable jt = config != null ? config.getJoinTable() : null;
+        JoinTable owningSideJt = getOwningSideJoinTable(property, jt);
 
         NamingStrategy namingStrategy = getNamingStrategy(sessionFactoryBeanName);
-        String tableName = (jt != null && jt.getName() != null ? jt.getName() : namingStrategy.tableName(calculateTableForMany(property, sessionFactoryBeanName)));
+        String tableName;
+        if (jt != null && jt.getName() != null) {
+            tableName = jt.getName();
+        }
+        else if (owningSideJt != null) {
+            tableName = owningSideJt.getName();
+        }
+        else {
+            tableName = namingStrategy.tableName(calculateTableForMany(property, sessionFactoryBeanName));
+        }
         String schemaName = getSchemaName(mappings);
         String catalogName = getCatalogName(mappings);
-        if (jt != null) {
-            if (jt.getSchema() != null) {
-                schemaName = jt.getSchema();
-            }
-            if (jt.getCatalog() != null) {
-                catalogName = jt.getCatalog();
+        for (JoinTable source : new JoinTable[] { owningSideJt, jt }) {
+            if (source != null) {
+                if (source.getSchema() != null) {
+                    schemaName = source.getSchema();
+                }
+                if (source.getCatalog() != null) {
+                    catalogName = source.getCatalog();
+                }
             }
         }
 
@@ -1179,6 +1227,28 @@ public class GrailsDomainBinder implements MetadataContributor {
         collection.setCollectionTable(mappings.addTable(
                 schemaName, catalogName,
                 tableName, null, false));
+    }
+
+    /**
+     * A bidirectional many-to-many has a single join table, which the owning side writes. When the inverse side
+     * does not name a join table of its own, it uses the one named by the owning side.
+     *
+     * @return the owning side's join table configuration, or null if it does not apply
+     */
+    protected JoinTable getOwningSideJoinTable(ToMany property, JoinTable jt) {
+        if (!(property instanceof ManyToMany) || !property.isBidirectional() || property.isOwningSide()) {
+            return null;
+        }
+        if (jt != null && jt.getName() != null) {
+            return null;
+        }
+        Association otherSide = property.getInverseSide();
+        if (otherSide == null || !otherSide.isOwningSide()) {
+            return null;
+        }
+        PropertyConfig otherSideConfig = getPropertyConfig(otherSide);
+        JoinTable otherSideJt = otherSideConfig != null ? otherSideConfig.getJoinTable() : null;
+        return otherSideJt != null && otherSideJt.getName() != null ? otherSideJt : null;
     }
 
     /**
@@ -2133,8 +2203,14 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     protected void bindEnumType(PersistentProperty property, SimpleValue simpleValue,
                                 String path, String sessionFactoryBeanName) {
-        bindEnumType(property, property.getType(), simpleValue,
-                getColumnNameForPropertyAndPath(property, path, null, sessionFactoryBeanName));
+        String columnName = getColumnNameForPropertyAndPath(property, path, null, sessionFactoryBeanName);
+        bindEnumType(property, property.getType(), simpleValue, columnName);
+
+        PropertyConfig propertyConfig = getPropertyConfig(property);
+        if (propertyConfig != null && propertyConfig.isUnique() && propertyConfig.isUniqueWithinGroup()) {
+            createKeyForProps(property, path, simpleValue.getTable(), columnName,
+                    propertyConfig.getUniquenessGroup(), sessionFactoryBeanName);
+        }
     }
 
     protected void bindEnumType(PersistentProperty property, Class<?> propertyType, SimpleValue simpleValue, String columnName) {
@@ -2190,8 +2266,13 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         PropertyConfig propertyConfig = getPropertyConfig(property);
         if (propertyConfig != null && !propertyConfig.getColumns().isEmpty()) {
-            bindIndex(columnName, column, propertyConfig.getColumns().get(0), t);
-            bindColumnConfigToColumn(property, column, propertyConfig.getColumns().get(0));
+            ColumnConfig cc = propertyConfig.getColumns().get(0);
+            column.setComment(cc.getComment());
+            column.setDefaultValue(cc.getDefaultValue());
+            column.setCustomRead(cc.getRead());
+            column.setCustomWrite(cc.getWrite());
+            bindIndex(columnName, column, cc, t);
+            bindColumnConfigToColumn(property, column, cc);
         }
     }
 
@@ -3082,6 +3163,11 @@ public class GrailsDomainBinder implements MetadataContributor {
 
     protected void createKeyForProps(PersistentProperty grailsProp, String path, Table table,
                                      String columnName, List<?> propertyNames, String sessionFactoryBeanName) {
+        if (grailsProp instanceof ToMany) {
+            // The column of a collection lives in the collection table (or the child table), which does not
+            // hold the columns of the other properties of the group, so there is no unique key to create.
+            return;
+        }
         List<Column> keyList = new ArrayList<>();
         keyList.add(new Column(columnName));
         for (Iterator<?> i = propertyNames.iterator(); i.hasNext();) {

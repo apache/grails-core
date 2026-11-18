@@ -33,6 +33,7 @@ import groovy.lang.MetaClass;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.aot.AotDetector;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -265,9 +266,34 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
     private void registerUnrefreshedBeansWithRegistry(BeanDefinitionRegistry registry) {
         if (context != null) {
             for (String beanName : context.getBeanDefinitionNames()) {
-                registry.registerBeanDefinition(beanName, context.getBeanDefinition(beanName));
+                register(registry, beanName, context.getBeanDefinition(beanName));
             }
         }
+    }
+
+    /**
+     * Registers a definition, leaving in place one that was generated ahead of time.
+     *
+     * <p>Running on generated artifacts, the plugins that produced these definitions already ran:
+     * they ran while the artifacts were being generated, and what they registered was written out as
+     * code and registered again here, ahead of this phase. Registering over that discards the
+     * instance supplier the generator wrote -- which resolves the constructor, the fields and the
+     * injection methods up front -- and replaces it with a definition that has to find all of that
+     * by reflection, which is what a generated image does not carry. So the generated one stands and
+     * this one is dropped.</p>
+     *
+     * <p>Anything the generator did not produce a definition for is registered as usual, so a bean a
+     * plugin contributes conditionally is unaffected. On a normal start nothing is skipped, and a
+     * plugin overrides what came before it exactly as it did.</p>
+     */
+    private void register(BeanDefinitionRegistry registry, String beanName, BeanDefinition definition) {
+        if (AotDetector.useGeneratedArtifacts() && registry.containsBeanDefinition(beanName)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("[RuntimeConfiguration] Keeping the generated definition of bean [" + beanName + "]");
+            }
+            return;
+        }
+        registry.registerBeanDefinition(beanName, definition);
     }
 
     private void registerBeanConfigsWithRegistry(BeanDefinitionRegistry registry) {
@@ -285,7 +311,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
                 }
             }
 
-            registry.registerBeanDefinition(beanName, bc.getBeanDefinition());
+            register(registry, beanName, bc.getBeanDefinition());
         }
     }
 
@@ -302,7 +328,7 @@ public class DefaultRuntimeSpringConfiguration implements RuntimeSpringConfigura
                 }
             }
             final String beanName = key.toString();
-            registry.registerBeanDefinition(beanName, bd);
+            register(registry, beanName, bd);
         }
     }
 

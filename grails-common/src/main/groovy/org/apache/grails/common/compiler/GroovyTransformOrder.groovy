@@ -228,4 +228,11 @@ interface GroovyTransformOrder {
      * contention, but a deterministic order keeps compilation output reproducible.
      */
     static final int COMMAND_FACTORIES_ORDER = RX_SCHEDULER_ORDER + DECREMENT_PRIORITY
+
+    /**
+     * Rewrites a call to a known tag into a direct invocation. Runs last, because whether a class can
+     * call tags at all is only settled once the traits that let it have been applied, which is what
+     * the artefact transforms above do.
+     */
+    static final int COMPILED_TAG_CALL_ORDER = COMMAND_FACTORIES_ORDER + DECREMENT_PRIORITY
 }

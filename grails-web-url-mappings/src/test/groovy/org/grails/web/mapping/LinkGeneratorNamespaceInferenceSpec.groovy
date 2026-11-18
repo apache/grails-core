@@ -18,11 +18,16 @@
  */
 package org.grails.web.mapping
 
+import ch.qos.logback.classic.Level
+
 import grails.core.DefaultGrailsApplication
 import grails.util.GrailsWebMockUtil
 import grails.web.CamelCaseUrlConverter
+import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.UrlCreator
 import grails.web.mapping.UrlMappingsHolder
+import org.apache.grails.core.testing.support.LogCapture
+import org.grails.core.artefact.ControllerArtefactHandler
 import org.grails.web.util.WebUtils
 import org.springframework.web.context.request.RequestContextHolder
 
@@ -38,8 +43,8 @@ import spock.lang.Unroll
  * <ul>
  *   <li>{@code home}   -> root only</li>
  *   <li>{@code book}   -> {@code admin} only (unambiguous single namespace)</li>
- *   <li>{@code author} -> root and {@code admin} (ambiguous: root sibling)</li>
- *   <li>{@code report} -> {@code admin} and {@code sales} (ambiguous: multiple namespaces)</li>
+ *   <li>{@code author} -> root and {@code admin}</li>
+ *   <li>{@code report} -> {@code admin} and {@code sales}, with no root controller</li>
  * </ul>
  */
 class LinkGeneratorNamespaceInferenceSpec extends Specification {
@@ -85,18 +90,17 @@ class LinkGeneratorNamespaceInferenceSpec extends Specification {
         // No current namespace: only infer for an unambiguous single-namespaced target
         null          | null         || 'book'      || 'admin'   // unique namespaced
         null          | null         || 'home'      || null      // root only
-        null          | null         || 'author'    || null      // ambiguous: root + admin
-        null          | null         || 'report'    || null      // ambiguous: admin + sales
+        null          | null         || 'author'    || null      // root + admin: the default namespace
+        null          | null         || 'report'    || null      // admin + sales: ambiguous
         null          | null         || 'unknown'   || null      // not registered
-        // Ambiguous root+namespaced: the non-namespaced controller wins even from a matching namespace
-        'page'        | 'admin'      || 'author'    || null
-        // Ambiguous multiple-namespaced (no root): fall back to the current request namespace
+        // Defined in the request namespace: it wins over the default namespace, nearest scope first
+        'page'        | 'admin'      || 'author'    || 'admin'
         'page'        | 'admin'      || 'report'    || 'admin'
         'page'        | 'sales'      || 'report'    || 'sales'
         // Single controller with the name -> just works regardless of the current namespace
         'page'        | 'admin'      || 'book'      || 'admin'
         'page'        | 'sales'      || 'book'      || 'admin'
-        'page'        | 'sales'      || 'author'    || null      // ambiguous root+admin -> root
+        'page'        | 'sales'      || 'author'    || null      // not in sales: the default namespace
         'page'        | 'admin'      || 'home'      || null      // single root controller -> root
     }
 
@@ -114,7 +118,7 @@ class LinkGeneratorNamespaceInferenceSpec extends Specification {
         null          | null         || [controller: 'book', action: 'index']          || '/bar/admin/book/index'
         null          | null         || [controller: 'home', action: 'index']          || '/bar/home/index'
         null          | null         || [controller: 'author', action: 'index']        || '/bar/author/index'
-        'page'        | 'admin'      || [controller: 'author', action: 'list']         || '/bar/author/list'
+        'page'        | 'admin'      || [controller: 'author', action: 'list']         || '/bar/admin/author/list'
         'page'        | 'admin'      || [controller: 'report', action: 'index']        || '/bar/admin/report/index'
         'page'        | 'sales'      || [controller: 'report', action: 'index']        || '/bar/sales/report/index'
     }
@@ -201,6 +205,54 @@ class LinkGeneratorNamespaceInferenceSpec extends Specification {
         generator.link(controller: 'book', action: 'index', plugin: 'someplugin') == '/bar/book/index'
     }
 
+    def "a controller name no scope resolves is reported once until the cache is reset"() {
+        given: 'report is defined only in admin and sales, and the request is in the default namespace'
+        bindRequest('page', null)
+        def generator = createGenerator()
+        def logCapture = new LogCapture(DefaultLinkGenerator)
+
+        when: 'its namespace is inferred twice'
+        def first = generator.getDefaultNamespace('report', null)
+        def second = generator.getDefaultNamespace('report', null)
+
+        then: 'no namespace is inferred'
+        first == null
+        second == null
+
+        and: 'the ambiguity is reported once, as a warning naming the namespaces'
+        def reports = warningsAbout(logCapture, 'controller [report]')
+        reports.size() == 1
+        reports[0].contains('[admin, sales]')
+
+        when: 'the cache is reset, as a reload does, and the name is inferred again'
+        generator.resetControllerNamespaceCache()
+        generator.getDefaultNamespace('report', null)
+
+        then: 'it is reported again'
+        warningsAbout(logCapture, 'controller [report]').size() == 2
+
+        cleanup:
+        logCapture.close()
+    }
+
+    def "a controller name no scope resolves is reported again once the controllers change"() {
+        given: 'report is defined only in admin and sales, and the request is in the default namespace'
+        bindRequest('page', null)
+        def generator = createGenerator()
+        def logCapture = new LogCapture(DefaultLinkGenerator)
+
+        when: 'the ambiguity is reported, and a controller is then reloaded'
+        generator.getDefaultNamespace('report', null)
+        grailsApplication.addArtefact(ControllerArtefactHandler.TYPE, org.grails.web.mapping.nsinference.admin.ReportController)
+        generator.getDefaultNamespace('report', null)
+
+        then: 'it is reported against the reloaded controllers too, without resetting the cache'
+        warningsAbout(logCapture, 'controller [report]').size() == 2
+
+        cleanup:
+        logCapture.close()
+    }
+
     def "caching link generator does not collide across request namespaces for the same attrs"() {
         given: 'report exists in both admin and sales namespaces'
         def generator = createCachingGenerator()
@@ -235,6 +287,21 @@ class LinkGeneratorNamespaceInferenceSpec extends Specification {
         then: 'the resource link is namespaced per request (no cache collision)'
         adminUrl == '/bar/admin/report/index'
         salesUrl == '/bar/sales/report/index'
+    }
+
+    def "the controller handling the request is recognised by the name a hyphenated URL gave it"() {
+        given: 'a request mapped from /admin/book-shelf/..., which holds the controller name as the URL wrote it'
+        bindRequest('book-shelf', 'admin')
+        def generator = createGenerator()
+        generator.grailsUrlConverter = new HyphenatedUrlConverter()
+
+        expect: 'a link naming the controller either way keeps the request namespace, even when it targets a plugin'
+        generator.getDefaultNamespace('book-shelf', 'someplugin') == 'admin'
+        generator.getDefaultNamespace('bookShelf', 'someplugin') == 'admin'
+    }
+
+    private static List<String> warningsAbout(LogCapture logCapture, String subject) {
+        logCapture.events.findAll { it.level == Level.WARN && it.formattedMessage.contains(subject) }*.formattedMessage
     }
 
     private void bindRequest(String controllerName, String namespace) {

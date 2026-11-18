@@ -18,10 +18,7 @@
  */
 package org.grails.orm.hibernate.query;
 
-import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -87,9 +84,19 @@ public interface HqlQueryMethods {
         hints.forEach(d::setHint);
     }
 
+    /**
+     * @deprecated since 8.0.1, use {@link #populateParameters(HqlQueryDelegate, QueryParameters)} instead.
+     */
+    @Deprecated(since = "8.0.1", forRemoval = true)
     static void populateParameters(HqlQueryDelegate d, HqlQueryContext queryContext) {
-        if (queryContext.namedParams() != null && !queryContext.namedParams().isEmpty()) {
-            queryContext.namedParams().forEach((key, value) -> {
+        if (queryContext != null) {
+            populateParameters(d, queryContext.parameters());
+        }
+    }
+
+    static void populateParameters(HqlQueryDelegate d, QueryParameters parameters) {
+        if (parameters != null && parameters.hasNamed()) {
+            parameters.named().forEach((key, value) -> {
                 if (INTERNAL_SETTINGS.contains(key)) return;
                 Object val = convertValue(value);
                 if (val instanceof Collection) {
@@ -100,33 +107,15 @@ public interface HqlQueryMethods {
                     d.setParameter(key, val);
                 }
             });
-        } else if (queryContext.positionalParams() != null && !queryContext.positionalParams().isEmpty()) {
-            for (int i = 0; i < queryContext.positionalParams().size(); i++) {
-                Object val = convertValue(queryContext.positionalParams().get(i));
+        } else if (parameters != null && parameters.hasPositional()) {
+            for (int i = 0; i < parameters.positional().size(); i++) {
+                Object val = convertValue(parameters.positional().get(i));
                 d.setParameter(i + 1, val);
             }
         }
     }
 
     static Object convertValue(Object value) {
-        if (value instanceof CharSequence) {
-            return value.toString();
-        }
-        if (value instanceof Collection<?> coll) {
-            List<Object> newList = new ArrayList<>(coll.size());
-            for (Object o : coll) {
-                newList.add(convertValue(o));
-            }
-            return newList;
-        }
-        if (value != null && value.getClass().isArray()) {
-            int length = Array.getLength(value);
-            Object newArray = Array.newInstance(value.getClass().getComponentType() == CharSequence.class || CharSequence.class.isAssignableFrom(value.getClass().getComponentType()) ? String.class : value.getClass().getComponentType(), length);
-            for (int i = 0; i < length; i++) {
-                Array.set(newArray, i, convertValue(Array.get(value, i)));
-            }
-            return newArray;
-        }
-        return value;
+        return QueryParameters.convertValue(value);
     }
 }

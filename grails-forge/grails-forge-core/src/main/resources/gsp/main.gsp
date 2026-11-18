@@ -51,7 +51,7 @@
                                  through a form using the method it allows, with a badge
                                  showing the verb: a plain link would only produce a 405. --%>
                             <g:set var="navMethods"
-                                   value="${c.getPropertyValue('allowedMethods') instanceof Map ? c.getPropertyValue('allowedMethods')[c.defaultAction ?: 'index'] : null}"/>
+                                   value="${c.getPropertyValue('allowedMethods') instanceof Map ? ((Map) c.getPropertyValue('allowedMethods')).get(c.defaultAction ?: 'index') : null}"/>
                             <g:set var="navGetOk"
                                    value="${navMethods == null || 'GET' in [navMethods].flatten()*.toString()*.toUpperCase()}"/>
                             <g:set var="navControllerName" value="${(c.fullName ?: '')
@@ -132,8 +132,10 @@
                  contributes its own navActions (e.g. a security plugin's account menu)
                  supersedes this block. --%>
             <g:if test="${!pageProperty(name: 'page.navActions') && org.springframework.util.ClassUtils.isPresent('org.springframework.security.core.context.SecurityContextHolder', null)}">
+                <g:set var="securityContextHolderClass"
+                       value="${org.springframework.util.ClassUtils.forName('org.springframework.security.core.context.SecurityContextHolder', null)}"/>
                 <g:set var="securityAuthentication"
-                       value="${org.springframework.util.ClassUtils.forName('org.springframework.security.core.context.SecurityContextHolder', null).context?.authentication}"/>
+                       value="${securityContextHolderClass.context?.authentication}"/>
                 <g:set var="securityLoggedIn"
                        value="${securityAuthentication?.authenticated &&
                                !org.springframework.util.ClassUtils.forName('org.springframework.security.authentication.AnonymousAuthenticationToken', null).isInstance(securityAuthentication)}"/>

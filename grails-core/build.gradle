@@ -26,6 +26,7 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-plugin-cli'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
@@ -69,7 +70,6 @@ dependencies {
     api 'org.springframework:spring-context'
     api 'org.springframework.boot:spring-boot-autoconfigure'
 
-    compileOnly 'org.springframework:spring-test'
     compileOnly 'org.apache.groovy:groovy-templates'
 
     api project(':grails-common')
@@ -90,6 +90,8 @@ dependencies {
     }
     cliImplementation 'org.apache.groovy:groovy-json'
     cliImplementation 'org.apache.groovy:groovy-templates'
+
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'org.springframework:spring-jdbc'
     testImplementation 'org.springframework.boot:spring-boot-test'

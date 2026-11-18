@@ -59,10 +59,14 @@ dependencies {
     compileOnly project(':grails-services')
     compileOnly project(':grails-domain-class')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
 
     testImplementation project(':grails-testing-support-web')
     testImplementation 'org.spockframework:spock-core'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 // Ship the plugin views as templates (used by the s2ui-override command).

@@ -71,6 +71,7 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria cache(boolean cache) {
+        ensureQueryIsInitialized();
         query.cache(cache);
         return this;
     }
@@ -83,18 +84,21 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
 
     @Override
     public BuildableCriteria join(String property) {
+        ensureQueryIsInitialized();
         query.join(property);
         return this;
     }
 
     @Override
     public BuildableCriteria join(String property, JoinType joinType) {
+        ensureQueryIsInitialized();
         query.join(property, joinType);
         return this;
     }
 
     @Override
     public BuildableCriteria select(String property) {
+        ensureQueryIsInitialized();
         query.select(property);
         return this;
     }
@@ -172,5 +176,26 @@ public class CriteriaBuilder<T> extends AbstractCriteriaBuilder implements Build
     @Override
     public Object scroll(@DelegatesTo(Criteria.class) Closure c) {
         return invokeMethod(SCROLL_CALL, new Object[]{c});
+    }
+
+    /**
+     * Executes the criteria builder
+     *
+     * @param c The closure
+     * @return The result
+     */
+    public Object call(@DelegatesTo(Criteria.class) Closure c) {
+        ensureQueryIsInitialized();
+        uniqueResult = false;
+        invokeClosureNode(c);
+        
+        Object result;
+        if (!uniqueResult) {
+            result = invokeList();
+        }
+        else {
+            result = query.singleResult();
+        }
+        return result;
     }
 }

@@ -24,7 +24,10 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Category
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
+import org.grails.forge.options.ServletImpl
 import spock.lang.Unroll
 
 class GrailsSpringSecuritySpec extends ApplicationContextSpec implements CommandOutputFixture {
@@ -74,6 +77,40 @@ class GrailsSpringSecuritySpec extends ApplicationContextSpec implements Command
 
         and: 'a data spec covers the classic model'
         output['src/test/groovy/example/grails/UserSpec.groovy'].contains('[User, Role, UserRole]')
+    }
+
+    @Unroll
+    void 'the classic User domain maps through the #gorm mapping directive'() {
+        when:
+        def options = new Options(DevelopmentReloading.DEVTOOLS, gorm, ServletImpl.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION)
+        def user = generate(ApplicationType.WEB, options, ['grails-spring-security'])['grails-app/domain/example/grails/User.groovy']
+
+        then: 'the directive matches the data implementation'
+        user.contains(directive)
+
+        and: 'no directive from another data implementation leaks in'
+        !user.contains(foreign)
+
+        where:
+        gorm                | directive              | foreign
+        GormImpl.HIBERNATE5 | "table name: '`user`'" | "collection 'user'"
+        GormImpl.HIBERNATE7 | "table name: '`user`'" | "collection 'user'"
+        GormImpl.MONGODB    | "collection 'user'"    | "table name: '`user`'"
+    }
+
+    void 'the classic User domain carries no mapping block when neither Hibernate nor MongoDB is used'() {
+        when:
+        def options = new Options(DevelopmentReloading.DEVTOOLS, GormImpl.NEO4J, ServletImpl.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION)
+        def user = generate(ApplicationType.WEB, options, ['grails-spring-security'])['grails-app/domain/example/grails/User.groovy']
+
+        then: 'no persistence-unit directive is emitted for a store that uses neither'
+        !user.contains('static mapping')
+        !user.contains("table name: '`user`'")
+        !user.contains("collection 'user'")
+
+        and: 'the rest of the domain is still generated'
+        user.contains('class User implements Serializable')
+        user.contains('username unique: true, nullable: false')
     }
 
     void 'the feature shares the Spring Security category and advertises the plugin'() {

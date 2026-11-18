@@ -43,7 +43,9 @@ import org.grails.web.util.GrailsApplicationAttributes
  *
  * @author Graeme Rocher
  * @since 3.0
+ * @deprecated Spring MVC async processing now uses {@code StandardServletAsyncWebRequest}. Retained temporarily for binary compatibility.
  */
+@Deprecated(since = '8.0', forRemoval = true)
 @CompileStatic
 class AsyncGrailsWebRequest extends GrailsWebRequest implements AsyncWebRequest, AsyncListener {
 

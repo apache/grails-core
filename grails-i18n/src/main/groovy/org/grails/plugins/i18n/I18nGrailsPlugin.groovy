@@ -20,6 +20,8 @@ package org.grails.plugins.i18n
 
 import java.nio.file.Files
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 
@@ -27,10 +29,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication
 import org.springframework.boot.autoconfigure.condition.SearchStrategy
-import org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
 import org.springframework.boot.webmvc.autoconfigure.WebMvcAutoConfiguration
-import org.springframework.context.MessageSource
-import org.springframework.context.support.ReloadableResourceBundleMessageSource
 import org.springframework.core.io.FileSystemResource
 import org.springframework.util.StringUtils
 import org.springframework.web.context.WebApplicationContext
@@ -46,9 +45,7 @@ import grails.core.GrailsApplication
 import grails.plugins.GrailsPluginManager
 import grails.plugins.Plugin
 import grails.util.BuildSettings
-import grails.util.Environment
 import grails.util.GrailsUtil
-import org.grails.spring.context.support.PluginAwareResourceBundleMessageSource
 import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
 
 /**
@@ -59,7 +56,7 @@ import org.grails.web.i18n.ParamsAwareLocaleChangeInterceptor
  */
 @Slf4j
 @CompileStatic
-@AutoConfiguration(before = [MessageSourceAutoConfiguration, WebMvcAutoConfiguration])
+@AutoConfiguration(before = WebMvcAutoConfiguration)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 class I18nGrailsPlugin extends Plugin {
 
@@ -75,10 +72,6 @@ class I18nGrailsPlugin extends Plugin {
     static final String AVAILABLE_LOCALES_ATTRIBUTE = 'availableLocales'
 
     def beans = {
-        field('encoding', String).value(Settings.GSP_VIEW_ENCODING, 'UTF-8')
-        field('gspEnableReload', boolean).value(Settings.GSP_ENABLE_RELOAD, 'false')
-        field('cacheSeconds', int).value(Settings.I18N_CACHE_SECONDS, '5')
-        field('fileCacheSeconds', int).value(Settings.I18N_FILE_CACHE_SECONDS, '5')
         field('localeResolverType', String).value(Settings.I18N_LOCALE_RESOLVER, 'session')
         // Default locale for the read-only 'fixed' resolver; empty falls back to the JVM default.
         // No Settings constant exists for this key - the original file didn't use one either.
@@ -129,26 +122,27 @@ class I18nGrailsPlugin extends Plugin {
             new ParamsAwareLocaleChangeInterceptor(paramName: 'lang')
         }
 
-        bean(MessageSource).conditionalOnMissingBeanName(search: SearchStrategy.CURRENT) { GrailsApplication grailsApplication, GrailsPluginManager pluginManager ->
-            // Captured before tap: the message source has cacheSeconds/fileCacheSeconds
-            // properties of its own, which inside tap would shadow these injected fields.
-            int configuredCacheSeconds = cacheSeconds
-            int configuredFileCacheSeconds = fileCacheSeconds
-            new PluginAwareResourceBundleMessageSource(grailsApplication, pluginManager).tap {
-                defaultEncoding = encoding
-                fallbackToSystemLocale = false
-                if (Environment.current.reloadEnabled || gspEnableReload) {
-                    cacheSeconds = configuredCacheSeconds
-                    fileCacheSeconds = configuredFileCacheSeconds
-                }
-            }
-        }
+        // No messageSource bean: Spring Boot's MessageSourceAutoConfiguration owns it. Its base names
+        // are composed by I18nEnvironmentPostProcessor from the build-time i18n descriptors, and its
+        // encoding, caching and locale fallback come from spring.messages.* rather than a Grails
+        // message source of our own.
 
         // Discovers the locales the application is translated into so a language selector can list
         // only real translations; see AvailableLocaleResolver's own class docs for the full contract.
+        // The supplier is re-invoked after clearCache() so that a descriptor regenerated during
+        // development is picked up without a restart.
         bean(AvailableLocaleResolver).conditionalOnMissingBean() { GrailsApplication grailsApplication,
-                @Value('${grails.i18n.availableLocales.includePlugins:true}') boolean includePlugins ->
-            new AvailableLocaleResolver(grailsApplication.classLoader, fixedLocale(), includePlugins)
+                GrailsPluginManager pluginManager,
+                @Value('${grails.i18n.include-plugin-bundles:true}') boolean includePlugins ->
+            ClassLoader classLoader = grailsApplication.classLoader
+            Supplier<EffectiveI18nDescriptors> descriptors = {
+                // getAllPlugins() is topological order — the same order the effective base-name list
+                // is derived from, so locales and messages can never disagree about which plugins
+                // participate.
+                EffectiveI18nDescriptors.of(I18nDescriptors.load(classLoader),
+                        pluginManager.allPlugins.collect { it.name }, includePlugins)
+            } as Supplier<EffectiveI18nDescriptors>
+            new AvailableLocaleResolver(descriptors, fixedLocale())
         }
     }
 
@@ -222,12 +216,14 @@ class I18nGrailsPlugin extends Plugin {
             }
         }
 
-        def messageSource = ctx.getBean('messageSource')
-        if (messageSource instanceof ReloadableResourceBundleMessageSource) {
-            messageSource.clearCache()
-        }
+        // Boot's ResourceBundleMessageSource reads through java.util.ResourceBundle and exposes no
+        // clearCache() of its own, so the bundle cache is flushed at its source. Combined with a short
+        // spring.messages.cache-duration in development, the edited bundle is picked up on the next
+        // lookup. Note this only reloads *content*: a newly added base name is not in
+        // spring.messages.basename, which Boot reads once when it builds the message source.
+        ResourceBundle.clearCache(Thread.currentThread().contextClassLoader)
 
-        // A bundle may have been added/removed, so re-scan and re-publish the available locales.
+        // A bundle may have been added/removed, so re-read the descriptors and re-publish the locales.
         AvailableLocaleResolver availableLocaleResolver = ctx.getBeanProvider(AvailableLocaleResolver).getIfAvailable()
         if (availableLocaleResolver != null) {
             availableLocaleResolver.clearCache()

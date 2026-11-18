@@ -122,7 +122,7 @@ dependencies {
     // Use the simple datastore to ensure the base implementation works correctly
     api project(':grails-data-simple')
 
-    testRuntimeOnly 'org.slf4j:slf4j-nop' // Get rid of warning about missing slf4j implementation during tests
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
 
     runtimeOnly 'org.apache.groovy:groovy-dateutil', {
         // Groovy Date Utils Extensions are used in the tests

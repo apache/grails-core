@@ -175,4 +175,53 @@ class GrailsJacocoPluginSpec extends Specification {
         and: "only one aggregate task is registered on the root"
         result.output.count('jacocoAggregateReport') == 1
     }
+
+    def "jacocoAggregateReport includes a subproject's cli source set next to its main one"() {
+        given: "a subproject whose cli companion source set, as the grails-plugin-cli plugin adds, gains a directory after the aggregate is realized"
+        testProjectDir.resolve('settings.gradle').toFile().text = "include 'app-module'"
+        testProjectDir.resolve('build.gradle').toFile().text = """
+            tasks.register('printAggregateDirs') {
+                doLast {
+                    def aggregate = tasks.getByName('jacocoAggregateReport')
+                    aggregate.classDirectories.files.each { println "CLASS_DIR \${it}" }
+                    aggregate.sourceDirectories.files.each { println "SOURCE_DIR \${it}" }
+                }
+            }
+        """
+        def moduleDir = testProjectDir.resolve('app-module')
+        moduleDir.toFile().mkdirs()
+        moduleDir.resolve('build.gradle').toFile().text = """
+            plugins {
+                id 'groovy'
+                id 'org.apache.grails.gradle.grails-jacoco'
+            }
+            repositories { mavenCentral() }
+            sourceSets { cli }
+            // realize the aggregate before the source set gains a directory, as an eager build script or an IDE sync does
+            rootProject.tasks.getByName('jacocoAggregateReport')
+            sourceSets.cli.groovy.srcDir('src/extra-cli')
+        """
+
+        when: "listing the directories the aggregate reports on"
+        def result = GradleRunner.create()
+                .withProjectDir(testProjectDir.toFile())
+                .withArguments('printAggregateDirs')
+                .withPluginClasspath()
+                .build()
+
+        then: "the cli classes and sources are reported alongside main's"
+        reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/cli')
+        reported(result.output, 'CLASS_DIR', 'app-module/build/classes/groovy/main')
+        reported(result.output, 'SOURCE_DIR', 'app-module/src/cli/groovy')
+        reported(result.output, 'SOURCE_DIR', 'app-module/src/main/groovy')
+
+        and: "so is the directory added after the aggregate was realized, which a snapshot of the source set would miss"
+        reported(result.output, 'SOURCE_DIR', 'app-module/src/extra-cli')
+    }
+
+    /** Whether the output lists a directory under the label, by its path relative to the test project. */
+    private static boolean reported(String output, String label, String relativePath) {
+        String suffix = new File(relativePath).path
+        output.readLines().any { it.startsWith("${label} ") && it.endsWith(suffix) }
+    }
 }

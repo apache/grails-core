@@ -27,6 +27,7 @@ import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.query.event.PreQueryEvent
 import org.grails.datastore.mapping.multitenancy.exceptions.TenantException
+import org.grails.datastore.mapping.multitenancy.exceptions.TenantNotFoundException
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.context.ApplicationEvent
 import spock.lang.Specification
@@ -105,7 +106,7 @@ class MultiTenantEventListenerSpec extends Specification {
 
     // ─── onApplicationEvent: PreQueryEvent — non-multi-tenant entity ──────────
 
-    void "onApplicationEvent PreQueryEvent on non-multi-tenant entity does not call enableMultiTenancyFilter"() {
+    void "onApplicationEvent PreQueryEvent on non-multi-tenant entity passes the entity to enableMultiTenancyFilter"() {
         given:
         def datastore = Mock(HibernateDatastore)
         def entity    = Mock(PersistentEntity) { isMultiTenant() >> false }
@@ -116,12 +117,13 @@ class MultiTenantEventListenerSpec extends Specification {
         listener.onApplicationEvent(event)
 
         then:
+        1 * datastore.enableMultiTenancyFilter(entity)
         0 * datastore.enableMultiTenancyFilter()
     }
 
     // ─── onApplicationEvent: PreQueryEvent — multi-tenant entity ─────────────
 
-    void "onApplicationEvent PreQueryEvent on multi-tenant entity calls enableMultiTenancyFilter"() {
+    void "onApplicationEvent PreQueryEvent on multi-tenant entity passes the entity to enableMultiTenancyFilter"() {
         given:
         def datastore = Mock(HibernateDatastore)
         def entity    = Mock(PersistentEntity) { isMultiTenant() >> true }
@@ -132,7 +134,8 @@ class MultiTenantEventListenerSpec extends Specification {
         listener.onApplicationEvent(event)
 
         then:
-        1 * datastore.enableMultiTenancyFilter()
+        1 * datastore.enableMultiTenancyFilter(entity)
+        0 * datastore.enableMultiTenancyFilter()
     }
 
     void "onApplicationEvent PreQueryEvent with non-Hibernate source does not call enableMultiTenancyFilter"() {
@@ -165,10 +168,10 @@ class MultiTenantEventListenerSpec extends Specification {
         0 * entityAccess.setProperty(_, _)
     }
 
-    // ─── onApplicationEvent: PreInsertEvent — multi-tenant, no resolver → no-op ─
+    // ─── onApplicationEvent: PreInsertEvent — multi-tenant, resolver returns null → fails ─
 
-    void "onApplicationEvent PreInsertEvent on multi-tenant entity does not set tenantId when resolver returns null"() {
-        given: "resolver returns null tenant — no-op path"
+    void "onApplicationEvent PreInsertEvent on multi-tenant entity fails when resolver returns null"() {
+        given: "resolver returns null tenant"
         def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) { resolveTenantIdentifier() >> null }
         def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
         def entity       = Mock(PersistentEntity) {
@@ -182,13 +185,14 @@ class MultiTenantEventListenerSpec extends Specification {
         when:
         listener.onApplicationEvent(event)
 
-        then: "setProperty never called because currentId is null"
+        then: "no current tenant, and the tenant id of the entity is not kept"
+        thrown(TenantNotFoundException)
         0 * entityAccess.setProperty(_, _)
     }
 
-    // ─── onApplicationEvent: PreUpdateEvent — multi-tenant, no resolver → no-op ─
+    // ─── onApplicationEvent: PreUpdateEvent — multi-tenant, resolver returns null → fails ─
 
-    void "onApplicationEvent PreUpdateEvent on multi-tenant entity does not set tenantId when resolver returns null"() {
+    void "onApplicationEvent PreUpdateEvent on multi-tenant entity fails when resolver returns null"() {
         given:
         def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) { resolveTenantIdentifier() >> null }
         def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
@@ -204,6 +208,7 @@ class MultiTenantEventListenerSpec extends Specification {
         listener.onApplicationEvent(event)
 
         then:
+        thrown(TenantNotFoundException)
         0 * entityAccess.setProperty(_, _)
     }
 
@@ -249,7 +254,7 @@ class MultiTenantEventListenerSpec extends Specification {
         thrown(TenantException)
     }
 
-    void "onApplicationEvent PreInsertEvent reads tenantId from entity property when currentId is DEFAULT"() {
+    void "onApplicationEvent PreInsertEvent replaces the tenantId of the entity when the resolver returns DEFAULT"() {
         given: "resolver returns DEFAULT connection source id"
         def resolver     = Mock(org.grails.datastore.mapping.multitenancy.TenantResolver) {
             resolveTenantIdentifier() >> org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT
@@ -267,6 +272,29 @@ class MultiTenantEventListenerSpec extends Specification {
 
         when:
         listener.onApplicationEvent(event)
+
+        then:
+        1 * entityAccess.setProperty("tenantId", org.grails.datastore.mapping.core.connections.ConnectionSource.DEFAULT)
+        0 * entityAccess.setProperty("tenantId", "entity_tenant")
+    }
+
+    void "onApplicationEvent PreInsertEvent reads tenantId from entity property inside withoutTenant"() {
+        given:
+        def tenantId     = Mock(TenantId) { getName() >> "tenantId" }
+        def entity       = Mock(PersistentEntity) {
+            isMultiTenant() >> true
+            getTenantId()   >> tenantId
+        }
+        def entityAccess = Mock(org.grails.datastore.mapping.engine.EntityAccess) {
+            getProperty("tenantId") >> "entity_tenant"
+        }
+        def datastore    = Mock(HibernateDatastore)
+        def event        = new PreInsertEvent(datastore, entity, entityAccess)
+
+        when:
+        grails.gorm.multitenancy.CurrentTenantHolder.withoutTenant(datastore) {
+            listener.onApplicationEvent(event)
+        }
 
         then:
         1 * entityAccess.setProperty("tenantId", "entity_tenant")

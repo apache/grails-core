@@ -118,10 +118,19 @@ abstract class ApplicationContextDatabaseMigrationCommandSpec extends DatabaseMi
 class Book {
     String title
     Author author
+
+    static constraints = {
+        title nullable: false
+        author nullable: false
+    }
 }
 
 @Entity
 class Author {
     String name
     static hasMany = [books: Book]
+
+    static constraints = {
+        name nullable: false
+    }
 }

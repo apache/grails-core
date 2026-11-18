@@ -45,12 +45,22 @@ import org.grails.async.factory.BoundPromise
 /**
  * Promise based on RxJava 3.x
  *
+ * <p>RxJava 3 does not allow {@code null} to travel through a stream, so a {@code null} value is carried through the
+ * stream as {@link #NULL_VALUE} and turned back into {@code null} wherever a value leaves it: in {@link #get()} and in
+ * the value an {@link #onComplete(Closure)} callback receives. A promise of {@code null} therefore behaves as it does
+ * with every other promise factory.
+ *
  * @since 7.0
  */
 @AutoFinal
 @CompileStatic
 @PackageScope
 class RxPromise<T>  implements Promise<T> {
+
+    /**
+     * Stands in for {@code null} inside the RxJava stream, which cannot carry {@code null} itself.
+     */
+    static final Object NULL_VALUE = new Object()
 
     protected final Subject<T> subject
     protected final RxPromiseFactory promiseFactory
@@ -104,13 +114,18 @@ class RxPromise<T>  implements Promise<T> {
             @Override
             void onComplete() {
                 finished = true
+                subject.onComplete()
             }
         })
         this.subject = subject
     }
 
+    /**
+     * @return the result of this promise, which replays the value once it is known, rather than its source, which
+     * would run a task again for every subscriber
+     */
     Observable<T> toObservable() {
-        return this.observable
+        return this.subject
     }
 
     @Override
@@ -121,7 +136,10 @@ class RxPromise<T>  implements Promise<T> {
     @Override
     Promise<T> onComplete(Closure<T> callable) {
         def decoratedCallable = promiseFactory.applyDecorators(callable, null)
-        return new RxPromise<T>(promiseFactory, subject.map(decoratedCallable as Function<T, T>))
+        Function<T, T> restoringCallable = { T value ->
+            (T) wrap(decoratedCallable.call(unwrap(value)))
+        } as Function<T, T>
+        return new RxPromise<T>(promiseFactory, subject.map(restoringCallable))
     }
 
     @Override
@@ -161,13 +179,13 @@ class RxPromise<T>  implements Promise<T> {
 
     @Override
     T get() throws InterruptedException, ExecutionException {
-        return subject.blockingFirst()
+        return (T) unwrap(subject.blockingFirst())
     }
 
     @Override
     T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         try {
-            return subject.timeout(timeout, unit).blockingFirst()
+            return (T) unwrap(subject.timeout(timeout, unit).blockingFirst())
         } catch (Throwable e) {
             if (e.cause instanceof TimeoutException) {
                 throw e.cause
@@ -179,11 +197,20 @@ class RxPromise<T>  implements Promise<T> {
     }
 
     static Object runCallable(Closure callable) {
-        Object rtn = callable.call()
-        if (rtn == null) {
-            return Void
-        } else {
-            return rtn
-        }
+        return wrap(callable.call())
+    }
+
+    /**
+     * @return the value as it travels through the stream: {@link #NULL_VALUE} for {@code null}, the value itself otherwise
+     */
+    static Object wrap(Object value) {
+        return value == null ? NULL_VALUE : value
+    }
+
+    /**
+     * @return the value as the promise hands it out: {@code null} for {@link #NULL_VALUE}, the value itself otherwise
+     */
+    static Object unwrap(Object value) {
+        return value.is(NULL_VALUE) ? null : value
     }
 }

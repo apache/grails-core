@@ -33,6 +33,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectories
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
@@ -45,6 +46,8 @@ import javax.inject.Inject
 import javax.xml.parsers.ParserConfigurationException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 @CompileStatic
 @CacheableTask
@@ -52,6 +55,10 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
 
     @Input
     final Property<String> projectVersion
+
+    @Input
+    @Optional
+    final Property<String> endOfSupport
 
     @InputFile
     @PathSensitive(PathSensitivity.RELATIVE)
@@ -65,6 +72,7 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
         projectVersion = objects.property(String).convention(project.provider {
             project.version as String
         })
+        endOfSupport = objects.property(String)
         bomPublicationFile = objects.fileProperty()
         versionsDirectory = objects.directoryProperty()
     }
@@ -90,6 +98,15 @@ abstract class WriteGrailsVersionInfoTask extends DefaultTask {
 
         TreeMap<String, String> props = []
         props.put("grails.version", getProjectVersion().get())
+        if (endOfSupport.present) {
+            String date = endOfSupport.get().trim()
+            try {
+                LocalDate.parse(date)
+            } catch (DateTimeParseException e) {
+                throw new GradleException("grailsEndOfSupport must be an ISO date (yyyy-MM-dd) but was: ${date}", e)
+            }
+            props.put("grails.endOfSupport", date)
+        }
         ((GPathResult) pom.getProperty("properties")).children().forEach(child -> {
             NodeChild node = (NodeChild) child
             props.put(node.name(), node.text())

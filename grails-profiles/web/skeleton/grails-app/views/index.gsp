@@ -1,4 +1,5 @@
 <%@ page import="grails.util.Environment"%>
+<%@ page import="grails.web.mime.MimeType"%>
 <%@ page import="org.springframework.boot.SpringBootVersion"%>
 <%@ page import="org.springframework.core.SpringVersion"%>
 <%@ page import="org.springframework.util.ClassUtils"%>
@@ -7,13 +8,13 @@
 <g:set var="pluginsWithOrder"
        value="${pluginManager.allPlugins.toList()
                .withIndex()
-               .collect { p, i -> [plugin: p, order: i + 1] }
-               .sort { a, b -> a.plugin.name.toLowerCase() <=> b.plugin.name.toLowerCase() }}"
+               .collect { p, i -> [plugin: p, order: ((int) i) + 1] }
+               .sort { Map row -> ((grails.plugins.GrailsPlugin) row.plugin).name.toLowerCase() }}"
 />
-<g:set var="numControllers" value="${grailsApplication.controllerClasses.size()}"/>
-<g:set var="numDomains" value="${grailsApplication.domainClasses.size()}"/>
-<g:set var="numServices" value="${grailsApplication.serviceClasses.size()}"/>
-<g:set var="numTagLibs" value="${grailsApplication.tagLibClasses.size()}"/>
+<g:def type="int" var="numControllers" value="${grailsApplication.controllerClasses.size()}"/>
+<g:def type="int" var="numDomains" value="${grailsApplication.domainClasses.size()}"/>
+<g:def type="int" var="numServices" value="${grailsApplication.serviceClasses.size()}"/>
+<g:def type="int" var="numTagLibs" value="${grailsApplication.tagLibClasses.size()}"/>
 <!doctype html>
 <html>
 <head>
@@ -71,9 +72,13 @@
                                 </span>
                                 ${SpringVersion.getVersion()}
                             </li>
-                            <%-- Spring Security: only when the dependency is present --%>
+                            <%-- Spring Security: only when the dependency is present. The version comes
+                                 off the package the class was loaded from, the way the banner reads it,
+                                 so there is no reflection here for a native image to reject. --%>
+                            <g:set var="springSecurityCoreVersionClass"
+                                   value="${ClassUtils.isPresent('org.springframework.security.core.SpringSecurityCoreVersion', null) ? ClassUtils.forName('org.springframework.security.core.SpringSecurityCoreVersion', null) : null}"/>
                             <g:set var="springSecurityVersion"
-                                   value="${ClassUtils.isPresent('org.springframework.security.core.SpringSecurityCoreVersion', null) ? ClassUtils.forName('org.springframework.security.core.SpringSecurityCoreVersion', null).getMethod('getVersion').invoke(null) : null}"/>
+                                   value="${springSecurityCoreVersionClass?.package?.implementationVersion}"/>
                             <g:if test="${springSecurityVersion}">
                                 <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                     <span class="d-inline-flex align-items-center text-body-secondary">
@@ -368,7 +373,7 @@
                                              through a form using the method it allows, with the
                                              methods shown as a badge in place of the URL link. --%>
                                         <g:set var="ctrlMethods"
-                                               value="${c.getPropertyValue('allowedMethods') instanceof Map ? c.getPropertyValue('allowedMethods')[c.defaultAction ?: 'index'] : null}"/>
+                                               value="${c.getPropertyValue('allowedMethods') instanceof Map ? ((Map) c.getPropertyValue('allowedMethods')).get(c.defaultAction ?: 'index') : null}"/>
                                         <g:set var="ctrlGetOk"
                                                value="${ctrlMethods == null || 'GET' in [ctrlMethods].flatten()*.toString()*.toUpperCase()}"/>
                                         <g:set var="showBase"
@@ -451,11 +456,11 @@
                         <g:set var="domainsByPlugin"
                                value="${grailsApplication.domainClasses.toList()
                                        .groupBy { dc ->
-                                           def plugin = null
-                                           try { plugin = pluginManager.getPluginForClass(dc.clazz) } catch (Throwable ignored) { }
-                                           plugin?.name ?: ''
+                                           String pluginName = ''
+                                           try { pluginName = pluginManager.getPluginForClass(dc.clazz)?.name ?: '' } catch (Throwable ignored) { }
+                                           pluginName
                                        }
-                                       .sort { a, b -> a.key.toLowerCase() <=> b.key.toLowerCase() }}"/>
+                                       .sort { it.key.toLowerCase() }}"/>
                         <div id="domains-list">
                             <g:each var="pEntry" in="${domainsByPlugin}" status="pIndex">
                                 <div class="${pIndex > 0 ? 'mt-4' : ''}" data-filter-group>
@@ -557,41 +562,83 @@
                      Development-only: this card enumerates filter pipelines, security
                      chains and bean internals that a production home page should not expose. --%>
                 <g:if test="${Environment.current == Environment.DEVELOPMENT}">
-                <g:set var="appListeners"
+                <g:def type="List" var="appListeners"
                        value="${applicationContext.applicationListeners.toList()
                                .collect { l -> [name: (l.getClass().simpleName ?: l.getClass().name.tokenize('.').last()),
                                                 packageName: (l.getClass().package?.name ?: ''),
                                                 detail: l.toString()] }
-                               .sort { a, b -> (a.name.toLowerCase() <=> b.name.toLowerCase()) ?: (a.detail <=> b.detail) }}"/>
+                               .sort { Map<String, String> a, Map<String, String> b -> (a.name.toLowerCase() <=> b.name.toLowerCase()) ?: (a.detail <=> b.detail) }}"/>
                 <g:set var="bindingGroups"
                        value="${[[code: 'welcome.binding.value', beans: applicationContext.getBeansOfType(grails.databinding.converters.ValueConverter)],
                                  [code: 'welcome.binding.formatted', beans: applicationContext.getBeansOfType(grails.databinding.converters.FormattedValueConverter)],
                                  [code: 'welcome.binding.structured', beans: applicationContext.getBeansOfType(grails.databinding.TypedStructuredBindingEditor)],
                                  [code: 'welcome.binding.listeners', beans: applicationContext.getBeansOfType(grails.databinding.events.DataBindingListener)]]}"/>
-                <g:set var="numBindingBeans" value="${bindingGroups.sum { g -> g.beans.size() } ?: 0}"/>
-                <g:set var="mimeTypeProviders"
+                <g:def type="int" var="numBindingBeans" value="${(bindingGroups.sum { g -> g.beans.size() } ?: 0)}"/>
+                <g:def type="List" var="mimeTypeProviders"
                        value="${applicationContext.getBeansOfType(grails.web.mime.MimeTypeProvider)
                                .entrySet().toList().sort { it.key.toLowerCase() }}"/>
-                <%-- The filters still on the call stack ARE this request's pipeline, in
-                     execution order: walk the reversed stack, keep Filter classes, collapse
-                     the extra frames a filter contributes through its abstract bases, and
-                     number what remains. No registry can report this actual order. --%>
-                <g:set var="requestFilters"
-                       value="${Thread.currentThread().stackTrace.toList().reverse()
-                               .findResults { ste ->
-                                   def cls = null
-                                   try { cls = Class.forName(ste.className, false, Thread.currentThread().contextClassLoader) } catch (Throwable ignored) { }
-                                   (cls != null && jakarta.servlet.Filter.isAssignableFrom(cls)) ? cls : null
-                               }
-                               .inject([]) { acc, cls ->
-                                   def prev = acc ? acc[-1] : null
-                                   if (prev == cls) { return acc }
-                                   if (prev != null && prev.isAssignableFrom(cls)) { acc[-1] = cls; return acc }
-                                   if (prev != null && cls.isAssignableFrom(prev)) { return acc }
-                                   acc << cls
-                               }
-                               .unique()}"/>
-                <g:set var="filterRegistrations"
+                <%-- Every filter mapping in the container. Tomcat builds each request's chain
+                     from its filter maps in two passes, the maps whose URL patterns match and
+                     then the maps whose servlet names match, adding a filter once. So one row
+                     per map, URL-pattern maps first, numbered in that order: a filter mapped
+                     more than once can run at a different position for different requests.
+                     A bare `*` is held in the match-all flags rather than in the arrays.
+                     Tomcat also skips a map that is not for the request's dispatcher type, and
+                     a map that states none is for REQUEST, so a map that leaves out REQUEST is
+                     badged with the dispatcher types it is for.
+                     Other containers expose no order, so list Spring Boot's enabled
+                     registrations in the order it registers them, then the container's other
+                     filters, all unnumbered. --%>
+                <g:set var="tomcatContext"
+                       value="${ { ->
+                           try {
+                               applicationContext.webServer.tomcat.host.findChildren().find { it.path == request.contextPath }
+                           } catch (Throwable ignored) {
+                               null
+                           }
+                       }() }"/>
+                <g:def type="List" var="servletFilterGroups"
+                       value="${(tomcatContext
+                               ? { ->
+                                   List maps = tomcatContext.findFilterMaps() as List
+                                   Closure row = { fm, matchAll, values ->
+                                       List mappings = []
+                                       if (matchAll) {
+                                           mappings << '*'
+                                       }
+                                       mappings.addAll(values as List)
+                                       [name: fm.filterName, className: tomcatContext.findFilterDef(fm.filterName)?.filterClass ?: '', mappings: mappings,
+                                        dispatchers: (fm.dispatcherNames as List) ?: ['REQUEST']]
+                                   }
+                                   List byUrl = maps.findAll { it.matchAllUrlPatterns || it.URLPatterns }
+                                           .collect { fm -> row(fm, fm.matchAllUrlPatterns, fm.URLPatterns) }
+                                   List byServlet = maps.findAll { it.matchAllServletNames || it.servletNames }
+                                           .collect { fm -> row(fm, fm.matchAllServletNames, fm.servletNames) }
+                                   (byUrl + byServlet).eachWithIndex { r, int i -> r.position = i + 1 }
+                                   [[code: 'welcome.filters.byUrl', rows: byUrl], [code: 'welcome.filters.byServlet', rows: byServlet]]
+                               }()
+                               : { ->
+                                   List springFilters = new org.springframework.boot.web.servlet.ServletContextInitializerBeans(
+                                               (org.springframework.beans.factory.ListableBeanFactory) applicationContext).toList()
+                                           .findAll { it instanceof org.springframework.boot.web.servlet.AbstractFilterRegistrationBean && it.enabled }
+                                           .collect { initializer ->
+                                               def rb = (org.springframework.boot.web.servlet.AbstractFilterRegistrationBean) initializer
+                                               List servletNames = (rb.servletNames as List) + rb.servletRegistrationBeans*.servletName
+                                               List urlPatterns = (rb.urlPatterns || servletNames) ? rb.urlPatterns as List : ['/*']
+                                               [name: rb.filterName, className: rb.filter?.getClass()?.name ?: '', mappings: urlPatterns + servletNames,
+                                                dispatchers: rb.determineDispatcherTypes()*.name()]
+                                           }
+                                   Set springNames = springFilters*.name as Set
+                                   [[code: null, rows: springFilters + request.servletContext.filterRegistrations.values()
+                                           .findAll { !(it.name in springNames) }
+                                           .sort { it.name.toLowerCase() }
+                                           .collect { reg ->
+                                               [name: reg.name, className: reg.className ?: '', mappings: reg.urlPatternMappings + reg.servletNameMappings,
+                                                dispatchers: []]
+                                           }]]
+                               }()).findAll { it.rows }}"/>
+                <g:def type="int" var="numServletFilters" value="${(servletFilterGroups.sum { g -> g.rows.size() } ?: 0)}"/>
+                <g:def type="List" var="filterRegistrations"
                        value="${applicationContext.getBeansOfType(org.springframework.boot.web.servlet.FilterRegistrationBean)
                                .entrySet().toList().sort { it.value.order }}"/>
                 <g:set var="filterChainProxyType"
@@ -603,9 +650,9 @@
                                .collect { chain, i ->
                                    def matcher = ''
                                    try { matcher = chain.requestMatcher?.toString() ?: '' } catch (Throwable ignored) { }
-                                   [index: i + 1, matcher: matcher, filters: chain.filters]
+                                   [index: ((int) i) + 1, matcher: matcher, filters: chain.filters]
                                } : []}"/>
-                <g:set var="numSecurityFilters" value="${securityFilterChains.sum { c -> c.filters.size() } ?: 0}"/>
+                <g:def type="int" var="numSecurityFilters" value="${(securityFilterChains.sum { c -> c.filters.size() } ?: 0)}"/>
 
                 <%-- URL MAPPINGS: the active mappings in evaluation order, plus a resolver
                      that replays UrlMappingsHolder.matchAll for a pasted URL and method.
@@ -625,7 +672,7 @@
                                def constraints = (mapping.constraints ?: []) as List
                                int ci = 0
                                StringBuilder pattern = new StringBuilder('/')
-                               def tokens = data.tokens
+                               String[] tokens = (String[]) data.tokens
                                tokens.eachWithIndex { token, i ->
                                    String finalToken = token
                                    while (finalToken.contains('(*)') || finalToken.contains('(**)')) {
@@ -663,7 +710,7 @@
                                m.pluginName ? target + ' (' + m.pluginName + ')' : target
                            } catch (Throwable ignored) { String.valueOf(m) }
                        } }"/>
-                <g:set var="urlMappingRows"
+                <g:def type="List" var="urlMappingRows"
                        value="${urlMappingsHolder ? urlMappingsHolder.urlMappings.toList().collect { m ->
                                [mapping: m, pattern: urlMappingPattern(m), method: (m.httpMethod ?: '*'), target: urlMappingTarget(m)]
                            } : []}"/>
@@ -706,7 +753,7 @@
                            if (request.contextPath && path.startsWith(request.contextPath + '/')) { path = path.substring(request.contextPath.length()) }
                            path.startsWith('/') ? path : '/' + path
                        }() }"/>
-                <g:set var="resolveMatches"
+                <g:def type="List" var="resolveMatches"
                        value="${ { ->
                            if (!urlMappingsHolder || !resolvePath) { return [] }
                            try { (urlMappingsHolder.matchAll(resolvePath, resolveMethodParam) ?: []).toList() }
@@ -776,7 +823,7 @@
                            urlMappingRows.findAll { r ->
                                try { r.mapping.urlData.hasProperty('responseCode') && r.mapping.urlData.responseCode == 404 }
                                catch (Throwable ignored) { false }
-                           }.withIndex().collect { r, i -> r + [rank: i + 1] }
+                           }.withIndex().collect { r, i -> ((Map) r) + [rank: ((int) i) + 1] }
                        }() }"/>
                 <%-- URL Mappings is the card's default panel whenever the holder exists;
                      it is computed server-side so resolver round-trips (plain GETs back
@@ -830,7 +877,7 @@
                                         <button type="button" class="dropdown-item d-flex justify-content-between align-items-center"
                                                 data-switch-type="filters" aria-pressed="false">
                                             <g:message code="welcome.filters.title"/>
-                                            <span class="badge bg-body-tertiary text-body border ms-3">${requestFilters.size()}</span>
+                                            <span class="badge bg-body-tertiary text-body border ms-3">${numServletFilters}</span>
                                         </button>
                                     </li>
                                     <li>
@@ -855,7 +902,7 @@
                                 <span class="badge bg-body-tertiary text-body border ${runtimePanel == 'listeners' ? '' : 'd-none'}" data-switch-for="listeners">${appListeners.size()}</span>
                                 <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="binding">${numBindingBeans}</span>
                                 <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="mimeproviders">${mimeTypeProviders.size()}</span>
-                                <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="filters">${requestFilters.size()}</span>
+                                <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="filters">${numServletFilters}</span>
                                 <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="registrations">${filterRegistrations.size()}</span>
                                 <g:if test="${filterChainProxyType}">
                                     <span class="badge bg-body-tertiary text-body border d-none" data-switch-for="securitychain">${numSecurityFilters}</span>
@@ -863,7 +910,7 @@
                                 <g:if test="${urlMappingsHolder}">
                                     <span class="badge bg-body-tertiary text-body border ${runtimePanel == 'urlmappings' ? '' : 'd-none'}" data-switch-for="urlmappings">${urlMappingRows.size()}</span>
                                 </g:if>
-                                <g:if test="${appListeners.size() + numBindingBeans + mimeTypeProviders.size() + requestFilters.size() + filterRegistrations.size() + numSecurityFilters + urlMappingRows.size() != 0}">
+                                <g:if test="${appListeners.size() + numBindingBeans + mimeTypeProviders.size() + numServletFilters + filterRegistrations.size() + numSecurityFilters + urlMappingRows.size() != 0}">
                                     <div class="dropdown">
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown"
                                                 data-bs-auto-close="outside" aria-expanded="false"
@@ -990,26 +1037,47 @@
                         </div>
 
                         <div data-switch-for="filters" class="d-none">
-                        <g:if test="${requestFilters}">
+                        <g:if test="${numServletFilters}">
                             <p class="small text-body-secondary mb-3">
-                                <g:message code="welcome.filters.request"/>
+                                <g:message code="${tomcatContext ? 'welcome.filters.description' : 'welcome.filters.unordered'}"/>
                             </p>
                         </g:if>
                         <div id="filters-list">
-                            <ul class="list-group list-group-flush">
-                                <g:each var="f" in="${requestFilters}" status="fi">
-                                    <li class="list-group-item px-2 d-flex align-items-center justify-content-between gap-2"
-                                        data-name="${f.simpleName ?: f.name.tokenize('.').last()} ${f.package?.name ?: ''}" title="${f.name}">
-                                        <span class="d-flex align-items-center gap-2 min-w-0">
-                                            <span class="small text-body-secondary" style="font-variant-numeric: tabular-nums;">${(fi + 1).toString().padLeft(2, '0')}</span>
-                                            <span class="fw-semibold text-body text-truncate">${f.simpleName ?: f.name.tokenize('.').last()}</span>
-                                        </span>
-                                        <span class="small text-body-secondary text-truncate">${f.package?.name ?: ''}</span>
-                                    </li>
-                                </g:each>
-                            </ul>
+                            <g:each var="group" in="${servletFilterGroups}" status="gIndex">
+                                <div class="${gIndex > 0 ? 'mt-4' : ''}" data-filter-group>
+                                    <g:if test="${servletFilterGroups.size() > 1}">
+                                        <div class="px-2 py-2 bg-body-tertiary">
+                                            <div class="small text-uppercase text-body-secondary fw-semibold"
+                                                 style="letter-spacing: .04em;">
+                                                <g:message code="${group.code}"/> (${group.rows.size()})
+                                            </div>
+                                        </div>
+                                    </g:if>
+                                    <ul class="list-group list-group-flush">
+                                        <g:each var="f" in="${group.rows}">
+                                            <%-- Lambda and anonymous filter classes have no readable simple name. --%>
+                                            <g:set var="fSimpleName" value="${f.className && !f.className.contains('$') ? f.className.tokenize('.').last() : f.name}"/>
+                                            <g:set var="fPackage" value="${f.className.contains('.') ? f.className.substring(0, f.className.lastIndexOf('.')) : ''}"/>
+                                            <li class="list-group-item px-2 d-flex align-items-center justify-content-between gap-2"
+                                                data-name="${fSimpleName} ${f.name} ${fPackage} ${f.mappings.join(' ')} ${f.dispatchers.join(' ')}" title="${f.name} (${f.className})">
+                                                <span class="d-flex align-items-center gap-2 min-w-0">
+                                                    <g:if test="${f.position}">
+                                                        <span class="small text-body-secondary" style="font-variant-numeric: tabular-nums;">${f.position.toString().padLeft(2, '0')}</span>
+                                                    </g:if>
+                                                    <span class="fw-semibold text-body text-truncate">${fSimpleName}</span>
+                                                    <span class="small text-nowrap"><g:each var="m" in="${f.mappings}"><code class="me-1">${m}</code></g:each></span>
+                                                    <g:if test="${f.dispatchers && !f.dispatchers.contains('REQUEST')}">
+                                                        <span class="text-nowrap" title="${message(code: 'welcome.filters.dispatchers')}"><g:each var="d" in="${f.dispatchers}"><span class="badge bg-body-tertiary text-body-secondary border fw-normal me-1">${d}</span></g:each></span>
+                                                    </g:if>
+                                                </span>
+                                                <span class="small text-body-secondary text-truncate">${fPackage}</span>
+                                            </li>
+                                        </g:each>
+                                    </ul>
+                                </div>
+                            </g:each>
                         </div>
-                        <g:if test="${requestFilters}">
+                        <g:if test="${numServletFilters}">
                             <p id="filters-empty" class="small text-body-secondary d-none mb-0"><g:message code="welcome.filter.none"/></p>
                         </g:if>
                         <g:else>
@@ -1337,7 +1405,7 @@
                 <g:set var="mimeTypes"
                        value="${applicationContext.containsBean('mimeTypes') ?
                                applicationContext.getBean('mimeTypes').toList()
-                                       .sort { a, b -> ((a.extension ?: '').toLowerCase() <=> (b.extension ?: '').toLowerCase()) ?: (a.name <=> b.name) } : []}"/>
+                                       .sort { MimeType a, MimeType b -> ((a.extension ?: '').toLowerCase() <=> (b.extension ?: '').toLowerCase()) ?: (a.name <=> b.name) } : []}"/>
                 <div class="card border-1 shadow-sm mt-4">
                     <div class="card-body">
                         <div class="d-flex align-items-center justify-content-between mb-3">

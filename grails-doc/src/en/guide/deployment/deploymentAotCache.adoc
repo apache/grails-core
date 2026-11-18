@@ -1,0 +1,191 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Spring's AOT processing removes the work of *deciding* what the beans are. What remains is the work the JVM does regardless: loading and linking classes, and interpreting methods until they are compiled. An AOT cache removes most of that as well.
+
+The JDK can record a run of an application — the classes it loaded and linked, and the profiles of the methods it executed — into a cache file, and read that file on the next start instead of doing the work again. The cache is a JDK feature rather than a framework one, so it applies to the whole application: the framework, Spring, Hibernate, and the application's own classes alike.
+
+It requires JDK 25 or later.
+
+Training is POSIX-only. The cache is written as the training JVM exits normally, so the run has to be asked to stop rather than killed — and a child process on Windows can only be killed. `trainAotCache` says so and stops rather than training a run it could not end. Reading a cache has no such restriction; only producing one does.
+
+
+=== Enabling the cache
+
+
+The cache is produced by running the application, so it is off unless asked for. Say which pages matter:
+
+[source,groovy]
+----
+grails {
+    aotCache {
+        enabled = true
+        paths = ['/', '/login', '/book/index', '/book/show/1']
+    }
+}
+----
+
+That adds two tasks. `extractAotCacheApplication` unpacks the executable jar into `build/aot-cache/application`, and `trainAotCache` runs what it unpacked, asks for each path, stops it, and leaves the cache beside the extracted application:
+
+[source,bash]
+----
+./gradlew trainAotCache
+----
+
+[source]
+----
+Trained myapp.aot (167 MB) over 4 paths
+----
+
+The application is unpacked first because a cache is read against the layout it was trained on. An executable jar loads its dependencies through a nested-jar classloader; the extracted form loads them as ordinary jars on the classpath, and only the second is a layout a cache can be reused against.
+
+
+=== Running with the cache
+
+
+`build/aot-cache` is what is deployed: the extracted application, and beside it the cache and what it was trained from.
+
+[source]
+----
+build/aot-cache/
+├── application/          <1>
+├── myapp.aot             <2>
+└── aot-cache.properties  <3>
+----
+<1> the extracted application, which is the layout the cache was trained against
+<2> the cache
+<3> what the cache was trained from
+
+[source,bash]
+----
+java -XX:AOTCache=build/aot-cache/myapp.aot -Dspring.aot.enabled=true -Dgrails.env=production \
+    -jar build/aot-cache/application/myapp.jar
+----
+
+It does not matter which directory it is started from. Moving the whole of `aot-cache` elsewhere is fine too — a container image that unpacks it under `/opt` is the usual case — as long as the cache and `application/` move together and keep their timestamps, which the cache checks the archive against. Copying only the jar out of `application/` does not work, and not because of the cache: the extracted layout reaches its dependencies through `lib/` beside it.
+
+A JVM given a cache it cannot use does not fail. It reports why, ignores the cache, and starts as it would have anyway — so an invalid cache costs the startup time it was meant to save, silently, and without any other symptom.
+
+Adding `-XX:AOTMode=on` turns that into a failure to start, which is worth doing wherever the cache is the reason the deployment meets its startup time. A cache that has been invalidated then stops the process rather than quietly making it slower:
+
+[source]
+----
+[0.003s][warning][aot] Unable to use AOT cache.
+[0.003s][error  ][aot] Loading static archive failed.
+----
+
+
+=== What the training run should do
+
+
+A cache makes the next start fast at whatever the training run did. Training a run that only refreshes the context records the framework starting, and that alone is most of what the startup time is — so most of the benefit is there before any path is named.
+
+Asking for paths adds a little to that and a good deal more to the first request. Each path asked for during training profiles the code that answers it — URL mapping, the controller, GSP rendering, the data access behind it — so the first real request finds that work done rather than doing it itself.
+
+So `paths` is worth setting for the pages that matter on a cold start: the ones a load balancer hits first, and the ones a user sees first. An application whose startup time is all that matters can leave it empty and still get most of the benefit.
+
+A path that answers with an error still profiles the code that produced the error, which is code the application runs too, so nothing here fails the build. The run is a recording, not a test.
+
+WARNING: The training run is a real run of the application. It executes bootstrap code, connects to whatever the configuration points at, and writes whatever that code writes. Point it at a build-time or throwaway database, never at production.
+
+It follows that the application has to be able to start in the environment it is trained in, which is production by default — the environment the cache is for. A datasource that only exists in development is not there during training, and the run fails with whatever the application says when it cannot reach its database:
+
+[source]
+----
+The training run ended before it started serving.
+What it printed is in build/tmp/trainAotCache/training.log
+----
+
+The build fails rather than carrying on, because a cache that was never written is indistinguishable at deployment time from one that was.
+
+Where the defaults are not right, the rest of the run is configurable:
+
+[source,groovy]
+----
+grails {
+    aotCache {
+        enabled = true
+        paths = ['/']
+        jvmArguments = ['-Dspring.aot.enabled=true', '-Dgrails.env=production']
+        port = 18080
+        startTimeoutSeconds = 120
+    }
+}
+----
+
+`jvmArguments` is given to the training run *and* has to be given to every run that reads the cache. A cache records what it saw; a run configured differently from the training run is a different application as far as the cache is concerned, and its cache will be declined.
+
+Because those arguments have to be reproduced at deployment time, they are recorded in `aot-cache.properties`, which ships beside the cache. Keep credentials out of them and pass them to the training run another way.
+
+
+=== Knowing whether a cache still applies
+
+
+A cache is read only by the JDK build that wrote it, against the archive it was trained on, with the arguments it was trained with. Any of those changing invalidates it, and the only symptom is that startup is no longer fast.
+
+Training runs on the project's Java toolchain where it declares one, so the JDK recorded here is the one the application is compiled for rather than whichever one happened to run Gradle.
+
+So the training run writes `aot-cache.properties` beside the cache, recording what it was made from:
+
+[source]
+----
+cache.file=myapp.aot
+cache.bytes=175019584
+application.archive=myapp-0.1.jar
+application.sha256=6f1b...
+training.arguments=-Dspring.aot.enabled=true -Dgrails.env=production
+training.paths=/ /login /book/index /book/show/1
+java.runtime.version=26.0.2+13
+java.vendor=BellSoft
+os.name=Mac OS X
+os.arch=aarch64
+----
+
+A deployment can compare those values against the JVM it is about to start and the jar it is about to run, and decide whether it has a cache that applies or one that will be quietly ignored. Because the cache is tied to an exact JDK build, a CI pipeline that produces the cache must publish it alongside the JDK it was produced with, and a base image upgrade invalidates every cache built against the previous one.
+
+
+=== What it is worth
+
+
+Measured on a Grails application with GORM for Hibernate, security and asset pipeline, best of three starts on the same machine and JDK:
+
+[cols="3,1,2"]
+|===
+| Start | Startup | First hit of four cold paths
+
+| Ordinary
+| 2.594s
+|
+
+| Spring AOT
+| 2.284s
+|
+
+| Spring AOT with a cache trained on refresh only
+| 1.015s
+| 0.495s
+
+| Spring AOT with a cache trained over those paths
+| 0.933s
+| 0.332s
+|===
+
+The shape of that is the point. Spring's AOT processing on its own moves less than might be expected, because deciding what the beans are was never most of the cost — loading and linking the classes was, and that is what the cache removes, cutting startup by more than half. Naming the paths takes a further tenth off startup and a third off the first requests.
+
+An AOT cache and a native image solve the same problem differently and are not combined: a native image has no cache to read because it has already done all of this at build time. The cache is what an application gets when it stays on the JVM — including applications a native image cannot yet build, which is most of those using Hibernate.

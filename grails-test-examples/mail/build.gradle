@@ -45,6 +45,8 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap-icons'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'org.apache.grails:grails-services'
     runtimeOnly 'org.apache.grails:grails-url-mappings'

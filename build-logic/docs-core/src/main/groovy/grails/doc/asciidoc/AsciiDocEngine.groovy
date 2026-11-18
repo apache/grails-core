@@ -44,7 +44,11 @@ class AsciiDocEngine extends DocEngine {
     Map attributes = [
         'imagesdir': '../img',
         'source-highlighter': 'coderay',
-        'icons': 'font'
+        'icons': 'font',
+        // Each guide section is rendered on its own, so its first heading sits at the depth the section
+        // occupies in the table of contents rather than at level 1. Rendering it as a fragment stops
+        // Asciidoctor warning about that, while headings nested inside the section are still checked.
+        'fragment': ''
     ]
     @Override
     String render(String content, RenderContext context) {

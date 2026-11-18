@@ -1,0 +1,90 @@
+{
+    "groups": [
+        {
+            "name": "grails.openapi",
+            "description": "OpenAPI"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.openapi.enabled",
+            "type": "java.lang.Boolean",
+            "description": "Whether the OpenAPI description is generated at all.",
+            "defaultValue": true
+        },
+        {
+            "name": "grails.openapi.base-document",
+            "type": "java.lang.String",
+            "description": "A resource location, such as classpath:openapi-base.yml, of a YAML or JSON document the description starts from."
+        },
+        {
+            "name": "grails.openapi.display-name",
+            "type": "java.lang.String",
+            "description": "The title of the default document, in place of info.app.name."
+        },
+        {
+            "name": "grails.openapi.annotated-only",
+            "type": "java.lang.Boolean",
+            "description": "Whether only actions that declare @Operation, or whose controller declares @Tag, are described.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.openapi.include-form-actions",
+            "type": "java.lang.Boolean",
+            "description": "Whether the create and edit actions of a RestfulController, which answer HTML forms, are described.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.openapi.paths-to-match",
+            "type": "java.util.List<java.lang.String>",
+            "description": "Ant patterns of the paths the default document describes."
+        },
+        {
+            "name": "grails.openapi.paths-to-exclude",
+            "type": "java.util.List<java.lang.String>",
+            "description": "Ant patterns of the paths the default document leaves out."
+        },
+        {
+            "name": "grails.openapi.packages-to-scan",
+            "type": "java.util.List<java.lang.String>",
+            "description": "The packages, with their sub-packages, of the controllers the default document describes."
+        },
+        {
+            "name": "grails.openapi.packages-to-exclude",
+            "type": "java.util.List<java.lang.String>",
+            "description": "The packages, with their sub-packages, of the controllers the default document leaves out."
+        },
+        {
+            "name": "grails.openapi.produces-to-match",
+            "type": "java.util.List<java.lang.String>",
+            "description": "The media types an operation of the default document must produce, exactly."
+        },
+        {
+            "name": "grails.openapi.consumes-to-match",
+            "type": "java.util.List<java.lang.String>",
+            "description": "The media types an operation of the default document must consume, exactly."
+        },
+        {
+            "name": "grails.openapi.headers-to-match",
+            "type": "java.util.List<java.lang.String>",
+            "description": "The header conditions an operation of the default document must declare, such as Accept-Version=1.0."
+        },
+        {
+            "name": "grails.openapi.groups",
+            "type": "java.util.Map<java.lang.String,java.lang.Object>",
+            "description": "Groups, each a document of its own, by name, each taking display-name and the same path, package, media type and header settings as the default document."
+        },
+        {
+            "name": "grails.openapi.output-directory",
+            "type": "java.lang.String",
+            "description": "Where the generate-open-api command writes the documents.",
+            "defaultValue": "build/openapi"
+        },
+        {
+            "name": "grails.openapi.output-format",
+            "type": "java.lang.String",
+            "description": "Whether the generate-open-api command writes yaml or json.",
+            "defaultValue": "yaml"
+        }
+    ]
+}

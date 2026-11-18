@@ -31,6 +31,7 @@ import org.springframework.beans.factory.config.ConstructorArgumentValues
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor
 import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.core.ResolvableType
 import org.springframework.core.Ordered
 import org.springframework.transaction.PlatformTransactionManager
 
@@ -61,9 +62,10 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
             boolean shouldConfigureDataSourceBean = GrailsVersion.isAtLeastMajorMinor(3, 3)
             String dataSourceBeanName = isDefault ? Settings.SETTING_DATASOURCE : "${Settings.SETTING_DATASOURCE}_$dataSourceName"
 
-            if (!registry.containsBeanDefinition(dataSourceBeanName) && shouldConfigureDataSourceBean) {
+            // A data source registered by other means, also as a singleton, is the one to keep
+            if (!registry.isBeanNameInUse(dataSourceBeanName) && shouldConfigureDataSourceBean) {
                 def dataSourceBean = new RootBeanDefinition()
-                dataSourceBean.setTargetType(DataSource)
+                dataSourceBean.setTargetType(ResolvableType.forClassWithGenerics(InstanceFactoryBean, DataSource))
                 dataSourceBean.setBeanClass(InstanceFactoryBean)
                 def args = new ConstructorArgumentValues()
                 String spel = "#{dataSourceConnectionSourceFactory.create('$dataSourceName', environment).source}".toString()
@@ -80,7 +82,7 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
                 String transactionManagerBeanName = "transactionManager$suffix"
 
                 def sessionFactoryBean = new RootBeanDefinition()
-                sessionFactoryBean.setTargetType(SessionFactory)
+                sessionFactoryBean.setTargetType(ResolvableType.forClassWithGenerics(InstanceFactoryBean, SessionFactory))
                 sessionFactoryBean.setBeanClass(InstanceFactoryBean)
                 def args = new ConstructorArgumentValues()
                 args.addGenericArgumentValue("#{hibernateDatastore.getDatastoreForConnection('$dataSourceName').sessionFactory}".toString())
@@ -93,7 +95,7 @@ class HibernateDatastoreConnectionSourcesRegistrar implements BeanDefinitionRegi
                 )
 
                 def transactionManagerBean = new RootBeanDefinition()
-                transactionManagerBean.setTargetType(PlatformTransactionManager)
+                transactionManagerBean.setTargetType(ResolvableType.forClassWithGenerics(InstanceFactoryBean, PlatformTransactionManager))
                 transactionManagerBean.setBeanClass(InstanceFactoryBean)
                 def txMgrArgs = new ConstructorArgumentValues()
                 txMgrArgs.addGenericArgumentValue("#{hibernateDatastore.getDatastoreForConnection('$dataSourceName').transactionManager}".toString())

@@ -138,21 +138,21 @@ class DataSourceSettings extends ConnectionSourceSettings {
      */
     @CompileStatic
     Map<String,String> toProperties() {
-        Map<String,String> properties = new LinkedHashMap<>()
-        properties.putAll(this.properties)
-        properties.put('url', url)
+        Map<String,String> props = new LinkedHashMap<>()
+        props.putAll(this.properties)
+        props.put('url', url)
         if (driverClassName) {
-            properties.put('driverClassName', driverClassName)
+            props.put('driverClassName', driverClassName)
         }
         if (username) {
-            properties.put('username', username)
+            props.put('username', username)
         }
         if (password) {
-            properties.put('password', password)
+            props.put('password', password)
         }
         if (readOnly) {
-            properties.put('defaultReadOnly', String.valueOf(readOnly))
+            props.put('defaultReadOnly', String.valueOf(readOnly))
         }
-        return properties
+        return props
     }
 }

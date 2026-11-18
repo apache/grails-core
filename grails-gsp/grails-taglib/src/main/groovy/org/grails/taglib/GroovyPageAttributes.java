@@ -47,12 +47,39 @@ public class GroovyPageAttributes extends TypeConvertingMap implements Cloneable
         this.gspTagSyntaxCall = gspTagSyntaxCall;
     }
 
-    public boolean isGspTagSyntaxCall() {
+    /**
+     * Whether the tag was invoked with GSP tag syntax rather than as a method call.
+     *
+     * <p>Deliberately not named {@code isGspTagSyntaxCall()}. This class implements {@link Map},
+     * and a JavaBean accessor on a map shadows the map entry of the same name, which made an
+     * attribute named {@code gspTagSyntaxCall} unreadable. See
+     * {@link grails.util.AbstractTypeConvertingMap} for the rule.
+     *
+     * @return {@code true} when invoked with GSP tag syntax
+     * @since 8.0
+     */
+    public boolean gspTagSyntaxCall() {
         return gspTagSyntaxCall;
     }
 
     public void setGspTagSyntaxCall(boolean gspTagSyntaxCall) {
         this.gspTagSyntaxCall = gspTagSyntaxCall;
+    }
+
+    /**
+     * Stores an attribute, so that {@code attrs['name'] = value} always writes a map entry.
+     *
+     * <p>Without it, Groovy 5 resolves subscript assignment of {@code gspTagSyntaxCall} to
+     * {@link #setGspTagSyntaxCall(boolean)}, while Groovy 6 routes it through {@link Map#put}.
+     * Declaring it gives both the Groovy 6 behaviour. Dotted assignment,
+     * {@code attrs.gspTagSyntaxCall = value}, still invokes the setter.
+     *
+     * @param key the attribute name
+     * @param value the attribute value
+     * @since 8.0
+     */
+    public void putAt(String key, Object value) {
+        put(key, value);
     }
 
     @Override

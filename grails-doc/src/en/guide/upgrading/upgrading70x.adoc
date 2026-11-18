@@ -261,6 +261,10 @@ The benefits of reproducible builds are well documented, but for Grails applicat
 To make your local build reproducible, you'll want to set the environment variable `SOURCE_DATE_EPOCH` to a fixed date.
 For Grails, we set this value to the last commit in git via the bash command: `SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)`
 
+Generated build metadata properties files, including `META-INF/grails.build.info`, `META-INF/grails.factories`, and `gsp/views.properties`, omit the automatic timestamp comment written by Java's `Properties.store`.
+They do not include a replacement `SOURCE_DATE_EPOCH` comment, even when that environment variable is set.
+Descriptive comments and property values are preserved. This prevents timestamp comments from changing otherwise identical JARs between builds and invalidating downstream build caches.
+
 ==== 8. Spring 6.2.x:
 
 Grails 7.0.x is built on the Spring Framework, version 6.2.x. If your project uses Spring-specific features, refer to the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-6.x[Upgrading to Spring 6 guide].
@@ -578,14 +582,14 @@ To learn more about development reloading options, please see the link:gettingSt
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true
         use_query_cache: false
         region:
-        factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
+            factory_class: 'org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory'
 ----
 
 If your application sets `hibernate.cache.region.factory_class` to `org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory` it will add the `non-jakarta` version of `hibernate-core` to your classpath which will cause `NoClassDefFoundError` and `ClassNotFoundException` errors.
@@ -595,8 +599,8 @@ You will need to change it to `jcache` and add the Ehcache dependency as follows
 [source,yml]
 .application.yml
 ----
-    hibernate:
-        allow_update_outside_transaction: true
+hibernate:
+    allow_update_outside_transaction: true
     cache:
         queries: false
         use_second_level_cache: true

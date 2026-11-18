@@ -60,18 +60,29 @@ dependencies {
     }
     // GrailsConsole (used by the scaffolding commands) needs jline at compile time
     cliImplementation 'org.jline:jline'
+
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     api project(':grails-fields')
     api project(':grails-rest-transforms')
 
     implementation project(':grails-gsp')
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.spockframework:spock-core'
     testImplementation project(':grails-layout')
     testImplementation project(':grails-web-gsp')
     testImplementation project(':grails-core')
+    testImplementation testFixtures(project(':grails-core'))
+    testImplementation project(':grails-datamapping-async')
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation project(':grails-testing-support-web')
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-web'
     testImplementation 'net.bytebuddy:byte-buddy'
+
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

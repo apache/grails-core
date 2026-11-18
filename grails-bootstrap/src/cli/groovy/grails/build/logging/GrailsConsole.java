@@ -43,6 +43,8 @@ import org.jline.reader.impl.completer.AggregateCompleter;
 import org.jline.reader.impl.history.DefaultHistory;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import grails.util.Environment;
 import org.grails.build.logging.GrailsConsoleErrorPrintStream;
@@ -61,6 +63,8 @@ import static org.grails.build.logging.ConsoleAnsi.ansi;
  * @since 2.0
  */
 public class GrailsConsole implements ConsoleLogger {
+
+    private static final Logger LOG = LoggerFactory.getLogger(GrailsConsole.class);
 
     private static GrailsConsole instance;
 
@@ -442,7 +446,11 @@ public class GrailsConsole implements ConsoleLogger {
                 Class<? extends GrailsConsole> klass = (Class<? extends GrailsConsole>) Class.forName(className);
                 return klass.getDeclaredConstructor().newInstance();
             } catch (Exception e) {
-                e.printStackTrace();
+                if (LOG.isErrorEnabled()) {
+                    LOG.error("Unable to create configured Grails console " + className, e);
+                } else {
+                    e.printStackTrace();
+                }
             }
         }
         return new GrailsConsole();

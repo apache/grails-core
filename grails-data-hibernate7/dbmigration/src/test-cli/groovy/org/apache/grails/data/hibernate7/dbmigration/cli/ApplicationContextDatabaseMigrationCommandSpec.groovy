@@ -121,6 +121,7 @@ class Book {
     Author author
     static belongsTo = [author: Author]
     static constraints = {
+        title nullable: false
         author nullable: false
     }
 }
@@ -129,4 +130,7 @@ class Book {
 class Author {
     String name
     static hasMany = [books: Book]
+    static constraints = {
+        name nullable: false
+    }
 }

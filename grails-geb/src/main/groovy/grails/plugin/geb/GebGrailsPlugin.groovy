@@ -31,7 +31,7 @@ class GebGrailsPlugin extends Plugin {
     def grailsVersion = '7.0.0-SNAPSHOT > *'
     def pluginExcludes = []
     def title = 'Grails Geb Plugin'
-    def author = 'Graeme Rocher'
+    def author = 'Apache Grails Team'
     def authorEmail = ''
     def description = 'Plugin that adds Geb functional testing code generation features.'
     def documentation = 'https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme'

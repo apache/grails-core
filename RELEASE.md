@@ -27,6 +27,16 @@ Prior to starting the release process, ensure that any other dependent library i
 
 Due to a limitation with GitHub, private groups cannot be used as approvers for an environment.  For this reason, prior to performing the release, add GitHub username to asf.yaml in the environment section for approvers. Only 6 approvers may exist on a given environment.
 
+A push to a release branch below the default branch builds and publishes without running the tests (see the CI policy in `AGENTS.md`), so the commit a release is cut from may never have been tested as a whole on that branch. Before creating the release, run the `CI` workflow manually on the release branch with its `run-tests` input ticked and wait for it to pass:
+
+```bash
+gh workflow run gradle.yml --repo apache/grails-core --ref 7.0.x -f run-tests=true
+```
+
+The command line works on any branch whose `gradle.yml` has the input; the manual-run form in the GitHub UI offers it once the default branch has it.
+
+The manual run shares its concurrency group with the pushes to that branch, so a merge to the branch while it is in progress cancels its build and test jobs, and the run started by that push does not run the tests. If the manual run ends up cancelled, start it again once nothing else is being merged to the branch.
+
 ## 1. Staging 
 
 During the staging step, we must create a source distribution & stage any binary artifacts that end users will consume.
@@ -35,7 +45,8 @@ During the staging step, we must create a source distribution & stage any binary
    * Click "Draft a new release" here: https://github.com/apache/grails-core/releases
    * On the draft new release screen, we execute the following steps:
      * The tag will have the prefix 'v', so for our release it would be 'v7.0.0-M4'
-     * The "Target" will be the branch we build out of (this case it's the default, 7.0.x)
+     * The "Target" will be the branch we build out of (this case it's the default, 7.0.x). It must be the version's
+       maintenance branch, for example `8.0.x` for `8.0.1`, or the `publish` job fails.
      * Previous tag will be auto
      * Click "Generate Release Notes"
        * This will then scan our commit history and we adjust the release notes per project agreement.
@@ -46,13 +57,20 @@ During the staging step, we must create a source distribution & stage any binary
    * checkout the project
    * setup gradle
    * extract the version # from the tag
+   * verify that the release targets the version's maintenance branch and that `githubBranch` in `gradle.properties`
+     names that branch, since the documentation links each page to its source on `githubBranch`. When creating a new
+     maintenance branch, set `githubBranch` to it in `gradle.properties`. The CI workflow fails on a maintenance branch,
+     and on a pull request into one, until it does.
    * run the pre-release workflow (updates gradle.properties to be the version specified by the user)
    * extract signing secrets from github action variables 
    * build the project, sign the jar files, and stage them to the necessary locations
    * add the grails wrapper to the `grails-core` release
    * add the grails binary distribution (grails, grails-shell-cli, and grails-forge-cli) to the `grails-core` release
+   * add the grails documentation distribution to the `grails-core` release
    * close the staging repository so the `grails-core` artifacts can be accessed
    * generate project checksums & artifact lists to make verification easier
+   * record the git tags the documentation was built with, so the documentation's version list can be rebuilt from the
+     source distribution
 4. (no approval required) The `source` job will: 
      * download the tagged grails source
      * generate a source distribution meeting the ASF requirements
@@ -60,10 +78,11 @@ During the staging step, we must create a source distribution & stage any binary
    * remove any temporary artifacts needed for the source distribution creation
 5. (no approval required) The `upload` job will:
      * Download the source distribution
-     * Download the binary distributions (wrapper & grails clis)
+     * Download the binary distributions (wrapper & grails clis) and the documentation distribution
      * upload the source distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/sources
      * upload the grails-wrapper binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
      * upload the grails binary distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution (note: this is the sdkman artifact)
+     * upload the grails documentation distribution to https://dist.apache.org/repos/dist/dev/grails/core/VERSION/distribution
    * upload a file containing the SVN revision for the uploaded artifacts
    * generate vote email template for the Grails PMC
 
@@ -97,7 +116,7 @@ verify the one inside of the source distribution.
 
 ### Manual Verification: Download the Staged Artifacts
 
-Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, and sdkman binary distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
+Use `etc/bin/download-release-artifacts.sh` to download the staged artifacts. This script will download the source distribution, wrapper binary distribution, sdkman binary distribution, and documentation distribution. The distribution should come from [https://dist.apache.org/repos/dist/dev/grails/core/version](https://dist.apache.org/repos/dist/dev/grails/core).
 
 ### Manual Verification: Source Distribution Verification
 
@@ -123,6 +142,7 @@ Extracts the zip file and verifies the contents:
    * Ensure `README.md` & `CONTRIBUTING.md` are present to ensure project build & usage instructions are present.
    * Ensure the `PUBLISHED_ARTIFACTS` file is present so we know how to pull the various jar files.
    * Ensure the `CHECKSUMS` file is present so we can ensure those checksums match the staged artifacts.
+   * Ensure the `GIT_TAGS` file is present so the documentation's version list can be rebuilt without git history.
 
 ### Manual Verification: Jar file Signature Verification (Nexus Staging Repositories)
 
@@ -142,15 +162,6 @@ After all jar files are verified to be signed by a valid Grails key, we need to 
 
 Further details on the building can be found in the [INSTALL](INSTALL) document.  Otherwise, run the `verify-reproducible.sh` shell script to compare the published jar files to a locally built version of them. 
 
-#### Dual-JDK requirement for the Grails-Micronaut island
-
-Grails 8 release artifacts come from TWO different JDKs and therefore TWO different reproducibility pins:
-
-- **Primary JDK (`$JAVA_VERSION` in `release.yml`, also in `.sdkmanrc` and the primary `FROM` in `etc/bin/Dockerfile`)**: builds every published artifact EXCEPT the Grails-Micronaut "island" (`grails-micronaut`, `grails-micronaut-bom`).
-- **Secondary JDK (`$JAVA_VERSION_MICRONAUT` in `release.yml`, installed alongside the primary in `etc/bin/Dockerfile` and exposed as `$JDK_25_HOME`)**: builds the two Micronaut island artifacts. The Micronaut 5 platform GA targets JVM 25 bytecode, so these two JARs cannot be reproduced on the primary JDK.
-
-The verify script understands both. Inside the verification container, `JDK_25_HOME` is already set so `verify-reproducible.sh` "just works". Outside the container, manual verifiers MUST install Liberica JDK matching `$JAVA_VERSION_MICRONAUT` from `release.yml` (for example via `sdk install java <version>-librca`) and export `JDK_25_HOME=/path/to/jdk25` before running the script - otherwise the script fails fast with a clear error.
-
 If there are any jar file differences, confirm they are relevant by following the following steps: 
 1. Extract the differing jar file using the `etc/bin/extract-build-artifact.sh <jarfilepath from diff.txt>`
 2. In IntelliJ, under `etc/bin/results` there will now be a `firstArtifact` & `secondArtifact` folder. Select them both, right click, and select `Compared Directories`  
@@ -158,6 +169,13 @@ If there are any jar file differences, confirm they are relevant by following th
 Please note that Grails is officially built on Linux so if there are differences they may be due to the OS platform.
 There is a dockerfile checked into to assist building in an environment like GitHub actions. Please see the section
 `Appendix: Verification from a Container` for more information.
+
+### Manual Verification: Reproducible Documentation
+The documentation distribution must also be rebuilt from the source distribution. Run the
+`verify-docs-reproducible.sh` shell script after the source distribution is extracted and Gradle is bootstrapped. It
+builds the documentation with `./gradlew :grails-doc:dist`, using the `BUILD_DATE` and `GIT_TAGS` files from the source
+distribution, and compares the result with the staged `apache-grails-<version>-docs.zip`. If the archives differ, the
+script extracts both under `etc/bin/results/docs` and lists the differing files in `etc/bin/results/docs/diff.txt`.
 
 ### Manual Verification: Running RAT
 
@@ -231,6 +249,34 @@ Generates applications using the CLIs and verifies all dependencies resolve:
 * Creates a shell app via `grails-shell-cli` and a forge app via `grails-forge-cli` against the staging repository.
 * Runs `./gradlew dependencies` in each generated app to confirm all dependencies resolve successfully. The build will fail if any dependency is marked as `FAILED`.
 
+### Manual Verification: Documentation Distribution Verification
+
+The documentation is staged as a distribution, so it is part of the vote and is published to the website exactly as
+voted. The following are the documentation distribution artifacts:
+* `apache-grails-<version>-docs.zip` - the documentation distribution: the guide, the reference, the API docs, and the GORM documentation
+* `apache-grails-<version>-docs.zip.asc` - the generated signature of the documentation distribution
+* `apache-grails-<version>-docs.zip.sha512` - the checksum to verify the documentation distribution
+
+Use `etc/bin/verify-docs-distribution.sh` to verify the documentation distribution. This script performs the following:
+
+Verifies the documentation distribution checksum via the command:
+   ```bash
+   shasum -a 512 -c apache-grails-<version>-docs.zip.sha512
+   ```
+
+Verifies the documentation distribution signature via the command:
+   ```bash
+    gpg --verify apache-grails-<version>-docs.zip.asc apache-grails-<version>-docs.zip
+   ```
+
+Extracts the zip file and verifies the contents:
+* Ensure the `LICENSE` & `NOTICE` files are present to ensure license compliance, along with every license file that `LICENSE` references under `licenses/`.
+* Ensure the documentation entry points are present under `html/`: `index.html`, `guide/single.html`, `api/index.html`, and `grails-data/index.html`.
+
+The documentation bundles third-party stylesheets and fonts. `LICENSE` lists each one with its license. When the
+documentation starts bundling a new third-party file, add it to `grails-doc/distribution-artifacts/LICENSE` and add its
+license text under `grails-doc/distribution-artifacts/licenses/`.
+
 ## 3. Verifying the CLIs are Functional
 
 The CLI distribution consists of various CLI's: `grailsw` (wrapper), `grails` (delegating), `grails-forge-cli`, and
@@ -301,7 +347,7 @@ files by one of 2 ways:
 
 ### Move the distributions from `dev` to `release`
 
-On dist.apache.org, the staged source distribution & binary distributions must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
+On dist.apache.org, the staged source distribution, binary distributions & documentation distribution must be moved from `https://dist.apache.org/repos/dist/dev/grails/` to `https://dist.apache.org/repos/dist/release/grails/`. Per ASF
 infrastructure, this must be performed manually, and we are not allowed to automate it via a gated approval workflow.
 Either move them via your SVN client or use the checked in script to perform these actions as your user.
 
@@ -318,25 +364,51 @@ the date you moved the distribution artifacts and report the release.
 
 ### Deploy the release to Grails Forge
 
-Publish the released version to [Grails Forge](https://start.grails.org) using one of the [GCP Deploy Actions](https://github.com/apache/grails-core/actions) available in the `grails-core` repository.
+Publish the released version to [Grails Forge](https://start.grails.org) using [Forge - AWS Elastic Beanstalk Deploy](https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml).
 
-Grails Forge organizes deployments into version slots as follows:
+There is one workflow and two choices: **Use workflow from** (the ref to build) and **slot**. The workflow builds the ref you select, so the deployed Forge version is the version on that ref. For a release, select the release tag, for example `v7.0.17`. For a snapshot slot, select the maintenance branch.
 
-- **RELEASE** - Full Final Releases - https://github.com/apache/grails-core/actions/workflows/forge-deploy-release.yml
-- **NEXT** - Milestones and Release Candidate for Next Release (also Next version snapshot prior to Milestone) - https://github.com/apache/grails-core/actions/workflows/forge-deploy-next.yml
-- **SNAPSHOT** - current or next version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
-- **PREV** - previous release version - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev.yml
-- **PREV-SNAPSHOT** - previous version snapshot - https://github.com/apache/grails-core/actions/workflows/forge-deploy-prev-snapshot.yml
+GitHub registers `workflow_dispatch` inputs from the **default branch**. The new `next-snapshot` and `older` choices appear in that UI only after this change is merged up from `7.0.x` through `7.1.x` / `7.2.x` onto the default line. Until then, dispatch from a maintenance branch that already contains the updated workflow file, or package and upload locally as below.
 
-Use the action whose name matches the slot you want to deploy to.\
-In the **“Run workflow/Use workflow from”** dropdown, choose the release tag you just created.
+| Slot | Host | Typical ref |
+| --- | --- | --- |
+| `latest` | `latest.grails.org` | release tag of the current release line, for example `v7.2.4` |
+| `snapshot` | `snapshot.grails.org` | current snapshot branch, for example `8.0.x` |
+| `next` | `next.grails.org` | milestone / RC release tag, for example `v8.0.0-RC1` |
+| `next-snapshot` | `next-snapshot.grails.org` | next snapshot branch, currently `8.0.0-SNAPSHOT` from `8.0.x` |
+| `prev` | `prev.grails.org` | release tag of the previous release line |
+| `prev-snapshot` | `prev-snapshot.grails.org` | previous snapshot branch |
+| `older` | `older.grails.org` | release tag of an older release line, for example `v7.0.17` |
+
+Do not deploy a release slot from its maintenance branch. After the release, that branch has moved on to the next `-SNAPSHOT` version.
+
+Forge reports the last supported day of its release line as `endOfSupport` (an ISO `yyyy-MM-dd` date) from `/versions`, and Forge UI uses it to flag deprecated or unsupported Grails versions. The date comes from `grailsEndOfSupport` in the root `gradle.properties` and is checked in per release branch, so keep each branch's own value when merging up. Both release and snapshot builds report it when the property is set. A value that is not a valid date fails the Forge build.
+
+Tags created before the AWS workflow was added (for example `v7.0.16`, `v7.1.6`, `v7.2.3`, and `v8.0.0-M6` or earlier) do not contain the workflow file, so they cannot be selected. Package these locally, then upload to Elastic Beanstalk. From a checkout of that tag, copy `grails-forge/grails-forge-web-netty/aws/` from the matching maintenance branch, then from `grails-forge` run:
+
+```bash
+./gradlew grails-forge-web-netty:awsElasticBeanstalk
+```
+
+The bundle is `grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip`. See [AWS Elastic Beanstalk Deployment Runbook](grails-forge/docs/aws-elastic-beanstalk.md).
 
 (The `release` job in the `Release` workflow includes a step titled `🚀 MANUAL - Deploy Grails Forge` that serves as a reminder to perform the deployment described above.)
 
 ### Publish `grails-core` documentation
 
-Open the release workflow in `grails-core` and approve the `Publish Documentation` step. Wait until finished, and a
-workflow should eventually kick off in `grails-doc` to publish to https://github.com/apache/grails-website/tree/asf-site-production/docs and https://grails.apache.org/docs/.
+Open the release workflow in `grails-core` and approve the `Publish Documentation` step. The step does not rebuild the
+documentation. It downloads the voted `apache-grails-<version>-docs.zip` from dist.apache.org, verifies its checksum and
+signature, and publishes the extracted `html` folder to https://github.com/apache/grails-website/tree/asf-site-production/docs,
+which serves https://grails.apache.org/docs/. It takes the zip from the `release` area once the distributions have been
+moved, and from the `dev` area until then.
+
+To correct the documentation of a version that is already released, create a branch from that version's release tag
+(for example `v8.0.0`), commit the fix to it, and run the `Release - Publish Documentation` workflow from that branch
+with the same version. That workflow rebuilds the documentation from the branch instead of publishing the voted zip. It
+fails unless the branch's `projectVersion` equals the requested version, so it cannot publish documentation built from a
+maintenance branch, which has moved on to the next `-SNAPSHOT` version. It also fails unless `githubBranch` in
+`gradle.properties` names the version's maintenance branch, so the rebuilt pages link to their sources on the same branch
+as the voted documentation, and the correction branch can be deleted afterwards.
 
 ### Advertise the release via SDKMAN
 
@@ -345,9 +417,11 @@ version from Maven Central.
 
 ### Close out the `grails-core` release
 
-The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.
+The last step in the `grails-core` release workflow is to run the `Close Release` step.  This will create a merge branch for the original tag with version number and then open a PR to merge back into the next branch.  You will need to merge this PR into the branch after correcting any merge conflict.  Merge it with a merge commit, not a squash or rebase, so that the release tag becomes part of the branch history.
 
-After this PR is merged, deploy the new SNAPSHOT to Forge via: https://github.com/apache/grails-core/actions/workflows/forge-deploy-snapshot.yml
+If the post-release step fails, for example because GitHub refuses to let the workflow token push a merge branch that it considers to change a workflow file, the `Close Release` job still runs its remaining steps.  The `🩹 MANUAL - Finish post-release` step then raises a warning, and the workflow summary lists the commands to create the merge branch and PR by hand.
+
+After this PR is merged, deploy the new SNAPSHOT to Forge via https://github.com/apache/grails-core/actions/workflows/forge-deploy-aws.yml (Use workflow from the snapshot branch, slot `snapshot`).
 
 ### Update the `grails-static-website`
 
@@ -410,11 +484,8 @@ Setup the key for validity:
 The Grails image is officially built on linux in a GitHub action using an Ubuntu container. To run a linux container
 locally, you can use the following command (substitute `<git-tag-of-release>` with the tag name):
 
-The verification container ships with BOTH JDKs needed for full reproducible verification: the primary Liberica JDK
-(`$JAVA_VERSION`, default on `PATH`/`JAVA_HOME`) and the secondary Liberica JDK 25 for the Grails-Micronaut "island"
-(installed at `$JDK_25_HOME`). `verify-reproducible.sh` uses both automatically - no manual JDK switching required
-inside the container. Both pins live in `etc/bin/Dockerfile` and must stay synced with
-`$JAVA_VERSION` / `$JAVA_VERSION_MICRONAUT` in `.github/workflows/release.yml`.
+The verification container uses the Liberica JDK version pinned by the `FROM` instruction in `etc/bin/Dockerfile`.
+Keep that version synchronized with `$JAVA_VERSION` in `.github/workflows/release.yml`.
 
 **macOS/Linux**
 ```bash
@@ -509,23 +580,16 @@ To test reproducibility locally, running etc/bin/test-reproducible-builds.sh wil
 to build the three gradle projects Grails uses. The artifacts are then saved off, and built again. Finally, the hashes
 are generated to ensure the artifacts are the same.
 
-Note that Grails 8 release artifacts come from TWO pinned JDKs: the primary one (used for everything except the
-Grails-Micronaut island) and a secondary Liberica JDK 25 (used only for `grails-micronaut` and `grails-micronaut-bom`,
-because Micronaut 5 platform GA targets JVM 25 bytecode). Both pins live in `.github/workflows/release.yml`
-(`JAVA_VERSION` and `JAVA_VERSION_MICRONAUT` respectively) and are installed side-by-side in `etc/bin/Dockerfile`. The
-verify scripts switch `JAVA_HOME` to `$JDK_25_HOME` for the island and back to the default for everything else. Anyone
-bumping either pin must also bump the matching pin in the Dockerfile so the verification container can reproduce the
-new artifacts.
-
 Some common gotchas with Java build reproducibility problems:
 
 1. Most tools support a `SOURCE_DATE_EPOCH` environment variable that can be set to a fixed time to ensure timestamps
    are reproducible. Grails sets this based on the last Git Commit and it's release process preserves the date chosen.
 2. The date set by `SOURCE_DATE_EPOCH` will need to be passed to various Gradle configuration to ensure the same date is
    used. Grails performs this configuration in it's root `build.gradle` file.
-3. Properties files are not reproducible because they write out the current time. Grails publishes a utility to mutate
-   property files so they're reproducible. As part of our build process, we mutate any property file we generate and do
-   not ship property files with dynamic timestamps.
+3. Java's `Properties.store` writes the current time in a comment. Grails removes this automatic timestamp comment
+   from generated build metadata properties files, preserving their descriptive comments and property values. These
+   files do not include a replacement `SOURCE_DATE_EPOCH` comment, so timestamp metadata cannot change their contents
+   between builds.
 4. Gradle builds are not reproducible by default because Gradle does not guarantee file ordering. Grails configures all
    tasks that create archive files to ensure file ordering is reproducible. This configuration can be found in
    the `CompilePlugin` in the `build-logic` project.
@@ -603,7 +667,7 @@ the following workflows:
 2. `codestyle.yml` - Runs checkstyle on our build to ensure code style requirements are met against any submitted code.
 3. `forge-*.yml` - Workflows to build & publish our public App Generation website.
 4. `gradle.yml` - Our main CI workflow & snapshot publishing.
-5. `groovy-joint-workflow.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
+5. `groovy-snapshot-canary.yml` - A workflow that runs with the latest snapshot of Groovy to ensure we are forward
    compatible and give the Groovy team early feedback.
 6. `rat.yml` - A workflow that runs the Apache RAT license audit to ensure license compliance. We use the Gradle plugin
    org.nosphere.apache.rat` to perform the audit.

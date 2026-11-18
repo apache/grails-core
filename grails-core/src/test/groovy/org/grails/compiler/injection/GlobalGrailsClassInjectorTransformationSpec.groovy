@@ -22,6 +22,7 @@ import groovy.xml.XmlSlurper
 import org.codehaus.groovy.ast.ASTNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.classgen.GeneratorContext
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
@@ -336,7 +337,7 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
                     sourceFile,
                     '''
                         @org.springframework.boot.autoconfigure.AutoConfiguration
-                        class DslBeansGrailsPlugin {
+                        class DslBeansGrailsPlugin extends grails.plugins.Plugin {
                             def version = '1.0'
                             def beans = {
                                 bean('greeting', String) { 'hello' }
@@ -349,6 +350,216 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
 
         then: "the property is consumed by the transform, unlike the two cases above"
             classNode.getProperty('beans') == null
+
+        and: "the name settled by the local transform is registered at the global transform's target"
+            new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').text.trim() ==
+                    'DslBeansAutoConfiguration'
+    }
+
+    void "an explicitly annotated descriptor registers its sibling too"() {
+        given: "the entry path the convention does not take: the local transform runs after this one"
+            def sourceFile = new File(tempDir, 'AnnotatedBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    '''
+                        @grails.compiler.beans.GrailsBeans
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class AnnotatedBeansGrailsPlugin extends grails.plugins.Plugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the annotation's own transform consumed the closure"
+            classNode.getProperty('beans') == null
+
+        and: "and registered the sibling, which is what silently did not happen before"
+            new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').text.trim() ==
+                    'AnnotatedBeansAutoConfiguration'
+    }
+
+    void "the implicit beans convention claims the closure of a descriptor that is not a Plugin"() {
+        given: "the descriptor names itself *GrailsPlugin but does not extend Plugin, so nothing is generated"
+            def sourceFile = new File(tempDir, 'PlainDslBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    '''
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class PlainDslBeansGrailsPlugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                bean('lazyGreeting', String).lazy() { 'later' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the closure is still compiled, onto the class itself rather than onto a sibling"
+            classNode.getProperty('beans') == null
+
+        and: "only the sibling generated for a plugin descriptor is registered, and there is none here"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
+    }
+
+    void "the implicit beans convention compiles a unit test's beans closure onto a nested configuration class"() {
+        given: "a Spock spec implementing the testing support's trait, stood in for here, in a test source directory"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def trait = new File(testSources, 'org/grails/testing/GrailsUnitTest.groovy')
+            trait.parentFile.mkdirs()
+            trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+            def spec = new File(testSources, 'ReportServiceSpec.groovy')
+            spec.text = '''
+                class ReportServiceSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    def beans = {
+                        bean('greeting', String) { 'hello' }
+                    }
+                }
+            '''
+            def targetDir = new File(tempDir, 'build/classes/groovy/test')
+
+        when:
+            def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDir))
+            cu.addSource(trait)
+            cu.addSource(spec)
+            cu.compile(Phases.CANONICALIZATION)
+            ClassNode test = cu.AST.getClass('ReportServiceSpec')
+            ClassNode configuration = cu.AST.getClass('ReportServiceSpec$BeansConfiguration')
+
+        then: "the property is consumed with no @GrailsBeans written"
+            test.getProperty('beans') == null
+
+        and: "the beans are on the nested class the testing support registers"
+            configuration != null
+            configuration.getMethod('greeting', [] as Parameter[]) != null
+
+        and: "nothing is registered as an auto-configuration"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
+    }
+
+    void "the implicit beans convention reports a unit test's @Shared beans block rather than dropping it"() {
+        given: "Spock renames a shared field and removes its property before this transform runs"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def trait = new File(testSources, 'org/grails/testing/GrailsUnitTest.groovy')
+            trait.parentFile.mkdirs()
+            trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+            def spec = new File(testSources, 'SharedBeansSpec.groovy')
+            spec.text = '''
+                class SharedBeansSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    @spock.lang.Shared
+                    def beans = {
+                        bean('greeting', String) { 'hello' }
+                    }
+                }
+            '''
+
+        when:
+            def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: new File(tempDir, 'build/classes/groovy/test')))
+            cu.addSource(trait)
+            cu.addSource(spec)
+            cu.compile(Phases.CANONICALIZATION)
+
+        then:
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains("A unit test's 'beans' block cannot be @Shared")
+    }
+
+    void "a unit test's unrelated @Shared beans field is left alone"() {
+        given: "a shared beans field that is not the DSL"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def spec = new File(testSources, 'SharedMapSpec.groovy')
+            spec.parentFile.mkdirs()
+            spec.text = '''
+                class SharedMapSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    @spock.lang.Shared
+                    def beans = [someKey: 'someValue']
+                }
+            '''
+
+        when: "it compiles"
+            def cu = unitTestCompilation(spec)
+            cu.compile(Phases.CANONICALIZATION)
+
+        then: "nothing is reported or generated"
+            cu.AST.getClass('SharedMapSpec$BeansConfiguration') == null
+    }
+
+    void "a unit test's unrelated beans closure stays where Spock put it"() {
+        given: "a beans closure that declares nothing, which Spock moves into its initializer method"
+            def testSources = new File(tempDir, 'src/test/groovy')
+            def spec = new File(testSources, 'UnrelatedClosureSpec.groovy')
+            spec.parentFile.mkdirs()
+            spec.text = '''
+                class UnrelatedClosureSpec extends spock.lang.Specification implements org.grails.testing.GrailsUnitTest {
+                    def beans = { 'not the DSL' }
+                }
+            '''
+
+        when:
+            def cu = unitTestCompilation(spec)
+            cu.compile(Phases.CANONICALIZATION)
+            ClassNode unrelatedSpec = cu.AST.getClass('UnrelatedClosureSpec')
+
+        then: "it is not moved back onto the field, and nothing is generated"
+            unrelatedSpec.getProperty('beans').field.initialExpression == null
+            cu.AST.getClass('UnrelatedClosureSpec$BeansConfiguration') == null
+    }
+
+    /** A compilation of a test source alongside a stand-in for the testing support's trait. */
+    private CompilationUnit unitTestCompilation(File spec) {
+        def trait = new File(tempDir, 'src/test/groovy/org/grails/testing/GrailsUnitTest.groovy')
+        trait.parentFile.mkdirs()
+        trait.text = 'package org.grails.testing\ninterface GrailsUnitTest { }\n'
+        def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: new File(tempDir, 'build/classes/groovy/test')))
+        cu.addSource(trait)
+        cu.addSource(spec)
+        cu
+    }
+
+    void "a generated class missing from a hand-authored imports file is reported"() {
+        given: "a hand-authored file listing something else, and a descriptor whose sibling is not in it"
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            def handAuthored = new File(tempDir,
+                    'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports')
+            handAuthored.parentFile.mkdirs()
+            handAuthored.text = 'com.elsewhere.FromAnotherJar\n'
+
+        when: "it compiles"
+            def warnings = compileCollectingWarnings(
+                    new File(tempDir, 'WarnOnceGrailsPlugin.groovy'),
+                    '''
+                        @org.springframework.boot.autoconfigure.AutoConfiguration
+                        class WarnOnceGrailsPlugin extends grails.plugins.Plugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                            }
+                        }
+                    ''',
+                    targetDir
+            )
+
+        then: "the entry that has to be added by hand is named"
+            warnings.any { it.contains('WarnOnceAutoConfiguration') && it.contains('AutoConfiguration.imports') }
+
+        and: "and the module's own file is left as the only one"
+            !new File(targetDir,
+                    'META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports').exists()
     }
 
     void "the implicit beans convention claims an application class's DSL-shaped beans closure"() {
@@ -371,6 +582,110 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
 
         then: "the property is consumed, so an application declares beans without annotating anything"
             classNode.getProperty('beans') == null
+    }
+
+    void "a stray statement among real declarations fails an application class rather than silently registering nothing"() {
+        given: "an application whose beans block has one statement that is not a declaration - a typo, here"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                bea('typo', String) { 'oops' }
+                                bean('farewell', String) { 'bye' }
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "the build fails, naming what to do, instead of dropping all three declarations"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('not a bean(...), field(...) or method(...) declaration')
+            e.message.contains('must be one of those three')
+    }
+
+    void "an if wrapped around beans is reported, since the beans inside it would register nothing"() {
+        given: "the shape a conditional-registration attempt takes"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                if (System.getProperty('dev')) {
+                                    bean('devOnly', String) { 'dev' }
+                                }
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "it points at the qualifier that does express a condition"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('ConditionalOnProperty')
+    }
+
+    void "a plugin descriptor with a stray statement fails the same way an application class does"() {
+        given: "a descriptor is compiled by the plugin author, but its missing beans are felt downstream"
+            def sourceFile = new File(tempDir, 'StrayBeansGrailsPlugin.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(
+                    sourceFile,
+                    """
+                        class StrayBeansGrailsPlugin {
+                            def version = '1.0'
+                            def beans = {
+                                bean('greeting', String) { 'hello' }
+                                println 'not a declaration'
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "no leniency for being a descriptor - the severity must not depend on the class name"
+            MultipleCompilationErrorsException e = thrown(MultipleCompilationErrorsException)
+            e.message.contains('not a bean(...), field(...) or method(...) declaration')
+
+        and: "and the message names the way out for a beans property that genuinely is not the DSL"
+            e.message.contains('rename it')
+    }
+
+    void "a beans closure with no declarations at all stays silent, being an unrelated property"() {
+        given: "the case the all-or-nothing claim exists to protect"
+            def sourceFile = new File(tempDir, 'grails-app/init/Application.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            def classNode = compileToFile(
+                    sourceFile,
+                    """
+                        class Application extends grails.boot.config.GrailsAutoConfiguration {
+                            def beans = {
+                                println 'not the DSL'
+                                System.currentTimeMillis()
+                            }
+                        }
+                    """,
+                    targetDir
+            )
+
+        then: "no diagnostic - nothing here claims to be a declaration"
+            noExceptionThrown()
+            classNode.getProperty('beans') != null
     }
 
     void "the global transform fails when a plugin descriptor class has no version"() {
@@ -450,6 +765,62 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             def factories = new File(targetDir, 'META-INF/grails.factories')
             factories.exists()
             factories.text.contains('TestHandler')
+    }
+
+    void "an artefact handler compiled again as a plain class leaves grails.factories"() {
+        given: "two artefact handlers compiled into the same output"
+            def sourceFile = new File(tempDir, 'src/main/groovy/TestHandler.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            compileToFile(sourceFile, artefactHandlerSource('TestHandler'), targetDir)
+            compileToFile(new File(tempDir, 'src/main/groovy/OtherHandler.groovy'), artefactHandlerSource('OtherHandler'), targetDir)
+
+        when: "incremental compilation recompiles only the edited one, which is no longer a handler"
+            compileToFile(sourceFile, 'class TestHandler {}', targetDir)
+
+        then:
+            factoriesIn(targetDir).getProperty('grails.core.ArtefactHandler') == 'OtherHandler'
+    }
+
+    void "a class that changes which factory type it implements is registered under the new one only"() {
+        given: "a trait injector"
+            def sourceFile = new File(tempDir, 'src/main/groovy/SwitchingType.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+            compileToFile(sourceFile, '''
+                class SwitchingType implements grails.compiler.traits.TraitInjector {
+                    Class getTrait() { null }
+                    String[] getArtefactTypes() { [] as String[] }
+                }
+            ''', targetDir)
+
+        when: "it is compiled again as an artefact handler"
+            compileToFile(sourceFile, artefactHandlerSource('SwitchingType'), targetDir)
+
+        then:
+            def factories = factoriesIn(targetDir)
+            factories.getProperty('grails.core.ArtefactHandler') == 'SwitchingType'
+            factories.getProperty('grails.compiler.traits.TraitInjector') == null
+    }
+
+    void "a class that is both an artefact handler and a trait injector is registered under both types"() {
+        given:
+            def sourceFile = new File(tempDir, 'src/main/groovy/BothTypes.groovy')
+            def targetDir = new File(tempDir, 'build/classes/groovy/main')
+
+        when:
+            compileToFile(sourceFile, '''
+                class BothTypes extends grails.core.ArtefactHandlerAdapter implements grails.compiler.traits.TraitInjector {
+                    BothTypes() {
+                        super('BothTypes', null, null, 'Handler')
+                    }
+                    Class getTrait() { null }
+                    String[] getArtefactTypes() { [] as String[] }
+                }
+            ''', targetDir)
+
+        then: "every type is checked, not only until one registers the class"
+            def factories = factoriesIn(targetDir)
+            factories.getProperty('grails.core.ArtefactHandler') == 'BothTypes'
+            factories.getProperty('grails.compiler.traits.TraitInjector') == 'BothTypes'
     }
 
     void "the global transform skips classes whose source falls outside the Grails resource patterns"() {
@@ -623,6 +994,45 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
             xml.@grailsVersion.text() == '3.0 > *'
             xml.type.text() == 'UpdatedGrailsPlugin'
             xml.resources.resource*.text() == ['KeptThing']
+    }
+
+    void "plugin xml update recreates a descriptor that declares a doctype"() {
+        given:
+            def logCapture = new LogCapture(GlobalGrailsClassInjectorTransformation, Level.WARN)
+
+        and: 'an existing descriptor declaring a doctype, which Grails never generates'
+            def pluginXml = new File(tempDir, 'doctype-plugin.xml')
+            pluginXml.text = '''
+                <!DOCTYPE plugin>
+                <plugin>
+                    <resources>
+                        <resource>ExistingThing</resource>
+                    </resources>
+                </plugin>
+            '''
+
+        when: 'the transformation attempts to update the descriptor'
+            transformation.updatePluginXml(null, null, pluginXml, ['NewThing'])
+
+        then: 'the declaration is refused, so the descriptor is discarded and a warning is logged'
+            !pluginXml.exists()
+            logCapture.events.size() == 1
+            with(logCapture.events[0]) {
+                level == Level.WARN
+                formattedMessage == "Failed to update existing file ${pluginXml.absolutePath}. Recreating it instead..."
+            }
+
+        and: 'the deferred names are written out when the descriptor is next generated'
+            transformation.generatePluginXml(
+                    compilePlugin('class DoctypeRecoveredGrailsPlugin {}'),
+                    '1.0',
+                    [] as Set,
+                    pluginXml
+            )
+            new XmlSlurper().parse(pluginXml).resources.resource*.text() == ['NewThing']
+
+        cleanup:
+            logCapture.close()
     }
 
     void "plugin xml update recreates safely when the existing descriptor is malformed"() {
@@ -826,6 +1236,31 @@ class GlobalGrailsClassInjectorTransformationSpec extends Specification {
      * own {@code CANONICALIZATION} pass runs, mirroring how the Grails Gradle plugin stamps project
      * name/version metadata via its own compiler customizer.
      */
+    private static List<String> compileCollectingWarnings(File sourceFile, String source, File targetDirectory) {
+        sourceFile.parentFile.mkdirs()
+        sourceFile.text = source
+        def cu = new CompilationUnit(new CompilerConfiguration(targetDirectory: targetDirectory))
+        cu.addSource(sourceFile)
+        cu.compile(Phases.CANONICALIZATION)
+        (cu.errorCollector.warnings ?: []).collect { it.message?.toString() ?: it.toString() }
+    }
+
+    private static String artefactHandlerSource(String className) {
+        """
+            class ${className} extends grails.core.ArtefactHandlerAdapter {
+                ${className}() {
+                    super('${className}', null, null, 'Handler')
+                }
+            }
+        """
+    }
+
+    private static Properties factoriesIn(File targetDirectory) {
+        Properties properties = new Properties()
+        new File(targetDirectory, 'META-INF/grails.factories').withInputStream { properties.load(it) }
+        properties
+    }
+
     private static ClassNode compileToFile(File sourceFile, String source, File targetDirectory, Map<String, String> nodeMetaData = [:]) {
         sourceFile.parentFile.mkdirs()
         sourceFile.text = source

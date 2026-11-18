@@ -24,6 +24,9 @@ import jakarta.persistence.criteria.Root
 import org.grails.datastore.mapping.query.Query
 import org.grails.orm.hibernate.query.JpaProjectionTranslator
 import org.grails.orm.hibernate.query.JpaQueryContext
+import org.grails.orm.hibernate.query.SqlGroupProjection
+import org.grails.orm.hibernate.query.SqlProjection
+import org.hibernate.type.StandardBasicTypes
 import org.hibernate.query.criteria.JpaCriteriaQuery
 import grails.gorm.annotation.Entity
 import org.grails.datastore.gorm.GormEntity
@@ -113,6 +116,70 @@ class JpaProjectionTranslatorSpec extends HibernateGormDatastoreSpec {
         then:
         result != null
         result.getJavaType() == Integer
+    }
+
+    def "translate SqlProjection selects the SQL under its column alias without making it a property alias"() {
+        given:
+        JpaCriteriaQuery cq = criteriaBuilder.createQuery(String)
+        Root root = cq.from(JpaProjectionTranslatorSpecPerson)
+        JpaQueryContext context = new JpaQueryContext()
+        context.setRoot(root)
+        JpaProjectionTranslator translator = new JpaProjectionTranslator(
+                criteriaBuilder, context, getPersistentEntity(JpaProjectionTranslatorSpecPerson))
+
+        when:
+        Expression result = translator.translate(
+                new SqlProjection('upper({alias}.first_name)', 'firstName', StandardBasicTypes.STRING))
+
+        then:
+        result.getAlias() == 'firstName'
+        result.getJavaType() == String
+        context.getSelectionAlias('firstName') == result
+        !context.hasAlias('firstName')
+        context.getFullyQualifiedExpression('firstName') != result
+    }
+
+    def "translate SqlProjection takes the Java type of a Java class"() {
+        given:
+        JpaCriteriaQuery cq = criteriaBuilder.createQuery(Long)
+        Root root = cq.from(JpaProjectionTranslatorSpecPerson)
+        JpaQueryContext context = new JpaQueryContext()
+        context.setRoot(root)
+        JpaProjectionTranslator translator = new JpaProjectionTranslator(
+                criteriaBuilder, context, getPersistentEntity(JpaProjectionTranslatorSpecPerson))
+
+        expect:
+        translator.translate(new SqlProjection('max(age)', 'oldest', Long)).getJavaType() == Long
+        translator.translate(new SqlProjection('max(age)', 'oldest', null)).getJavaType() == Object
+    }
+
+    def "translate SqlGroupProjection selects nothing"() {
+        given:
+        JpaCriteriaQuery cq = criteriaBuilder.createQuery(String)
+        Root root = cq.from(JpaProjectionTranslatorSpecPerson)
+        JpaQueryContext context = new JpaQueryContext()
+        context.setRoot(root)
+        JpaProjectionTranslator translator = new JpaProjectionTranslator(
+                criteriaBuilder, context, getPersistentEntity(JpaProjectionTranslatorSpecPerson))
+
+        expect:
+        translator.translate(new SqlGroupProjection('first_name')) == null
+    }
+
+    def "translateSql needs the queried entity to replace {alias}"() {
+        given:
+        JpaCriteriaQuery cq = criteriaBuilder.createQuery(String)
+        Root root = cq.from(JpaProjectionTranslatorSpecPerson)
+        JpaQueryContext context = new JpaQueryContext()
+        context.setRoot(root)
+        JpaProjectionTranslator translator = new JpaProjectionTranslator(criteriaBuilder, context)
+
+        when:
+        translator.translateSql('upper({alias}.first_name)', String)
+
+        then:
+        IllegalStateException e = thrown()
+        e.message.contains('without the queried entity')
     }
 }
 

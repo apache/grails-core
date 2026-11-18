@@ -226,7 +226,7 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
         def context = contextWithProperties([
                 (Settings.SETTING_LOG_FULL_STACKTRACE_ON_FILTER): 'false'
         ])
-        def logCapture = new LogCapture('StackTrace')
+        def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
         when:
         closeBootstrapContext(context)
@@ -242,7 +242,7 @@ class GrailsBootstrapRegistryInitializerSpec extends Specification {
     def 'defaults logFullStackTraceOnFilter to true on the promoted DefaultStackTraceFilterer'() {
         given:
         def context = contextWithProperties([:])
-        def logCapture = new LogCapture('StackTrace')
+        def logCapture = new LogCapture(DefaultStackTraceFilterer.STACK_LOG_NAME)
 
         when:
         closeBootstrapContext(context)

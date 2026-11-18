@@ -34,6 +34,11 @@ plugins {
 version = projectVersion
 group = 'org.apache.grails.testing'
 
+grailsCodeAnalysis {
+    // PMD baseline is clean for this module; keep it blocking.
+    enablePmd()
+}
+
 ext {
     pomDescription = 'Support for writing concise expressive tests for Grails artifacts'
 }
@@ -58,6 +63,8 @@ dependencies {
     api 'org.junit.jupiter:junit-jupiter-api'
     api 'org.junit.platform:junit-platform-suite'
     runtimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'

@@ -1,0 +1,157 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A job whose execution takes longer than the interval of the trigger that started it needs three decisions: whether its executions may overlap, how many of the scheduler's threads they may occupy, and how an execution that has run for too long is stopped.
+
+===== Overlapping executions
+
+`concurrent` defaults to `true`, so every fire starts an execution whether or not the previous one has finished. A job that runs for hours on a trigger that fires every few minutes therefore stacks executions up, each holding one of the scheduler's worker threads for its whole run. Once every thread is occupied nothing fires at all: the scheduler looks stuck, the log fills with misfires, and no work gets done.
+
+Set `concurrent = false` on such a job, and the scheduler never runs two of its executions at the same time:
+
+[source,groovy]
+----
+class ImportJob {
+
+    static concurrent = false
+
+    static triggers = {
+        simple repeatInterval: 100_000L
+    }
+
+    void execute() {
+        // ...
+    }
+}
+----
+
+A fire that arrives while the job is still running is then held, and what becomes of it is the trigger's misfire instruction.
+
+===== Threads
+
+Jobs run on a fixed pool of worker threads — ten of them unless configured otherwise. A long-running job holds one of those threads for its entire execution, so the pool has to be large enough for every execution that can be in flight at once, plus the short jobs that must keep firing meanwhile:
+
+[source,yaml]
+----
+quartz:
+    threadPool:
+        threadCount: 25
+----
+
+===== Misfires
+
+A trigger misfires when the scheduler cannot fire it when it was due — because the previous execution is still running and the job is not concurrent, or because no worker thread is free. What happens to the fires that were missed is the trigger's `misfireInstruction`, set like any other trigger attribute. Left unset, a trigger uses Quartz's smart policy, which depends on the trigger type: an indefinitely repeating `simple` trigger drops the fires it missed and carries on at its next scheduled time, while a `cron` trigger fires once immediately.
+
+So to have an hourly report skip the run it missed instead of starting it the moment the long execution finishes:
+
+[source,groovy]
+----
+class ReportJob {
+
+    static concurrent = false
+
+    static triggers = {
+        cron cronExpression: '0 0 * * * ?',
+                misfireInstruction: CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING
+    }
+
+    void execute() {
+        // ...
+    }
+}
+----
+
+The instructions to choose from are the constants of the Quartz trigger type — `SimpleTrigger` and `CronTrigger`. How late a fire may be before the scheduler counts it as a misfire is `quartz.jobStore.misfireThreshold`, in milliseconds; it is passed straight through to Quartz, so set it explicitly if the tolerance matters to your schedule.
+
+===== Watching what is running
+
+`jobManagerService.runningJobs` returns the `JobExecutionContext` of every execution in flight. Each one carries the job it belongs to as `jobDetail.key` and the moment its execution began as `fireTime`, which is all that is needed to find work that has been running for too long:
+
+[source,groovy]
+----
+jobManagerService.runningJobs.each { JobExecutionContext context ->
+    println "${context.jobDetail.key} has been running since ${context.fireTime}"
+}
+----
+
+===== Stopping an execution
+
+There is no timeout setting. Nothing can safely stop a thread in the middle of arbitrary work, so a job is asked to stop itself instead: declare an `interrupt()` method on the job, and the plugin routes interruption requests to it. It is up to the job to notice and return from `execute`.
+
+[source,groovy]
+----
+class ImportJob {
+
+    static concurrent = false
+
+    private volatile boolean interrupted
+
+    static triggers = {
+        simple repeatInterval: 100_000L
+    }
+
+    void execute() {
+        for (batch in batches) {
+            if (interrupted) {
+                return
+            }
+            process batch
+        }
+    }
+
+    void interrupt() {
+        interrupted = true
+    }
+}
+----
+
+A field is enough to carry the flag: every execution is given its own instance of the job class, so nothing is shared between executions.
+
+Ask for the interruption from anywhere in the application, by job group and job name:
+
+[source,groovy]
+----
+jobManagerService.interruptJob('GRAILS_JOBS', 'com.example.ImportJob')
+----
+
+A job that does not declare `interrupt()` cannot be stopped; the request raises an `UnableToInterruptJobException` saying so. Code that interrupts jobs it does not own — a watchdog job which interrupts whatever it finds running past a limit, for instance — has to allow for that.
+
+===== Hibernate sessions
+
+A Hibernate `Session` is bound to the job's thread for the whole execution unless the job sets `sessionRequired = false`. A session that lives for hours keeps every entity it has loaded in its first-level cache, so memory grows with the work done and the entities it holds drift further from the database.
+
+Process the work of a long job in chunks, each in a session of its own, so neither grows without bound:
+
+[source,groovy]
+----
+class ImportJob {
+
+    static concurrent = false
+
+    void execute() {
+        batches.each { batch ->
+            Invoice.withNewSession {
+                process batch
+            }
+        }
+    }
+}
+----
+
+Note that the session is bound regardless of `sessionRequired` when `quartz.jdbcStore` is enabled, because the job store needs it.

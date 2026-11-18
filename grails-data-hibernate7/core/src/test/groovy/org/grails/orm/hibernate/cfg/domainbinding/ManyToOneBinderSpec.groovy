@@ -19,8 +19,10 @@
 package org.grails.orm.hibernate.cfg.domainbinding
 
 import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.ColumnConfig
 import org.grails.orm.hibernate.cfg.HibernateCompositeIdentity
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.*
+import org.grails.orm.hibernate.cfg.JoinTable
 import org.grails.orm.hibernate.cfg.Mapping
 import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
 import org.grails.orm.hibernate.cfg.PropertyConfig
@@ -198,6 +200,104 @@ class ManyToOneBinderSpec extends HibernateGormDatastoreSpec {
         result instanceof ManyToOne
         mapping.getColumns().containsKey("newProp")
         1 * propertyConfig.setJoinTable({ it.keys && it.keys[0].name == "new_prop_id" })
+    }
+
+    def "prepareCircularManyToMany reuses existing join-table keys when their count matches the composite identity"() {
+        given: "a circular many-to-many owned by an entity with a composite identity and pre-configured join keys"
+        def property = Mock(HibernateManyToManyProperty)
+        def otherSide = Mock(HibernateManyToManyProperty)
+        def collectionTable = new Table("coll_table")
+
+        PersistentClass ownerClass = new RootClass(metadataBuildingContext)
+        def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
+        realCollection.setCollectionTable(collectionTable)
+
+        property.getCollection() >> realCollection
+        property.getHibernateInverseSide() >> otherSide
+
+        def compositeId = new HibernateCompositeIdentity()
+        compositeId.setPropertyNames(["partA", "partB"] as String[])
+        def mapping = new Mapping()
+        mapping.setIdentity(compositeId)
+        mapping.setColumns([:])
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getHibernateCompositeIdentity() >> Optional.of(compositeId)
+            getHibernateMappedForm() >> mapping
+        }
+
+        def existingJoinTable = new JoinTable()
+        existingJoinTable.setKeys([new ColumnConfig(name: "custom_part_a"), new ColumnConfig(name: "custom_part_b")])
+
+        def propertyConfig = Mock(PropertyConfig)
+        propertyConfig.hasJoinKeyMapping() >> false
+        propertyConfig.getJoinTable() >> existingJoinTable
+
+        otherSide.getHibernateOwner() >> ownerEntity
+        otherSide.getOwner() >> ownerEntity
+        ownerEntity.getName() >> "OwnerEntity"
+
+        otherSide.isCircular() >> true
+        otherSide.getName() >> "compositeProp"
+        otherSide.getMappedForm() >> propertyConfig
+        otherSide.getHibernateMappedForm() >> propertyConfig
+
+        when:
+        def result = binder.bindManyToOne(property, "/test")
+
+        then:
+        result instanceof ManyToOne
+        1 * propertyConfig.setJoinTable({ it.keys*.name == ["custom_part_a", "custom_part_b"] })
+    }
+
+    def "prepareCircularManyToMany derives join keys from property names when existing keys are absent"() {
+        given: "a circular many-to-many owned by an entity with a composite identity and no pre-configured join keys"
+        def property = Mock(HibernateManyToManyProperty)
+        def otherSide = Mock(HibernateManyToManyProperty)
+        def collectionTable = new Table("coll_table")
+
+        PersistentClass ownerClass = new RootClass(metadataBuildingContext)
+        def realCollection = new HibernateMap(metadataBuildingContext, ownerClass)
+        realCollection.setCollectionTable(collectionTable)
+
+        property.getCollection() >> realCollection
+        property.getHibernateInverseSide() >> otherSide
+
+        def compositeId = new HibernateCompositeIdentity()
+        compositeId.setPropertyNames(["partA", "partB"] as String[])
+        def mapping = new Mapping()
+        mapping.setIdentity(compositeId)
+        mapping.setColumns([:])
+
+        def ownerEntity = Mock(GrailsHibernatePersistentEntity) {
+            getMappedForm() >> mapping
+            getHibernateCompositeIdentity() >> Optional.of(compositeId)
+            getHibernateMappedForm() >> mapping
+        }
+
+        def propertyConfig = Mock(PropertyConfig)
+        propertyConfig.hasJoinKeyMapping() >> false
+        propertyConfig.getJoinTable() >> null
+
+        otherSide.getHibernateOwner() >> ownerEntity
+        otherSide.getOwner() >> ownerEntity
+        ownerEntity.getName() >> "OwnerEntity"
+
+        otherSide.isCircular() >> true
+        otherSide.getName() >> "compositeProp"
+        otherSide.getMappedForm() >> propertyConfig
+        otherSide.getHibernateMappedForm() >> propertyConfig
+
+        namingStrategy.resolveColumnName("partA") >> "part_a"
+        namingStrategy.resolveColumnName("partB") >> "part_b"
+
+        when:
+        def result = binder.bindManyToOne(property, "/test")
+
+        then:
+        result instanceof ManyToOne
+        1 * propertyConfig.setJoinTable({ it.keys*.name == ["part_a_id", "part_b_id"] })
     }
 
     private List mockEntity(boolean composite) {

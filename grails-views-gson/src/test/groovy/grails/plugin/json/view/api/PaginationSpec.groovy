@@ -79,7 +79,7 @@ class PaginationSpec extends Specification {
     @Unroll("getLastOffset(total:#total, max:#max) == #expectedOffset")
     void "test last offests"() {
         when:
-            Integer lastOffset = jsonViewHelper.getLastOffset(total, max)
+            Long lastOffset = jsonViewHelper.getLastOffset(total, max)
 
         then:
             lastOffset == expectedOffset
@@ -96,12 +96,14 @@ class PaginationSpec extends Specification {
             99    | 5   | 95
             100   | 5   | 95
             101   | 5   | 100
+            3_000_000_000L | 10 | 2_999_999_990L
+            3_000_000_001L | 10 | 3_000_000_000L
     }
 
     @Unroll("getPrevOffset(offset:#offset, max:#max) == #expectedOffset")
     void "test prev offests"() {
         when:
-            Integer prevOffset = jsonViewHelper.getPrevOffset(offset, max)
+            Long prevOffset = jsonViewHelper.getPrevOffset(offset, max)
 
         then:
             prevOffset == expectedOffset
@@ -119,12 +121,13 @@ class PaginationSpec extends Specification {
             99     | 5   | 94
             100    | 5   | 95
             101    | 5   | 96
+            3_000_000_000L | 10 | 2_999_999_990L
     }
 
     @Unroll("getNextOffset(total:#total, offset:#offset, max:#max) == #expectedOffset")
     void "test getNextOffset"() {
         when:
-            Integer nextOffset = jsonViewHelper.getNextOffset(total, offset, max)
+            Long nextOffset = jsonViewHelper.getNextOffset(total, offset, max)
 
         then:
             nextOffset == expectedOffset
@@ -142,6 +145,8 @@ class PaginationSpec extends Specification {
             100   | 6      | 5   | 11
             100   | 90     | 5   | 95
             100   | 94     | 5   | 99
+            3_000_000_000L | 2_999_999_980L | 10 | 2_999_999_990L
+            3_000_000_000L | 2_999_999_990L | 10 | null
 
             100   | 95     | 5   | null
             100   | 99     | 5   | null

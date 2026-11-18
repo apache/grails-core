@@ -37,9 +37,15 @@ class BootStrap {
     def init = {
 @if(features.contains("spring-boot-starter-security")) {
         User.withTransaction {
+            def passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder()
             def password = UUID.randomUUID().toString()
-            new User(username: 'admin', password: PasswordEncoderFactories.createDelegatingPasswordEncoder().encode(password), roles: ['ROLE_ADMIN']).save(failOnError: true)
+            new User(username: 'admin', password: passwordEncoder.encode(password), roles: ['ROLE_ADMIN']).save(failOnError: true)
             log.warn "Generated admin credentials: admin / $password"
+            // A second, non-admin account: the URL rules in Application distinguish ROLE_ADMIN
+            // from an ordinary logged-in user, and without this nothing exercises that.
+            def userPassword = UUID.randomUUID().toString()
+            new User(username: 'user', password: passwordEncoder.encode(userPassword), roles: ['ROLE_USER']).save(failOnError: true)
+            log.warn "Generated user credentials: user / $userPassword"
         }
 }
 @if(features.contains("grails-spring-security")) {

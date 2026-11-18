@@ -19,6 +19,12 @@
 
 package org.grails.datastore.gorm
 
+import groovy.transform.CompileStatic
+import groovy.transform.NamedParam
+import groovy.transform.NamedParams
+
+import org.grails.datastore.gorm.internal.RefreshLockArguments
+
 /**
  * API for instance methods defined by a GORM entity
  *
@@ -50,6 +56,36 @@ trait GormEntityApi<D> {
      * @return The instance
      */
     abstract D refresh()
+    /**
+     * Refreshes the state of the current instance, with options.
+     *
+     * <p>Supported arguments:</p>
+     * <ul>
+     *   <li>{@code lock} - {@code true} reloads this instance's database state and version under a pessimistic
+     *   write lock; a {@link jakarta.persistence.LockModeType} reloads them under that lock mode instead. Either
+     *   form discards unflushed changes and requires an attached instance and an active transaction.</li>
+     * </ul>
+     *
+     * <p>Without a requested lock this behaves like {@link #refresh()}. Implementations that support locking
+     * override this method.</p>
+     *
+     * @param args The named arguments
+     * @return The instance
+     * @throws RuntimeException an implementation-specific exception if a lock is requested without an active
+     * transaction, such as {@code jakarta.persistence.TransactionRequiredException} for Hibernate
+     * @throws IllegalArgumentException if a lock is requested for an instance that is not attached to the
+     * current session, or the {@code lock} argument is neither a boolean nor a lock mode
+     * @throws UnsupportedOperationException if a lock is requested and the implementation does not support it
+     */
+    @CompileStatic
+    D refresh(@NamedParams([
+            @NamedParam(value = 'lock', type = Object, required = false)
+    ]) Map args) {
+        if (RefreshLockArguments.lockModeFrom(args) != null) {
+            throw new UnsupportedOperationException(RefreshLockArguments.UNSUPPORTED)
+        }
+        refresh()
+    }
     /**
      * Saves an object the datastore
      * @return Returns the instance

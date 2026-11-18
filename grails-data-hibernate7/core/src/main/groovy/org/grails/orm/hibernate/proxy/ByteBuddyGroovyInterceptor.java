@@ -27,16 +27,13 @@ import org.hibernate.type.CompositeType;
 /**
  * A ByteBuddy interceptor that avoids initializing the proxy for Groovy-specific methods.
  *
- * @author Graeme Rocher
- * @since 7.0
+ * @since 8.0
  */
 public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
 
-    private static final String GET_ID_METHOD = "getId";
-    private static final String GET_IDENTIFIER_METHOD = "getIdentifier";
-
     protected final Method getIdentifierMethod;
 
+    private final Class<?>[] interfaces;
     private final boolean lazyToString;
 
     public ByteBuddyGroovyInterceptor(
@@ -61,6 +58,7 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
                 session,
                 overridesEquals);
         this.getIdentifierMethod = getIdentifierMethod;
+        this.interfaces = interfaces;
         this.lazyToString = lazyToString;
     }
 
@@ -68,10 +66,8 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
     public Object intercept(Object proxy, Method method, Object[] args) throws Throwable {
         String methodName = method.getName();
 
-        // Check these BEFORE calling this.invoke() to avoid premature initialization in Hibernate 7
-        if ((getIdentifierMethod != null && methodName.equals(getIdentifierMethod.getName())) ||
-                GET_ID_METHOD.equals(methodName) ||
-                GET_IDENTIFIER_METHOD.equals(methodName)) {
+        // Only the mapped getter can return the identifier without invoking the entity.
+        if (getIdentifierMethod != null && getIdentifierMethod.equals(method)) {
             return getIdentifier();
         }
 
@@ -86,5 +82,27 @@ public class ByteBuddyGroovyInterceptor extends ByteBuddyInterceptor {
         }
 
         return this.invoke(method, args, proxy);
+    }
+
+    /**
+     * Writes the proxy as a {@link SerializableGroovyProxy}, which reads back through
+     * {@link ByteBuddyGroovyProxyFactory} as the same Groovy-aware proxy. Hibernate's own serialized form
+     * only rebuilds stock proxies, and rejects {@link GrailsBytecodeProvider}.
+     */
+    @Override
+    protected Object serializableProxy() {
+        return new SerializableGroovyProxy(
+                getEntityName(),
+                getPersistentClass(),
+                interfaces,
+                getInternalIdentifier(),
+                isReadOnlySettingAvailable() ? Boolean.valueOf(isReadOnly()) : isReadOnlyBeforeAttachedToSession(),
+                getSessionFactoryUuid(),
+                getSessionFactoryName(),
+                isAllowLoadOutsideTransaction(),
+                getIdentifierMethod,
+                setIdentifierMethod,
+                componentIdType,
+                lazyToString);
     }
 }

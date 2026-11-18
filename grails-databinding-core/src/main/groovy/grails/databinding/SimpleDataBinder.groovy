@@ -29,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 import groovy.xml.slurpersupport.GPathResult
 import org.codehaus.groovy.reflection.CachedMethod
+import org.codehaus.groovy.runtime.InvokerHelper
 
 import grails.databinding.converters.FormattedValueConverter
 import grails.databinding.converters.ValueConverter
@@ -75,6 +76,8 @@ import org.grails.databinding.xml.GPathResultMap
  */
 @CompileStatic
 class SimpleDataBinder implements DataBinder {
+
+    private static final List BIND_ALL_BINDING_INCLUDE_LIST = new BindAllBindingIncludeList()
 
     protected Map<Class, StructuredBindingEditor> structuredEditors = new HashMap<Class, StructuredBindingEditor>()
     ConversionService conversionService
@@ -269,7 +272,28 @@ class SimpleDataBinder implements DataBinder {
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
-        'class' != propName && 'classLoader' != propName && 'protectionDomain' != propName && 'metaClass' != propName && 'metaPropertyValues' != propName && 'properties' != propName && !blackList?.contains(propName) && (!whiteList || whiteList.contains(propName) || whiteList.find { it -> it?.toString()?.startsWith(propName + '.') })
+        // Only intrinsic runtime properties are hard-denied here. Grails-managed domain
+        // properties (id, version, dateCreated, lastUpdated, errors) may still bind when
+        // explicitly allowlisted (e.g. bindable: true); intrinsic runtime properties remain
+        // hard-denied while Grails-managed properties follow the explicit binding allowlist.
+        !FrameworkPropertyNames.INTRINSIC_RUNTIME_PROPERTIES.contains(propName) && !blackList?.contains(propName) &&
+                (whiteList == null || isBindAllBindingIncludeList(whiteList) || whiteList.contains(propName) ||
+                        whiteList.any { item -> item?.toString()?.startsWith(propName + '.') })
+    }
+
+    /**
+     * Marker include list meaning "bind every eligible property". Used when an
+     * explicit exclude-only bind must not intersect the class allowlist.
+     */
+    protected static List getBindAllBindingIncludeList() {
+        BIND_ALL_BINDING_INCLUDE_LIST
+    }
+
+    protected static boolean isBindAllBindingIncludeList(List includeList) {
+        includeList.is(BIND_ALL_BINDING_INCLUDE_LIST)
+    }
+
+    private static final class BindAllBindingIncludeList extends ArrayList {
     }
 
     protected boolean isOkToBind(MetaProperty property, List whitelist, List blacklist) {
@@ -352,9 +376,10 @@ class SimpleDataBinder implements DataBinder {
                     } else if (isBasicType(genericType)) {
                         addElementToCollectionAt(obj, propName, collectionInstance, index, convert(genericType, val))
                     } else if (val instanceof Map) {
-                        indexedInstance = genericType.getDeclaredConstructor().newInstance()
-                        bind(indexedInstance, new SimpleMapDataBindingSource(val), listener)
-                        addElementToCollectionAt(obj, propName, collectionInstance, index, indexedInstance)
+                        indexedInstance = instantiateAndBindOrUseMapConstructor(genericType, (Map) val, listener)
+                        if (indexedInstance != null) {
+                            addElementToCollectionAt(obj, propName, collectionInstance, index, indexedInstance)
+                        }
                     } else if (val instanceof DataBindingSource) {
                         indexedInstance = genericType.getDeclaredConstructor().newInstance()
                         bind(indexedInstance, val, listener)
@@ -378,20 +403,53 @@ class SimpleDataBinder implements DataBinder {
                 }
             }
         } else if (Map.isAssignableFrom(propertyType)) {
+            // Map.put rather than mapInstance[index] = ...: on Groovy 5 a String subscript on a Map
+            // resolves as property access, so an index such as "properties" would throw
+            // ReadOnlyPropertyException instead of storing the entry.
             Map mapInstance = initializeMap(obj, propName)
             if (mapInstance.size() < autoGrowCollectionLimit || mapInstance.containsKey(indexedPropertyReferenceDescriptor.index)) {
                 def referencedType = getReferencedTypeForCollection(propName, obj)
                 if (referencedType != null) {
                     if (val instanceof Map) {
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = referencedType.newInstance(val)
+                        def indexedInstance = instantiateAndBindOrUseMapConstructor(referencedType, (Map) val, listener)
+                        if (indexedInstance != null) {
+                            mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
+                        }
+                    } else if (val instanceof DataBindingSource) {
+                        def indexedInstance = referencedType.getDeclaredConstructor().newInstance()
+                        bind(indexedInstance, val, listener)
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, indexedInstance)
                     } else {
-                        mapInstance[indexedPropertyReferenceDescriptor.index] = convert(referencedType, val)
+                        mapInstance.put(indexedPropertyReferenceDescriptor.index, convert(referencedType, val))
                     }
                 } else {
-                    mapInstance[indexedPropertyReferenceDescriptor.index] = val
+                    mapInstance.put(indexedPropertyReferenceDescriptor.index, val)
                 }
             }
         }
+    }
+
+    protected Object instantiateAndBindOrUseMapConstructor(Class referencedType, Map values, DataBindingListener listener) {
+        def instance
+        try {
+            instance = referencedType.getDeclaredConstructor().newInstance()
+        } catch (NoSuchMethodException | IllegalAccessException ignored) {
+            return newInstanceFromMapArguments(referencedType, values)
+        }
+        bind(instance, new SimpleMapDataBindingSource(values), listener)
+        instance
+    }
+
+    /**
+     * Invoke a {@code Map} constructor without calling Groovy's
+     * {@code Class.newInstance(Map)}. Under {@code @CompileStatic} with
+     * invokedynamic disabled that extension is not selected, so nested
+     * objects with only a Map constructor are left unbound.
+     */
+    protected Object newInstanceFromMapArguments(Class referencedType, Map values) {
+        // Pass an Object[] so CompileStatic cannot treat the Map as named
+        // arguments or coerce it to a multi-arg constructor signature.
+        InvokerHelper.invokeConstructorOf(referencedType, new Object[] { values })
     }
 
     @CompileStatic(TypeCheckingMode.SKIP)

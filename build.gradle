@@ -19,8 +19,11 @@ plugins {
     id 'org.apache.grails.gradle.grails-violation-aggregation'
     id 'org.apache.grails.gradle.grails-ij-formatter'
     id 'org.apache.grails.gradle.grails-validate-actions'
+    id 'org.apache.grails.buildsrc.test-task-sharding'
+    id 'org.apache.grails.buildsrc.vulnerability-scan-report'
 }
 
+import java.lang.management.ManagementFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -28,6 +31,7 @@ import java.time.format.DateTimeFormatter
 
 import javax.inject.Inject
 
+import com.sun.management.OperatingSystemMXBean
 import org.apache.tools.ant.taskdefs.condition.Os
 
 ext {
@@ -42,11 +46,27 @@ ext {
             DateTimeFormatter.ISO_DATE.format(LocalDate.ofInstant(buildInstant as Instant, ZoneOffset.UTC))
     buildDate = (buildInstant as Instant).atZone(ZoneOffset.UTC) // for reproducible builds
     isCiBuild = System.getenv().get('CI') as Boolean
+    // GitHub Actions sets GITHUB_EVENT_NAME on every step; a pull request run restores the Gradle
+    // user home read-only from the base branch, so it reuses whatever that branch last resolved
+    isPullRequestBuild = System.getenv('GITHUB_EVENT_NAME') == 'pull_request'
     // Set DO_NOT_CACHE_TESTS=1 to force test tasks to re-run on every invocation without
     // needing --rerun-tasks. Useful for repeatedly running the same test command while
     // chasing flaky tests across runs.
     doNotCacheTests = System.getenv('DO_NOT_CACHE_TESTS')?.toBoolean()
-    configuredTestParallel = findProperty('maxTestParallel') as Integer ?: (isCiBuild ? 4 : Runtime.runtime.availableProcessors() * 3 / 4 as int ?: 1)
+    // availableProcessors() reports LOGICAL processors: SMT threads on x64, and on Apple silicon
+    // every efficiency core as well as every performance core. Taking 3/4 of that therefore
+    // asked for more concurrent Grails/Spring test JVMs than the machine has real capacity for
+    // (each fork also holds a 1G heap, and the mongodb, redis and geb suites start a Docker
+    // container per fork). Half is the conservative fraction. CI keeps its existing budget, so
+    // this does not reduce CI fork counts - though CI forks do see fewer processors, below.
+    configuredTestParallel = findProperty('maxTestParallel') as Integer ?:
+            (isCiBuild ? 4 : Math.max(1, (Runtime.runtime.availableProcessors() / 2) as int))
+    testForkHeapMb = findProperty('testForkHeapMb') as Integer ?:
+            (isCiBuild ? 768 : localTestForkHeapMb(gradle.startParameter.maxWorkerCount))
+    if (testForkHeapMb < 768) {
+        throw new GradleException("-PtestForkHeapMb must be at least 768 (got ${testForkHeapMb}): Grails Test " +
+                'tasks start with -Xms768m. Lower -PmaxTestParallel or --max-workers to use less memory.')
+    }
     excludeUnusedTransDeps = findProperty('excludeUnusedTransDeps')
 
     testProjectsStartWith = [
@@ -57,9 +77,70 @@ ext {
     docProjects = [ /* Will be populated by subprojects loop below */]
     cliProjects = [ /* Will be populated by subprojects loop below */]
     profileProjects = [ /* Will be populated by subprojects loop below */]
+    skillProjects = [ /* Will be populated by subprojects loop below */]
+}
+
+/**
+ * Sizes the heap of each local test fork, which org.gradle.jvmargs does not bound: half the RAM
+ * left after the daemon heap, split across the build-wide worker pool (which, not maxParallelForks,
+ * bounds concurrent forks) and clamped to 768m-1024m. 768m is the CI value and the minHeapSize
+ * GrailsGradlePlugin gives Grails Test tasks.
+ */
+static int localTestForkHeapMb(int maxWorkerCount) {
+    def os = ManagementFactory.operatingSystemMXBean
+    if (!(os instanceof OperatingSystemMXBean)) {
+        return 1024
+    }
+    long spareMb = Math.max(0L, (os.totalMemorySize - Runtime.runtime.maxMemory()) >> 20)
+    Math.min(1024, Math.max(768, spareMb.intdiv(2L * Math.max(1, maxWorkerCount)) as int))
+}
+
+/**
+ * Tells a forked test JVM how many processors it may size its GC and JIT thread pools from.
+ *
+ * Every forked JVM otherwise sizes those pools for the WHOLE machine, because no fork knows the
+ * others exist. On a 20-processor host that is 15 ParallelGCThreads + 4 ConcGCThreads + 12
+ * CICompilerCount = 31 threads per fork before a single test runs, so N concurrent forks become
+ * N*31 threads competing for the same cores. Gradle cannot see this: it charges each fork one
+ * worker lease, as though a fork were a single thread.
+ *
+ * The share is availableProcessors / maxWorkerCount, i.e. the BUILD-WIDE worker limit, because
+ * that - not any one task's maxParallelForks - is what bounds how many forks can run at once.
+ * With org.gradle.parallel=true, Test tasks from several projects execute concurrently, so a
+ * per-task share would still oversubscribe the machine.
+ *
+ * Supplied as an argument provider rather than through jvmArgs because several modules assign
+ * jvmArgs wholesale in their own build scripts, which would discard anything added here first.
+ */
+final class ActiveProcessorCountArgumentProvider implements CommandLineArgumentProvider {
+
+    @Input
+    final int processorCount
+
+    ActiveProcessorCountArgumentProvider(int availableProcessorCount, int maxWorkerCount) {
+        // Floor of 2: at ActiveProcessorCount=1 HotSpot's ergonomics select Serial GC, which
+        // costs more on a 1G test heap than the contention it saves. Two keeps G1 with a
+        // bounded worker count.
+        //
+        // That floor also means -PmaxTestParallel=1 still advertises 2 processors to the
+        // single fork whenever maxWorkerCount is larger than availableProcessors/2 (the
+        // usual local case: org.gradle.parallel=true with no org.gradle.workers.max).
+        // It is not a "give the one fork the whole machine" switch.
+        this.processorCount = Math.max(2, (availableProcessorCount / Math.max(1, maxWorkerCount)) as int)
+    }
+
+    @Override
+    Iterable<String> asArguments() {
+        ["-XX:ActiveProcessorCount=$processorCount".toString()]
+    }
 }
 
 subprojects {
+
+    tasks.withType(Test).configureEach { testTask ->
+        testTask.jvmArgumentProviders.add(new ActiveProcessorCountArgumentProvider(
+                Runtime.runtime.availableProcessors(), gradle.startParameter.maxWorkerCount))
+    }
 
     for (String testPrefix : testProjectsStartWith) {
         if (name.startsWith(testPrefix)) {
@@ -86,9 +167,21 @@ subprojects {
         rootProject.ext['profileProjects'] << name
     }
 
+    if (name.startsWith('grails-skills')) {
+        rootProject.ext['skillProjects'] << name
+    }
+
     configurations.configureEach {
         resolutionStrategy {
-            def cacheHours = isCiBuild || isReproducibleBuild ? 0 : 24
+            // Push and release runs always refetch dynamic versions and snapshots so they test what the
+            // repositories serve now. A pull request run reuses metadata the base branch resolved within
+            // the last day, so a repository that is down or slow does not fail the run at configuration time.
+            // validateDependencyVersions rejects dynamic versions, so in practice the cache covers only the
+            // snapshots in dependencies.gradle (Asset Pipeline, SiteMesh, grails-publish between releases):
+            // a pull request sees the snapshot the base branch last resolved, for up to a day. To test a
+            // newer snapshot sooner, push to the base branch, which refetches it and saves the Gradle user
+            // home that pull request runs restore, or run the build with --refresh-dependencies.
+            def cacheHours = (isCiBuild && !isPullRequestBuild) || isReproducibleBuild ? 0 : 24
             cacheDynamicVersionsFor(cacheHours, 'hours')
             cacheChangingModulesFor(cacheHours, 'hours')
         }
@@ -103,14 +196,15 @@ tasks.register('publishAllToMavenLocal') {
     group = 'publishing'
 
     def execSupport = objects.newInstance(ExecSupport)
+    // read while configuring: the build script's layout and logger are not available while a task runs
+    File projectRoot = layout.projectDirectory.asFile
 
-    doLast {
-        def projectRoot = layout.projectDirectory.asFile
+    doLast { Task task ->
         def javaHome = System.getProperty('java.home')
         def gradlew = Os.isFamily(Os.FAMILY_WINDOWS) ? 'gradlew.bat' : 'gradlew'
 
         def runPublish = { File workingDir, String label ->
-            logger.lifecycle("--- Publishing ${label} to Maven Local ---")
+            task.logger.lifecycle("--- Publishing ${label} to Maven Local ---")
             execSupport.process.exec { ExecSpec exec ->
                 exec.environment('JAVA_HOME', javaHome)
                 exec.workingDir = workingDir

@@ -1,0 +1,27 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+}
+
+gradle.projectsEvaluated {
+    tasks.named('compileGroovy', GroovyCompile).configure {
+        it.groovyOptions.configurationScript = file('user-config.groovy')
+    }
+}
+
+tasks.register('inspectAssign') {
+    dependsOn 'compileGroovy'
+    def finalConfigScript = providers.provider { tasks.named('compileGroovy', GroovyCompile).get().groovyOptions.configurationScript?.name }
+    def combined = file('build/grailsGroovyCompilerConfig-compileGroovy.groovy')
+    doLast {
+        println "FINAL_CONFIG_SCRIPT=${finalConfigScript.getOrNull()}"
+        println "COMBINED_EXISTS=${combined.exists()}"
+        println "COMBINED_CONTAINS_USER_IMPORT=${combined.exists() && combined.text.contains(/star 'java.time'/)}"
+    }
+}

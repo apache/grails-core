@@ -20,17 +20,20 @@ package org.grails.plugins.codecs
 
 import org.codehaus.groovy.runtime.NullObject
 
+import groovy.transform.CompileStatic
+
+@CompileStatic
 class SHA1CodecExtensionMethods {
 
     // Returns the byte[] of the digest
-    static encodeAsSHA1(theTarget) {
+    static Object encodeAsSHA1(Object theTarget) {
         if (theTarget == null || theTarget instanceof NullObject) {
             return null
         }
-        theTarget.encodeAsSHA1Bytes().encodeAsHex()
+        return HexCodecExtensionMethods.encodeAsHex(SHA1BytesCodecExtensionMethods.encodeAsSHA1Bytes(theTarget))
     }
 
-    static decodeSHA1(theTarget) {
+    static Object decodeSHA1(Object theTarget) {
         throw new UnsupportedOperationException('Cannot decode SHA-1 hashes')
     }
 }

@@ -25,7 +25,8 @@ public enum GormImpl {
 
     HIBERNATE5("gorm-hibernate5", "Hibernate 5"),
     HIBERNATE7("gorm-hibernate7", "Hibernate 7"),
-    MONGODB("gorm-mongodb", "MongoDB");
+    MONGODB("gorm-mongodb", "MongoDB"),
+    NEO4J("gorm-neo4j", "Neo4j");
 
     public static final GormImpl DEFAULT_OPTION = HIBERNATE5;
 

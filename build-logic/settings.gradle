@@ -28,10 +28,14 @@ pluginManagement {
 plugins {
 	id 'com.gradle.develocity' version '4.3.2'
 	id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.4.0'
+	id 'com.autonomousapps.build-health' version '3.19.2' apply false
 }
+
+apply from: file('../gradle/dependency-analysis.settings.gradle')
 
 def isCI = System.getenv().containsKey('CI')
 def isLocal = !isCI
+def hasDevelocityAccessKey = System.getenv('DEVELOCITY_ACCESS_KEY') != null
 def isReproducibleBuild = System.getenv('SOURCE_DATE_EPOCH') != null
 if (isReproducibleBuild) {
     gradle.settingsEvaluated {
@@ -42,6 +46,7 @@ if (isReproducibleBuild) {
 
 develocity {
 	server = 'https://develocity.apache.org'
+	projectId = 'grails'
 	buildScan {
 		publishing.onlyIf { it.authenticated }
 		uploadInBackground = isLocal
@@ -51,7 +56,7 @@ develocity {
 buildCache {
     local { enabled = (isLocal && !isReproducibleBuild) || (isCI && isReproducibleBuild) }
     remote(develocity.buildCache) {
-        push = isCI
+        push = hasDevelocityAccessKey
         enabled = !isReproducibleBuild
     }
 }
@@ -89,6 +94,9 @@ rootProject.name = 'build-logic-root'
 
 include 'build-logic'
 project(':build-logic').projectDir = file('plugins')
+
+include 'vulnerability-scan'
+project(':vulnerability-scan').projectDir = file('vulnerability-scan')
 
 include 'grails-docs-core'
 project(':grails-docs-core').projectDir = file('docs-core')

@@ -80,6 +80,12 @@ class ConnectionSourceSettings implements Settings {
     Boolean cacheAutoTimestampAnnotations
 
     /**
+     * The identity type to use when a portable, precompiled domain declares
+     * {@code Serializable id}. Accepted values are {@code long} and {@code native}.
+     */
+    String defaultIdType = 'long'
+
+    /**
      * Package names that should fail on error
      */
     List<String> failOnErrorPackages = Collections.emptyList()
@@ -143,4 +149,3 @@ class ConnectionSourceSettings implements Settings {
         List<CustomTypeMarshaller> types = []
     }
 }
-

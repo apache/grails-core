@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import grails.core.GrailsApplication;
 import grails.core.GrailsControllerClass;
 import org.grails.core.artefact.ControllerArtefactHandler;
+import org.grails.web.util.HiddenHttpMethod;
 
 /**
  * Default implementation that uses the web request to obtain information about the currently
@@ -61,7 +62,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
     public String getCharacterEncoding() {
         final GrailsWebRequest req = getWebRequest();
         if (req != null) {
-            return req.getCurrentRequest().getCharacterEncoding();
+            return req.getRequest().getCharacterEncoding();
         }
         return DEFAULT_REQUEST_ENCODING;
     }
@@ -70,7 +71,7 @@ public class DefaultRequestStateLookupStrategy implements GrailsRequestStateLook
     public String getHttpMethod() {
         final GrailsWebRequest req = getWebRequest();
         if (req != null) {
-            return req.getCurrentRequest().getMethod();
+            return HiddenHttpMethod.effectiveMethod(req.getRequest());
         }
         return null;
     }
