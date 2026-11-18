@@ -81,11 +81,11 @@ dependencies {
     testRuntimeOnly 'org.aspectj:aspectjweaver'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
     testRuntimeOnly 'org.springframework:spring-aspects'
+    testRuntimeOnly project(':grails-test-listener')
 }
 
 def isolatedTestPatterns = [
         isolatedTestsOne: [
-                'org.grails.core.DefaultGrailsControllerClassSpec',
                 'org.grails.web.util.WebUtilsTests'
         ],
         isolatedTestsTwo: [
@@ -138,8 +138,9 @@ tasks.withType(Test).configureEach {
 
     onlyIf { !testsSkipped }
     useJUnitPlatform()
+    // The excludes of test-config.gradle, which this build does not apply.
+    exclude('**/*TestCase.class', '**/*$*.class')
     maxParallelForks = rootProject.ext.configuredTestParallel
-    forkEvery = isCiBuild ? 50 : 100
     maxHeapSize = "${rootProject.ext.testForkHeapMb}m"
     jvmArgs('--add-opens=java.base/java.lang=ALL-UNNAMED', '--add-opens=java.base/java.util=ALL-UNNAMED')
 }
@@ -149,7 +150,6 @@ tasks.withType(Test).configureEach {
 // block registered first would be silently overwritten by the later configureEach.
 tasks.named('isolatedTestsTwo', Test) {
     maxParallelForks = 1
-    forkEvery = 100
 }
 
 tasks.named('test', Test) {

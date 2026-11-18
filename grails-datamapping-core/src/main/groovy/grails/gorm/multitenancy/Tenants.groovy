@@ -56,8 +56,12 @@ class Tenants {
         Datastore getDatastore(Class<? extends Datastore> datastoreClass) {
             GormRegistry.instance.apiResolver.findDatastoreByType(datastoreClass)
         }
+        /**
+         * The datastore the domain class is mapped to, never the one of a tenant in DATABASE mode, as the tenant is
+         * bound for the former.
+         */
         Datastore getDatastoreForDomain(Class domainClass) {
-            GormRegistry.instance.apiResolver.findDatastore(domainClass)
+            GormRegistry.instance.apiResolver.findServiceDatastore(domainClass)
         }
     }
 

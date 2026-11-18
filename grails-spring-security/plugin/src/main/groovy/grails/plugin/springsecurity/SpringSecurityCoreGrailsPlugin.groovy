@@ -58,6 +58,7 @@ import grails.plugin.springsecurity.web.filter.GrailsAnonymousAuthenticationFilt
 
 import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFilter
 import grails.plugin.springsecurity.web.filter.IpAddressFilter
+import grails.plugin.springsecurity.web.filter.StartupGateFilter
 import grails.plugins.Plugin
 import groovy.util.logging.Slf4j
 import org.grails.web.mime.HttpServletResponseExtension
@@ -66,6 +67,7 @@ import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.cache.jcache.JCacheCacheManager
+import org.springframework.core.Ordered
 import org.springframework.expression.spel.standard.SpelExpressionParser
 import org.springframework.security.authentication.event.LoggerListener
 import org.springframework.security.access.expression.DenyAllPermissionEvaluator
@@ -225,6 +227,20 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             beanTypeResolver = beanTypeResolverClass.newInstance(conf, grailsApplication)
 
             springSecurityBeanFactoryPostProcessor(classFor('springSecurityBeanFactoryPostProcessor', SpringSecurityBeanFactoryPostProcessor))
+
+            if (conf.rejectRequestsDuringStartup) {
+                // respond with 503 until the application has started
+                springSecurityStartupGateFilter(classFor('springSecurityStartupGateFilter', StartupGateFilter))
+
+                springSecurityStartupGateRegistrationBean(classFor('springSecurityStartupGateRegistrationBean', FilterRegistrationBean)) {
+                    filter = ref('springSecurityStartupGateFilter')
+                    urlPatterns = ['/*']
+                    dispatcherTypes = EnumSet.of(DispatcherType.ERROR, DispatcherType.REQUEST)
+                    // leave the highest precedence to filters that answer requests themselves while
+                    // the application starts, such as a startup progress page
+                    order = Ordered.HIGHEST_PRECEDENCE + 1
+                }
+            }
 
             // configure the filter and optionally the listener
             int filterOrder = securityFilterOrder()
@@ -723,6 +739,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
 // TODO            if (passwordEncoder instanceof DigestAuthPasswordEncoder) {
 //                passwordEncoder.resetInitializing()
 //            }
+        }
+
+        if (conf.rejectRequestsDuringStartup) {
+            // the startup gate opens once this has run and the application has started
+            applicationContext.springSecurityStartupGateFilter.markInitialized()
         }
     }
 

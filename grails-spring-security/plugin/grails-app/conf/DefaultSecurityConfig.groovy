@@ -51,6 +51,9 @@ security {
     // Also consider using fii.rejectPublicInvocations = true
     rejectIfNoRule = true
 
+    // respond with 503 to requests received before the application has started
+    rejectRequestsDuringStartup = true
+
     // hierarchical roles
     roleHierarchy = ''
 

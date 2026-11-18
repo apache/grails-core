@@ -37,7 +37,7 @@ jobs:
       github.event_name != 'pull_request'
       || (!contains(github.event.pull_request.labels.*.name, 'no ci')
           && (!github.event.pull_request.draft || contains(github.event.pull_request.labels.*.name, 'run ci')))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: "📥 Checkout repository"
         uses: actions/checkout@v7.0.1

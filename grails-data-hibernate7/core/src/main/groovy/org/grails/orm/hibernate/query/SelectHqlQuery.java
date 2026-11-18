@@ -63,9 +63,9 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
         if (offset != null && offset > -1) {
             d.setFirstResult(offset);
         }
-        populateQuerySettings(d, queryContext.querySettings());
-        populateHints(d, queryContext.hints());
-        HqlQueryMethods.populateParameters(d, queryContext);
+        populateQuerySettings(d, queryContext.settings().settings());
+        populateHints(d, queryContext.settings().hints());
+        HqlQueryMethods.populateParameters(d, queryContext.parameters());
     }
 
     public int executeUpdate() {
@@ -95,7 +95,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
         if (max != null && max > -1) {
             return max;
         }
-        Object m = queryContext.querySettings().get(HibernateQueryArgument.MAX.value());
+        Object m = queryContext.settings().getSetting(HibernateQueryArgument.MAX);
         return m == null ? -1 : HqlQueryMethods.toInteger(m);
     }
 
@@ -104,7 +104,7 @@ public class SelectHqlQuery extends Query implements HqlQueryMethods, Serializab
         if (offset != null && offset > -1) {
             return offset;
         }
-        Object o = queryContext.querySettings().get(HibernateQueryArgument.OFFSET.value());
+        Object o = queryContext.settings().getSetting(HibernateQueryArgument.OFFSET);
         return o == null ? 0 : HqlQueryMethods.toInteger(o);
     }
 }

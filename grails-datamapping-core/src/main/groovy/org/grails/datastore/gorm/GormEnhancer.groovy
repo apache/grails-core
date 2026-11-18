@@ -39,6 +39,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.reflect.MetaClassUtils
+import org.grails.datastore.mapping.reflect.NameUtils
 
 /**
  * Enhances a class with GORM methods
@@ -239,7 +240,8 @@ class GormEnhancer implements Closeable {
     static PersistentEntity findEntity(Class entity) {
         GormApiResolver resolver = GormRegistry.instance.apiResolver
         Datastore ds = resolver.findDatastore(entity, null)
-        return ds?.mappingContext?.getPersistentEntity(entity.name)
+        String className = entity != null ? NameUtils.getClassName(entity) : null
+        return ds?.mappingContext?.getPersistentEntity(className)
     }
 
     /**

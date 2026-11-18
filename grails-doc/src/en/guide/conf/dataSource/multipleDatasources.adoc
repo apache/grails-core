@@ -48,8 +48,8 @@ environments:
             dbCreate: update
             url: jdbc:h2:prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             properties:
-               jmxEnabled: true
-               initialSize: 5
+               registerMbeans: true
+               minimumIdle: 5
 ----
 
 This configures a single `DataSource` with the Spring bean named `dataSource`. To configure extra data sources, add a `dataSources` block (at the top level, in an environment block, or both, just like the standard `DataSource` definition) with a custom name. For example, this configuration adds a second `DataSource`, using MySQL in the development environment and Oracle in production:
@@ -86,8 +86,8 @@ environments:
             dbCreate: update
             url: jdbc:h2:prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             properties:
-                jmxEnabled: true
-                initialSize: 5
+                registerMbeans: true
+                minimumIdle: 5
                 ...
         dataSources:            
             lookup:
