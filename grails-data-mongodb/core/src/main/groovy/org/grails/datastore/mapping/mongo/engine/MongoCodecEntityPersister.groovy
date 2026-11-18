@@ -212,7 +212,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
             } else if (idIsNull) {
                 throw new DataIntegrityViolationException("Entity [$obj] has null identifier when identifier strategy is manual assignment. Assign an appropriate identifier before persisting.")
             } else if (isAssigned && !si.isStateless(entity)) {
-                isUpdate = mongoCodecSession.contains(obj) || wasPersisted(obj)
+                isUpdate = mongoCodecSession.contains(obj) || (!isInsert && wasPersisted(obj))
             }
 
             si.registerPending(obj)
@@ -224,6 +224,9 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                     @Override
                     void run() {
                         if (!cancelInsert(entity, entityAccess)) {
+                            if (isAssigned) {
+                                mongoDatastore.persistedInstances.add(obj)
+                            }
                             updateCaches(entity, obj, id)
                             addCascadeOperation(new PendingOperationAdapter(entity, id, obj) {
                                 @Override
@@ -287,15 +290,12 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
     }
 
     /**
-     * An instance that was loaded or saved starts tracking its changes, a new one does not. With an assigned id that is what
-     * tells a detached instance, which is updated, from a new one, which is inserted.
+     * An instance with an assigned id that was loaded from the database, or inserted into it, is detached when the session no
+     * longer holds it, and is updated when it is saved. A new instance was neither, and is inserted. The changes an instance
+     * tracks cannot tell the two apart, as a save marks a loaded instance dirty as a whole, which a new one looks like too.
      */
-    private static boolean wasPersisted(Object obj) {
-        if (obj instanceof DirtyCheckable) {
-            DirtyCheckable checkable = (DirtyCheckable) obj
-            return !checkable.hasChanged() || !checkable.listDirtyPropertyNames().isEmpty()
-        }
-        return false
+    private boolean wasPersisted(Object obj) {
+        mongoDatastore.persistedInstances.contains(obj)
     }
 
     protected void processAssociations(MongoCodecSession mongoCodecSession, PersistentEntity entity, EntityAccess entityAccess, obj, ProxyFactory proxyFactory, boolean isUpdate) {
@@ -473,6 +473,7 @@ class MongoCodecEntityPersister extends ThirdPartyCacheEntityPersister<Object> {
                 void run() {
                     def entityAccess = self.createEntityAccess(pe, obj)
                     if (!self.cancelDelete(pe, entityAccess)) {
+                        mongoDatastore.persistedInstances.remove(obj)
                         mongoSession.clear(obj)
                         addCascadeOperation(new PendingOperationAdapter(pe, id, obj) {
                             @Override
