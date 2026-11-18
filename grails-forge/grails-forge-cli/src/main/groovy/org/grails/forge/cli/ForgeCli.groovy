@@ -21,6 +21,7 @@ package org.grails.forge.cli
 import java.util.function.BiFunction
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
@@ -153,12 +154,27 @@ final class ForgeCli {
         // of the manifest as it is, read quietly, since a problem with it was reported already
         CommandLine[] offered = [commandLine] as CommandLine[]
         Supplier<CommandLine> current = { -> offered[0] } as Supplier<CommandLine>
-        new InteractiveShell(commandLine, current, { String[] commandArgs ->
-            execute(context, commandArgs)
+        new InteractiveShell(commandLine, current, { String[] commandArgs -> runLine(context, offered, commandArgs) },
+                EXCEPTION_HANDLER, InteractiveShell.DEFAULT_PROMPT).start()
+    }
+
+    /**
+     * Runs a line entered at the prompt, then makes the commands it offers those of the project's
+     * manifest as it is now. A problem reading them keeps those offered before, so the prompt goes on.
+     *
+     * @param offered holds the command line the prompt completes from
+     */
+    @PackageScope
+    static void runLine(ApplicationContext context, CommandLine[] offered, String[] commandArgs) {
+        execute(context, commandArgs)
+        try {
             CommandLine refreshed = createForgeCommandLine(context, true)
             addProjectCommands(refreshed, false, ConsoleOutput.NOOP)
             offered[0] = refreshed
-        }, EXCEPTION_HANDLER, InteractiveShell.DEFAULT_PROMPT).start()
+        }
+        catch (RuntimeException ignored) {
+            // the next line that runs reports it
+        }
     }
 
     /**

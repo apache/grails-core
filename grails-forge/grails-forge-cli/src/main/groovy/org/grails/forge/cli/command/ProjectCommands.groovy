@@ -33,7 +33,7 @@ import org.grails.forge.io.ConsoleOutput
  * plugins, which {@code runCommand} runs.
  *
  * <p>The project's build describes them in a manifest, written by the Grails Gradle plugin's
- * {@code generateCommandManifest} task, which also names the directories whose files decide the
+ * {@code generateCommandManifest} task, which also names the directories and files that decide the
  * commands. Each time the build runs, the files of those directories are recorded, with their times and
  * sizes; the manifest is read as long as they are unchanged, and otherwise the task is run first, so a
  * plugin added to the build brings its commands with it. When the build fails, the commands of the last
@@ -65,10 +65,14 @@ class ProjectCommands {
 
     private static final List<String> BUILD_FILE_SUFFIXES = ['.gradle', '.gradle.kts', '.properties', '.toml']
 
-    private static final List<String> BUILD_SCRIPTS = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts']
+    /** What builds and tools write, rather than read, outside a directory of sources */
+    private static final List<String> OUTPUT_DIRS = ['build', '.gradle', '.kotlin', 'out', 'bin', '.git', '.idea', '.settings']
 
-    /** What builds and tools write next to a build script, rather than read */
-    private static final List<String> OUTPUT_DIRS = ['build', '.gradle', '.kotlin', 'out', 'bin', '.git', '.idea', 'node_modules']
+    /** Directories whose files are sources, so a package below them named like an output is read */
+    private static final List<String> SOURCE_DIRS = ['src', 'grails-app']
+
+    /** What tools write anywhere, sources included */
+    private static final List<String> TOOL_FILES = ['node_modules', '.DS_Store']
 
     private final File projectDir
     private final ProjectGradle gradle
@@ -127,7 +131,7 @@ class ProjectCommands {
     private void update(File manifest, ConsoleOutput console) {
         // the files are recorded before the build runs, so one changed while it runs counts next time
         Inputs before = inputsOf(manifest)
-        List<String> recorded = snapshot(before)
+        List<String> recorded = snapshotOrNull(before)
         console.out('Reading the commands of the project from its build...')
         String problem
         try {
@@ -142,7 +146,7 @@ class ProjectCommands {
         }
         if (problem == null) {
             Inputs after = inputsOf(manifest)
-            save(after == before ? recorded : snapshot(after), null, console)
+            save(after == before ? recorded : snapshotOrNull(after), null, console)
             return
         }
         save(recorded, problem, console)
@@ -159,6 +163,11 @@ class ProjectCommands {
     private void save(List<String> recorded, String problem, ConsoleOutput console) {
         File record = new File(projectDir, RECORD_PATH)
         File failed = new File(projectDir, FAILED_PATH)
+        if (recorded == null) {
+            console.warning('Could not read the files the commands of the project depend on. The build is run for ' +
+                    'them again next time.')
+            return
+        }
         try {
             Files.createDirectories(record.parentFile.toPath())
             Files.write(record.toPath(), recorded.collect { String line -> line + '\n' }.join('').getBytes('UTF-8'))
@@ -239,7 +248,7 @@ class ProjectCommands {
             // cannot be told from one that was never there
             return !record.isFile() || Files.readAllLines(record.toPath()) != snapshot(inputsOf(manifest))
         }
-        catch (IOException ignored) {
+        catch (IOException | RuntimeException ignored) {
             return true
         }
     }
@@ -254,10 +263,12 @@ class ProjectCommands {
                 Object parsed = new JsonSlurper().parse(manifest, 'UTF-8')
                 Object inputs = parsed instanceof Map ? ((Map) parsed).inputs : null
                 if (inputs instanceof Map) {
-                    List<File> buildDirectories = files(((Map) inputs).buildDirectories)
-                    List<File> sourceDirectories = files(((Map) inputs).sourceDirectories)
-                    if (buildDirectories != null && sourceDirectories != null) {
-                        return new Inputs(buildDirectories, sourceDirectories)
+                    Map given = (Map) inputs
+                    List<File> buildDirectories = files(given.buildDirectories)
+                    List<File> sourceDirectories = files(given.sourceDirectories)
+                    List<File> sourceFiles = given.containsKey('sourceFiles') ? files(given.sourceFiles) : []
+                    if (buildDirectories != null && sourceDirectories != null && sourceFiles != null) {
+                        return new Inputs(buildDirectories, sourceDirectories, sourceFiles)
                     }
                 }
             }
@@ -268,14 +279,31 @@ class ProjectCommands {
         File rootDir = gradle.rootDir
         new Inputs([projectDir, rootDir].unique(),
                 [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
-                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')])
+                 new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')], [])
     }
 
+    /** The files of a list of absolute paths, or none when one is not such a path, such as a mistyped one */
     private static List<File> files(Object paths) {
-        if (!(paths instanceof List) || ((List) paths).any { !(it instanceof String) }) {
+        if (!(paths instanceof List)) {
             return null
         }
-        ((List<String>) paths).collect { String path -> new File(path) }
+        List<File> files = []
+        for (Object path : (List) paths) {
+            if (!(path instanceof String) || !absolute((String) path)) {
+                return null
+            }
+            files << new File((String) path)
+        }
+        files
+    }
+
+    private static boolean absolute(String path) {
+        try {
+            return Path.of(path).absolute && Path.of(path).nameCount > 0
+        }
+        catch (RuntimeException ignored) {
+            return false
+        }
     }
 
     /**
@@ -299,12 +327,26 @@ class ProjectCommands {
             }
         }
         for (File dir : inputs.sourceDirectories) {
-            walk(dir, lines)
+            // the sources of commands are sources from the start; a tree of a build becomes so below src
+            walk(dir, lines, dir.name == 'META-INF' || (dir.name == 'commands' && dir.parentFile?.name == 'grails-app'))
+        }
+        for (File file : inputs.sourceFiles) {
+            walk(file, lines, true)
         }
         lines
     }
 
-    private static void walk(File file, List<String> lines) {
+    /** The record of the files, or none when they cannot be read, such as one of a path the system refuses */
+    private static List<String> snapshotOrNull(Inputs inputs) {
+        try {
+            return snapshot(inputs)
+        }
+        catch (RuntimeException ignored) {
+            return null
+        }
+    }
+
+    private static void walk(File file, List<String> lines, boolean inSources) {
         Path path = file.toPath()
         if (Files.isSymbolicLink(path)) {
             // not followed, so a link to a directory above it cannot loop
@@ -324,10 +366,10 @@ class ProjectCommands {
                 return
             }
             lines << "directory\t${file.absolutePath}".toString()
-            boolean buildRoot = file.name == 'buildSrc' || BUILD_SCRIPTS.any { String script -> new File(file, script).isFile() }
             for (File child : children.sort(false) { File it -> it.name }) {
-                if (!(buildRoot && child.name in OUTPUT_DIRS && child.isDirectory())) {
-                    walk(child, lines)
+                boolean output = !inSources && child.name in OUTPUT_DIRS && child.isDirectory()
+                if (!output && !(child.name in TOOL_FILES)) {
+                    walk(child, lines, inSources || child.name in SOURCE_DIRS)
                 }
             }
         }
@@ -348,10 +390,12 @@ class ProjectCommands {
 
         final List<File> buildDirectories
         final List<File> sourceDirectories
+        final List<File> sourceFiles
 
-        Inputs(List<File> buildDirectories, List<File> sourceDirectories) {
+        Inputs(List<File> buildDirectories, List<File> sourceDirectories, List<File> sourceFiles) {
             this.buildDirectories = buildDirectories
             this.sourceDirectories = sourceDirectories
+            this.sourceFiles = sourceFiles
         }
     }
 }

@@ -170,7 +170,7 @@ class ProjectCommandsSpec extends Specification {
                 file.parentFile.mkdirs()
                 file.text = 'a=1'
                 break
-            case 'changed with its time kept':
+            case 'changed in size with its time kept':
                 file.text = 'a=12'
                 file.setLastModified(recorded)
                 break
@@ -193,7 +193,7 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations().size() == 1
 
         where:
-        [path, change] << [WATCHED_FILES, ['added', 'changed with its time kept', 'replaced by an older copy', 'deleted']]
+        [path, change] << [WATCHED_FILES, ['added', 'changed in size with its time kept', 'replaced by an older copy', 'deleted']]
                 .combinations()
                 .findAll { String path, String change -> !(path == 'build.gradle' && change in ['added', 'deleted']) }
     }
@@ -337,6 +337,73 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         gradleInvocations().size() == 2
+    }
+
+    void 'the source of a command the manifest names is watched, wherever it is'() {
+        given:
+        File source = new File(dir, 'plugins/audit/src/main/groovy/com/acme/AuditCommand.groovy')
+        source.parentFile.mkdirs()
+        source.text = 'class AuditCommand {}'
+        buildWritesWithInputs([buildDirectories: [dir.path], sourceDirectories: [], sourceFiles: [source.path]], URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'the command gains an option'
+        source.text = 'class AuditCommand { /* @CommandOption */ }'
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+    }
+
+    void 'what tools write in an included build does not make the manifest outdated, wherever the build is'() {
+        given: 'an included build, below a directory named src, with a subproject that has no build file of its own'
+        File included = new File(dir, 'src/shared')
+        new File(included, 'lib/src/main/groovy/com/acme/build').mkdirs()
+        new File(included, 'lib/src/main/webapp').mkdirs()
+        new File(included, 'settings.gradle.kts').text = 'include("lib")'
+        buildWritesWithInputs([buildDirectories: [dir.path], sourceDirectories: [included.path]], URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when:
+        ['lib/build/classes/A.class', 'lib/.gradle/probe', '.gradle/probe', '.kotlin/sessions/a', 'lib/bin/A.class',
+         'node_modules/.cache/x', 'lib/src/main/webapp/node_modules/.cache/x', '.DS_Store', 'lib/.settings/prefs'].each { String path ->
+            File written = new File(included, path)
+            written.parentFile.mkdirs()
+            written.text = 'written'
+        }
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == []
+
+        when: 'a source of the included build changes, in a package named build'
+        new File(included, 'lib/src/main/groovy/com/acme/build/Plugin.groovy').text = 'class Plugin {}'
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations().size() == 1
+    }
+
+    void 'a manifest naming #what as an input is read with the inputs of the project and its build instead'() {
+        given:
+        buildWritesWithInputs([buildDirectories: paths, sourceDirectories: []], URL_MAPPINGS_REPORT)
+
+        when:
+        CommandLine first = ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        first.subcommands.containsKey('url-mappings-report')
+        gradleInvocations().size() == 1
+
+        where:
+        what              | paths
+        'a relative path' | ['relative/dir']
+        'the root'        | ['/']
+        'an empty path'   | ['']
+        'a path with NUL' | ['/tmp/a\u0000b']
     }
 
     void 'a link that loops is recorded, not followed'() {
@@ -756,6 +823,29 @@ class ProjectCommandsSpec extends Specification {
         then:
         output.toString().contains("Could not read the commands of the project from ${manifest}, so they are not offered")
         commandLine.subcommands.containsKey('create-app')
+    }
+
+    void 'after a line that runs the build, the prompt completes the commands the build found'() {
+        given: 'the prompt started with the commands of the last manifest'
+        writeManifest(URL_MAPPINGS_REPORT)
+        CommandLine[] offered = [ForgeCli.createCommandLine(context, true)] as CommandLine[]
+        assert !complete(offered[0], 's2-q').contains('s2-quickstart')
+        buildWrites(URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
+        new File(dir, 'build.gradle') << '// a plugin added\n'
+
+        when: 'a line names a command the Forge CLI does not have, which runs the build'
+        ForgeCli.runLine(context, offered, ['s2-quickstart', '--help'] as String[])
+
+        then:
+        gradleInvocations()*.get(5) == ['generateCommandManifest']
+        complete(offered[0], 's2-q').contains('s2-quickstart')
+
+        when: 'a line runs no build'
+        ForgeCli.runLine(context, offered, ['--help'] as String[])
+
+        then: 'the commands stay those of the manifest'
+        complete(offered[0], 's2-q').contains('s2-quickstart')
+        gradleInvocations().size() == 1
     }
 
     void 'the prompt completes project commands, their options and the values they declare'() {
