@@ -71,7 +71,12 @@ interface OuterSessionLifecycleStrategy {
             return new NoOpOuterSessionStrategy();
         }
 
-        if (txResources.isActualTransactionActive()) {
+        // The holder of the outer session says whether that session has a transaction of its own. The thread flag
+        // alone is true for a transaction on another data source as well, which leaves this session without one.
+        boolean outerTransactionActive = previousHolder != null ?
+                previousHolder.getTransaction() != null :
+                txResources.isActualTransactionActive();
+        if (outerTransactionActive) {
             return new ActiveTransactionOuterSessionStrategy(
                     sessionFactory, dataSource, txResources, previousHolder, lazyConnection);
         }

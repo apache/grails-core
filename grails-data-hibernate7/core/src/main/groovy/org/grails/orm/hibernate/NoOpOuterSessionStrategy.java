@@ -19,7 +19,7 @@
 package org.grails.orm.hibernate;
 
 /**
- * Strategy applied when no outer session exists or the outer session is closed.
+ * Strategy applied when there is no outer session, no connection holder and no synchronization to suspend.
  */
 class NoOpOuterSessionStrategy implements OuterSessionLifecycleStrategy {
 

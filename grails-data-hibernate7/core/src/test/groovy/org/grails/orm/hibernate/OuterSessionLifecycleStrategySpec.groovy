@@ -110,9 +110,10 @@ class OuterSessionLifecycleStrategySpec extends Specification {
         strategy instanceof DefaultOuterSessionStrategy
     }
 
-    void "from returns ActiveTransactionOuterSessionStrategy when actual transaction is active"() {
+    void "from returns ActiveTransactionOuterSessionStrategy when the outer session has a transaction"() {
         given:
         session.isOpen() >> true
+        sessionHolder.setTransaction(Mock(org.hibernate.Transaction))
         txResources.isActualTransactionActive() >> true
 
         when:
@@ -121,6 +122,20 @@ class OuterSessionLifecycleStrategySpec extends Specification {
 
         then:
         strategy instanceof ActiveTransactionOuterSessionStrategy
+    }
+
+    void "from does not return ActiveTransactionOuterSessionStrategy when only another data source has a transaction"() {
+        given: 'the thread has an actual transaction, the outer session has none'
+        session.isOpen() >> true
+        txResources.isActualTransactionActive() >> true
+        txResources.isSynchronizationActive() >> true
+
+        when:
+        OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
+                sessionHolder, sessionFactory, dataSource, txResources, false)
+
+        then:
+        strategy instanceof NonTransactionalSynchronizationOuterSessionStrategy
     }
 
     void "from returns NonTransactionalSynchronizationOuterSessionStrategy when synchronization is active but not actual transaction"() {
@@ -306,6 +321,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
                         sessionFactory, dataSource, txResources, holder, false)
 
         strategy.prepare()
+        strategy.suspendAndUnbind()
 
         when: "restoring after session became physically connected during scope"
         strategy.restore()
@@ -477,6 +493,7 @@ class OuterSessionLifecycleStrategySpec extends Specification {
                 sessionFactory, dataSource, txResources, holder, false)
 
         strategy.prepare()
+        strategy.suspendAndUnbind()
 
         when: "restoring after session became physically connected during scope"
         strategy.restore()

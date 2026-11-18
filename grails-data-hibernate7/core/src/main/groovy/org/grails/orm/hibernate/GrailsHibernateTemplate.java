@@ -229,9 +229,9 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         OuterSessionLifecycleStrategy strategy = OuterSessionLifecycleStrategy.from(
                 sessionHolder, sessionFactory, dataSource, txResources, lazyConnection);
 
-        strategy.prepare();
         Session newSession = null;
         try {
+            strategy.prepare();
             strategy.suspendAndUnbind();
 
             newSession = sessionFactory.openSession();
