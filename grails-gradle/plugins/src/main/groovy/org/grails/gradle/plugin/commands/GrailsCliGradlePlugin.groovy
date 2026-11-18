@@ -768,9 +768,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                             [new File(dir, 'grails-app/commands'), new File(dir, 'src/main/resources/META-INF')]
                         } + includedBuildDirs)
                         .collect { File dir -> dir.absolutePath }.unique().sort()
+                // every source set, as a plugin keeps its commands in its cli source set, src/cli/groovy
                 List<String> commandSourceRoots = root.allprojects.collectMany { Project each ->
-                    SourceSet main = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)?.findByName('main')
-                    main ? main.allSource.srcDirs.collect { File dir -> dir.absolutePath } : []
+                    def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
+                    sourceSets ? sourceSets.collectMany { SourceSet set -> set.allSource.srcDirs*.absolutePath } : []
                 }.unique().sort()
                 manifestTask.configure {
                     it.buildDirectories.set(buildDirectories)

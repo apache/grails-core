@@ -103,8 +103,8 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         and: 'every included build, also those that bring plugins of the build'
         inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([new File(root, 'shared'), new File(root, 'build-logic')])
 
-        and: 'the sources of the listed commands found in the projects of the build'
-        inputs.sourceFiles.collect { new File(it).canonicalFile } == [new File(root, 'app/src/main/java/org/example/FakeCommand.java')]
+        and: 'the sources of the listed commands found in the projects of the build, in any source set'
+        inputs.sourceFiles.collect { new File(it).canonicalFile } == [new File(root, 'app/src/cli/java/org/example/FakeCommand.java')]
     }
 
     void 'the task runs only in the project the grailsCommandProject property names'() {
