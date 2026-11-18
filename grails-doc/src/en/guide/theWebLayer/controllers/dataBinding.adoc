@@ -128,7 +128,7 @@ assert band.albums[1].numberOfTracks == 7
 
 That code would work in the same way if `albums` were an array instead of a `List`.
 
-A name may carry a second index, as form libraries that send `columns[0][data]` do. The first index selects the element and the second one is a key inside that element, so `columns[0][data]` binds the same as `columns[0].data` does. Names that share the first index are gathered into one element. When the object already holds a map at that index, the entries are written into that map and its other entries stay, and when the request supplies an object for the element, the entries are bound as that object's properties. A name whose second index holds a space is skipped:
+A name may carry a second index, as form libraries that send `columns[0][data]` do. The first index selects the element and the second one is a key inside that element, so `columns[0][data]` binds the same as `columns[0].data` does. Names that share the first index are gathered into one element. When the object already holds a map at that index, the entries are written into that map and its other entries stay, the same for a list that the object holds at that index, where the second index is a position (`rows[0][1]`), and when the request supplies an object for the element, the entries are bound as that object's properties, with the include list and the binding constraints of its own class. None of this applies to a property that the bind may not change: its name is left out by the include and exclude lists or by `bindable: false` for the held map as it is for any other entry, and an element or property that the filter or the object does not accept is not bound. A name whose second index holds a space is skipped:
 
 [source,groovy]
 ----

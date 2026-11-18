@@ -275,7 +275,9 @@ class SimpleDataBinder implements DataBinder {
         deferred.each { Object target, Map<String, Object> entries ->
             SimpleMapDataBindingSource deferredSource = new SimpleMapDataBindingSource(entries)
             deferredSource.dataSourceAware = source.dataSourceAware
-            doBind(target, deferredSource, null, null, null, listener, errors)
+            // the entry point a nested object is bound through, so the include list and the constraints of the
+            // supplied object apply to its properties as they do when it is bound directly
+            bind(target, deferredSource, listener)
         }
     }
 
@@ -310,9 +312,11 @@ class SimpleDataBinder implements DataBinder {
         }
         elements.each { String element, Map<String, Object> entries ->
             def supplied = grouped.get(element)
+            MetaProperty owner = indexedOwner(obj, element, filter)
+            boolean okToBind = owner != null && isOkToBind(owner, whiteList, blackList)
             if (supplied != null && !(supplied instanceof Map)) {
-                def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
-                if (descriptor && isOkToBind(descriptor.propertyName, whiteList, blackList)) {
+                // only an element that the bind accepts, of a property the object has, is bound at all
+                if (okToBind) {
                     deferred.computeIfAbsent(supplied) { new LinkedHashMap<String, Object>() }.putAll(entries)
                 }
                 return
@@ -320,9 +324,11 @@ class SimpleDataBinder implements DataBinder {
             if (supplied instanceof Map) {
                 entries.putAll((Map) supplied)
             }
-            Map held = findHeldMap(obj, element, filter)
-            if (held != null) {
-                held.putAll(entries)
+            def held = okToBind ? findHeld(obj, owner, element, filter) : null
+            if (held instanceof Map) {
+                ((Map) held).putAll(entries)
+                grouped.remove(element)
+            } else if (held instanceof List && writeIntoHeldList((List) held, entries)) {
                 grouped.remove(element)
             } else {
                 grouped.put(element, entries)
@@ -340,15 +346,23 @@ class SimpleDataBinder implements DataBinder {
         element
     }
 
-    private Map findHeldMap(obj, String element, String filter) {
+    /**
+     * The property that owns the element named by {@code element}, {@code columns} for {@code columns[0]}, or null
+     * when the name is outside the filter, is no indexed name, or the object has no such property.
+     */
+    private MetaProperty indexedOwner(obj, String element, String filter) {
         if (filter && !element.startsWith(filter + '.')) {
             return null
         }
         def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
-        MetaProperty metaProperty = descriptor ? obj.metaClass.getMetaProperty(descriptor.propertyName) : null
-        if (metaProperty == null) {
-            return null
-        }
+        descriptor ? obj.metaClass.getMetaProperty(descriptor.propertyName) : null
+    }
+
+    /**
+     * The map or list that the object already holds at the element, or null.
+     */
+    private Object findHeld(obj, MetaProperty metaProperty, String element, String filter) {
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
         def held
         try {
             held = metaProperty.getProperty(obj)
@@ -362,7 +376,25 @@ class SimpleDataBinder implements DataBinder {
         } else if (held instanceof List && index ==~ /\d+/ && index.toInteger() < ((List) held).size()) {
             selected = ((List) held).get(index.toInteger())
         }
-        selected instanceof Map ? (Map) selected : null
+        (selected instanceof Map || selected instanceof List) ? selected : null
+    }
+
+    /**
+     * Writes the entries whose keys are all positions into a list that the object holds, {@code rows[0][1]} for
+     * {@code rows} holding a list of lists, and leaves the list as it is, returning false, when a key is anything else.
+     */
+    private static boolean writeIntoHeldList(List held, Map<String, Object> entries) {
+        if (!entries.keySet().every { String key -> key ==~ /\d+/ }) {
+            return false
+        }
+        entries.each { String key, Object value ->
+            int position = key.toInteger()
+            while (held.size() <= position) {
+                held.add(null)
+            }
+            held.set(position, value)
+        }
+        true
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
