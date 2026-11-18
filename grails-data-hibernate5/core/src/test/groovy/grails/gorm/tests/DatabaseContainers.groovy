@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit
 
 import groovy.transform.CompileStatic
 import org.testcontainers.DockerClientFactory
+import org.testcontainers.cockroachdb.CockroachContainer
 import org.testcontainers.db2.Db2Container
 import org.testcontainers.mariadb.MariaDBContainer
 import org.testcontainers.mysql.MySQLContainer
@@ -72,6 +73,9 @@ final class DatabaseContainers {
     static final Db2Container DB2 = new Db2Container('icr.io/db2_community/db2:11.5.9.0')
             .acceptLicense()
             .withStartupTimeout(Duration.ofMinutes(10))
+
+    static final CockroachContainer COCKROACH = new CockroachContainer('cockroachdb/cockroach:v24.3.0')
+            .withStartupTimeout(Duration.ofMinutes(3))
 
     /**
      * Whether a Docker daemon is reachable on this machine; a yes means a daemon answered. A socket file at the
