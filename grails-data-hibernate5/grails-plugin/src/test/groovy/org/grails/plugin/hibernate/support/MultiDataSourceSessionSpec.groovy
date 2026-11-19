@@ -46,6 +46,17 @@ class MultiDataSourceSessionSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), OsivBook, OsivAuthor)
 
+    void cleanup() {
+        [datastore.sessionFactory, datastore.getDatastoreForConnection('secondary').sessionFactory].each { SessionFactory sessionFactory ->
+            if (TransactionSynchronizationManager.hasResource(sessionFactory)) {
+                Session session = ((SessionHolder) TransactionSynchronizationManager.unbindResource(sessionFactory)).session
+                if (session.open) {
+                    session.close()
+                }
+            }
+        }
+    }
+
     def "withSession on default datasource works with OSIV"() {
         given: "OSIV interceptor configured with the datastore"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
@@ -119,7 +130,7 @@ class MultiDataSourceSessionSpec extends Specification {
         given: "a pre-bound session for the secondary datasource"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
         interceptor.setHibernateDatastore(datastore)
-        WebRequest webRequest = Mock(WebRequest)
+        WebRequest webRequest = webRequest()
 
         def secondaryDatastore = datastore.getDatastoreForConnection('secondary')
         SessionFactory secondarySf = secondaryDatastore.sessionFactory
@@ -134,12 +145,98 @@ class MultiDataSourceSessionSpec extends Specification {
         def currentHolder = TransactionSynchronizationManager.getResource(secondarySf)
         currentHolder.is(preBoundHolder)
 
-        cleanup:
+        when: "the request completes"
         interceptor.afterCompletion(webRequest, null)
+
+        then: "the pre-bound session is left bound and open"
+        TransactionSynchronizationManager.getResource(secondarySf).is(preBoundHolder)
+        preBoundSession.open
+
+        cleanup:
         if (TransactionSynchronizationManager.hasResource(secondarySf)) {
             TransactionSynchronizationManager.unbindResource(secondarySf)
         }
         preBoundSession.close()
+    }
+
+    def "an include uses the sessions of the request for every datasource and leaves them open"() {
+        given: "the request has opened its sessions"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+        Session secondarySession = boundSession(secondarySf)
+
+        when: "an include within it starts and completes"
+        interceptor.preHandle(webRequest)
+        interceptor.postHandle(webRequest, null)
+        interceptor.afterCompletion(webRequest, null)
+
+        then: "the sessions of the request are still bound and open"
+        boundSession(datastore.sessionFactory).is(defaultSession)
+        boundSession(secondarySf).is(secondarySession)
+        secondarySession.open
+
+        when: "the request completes"
+        interceptor.afterCompletion(webRequest, null)
+
+        then: "they are unbound and closed"
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !secondarySession.open
+    }
+
+    def "a request that goes asynchronous closes the sessions it opened and leaves the thread without them"() {
+        given: "the request has opened its sessions"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+        Session secondarySession = boundSession(secondarySf)
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "no session is bound to the thread any more"
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+
+        and: "the session of the other datasource is closed"
+        !secondarySession.open
+
+        cleanup:
+        defaultSession?.close()
+    }
+
+    def "a session of another datasource bound before the request stays bound and open when the request goes asynchronous"() {
+        given: "a pre-bound session for the secondary datasource"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        Session preBoundSession = secondarySf.openSession()
+        SessionHolder preBoundHolder = new SessionHolder(preBoundSession)
+        TransactionSynchronizationManager.bindResource(secondarySf, preBoundHolder)
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the pre-bound session is left bound and open"
+        TransactionSynchronizationManager.getResource(secondarySf).is(preBoundHolder)
+        preBoundSession.open
+
+        cleanup:
+        if (TransactionSynchronizationManager.hasResource(secondarySf)) {
+            TransactionSynchronizationManager.unbindResource(secondarySf)
+        }
+        preBoundSession.close()
+        defaultSession?.close()
     }
 
     def "CRUD operations work on secondary datasource with OSIV"() {
@@ -173,6 +270,19 @@ class MultiDataSourceSessionSpec extends Specification {
             OsivBook.list()*.delete(flush: true)
         }
         interceptor.afterCompletion(webRequest, null)
+    }
+
+    private WebRequest webRequest() {
+        Map<String, Object> attributes = [:]
+        Stub(WebRequest) {
+            getAttribute(_ as String, WebRequest.SCOPE_REQUEST) >> { String name, int scope -> attributes[name] }
+            setAttribute(_ as String, _, WebRequest.SCOPE_REQUEST) >> { String name, Object value, int scope -> attributes[name] = value }
+            removeAttribute(_ as String, WebRequest.SCOPE_REQUEST) >> { String name, int scope -> attributes.remove(name) }
+        }
+    }
+
+    private static Session boundSession(SessionFactory sessionFactory) {
+        ((SessionHolder) TransactionSynchronizationManager.getResource(sessionFactory))?.session
     }
 }
 

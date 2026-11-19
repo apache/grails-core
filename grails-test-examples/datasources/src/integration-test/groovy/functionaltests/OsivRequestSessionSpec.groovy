@@ -1,0 +1,72 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package functionaltests
+
+import java.util.concurrent.CountDownLatch
+
+import datasources.RequestSessions
+import grails.testing.mixin.integration.Integration
+import org.apache.grails.testing.http.client.HttpClientSupport
+import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
+
+/**
+ * The session the open session in view interceptor opens for the secondary datasource is used by an include within
+ * the request, and closed when the request goes asynchronous, so that it is not left bound to the thread.
+ */
+@Integration
+class OsivRequestSessionSpec extends Specification implements HttpClientSupport {
+
+    void 'an include uses the session of the secondary datasource of the request and leaves it open'() {
+        when:
+        final page = pageLines('/requestSession/page?include=true')
+
+        then:
+        page.before.endsWith('/open')
+        page.included == page.before
+        page.after == page.before
+    }
+
+    void 'a request that goes asynchronous closes its session of the secondary datasource'() {
+        given:
+        RequestSessions.release = new CountDownLatch(1)
+        RequestSessions.asyncSecondarySession = null
+        final asyncRequest = Thread.start { http('/requestSession/promise').assertStatus(200) }
+
+        expect: 'the session the action ran with is closed once the request has gone asynchronous'
+        new PollingConditions(timeout: 10).eventually {
+            assert RequestSessions.asyncSecondarySession != null
+            assert !RequestSessions.asyncSecondarySession.open
+        }
+
+        and: 'a later request gets a session of its own'
+        !http('/requestSession/current').body().startsWith("${System.identityHashCode(RequestSessions.asyncSecondarySession)}/")
+
+        cleanup:
+        RequestSessions.release.countDown()
+        asyncRequest?.join(30000)
+    }
+
+    private Map<String, String> pageLines(String path) {
+        http(path).assertStatus(200).body().readLines()*.trim().findAll().collectEntries { String line ->
+            final parts = line.split(':', 2)
+            [(parts[0]): parts[1]]
+        }
+    }
+}

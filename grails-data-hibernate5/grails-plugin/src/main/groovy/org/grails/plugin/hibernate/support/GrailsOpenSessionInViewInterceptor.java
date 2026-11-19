@@ -45,7 +45,11 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  * The default datasource's SessionFactory is managed by the parent class.
  * Additional (non-default) datasource SessionFactories are managed by this
  * subclass, which opens and closes sessions for each one alongside the
- * default session.
+ * default session. As the parent class does for the default session, a request
+ * that finds a session already bound, such as an include within a request that
+ * opened one, uses that session and leaves it to the one that opened it, and a
+ * request that goes asynchronous closes the sessions it opened, so that they do
+ * not stay bound to the thread for the next request that thread serves.
  *
  * @author Graeme Rocher
  * @since 0.5
@@ -90,6 +94,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
             SessionFactory sf = config.sessionFactory;
             if (TransactionSynchronizationManager.hasResource(sf)) {
+                // a session is already open for this request: use it, and leave it to the one that opened it
+                incrementParticipateCount(request, sf);
                 continue;
             }
             if (logger.isDebugEnabled()) {
@@ -165,28 +171,79 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
         try {
-            for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
-                AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
-                SessionFactory sf = config.sessionFactory;
-                SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
-                if (sessionHolder != null) {
-                    Session session = sessionHolder.getSession();
-                    TransactionSynchronizationManager.unbindResource(sf);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
-                    }
-                    try {
-                        SessionFactoryUtils.closeSession(session);
-                    }
-                    catch (RuntimeException closeEx) {
-                        logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
-                    }
-                }
-            }
+            closeAdditionalSessions(request);
         }
         finally {
             super.afterCompletion(request, ex);
         }
+    }
+
+    /**
+     * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
+     * handling. The parent class unbinds the default session; the sessions this interceptor opened for the other
+     * datasources are closed here, so that the thread goes back to its pool without them.
+     */
+    @Override
+    public void afterConcurrentHandlingStarted(WebRequest request) {
+        try {
+            closeAdditionalSessions(request);
+        }
+        finally {
+            super.afterConcurrentHandlingStarted(request);
+        }
+    }
+
+    private void closeAdditionalSessions(WebRequest request) {
+        for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
+            AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
+            SessionFactory sf = config.sessionFactory;
+            if (decrementParticipateCount(request, sf)) {
+                continue;
+            }
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+            if (sessionHolder != null) {
+                Session session = sessionHolder.getSession();
+                TransactionSynchronizationManager.unbindResource(sf);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+                }
+                try {
+                    SessionFactoryUtils.closeSession(session);
+                }
+                catch (RuntimeException closeEx) {
+                    logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
+                }
+            }
+        }
+    }
+
+    private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {
+        String participateAttributeName = participateAttributeName(sf);
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        request.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
+    }
+
+    /**
+     * @return {@code true} when this request used a session of the given factory that was already open, which is
+     * then left as it is
+     */
+    private static boolean decrementParticipateCount(WebRequest request, SessionFactory sf) {
+        String participateAttributeName = participateAttributeName(sf);
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        if (count == null) {
+            return false;
+        }
+        if (count > 1) {
+            request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+        }
+        else {
+            request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        }
+        return true;
+    }
+
+    private static String participateAttributeName(SessionFactory sf) {
+        return sf.toString() + PARTICIPATE_SUFFIX;
     }
 
     public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
