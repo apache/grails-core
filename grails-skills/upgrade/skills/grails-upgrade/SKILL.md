@@ -583,6 +583,31 @@ With a database or a schema per tenant, a domain class that does not implement `
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+## Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a `DataTest` or `DomainUnitTest` spec, a save through a data source other than the default one, such as `book.secondary.save()`, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set `dateCreated` and `lastUpdated`, as in the application. Grails 8 ran neither. Unit tests still do not set `@CreatedBy` and `@LastModifiedBy`, even with an `AuditorAware` bean in the test.
+
+- A test that expected such a save to keep the timestamps it was given saves inside `withoutTimestamps { }` of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+- A test that expected a domain class event not to run on such a save expects what the event does.
+- The in-memory datastore follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included. With `autoTimestampInsertOverwrite: false`, a test that expected a given `dateCreated` or `lastUpdated` to be overwritten expects it kept.
+
+## A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class has a static `autoTimestampEventListener` property: the listener that sets its timestamp and auditor properties, for the data source its saves go to.
+
+- A domain class that declares a property named `autoTimestampEventListener` of another type no longer compiles, as its `getAutoTimestampEventListener()` return type is incompatible with the one in `GormEntity`. One typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`. Rename the property.
+- Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead.
+
+## Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+With several data sources, or a database or a schema per tenant, a save through a data source other than the default one:
+
+- sets `@CreatedBy` and `@LastModifiedBy` from the application's `AuditorAware`; Grails 8 set them only on the default data source.
+- follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`; Grails 8 overwrote a given `dateCreated` or `lastUpdated` whatever the setting said.
+- with GORM for Neo4j, runs the domain class's events and sets `dateCreated` and `lastUpdated`; Grails 8 ran neither on another Neo4j connection.
+
+Most applications need no change. Check the domain classes saved through another data source whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
 # After the Upgrade
 
 ## Verification Checklist
@@ -627,6 +652,9 @@ With a database or a schema per tenant, a domain class that does not implement `
 - [ ] No typed read with a default, such as `getProperty('x.y.enabled', Boolean, true)`, names a key below a configuration value that is not a map
 - [ ] With a database or a schema per tenant, every domain class saved inside a tenant block whose instances belong to a tenant, or that a multi-tenant class references, implements `MultiTenant`
 - [ ] Every write of a class that is not multi-tenant inside a tenant's transaction runs in the class's data service or its own `withTransaction`, or uses `flush: true`
+- [ ] No domain class declares a property named `autoTimestampEventListener`
+- [ ] Unit tests that save through another data source or a tenant expect the domain class events to run and the timestamps to be set, or save inside `withoutTimestamps { }`
+- [ ] Domain classes saved through a data source other than the default one are checked for auditor properties, given timestamps and, with Neo4j, events that were expected to be left alone
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

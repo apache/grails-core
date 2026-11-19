@@ -59,6 +59,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -132,6 +133,15 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     GormStaticApi<D> getApi(String qualifier) {
         (GormStaticApi<D>) HibernateGormEnhancer.findStaticApi(persistentClass, qualifier)
+    }
+
+    /**
+     * Hibernate saves an instance through the datastore this API is bound to, inside a tenant block as well, so this
+     * is that datastore's listener.
+     */
+    @Override
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        autoTimestampEventListenerOf(getDatastore())
     }
 
     @Override

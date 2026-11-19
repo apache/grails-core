@@ -23,6 +23,7 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
 
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.config.Settings
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -80,6 +81,22 @@ class DatabasePerTenantSpec extends Specification {
         then:
         bookService.countBooks() == 2
         bookDataService.countBooks() == 2
+    }
+
+    void 'withTenant reaches the named tenant when no tenant is current'() {
+        given: 'a book in the foo database and none in bar'
+        Tenants.withId('foo') {
+            new Book(title: 'The Stand').save(flush: true)
+        }
+
+        and: 'no current tenant'
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, '')
+
+        expect:
+        Book.withTenant('foo') { Book.count() } == 1
+        Book.withTenant('bar') { Book.count() } == 0
+        Book.withTenant('foo').count() == 1
+        Book.withTenant('bar').count() == 0
     }
 }
 

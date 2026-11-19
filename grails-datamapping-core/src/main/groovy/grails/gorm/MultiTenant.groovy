@@ -43,7 +43,9 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <T> T withTenant(Serializable tenantId, Closure<T> callable) {
-        GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId, callable)
+        // The tenant is named here, so the lookup must not resolve the current one: findStaticApi does, and for a
+        // database or schema per tenant it throws TenantNotFoundException when no tenant is current.
+        GormRegistry.instance.getStaticApi((Class<D>) this).withTenant(tenantId, callable)
     }
 
     /**
@@ -68,6 +70,7 @@ trait MultiTenant<D> extends Entity {
      */
     @Generated
     static <D> GormAllOperations<D> withTenant(Serializable tenantId) {
-        (GormAllOperations<D>) GormRegistry.instance.findStaticApi((Class<D>) this).withTenant(tenantId)
+        // The tenant is named here too, so the current one is not resolved; see withTenant(Serializable, Closure).
+        (GormAllOperations<D>) GormRegistry.instance.getStaticApi((Class<D>) this).withTenant(tenantId)
     }
 }
