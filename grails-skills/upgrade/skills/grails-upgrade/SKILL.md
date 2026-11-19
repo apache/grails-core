@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, and configuration keys below a value that is not a map"
+description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, configuration keys below a value that is not a map, JLine 4, and the command lines of application commands"
 license: Apache-2.0
 ---
 
@@ -15,7 +15,7 @@ Licensed to the Apache Software Foundation (ASF) under one or more contributor l
 - Guide upgrades of Grails applications from Grails 8.x to Grails 9.
 - Guide upgrades from one Grails 9 release to a later one, with the changes of each release listed under that release.
 - Turn the Grails 9 upgrade guide into a practical migration checklist.
-- Identify the Groovy 6, Spring Boot 4.2, Spring Framework 7.1, graphql-java 26, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, and character encoding changes that can break an application.
+- Identify the Groovy 6, Spring Boot 4.2, Spring Framework 7.1, graphql-java 26, GPars, invokedynamic, XML, JSON rendering and binding, REST error, content negotiation, unit test, GORM, RxGORM, RxJava, character encoding, JLine and command line changes that can break an application.
 - Prepare an application for the defaults Grails 10 changes, by checking each Grails 9 opt-in setting while the Grails 8 behaviour is still the default.
 - Keep migration work focused on public application behavior, not internal Grails framework implementation details.
 
@@ -596,6 +596,22 @@ With several data sources, or a database or a schema per tenant, a save through 
 
 Most applications need no change. Check the domain classes saved through another data source whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
 
+## JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. It is the terminal library behind the prompts of the `grails` command line tools and `grails shell`, and behind `GrailsConsole`. The `org.jline` packages are unchanged.
+
+- Recompile code that uses JLine, such as an `org.jline.reader.Completer` of a command, against JLine 4, which removed APIs JLine 3 had deprecated: use `org.jline.builtins.Completers.FileNameCompleter` for `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()`/`outputEncoding()` for `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`; `TerminalBuilder.codepage(int)`, `PROP_JNA` and `PROP_JANSI` are gone.
+- Remove dependencies on `org.jline:jline-terminal-jna` and `org.jline:jline-terminal-jansi`, which have no JLine 4 version.
+- `info.picocli:picocli-shell-jline3` still runs, but its `PicocliCommands` implements the deprecated `org.jline.console.CommandRegistry`; `org.jline:jline-picocli`, at the JLine version the Grails BOM manages, is the JLine 4 bridge to move to.
+
+## Command Lines of Application Commands
+
+The command line parser of the `grails` tool and of `runCommand`, which application and plugin commands read their command line through, changed in Grails 9:
+
+- An empty argument after an option without a value is that option's empty value: `--name "" value` gives an empty `name` and the argument `value`, where it used to give `name=value`.
+- The text inside a pair of double quotes is trimmed: `" a "` reaches the command as `a`, where it used to be ` a `.
+- `--name=` gives an empty `name` (it threw `ArrayIndexOutOfBoundsException`), a lone `"` argument is passed on (it threw `StringIndexOutOfBoundsException`), and an option's value is everything after the first `=`: `--filter=status=active` gives `status=active`, where it gave `status`. Remove workarounds for these.
+
 # After the Upgrade
 
 ## Verification Checklist
@@ -643,6 +659,8 @@ Most applications need no change. Check the domain classes saved through another
 - [ ] No domain class declares a property named `autoTimestampEventListener`
 - [ ] Unit tests that save through another data source or a tenant expect the domain class events to run and the timestamps to be set, or save inside `withoutTimestamps { }`
 - [ ] Domain classes saved through a data source other than the default one are checked for auditor properties, given timestamps and, with Neo4j, events that were expected to be left alone
+- [ ] Code that uses JLine compiles against JLine 4, and no build file declares `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`
+- [ ] Commands that read an option followed by an empty argument, or quoted arguments with spaces at their ends, expect the Grails 9 values, and no command works around a value cut at its second `=`
 - [ ] The full test suite passes on Groovy 6
 
 ## Pitfalls to Avoid

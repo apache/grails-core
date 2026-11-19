@@ -34,8 +34,8 @@ ext {
             'grails-publish-plugin.version' : '1.0.0',
             'javaparser-core.version'       : '3.28.2',
             // Tracks the JLine version Groovy ships (groovy-groovysh), so the framework and groovysh
-            // share one terminal stack - keep in step with groovy.version.
-            'jline.version'                 : '3.30.16',
+            // share one terminal stack - keep in step with groovy.version. Groovy 6 moved to JLine 4.
+            'jline.version'                 : '4.4.5',
             'jna.version'                   : '5.19.1',
             'maven-model.version'           : '3.9.16',
             'objenesis.version'             : '3.6',
