@@ -20,8 +20,10 @@ package org.grails.orm.hibernate.query;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.hibernate.Criteria;
+import org.hibernate.FlushMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.dialect.Dialect;
@@ -35,6 +37,7 @@ import org.hibernate.type.TypeResolver;
 import grails.orm.HibernateCriteriaBuilder;
 import grails.orm.RlikeExpression;
 import org.grails.datastore.mapping.model.PersistentEntity;
+import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.orm.hibernate.AbstractHibernateSession;
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
@@ -47,7 +50,7 @@ import org.grails.orm.hibernate.HibernateSession;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class HibernateQuery extends AbstractHibernateQuery {
+public class HibernateQuery extends AbstractHibernateQuery implements QueryArgumentsAware {
 
     public static final HibernateCriterionAdapter HIBERNATE_CRITERION_ADAPTER = new HibernateCriterionAdapter();
 
@@ -72,6 +75,49 @@ public class HibernateQuery extends AbstractHibernateQuery {
      */
     public Criteria getHibernateCriteria() {
         return this.criteria;
+    }
+
+    /**
+     * Applies the Hibernate settings of a GORM query arguments map to the criteria: {@code fetchSize},
+     * {@code timeout}, {@code readOnly} and {@code flushMode}. Settings absent from the map are left as they are.
+     * The other arguments, such as {@code max} and {@code sort}, are applied by the caller.
+     *
+     * @param arguments the query arguments, may be {@code null}
+     * @throws IllegalArgumentException when {@code fetchSize} or {@code timeout} is not a whole number
+     */
+    @Override
+    public void setArguments(Map arguments) {
+        if (arguments == null || criteria == null) {
+            return;
+        }
+        if (arguments.get("fetchSize") != null) {
+            criteria.setFetchSize(wholeNumber("fetchSize", arguments.get("fetchSize")));
+        }
+        if (arguments.get("timeout") != null) {
+            criteria.setTimeout(wholeNumber("timeout", arguments.get("timeout")));
+        }
+        if (arguments.get("readOnly") != null) {
+            criteria.setReadOnly(Boolean.parseBoolean(String.valueOf(arguments.get("readOnly"))));
+        }
+        Object flushMode = arguments.get("flushMode");
+        if (flushMode instanceof FlushMode) {
+            criteria.setFlushMode((FlushMode) flushMode);
+        }
+        else if (flushMode != null) {
+            criteria.setFlushMode(FlushMode.valueOf(String.valueOf(flushMode)));
+        }
+    }
+
+    private static int wholeNumber(String argument, Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value).trim());
+        }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("The " + argument + " argument must be a whole number but was [" + value + "]", e);
+        }
     }
 
     @Override
