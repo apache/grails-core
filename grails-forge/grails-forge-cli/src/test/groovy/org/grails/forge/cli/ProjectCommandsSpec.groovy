@@ -379,6 +379,44 @@ class ProjectCommandsSpec extends Specification {
         commandLine.subcommands.containsKey('audit')
     }
 
+    void "a command added to a plugin project's main sources is offered and runs, while other sources change nothing"() {
+        given: "a manifest naming the main sources of a plugin project next to the application"
+        File sources = new File(dir, 'plugins/audit/src/main/groovy')
+        File service = new File(sources, 'com/acme/AuditService.groovy')
+        service.parentFile.mkdirs()
+        service.text = 'class AuditService {}'
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [], commandFileDirectories: [sources.path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'a command class is added'
+        new File(sources, 'com/acme/AuditCommand.groovy').text = 'class AuditCommand {}'
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, AUDIT)
+        int exitCode = ForgeCli.execute(context, 'audit')
+
+        then: 'the build runs once, and the new command runs instead of being rejected'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+        commandArguments() == ['audit']
+
+        when: 'another source is changed and one is added'
+        forgetInvocations()
+        service.text = 'class AuditService { void audit() {} }'
+        new File(sources, 'com/acme/Helper.groovy').text = 'class Helper {}'
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == []
+
+        when: 'the command is removed'
+        new File(sources, 'com/acme/AuditCommand.groovy').delete()
+        ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+    }
+
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
         given: 'a manifest naming a plugin project next to the application'
         File plugin = new File(dir, 'plugins/audit')

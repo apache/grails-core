@@ -78,6 +78,9 @@ class ProjectCommands {
     /** Directories whose files are sources, so a package below them named like an output is read */
     private static final List<String> SOURCE_DIRS = ['src', 'grails-app']
 
+    /** How the file of a command is named, after the class whose name gives the command its own */
+    private static final List<String> COMMAND_FILE_SUFFIXES = ['Command.groovy', 'Command.java']
+
     /** What tools write anywhere, sources included */
     private static final List<String> TOOL_FILES = ['node_modules', '.DS_Store']
 
@@ -309,7 +312,8 @@ class ProjectCommands {
         new Inputs([projectDir, rootDir].unique(),
                 [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
                  new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')],
-                [new File(projectDir, 'src/cli')], [])
+                [new File(projectDir, 'src/cli')],
+                [new File(projectDir, 'src/main/groovy'), new File(projectDir, 'src/main/java')], [])
     }
 
     private static Object parseOrNull(File file) {
@@ -331,11 +335,13 @@ class ProjectCommands {
         List<File> buildDirectories = files(given.buildDirectories)
         List<File> sourceDirectories = files(given.sourceDirectories)
         List<File> commandDirectories = optionalFiles(given, 'commandDirectories')
+        List<File> commandFileDirectories = optionalFiles(given, 'commandFileDirectories')
         List<File> sourceFiles = optionalFiles(given, 'sourceFiles')
-        if (buildDirectories == null || sourceDirectories == null || commandDirectories == null || sourceFiles == null) {
+        if (buildDirectories == null || sourceDirectories == null || commandDirectories == null ||
+                commandFileDirectories == null || sourceFiles == null) {
             return null
         }
-        new Inputs(buildDirectories, sourceDirectories, commandDirectories, sourceFiles)
+        new Inputs(buildDirectories, sourceDirectories, commandDirectories, commandFileDirectories, sourceFiles)
     }
 
     /** A list a manifest written by an earlier Grails may not have, which then names no files */
@@ -372,7 +378,8 @@ class ProjectCommands {
      * every file and directory below each source directory, apart from what builds and tools write next
      * to a build script, and below each directory of commands, all of which are sources. Each such file
      * is listed with its time and size, so a deleted, added, replaced or changed file changes the list,
-     * whatever the clock said when it was written.
+     * whatever the clock said when it was written. Below each directory of command files, only the
+     * names of the files named like a command are listed.
      */
     private static List<String> snapshot(Inputs inputs) {
         List<String> lines = []
@@ -394,6 +401,10 @@ class ProjectCommands {
         }
         for (File dir : inputs.commandDirectories) {
             walk(dir, lines, true)
+        }
+        // a new command there registers itself, and names its file after itself; other sources are left out
+        for (File dir : inputs.commandFileDirectories) {
+            walkNames(dir, lines)
         }
         for (File file : inputs.sourceFiles) {
             walk(file, lines, true)
@@ -446,6 +457,25 @@ class ProjectCommands {
         }
     }
 
+    /** The files below the directory named like a command, by name only, so editing one changes nothing */
+    private static void walkNames(File dir, List<String> lines) {
+        if (Files.isSymbolicLink(dir.toPath())) {
+            return
+        }
+        File[] children = dir.listFiles()
+        if (children == null) {
+            return
+        }
+        for (File child : children.sort(false) { File it -> it.name }) {
+            if (child.isDirectory()) {
+                walkNames(child, lines)
+            }
+            else if (COMMAND_FILE_SUFFIXES.any { String suffix -> child.name.endsWith(suffix) }) {
+                lines << "named\t${child.absolutePath}".toString()
+            }
+        }
+    }
+
     private static String describe(File file) {
         "file\t${file.absolutePath}\t${file.lastModified()}\t${file.length()}".toString()
     }
@@ -456,13 +486,15 @@ class ProjectCommands {
         final List<File> buildDirectories
         final List<File> sourceDirectories
         final List<File> commandDirectories
+        final List<File> commandFileDirectories
         final List<File> sourceFiles
 
         Inputs(List<File> buildDirectories, List<File> sourceDirectories, List<File> commandDirectories,
-               List<File> sourceFiles) {
+               List<File> commandFileDirectories, List<File> sourceFiles) {
             this.buildDirectories = buildDirectories
             this.sourceDirectories = sourceDirectories
             this.commandDirectories = commandDirectories
+            this.commandFileDirectories = commandFileDirectories
             this.sourceFiles = sourceFiles
         }
     }

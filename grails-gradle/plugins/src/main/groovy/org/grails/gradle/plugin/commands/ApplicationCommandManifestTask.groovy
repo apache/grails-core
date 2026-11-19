@@ -43,7 +43,8 @@ import javax.inject.Inject
  * <p>The file also names, under {@code inputs}, the directories whose files decide the commands without
  * being on the classpath yet: those whose build files decide the build, those that hold the sources
  * of commands or of the build's logic, those of the {@code cli} source sets, where every source can be a
- * command, and the source files of the listed commands found in the projects of the build. A tool reading the file runs the task again when one of their files changes.</p>
+ * command, those of the main sources, where a file named like a command can add one, and the source files
+ * of the listed commands found in the projects of the build. A tool reading the file runs the task again when one of their files changes.</p>
  *
  * @since 9.0
  */
@@ -60,6 +61,7 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         buildDirectories.convention([])
         sourceDirectories.convention([])
         commandDirectories.convention([])
+        commandFileDirectories.convention([])
         commandSourceRoots.convention([])
     }
 
@@ -90,6 +92,14 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
      */
     @Input
     abstract ListProperty<String> getCommandDirectories()
+
+    /**
+     * @return the directories of the main Java and Groovy sources of every project of the build, where a
+     * command compiled from a new file, named after its class as a command is, registers itself; a tool
+     * watches the names of those files, not what they hold
+     */
+    @Input
+    abstract ListProperty<String> getCommandFileDirectories()
 
     /**
      * @return the source directories of every project of the build, where the source of a command the
@@ -133,7 +143,8 @@ abstract class ApplicationCommandManifestTask extends JavaExec {
         super.exec()
         Map<String, Object> manifest = (Map<String, Object>) new JsonSlurper().parse(file, 'UTF-8')
         manifest.inputs = [buildDirectories: buildDirectories.get(), sourceDirectories: sourceDirectories.get(),
-                           commandDirectories: commandDirectories.get(), sourceFiles: commandSources(manifest.commands)]
+                           commandDirectories: commandDirectories.get(),
+                           commandFileDirectories: commandFileDirectories.get(), sourceFiles: commandSources(manifest.commands)]
         file.setText(JsonOutput.prettyPrint(JsonOutput.toJson(manifest)), 'UTF-8')
     }
 }

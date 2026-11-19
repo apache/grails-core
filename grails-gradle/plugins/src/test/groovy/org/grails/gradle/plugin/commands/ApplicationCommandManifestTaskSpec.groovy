@@ -106,6 +106,10 @@ class ApplicationCommandManifestTaskSpec extends GradleSpecification {
         inputs.commandDirectories.collect { new File(it).canonicalFile } as Set ==
                 [new File(root, 'app/src/cli/java'), new File(root, 'app/src/cli/resources')] as Set
 
+        and: 'the main sources of every project, where a file named like a command can add one'
+        inputs.commandFileDirectories.collect { new File(it).canonicalFile } as Set ==
+                [new File(root, 'app/src/main/java'), new File(root, 'manifest-writer/src/main/java')] as Set
+
         and: 'every included build, also those that bring plugins of the build'
         inputs.sourceDirectories.collect { new File(it).canonicalFile }.containsAll([new File(root, 'shared'), new File(root, 'build-logic')])
 

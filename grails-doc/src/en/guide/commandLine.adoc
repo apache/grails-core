@@ -244,15 +244,19 @@ files decide them:
   `src/cli/groovy` and `src/cli/resources`, where a command a plugin project of the build adds registers
   itself;
 * the source file of each command it lists that one of the projects of the build compiles, such as a
-  command of a plugin project in `src/main/groovy`.
+  command of a plugin project in `src/main/groovy`;
+* the names of the files in the main Java and Groovy sources of every project, such as `src/main/groovy`,
+  that are named like a command, `AuditCommand.groovy` or `AuditCommand.java`, so a command added there
+  counts, while editing or adding another source does not.
 
-Each time it runs the task, the Forge CLI records those files, with their times and sizes, in the
-project's `.gradle/grails` directory. It runs the task again when one of them is added or deleted, or
+Each time it runs the task, the Forge CLI records those files, with their times and sizes, and the
+directories the manifest names, in the project's `.gradle/grails` directory, so they are still watched
+after `./gradlew clean` removes the manifest. It runs the task again when one of them is added or deleted, or
 its time or size changes, whether the time goes forward or back, and when a manifest has no record, as
 one written by `./gradlew generateCommandManifest` alone. So a plugin added to the build brings its commands the next
 time a project command is asked for. A change the Forge CLI cannot see, such as a new snapshot of a
-plugin, or a command added to a project's `src/main/groovy` rather than to `grails-app/commands` or a
-`cli` source set, is picked up by running `./gradlew generateCommandManifest`.
+plugin, or a command in the main sources of a file not named after it, such as a class that becomes a
+command, is picked up by running `./gradlew generateCommandManifest`.
 
 The build runs only when the interactive prompt starts or a command the Forge CLI does not have is
 named, also after the Forge CLI's own options, as in `grails-forge-cli -x dbm-update`. Its own commands,

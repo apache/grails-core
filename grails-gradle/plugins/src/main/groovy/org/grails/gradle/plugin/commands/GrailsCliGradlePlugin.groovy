@@ -803,6 +803,12 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     SourceSet cli = sourceSets?.findByName(GrailsCliArtifactGradlePlugin.CLI_SOURCE_SET_NAME)
                     cli ? cli.allSource.srcDirs*.absolutePath : []
                 }.unique().sort()
+                // so is one compiled from the main sources, which is named after its class like any command
+                List<String> commandFileDirectories = root.allprojects.collectMany { Project each ->
+                    def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
+                    SourceSet main = sourceSets?.findByName(SourceSet.MAIN_SOURCE_SET_NAME)
+                    main ? main.allJava.srcDirs*.absolutePath : []
+                }.unique().sort()
                 // every source set, as a plugin keeps its commands in its cli source set, src/cli/groovy
                 List<String> commandSourceRoots = root.allprojects.collectMany { Project each ->
                     def sourceSets = each.extensions.findByType(org.gradle.api.tasks.SourceSetContainer)
@@ -812,6 +818,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     it.buildDirectories.set(buildDirectories)
                     it.sourceDirectories.set(sourceDirectories)
                     it.commandDirectories.set(commandDirectories)
+                    it.commandFileDirectories.set(commandFileDirectories)
                     it.commandSourceRoots.set(commandSourceRoots)
                 }
             }
