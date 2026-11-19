@@ -28,4 +28,9 @@ abstract class GormOneOfFeature extends GormFeature implements OneOfFeature {
     Class<?> getFeatureClass() {
         return GormOneOfFeature
     }
+
+    @Override
+    String getGroup() {
+        return 'data-nosql'
+    }
 }

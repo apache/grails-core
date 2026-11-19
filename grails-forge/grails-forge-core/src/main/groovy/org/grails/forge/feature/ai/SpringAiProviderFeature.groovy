@@ -55,6 +55,11 @@ abstract class SpringAiProviderFeature implements OneOfFeature {
     }
 
     @Override
+    String getGroup() {
+        return 'spring-ai-provider'
+    }
+
+    @Override
     void processSelectedFeatures(FeatureContext featureContext) {
         if (!featureContext.isPresent(GrailsSpringAi)) {
             featureContext.addFeature(grailsSpringAi)

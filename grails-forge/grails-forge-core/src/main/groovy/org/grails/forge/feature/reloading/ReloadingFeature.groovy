@@ -34,6 +34,11 @@ interface ReloadingFeature extends OneOfFeature, DefaultFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'reloading'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

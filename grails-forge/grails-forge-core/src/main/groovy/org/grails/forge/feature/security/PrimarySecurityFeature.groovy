@@ -37,4 +37,9 @@ interface PrimarySecurityFeature extends OneOfFeature {
     default Class<?> getFeatureClass() {
         return PrimarySecurityFeature
     }
+
+    @Override
+    default String getGroup() {
+        return 'spring-security'
+    }
 }

@@ -26,7 +26,7 @@ import org.grails.forge.feature.OneOfFeature
 /**
  * Common parent for the mutually exclusive GSP layout decorators: SiteMesh 3
  * ({@code grails-sitemesh3}) and the legacy SiteMesh 2 based {@code grails-layout}.
- * Because they share the same {@link #getFeatureClass()}, only one of them may be
+ * Because they share the same {@link #getGroup()}, only one of them may be
  * selected for a given application (enforced by the one-of feature validator).
  */
 @CompileStatic
@@ -35,6 +35,11 @@ abstract class GspLayout implements OneOfFeature {
     @Override
     Class<?> getFeatureClass() {
         return GspLayout
+    }
+
+    @Override
+    String getGroup() {
+        return 'gsp-layout'
     }
 
     @Override

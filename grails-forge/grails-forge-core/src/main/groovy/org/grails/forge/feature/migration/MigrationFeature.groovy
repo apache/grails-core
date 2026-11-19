@@ -32,6 +32,11 @@ interface MigrationFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'migration'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

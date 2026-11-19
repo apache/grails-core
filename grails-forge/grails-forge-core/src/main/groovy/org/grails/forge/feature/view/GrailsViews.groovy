@@ -41,6 +41,11 @@ abstract class GrailsViews implements OneOfFeature {
     }
 
     @Override
+    String getGroup() {
+        return 'api-views'
+    }
+
+    @Override
     boolean supports(ApplicationType applicationType) {
         return true
     }

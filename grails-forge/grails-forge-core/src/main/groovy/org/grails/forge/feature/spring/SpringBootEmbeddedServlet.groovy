@@ -32,6 +32,11 @@ abstract class SpringBootEmbeddedServlet implements OneOfFeature, DefaultFeature
     }
 
     @Override
+    String getGroup() {
+        return 'embedded-servlet'
+    }
+
+    @Override
     String getCategory() {
         return Category.SERVER
     }

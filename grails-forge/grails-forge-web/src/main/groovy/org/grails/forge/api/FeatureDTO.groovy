@@ -57,7 +57,7 @@ class FeatureDTO extends Linkable {
         this.preview = feature.isPreview()
         this.community = feature.isCommunity()
         this.dependentFeatures = feature.getDependentFeatures()
-        this.oneOfGroup = feature instanceof OneOfFeature ? ((OneOfFeature) feature).getFeatureClass().getSimpleName() : null
+        this.oneOfGroup = feature instanceof OneOfFeature ? ((OneOfFeature) feature).getGroup() : null
     }
 
     /**

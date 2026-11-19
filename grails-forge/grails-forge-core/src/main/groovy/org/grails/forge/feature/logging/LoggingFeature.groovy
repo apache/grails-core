@@ -32,6 +32,11 @@ interface LoggingFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'logging'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

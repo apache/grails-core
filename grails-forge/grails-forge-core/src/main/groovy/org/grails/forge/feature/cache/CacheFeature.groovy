@@ -32,6 +32,11 @@ interface CacheFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'cache-provider'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return true
     }

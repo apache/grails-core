@@ -46,6 +46,11 @@ abstract class DatabaseDriverFeature implements OneOfFeature {
     }
 
     @Override
+    String getGroup() {
+        return 'database-driver'
+    }
+
+    @Override
     boolean supports(ApplicationType applicationType) {
         return true
     }

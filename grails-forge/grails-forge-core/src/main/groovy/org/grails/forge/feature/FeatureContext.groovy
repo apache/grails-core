@@ -27,6 +27,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
+import java.util.stream.Stream
 
 import static java.util.stream.Collectors.collectingAndThen
 import static java.util.stream.Collectors.toCollection
@@ -134,10 +135,31 @@ class FeatureContext {
     }
 
     boolean isPresent(Class<? extends Feature> feature) {
-        return features.stream()
-            .filter(f -> exclusions.stream().noneMatch(e -> e.test(f)))
+        return selected()
             .map(Feature::getClass)
             .anyMatch(feature::isAssignableFrom)
+    }
+
+    /**
+     * @param name the name of a feature
+     * @return whether a feature of that name is selected and not excluded
+     * @since 9.0
+     */
+    boolean isPresent(String name) {
+        return selected().anyMatch(f -> f.getName() == name)
+    }
+
+    /**
+     * @param group the identifier of an exclusive group, see {@link OneOfFeature#getGroup()}
+     * @return whether a feature of that group is selected and not excluded
+     * @since 9.0
+     */
+    boolean isGroupPresent(String group) {
+        return selected().anyMatch(f -> f instanceof OneOfFeature && ((OneOfFeature) f).getGroup() == group)
+    }
+
+    private Stream<Feature> selected() {
+        return features.stream().filter(f -> exclusions.stream().noneMatch(e -> e.test(f)))
     }
 
     OperatingSystem getOperatingSystem() {

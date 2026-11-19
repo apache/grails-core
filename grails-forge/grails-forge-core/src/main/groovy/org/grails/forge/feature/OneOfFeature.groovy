@@ -23,5 +23,20 @@ import groovy.transform.CompileStatic
 @CompileStatic
 interface OneOfFeature extends Feature {
 
+    /**
+     * @return the type the features of the group share. Features are told apart from other groups by
+     * {@link #getGroup()}; this type only lets compiled code look a feature of the group up by type.
+     */
     Class<?> getFeatureClass()
+
+    /**
+     * The identifier of the exclusive group this feature belongs to: at most one feature of a group can
+     * be selected. The identifier is stable, so that a feature that is not a class of this module can
+     * name the group it joins.
+     *
+     * @return the identifier of the group. The groups of the framework are named in lower case with
+     * hyphens, such as {@code database-driver}.
+     * @since 9.0
+     */
+    String getGroup()
 }

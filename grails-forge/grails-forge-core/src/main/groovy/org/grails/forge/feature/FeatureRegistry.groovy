@@ -61,6 +61,33 @@ class FeatureRegistry {
             }
         }
         this.features = List.copyOf(unique.values())
+        validateGroups(this.features)
+    }
+
+    /**
+     * A group identifier names one exclusive group: two families of features must not share an identifier,
+     * and the features of one family must not name two.
+     */
+    private static void validateGroups(List<Feature> features) {
+        Map<String, Class<?>> familyByGroup = new HashMap<>()
+        Map<Class<?>, String> groupByFamily = new HashMap<>()
+        for (Feature feature : features) {
+            if (!(feature instanceof OneOfFeature)) {
+                continue
+            }
+            OneOfFeature oneOf = (OneOfFeature) feature
+            String group = oneOf.getGroup()
+            if (group == null || group.isBlank()) {
+                throw new IllegalArgumentException("The feature ${feature.getName()} names no exclusive group")
+            }
+            Class<?> family = familyByGroup.putIfAbsent(group, oneOf.getFeatureClass())
+            String known = groupByFamily.putIfAbsent(oneOf.getFeatureClass(), group)
+            if ((family != null && family != oneOf.getFeatureClass()) || (known != null && known != group)) {
+                throw new IllegalArgumentException(
+                        "The feature ${feature.getName()} puts ${oneOf.getFeatureClass().getSimpleName()} in the exclusive group " +
+                        "'${group}', which does not match the other features of that group")
+            }
+        }
     }
 
     List<Feature> all() {

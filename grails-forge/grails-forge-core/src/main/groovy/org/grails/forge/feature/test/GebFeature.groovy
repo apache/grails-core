@@ -33,6 +33,11 @@ interface GebFeature extends OneOfFeature {
     }
 
     @Override
+    default String getGroup() {
+        return 'geb'
+    }
+
+    @Override
     default boolean supports(ApplicationType applicationType) {
         return applicationType == ApplicationType.WEB || applicationType == ApplicationType.WEB_PLUGIN
     }
