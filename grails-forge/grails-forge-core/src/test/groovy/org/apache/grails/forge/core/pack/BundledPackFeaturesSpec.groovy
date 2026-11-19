@@ -94,6 +94,51 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
 
     void "every pack of Forge gives the applications a compiled feature of the same name would"() {
         expect: 'the names here are the features that were compiled once; a pack that goes missing is a feature that goes missing'
-        BundledPackFeatures.names(getClass().classLoader) == ['asciidoctor', 'cache-ehcache', 'grails-layout', 'grails-quartz', 'grails-web-console', 'hibernate-validator', 'shade']
+        BundledPackFeatures.names(getClass().classLoader) == [
+                'asciidoctor',
+                'cache',
+                'cache-ehcache',
+                'grails-layout',
+                'grails-quartz',
+                'grails-spring-ai',
+                'grails-web-console',
+                'hibernate-validator',
+                'openapi',
+                'shade',
+                'spring-ai-anthropic',
+                'spring-ai-ollama',
+                'spring-ai-openai']
+    }
+
+    void "a pack of Forge can name a page of the guide of this Grails in place of a link"() {
+        given:
+        String descriptor = PackGenerationSpec.HEADER + 'name: acme\nguideOfGrails: \'guide/REST.html#openApi\'\n'
+
+        expect:
+        new PackDescriptorParser().parseOfForge(descriptor, 'test').documentation ==
+                "https://grails.apache.org/docs/${org.grails.forge.util.VersionInfo.documentationVersion}/guide/REST.html#openApi"
+
+        when: 'the pack of a plugin cannot'
+        new PackDescriptorParser().parse(descriptor, 'test')
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems.size() == 1
+        e.problems[0].contains("has the key 'guideOfGrails', which this version of Forge does not read here")
+    }
+
+    void "the page of the guide a pack of Forge names is a page of the guide: #page"() {
+        when:
+        new PackDescriptorParser().parseOfForge(PackGenerationSpec.HEADER + "name: acme\nguideOfGrails: '${page}'\n${more}", 'test')
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == [problem]
+
+        where:
+        page                          | more                                    || problem
+        'https://evil.example/x.html' | ''                                      || "guideOfGrails: must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'https://evil.example/x.html'"
+        'guide/../../x.html'          | ''                                      || "guideOfGrails: must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'guide/../../x.html'"
+        'guide/cache.html'            | "documentation: 'https://a.example/'\n" || 'guideOfGrails: is in place of documentation, and both are given'
     }
 }

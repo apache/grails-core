@@ -1,0 +1,51 @@
+# web
+title: OpenAPI / Swagger UI
+description: Describes the application's URL mappings and domain classes as an OpenAPI document, served at /v3/api-docs and browsable at /swagger-ui/index.html outside production.
+category: API
+documentation: https://grails.apache.org/docs/VERSION/guide/REST.html#openApi
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature openapi documentation
++ - [Grails OpenAPI / Swagger UI documentation](https://grails.apache.org/docs/VERSION/guide/REST.html#openApi)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-openapi"
++     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui"
++             'webjars/swagger-ui/**',
+== grails-app/conf/application.yml
++     springdoc:
++       api-docs:
++         enabled: false
++       swagger-ui:
++         enabled: false
+
+# rest_api
+title: OpenAPI / Swagger UI
+description: Describes the application's URL mappings and domain classes as an OpenAPI document, served at /v3/api-docs and browsable at /swagger-ui/index.html outside production.
+category: API
+documentation: https://grails.apache.org/docs/VERSION/guide/REST.html#openApi
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature openapi documentation
++ - [Grails OpenAPI / Swagger UI documentation](https://grails.apache.org/docs/VERSION/guide/REST.html#openApi)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-openapi"
++     implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui"
+== grails-app/conf/application.yml
++     springdoc:
++       api-docs:
++         enabled: false
++       swagger-ui:
++         enabled: false
+
+# web_plugin
+not for this kind of application
+
+# plugin
+not for this kind of application
+

@@ -15,9 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 asciidoctor
+cache
 cache-ehcache
 grails-layout
 grails-quartz
+grails-spring-ai
 grails-web-console
 hibernate-validator
+openapi
 shade
+spring-ai-anthropic
+spring-ai-ollama
+spring-ai-openai

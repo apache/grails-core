@@ -31,6 +31,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.build.gradle.BuildFileAnchor
 import org.grails.forge.feature.Category
+import org.grails.forge.util.VersionInfo
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
@@ -106,7 +107,9 @@ class PackDescriptorParser {
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
-    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks']
+    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks', 'guideOfGrails']
+    private static final String GRAILS_DOCUMENTATION = 'https://grails.apache.org/docs/'
+    private static final Pattern GUIDE_PAGE = Pattern.compile(/guide\/[A-Za-z0-9]+\.html(#[A-Za-z0-9\-_.]+)?/)
     private static final int MAX_ENTRIES_OF_FORGE = 20
     private static final String FEATURE_KIND = 'feature'
     private static final String MARKUP = '@|'
@@ -227,8 +230,7 @@ class PackDescriptorParser {
                 text(root, 'title', '', MAX_LINE, problems) ?: name,
                 text(root, 'description', '', MAX_PARAGRAPH, problems) ?: name,
                 category,
-                matching(text(root, 'documentation', '', MAX_PARAGRAPH, problems), URL, 'documentation',
-                        "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems),
+                documentation(root, ofForge, problems),
                 grails,
                 forge,
                 applicationTypes(root, problems),
@@ -252,6 +254,25 @@ class PackDescriptorParser {
                 ofForge ? readmeLinks(root, problems) : [] as List<PackLink>)
         failOn(problems, source)
         return descriptor
+    }
+
+    /**
+     * The link to the documentation of the feature. A pack of Forge can name a page of the guide of
+     * Grails in place of a link, and the link is then to that page in the documentation of the version
+     * of Grails this Forge generates for, as it was for the compiled feature.
+     */
+    private static String documentation(Map<String, Object> root, boolean ofForge, List<String> problems) {
+        String link = matching(text(root, 'documentation', '', MAX_PARAGRAPH, problems), URL, 'documentation',
+                "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems)
+        if (!ofForge || root.get('guideOfGrails') == null) {
+            return link
+        }
+        String page = matching(text(root, 'guideOfGrails', '', MAX_LINE, problems), GUIDE_PAGE, 'guideOfGrails',
+                "must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi'", problems)
+        if (root.get('documentation') != null) {
+            problems << 'guideOfGrails: is in place of documentation, and both are given'
+        }
+        return page == null ? link : GRAILS_DOCUMENTATION + VersionInfo.getDocumentationVersion() + '/' + page
     }
 
     private static void failOn(List<String> problems, String source) {

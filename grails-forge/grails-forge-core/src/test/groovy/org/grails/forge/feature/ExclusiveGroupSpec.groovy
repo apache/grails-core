@@ -50,7 +50,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
                 'logging'             : 'LoggingFeature',
                 'migration'           : 'MigrationFeature',
                 'reloading'           : 'ReloadingFeature',
-                'spring-ai-provider'  : 'SpringAiProviderFeature',
+                'spring-ai-provider'  : 'a pack of Forge',
                 'spring-security'     : 'PrimarySecurityFeature',
                 'threading'           : 'SpringThreadingFeature',
         ]

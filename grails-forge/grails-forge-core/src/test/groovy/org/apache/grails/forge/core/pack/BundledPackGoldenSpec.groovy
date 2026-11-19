@@ -23,6 +23,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.fixture.CommandOutputFixture
+import org.grails.forge.util.VersionInfo
 import spock.lang.Unroll
 
 /**
@@ -30,7 +31,8 @@ import spock.lang.Unroll
  * once and is a pack now has to go on giving what it gave. The file of a pack under
  * {@code src/test/resources/golden/bundled} holds what the feature says of itself and every line the
  * application has with the feature that it has not without it, for each kind of application. The
- * versions of dependencies, which change with every release, are written as {@code VERSION}.
+ * versions of dependencies and of the documentation of Grails, which change with every release, are
+ * written as {@code VERSION}.
  *
  * <p>After a change that is meant, write the files again by running this spec with the environment
  * variable {@code FORGE_UPDATE_GOLDEN} set to {@code true}, and read the difference before it is
@@ -97,6 +99,7 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
             (without.keySet() - with.keySet()).toSorted().each { text << "== ${it}\n(not written)\n" }
             text << '\n'
         }
-        return text.toString()
+        // the documentation of Grails is that of the version Forge generates for
+        return text.toString().replace("https://grails.apache.org/docs/${VersionInfo.documentationVersion}/", 'https://grails.apache.org/docs/VERSION/')
     }
 }
