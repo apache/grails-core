@@ -21,6 +21,13 @@ under the License.
 
 This guide outlines the changes introduced in Grails 7.2 and the steps required to upgrade your application.
 
+The changes are listed by release. Apply the section of every release after the one the application is on, up to and including the release it is upgrading to.
+
+[[grails-7-2-0]]
+=== Grails 7.2.0
+
+This release carries the changes of every Grails 7.1 release up to <<grails-7-1-3,Grails 7.1.3>>.
+
 ==== 1. SiteMesh 3 Filter-less Integration
 
 Grails 7.2 upgrades the SiteMesh 3 integration to a *filter-less* architecture. Decoration is now performed by a Spring MVC `ViewResolver` rather than a Servlet filter. This change improves performance, eliminates ordering issues with other filters, and correctly supports async controller return types (`Callable`, `@Async`).
@@ -100,3 +107,28 @@ Content blocks (the `<content tag="...">` pattern) continue to work as before. T
     <g:pageProperty name="page.sidebar" />
 </div>
 ----
+
+[[grails-7-2-1]]
+=== Grails 7.2.1
+
+This release carries the changes of <<grails-7-1-4,Grails 7.1.4>>. It has no upgrade notes of its own.
+
+[[grails-7-2-2]]
+=== Grails 7.2.2
+
+This release carries the changes of <<grails-7-1-5,Grails 7.1.5>>. It has no upgrade notes of its own.
+
+[[grails-7-2-3]]
+=== Grails 7.2.3
+
+This release carries the changes of <<grails-7-1-6,Grails 7.1.6>>. It has no upgrade notes of its own.
+
+[[grails-7-2-4]]
+=== Grails 7.2.4
+
+This release carries the changes of <<grails-7-1-7,Grails 7.1.7>>. It has no upgrade notes of its own.
+
+[[grails-7-2-5]]
+=== Grails 7.2.5
+
+This release carries the changes of <<grails-7-1-8,Grails 7.1.8>>. It has no upgrade notes of its own.
