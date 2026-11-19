@@ -571,6 +571,14 @@ With a database or a schema per tenant, a domain class that does not implement `
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+## A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, throws an `IllegalArgumentException` with the message `Invalid sort property`. The query ignored such a sort and returned its results unsorted. This applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the `sort` argument of the `list` of a criteria query.
+
+- Search for sorts whose property contains a `.`, such as `sort: 'a.name'`, also where the sort comes from a request parameter, and check that the part before the first `.` is a property of the queried class or an alias that the same query defines.
+- To get the results without a sort, as before, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`.
+- When the same sort is applied to queries with different criteria, sort by the association path, such as `author.name`, which does not depend on an alias.
+
 # After the Upgrade
 
 ## Verification Checklist

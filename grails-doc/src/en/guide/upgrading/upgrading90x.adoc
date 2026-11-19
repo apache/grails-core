@@ -1483,3 +1483,9 @@ With GORM for MongoDB, a class that is not multi-tenant and was saved inside a t
 * When the instances are shared by every tenant and no multi-tenant class references them, move the documents from the tenants' databases into the default database.
 
 Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
+
+==== 26. A Sort by an Alias That the Query Does Not Define Is Rejected
+
+With GORM for Hibernate 5, a sort whose path starts with a name that is neither a property of the queried class nor an alias that the query defines, as in `Book.list(sort: 'a.name')`, now throws an `IllegalArgumentException` with the message `Invalid sort property`, as any other invalid sort property does. The query ignored such a sort and returned its results unsorted. This applies to where queries, detached criteria, `list`, dynamic finders, `find` and `findAll` with an example, and the `sort` argument of the `list` of a criteria query.
+
+To get the results without a sort, as before, remove the sort, or define the alias in the query, as in `Book.where { def a = author; a.name ==~ 'S%' }.list(sort: 'a.name')`. When the same sort is applied to queries with different criteria, for example from a sortable table with optional filters, sort by the association path, such as `author.name`, which does not depend on an alias.
