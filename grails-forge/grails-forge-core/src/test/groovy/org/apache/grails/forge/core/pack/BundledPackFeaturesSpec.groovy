@@ -94,6 +94,6 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
 
     void "every pack of Forge gives the applications a compiled feature of the same name would"() {
         expect: 'the names here are the features that were compiled once; a pack that goes missing is a feature that goes missing'
-        BundledPackFeatures.names(getClass().classLoader) == ['cache-ehcache', 'grails-quartz', 'grails-web-console']
+        BundledPackFeatures.names(getClass().classLoader) == ['cache-ehcache', 'grails-layout', 'grails-quartz', 'grails-web-console']
     }
 }

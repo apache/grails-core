@@ -40,4 +40,15 @@ interface OneOfFeature extends Feature {
      * @since 9.0
      */
     String getGroup()
+
+    /**
+     * @return whether everything that looks for a feature of this group looks for the group's identifier
+     * and not for the type of {@link #getFeatureClass()}. Only then can a feature that is a pack be in
+     * the group beside this one: a default that looked for the type would not see the pack and would be
+     * selected with it.
+     * @since 9.0
+     */
+    default boolean isFoundByGroup() {
+        return false
+    }
 }

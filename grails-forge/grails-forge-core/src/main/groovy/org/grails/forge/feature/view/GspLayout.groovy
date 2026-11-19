@@ -43,6 +43,11 @@ abstract class GspLayout implements OneOfFeature {
     }
 
     @Override
+    boolean isFoundByGroup() {
+        return true
+    }
+
+    @Override
     boolean supports(ApplicationType applicationType) {
         return applicationType == ApplicationType.WEB || applicationType == ApplicationType.WEB_PLUGIN
     }

@@ -97,9 +97,13 @@ class FeatureRegistry {
         // the compiled features of a group find each other by their class, which a pack has not: such a
         // pack would be selected beside the default of the group, or not found by what asks for the group
         for (String group : classless) {
-            if (familyByGroup.containsKey(group)) {
-                throw new IllegalArgumentException("The exclusive group '${group}' has compiled features and features that are packs, " +
-                        'which cannot be told apart from each other yet')
+            boolean byType = features.any { Feature feature ->
+                feature instanceof OneOfFeature && ((OneOfFeature) feature).getGroup() == group &&
+                        ((OneOfFeature) feature).getFeatureClass() != null && !((OneOfFeature) feature).isFoundByGroup()
+            }
+            if (byType) {
+                throw new IllegalArgumentException("The exclusive group '${group}' has features that are packs and compiled features " +
+                        'that are looked for by their type, which a pack has not')
             }
         }
     }

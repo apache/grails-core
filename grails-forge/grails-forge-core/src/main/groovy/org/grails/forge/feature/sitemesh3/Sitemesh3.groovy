@@ -25,6 +25,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.OneOfFeature
 import org.grails.forge.feature.view.GspLayout
 import org.grails.forge.options.Options
 
@@ -62,7 +63,7 @@ class Sitemesh3 extends GspLayout implements DefaultFeature {
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         return supports(applicationType) &&
-                selectedFeatures.stream().noneMatch { it instanceof GspLayout }
+                selectedFeatures.stream().noneMatch { it instanceof OneOfFeature && ((OneOfFeature) it).getGroup() == getGroup() }
     }
 
     @Override

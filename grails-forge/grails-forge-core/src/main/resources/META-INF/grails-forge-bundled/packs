@@ -15,5 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 cache-ehcache
+grails-layout
 grails-quartz
 grails-web-console
