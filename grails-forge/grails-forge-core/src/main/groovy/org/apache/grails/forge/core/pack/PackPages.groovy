@@ -117,29 +117,26 @@ final class PackPages {
         } catch (Throwable ignored) {
             message = null
         }
-        String reason = (message ?: e.class.simpleName).readLines().join(' ')
-                .replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/, ' ').replace('@|', '@ |')
+        String reason = (message ?: '').readLines().join(' ')
+                .replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/, ' ').replace('@|', '@ |').trim()
+        if (!reason) {
+            // an anonymous class has no simple name
+            reason = e.class.name
+        }
         return reason.length() > MAX_MESSAGE ? reason.substring(0, reason.offsetByCodePoints(0, reason.codePointCount(0, MAX_MESSAGE))) + '...' : reason
     }
 
     /**
-     * Has a page fail for a name that is neither in its model nor one the pages of GSP have of their
-     * own, which without it would be nothing: a template with a name misspelled, or written for a later
+     * Has a page fail for a name that is neither in its model nor one of its own (what it declares, and
+     * the {@code out} and {@code it} every page has), which without it would be nothing: a template with a name misspelled, or written for a later
      * template API, would write a wrong file and not say so.
      */
     private static final class Names extends DefaultOutputContextLookup {
 
-        // what a page of GSP looks for whether a template uses it or not; none of it is there for a pack
-        private static final Set<String> OF_PAGES = ['it', 'out', 'expressionOut', 'pagePlugin', 'pluginContextPath', 'params', 'request',
-                                                     'response', 'session', 'flash', 'application', 'applicationContext',
-                                                     'grailsApplication', 'webRequest', 'pageScope', 'controllerName', 'actionName',
-                                                     'variables', 'metaClass'] as Set<String>
-
         private final OutputContext context
 
         Names(Set<String> model) {
-            Set<String> known = new HashSet<>(model)
-            known.addAll(OF_PAGES)
+            Set<String> known = new TreeSet<>(model)
             context = new DefaultOutputContext() {
 
                 @Override
@@ -181,7 +178,7 @@ final class PackPages {
                 return getVariablesMap().get(name)
             }
             throw new MissingPropertyException("There is no '${name}' for a template: template API ${PackDescriptor.TEMPLATE_API} has " +
-                    "${known.findAll { String each -> !Names.OF_PAGES.contains(each) }.toSorted()}")
+                    "${known}")
         }
     }
 

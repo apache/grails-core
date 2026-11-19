@@ -299,22 +299,23 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'asserts what is not so'             | '<% assert features.contains("nope") : "wanted \\u001b[31m @|red nope|@" %>' || 'wanted'
         'calls itself without end'           | '<% def f; f = { f() }; f() %>'                                             || 'it calls itself without end'
         'throws an error of linking'         | '<% throw new LinkageError("link \\u202e @|red e|@") %>'                    || 'link'
-        'throws what has no message to give' | '<% throw new RuntimeException() { String getMessage() { throw new IllegalStateException("@|red x|@") } } %>' || 'cannot be rendered'
+        'throws what has no message to give' | '<% throw new RuntimeException() { String getMessage() { throw new IllegalStateException("@|red x|@") } } %>' || '_gsp'
     }
 
     void "a pack that cannot write one of its files runs none of its templates"() {
         given:
         Path marker = directory.resolve('ran.marker')
-        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n  - from: plain.txt\n    to: '{name}/config'\n", [
+        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n  - from: plain.txt\n    to: '{name}/x.txt'\n", [
                 'first.txt.gsp': "<% new File('${marker.toString().replace('\\', '/')}').text = 'ran' %>x".toString(),
                 'plain.txt'    : 'x',
         ])
 
         when:
-        generate(['acme-audit'], [pack], ApplicationType.WEB, '.git')
+        generate(['acme-audit'], [pack], ApplicationType.WEB, 'con')
 
         then:
-        thrown(IllegalArgumentException)
+        IllegalArgumentException e = thrown()
+        e.message.startsWith('The feature acme-audit would write the file {name}/x.txt to con/x.txt')
         !Files.exists(marker)
     }
 
@@ -367,8 +368,79 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == 'The application beta cannot be generated from what was prepared for the application alpha'
+        e.message == 'The application beta in org.second cannot be generated from what was prepared for the application alpha in com.first'
         output.getProject().isEmpty()
+    }
+
+    void "a template can have names of its own beside those of the model"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: t.txt.gsp\n    to: t.txt\n", ['t.txt.gsp':
+                '<% x = 1; def y = 2 %>${x + y}|' +
+                '<g:each in="${[\'a\', \'b\']}" var="f" status="i">${i}${f}</g:each>|' +
+                '<g:each in="${[\'c\']}">${it}</g:each>|' +
+                '<% [\'d\'].each { e -> %>${e}${project.name}<% } %>|' +
+                '${binding.hasVariable("nope")}|${options.containsKey("nope")}|${"jdk" in options}|${project.getOrDefault("nope", "d")}|' +
+                '${options.containsKey(1)}|${project.collect { k, v -> k }.size()}'])
+
+        expect:
+        generate(['acme-audit'], [pack])['t.txt'] == '3|0a1b|c|dfoo|false|false|true|d|false|6'
+    }
+
+    @Unroll
+    void "a template cannot get at #name, which is not of the model"() {
+        when:
+        generate(['acme-audit'], [pack('acme-audit', "files:\n  - from: bad.txt.gsp\n    to: bad.txt\n", ['bad.txt.gsp': '${' + name + '}'])])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains("There is no '${name}' for a template")
+
+        where:
+        name << ['params', 'request', 'grailsApplication', 'controllerName', 'project.properties', 'options.class']
+    }
+
+    void "a template that throws what has no name and no message is still said to have failed with something"() {
+        when:
+        generate(['acme-audit'], [pack('acme-audit', "files:\n  - from: bad.txt.gsp\n    to: bad.txt\n",
+                ['bad.txt.gsp': '<% throw new RuntimeException() { } %>'])])
+
+        then:
+        IllegalArgumentException e = thrown()
+        (e.message - 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: ').trim().length() > 5
+    }
+
+    void "what a pack adds is summed up, what of it is code first, and a long list is cut"() {
+        given:
+        String many = (1..40).collect { "  - from: plain.txt\n    to: 'docs/file${it}.txt'\n" }.join('')
+        Pack audit = pack('acme-audit', 'requires: [postgres]\nconflicts: [mysql]\n' +
+                "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit\n    version: '1.0'\n    excludes: ['org.slf4j:slf4j-simple']\n" +
+                "platforms:\n  - coordinates: com.acme:acme-bom\n    version: '1.0'\n" +
+                "buildPlugins:\n  - id: com.acme.audit\n    version: '2.0'\n" +
+                "build:\n  properties:\n    systemProp.http.proxyHost: proxy.example\n  extensions:\n    assets: minifyJs = false\n" +
+                'configuration:\n  acme.audit.enabled: true\n' +
+                'readme: Read this.\n' +
+                "files:\n  - from: t.txt.gsp\n    to: one.txt\n  - from: t.txt.gsp\n    to: buildSrc/build.gradle\n" + many,
+                ['t.txt.gsp': 'x', 'plain.txt': 'x'])
+
+        when:
+        List<String> summary = audit.summary()
+
+        then:
+        summary[0] == 'templates, which are code that runs when the application is generated: t.txt.gsp'
+        summary[1] == 'build file blocks, which are code of the build: assets'
+        summary[2].startsWith('files it writes: one.txt, buildSrc/build.gradle, docs/file1.txt, ')
+        summary[2].endsWith(', docs/file18.txt and 22 more')
+        summary.contains('build plugins: com.acme.audit:2.0')
+        summary.contains('build properties: systemProp.http.proxyHost=proxy.example')
+        summary.contains('platforms: com.acme:acme-bom:1.0')
+        summary.contains('dependencies: implementation com.acme:acme-audit:1.0 without org.slf4j:slf4j-simple')
+        summary.contains('configuration: 1 setting')
+        summary.contains('a section of the readme')
+        summary.contains('requires the features postgres')
+        summary.contains('cannot be used with the features mysql')
+
+        and: 'a pack that adds nothing has nothing said of it'
+        pack('acme-none', '').summary() == []
     }
 
     void "a pack that is not selected adds nothing"() {

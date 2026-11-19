@@ -42,6 +42,11 @@ final class Pack {
     /** The end of the name of a file of a pack that is a template and not a file written as it is */
     public static final String TEMPLATE_SUFFIX = '.gsp'
 
+    /** The most things one line of {@link #summary()} names */
+    public static final int MAX_SUMMARY_ITEMS = 20
+
+    private static final int MAX_SUMMARY_ITEM = 120
+
     private final PackDescriptor descriptor
     private final String origin
     private final Map<String, byte[]> files
@@ -93,50 +98,65 @@ final class Pack {
     /**
      * What the pack adds to an application, for whoever is about to generate one with it: a line for
      * each kind of thing, and none for a kind the pack has nothing of. What runs as code, when the
-     * application is generated or when it is built, is said to.
+     * application is generated or when it is built, comes first and is said to. A line names at most
+     * {@link #MAX_SUMMARY_ITEMS} things and says how many more there are.
      *
      * @return the lines, which are text of the descriptor as the parser let it through
      */
     List<String> summary() {
         List<String> lines = []
-        if (descriptor.requires) {
-            lines << "requires the features ${descriptor.requires.join(', ')}".toString()
-        }
-        if (descriptor.platforms) {
-            lines << "platforms: ${descriptor.platforms.collect { PackDependency each -> coordinates(each) }.join(', ')}".toString()
-        }
-        if (descriptor.dependencies) {
-            lines << "dependencies: ${descriptor.dependencies.collect { PackDependency each -> each.scope + ' ' + coordinates(each) }.join(', ')}".toString()
-        }
-        if (descriptor.buildPlugins) {
-            lines << "build plugins: ${descriptor.buildPlugins.collect { PackBuildPlugin each -> each.version ? each.id + ':' + each.version : each.id }.join(', ')}".toString()
-        }
-        if (descriptor.buildProperties) {
-            lines << "build properties: ${descriptor.buildProperties.keySet().join(', ')}".toString()
+        List<String> templates = descriptor.files.findAll { PackFile each -> isTemplate(each.from) }.collect { PackFile each -> each.from }.unique()
+        if (templates) {
+            lines << "templates, which are code that runs when the application is generated: ${some(templates)}".toString()
         }
         if (descriptor.buildExtensions) {
-            lines << "build file blocks, which are code of the build: ${descriptor.buildExtensions.keySet().join(', ')}".toString()
+            lines << "build file blocks, which are code of the build: ${some(descriptor.buildExtensions.keySet())}".toString()
+        }
+        if (descriptor.files) {
+            lines << "files it writes: ${some(descriptor.files.collect { PackFile each -> each.to })}".toString()
+        }
+        if (descriptor.buildPlugins) {
+            lines << "build plugins: ${some(descriptor.buildPlugins.collect { PackBuildPlugin each -> each.version ? each.id + ':' + each.version : each.id })}".toString()
+        }
+        if (descriptor.buildProperties) {
+            lines << "build properties: ${some(descriptor.buildProperties.collect { String name, String value -> name + '=' + value })}".toString()
+        }
+        if (descriptor.platforms) {
+            lines << "platforms: ${some(descriptor.platforms.collect { PackDependency each -> coordinates(each) })}".toString()
+        }
+        if (descriptor.dependencies) {
+            lines << "dependencies: ${some(descriptor.dependencies.collect { PackDependency each -> each.scope + ' ' + coordinates(each) })}".toString()
         }
         int settings = leaves(descriptor.configuration)
         if (settings > 0) {
             lines << "configuration: ${settings} ${settings == 1 ? 'setting' : 'settings'}".toString()
         }
-        if (descriptor.files) {
-            List<String> templates = descriptor.files.findAll { PackFile each -> isTemplate(each.from) }.collect { PackFile each -> each.from }.unique()
-            int copied = descriptor.files.count { PackFile each -> !isTemplate(each.from) } as int
-            if (copied > 0) {
-                lines << "files written as they are: ${copied}".toString()
-            }
-            if (templates) {
-                lines << "templates, which are code that runs when the application is generated: ${templates.join(', ')}".toString()
-            }
+        if (descriptor.readme) {
+            lines << 'a section of the readme'
+        }
+        if (descriptor.requires) {
+            lines << "requires the features ${some(descriptor.requires)}".toString()
+        }
+        if (descriptor.conflicts) {
+            lines << "cannot be used with the features ${some(descriptor.conflicts)}".toString()
         }
         return lines
     }
 
+    private static String some(Collection<String> all) {
+        List<String> shown = all.take(MAX_SUMMARY_ITEMS).collect { String each ->
+            each.length() > MAX_SUMMARY_ITEM ? each.substring(0, MAX_SUMMARY_ITEM) + '...' : each
+        }
+        String text = shown.join(', ')
+        return all.size() > shown.size() ? "${text} and ${all.size() - shown.size()} more" : text
+    }
+
     private static String coordinates(PackDependency dependency) {
         String coordinates = dependency.groupId + ':' + dependency.artifactId
-        return dependency.version ? coordinates + ':' + dependency.version : coordinates
+        if (dependency.version) {
+            coordinates += ':' + dependency.version
+        }
+        return dependency.excludes ? "${coordinates} without ${dependency.excludes.join(' and ')}" : coordinates
     }
 
     private static int leaves(Object value) {

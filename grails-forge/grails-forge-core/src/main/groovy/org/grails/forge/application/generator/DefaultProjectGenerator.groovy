@@ -96,8 +96,9 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {
             // what the features add was made for the project of the context, its name in it
-            throw new IllegalArgumentException("The application ${project.getName()} cannot be generated from what was prepared for " +
-                    "the application ${generatorContext.getProject().getName()}")
+            throw new IllegalArgumentException("The application ${project.getName()} in ${project.getPackageName()} cannot be generated " +
+                    "from what was prepared for the application ${generatorContext.getProject().getName()} " +
+                    "in ${generatorContext.getProject().getPackageName()}")
         }
         generatorContext.applyFeatures()
 

@@ -66,8 +66,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
 
         and: 'what the pack adds is said before the application is written'
         out.toString().contains('    dependencies: implementation com.acme:acme-audit-grails:2.3.0')
-        out.toString().contains('    files written as they are: 1')
-        out.toString().indexOf('files written as they are') < out.toString().indexOf('Application created')
+        out.toString().contains('    files it writes: grails-app/conf/{packagePath}/audit.txt')
 
         and:
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
@@ -216,6 +215,9 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         then:
         exit != 0
         err.toString().contains('The feature acme-audit sets the build property grailsVersion')
+
+        and: 'what it adds was said before it was refused'
+        out.toString().contains('    build properties: grailsVersion=0.0.1')
         !new File(dir, 'shop/build.gradle').exists()
     }
 
@@ -250,7 +252,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         and: 'what of the pack is code is said to be'
         out.toString().contains('    templates, which are code that runs when the application is generated: Text.groovy.gsp')
         out.toString().contains('    build file blocks, which are code of the build: tasks.bootRun, assets')
-        out.toString().contains('    build properties: acme.text.enabled')
+        out.toString().contains('    build properties: acme.text.enabled=true')
         out.toString().contains('    configuration: 2 settings')
 
         when: 'Gradle configures the build, resolves what it declares and compiles the application'

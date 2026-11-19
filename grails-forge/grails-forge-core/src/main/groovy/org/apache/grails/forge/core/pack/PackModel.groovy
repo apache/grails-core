@@ -99,7 +99,7 @@ final class PackModel {
 
         @Override
         Object get(Object name) {
-            if (!values.containsKey(name)) {
+            if (!containsKey(name)) {
                 List<String> names = []
                 for (String each : values.keySet()) {
                     names << "${this.of}.${each}".toString()
@@ -112,7 +112,18 @@ final class PackModel {
 
         @Override
         boolean containsKey(Object name) {
-            return values.containsKey(name)
+            return name instanceof String && values.containsKey(name)
+        }
+
+        @Override
+        Object getOrDefault(Object name, Object otherwise) {
+            return containsKey(name) ? values.get(name) : otherwise
+        }
+
+        // a name after a dot is a name of the model and nothing else: not a property of this class
+        @Override
+        Object getProperty(String name) {
+            return get(name)
         }
     }
 }
