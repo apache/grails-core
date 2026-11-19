@@ -29,10 +29,19 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 
 import static java.util.stream.Collectors.collectingAndThen
-import static java.util.stream.Collectors.toSet
+import static java.util.stream.Collectors.toCollection
 
 @CompileStatic
 class FeatureContext {
+
+    /**
+     * The order features are applied and listed in: by {@link Feature#getOrder()}, then by name, so that
+     * features of the same order always come out in the same sequence.
+     */
+    public static final Comparator<Feature> FEATURE_ORDER = { Feature first, Feature second ->
+        int byOrder = Integer.compare(first.getOrder(), second.getOrder())
+        byOrder != 0 ? byOrder : first.getName() <=> second.getName()
+    } as Comparator<Feature>
 
     private final ApplicationType applicationType
     private final OperatingSystem operatingSystem
@@ -63,7 +72,7 @@ class FeatureContext {
 
     void processSelectedFeatures() {
         this.features.addAll(0, selectedFeatures)
-        this.features.sort(Comparator.comparingInt(Feature::getOrder))
+        this.features.sort(FEATURE_ORDER)
         this.iterator = this.features.listIterator()
         while (iterator.hasNext()) {
             Feature feature = iterator.next()
@@ -76,6 +85,9 @@ class FeatureContext {
         exclusions.add(exclusion)
     }
 
+    /**
+     * @return the selected features without the excluded ones, in {@link #FEATURE_ORDER}
+     */
     Set<Feature> getFinalFeatures(ConsoleOutput consoleOutput) {
         return features.stream().filter(feature -> {
             for (FeaturePredicate predicate : exclusions) {
@@ -87,7 +99,8 @@ class FeatureContext {
                 }
             }
             return true
-        }).collect(collectingAndThen(toSet(), Collections::unmodifiableSet))
+        }).sorted(FEATURE_ORDER)
+                .collect(collectingAndThen(toCollection(LinkedHashSet::new), Collections::unmodifiableSet))
     }
 
     DevelopmentReloading getDevelopmentReloading() {

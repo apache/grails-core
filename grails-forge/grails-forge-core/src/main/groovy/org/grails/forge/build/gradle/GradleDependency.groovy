@@ -20,12 +20,11 @@ package org.grails.forge.build.gradle
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
-import jakarta.annotation.Nullable
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Coordinate
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.dependencies.DependencyCoordinate
-import org.grails.forge.template.Writable
+import org.grails.forge.build.dependencies.DependencyExclusion
 
 import static org.grails.forge.build.gradle.GradleConfiguration.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES
 
@@ -44,26 +43,20 @@ class GradleDependency extends DependencyCoordinate {
         return Coordinate.COMPARATOR.compare(o1, o2)
     }
 
-    private final Writable extension
+    private final List<DependencyExclusion> exclusions
 
     @Nonnull
     private final GradleConfiguration gradleConfiguration
 
     GradleDependency(@Nonnull Dependency dependency,
                             @Nonnull GeneratorContext generatorContext) {
-        this(dependency, generatorContext, null)
-    }
-
-    GradleDependency(@Nonnull Dependency dependency,
-                            @Nonnull GeneratorContext generatorContext,
-                            @Nullable Writable extension) {
         super(dependency)
         gradleConfiguration = GradleConfiguration.of(
             dependency.getScope(),
             generatorContext.getDevelopmentReloading()
         ).orElseThrow(() ->
             new IllegalArgumentException(String.format('Cannot map the dependency scope: [%s] to a Gradle specific scope', dependency.getScope())))
-        this.extension = extension
+        this.exclusions = dependency.getExclusions()
     }
 
     @Nonnull
@@ -71,8 +64,12 @@ class GradleDependency extends DependencyCoordinate {
         return gradleConfiguration
     }
 
-    Writable getExtension() {
-        return extension
+    /**
+     * @return the transitive dependencies this dependency is declared without
+     */
+    @Nonnull
+    List<DependencyExclusion> getExclusions() {
+        return exclusions
     }
 
     @Override
@@ -100,6 +97,9 @@ class GradleDependency extends DependencyCoordinate {
 
     @Nonnull
     String toSnippet() {
+        if (!exclusions.isEmpty()) {
+            return withComment(toSnippetWithExclusions())
+        }
         String optionalSpace = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES ? '' : ' '
         String snippet = gradleConfiguration.getConfigurationName() + optionalSpace
         if (isPom() && isEnforced()) {
@@ -114,10 +114,39 @@ class GradleDependency extends DependencyCoordinate {
         if (isPom() || gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES) {
             snippet += ')'
         }
-        if (getArtifactId() == 'spring-boot-devtools') {
-            snippet += ' // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications'
-        }
+        return withComment(snippet)
+    }
 
+    /**
+     * A dependency with exclusions is declared with parentheses and a closure, on one line so that it
+     * needs no indentation of its own: {@code implementation("g:a") { exclude group: "x", module: "y" }}.
+     */
+    private String toSnippetWithExclusions() {
+        boolean testFixtures = gradleConfiguration == INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES
+        String notation = '"' + getGroupId() + ':' + getArtifactId() +
+            (getVersion() != null ? (':' + getVersion()) : '') + '"'
+        if (isPom() && isEnforced()) {
+            notation = 'enforcedPlatform(' + notation + ')'
+        } else if (isPom()) {
+            notation = 'platform(' + notation + ')'
+        } else if (testFixtures) {
+            notation = 'testFixtures(' + notation + ')'
+        }
+        String configurationName = gradleConfiguration.getConfigurationName()
+        if (testFixtures) {
+            configurationName = configurationName.substring(0, configurationName.indexOf(' '))
+        }
+        String excludes = exclusions.collect { DependencyExclusion exclusion ->
+            'exclude group: "' + exclusion.getGroupId() + '"' +
+                (exclusion.getArtifactId() != null ? ', module: "' + exclusion.getArtifactId() + '"' : '')
+        }.join('; ')
+        return configurationName + '(' + notation + ') { ' + excludes + ' }'
+    }
+
+    private String withComment(String snippet) {
+        if (getArtifactId() == 'spring-boot-devtools') {
+            return snippet + ' // Spring Boot DevTools may cause performance slowdowns or compatibility issues on larger applications'
+        }
         return snippet
     }
 }

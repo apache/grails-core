@@ -120,9 +120,7 @@ class GradleBuild {
 
     @Nonnull
     String renderExtensions() {
-        return renderWritableExtensions(Stream.concat(
-                buildscriptDependencies.stream().map(GradleDependency::getExtension).filter(Objects::nonNull),
-                plugins.stream().map(GradlePlugin::getExtension)))
+        return renderWritableExtensions(plugins.stream().map(GradlePlugin::getExtension))
     }
 
     @Nonnull

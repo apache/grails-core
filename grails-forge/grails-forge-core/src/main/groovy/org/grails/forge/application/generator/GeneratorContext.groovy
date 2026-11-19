@@ -34,6 +34,7 @@ import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
 import org.grails.forge.feature.build.gradle.GradleBuildSrc
 import org.grails.forge.feature.config.ApplicationConfiguration
@@ -271,7 +272,7 @@ class GeneratorContext implements DependencyContext {
 
     void applyFeatures() {
         List<Feature> features = new ArrayList<>(this.features.getFeatures())
-        features.sort(Comparator.comparingInt(Feature::getOrder))
+        features.sort(FeatureContext.FEATURE_ORDER)
 
         for (Feature feature: features) {
             feature.apply(this)
@@ -326,9 +327,26 @@ class GeneratorContext implements DependencyContext {
         if (dependency.requiresLookup()) {
             Coordinate coordinate = coordinateResolver.resolve(dependency.getArtifactId())
                     .orElseThrow(() -> new LookupFailedException(dependency.getArtifactId()))
-            this.dependencies.add(dependency.resolved(coordinate))
+            addDeclared(this.dependencies, dependency.resolved(coordinate))
         } else {
-            this.dependencies.add(dependency)
+            addDeclared(this.dependencies, dependency)
+        }
+    }
+
+    /**
+     * Adds a dependency unless the same one, by group, artifact and scope, is already declared. The one
+     * declared first is kept, but two declarations that exclude different transitive dependencies are an
+     * error, since keeping either would silently drop what the other asked for.
+     */
+    private static void addDeclared(Set<Dependency> declared, Dependency dependency) {
+        if (declared.add(dependency)) {
+            return
+        }
+        Dependency existing = declared.find { Dependency each -> each == dependency }
+        if (new HashSet<>(existing.getExclusions()) != new HashSet<>(dependency.getExclusions())) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
+                    "with different exclusions: ${existing.getExclusions()} and ${dependency.getExclusions()}")
         }
     }
 
@@ -346,10 +364,10 @@ class GeneratorContext implements DependencyContext {
     private void addBuildscriptDependencyBasedOnFeatures(@Nonnull Dependency dependency) {
         if (getFeature(GradleBuildSrc).isPresent()) {
             // for buildSrc/build.gradle with initial scope
-            this.buildscriptDependencies.add(dependency)
+            addDeclared(this.buildscriptDependencies, dependency)
         } else {
             // for main build.gradle with classpath scope
-            this.buildscriptDependencies.add(dependency.scope(Scope.CLASSPATH))
+            addDeclared(this.buildscriptDependencies, dependency.scope(Scope.CLASSPATH))
         }
     }
 

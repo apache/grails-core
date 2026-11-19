@@ -62,6 +62,14 @@ class DatabaseMigrationPluginSpec extends ApplicationContextSpec implements Comm
         !buildGradle.contains('grails-data-hibernate5-dbmigration-cli')
     }
 
+    void "test the build file declares no source set for the migrations directory"() {
+        when: 'the Grails Gradle plugin already makes grails-app/migrations a resources directory'
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['database-migration'])
+
+        then:
+        !output['build.gradle'].contains('sourceSets')
+    }
+
     @Unroll
     void "test migrations directory is present"() {
         when:

@@ -25,7 +25,6 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.database.GrailsDataHibernate7
 import org.grails.forge.template.URLTemplate
 import org.grails.forge.util.VersionInfo
-import org.grails.forge.template.GspView
 
 @Component
 @CompileStatic
@@ -59,6 +58,8 @@ class DatabaseMigrationPlugin implements MigrationFeature {
     @Override
     void apply(GeneratorContext generatorContext) {
         final String srcDirPath = getSrcDirPath()
+        // the Grails Gradle plugin already makes grails-app/migrations a resources directory, so the
+        // build file needs no sourceSets block for it.
         // the dbm-* commands ship in the companion -cli artifact, which the Grails Gradle plugin
         // discovers automatically from the plugin jar's Grails-Cli-Artifact manifest attribute —
         // no buildscript classpath or grailsCli entry is generated
@@ -68,8 +69,7 @@ class DatabaseMigrationPlugin implements MigrationFeature {
         generatorContext.addDependency(Dependency.builder()
                 .groupId('org.apache.grails')
                 .artifactId(dbMigrationArtifactId)
-                .implementation()
-                .extension(GspView.of('/forge/feature/migration/templates/dbMigrationGradle.gsp', [srcDirPath: srcDirPath])))
+                .implementation())
         final ClassLoader classLoader = Thread.currentThread().getContextClassLoader()
         generatorContext.addTemplate(srcDirPath, new URLTemplate(srcDirPath + '/.gitkeep', classLoader.getResource('.gitkeep')))
     }
