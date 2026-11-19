@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -78,6 +79,7 @@ import org.grails.datastore.mapping.core.Session;
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
 import org.grails.datastore.mapping.core.connections.ConnectionSources;
 import org.grails.datastore.mapping.core.connections.ConnectionSourcesInitializer;
+import org.grails.datastore.mapping.core.connections.ConnectionSourcesSupport;
 import org.grails.datastore.mapping.core.connections.DefaultConnectionSource;
 import org.grails.datastore.mapping.core.connections.SingletonConnectionSources;
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
@@ -177,19 +179,22 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
             });
 
             if (multiTenantMode == MultiTenancySettings.MultiTenancyMode.SCHEMA) {
+                Collection<String> tenantSchemaNames = new ArrayList<>();
                 if (this.tenantResolver instanceof AllTenantsResolver) {
-                    AllTenantsResolver allTenantsResolver = (AllTenantsResolver) tenantResolver;
-                    Iterable<Serializable> tenantIds = allTenantsResolver.resolveTenantIds();
-
-                    for (Serializable tenantId : tenantIds) {
-                        addTenantForSchemaInternal(tenantId.toString());
+                    for (Serializable tenantId : ((AllTenantsResolver) tenantResolver).resolveTenantIds()) {
+                        tenantSchemaNames.add(tenantId.toString());
                     }
                 }
                 else {
-                    Collection<String> allSchemas = schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource());
-                    for (String schema : allSchemas) {
-                        addTenantForSchemaInternal(schema);
-                    }
+                    tenantSchemaNames.addAll(schemaHandler.resolveSchemaNames(defaultConnectionSource.getDataSource()));
+                }
+                List<String> unmapped = ConnectionSourcesSupport.findAssociationsToEntitiesMissingFromTenantSchemas(mappingContext.getPersistentEntities(), tenantSchemaNames);
+                if (!unmapped.isEmpty()) {
+                    throw new ConfigurationException("Multi-tenancy mode SCHEMA cannot map an association from a MultiTenant entity to an entity that is not MultiTenant and that a tenant schema does not map: " +
+                            String.join(", ", unmapped) + ". Make the target MultiTenant, map it on every tenant schema (datasource 'ALL', or name each schema), or use the DISCRIMINATOR multi-tenancy mode.");
+                }
+                for (String tenantSchemaName : tenantSchemaNames) {
+                    addTenantForSchemaInternal(tenantSchemaName);
                 }
             }
         }

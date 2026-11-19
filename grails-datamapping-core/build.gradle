@@ -106,6 +106,7 @@ dependencies {
     testImplementation project(':grails-core'), {
         // impl: ValidationException
     }
+    testImplementation project(':grails-data-simple')
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
     testImplementation 'org.spockframework:spock-core'
 
