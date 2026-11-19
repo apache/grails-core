@@ -19,9 +19,12 @@
 
 package functional.tests
 
+import java.util.concurrent.CountDownLatch
+
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
 import spock.lang.Specification
+import spock.util.concurrent.PollingConditions
 
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
@@ -32,7 +35,8 @@ import org.apache.grails.testing.http.client.TestHttpResponse
  * action without a transaction can read what its queries return. Without that session, the one a
  * query opens for itself closes before the action reads the results: MongoDB returns the first 101
  * documents with the query and they are decoded at once, but decoding a later batch fails with
- * "No datastore session found".
+ * "No datastore session found". An include uses the session of its request, and a request that
+ * goes asynchronous closes its session, so that it is not left bound to the thread.
  */
 @Integration(applicationClass = Application)
 class OpenSessionInViewSpec extends Specification implements HttpClientSupport {
@@ -83,6 +87,53 @@ class OpenSessionInViewSpec extends Specification implements HttpClientSupport {
 
         then:
         Player.withNewSession { Player.get(playerId).name } == 'Player 0'
+    }
+
+    void "an include uses the session of the request and leaves it open for the rest of the page"() {
+        when:
+        final page = pageLines('/requestSession/page?include=true')
+
+        then: 'the include reads through the session of the page'
+        page.included == page.before
+
+        and: 'the page keeps its session after the include, and reads beyond the first batch'
+        page.after == page.before
+        page.read == '102'
+    }
+
+    void "an action that goes asynchronous with #how closes its session as the request goes asynchronous"() {
+        given:
+        RequestSessions.release = new CountDownLatch(1)
+        RequestSessions.asyncSession = null
+        final asyncRequest = Thread.start { http(path).assertStatus(200) }
+
+        expect: 'the session the action ran with is closed once the request has gone asynchronous'
+        new PollingConditions(timeout: 10).eventually {
+            assert RequestSessions.asyncSession != null
+            assert !RequestSessions.asyncSession.connected
+        }
+
+        and: 'what the action saved was flushed then, as when an action returns'
+        Player.withNewSession { Player.findByName('Saved before going asynchronous') } != null
+
+        and: 'a later request gets a session of its own'
+        !http('/requestSession/current').body().startsWith("${System.identityHashCode(RequestSessions.asyncSession)}/")
+
+        cleanup:
+        RequestSessions.release.countDown()
+        asyncRequest?.join(30000)
+
+        where:
+        how                            | path
+        'a promise'                    | '/requestSession/promise'
+        'AsyncController.startAsync()' | '/asyncRequestSession/start'
+    }
+
+    private Map<String, String> pageLines(String path) {
+        http(path).assertStatus(200).body().readLines()*.trim().findAll().collectEntries { String line ->
+            final parts = line.split(':', 2)
+            [(parts[0]): parts[1]]
+        }
     }
 
     private TestHttpResponse postForm(String path, String form) {
