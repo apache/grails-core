@@ -1275,6 +1275,15 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 * Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
+==== A dynamic finder refuses text after its operator
+
+A dynamic finder name with text after its last operator that the finder does not understand used to run as if the text
+were not there: `findAllByAgeGreaterThanOrderByName(18)` ran as `findAllByAgeGreaterThan(18)` and returned the rows
+unsorted, with no error. The finder now throws an `IllegalArgumentException` whose message names the `sort` and `order`
+arguments, which is how a finder is sorted: `findAllByAgeGreaterThan(18, [sort: 'name'])`. Search the application for
+finders that carry an `OrderBy` or other trailing text and move the sort into the arguments. Finder names without
+trailing text are unchanged.
+
 ==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
