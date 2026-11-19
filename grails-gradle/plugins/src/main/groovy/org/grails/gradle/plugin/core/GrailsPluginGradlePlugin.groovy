@@ -18,15 +18,21 @@
  */
 package org.grails.gradle.plugin.core
 
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
 import javax.inject.Inject
 
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.ConfigurableFileCollection
+import org.gradle.api.file.CopySpec
+import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Copy
@@ -64,6 +70,23 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
     /** Build-dir root staged by {@code copyTemplates}; laid out as the archive sees it. */
     protected static final String TEMPLATES_STAGING_DIR = 'grails/plugin-templates'
+
+    /** Build-dir root staged by {@code copyForgePack}; laid out as the archive sees it. */
+    protected static final String FORGE_PACK_STAGING_DIR = 'grails/plugin-forge-pack'
+
+    /** The directory of a plugin project that holds its Forge feature pack. */
+    public static final String FORGE_PACK_SOURCE_DIR = 'src/main/forge'
+
+    /** The descriptor of a Forge feature pack, in its source directory and in the jar. */
+    public static final String FORGE_PACK_DESCRIPTOR = 'feature.yml'
+
+    /** Where a Forge feature pack is in the jar of the plugin. */
+    public static final String FORGE_PACK_JAR_DIR = 'META-INF/grails-forge'
+
+    /** The manifest attribute that names the Forge feature pack a jar holds. */
+    public static final String FORGE_PACK_MANIFEST_ATTRIBUTE = 'Grails-Forge-Pack'
+
+    private static final Pattern FORGE_PACK_NAME = Pattern.compile(/name:[ \t]*(['"]?)([a-z][a-z0-9]*(?:-[a-z0-9]+)*)\1[ \t]*(?:#.*)?/)
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
@@ -109,6 +132,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureAssembleTask(project)
         configurePluginResources(project)
         configureJarTask(project)
+        configureForgePack(project)
         configureSourcesJarTask(project)
     }
 
@@ -287,6 +311,56 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                     'spring/resources.groovy'
             )
         }
+    }
+
+    /**
+     * Packages the Forge feature pack of the plugin, when it has one: the {@code feature.yml} and the
+     * {@code templates} directory under {@code src/main/forge} go into {@code META-INF/grails-forge}
+     * of the jar, and the manifest of the jar names the pack, so that a tool can tell a jar holds one
+     * without reading the descriptor. A plugin without that directory is built as before.
+     *
+     * <p>The pack is staged in a directory of its own, attached to the output of the main source set
+     * like the templates of the plugin are, so the GSP templates of a pack are not dropped by the
+     * pattern that keeps views out of {@code processResources}.</p>
+     */
+    protected void configureForgePack(Project project) {
+        ProjectLayout layout = project.layout
+        Directory source = layout.projectDirectory.dir(FORGE_PACK_SOURCE_DIR)
+
+        TaskProvider<Copy> copyForgePack = project.tasks.register('copyForgePack', Copy) { Copy copy ->
+            copy.from(source) { CopySpec spec ->
+                spec.include(FORGE_PACK_DESCRIPTOR, 'templates/**')
+            }
+            copy.into(layout.buildDirectory.dir("${FORGE_PACK_STAGING_DIR}/${FORGE_PACK_JAR_DIR}"))
+            regenerateStagingTree(copy)
+        }
+
+        SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
+        sourceSets.getByName(SourceSet.MAIN_SOURCE_SET_NAME).output
+                .dir([builtBy: copyForgePack], layout.buildDirectory.dir(FORGE_PACK_STAGING_DIR))
+
+        // read as an input of the configuration: a pack that is added or renamed is seen by the next build
+        Provider<String> descriptor = project.providers.fileContents(source.file(FORGE_PACK_DESCRIPTOR)).asText
+        project.tasks.named('jar', Jar).configure { Jar jarTask ->
+            if (descriptor.isPresent()) {
+                jarTask.manifest.attributes([(FORGE_PACK_MANIFEST_ATTRIBUTE): forgePackName(descriptor.get())])
+            }
+        }
+    }
+
+    /**
+     * The name a descriptor of a Forge feature pack gives the pack. Forge checks the whole of a
+     * descriptor when the pack is used; only the name is read here, for the manifest.
+     */
+    protected static String forgePackName(String descriptor) {
+        for (String line : descriptor.readLines()) {
+            Matcher matcher = FORGE_PACK_NAME.matcher(line)
+            if (matcher.matches()) {
+                return matcher.group(2)
+            }
+        }
+        throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} does not name the feature pack: it needs a line " +
+                "'name: <name>' with a name of lowercase letters, digits and single hyphens that starts with a letter")
     }
 
     /**

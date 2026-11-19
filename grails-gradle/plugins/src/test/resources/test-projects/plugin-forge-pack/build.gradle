@@ -1,0 +1,10 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-plugin'
+}
+
+// The build has no repositories, and the configuration cache resolves the classpaths of the
+// scheduled compile tasks even when they have no sources, so nothing external is declared.
+grails {
+    bom = null
+    cliAutoProvision = false
+}
