@@ -148,7 +148,7 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @see #createAlias(String, String)
      */
     public Criteria createAlias(String associationPath, String alias, int joinType) {
-        aliasMap.put(associationPath, alias);
+        aliasMap.put(getWholeAssociationPath(associationPath), alias);
         return criteria.createAlias(associationPath, alias, JoinType.parse(joinType));
     }
 
@@ -233,8 +233,9 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
         else {
             detachedCriteria = org.hibernate.criterion.DetachedCriteria.forClass(targetClass);
         }
-        populateHibernateDetachedCriteria(new HibernateQuery(detachedCriteria, persistentEntity), detachedCriteria, queryableCriteria);
-        return detachedCriteria;
+        HibernateQuery subquery = new HibernateQuery(detachedCriteria, persistentEntity);
+        populateHibernateDetachedCriteria(subquery, detachedCriteria, queryableCriteria);
+        return subquery.getHibernateDetachedCriteria();
     }
 
     private static void populateHibernateDetachedCriteria(AbstractHibernateQuery query, org.hibernate.criterion.DetachedCriteria detachedCriteria, QueryableCriteria<?> queryableCriteria) {
@@ -243,6 +244,11 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             Map<String, FetchType> fetchStrategies = abstractDetachedCriteria.getFetchStrategies();
             for (Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
                 String property = entry.getKey();
+                jakarta.persistence.criteria.JoinType supersededJoinType = abstractDetachedCriteria.getSupersededJoinTypes().get(property);
+                if (supersededJoinType != null) {
+                    // requested before the fetch mode below, which replaces it
+                    query.join(property, supersededJoinType);
+                }
                 switch (entry.getValue()) {
                     case EAGER:
                         jakarta.persistence.criteria.JoinType gormJoinType = abstractDetachedCriteria.getJoinTypes().get(property);
