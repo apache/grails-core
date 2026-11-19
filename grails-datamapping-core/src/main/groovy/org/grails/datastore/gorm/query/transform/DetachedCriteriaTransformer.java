@@ -262,6 +262,17 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         super.visitField(node);
     }
 
+    /**
+     * The class of the criteria that the closure being transformed runs against, read when it runs. It is not the
+     * class the code declares for it: a helper typed {@code DetachedCriteria<Animal>} can be given the criteria of a
+     * {@code Cat}, and an aggregate on the right of a comparison is then taken over the cats.
+     */
+    private static Expression criteriaTargetClass() {
+        MethodCallExpression targetClass = new MethodCallExpression(VariableExpression.THIS_EXPRESSION, "getTargetClass", ArgumentListExpression.EMPTY_ARGUMENTS);
+        targetClass.setImplicitThis(true);
+        return targetClass;
+    }
+
     protected ClassNode getParameterizedDetachedCriteriaClassNode(ClassNode classNode) {
         ClassNode detachedCriteriaClassNode = DETACHED_CRITERIA_CLASS_NODE.getPlainNodeReference();
         if (classNode != null) {
@@ -1247,7 +1258,7 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
                         if (validProperty) {
                             BlockStatement bs = (BlockStatement) ce.getCode();
                             addProjectionToCurrentBody(bs, aggregateFunctionName, aggregatePropertyName, variableScope);
-                            rightExpression = new MethodCallExpression(new ConstructorCallExpression(getParameterizedDetachedCriteriaClassNode(null), new ArgumentListExpression(new ClassExpression(this.currentClassNode))), "build", new ArgumentListExpression(ce));
+                            rightExpression = new MethodCallExpression(new ConstructorCallExpression(getParameterizedDetachedCriteriaClassNode(null), new ArgumentListExpression(criteriaTargetClass())), "build", new ArgumentListExpression(ce));
                         }
                     }
                 }
@@ -1276,10 +1287,17 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
                                 addProjectionToCurrentBody(currentBody, aggregateFunctionName, aggregatePropertyName, variableScope);
 
-                                rightExpression = closureAndArguments.getClosureExpression();
-
                                 if ("property".equals(aggregateFunctionName) && METHOD_TO_SUBQUERY_MAP.containsKey(methodToCall)) {
+                                    rightExpression = closureAndArguments.getClosureExpression();
                                     methodToCall = methodToCall + "All";
+                                } else {
+                                    // Built explicitly so the subquery's own criteria receives the projection: a bare
+                                    // closure resolves its calls against the enclosing criteria when the query is
+                                    // declared in a service (@Where), and the aggregate then lands on the outer query.
+                                    rightExpression = new MethodCallExpression(
+                                            new ConstructorCallExpression(getParameterizedDetachedCriteriaClassNode(null),
+                                                    new ArgumentListExpression(criteriaTargetClass())),
+                                            "build", new ArgumentListExpression(closureAndArguments.getClosureExpression()));
                                 }
                             } else {
                                 sourceUnit.getErrorCollector().addError(new LocatedMessage("Cannot use aggregate function " + aggregateFunctionName + " on property \"" + aggregatePropertyName + "\" - no such property on class " + this.currentClassNode.getName() + " exists.", Token.newString(propertyName, aggregateMethodCall.getLineNumber(), aggregateMethodCall.getColumnNumber()), sourceUnit));

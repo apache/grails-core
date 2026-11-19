@@ -35,6 +35,12 @@ import org.grails.datastore.mapping.query.Query
 
 class DetachedCriteriaCloneSpec extends Specification {
 
+    void "the target class of a criteria is the class it was created for, and a clone keeps it, with no datastore"() {
+        expect:
+        new DetachedCriteria(TestEntity).targetClass == TestEntity
+        new DetachedCriteria(TestEntity).clone().targetClass == TestEntity
+    }
+
     void "clone preserves connectionName"() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
