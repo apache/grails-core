@@ -141,7 +141,10 @@ class ProjectCommands {
     private void update(File manifest, ConsoleOutput console) {
         // the files are recorded before the build runs, so one changed while it runs counts next time
         Inputs before = inputsOf(manifest)
-        List<String> recorded = snapshotOrNull(before)
+        List<String> recorded = snapshotOrNull(before, false)
+        // a failed build is recorded with the contents of the files named like a command too, so fixing
+        // a new command that did not compile runs the build again, while nothing else changed does not
+        List<String> recordedWhole = snapshotOrNull(before, true)
         console.out('Reading the commands of the project from its build...')
         String problem
         try {
@@ -158,12 +161,12 @@ class ProjectCommands {
             // a manifest naming other files is recorded as they are now, unless one of the files known
             // before the build changed while it ran: then the record from before makes the build run again
             Inputs after = inputsOf(manifest)
-            boolean changedDuringBuild = after != before && snapshotOrNull(before) != recorded
-            save(after == before || changedDuringBuild ? recorded : snapshotOrNull(after), null, console)
+            boolean changedDuringBuild = after != before && snapshotOrNull(before, false) != recorded
+            save(after == before || changedDuringBuild ? recorded : snapshotOrNull(after, false), null, console)
             keepInputs(manifest)
             return
         }
-        save(recorded, problem, console)
+        save(recordedWhole, problem, console)
         String kept = manifest.isFile() ? 'The commands it listed before are offered' : 'Its commands are not offered'
         console.warning("Could not read the commands of the project: ${problem}. ${kept}, and the build is not run " +
                 'for them again until a build file changes. A project of Grails 9 or later lists them with its ' +
@@ -260,7 +263,8 @@ class ProjectCommands {
         try {
             // without a record, as when the project's own build wrote the manifest, a file deleted since
             // cannot be told from one that was never there
-            return !record.isFile() || Files.readAllLines(record.toPath()) != snapshot(inputsOf(manifest))
+            boolean failedLast = new File(projectDir, FAILED_PATH).isFile()
+            return !record.isFile() || Files.readAllLines(record.toPath()) != snapshot(inputsOf(manifest), failedLast)
         }
         catch (IOException | RuntimeException ignored) {
             return true
@@ -378,10 +382,10 @@ class ProjectCommands {
      * every file and directory below each source directory, apart from what builds and tools write next
      * to a build script, and below each directory of commands, all of which are sources. Each such file
      * is listed with its time and size, so a deleted, added, replaced or changed file changes the list,
-     * whatever the clock said when it was written. Below each directory of command files, only the
-     * names of the files named like a command are listed.
+     * whatever the clock said when it was written. Below each directory of command files, the files
+     * named like a command are listed by name only, or, after a failed build, with their times and sizes.
      */
-    private static List<String> snapshot(Inputs inputs) {
+    private static List<String> snapshot(Inputs inputs, boolean wholeCommandFiles) {
         List<String> lines = []
         for (File dir : inputs.buildDirectories) {
             File[] files = dir.listFiles()
@@ -404,7 +408,7 @@ class ProjectCommands {
         }
         // a new command there registers itself, and names its file after itself; other sources are left out
         for (File dir : inputs.commandFileDirectories) {
-            walkNames(dir, lines)
+            walkNames(dir, lines, wholeCommandFiles)
         }
         for (File file : inputs.sourceFiles) {
             walk(file, lines, true)
@@ -413,9 +417,9 @@ class ProjectCommands {
     }
 
     /** The record of the files, or none when they cannot be read, such as one of a path the system refuses */
-    private static List<String> snapshotOrNull(Inputs inputs) {
+    private static List<String> snapshotOrNull(Inputs inputs, boolean wholeCommandFiles) {
         try {
-            return snapshot(inputs)
+            return snapshot(inputs, wholeCommandFiles)
         }
         catch (RuntimeException ignored) {
             return null
@@ -457,8 +461,11 @@ class ProjectCommands {
         }
     }
 
-    /** The files below the directory named like a command, by name only, so editing one changes nothing */
-    private static void walkNames(File dir, List<String> lines) {
+    /**
+     * The files below the directory named like a command: by name only, so editing one changes nothing,
+     * or else with their times and sizes
+     */
+    private static void walkNames(File dir, List<String> lines, boolean whole) {
         if (Files.isSymbolicLink(dir.toPath())) {
             return
         }
@@ -468,10 +475,10 @@ class ProjectCommands {
         }
         for (File child : children.sort(false) { File it -> it.name }) {
             if (child.isDirectory()) {
-                walkNames(child, lines)
+                walkNames(child, lines, whole)
             }
             else if (COMMAND_FILE_SUFFIXES.any { String suffix -> child.name.endsWith(suffix) }) {
-                lines << "named\t${child.absolutePath}".toString()
+                lines << (whole ? describe(child) : "named\t${child.absolutePath}".toString())
             }
         }
     }

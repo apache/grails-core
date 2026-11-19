@@ -417,6 +417,46 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations() == [prefix() + MANIFEST_TASK]
     }
 
+    void "a new command in a plugin project's main sources that did not compile runs the build again once it is fixed"() {
+        given: "a manifest naming the main sources of a plugin project next to the application"
+        File sources = new File(dir, 'plugins/audit/src/main/groovy')
+        File command = new File(sources, 'com/acme/AuditCommand.groovy')
+        command.parentFile.mkdirs()
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [], commandFileDirectories: [sources.path]]
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'a command is added that does not compile'
+        command.text = 'class AuditCommand { broken'
+        new File(dir, 'gradle-exit-code').text = '1'
+        int rejected = ForgeCli.execute(context, 'audit')
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build runs once, not again while nothing changes'
+        rejected != 0
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+
+        when: 'the command is fixed'
+        forgetInvocations()
+        command.text = 'class AuditCommand { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, AUDIT)
+        int exitCode = ForgeCli.execute(context, 'audit')
+
+        then: 'the build runs again, and the command runs'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+
+        when: 'the command is edited once the build has succeeded'
+        forgetInvocations()
+        command.text = 'class AuditCommand { /* edited */ }'
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'it is watched by name again'
+        gradleInvocations() == []
+    }
+
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
         given: 'a manifest naming a plugin project next to the application'
         File plugin = new File(dir, 'plugins/audit')
