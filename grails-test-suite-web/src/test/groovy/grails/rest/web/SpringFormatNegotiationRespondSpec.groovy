@@ -23,11 +23,13 @@ import org.springframework.http.MediaType
 import org.springframework.http.ProblemDetail
 import org.springframework.web.accept.ContentNegotiationManager
 import org.springframework.web.context.request.ServletWebRequest
+import org.springframework.web.servlet.HandlerMapping
 
 import grails.artefact.Artefact
 import grails.config.Settings
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.Validateable
+import grails.web.mapping.UrlMappingInfo
 import org.grails.web.mime.GrailsContentNegotiationManager
 import spock.lang.Specification
 
@@ -47,6 +49,14 @@ class SpringFormatNegotiationRespondSpec extends Specification implements Contro
     void "a web unit test negotiates with the manager Spring MVC negotiates with in an application"() {
         expect:
         applicationContext.getBean('mvcContentNegotiationManager', ContentNegotiationManager) instanceof GrailsContentNegotiationManager
+    }
+
+    void 'the request of the action a web unit test calls is handled by a URL mapping, as the URL mappings mark it in an application'() {
+        when:
+        controller
+
+        then:
+        request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) instanceof UrlMappingInfo
     }
 
     void 'what Spring MVC writes for an action of a web unit test is negotiated with the format the request names, as in an application'() {
@@ -229,6 +239,14 @@ class GrailsFormatNegotiationRespondSpec extends Specification implements Contro
 
     Closure doWithConfig() {
         { config -> config[Settings.WEB_RENDERING_JSON_SPRING] = true }
+    }
+
+    void 'the request of the action a web unit test calls is not marked as handled by a URL mapping, as in Grails 9'() {
+        when:
+        controller
+
+        then:
+        request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) == null
     }
 
     void "Spring MVC's manager is left as it is"() {

@@ -83,6 +83,17 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
      */
     boolean resolveHiddenHttpMethod = false
 
+    /**
+     * Whether the mapping that handles a request is set as its
+     * {@link org.springframework.web.servlet.HandlerMapping#BEST_MATCHING_HANDLER_ATTRIBUTE} until the dispatch
+     * completes, so that what Spring MVC negotiates for the request can tell that a URL mapping handles it. Set with
+     * {@code grails.mime.negotiation.spring}, whose strategies are all that read it; without it, the request and the
+     * handler chain are left as Spring MVC's handler mapping leaves them.
+     *
+     * @since 9.0
+     */
+    boolean markHandledRequests = false
+
     protected UrlMappingsHolder urlMappingsHolder
     // Deliberately not UrlPathHelper.defaultInstance: that instance is read-only, and this field is
     // protected, so a subclass configuring it (alwaysUseFullPath and friends) must keep working.
@@ -165,8 +176,10 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
         // before(), so that a failure in one is reported under the route that failed
         chain.addInterceptor(webRequestInterceptorCount, OBSERVATION_ROUTE_HANDLER)
         chain.addInterceptor(ERROR_HANDLING_HANDLER)
-        // First, so that it completes last, whichever interceptor stops the request
-        chain.addInterceptor(0, HANDLED_REQUEST_HANDLER)
+        if (markHandledRequests) {
+            // First, so that it completes last, whichever interceptor stops the request
+            chain.addInterceptor(0, HANDLED_REQUEST_HANDLER)
+        }
         return chain
     }
 
@@ -185,11 +198,15 @@ class UrlMappingsHandlerMapping extends AbstractHandlerMapping {
      * The mapping that handles the request, which is also the request's
      * {@link org.springframework.web.servlet.HandlerMapping#BEST_MATCHING_HANDLER_ATTRIBUTE}, as each of Spring MVC's
      * handler mappings sets it for the handler it finds, until the dispatch completes, so that what Spring MVC
-     * negotiates for the request while a URL mapping handles it can tell that one does.
+     * negotiates for the request while a URL mapping handles it can tell that one does, where
+     * {@link #markHandledRequests} says so.
      */
     @Override
     protected Object getHandlerInternal(HttpServletRequest request) throws Exception {
         Object handler = matchHandler(request)
+        if (!markHandledRequests) {
+            return handler
+        }
         if (handler != null) {
             request.setAttribute(BEST_MATCHING_HANDLER_ATTRIBUTE, handler)
         }

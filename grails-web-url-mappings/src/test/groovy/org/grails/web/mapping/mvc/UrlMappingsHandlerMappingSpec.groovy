@@ -31,6 +31,7 @@ import grails.util.GrailsWebMockUtil
 import grails.web.Action
 import grails.web.HyphenatedUrlConverter
 import grails.web.mapping.AbstractUrlMappingsSpec
+import grails.web.mapping.UrlMappingInfo
 import grails.web.mime.MimeTypeResolver
 import org.grails.web.errors.GrailsWrappedRuntimeException
 import org.grails.web.mapping.DefaultUrlMappingData
@@ -356,7 +357,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         result.view.getUrl() == "/index.html"
     }
 
-    void "the handler chain completes the handled request last, keeps WebRequestInterceptors first, then the route, and appends the error handling last"() {
+    void "the handler chain keeps WebRequestInterceptors first, then the route, and appends the error handling last"() {
         given: "a handler mapping with both a WebRequestInterceptor and an ordinary HandlerInterceptor"
         def handlerMapping = handlerMapping()
         def plainInterceptor = new HandlerInterceptor() {}
@@ -374,22 +375,45 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         webRequest.request.setRequestURI("/foo/bar")
         def interceptors = handlerMapping.getHandler(webRequest.request).interceptorList
 
-        then: "the handled request is completed by the first interceptor, which completes last whichever stops the request"
-        interceptors[0].class.simpleName == 'HandledRequestHandler'
-
-        and: "the WebRequestInterceptor is adapted and ordered next, ahead of ordinary interceptors"
-        interceptors[1] instanceof WebRequestHandlerInterceptorAdapter
+        then: "the WebRequestInterceptor is adapted and ordered first, ahead of ordinary interceptors"
+        interceptors[0] instanceof WebRequestHandlerInterceptorAdapter
         interceptors.contains(plainInterceptor)
 
         and: "the route is set ahead of the ordinary interceptors, which can fail, and the error handling is last"
+        interceptors[1].class.simpleName == 'ObservationRouteHandler'
+        interceptors.indexOf(plainInterceptor) > 1
+        interceptors[-1].class.simpleName == 'ErrorHandlingHandler'
+        !interceptors.any { it.class.simpleName == 'HandledRequestHandler' }
+    }
+
+    void "where the handler mapping marks the requests it handles, the handled request is completed first in the chain, ahead of the WebRequestInterceptors"() {
+        given:
+        def handlerMapping = handlerMapping()
+        handlerMapping.markHandledRequests = true
+        def webRequestInterceptor = new WebRequestInterceptor() {
+            void preHandle(WebRequest request) {}
+            void postHandle(WebRequest request, ModelMap model) {}
+            void afterCompletion(WebRequest request, Exception ex) {}
+        }
+        handlerMapping.setWebRequestInterceptors([webRequestInterceptor] as WebRequestInterceptor[])
+        handlerMapping.setApplicationContext(new StaticWebApplicationContext())
+
+        when:
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.request.setRequestURI("/foo/bar")
+        def interceptors = handlerMapping.getHandler(webRequest.request).interceptorList
+
+        then: "the first interceptor completes last, whichever interceptor stops the request"
+        interceptors[0].class.simpleName == 'HandledRequestHandler'
+        interceptors[1] instanceof WebRequestHandlerInterceptorAdapter
         interceptors[2].class.simpleName == 'ObservationRouteHandler'
-        interceptors.indexOf(plainInterceptor) > 2
         interceptors[-1].class.simpleName == 'ErrorHandlingHandler'
     }
 
     void "the Grails interceptors are shared rather than allocated per request"() {
         given:
         def handlerMapping = handlerMapping()
+        handlerMapping.markHandledRequests = true
         handlerMapping.setApplicationContext(new StaticWebApplicationContext())
 
         when: "two separate requests are handled"
@@ -655,6 +679,34 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         context.pathPattern == '/foo/bar'
     }
 
+    void 'by default, the mapping that handles a request is not set as its best matching handler, as before Grails 9'() {
+        given:
+        def grailsApplication = new DefaultGrailsApplication(FooController)
+        grailsApplication.initialise()
+        def handler = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
+            '/foo/bar'(controller: 'foo', action: 'bar')
+        }))
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        def request = webRequest.request
+        request.requestURI = '/foo/bar'
+
+        when:
+        def chain = handler.getHandler(request)
+
+        then:
+        chain.handler instanceof UrlMappingInfo
+        request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE) == null
+
+        when: 'another handler mapping set it, and the URL mappings match nothing for the next dispatch'
+        def earlier = new ForwardUrlMappingInfo(controllerName: 'foo')
+        request.setAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE, earlier)
+        request.requestURI = '/spring/endpoint'
+
+        then: 'it is left as it is'
+        handler.getHandler(request) == null
+        request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE).is(earlier)
+    }
+
     void 'the mapping that handles a request is its best matching handler, as a Spring MVC handler mapping sets it'() {
         given:
         def grailsApplication = new DefaultGrailsApplication(FooController)
@@ -663,6 +715,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
             '/foo/bar'(controller: 'foo', action: 'bar')
             '/'(view: '/index')
         }))
+        handler.markHandledRequests = true
         def request = GrailsWebMockUtil.bindMockWebRequest().request
 
         when: 'a request a controller mapping matches'
@@ -690,6 +743,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def handler = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
             '/foo/bar'(controller: 'foo', action: 'bar')
         }))
+        handler.markHandledRequests = true
         boolean proceeds = proceed
         handler.setHandlerInterceptors([new HandlerInterceptor() {
             @Override
@@ -724,6 +778,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def handler = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
             '/foo/bar'(controller: 'foo', action: 'bar')
         }))
+        handler.markHandledRequests = true
         def webRequest = GrailsWebMockUtil.bindMockWebRequest()
         def request = webRequest.request
         request.requestURI = '/foo/bar'
@@ -745,6 +800,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def handler = new UrlMappingsHandlerMapping(new GrailsControllerUrlMappings(grailsApplication, getUrlMappingsHolder {
             '/foo/bar'(controller: 'foo', action: 'bar')
         }))
+        handler.markHandledRequests = true
         def request = GrailsWebMockUtil.bindMockWebRequest().request
         request.requestURI = '/foo/bar'
         handler.getHandler(request)
@@ -763,6 +819,7 @@ class UrlMappingsHandlerMappingSpec extends AbstractUrlMappingsSpec {
         def handler = new UrlMappingsHandlerMapping(getUrlMappingsHolder {
             '/foo/bar'(controller: 'foo', action: 'bar')
         })
+        handler.markHandledRequests = true
         def request = GrailsWebMockUtil.bindMockWebRequest().request
         def springHandler = new Object()
         request.setAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE, springHandler)
