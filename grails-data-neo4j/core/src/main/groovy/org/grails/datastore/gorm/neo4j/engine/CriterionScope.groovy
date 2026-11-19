@@ -140,6 +140,10 @@ final class CriterionScope {
             return associated.formatId(target)
         }
         if (entity.isRelationshipEntity() && name == RelationshipPersistentEntity.TYPE) {
+            if (builder.isRelationshipVariable(variable)) {
+                // a block bound the relationship as a variable of its own, so its type is read from that variable
+                return "TYPE(${variable})".toString()
+            }
             builder.replaceFirstRelationshipMatch(((RelationshipPersistentEntity) entity).buildRelationshipMatchTo(null, CypherBuilder.REL_VAR))
             return "TYPE(${CypherBuilder.REL_VAR})".toString()
         }

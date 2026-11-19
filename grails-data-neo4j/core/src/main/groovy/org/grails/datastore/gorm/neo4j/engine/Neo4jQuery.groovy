@@ -250,7 +250,7 @@ class Neo4jQuery extends Query {
         CypherExpression handle(CriterionScope scope, Query.Like criterion) {
             int paramNumber = addBuildParameterForCriterion(scope.builder, scope.entity, criterion)
             String operator = handleLike(criterion, scope.builder, paramNumber, false)
-            return new CypherExpression(scope.property(criterion.property), "\$$paramNumber", operator)
+            return new CypherExpression(scope.reference(criterion.property), "\$$paramNumber", operator)
         }
             },
             (Query.ILike): new CriterionHandler<Query.ILike>() {
@@ -260,7 +260,7 @@ class Neo4jQuery extends Query {
         CypherExpression handle(CriterionScope scope, Query.ILike criterion) {
             int paramNumber = addBuildParameterForCriterion(scope.builder, scope.entity, criterion)
             String operator = handleLike(criterion, scope.builder, paramNumber, true)
-            String propertyRef = scope.property(criterion.property)
+            String propertyRef = scope.reference(criterion.property)
             String parameterRef = "\$$paramNumber"
             if (operator != CriterionHandler.OPERATOR_LIKE) {
                 propertyRef = "lower($propertyRef)"
