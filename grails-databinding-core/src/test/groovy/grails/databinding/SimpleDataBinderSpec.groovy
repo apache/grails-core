@@ -718,6 +718,25 @@ class SimpleDataBinderSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A filter that has an indexer of its own does not stop the held map from being written'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def table = new IndexedTable(columns: [[data: 'old', keep: 'me']])
+
+        when:
+        binder.bind(table, new SimpleMapDataBindingSource([(name): 'new']), filter, null, null)
+
+        then:
+        table.columns == expected
+
+        where:
+        name                        | filter         || expected
+        'selected[0].columns[0][data]' | 'selected[0]' || [[data: 'new', keep: 'me']]
+        'selected.columns[0][data]'    | 'selected'    || [[data: 'new', keep: 'me']]
+        'other[0].columns[0][data]'    | 'selected[0]' || [[data: 'old', keep: 'me']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
     void 'A supplied object is bound only when its indexed name is accepted by the bind'() {
         given:
         def binder = new SimpleDataBinder()

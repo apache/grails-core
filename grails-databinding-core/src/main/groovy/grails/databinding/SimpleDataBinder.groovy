@@ -292,20 +292,23 @@ class SimpleDataBinder implements DataBinder {
      */
     protected DataBindingSource groupMultipleIndexers(obj, DataBindingSource source, String filter, List whiteList, List blackList, Map<Object, Map<String, Object>> deferred) {
         Set<String> names = source.getPropertyNames()
-        if (!names.any { String name -> name =~ MULTIPLE_INDEXERS_REGEX }) {
+        String prefix = filter ? filter + '.' : ''
+        // the indexers are counted in the name that is left once the filter is taken off, a filter such as
+        // selected[0] has an indexer of its own
+        if (!names.any { String name -> name.startsWith(prefix) && name.substring(prefix.size()) =~ MULTIPLE_INDEXERS_REGEX }) {
             return source
         }
         Map<String, Object> grouped = new LinkedHashMap<String, Object>()
         Map<String, Map<String, Object>> elements = new LinkedHashMap<String, Map<String, Object>>()
         for (String name in names) {
-            def matcher = name =~ MULTIPLE_INDEXERS_REGEX
+            def matcher = name.startsWith(prefix) ? (name.substring(prefix.size()) =~ MULTIPLE_INDEXERS_REGEX) : null
             def rest = matcher ? (matcher.group(2) =~ /^\[\s*([^\s\]]*)\s*\](.*)$/) : null
             if (rest != null && rest.matches()) {
                 String key = rest.group(1)
                 if (key.size() > 2 && ((key.startsWith("'") && key.endsWith("'")) || (key.startsWith('"') && key.endsWith('"')))) {
                     key = key[1..-2]
                 }
-                elements.computeIfAbsent(matcher.group(1)) { new LinkedHashMap<String, Object>() }.put(key + rest.group(2), source.getPropertyValue(name))
+                elements.computeIfAbsent(prefix + matcher.group(1)) { new LinkedHashMap<String, Object>() }.put(key + rest.group(2), source.getPropertyValue(name))
             } else {
                 grouped.put(name, source.getPropertyValue(name))
             }
