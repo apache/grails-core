@@ -115,16 +115,19 @@ jobs:
               $0 == closing || index($0, closing ":") == 1 { if (!start) exit 1; printf "%d %d ", start, NR; start = 0 }
               END { if (start) exit 1 }') || return 2
             [[ -n "$regions" ]] || return 1
-            # Every line the merge commit removed or replaced lies in a conflict, and every line it inserted sits in
-            # or next to one. --text makes git compare a file it takes for binary line by line too, rather than only
-            # say that it differs.
+            # Every line the merge commit removed or replaced lies in a conflict, markers included, and every line it
+            # only inserted lands between the markers of one: git reports an insertion after an old line, so that
+            # line has to be the opening marker or a line after it, before the closing marker. A line inserted next
+            # to a conflict whose markers are kept is a change outside it. A resolution that removes the markers is
+            # a change of the conflict's own lines, whatever it adds. --text makes git compare a file it takes for
+            # binary line by line too, rather than only say that it differs.
             hunks=$(bounded git -C merges.git diff -U0 --text --no-ext-diff --no-textconv --no-color "$tree:$path" "$commit:$path") || return 2
             awk -v regions="$regions" '
               BEGIN { n = split(regions, r, " ") }
               /^@@ / {
                 split(substr($2, 2), h, ","); at = h[1] + 0; count = (2 in h) ? h[2] + 0 : 1; inside = 0
                 for (i = 1; i < n; i += 2)
-                  if (count > 0 ? (r[i] <= at && at + count - 1 <= r[i + 1]) : (r[i] - 1 <= at && at <= r[i + 1])) inside = 1
+                  if (count > 0 ? (r[i] <= at && at + count - 1 <= r[i + 1]) : (r[i] <= at && at < r[i + 1])) inside = 1
                 if (!inside) exit 1
               }' <<< "$hunks" || return 1
           }
