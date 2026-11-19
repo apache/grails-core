@@ -1208,6 +1208,18 @@ See the xref:backgroundJobs.adoc#quartzJobProperties[Job Properties] section for
 [[grails-7-0-18]]
 === Grails 7.0.18
 
+==== Hibernate 5: map sorts, composite id sorts and empty in lists
+
+These calls on Hibernate 5 returned the wrong rows or failed. Each now does what it asks:
+
+* A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them. The static `list(sort: map)` kept only the last property of the map (issue https://github.com/apache/grails-core/issues/14533[#14533]); it now orders by all of them, so the order of the rows it returns can differ from before.
+* Sorting a domain class with a composite id by one of the properties of the id threw a `NullPointerException`; it sorts now (issue https://github.com/apache/grails-core/issues/14451[#14451]).
+* A map sort, or a string sort on an association that the query's own block already joined, no longer joins the association a second time (which failed with a duplicate association path), and a sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.
+* An empty list given to `inList`, or to `in` in any of its forms, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched no row on PostgreSQL, MySQL and MariaDB (issues https://github.com/apache/grails-core/issues/14653[#14653] and https://github.com/apache/grails-core/issues/14457[#14457]).
+* A default `sort` of a `hasMany` that names a property the associated entity does not have failed with a `NullPointerException` at startup; the error now names the association and the sort.
+
+To get the earlier rows back for the sort or the empty list, remove the criterion or the sort from the query.
+
 ==== Interceptor URI Matching Uses the Dispatched Path
 
 Interceptors that match on `uri`, with `match(uri: ...)` or `excludes(uri: ...)`, now match the same path that URL
