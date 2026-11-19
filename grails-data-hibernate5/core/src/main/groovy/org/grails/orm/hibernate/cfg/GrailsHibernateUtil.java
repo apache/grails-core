@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,8 +37,10 @@ import org.hibernate.criterion.Order;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.sql.JoinType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +52,7 @@ import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.datasource.MultipleDataSourceSupport;
@@ -213,6 +217,91 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         return FlushMode.valueOf(String.valueOf(object));
     }
 
+    private static CriteriaImpl getRootCriteria(Criteria criteria) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
+    }
+
+    /**
+     * Returns the criteria of the join that a query has for an association path, whichever part of
+     * the query made the join.
+     *
+     * @param criteria The root criteria of the query, or the criteria of one of its joins
+     * @param associationPath The path of the association from the root entity
+     * @return The criteria of the join, or null when the query does not join the association
+     */
+    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        return findCriteria(getRootCriteria(criteria), associationPath);
+    }
+
+    /**
+     * Returns the criteria that the root criteria have for an association path, or null.
+     */
+    private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
+        if (root instanceof CriteriaImpl) {
+            CriteriaImpl criteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (associationPath.equals(getWholePath(criteria, existing))) {
+                    return existing;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
+     * is relative to the criteria it is created from, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Whether a sort by a property of an association joins the association with a left join, so that the
+     * sort keeps the instances whose association is null. That is the case when the
+     * <code>grails.gorm.leftJoinAssociationSort</code> setting is enabled. The association is otherwise
+     * joined with an inner join.
+     *
+     * @param entity an entity of the datastore that runs the query
+     * @return whether a sort joins an association with a left join
+     * @since 7.0.18
+     */
+    public static boolean isLeftJoinAssociationSort(PersistentEntity entity) {
+        return entity != null && entity.getMappingContext() instanceof HibernateMappingContext &&
+                ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort();
+    }
+
     /**
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
@@ -228,7 +317,11 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);
             } else if (property instanceof Association) {
-                Criteria subCriteria = c.createCriteria(sortHead);
+                // with the leftJoinAssociationSort setting, a left join, so that the sort keeps the rows where the
+                // association is null; a collection is joined with an inner join, since Hibernate would fetch it
+                // through a left join
+                Criteria subCriteria = c.createCriteria(sortHead, property instanceof ToMany || !isLeftJoinAssociationSort(property.getOwner()) ?
+                        JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);
                 Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
                 GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
                 addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
