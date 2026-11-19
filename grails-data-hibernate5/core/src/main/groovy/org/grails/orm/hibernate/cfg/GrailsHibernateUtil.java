@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -32,12 +33,19 @@ import org.hibernate.Hibernate;
 import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Criterion;
+import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.criterion.Subqueries;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
+import org.hibernate.sql.JoinType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +56,9 @@ import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
 import org.grails.datastore.mapping.model.types.Association;
+import org.grails.datastore.mapping.model.types.Basic;
 import org.grails.datastore.mapping.model.types.Embedded;
+import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.reflect.ClassUtils;
 import org.grails.orm.hibernate.AbstractHibernateDatastore;
 import org.grails.orm.hibernate.datasource.MultipleDataSourceSupport;
@@ -122,7 +132,13 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             Map fetch = (Map) fetchObj;
             for (Object o : fetch.keySet()) {
                 String associationName = (String) o;
-                c.setFetchMode(associationName, getFetchMode(fetch.get(associationName)));
+                Object fetchValue = fetch.get(associationName);
+                if (fetchValue instanceof jakarta.persistence.criteria.JoinType) {
+                    applyJoinType(datastore, targetClass, c, associationName, (jakarta.persistence.criteria.JoinType) fetchValue);
+                }
+                else {
+                    c.setFetchMode(associationName, getFetchMode(fetchValue));
+                }
             }
         }
 
@@ -217,23 +233,356 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Add order to criteria, creating necessary subCriteria if nested sort property (ie. sort:'nested.property').
      */
     private static void addOrderPossiblyNested(AbstractHibernateDatastore datastore, Criteria c, Class<?> targetClass, String sort, String order, boolean ignoreCase) {
-        int firstDotPos = sort.indexOf(".");
-        if (firstDotPos == -1) {
-            addOrder(c, sort, order, ignoreCase);
-        } else { // nested property
-            String sortHead = sort.substring(0, firstDotPos);
-            String sortTail = sort.substring(firstDotPos + 1);
-            PersistentProperty property = getGrailsDomainClassProperty(datastore, targetClass, sortHead);
-            if (property instanceof Embedded) {
-                // embedded objects cannot reference entities (at time of writing), so no more recursion needed
-                addOrder(c, sort, order, ignoreCase);
-            } else if (property instanceof Association) {
-                Criteria subCriteria = c.createCriteria(sortHead);
-                Class<?> propertyTargetClass = ((Association) property).getAssociatedEntity().getJavaClass();
-                GrailsHibernateUtil.cacheCriteriaByMapping(datastore, propertyTargetClass, subCriteria);
-                addOrderPossiblyNested(datastore, subCriteria, propertyTargetClass, sortTail, order, ignoreCase); // Recurse on nested sort
+        Criteria criteria = c;
+        Class<?> currentClass = targetClass;
+        String associationPath = null;
+        String property = sort;
+        int firstDotPos;
+        while ((firstDotPos = property.indexOf('.')) != -1) {
+            String sortHead = property.substring(0, firstDotPos);
+            PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, sortHead);
+            if (persistentProperty == null && associationPath == null) {
+                // an alias that the criteria give an association: the rest of the path starts from that association
+                CriteriaImpl root = getRootCriteria(c);
+                Criteria aliased = root != null ? findCriteriaByAlias(root, sortHead) : null;
+                String aliasedPath = aliased instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) aliased) : null;
+                Class<?> aliasedClass = aliasedPath != null ? getAssociatedClass(datastore, targetClass, aliasedPath) : null;
+                if (aliasedClass != null) {
+                    criteria = aliased;
+                    associationPath = aliasedPath;
+                    currentClass = aliasedClass;
+                    property = property.substring(firstDotPos + 1);
+                    continue;
+                }
+            }
+            if (persistentProperty instanceof Embedded) {
+                // embedded objects cannot reference entities (at time of writing), so the rest is a component path
+                break;
+            }
+            if (!(persistentProperty instanceof Association)) {
+                return;
+            }
+            associationPath = associationPath == null ? sortHead : associationPath + '.' + sortHead;
+            criteria = getOrCreateSortCriteria(c, criteria, associationPath, sortHead,
+                    persistentProperty instanceof ToMany || !isLeftJoinAssociationSort(persistentProperty.getOwner()));
+            currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
+            GrailsHibernateUtil.cacheCriteriaByMapping(datastore, currentClass, criteria);
+            property = property.substring(firstDotPos + 1);
+        }
+        addOrder(criteria, property, order, ignoreCase);
+    }
+
+    /**
+     * Returns the class at the end of an association path from the given class, or null when the path
+     * does not consist of associations only.
+     */
+    private static Class<?> getAssociatedClass(AbstractHibernateDatastore datastore, Class<?> targetClass, String associationPath) {
+        Class<?> currentClass = targetClass;
+        for (String token : associationPath.split("\\.")) {
+            PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, token);
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded) {
+                return null;
+            }
+            currentClass = ((Association) persistentProperty).getAssociatedEntity().getJavaClass();
+        }
+        return currentClass;
+    }
+
+    /**
+     * Returns the criteria that joins an association for a sort: the one the query already has for the
+     * association path or, failing that, a new one. A new one is created from the root criteria,
+     * because the count of a paged list recreates each join from the root criteria by its path, and
+     * an association after the first one on the path is joined through the alias of the join before
+     * it, so that Hibernate does not read the first association of the path as an alias of the same
+     * name. With the <code>grails.gorm.leftJoinAssociationSort</code> setting it is a left join, so
+     * that the sort keeps the rows where the association is null, and without it an inner join. A
+     * collection is always joined with an inner join: Hibernate would fetch it through a left join.
+     */
+    private static Criteria getOrCreateSortCriteria(Criteria root, Criteria parent, String associationPath, String associationName, boolean innerJoin) {
+        Criteria existing = findCriteria(root, associationPath);
+        if (existing != null) {
+            return existing;
+        }
+        return root.createCriteria(getJoinPath(parent, associationPath, associationName), newJoinAlias(root, associationPath, "_sort"),
+                innerJoin ? JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);
+    }
+
+    /**
+     * Returns the path to create the join of an association with from the root criteria: the alias of
+     * the join of the association before it, followed by its name, or the whole path when the
+     * association follows the root, or a join without an alias.
+     */
+    private static String getJoinPath(Criteria parent, String associationPath, String associationName) {
+        String parentAlias = parent instanceof CriteriaImpl.Subcriteria ? ((CriteriaImpl.Subcriteria) parent).getAlias() : null;
+        return parentAlias != null ? parentAlias + '.' + associationName : associationPath;
+    }
+
+    /**
+     * Returns an alias for a join that the criteria do not use yet.
+     */
+    private static String newJoinAlias(Criteria root, String associationPath, String suffix) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        String base = associationPath.replace('.', '_') + suffix;
+        String alias = base;
+        int count = 1;
+        while (criteria != null && findCriteriaByAlias(criteria, alias) != null) {
+            alias = base + count++;
+        }
+        return alias;
+    }
+
+    private static CriteriaImpl getRootCriteria(Criteria criteria) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
+    }
+
+    private static FetchMode getRequestedFetchMode(Criteria root, String associationPath) {
+        CriteriaImpl criteria = getRootCriteria(root);
+        if (criteria == null) {
+            return null;
+        }
+        // Hibernate records a fetch mode under the path from the alias of the root criteria
+        String rootAlias = criteria.getAlias();
+        String path = rootAlias != null && !associationPath.startsWith(rootAlias + '.') ? rootAlias + '.' + associationPath : associationPath;
+        return criteria.getFetchMode(path);
+    }
+
+    /**
+     * Returns the alias of the join that the criteria have for an association path, whichever part
+     * of the query made the join.
+     *
+     * @param root The root criteria
+     * @param associationPath The path of the association from the root entity
+     * @return The alias, or null when the criteria do not join the association or join it without an alias
+     */
+    public static String getJoinAlias(Criteria root, String associationPath) {
+        CriteriaImpl.Subcriteria existing = findCriteria(root, associationPath);
+        return existing != null ? existing.getAlias() : null;
+    }
+
+    /**
+     * Returns the criteria of the join that a query has for an association path, whichever part of
+     * the query made the join.
+     *
+     * @param criteria The root criteria of the query, or the criteria of one of its joins
+     * @param associationPath The path of the association from the root entity
+     * @return The criteria of the join, or null when the query does not join the association
+     */
+    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        return findCriteria(getRootCriteria(criteria), associationPath);
+    }
+
+    /**
+     * Returns the criteria that the root criteria have for an association path, or null.
+     */
+    private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
+        if (root instanceof CriteriaImpl) {
+            CriteriaImpl criteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (associationPath.equals(getWholePath(criteria, existing))) {
+                    return existing;
+                }
             }
         }
+        return null;
+    }
+
+    /**
+     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
+     * is relative to the criteria it is created from, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Whether a sort by a property of an association joins the association with a left join, so that the
+     * sort keeps the instances whose association is null. That is the case when the
+     * <code>grails.gorm.leftJoinAssociationSort</code> setting is enabled. The association is otherwise
+     * joined with an inner join.
+     *
+     * @param entity an entity of the datastore that runs the query
+     * @return whether a sort joins an association with a left join
+     * @since 7.0.18
+     */
+    public static boolean isLeftJoinAssociationSort(PersistentEntity entity) {
+        return entity != null && entity.getMappingContext() instanceof HibernateMappingContext &&
+                ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort();
+    }
+
+    /**
+     * Applies the join type that a criteria query requests for an association, with the {@code fetch}
+     * argument or with {@code join(String, JoinType)}. The association is fetched, as it is for the
+     * {@code 'join'} fetch mode. A fetch mode alone always joins with an outer join, so a join type
+     * other than a left join is applied by joining each association on the path that the criteria do
+     * not join already; one that they join keeps its join.
+     * <p>
+     * Hibernate fetches a collection only through a left join, and a join through a collection
+     * returns an instance once for each element of the collection. A path that ends in a collection,
+     * or passes through one, that the criteria do not join is therefore joined in a subquery, see
+     * {@link #joinedInSubquery(String, String, String)}. A collection at the end of the path keeps the
+     * left join of the fetch mode, and the associations before it are joined, so that the collection
+     * is fetched.
+     *
+     * @param datastore The datastore
+     * @param targetClass The class that the criteria query
+     * @param root The root criteria
+     * @param associationPath The path of the association from the target class
+     * @param joinType The requested join type
+     */
+    public static void applyJoinType(AbstractHibernateDatastore datastore, Class<?> targetClass, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
+        PersistentEntity entity = datastore != null && targetClass != null ? datastore.getMappingContext().getPersistentEntity(targetClass.getName()) : null;
+        applyJoinType(entity, root, associationPath, joinType);
+    }
+
+    /**
+     * Applies the join type that a query requests for an association: see
+     * {@link #applyJoinType(AbstractHibernateDatastore, Class, Criteria, String, jakarta.persistence.criteria.JoinType)}.
+     *
+     * @param entity The entity that the criteria query
+     * @param root The root criteria
+     * @param associationPath The path of the association from the entity
+     * @param joinType The requested join type
+     */
+    public static void applyJoinType(PersistentEntity entity, Criteria root, String associationPath, jakarta.persistence.criteria.JoinType joinType) {
+        root.setFetchMode(associationPath, FetchMode.JOIN);
+        if (entity == null) {
+            return;
+        }
+
+        String[] tokens = associationPath.split("\\.");
+        int last = tokens.length - 1;
+        Association[] associations = new Association[tokens.length];
+        PersistentEntity currentEntity = entity;
+        for (int i = 0; i < tokens.length; i++) {
+            PersistentProperty persistentProperty = currentEntity != null ? currentEntity.getPropertyByName(tokens[i]) : null;
+            if (!(persistentProperty instanceof Association) || persistentProperty instanceof Embedded ||
+                    (persistentProperty instanceof Basic && i != last)) {
+                return;
+            }
+            associations[i] = (Association) persistentProperty;
+            currentEntity = associations[i].getAssociatedEntity();
+        }
+        fetchAssociationsBefore(root, associationPath);
+        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT) {
+            return;
+        }
+
+        String[] paths = new String[tokens.length];
+        CriteriaImpl.Subcriteria[] joined = new CriteriaImpl.Subcriteria[tokens.length];
+        int unjoinedCollection = -1;
+        for (int i = 0; i < tokens.length; i++) {
+            paths[i] = i == 0 ? tokens[i] : paths[i - 1] + '.' + tokens[i];
+            joined[i] = findCriteria(root, paths[i]);
+            if (unjoinedCollection < 0 && joined[i] == null && associations[i] instanceof ToMany) {
+                unjoinedCollection = i;
+            }
+        }
+        if (unjoinedCollection >= 0) {
+            root.add(joinedInSubquery(entity.getName(), root.getAlias(), associationPath));
+        }
+
+        // the associations before a collection that the subquery joins are joined and fetched
+        JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
+        int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection;
+        String parentAlias = null;
+        for (int i = 0; i < joinedCount; i++) {
+            if (joined[i] != null) {
+                parentAlias = joined[i].getAlias();
+                continue;
+            }
+            // joined from the root criteria, as the count of a paged list recreates it, through the
+            // alias of the join before it
+            String alias = newJoinAlias(root, paths[i], "_join");
+            root.createAlias(parentAlias != null ? parentAlias + '.' + tokens[i] : paths[i], alias, i == last ? lastJoinType : JoinType.LEFT_OUTER_JOIN);
+            parentAlias = alias;
+        }
+    }
+
+    /**
+     * Asks the criteria to fetch, with a join, the associations before the last one on a path that a
+     * join type is requested for, unless they request another fetch mode for them. Hibernate fetches
+     * an association by its fetch mode only when it fetches the associations before it, and a
+     * collection on the path is fetched with all of its elements, since nothing restricts them: the
+     * requested join type only decides which instances the query returns.
+     *
+     * @param criteria The criteria of the query
+     * @param associationPath The path from the root entity
+     */
+    public static void fetchAssociationsBefore(Criteria criteria, String associationPath) {
+        int dot = associationPath.indexOf('.');
+        while (dot > 0) {
+            String path = associationPath.substring(0, dot);
+            if (getRequestedFetchMode(criteria, path) == null) {
+                criteria.setFetchMode(path, FetchMode.JOIN);
+            }
+            dot = associationPath.indexOf('.', dot + 1);
+        }
+    }
+
+    /**
+     * Returns a restriction to the instances of an entity for which an inner join of an association
+     * path returns a row. The path is joined in a subquery, which is correlated with the query by the
+     * identifier of the entity.
+     * <p>
+     * A join through a collection returns an instance once for each element of the collection. That
+     * multiplies the rows that a row limit and a count work on, and a collection that is fetched from
+     * those rows lacks the elements that the rest of the path leaves out. A subquery restricts the
+     * query to the same instances without either effect. Unlike a check that a collection is not
+     * empty, its joins apply the filters that are enabled for the session, such as the one of
+     * discriminator based multi-tenancy.
+     *
+     * @param entityName The name of the entity that the query returns
+     * @param rootAlias The alias of the root of the query
+     * @param associationPath The path of the association from the entity
+     * @return The restriction
+     */
+    public static Criterion joinedInSubquery(String entityName, String rootAlias, String associationPath) {
+        // Hibernate uses this alias as it is in the SQL of the subquery, so it is not made from the
+        // association path, which can be longer than a database allows an identifier to be. It is made
+        // from the alias of the root, so that an alias in the subquery cannot hide the root that it refers to
+        String subqueryAlias = rootAlias + "_sub";
+        DetachedCriteria subquery = DetachedCriteria.forEntityName(entityName, subqueryAlias);
+        String parentAlias = subqueryAlias;
+        int level = 0;
+        for (String association : associationPath.split("\\.")) {
+            String alias = subqueryAlias + level++;
+            subquery.createAlias(parentAlias + '.' + association, alias, JoinType.INNER_JOIN);
+            parentAlias = alias;
+        }
+        subquery.add(Restrictions.eqProperty(subqueryAlias + ".id", rootAlias + ".id"));
+        subquery.setProjection(Projections.id());
+        return Subqueries.exists(subquery);
     }
 
     /**
