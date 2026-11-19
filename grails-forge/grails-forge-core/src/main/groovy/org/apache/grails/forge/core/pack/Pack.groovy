@@ -42,6 +42,12 @@ final class Pack {
     /** Where a pack is in the jar of the plugin it belongs to */
     public static final String JAR_DIRECTORY = 'META-INF/grails-forge'
 
+    /** Where the packs Forge has in itself are among its resources, each in a directory of its name */
+    public static final String BUNDLED_DIRECTORY = 'META-INF/grails-forge-bundled'
+
+    /** The resource that lists the names of the packs Forge has in itself, one on a line */
+    public static final String BUNDLED_INDEX = 'META-INF/grails-forge-bundled/packs'
+
     /** The end of the name of a file of a pack that is a template and not a file written as it is */
     public static final String TEMPLATE_SUFFIX = '.gsp'
 
@@ -53,6 +59,7 @@ final class Pack {
     private final PackDescriptor descriptor
     private final String origin
     private final Map<String, byte[]> files
+    private final boolean bundled
 
     /**
      * @param descriptor the descriptor of the pack
@@ -60,6 +67,17 @@ final class Pack {
      * @param files the content of the file of each {@code from} of the descriptor
      */
     Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files) {
+        this(descriptor, origin, files, false)
+    }
+
+    /**
+     * @param descriptor the descriptor of the pack
+     * @param origin where the pack came from, for messages
+     * @param files the content of the file of each {@code from} of the descriptor
+     * @param bundled whether the pack is one Forge has in itself
+     */
+    Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled) {
+        this.bundled = bundled
         this.descriptor = descriptor
         this.origin = origin
         Map<String, byte[]> copies = new LinkedHashMap<>()
@@ -69,6 +87,14 @@ final class Pack {
 
     PackDescriptor getDescriptor() {
         return descriptor
+    }
+
+    /**
+     * @return whether the pack is one Forge has in itself: a feature of the framework that is written
+     * as a pack. A dependency such a pack declares without a version has the version Forge knows for it.
+     */
+    boolean isBundled() {
+        return bundled
     }
 
     /**

@@ -99,6 +99,55 @@ class PackLoader {
         }
     }
 
+    /**
+     * Reads a pack Forge has in itself, from the directory of its name under
+     * {@code META-INF/grails-forge-bundled} of the resources.
+     *
+     * @param loader the class loader that has the resources of Forge
+     * @param name the name of the pack, which its descriptor has to have too
+     * @return the pack
+     * @throws PackDescriptorException when there is no such pack or it cannot be used
+     */
+    Pack fromClasspath(ClassLoader loader, String name) {
+        String origin = "the features of Forge (${name})"
+        String base = "${Pack.BUNDLED_DIRECTORY}/${name}/"
+        byte[] descriptorBytes = resource(loader, base + Pack.DESCRIPTOR, MAX_DESCRIPTOR_BYTES)
+        if (descriptorBytes == null) {
+            throw new PackDescriptorException(origin, ["There is no ${base}${Pack.DESCRIPTOR}, or it is larger than a descriptor can be".toString()])
+        }
+        PackDescriptor descriptor = parser.parse(text(descriptorBytes, origin), origin)
+        List<String> problems = []
+        if (descriptor.name != name) {
+            problems << "name: is ${descriptor.name}, and the pack is in the directory ${name}".toString()
+        }
+        Map<String, byte[]> files = new LinkedHashMap<>()
+        descriptor.files.eachWithIndex { PackFile file, int index ->
+            byte[] content = resource(loader, "${base}${Pack.TEMPLATES}/${file.from}", MAX_FILE_BYTES)
+            if (content == null) {
+                problems << "files[${index}].from: '${file.from}' is not a resource under ${base}${Pack.TEMPLATES}, or is larger than a file can be".toString()
+            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+                problems << "files[${index}].from: '${file.from}' is a template and is not text in UTF-8".toString()
+            } else {
+                files.put(file.from, content)
+            }
+        }
+        if (problems) {
+            throw new PackDescriptorException(origin, problems)
+        }
+        return new Pack(descriptor, origin, files, true)
+    }
+
+    private static byte[] resource(ClassLoader loader, String path, long limit) {
+        InputStream input = loader.getResourceAsStream(path)
+        if (input == null) {
+            return null
+        }
+        try (InputStream stream = input) {
+            byte[] bytes = stream.readNBytes((int) limit + 1)
+            return bytes.length > limit ? null : bytes
+        }
+    }
+
     private Pack read(ZipFile zip, String origin) {
         ZipEntry descriptorEntry = zip.getEntry("${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR}")
         if (descriptorEntry == null || descriptorEntry.isDirectory()) {

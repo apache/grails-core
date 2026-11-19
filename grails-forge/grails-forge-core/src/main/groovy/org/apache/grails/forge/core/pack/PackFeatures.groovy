@@ -116,7 +116,7 @@ final class PackFeatures implements AvailableFeatures {
     }
 
     // a pack that was given is refused when it is not for this Grails, selected or not: it was asked for
-    private static void checkCompatibility(Pack pack, String of, String range, String version) {
+    static void checkCompatibility(Pack pack, String of, String range, String version) {
         PackVersionRange versions = PackVersionRange.parse(range)
         if (!versions.contains(version)) {
             throw new IllegalArgumentException("The feature pack ${pack.descriptor.name} from ${pack.origin} is for ${of} ${versions}, " +

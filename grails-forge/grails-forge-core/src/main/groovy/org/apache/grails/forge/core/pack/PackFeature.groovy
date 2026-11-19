@@ -27,6 +27,7 @@ import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.Coordinate
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.Feature
@@ -148,10 +149,10 @@ class PackFeature implements Feature {
         List<PackDependency> declared = descriptor.dependencies + descriptor.platforms
         declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
         for (PackDependency dependency : descriptor.dependencies) {
-            generatorContext.addDependency(toDependency(dependency, false))
+            generatorContext.addDependency(toDependency(generatorContext, dependency, false))
         }
         for (PackDependency platform : descriptor.platforms) {
-            generatorContext.addDependency(toDependency(platform, true))
+            generatorContext.addDependency(toDependency(generatorContext, platform, true))
         }
         for (PackBuildPlugin plugin : descriptor.buildPlugins) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id(plugin.id).version(plugin.version).build())
@@ -199,12 +200,21 @@ class PackFeature implements Feature {
         }
     }
 
-    private static Dependency.Builder toDependency(PackDependency declared, boolean platform) {
+    private Dependency.Builder toDependency(GeneratorContext generatorContext, PackDependency declared, boolean platform) {
+        String version = declared.version
+        if (version == null && !platform && pack.bundled) {
+            // a feature of the framework names the version Forge knows for what it adds, as its compiled
+            // features do: the version is in one place, and the application says which it was made with
+            version = generatorContext.findCoordinate(declared.artifactId)
+                    .filter { Coordinate known -> known.groupId == declared.groupId }
+                    .map { Coordinate known -> known.version }
+                    .orElse(null)
+        }
         Dependency.Builder dependency = Dependency.builder()
                 .groupId(declared.groupId)
                 .artifactId(declared.artifactId)
                 .scope(PackDescriptorParser.SCOPES.get(platform ? 'implementation' : declared.scope))
-                .version(declared.version)
+                .version(version)
                 .pom(platform)
         for (String exclusion : declared.excludes) {
             int colon = exclusion.indexOf(':')
