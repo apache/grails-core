@@ -347,6 +347,38 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations().size() == 1
     }
 
+    void "the inputs of the last manifest are still watched when cleaning the build removed it after a failed build"() {
+        given: "a manifest naming a plugin project's commands"
+        File command = new File(dir, 'plugins/audit/grails-app/commands/AuditCommand.groovy')
+        command.parentFile.mkdirs()
+        command.text = 'class AuditCommand {}'
+        buildWritesWithInputs([buildDirectories: [dir.path], sourceDirectories: [command.parentFile.path]],
+                URL_MAPPINGS_REPORT, AUDIT)
+        ForgeCli.createCommandLine(context, false)
+
+        and: 'a change to the command that does not compile'
+        command.text = 'class AuditCommand { broken'
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'the build is cleaned, and the Forge CLI starts while the command is still broken'
+        new File(dir, 'build').deleteDir()
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build is not run again for nothing'
+        gradleInvocations() == []
+
+        when: 'the command is fixed'
+        command.text = 'class AuditCommand { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+
+        then:
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+        commandLine.subcommands.containsKey('audit')
+    }
+
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
         given: 'a manifest naming a plugin project next to the application'
         File plugin = new File(dir, 'plugins/audit')

@@ -22,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.json.JsonException
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
@@ -59,6 +60,12 @@ class ProjectCommands {
 
     /** Kept next to the record when the build could not write the manifest, so it is not run again for nothing */
     static final String FAILED_PATH = '.gradle/grails/commands.failed'
+
+    /**
+     * A copy of the inputs the last manifest named, kept next to the record, so they are still watched when
+     * cleaning the build removed the manifest
+     */
+    static final String INPUTS_PATH = '.gradle/grails/commands.inputs'
 
     /** The newest version of the manifest's format this CLI reads */
     static final int FORMAT_VERSION = 1
@@ -150,6 +157,7 @@ class ProjectCommands {
             Inputs after = inputsOf(manifest)
             boolean changedDuringBuild = after != before && snapshotOrNull(before) != recorded
             save(after == before || changedDuringBuild ? recorded : snapshotOrNull(after), null, console)
+            keepInputs(manifest)
             return
         }
         save(recorded, problem, console)
@@ -257,27 +265,44 @@ class ProjectCommands {
     }
 
     /**
-     * The directories the commands depend on: those the manifest names, or, for a manifest that names
-     * none, those of the project and the root of its build.
+     * Keeps a copy of the inputs the manifest names, or forgets the last one when it names none.
+     */
+    private void keepInputs(File manifest) {
+        Path kept = new File(projectDir, INPUTS_PATH).toPath()
+        try {
+            Object parsed = new JsonSlurper().parse(manifest, 'UTF-8')
+            Object inputs = parsed instanceof Map ? ((Map) parsed).inputs : null
+            if (inputs instanceof Map) {
+                Files.createDirectories(kept.parent)
+                Files.write(kept, JsonOutput.toJson(inputs).getBytes('UTF-8'))
+            }
+            else {
+                Files.deleteIfExists(kept)
+            }
+        }
+        catch (JsonException | IOException | RuntimeException ignored) {
+            // without the copy, a manifest removed by cleaning the build is watched through the project's inputs
+        }
+    }
+
+    /**
+     * The directories the commands depend on: those the manifest names; without a manifest, as after
+     * cleaning the build, those the last manifest named; or else those of the project and the root of
+     * its build.
      */
     private Inputs inputsOf(File manifest) {
         if (manifest.isFile()) {
-            try {
-                Object parsed = new JsonSlurper().parse(manifest, 'UTF-8')
-                Object inputs = parsed instanceof Map ? ((Map) parsed).inputs : null
-                if (inputs instanceof Map) {
-                    Map given = (Map) inputs
-                    List<File> buildDirectories = files(given.buildDirectories)
-                    List<File> sourceDirectories = files(given.sourceDirectories)
-                    List<File> commandDirectories = given.containsKey('commandDirectories') ? files(given.commandDirectories) : []
-                    List<File> sourceFiles = given.containsKey('sourceFiles') ? files(given.sourceFiles) : []
-                    if (buildDirectories != null && sourceDirectories != null && commandDirectories != null && sourceFiles != null) {
-                        return new Inputs(buildDirectories, sourceDirectories, commandDirectories, sourceFiles)
-                    }
-                }
+            Object parsed = parseOrNull(manifest)
+            Inputs named = inputsFrom(parsed instanceof Map ? ((Map) parsed).inputs : null)
+            if (named != null) {
+                return named
             }
-            catch (JsonException | IOException | RuntimeException ignored) {
-                // the manifest is reported when it is read
+        }
+        else {
+            File kept = new File(projectDir, INPUTS_PATH)
+            Inputs named = kept.isFile() ? inputsFrom(parseOrNull(kept)) : null
+            if (named != null) {
+                return named
             }
         }
         File rootDir = gradle.rootDir
@@ -285,6 +310,37 @@ class ProjectCommands {
                 [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
                  new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')],
                 [new File(projectDir, 'src/cli')], [])
+    }
+
+    private static Object parseOrNull(File file) {
+        try {
+            return new JsonSlurper().parse(file, 'UTF-8')
+        }
+        catch (JsonException | IOException | RuntimeException ignored) {
+            // the manifest is reported when it is read
+            return null
+        }
+    }
+
+    /** The inputs a manifest names, or none when it names none or they are not lists of absolute paths */
+    private static Inputs inputsFrom(Object inputs) {
+        if (!(inputs instanceof Map)) {
+            return null
+        }
+        Map given = (Map) inputs
+        List<File> buildDirectories = files(given.buildDirectories)
+        List<File> sourceDirectories = files(given.sourceDirectories)
+        List<File> commandDirectories = optionalFiles(given, 'commandDirectories')
+        List<File> sourceFiles = optionalFiles(given, 'sourceFiles')
+        if (buildDirectories == null || sourceDirectories == null || commandDirectories == null || sourceFiles == null) {
+            return null
+        }
+        new Inputs(buildDirectories, sourceDirectories, commandDirectories, sourceFiles)
+    }
+
+    /** A list a manifest written by an earlier Grails may not have, which then names no files */
+    private static List<File> optionalFiles(Map inputs, String key) {
+        inputs.containsKey(key) ? files(inputs[key]) : []
     }
 
     /** The files of a list of absolute paths, or none when one is not such a path, such as a mistyped one */
@@ -313,9 +369,10 @@ class ProjectCommands {
 
     /**
      * What the files the commands depend on are now: the build files directly in each build directory,
-     * and every file and directory below each source directory, apart from what builds and tools write
-     * next to a build script, and below each directory of commands, all of which are sources. Each file is listed with its time and size, so a deleted, added, replaced
-     * or changed file changes the list, whatever the clock said when it was written.
+     * every file and directory below each source directory, apart from what builds and tools write next
+     * to a build script, and below each directory of commands, all of which are sources. Each such file
+     * is listed with its time and size, so a deleted, added, replaced or changed file changes the list,
+     * whatever the clock said when it was written.
      */
     private static List<String> snapshot(Inputs inputs) {
         List<String> lines = []
