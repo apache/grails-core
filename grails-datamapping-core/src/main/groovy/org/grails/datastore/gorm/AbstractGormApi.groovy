@@ -174,13 +174,13 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
      * Fails a write that a tenant's transaction would neither commit nor roll back. With a database or a schema per
      * tenant, a class that is not multi-tenant is written to its own datastore inside a tenant block, and the
      * tenant's transaction belongs to the tenant's datastore: a change left pending there would be lost, or written
-     * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore,
-     * or is flushed at once.
+     * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore.
+     * Flushing does not enlist the write in the tenant's transaction and does not replace that transaction.
      *
-     * @param flush Whether the write is flushed at once
+     * @param flush Whether the write is flushed at once; this does not exempt it from requiring its own transaction
      */
     protected void requireTransactionForWrite(boolean flush) {
-        if (flush || MultiTenant.isAssignableFrom(persistentClass)) {
+        if (MultiTenant.isAssignableFrom(persistentClass)) {
             return
         }
         Datastore ds = getDatastore()
@@ -203,7 +203,8 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
         throw new IllegalTransactionStateException("${persistentClass.name} is not multi-tenant, so inside a block of " +
                 "tenant [${tenantId}] it is written to its own datastore, outside the transaction of the tenant, which " +
                 'would neither commit nor roll back the write. Write it in a transaction of its own datastore, such as ' +
-                "${persistentClass.simpleName}.withTransaction { } or a method of its data service, or with flush: true.")
+                "${persistentClass.simpleName}.withTransaction { } or a method of its data service. " +
+                'Flushing does not replace a transaction.')
     }
 
     private static boolean isTransactionActive(Datastore datastore) {

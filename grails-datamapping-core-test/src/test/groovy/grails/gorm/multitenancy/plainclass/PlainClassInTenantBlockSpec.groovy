@@ -115,6 +115,7 @@ class PlainClassInTenantBlockSpec extends Specification {
         IllegalTransactionStateException e = thrown()
         e.message.contains(PlainNote.name)
         e.message.contains('PlainNote.withTransaction { }')
+        e.message.contains('Flushing does not replace a transaction.')
         PlainNote.withTransaction { PlainNote.list()*.text } == ['seed']
 
         where:
@@ -122,13 +123,18 @@ class PlainClassInTenantBlockSpec extends Specification {
     }
 
     @Unroll
-    void 'with #mode multi-tenancy, a save of a plain class inside a tenant\'s transaction fails while a session of its datastore is bound, as in a web request'() {
+    void 'with #mode multi-tenancy, a save with flush=#flush fails while a session of its datastore is bound, as in a web request'() {
         given:
         startDatastore(mode)
 
         when:
         PlainNote.withSession {
-            Tenants.withId('foo') { new TransactionalPlainNoteWriter().run { new PlainNote(text: 'pending').save() } }
+            Tenants.withId('foo') {
+                new TransactionalPlainNoteWriter().run {
+                    new PlainNote(text: 'inner').save(flush: flush)
+                    throw new IllegalStateException('tenant failed')
+                }
+            }
         }
 
         then:
@@ -136,7 +142,7 @@ class PlainClassInTenantBlockSpec extends Specification {
         PlainNote.withTransaction { PlainNote.list()*.text } == ['seed']
 
         where:
-        mode << MODES
+        [mode, flush] << [MODES, [false, true]].combinations()
     }
 
     @Unroll
@@ -204,6 +210,10 @@ class PlainClassInTenantBlockSpec extends Specification {
     ]
 
     static final Map<String, Closure> WRITES = [
+            'a flushed save': { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').save(flush: true) },
+            'a flushed insert': { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').insert(flush: true) },
+            'a flushed delete': { PlainClassInTenantBlockSpec spec -> PlainNote.get(spec.seed.id).delete(flush: true) },
+            'a flushed deleteAll': { PlainClassInTenantBlockSpec spec -> PlainNote.deleteAll([flush: true], [PlainNote.get(spec.seed.id)]) },
             'a save'     : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'pending').save() },
             'an insert'  : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'pending').insert() },
             'a delete'   : { PlainClassInTenantBlockSpec spec -> PlainNote.get(spec.seed.id).delete() },
@@ -212,7 +222,9 @@ class PlainClassInTenantBlockSpec extends Specification {
     ]
 
     static final Map<String, Closure> OWN_TRANSACTION_WRITES = [
-            'a save with flush: true'     : { PlainClassInTenantBlockSpec spec -> new PlainNote(text: 'inner').save(flush: true) },
+            'a flushed save in withTransaction': { PlainClassInTenantBlockSpec spec ->
+                PlainNote.withTransaction { new PlainNote(text: 'inner').save(flush: true) }
+            },
             'a save in withTransaction'   : { PlainClassInTenantBlockSpec spec ->
                 PlainNote.withTransaction { new PlainNote(text: 'inner').save() }
             },

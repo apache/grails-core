@@ -114,6 +114,7 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         then: 'read without GORM'
         IllegalTransactionStateException e = thrown()
         e.message.contains(PlainMongoNote.name)
+        e.message.contains('Flushing does not replace a transaction.')
         textsIn('plainClassDefaultDb', PlainMongoNote) == ['seed']
         textsIn('plainClassFooDb', PlainMongoNote) == []
 
@@ -121,15 +122,24 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         write << WRITES.keySet().toList()
     }
 
-    void 'a save of a plain class inside a tenant\'s transaction fails while a session of its datastore is bound, as in a web request'() {
+    @Unroll
+    void 'a save with flush=#flush fails while a session of its datastore is bound, as in a web request'() {
         when:
         PlainMongoNote.withSession {
-            Tenants.withId('foo') { new TransactionalNoteWriter().run { new PlainMongoNote(text: 'pending').save() } }
+            Tenants.withId('foo') {
+                new TransactionalNoteWriter().run {
+                    new PlainMongoNote(text: 'inner').save(flush: flush)
+                    throw new IllegalStateException('tenant failed')
+                }
+            }
         }
 
         then:
         thrown(IllegalTransactionStateException)
         textsIn('plainClassDefaultDb', PlainMongoNote) == ['seed']
+
+        where:
+        flush << [false, true]
     }
 
     @Unroll
@@ -161,6 +171,10 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
     }
 
     static final Map<String, Closure> WRITES = [
+            'a flushed save': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').save(flush: true) },
+            'a flushed insert': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').insert(flush: true) },
+            'a flushed delete': { PlainClassInTenantBlockSpec spec -> PlainMongoNote.get(spec.seed.id).delete(flush: true) },
+            'a flushed deleteAll': { PlainClassInTenantBlockSpec spec -> PlainMongoNote.deleteAll([flush: true], [PlainMongoNote.get(spec.seed.id)]) },
             'a save'     : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'pending').save() },
             'an insert'  : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'pending').insert() },
             'a delete'   : { PlainClassInTenantBlockSpec spec -> PlainMongoNote.get(spec.seed.id).delete() },
@@ -169,7 +183,9 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
     ]
 
     static final Map<String, Closure> OWN_TRANSACTION_WRITES = [
-            'a save with flush: true'     : { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').save(flush: true) },
+            'a flushed save in withTransaction': { PlainClassInTenantBlockSpec spec ->
+                PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save(flush: true) }
+            },
             'a save in withTransaction'   : { PlainClassInTenantBlockSpec spec ->
                 PlainMongoNote.withTransaction { new PlainMongoNote(text: 'inner').save() }
             },
