@@ -138,6 +138,9 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         for (Pack pack : packs) {
             if (context.getFeatures().contains(pack.descriptor.name)) {
                 out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replace('@|', '@ |')}")
+                for (String line : pack.summary()) {
+                    out("    ${line.replace('@|', '@ |')}")
+                }
             }
         }
         projectGenerator.generate(applicationType, project, outputHandler, context)

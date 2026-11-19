@@ -64,6 +64,11 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         out.toString().contains("Feature pack acme-audit from ${pack.absolutePath}")
         out.toString().contains('Application created')
 
+        and: 'what the pack adds is said before the application is written'
+        out.toString().contains('    dependencies: implementation com.acme:acme-audit-grails:2.3.0')
+        out.toString().contains('    files written as they are: 1')
+        out.toString().indexOf('files written as they are') < out.toString().indexOf('Application created')
+
         and:
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
         new File(dir, 'shop/grails-app/conf/com/example/audit.txt').text == 'kept as it is'
@@ -241,6 +246,12 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'build.gradle').text.contains(
                 'implementation("org.apache.commons:commons-lang3") { exclude group: "org.slf4j", module: "slf4j-simple"; exclude group: "commons-logging" }')
         new File(dir, 'src/main/groovy/com/example/ShopText.groovy').text.contains('class ShopText {\n    static final boolean VIEWS = true\n')
+
+        and: 'what of the pack is code is said to be'
+        out.toString().contains('    templates, which are code that runs when the application is generated: Text.groovy.gsp')
+        out.toString().contains('    build file blocks, which are code of the build: tasks.bootRun, assets')
+        out.toString().contains('    build properties: acme.text.enabled')
+        out.toString().contains('    configuration: 2 settings')
 
         when: 'Gradle configures the build, resolves what it declares and compiles the application'
         System.setOut(originalOut)

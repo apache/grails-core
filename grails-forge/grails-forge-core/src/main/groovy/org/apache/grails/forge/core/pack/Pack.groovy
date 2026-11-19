@@ -19,6 +19,9 @@
 package org.apache.grails.forge.core.pack
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.pack.PackDescriptor.PackBuildPlugin
+import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
+import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 
 /**
  * A feature pack that was read: its descriptor, and the content of the files it adds to an application,
@@ -85,6 +88,66 @@ final class Pack {
      */
     static boolean isTemplate(String from) {
         return from.toLowerCase(Locale.ROOT).endsWith(TEMPLATE_SUFFIX)
+    }
+
+    /**
+     * What the pack adds to an application, for whoever is about to generate one with it: a line for
+     * each kind of thing, and none for a kind the pack has nothing of. What runs as code, when the
+     * application is generated or when it is built, is said to.
+     *
+     * @return the lines, which are text of the descriptor as the parser let it through
+     */
+    List<String> summary() {
+        List<String> lines = []
+        if (descriptor.requires) {
+            lines << "requires the features ${descriptor.requires.join(', ')}".toString()
+        }
+        if (descriptor.platforms) {
+            lines << "platforms: ${descriptor.platforms.collect { PackDependency each -> coordinates(each) }.join(', ')}".toString()
+        }
+        if (descriptor.dependencies) {
+            lines << "dependencies: ${descriptor.dependencies.collect { PackDependency each -> each.scope + ' ' + coordinates(each) }.join(', ')}".toString()
+        }
+        if (descriptor.buildPlugins) {
+            lines << "build plugins: ${descriptor.buildPlugins.collect { PackBuildPlugin each -> each.version ? each.id + ':' + each.version : each.id }.join(', ')}".toString()
+        }
+        if (descriptor.buildProperties) {
+            lines << "build properties: ${descriptor.buildProperties.keySet().join(', ')}".toString()
+        }
+        if (descriptor.buildExtensions) {
+            lines << "build file blocks, which are code of the build: ${descriptor.buildExtensions.keySet().join(', ')}".toString()
+        }
+        int settings = leaves(descriptor.configuration)
+        if (settings > 0) {
+            lines << "configuration: ${settings} ${settings == 1 ? 'setting' : 'settings'}".toString()
+        }
+        if (descriptor.files) {
+            List<String> templates = descriptor.files.findAll { PackFile each -> isTemplate(each.from) }.collect { PackFile each -> each.from }.unique()
+            int copied = descriptor.files.count { PackFile each -> !isTemplate(each.from) } as int
+            if (copied > 0) {
+                lines << "files written as they are: ${copied}".toString()
+            }
+            if (templates) {
+                lines << "templates, which are code that runs when the application is generated: ${templates.join(', ')}".toString()
+            }
+        }
+        return lines
+    }
+
+    private static String coordinates(PackDependency dependency) {
+        String coordinates = dependency.groupId + ':' + dependency.artifactId
+        return dependency.version ? coordinates + ':' + dependency.version : coordinates
+    }
+
+    private static int leaves(Object value) {
+        if (value instanceof Map) {
+            int count = 0
+            for (Object each : ((Map) value).values()) {
+                count += leaves(each)
+            }
+            return count
+        }
+        return 1
     }
 
     @Override
