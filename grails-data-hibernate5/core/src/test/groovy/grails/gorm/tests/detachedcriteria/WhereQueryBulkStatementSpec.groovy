@@ -98,6 +98,55 @@ class WhereQueryBulkStatementSpec extends Specification {
     }
 
     @Rollback
+    void "a bulk statement compares a function with a fraction as it is"() {
+        given:
+        new BulkStatementItem(name: 'abc', amount: 1).save()
+        new BulkStatementItem(name: 'abcd', amount: 1).save()
+        new BulkStatementItem(name: 'abcde', amount: 1).save(flush: true)
+
+        when:
+        int above = criteriaOf(new FunctionCallingCriterion('length', new Query.GreaterThan('name', 3.5))).updateAll(amount: 2)
+        int equal = criteriaOf(new FunctionCallingCriterion('length', new Query.Equals('name', 3.5))).updateAll(amount: 3)
+        int nearWhole = criteriaOf(new FunctionCallingCriterion('length', new Query.Equals('name', 3.0000000000000000001))).updateAll(amount: 5)
+        int inList = criteriaOf(new FunctionCallingCriterion('length', new Query.In('name', [3, 3.5]))).updateAll(amount: 4)
+        int deleted = criteriaOf(new FunctionCallingCriterion('length', new Query.LessThan('name', 3.5))).deleteAll()
+
+        then:
+        above == 2
+        equal == 0
+        nearWhole == 0
+        inList == 1
+        deleted == 1
+        BulkStatementItem.findAllByAmount(2)*.name.sort() == ['abcd', 'abcde']
+        BulkStatementItem.count() == 2
+    }
+
+    @Rollback
+    void "an empty list in a function comparison matches nothing in a bulk statement"() {
+        given:
+        seed()
+        def criterion = new FunctionCallingCriterion('upper', new Query.In('name', []))
+
+        expect:
+        criteriaOf(criterion).updateAll(label: 'x') == 0
+        criteriaOf(criterion).deleteAll() == 0
+        BulkStatementItem.count() == 3
+    }
+
+    @Rollback
+    void "a subquery without projection is compared by the property of the function in a bulk statement"() {
+        given:
+        seed()
+        DetachedCriteria<BulkStatementItem> named = new DetachedCriteria<>(BulkStatementItem).build { eq('name', 'a') }
+        def criterion = new FunctionCallingCriterion('lower', new Query.Equals('name', named))
+
+        expect:
+        criteriaOf(criterion).updateAll(label: 'x') == 1
+        BulkStatementItem.findAllByLabel('x')*.name == ['a']
+        criteriaOf(criterion).deleteAll() == 1
+    }
+
+    @Rollback
     void "a function name that the where DSL does not support is rejected and writes nothing"() {
         given:
         seed()

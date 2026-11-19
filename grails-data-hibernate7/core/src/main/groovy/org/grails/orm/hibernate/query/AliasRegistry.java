@@ -64,6 +64,13 @@ public class AliasRegistry {
         return definitions.containsKey(alias);
     }
 
+    /**
+     * Whether this query realized the alias, independently of any enclosing query.
+     */
+    boolean isOwnRealized(String alias) {
+        return realizedExpressions.containsKey(alias);
+    }
+
     public HibernateAlias getDefinition(String alias) {
         HibernateAlias def = definitions.get(alias);
         if (def == null && parent != null) {

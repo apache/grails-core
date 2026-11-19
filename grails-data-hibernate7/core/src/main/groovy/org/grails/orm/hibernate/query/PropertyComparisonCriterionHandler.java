@@ -19,7 +19,10 @@
 package org.grails.orm.hibernate.query;
 
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.SingularAttribute;
 
 import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 
@@ -49,6 +52,11 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
 
         HibernateCriteriaBuilder criteriaBuilder = context.getCriteriaBuilder();
 
+        Expression<?> left = identifierIfCompared(propertyPath, otherPropertyPath);
+        Expression<?> right = identifierIfCompared(otherPropertyPath, propertyPath);
+        propertyPath = left;
+        otherPropertyPath = right;
+
         if (c instanceof Query.EqualsProperty) {
             return criteriaBuilder.equal(propertyPath, otherPropertyPath);
         } else if (c instanceof Query.NotEqualsProperty) {
@@ -64,5 +72,41 @@ class PropertyComparisonCriterionHandler implements InternalCriterionHandler<Que
         }
 
         throw new UnsupportedOperationException("Unsupported property comparison criterion: " + c.getClass().getName());
+    }
+
+    /**
+     * An association compared with a value that is not an instance of it, such as {@code id == team.club},
+     * is compared by its identifier, as Hibernate 5 does. Two associations are compared as entities, whatever
+     * their classes: an identifier cannot be taken out of both when it is composite.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Expression<?> identifierIfCompared(Expression<?> expression, Expression<?> other) {
+        if (expression instanceof Path<?> path &&
+                path.getModel() instanceof SingularAttribute<?, ?> attribute &&
+                attribute.getType() instanceof EntityType<?> entityType &&
+                !isEntityValued(other) &&
+                !path.getJavaType().isAssignableFrom(other.getJavaType()) &&
+                !other.getJavaType().isAssignableFrom(path.getJavaType())) {
+            Class idType = entityType.getIdType().getJavaType();
+            return path.get(entityType.getId(idType).getName());
+        }
+        return expression;
+    }
+
+    private static boolean isEntityValued(Expression<?> expression) {
+        return expression instanceof Path<?> path && (path.getModel() instanceof EntityType<?> ||
+                path.getModel() instanceof SingularAttribute<?, ?> attribute && attribute.getType() instanceof EntityType<?>);
+    }
+
+    private static EntityType<?> entityTypeOf(Expression<?> expression) {
+        if (expression instanceof Path<?> path) {
+            if (path.getModel() instanceof EntityType<?> entityType) {
+                return entityType;
+            }
+            if (path.getModel() instanceof SingularAttribute<?, ?> attribute && attribute.getType() instanceof EntityType<?> entityType) {
+                return entityType;
+            }
+        }
+        return null;
     }
 }
