@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets
 
 import groovy.transform.InheritConstructors
 
+import com.nimbusds.jose.EncryptionMethod
+import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
@@ -32,20 +34,24 @@ import spock.lang.Specification
 
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.security.core.userdetails.User
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 
 import grails.plugin.springsecurity.rest.authentication.RestAuthenticationEventPublisher
 import grails.plugin.springsecurity.rest.error.DefaultCallbackErrorHandler
 import grails.plugin.springsecurity.rest.token.AccessToken
 import grails.plugin.springsecurity.rest.token.generation.jwt.AbstractJwtTokenGenerator
+import grails.plugin.springsecurity.rest.token.generation.jwt.DefaultRSAKeyProvider
+import grails.plugin.springsecurity.rest.token.generation.jwt.EncryptedJwtTokenGenerator
 import grails.plugin.springsecurity.rest.token.rendering.AccessTokenJsonRenderer
 import grails.plugin.springsecurity.rest.token.storage.TokenStorageService
+import grails.plugin.springsecurity.rest.token.storage.jwt.JwtTokenStorageService
 import grails.testing.web.controllers.ControllerUnitTest
 
 import static org.springframework.http.HttpStatus.*
 
 @Issue("https://github.com/grails/grails-spring-security-rest/issues/237")
-class RestOauthControllerSpec extends Specification implements ControllerUnitTest<RestOauthController> {
+class RestOauthControllerSpec extends Specification implements TokenGeneratorSupport, ControllerUnitTest<RestOauthController> {
 
     private static final String ALLOWED_CALLBACK_ORIGINS = 'grails.plugin.springsecurity.rest.oauth.allowedCallbackOrigins'
     private static final String TOKEN_VALUE = 'token-value'
@@ -437,6 +443,67 @@ class RestOauthControllerSpec extends Specification implements ControllerUnitTes
         }
         response.status == OK.value()
         response.text == "rendered json"
+    }
+
+    void "an encrypted refresh token gets a new access token"() {
+        given:
+        final tokenGenerator = useEncryptedJwt()
+        final refreshToken = tokenGenerator.generateAccessToken(new User('foo', 'bar', [])).refreshToken
+
+        when:
+        params.grant_type = 'refresh_token'
+        params.refresh_token = refreshToken
+        request.method = 'POST'
+        controller.accessToken()
+
+        then:
+        1 * controller.tokenStorageService.userDetailsService.loadUserByUsername('foo') >> new User('foo', 'bar', [])
+        1 * controller.authenticationEventPublisher.publishTokenCreation(_)
+        1 * controller.accessTokenJsonRenderer.generateJson({ AccessToken it ->
+            it.principal.username == 'foo' && it.refreshToken == refreshToken && it.accessTokenJwt.JWTClaimsSet.subject == 'foo'
+        }) >> 'rendered json'
+        response.status == OK.value()
+        response.text == 'rendered json'
+    }
+
+    void "an encrypted refresh token whose claims are not signed is forbidden"() {
+        given:
+        final tokenGenerator = useEncryptedJwt()
+        final claims = new JWTClaimsSet.Builder()
+                .subject('foo')
+                .claim(AbstractJwtTokenGenerator.REFRESH_ONLY_CLAIM, true)
+                .build()
+        final refreshToken = encryptClaims(claims, tokenGenerator.keyProvider.publicKey)
+
+        when:
+        params.grant_type = 'refresh_token'
+        params.refresh_token = refreshToken
+        request.method = 'POST'
+        controller.accessToken()
+
+        then:
+        0 * controller.tokenStorageService.userDetailsService.loadUserByUsername(_)
+        0 * controller.authenticationEventPublisher.publishTokenCreation(_)
+        0 * controller.accessTokenJsonRenderer.generateJson(_)
+        response.status == FORBIDDEN.value()
+    }
+
+    private EncryptedJwtTokenGenerator useEncryptedJwt() {
+        final tokenGenerator = new EncryptedJwtTokenGenerator(
+                keyProvider: new DefaultRSAKeyProvider(),
+                jweAlgorithm: JWEAlgorithm.RSA_OAEP,
+                encryptionMethod: EncryptionMethod.A128GCM,
+                defaultExpiration: 3600,
+                customClaimProviders: []
+        )
+        final jwtService = new JwtService(keyProvider: tokenGenerator.keyProvider)
+        tokenGenerator.jwtTokenStorageService = new JwtTokenStorageService(jwtService: jwtService, userDetailsService: Mock(UserDetailsService))
+        controller.tokenGenerator = tokenGenerator
+        controller.jwtService = jwtService
+        controller.tokenStorageService = tokenGenerator.jwtTokenStorageService
+        controller.authenticationEventPublisher = Mock(RestAuthenticationEventPublisher)
+        controller.accessTokenJsonRenderer = Mock(AccessTokenJsonRenderer)
+        tokenGenerator
     }
 }
 
