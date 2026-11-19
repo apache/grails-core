@@ -19,6 +19,7 @@
 package org.grails.forge.template
 
 import groovy.transform.CompileStatic
+import java.nio.charset.StandardCharsets
 
 @CompileStatic
 class PropertiesTemplate implements Template {
@@ -38,7 +39,15 @@ class PropertiesTemplate implements Template {
 
     @Override
     void write(OutputStream outputStream) throws IOException {
-        properties.store(outputStream, null)
+        // java.util.Properties starts with the time of day and ends its lines as the platform does:
+        // the file is the same whenever and wherever it is generated
+        ByteArrayOutputStream stored = new ByteArrayOutputStream()
+        properties.store(stored, null)
+        List<String> lines = stored.toString(StandardCharsets.ISO_8859_1).split('\\r?\\n').toList()
+        if (!lines.isEmpty() && lines.first().startsWith('#')) {
+            lines.remove(0)
+        }
+        outputStream.write(lines.collect { String line -> line + '\n' }.join('').getBytes(StandardCharsets.ISO_8859_1))
     }
 
     private Properties transform(Properties finalConfig, String prefix, Map<String, Object> config) {

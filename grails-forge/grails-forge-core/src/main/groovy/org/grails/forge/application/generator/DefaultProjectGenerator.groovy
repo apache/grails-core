@@ -24,6 +24,7 @@ import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackContent
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.apache.grails.forge.core.pack.PackFeatures
+import org.apache.grails.forge.core.state.ProjectStateRecorder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
@@ -104,9 +105,20 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         checkPaths(project, generatorContext.getTemplates().values())
 
+        // the state of the project under .grails is written last and holds what was rendered for the
+        // application, so it is not part of its own baseline
+        ProjectStateRecorder state = new ProjectStateRecorder(applicationType, project, generatorContext)
+        state.check(generatorContext.getTemplates().values(), outputHandler)
+
         try (TemplateRenderer templateRenderer = TemplateRenderer.create(project, outputHandler)) {
             for (Template template: generatorContext.getTemplates().values()) {
-                RenderResult renderResult = templateRenderer.render(template)
+                RenderResult renderResult = templateRenderer.render(state.record(template))
+                if (renderResult.getError() != null) {
+                    throw renderResult.getError()
+                }
+            }
+            for (Template template : state.state()) {
+                RenderResult renderResult = templateRenderer.render(template, true)
                 if (renderResult.getError() != null) {
                     throw renderResult.getError()
                 }

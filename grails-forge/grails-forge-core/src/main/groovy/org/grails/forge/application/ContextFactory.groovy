@@ -55,10 +55,12 @@ class ContextFactory {
                                                Options options,
                                                @Nullable OperatingSystem operatingSystem) {
         final Set<Feature> features = Collections.newSetFromMap(new IdentityHashMap<>(8))
+        List<String> requested = []
         for (String name : selectedFeatures) {
             Feature feature = availableFeatures.findFeature(name).orElse(null)
             if (feature != null) {
                 features.add(feature)
+                requested << feature.getName()
             } else {
                 throw new IllegalArgumentException('The requested feature does not exist: ' + name)
             }
@@ -104,7 +106,9 @@ class ContextFactory {
 
         featureValidator.validatePreProcessing(newOptions, applicationType, features)
 
-        return new FeatureContext(newOptions, applicationType, operatingSystem, features)
+        FeatureContext featureContext = new FeatureContext(newOptions, applicationType, operatingSystem, features)
+        featureContext.setRequestedFeatures(requested)
+        return featureContext
     }
 
     GeneratorContext createGeneratorContext(Project project,
@@ -116,7 +120,9 @@ class ContextFactory {
 
         featureValidator.validatePostProcessing(featureContext.getOptions(), featureContext.getApplicationType(), featureList)
 
-        return new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver)
+        GeneratorContext generatorContext = new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver)
+        generatorContext.setRequestedFeatures(featureContext.getRequestedFeatures())
+        return generatorContext
     }
 
     DevelopmentReloading determineDevelopmentReloading(DevelopmentReloading reloading) {

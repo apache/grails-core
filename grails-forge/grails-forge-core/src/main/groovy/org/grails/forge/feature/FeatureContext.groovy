@@ -50,6 +50,7 @@ class FeatureContext {
     private final Options options
     private final List<Feature> features = new ArrayList<>()
     private final List<FeaturePredicate> exclusions = new ArrayList<>()
+    private List<String> requestedFeatures = Collections.emptyList()
     private ListIterator<Feature> iterator
 
     FeatureContext(Options options,
@@ -69,6 +70,23 @@ class FeatureContext {
             options = options.withDevelopmentReloading(reloading)
         }
         this.options = options
+    }
+
+    /**
+     * @return the names of the features that were asked for by name, without what they require and
+     * without the defaults
+     * @since 9.0
+     */
+    List<String> getRequestedFeatures() {
+        return requestedFeatures
+    }
+
+    /**
+     * @param requestedFeatures the names of the features that were asked for by name
+     * @since 9.0
+     */
+    void setRequestedFeatures(List<String> requestedFeatures) {
+        this.requestedFeatures = Collections.unmodifiableList(new ArrayList<String>(requestedFeatures))
     }
 
     void processSelectedFeatures() {

@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.core.pack
 
+import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
@@ -93,8 +94,9 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
             text << "dependentFeatures: ${feature.dependentFeatures}\n"
             Map<String, String> without = generate(type, [])
             Map<String, String> with = generate(type, [name])
-            // the record of the features of the application changes with every feature the framework gains
-            with.keySet().findAll { it != 'grails-forge-cli.yml' }.toSorted().each { String path ->
+            // the record of the features of the application changes with every feature the framework gains,
+            // and the state under .grails repeats it and every file of the application
+            with.keySet().findAll { it != 'grails-forge-cli.yml' && !ProjectState.isStatePath(it) }.toSorted().each { String path ->
                 List<String> before = (without[path] ?: '').readLines()
                 List<String> added = []
                 (with[path] ?: '').readLines().each { String line ->
@@ -109,7 +111,7 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
                     added.each { text << "+ ${it.replaceAll(/:\d[A-Za-z0-9_.+\-]*"/, ':VERSION"')}\n" }
                 }
             }
-            (without.keySet() - with.keySet()).toSorted().each { text << "== ${it}\n(not written)\n" }
+            (without.keySet() - with.keySet()).findAll { !ProjectState.isStatePath(it) }.toSorted().each { text << "== ${it}\n(not written)\n" }
             text << '\n'
         }
         // the documentation of Grails is that of the version Forge generates for

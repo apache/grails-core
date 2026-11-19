@@ -40,6 +40,7 @@ import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.time.LocalDate
+import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
@@ -193,6 +194,56 @@ class ForgeApiIntegrationSpec extends Specification {
         featureResponse.status == 200
         featureResponse.contentType.startsWith('text/plain')
         featureDiff.contains('+## Feature gorm-mongodb documentation')
+    }
+
+    void "a zip archive has the state of the project, with the baseline of every other file"() {
+        when:
+        byte[] zip = get('/create/web/com.example.forge-state?features=grails-quartz&servlet=jetty').body as byte[]
+        List<String> entries = zipEntries(zip).findAll { !it.endsWith('/') }.collect { it - 'forge-state/' }
+        List<String> application = entries.findAll { !it.startsWith('.grails/') }
+        String manifest = zipText(zip, 'forge-state/.grails/project.yml')
+        String lock = zipText(zip, 'forge-state/.grails/forge.lock.yml')
+        String index = zipText(zip, 'forge-state/.grails/baseline/index.yml')
+
+        then: 'the manifest and the lock'
+        manifest.contains('applicationType: web\nname: forge-state\ndefaultPackage: com.example\n')
+        manifest.contains('  servlet: jetty\n')
+        manifest.contains('requestedFeatures:\n- name: grails-quartz\n')
+        lock.contains('- name: grails-quartz\n  source: bundled-pack\n')
+        lock.contains("manifest:\n  sha256: ${sha256(manifest.getBytes('UTF-8'))}\n")
+        lock.contains("baselineIndex:\n  sha256: ${sha256(index.getBytes('UTF-8'))}\n")
+
+        and: 'the baseline is the files of the application, each once, and not the state'
+        entries.findAll { it.startsWith('.grails/') }.toSorted() ==
+                (['.grails/project.yml', '.grails/forge.lock.yml', '.grails/baseline/index.yml', '.grails/.gitattributes'] + application.collect { '.grails/baseline/files/' + it }).toSorted()
+        application.every { index.contains("- path: ${it}\n") }
+        index.contains("- path: build.gradle\n  sha256: ${sha256(zipText(zip, 'forge-state/build.gradle').getBytes('UTF-8'))}\n  kind: text\n  executable: false\n")
+        index.contains("- path: gradlew\n  sha256: ${sha256(zipText(zip, 'forge-state/gradlew').getBytes('UTF-8'))}\n  kind: binary\n  executable: true\n")
+        zipText(zip, 'forge-state/.grails/baseline/files/build.gradle') == zipText(zip, 'forge-state/build.gradle')
+        zipText(zip, 'forge-state/.gitignore').contains('.grails/cache/\n')
+    }
+
+    void "a preview shows the manifest and the lock of the project, and not the baseline"() {
+        when:
+        Map contents = json(get('/preview/web/com.example.forge-state?features=grails-quartz')).contents as Map
+
+        then:
+        (contents['.grails/project.yml'] as String).contains('requestedFeatures:\n- name: grails-quartz\n')
+        (contents['.grails/forge.lock.yml'] as String).contains('- name: grails-quartz\n  source: bundled-pack\n')
+        contents.containsKey('build.gradle')
+        !contents.keySet().any { (it as String).startsWith('.grails/baseline') }
+    }
+
+    void "a diff shows what a feature changes in the manifest and the lock, and not the baseline"() {
+        when:
+        String diff = text(get('/diff/web/forge-state?features=grails-quartz'))
+
+        then:
+        diff.contains('+++ build.gradle')
+        diff.contains('+++ .grails/project.yml')
+        diff.contains('+- name: grails-quartz')
+        diff.contains('+++ .grails/forge.lock.yml')
+        !diff.contains('.grails/baseline')
     }
 
     void "GET /preview preserves the application name and package in a qualified name ending in #appName"() {
@@ -575,6 +626,10 @@ class ForgeApiIntegrationSpec extends Specification {
 
     private static String text(Map response) {
         new String(response.body as byte[], StandardCharsets.UTF_8)
+    }
+
+    private static String sha256(byte[] bytes) {
+        return HexFormat.of().formatHex(MessageDigest.getInstance('SHA-256').digest(bytes))
     }
 
     private static boolean isZip(byte[] body) {

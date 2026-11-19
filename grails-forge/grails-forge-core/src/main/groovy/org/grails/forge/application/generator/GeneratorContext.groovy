@@ -90,6 +90,7 @@ class GeneratorContext implements DependencyContext {
     private boolean featuresApplied
     private Throwable applyFailure
     private final List<Runnable> checks = new ArrayList<>()
+    private List<String> requestedFeatures = Collections.emptyList()
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -260,6 +261,23 @@ class GeneratorContext implements DependencyContext {
      */
     @Nonnull Features getFeatures() {
         return features
+    }
+
+    /**
+     * @return the names of the features that were asked for by name, without what they require and
+     * without the defaults
+     * @since 9.0
+     */
+    @Nonnull List<String> getRequestedFeatures() {
+        return requestedFeatures
+    }
+
+    /**
+     * @param requestedFeatures the names of the features that were asked for by name
+     * @since 9.0
+     */
+    void setRequestedFeatures(@Nonnull List<String> requestedFeatures) {
+        this.requestedFeatures = Collections.unmodifiableList(new ArrayList<String>(requestedFeatures))
     }
 
     /**

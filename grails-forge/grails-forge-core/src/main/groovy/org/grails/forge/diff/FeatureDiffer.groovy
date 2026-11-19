@@ -23,6 +23,7 @@ import com.github.difflib.DiffUtils
 import com.github.difflib.UnifiedDiffUtils
 import com.github.difflib.patch.Patch
 import jakarta.annotation.Nullable
+import org.apache.grails.forge.core.state.ProjectState
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
@@ -98,7 +99,8 @@ class FeatureDiffer {
                 outputHandler,
                 ConsoleOutput.NOOP
         )
-        Map<String, String> oldProject = outputHandler.getProject()
+        // the baseline under .grails repeats every file of the application: its difference is theirs
+        Map<String, String> oldProject = withoutBaseline(outputHandler.getProject())
 
         outputHandler = new MapOutputHandler()
         projectGenerator.generate(
@@ -107,7 +109,7 @@ class FeatureDiffer {
                 outputHandler,
                 generatorContext
         )
-        Map<String, String> newProject = outputHandler.getProject()
+        Map<String, String> newProject = withoutBaseline(outputHandler.getProject())
 
         for (Map.Entry<String, String> entry: newProject.entrySet()) {
             String oldFile = oldProject.remove(entry.getKey())
@@ -161,6 +163,16 @@ class FeatureDiffer {
                 consoleOutput.out('\n')
             }
         }
+    }
+
+    private static Map<String, String> withoutBaseline(Map<String, String> project) {
+        Map<String, String> files = new LinkedHashMap<>()
+        for (Map.Entry<String, String> entry : project.entrySet()) {
+            if (!ProjectState.isBaselinePath(entry.getKey())) {
+                files.put(entry.getKey(), entry.getValue())
+            }
+        }
+        return files
     }
 
     private List<String> toLines(String file) {
