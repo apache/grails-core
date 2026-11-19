@@ -134,9 +134,11 @@ class PackFeature implements Feature {
         // the requirements are selected when the features are; this is for a context made another way
         for (String required : pack.descriptor.requires) {
             if (!featureContext.isPresent(required)) {
-                Feature feature = features.apply(required).orElseThrow {
-                    new IllegalArgumentException("The feature ${name} requires the feature ${required}, which there is not for this type of application")
-                }
+                Feature feature = features.apply(required)
+                        .filter { Feature found -> found.supports(featureContext.getApplicationType()) }
+                        .orElseThrow {
+                            new IllegalArgumentException("The feature ${name} requires the feature ${required}, which there is not for this type of application")
+                        }
                 featureContext.addFeature(feature)
             }
         }

@@ -1,0 +1,88 @@
+# web
+title: Ehcache Plugin
+description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
+category: Cache
+documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+== README.md
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.grails.plugins:cache-ehcache:VERSION"
+== grails-app/conf/application.yml
++     ehcache:
++       ehcacheXmlLocation: classpath:ehcache.xml
++       lockTimeout: 200
++   cache:
+
+# rest_api
+title: Ehcache Plugin
+description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
+category: Cache
+documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+== README.md
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.grails.plugins:cache-ehcache:VERSION"
+== grails-app/conf/application.yml
++     ehcache:
++       ehcacheXmlLocation: classpath:ehcache.xml
++       lockTimeout: 200
++   cache:
+
+# web_plugin
+title: Ehcache Plugin
+description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
+category: Cache
+documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+== README.md
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.grails.plugins:cache-ehcache:VERSION"
+== grails-app/conf/application.yml
++     ehcache:
++       ehcacheXmlLocation: classpath:ehcache.xml
++       lockTimeout: 200
++   cache:
+
+# plugin
+title: Ehcache Plugin
+description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
+category: Cache
+documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
+thirdPartyDocumentation: https://www.ehcache.org/
+visible: true
+== README.md
++ ## Feature cache-ehcache documentation
++ - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
++ - [https://www.ehcache.org/](https://www.ehcache.org/)
++ 
++ 
++ 
+== build.gradle
++     implementation "org.grails.plugins:cache-ehcache:VERSION"
+== grails-app/conf/application.yml
++     ehcache:
++       ehcacheXmlLocation: classpath:ehcache.xml
++       lockTimeout: 200
++   cache:
+

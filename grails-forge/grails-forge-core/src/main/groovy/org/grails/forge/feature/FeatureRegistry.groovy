@@ -71,6 +71,7 @@ class FeatureRegistry {
     private static void validateGroups(List<Feature> features) {
         Map<String, Class<?>> familyByGroup = new HashMap<>()
         Map<Class<?>, String> groupByFamily = new HashMap<>()
+        Set<String> classless = new HashSet<>()
         for (Feature feature : features) {
             if (!(feature instanceof OneOfFeature)) {
                 continue
@@ -82,6 +83,7 @@ class FeatureRegistry {
             }
             if (oneOf.getFeatureClass() == null) {
                 // a feature that is written as a pack is of no class of its own: its group is its identifier
+                classless << group
                 continue
             }
             Class<?> family = familyByGroup.putIfAbsent(group, oneOf.getFeatureClass())
@@ -90,6 +92,14 @@ class FeatureRegistry {
                 throw new IllegalArgumentException(
                         "The feature ${feature.getName()} puts ${oneOf.getFeatureClass().getSimpleName()} in the exclusive group " +
                         "'${group}', which does not match the other features of that group")
+            }
+        }
+        // the compiled features of a group find each other by their class, which a pack has not: such a
+        // pack would be selected beside the default of the group, or not found by what asks for the group
+        for (String group : classless) {
+            if (familyByGroup.containsKey(group)) {
+                throw new IllegalArgumentException("The exclusive group '${group}' has compiled features and features that are packs, " +
+                        'which cannot be told apart from each other yet')
             }
         }
     }

@@ -36,8 +36,9 @@ import org.springframework.beans.factory.support.RootBeanDefinition
  * is then a feature like the compiled ones: it is listed, selected and validated with them, by the
  * command line and by the web application.
  *
- * <p>The packs are named, one on a line, in the resource {@link Pack#BUNDLED_INDEX}. A pack that
- * cannot be read, or is not for this Grails, stops Forge from starting: it is part of Forge.</p>
+ * <p>The packs are named, one on a line, in the resource {@link Pack#BUNDLED_INDEX}. An index that is
+ * missing or empty, a pack that cannot be read and one that is not for this Grails stop Forge from
+ * starting: they are part of Forge.</p>
  *
  * @since 9.0
  */
@@ -76,13 +77,20 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
     static List<String> names(ClassLoader loader) {
         InputStream index = loader.getResourceAsStream(Pack.BUNDLED_INDEX)
         if (index == null) {
-            return []
+            // without it features of the framework would be gone and nothing would say so
+            throw new IllegalStateException("Forge is not whole: it has no ${Pack.BUNDLED_INDEX}")
         }
+        List<String> names
         try (InputStream input = index) {
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8).readLines()
+            String text = new String(input.readAllBytes(), StandardCharsets.UTF_8)
+            names = (text.startsWith('\uFEFF') ? text.substring(1) : text).readLines()
                     .collect { String line -> line.trim() }
                     .findAll { String line -> line && !line.startsWith('#') }
         }
+        if (names.isEmpty() || names.toUnique().size() != names.size()) {
+            throw new IllegalStateException("Forge is not whole: ${Pack.BUNDLED_INDEX} names no pack, or one twice")
+        }
+        return names
     }
 
     private Optional<Feature> find(String name) {
