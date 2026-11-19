@@ -27,6 +27,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.OneOfFeature
+import org.grails.forge.util.VersionInfo
 
 /**
  * The features an application of one type can have for one generation: those of the framework, and
@@ -67,6 +68,8 @@ final class PackFeatures implements AvailableFeatures {
             return made[0]
         } as Supplier<PackPages>
         for (Pack pack : packs) {
+            checkCompatibility(pack, 'Grails', pack.descriptor.grailsCompatibility, VersionInfo.getGrailsVersion())
+            checkCompatibility(pack, 'Forge', pack.descriptor.forgeCompatibility, VersionInfo.getVersion())
             PackFeature feature = PackFeature.of(pack, lookup, pages)
             String name = feature.getName()
             if (frameworkNames.contains(name)) {
@@ -110,5 +113,13 @@ final class PackFeatures implements AvailableFeatures {
     @Override
     Stream<Feature> getAllFeatures() {
         return Stream.concat(framework.getAllFeatures(), packs.values().stream())
+    }
+
+    // a pack that was given is refused when it is not for this Grails, selected or not: it was asked for
+    private static void checkCompatibility(Pack pack, String of, String range, String version) {
+        if (!PackVersionRange.parse(range).contains(version)) {
+            throw new IllegalArgumentException("The feature pack ${pack.descriptor.name} from ${pack.origin} is for ${of} ${range}, " +
+                    "and this is ${of} ${version}")
+        }
     }
 }

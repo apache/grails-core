@@ -567,6 +567,28 @@ class PackGenerationSpec extends ApplicationContextSpec {
         e.problems == ['feature.yml is larger than a descriptor can be']
     }
 
+    @Unroll
+    void "a pack that is for #what is refused, selected or not"() {
+        given:
+        Path packDirectory = Files.createDirectories(directory.resolve('other/templates')).parent
+        Files.writeString(packDirectory.resolve('feature.yml'), "format: 1\nkind: feature\ntemplateApi: 1\nname: acme-audit\n" +
+                "compatibility:\n  grails: '${grails}'\n  forge: '${forge}'\n")
+        Pack other = new PackLoader().fromDirectory(packDirectory)
+
+        when:
+        generate([], [other])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The feature pack acme-audit from ${packDirectory} is for ${of} ${range}, and this is ${of} ${org.grails.forge.util.VersionInfo.grailsVersion}"
+
+        where:
+        what                | grails            | forge             || of       | range
+        'another Grails'    | '[10.0.0,11.0.0)' | '[9.0.0,10.0.0)'  || 'Grails' | '[10.0.0,11.0.0)'
+        'an earlier Grails' | '[7.0.0,9.0.0)'   | '[9.0.0,10.0.0)'  || 'Grails' | '[7.0.0,9.0.0)'
+        'another Forge'     | '[9.0.0,10.0.0)'  | '(,9.0.0)'        || 'Forge'  | '(,9.0.0)'
+    }
+
     void "a pack that is not selected adds nothing"() {
         given:
         Pack pack = pack('acme-audit', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit-grails\n")

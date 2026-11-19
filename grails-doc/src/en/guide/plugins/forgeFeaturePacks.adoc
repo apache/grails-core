@@ -87,7 +87,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |Required. The name the feature is selected by: lowercase letters, digits and single hyphens, starting with a letter. It cannot be the name of a feature Grails offers.
 
 |`compatibility`
-|Required. The versions of Grails (`grails`) and of the generator (`forge`) the pack is for, each one version range.
+|Required. The versions of Grails (`grails`) and of the generator (`forge`) the pack is for. `[9.0.0,10.0.0)` is 9.0.0 and later and before 10.0.0, `[9.1,)` is 9.1.0 and later, `9.0.0` is that release only, and several intervals are separated by commas. A snapshot, milestone or release candidate counts as the release it leads to. A pack that is not for the Grails that generates the application is refused.
 
 |`title`, `description`, `category`, `documentation`
 |What `--list-features` shows for the feature.

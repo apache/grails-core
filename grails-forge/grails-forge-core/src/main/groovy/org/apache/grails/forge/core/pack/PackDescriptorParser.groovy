@@ -609,8 +609,17 @@ class PackDescriptorParser {
     }
 
     private static String versionRange(Map<String, Object> compatibility, String key, List<String> problems) {
-        return matching(requiredText(compatibility, key, 'compatibility.', MAX_LINE, problems), VERSION_RANGE, 'compatibility.' + key,
+        String range = matching(requiredText(compatibility, key, 'compatibility.', MAX_LINE, problems), VERSION_RANGE, 'compatibility.' + key,
                 "must be a version or a range of versions, such as '[9.0.0,10.0.0)'", problems)
+        if (range != null) {
+            try {
+                PackVersionRange.parse(range)
+            } catch (IllegalArgumentException e) {
+                problems << "compatibility.${key}: ${e.message}, but is ${describe(range)}".toString()
+                return null
+            }
+        }
+        return range
     }
 
     private static String matching(String value, Pattern pattern, String at, String rule, List<String> problems) {
