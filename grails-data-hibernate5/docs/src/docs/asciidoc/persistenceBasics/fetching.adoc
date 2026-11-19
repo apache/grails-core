@@ -105,6 +105,38 @@ Author.where {
  .list()
 ----
 
+A <<whereQueries, Where Query>>, a detached criteria, a dynamic finder or a criteria query can also be given the type of the join, as a `jakarta.persistence.criteria.JoinType`. Pass it in the `fetch` argument, or as the second argument of the `join` method of a where query, a detached criteria or a criteria query:
+
+[source,groovy]
+----
+import jakarta.persistence.criteria.JoinType
+
+// only the authors that have a location
+Author.where {
+    name ==~ "Stephen%"
+}.list(fetch: [location: JoinType.INNER])
+
+Author.where {
+    name ==~ "Stephen%"
+}.join('location', JoinType.INNER)
+ .list()
+
+Author.withCriteria {
+    like('name', "Stephen%")
+    join('location', JoinType.INNER)
+}
+----
+
+`'join'` and `JoinType.LEFT` fetch the association with an outer join, so the query returns every instance that it matches. `JoinType.INNER` fetches the association as well, but leaves out the instances whose association is `null`, or whose collection is empty, also for a collection of a basic type, such as `static hasMany = [tags: String]`. `JoinType.RIGHT` fetches the association and leaves out the same instances. A right join of an association to a single instance also has a row for each associated instance that no instance refers to, such as a location without an author, unless the criteria of the query exclude it. The list contains `null` once for all such rows, and `count` and the `totalCount` of a paged list count each of them. For a collection, a right join returns the same instances as an inner join.
+
+When the requested path passes through a collection, as `flights` does in `fetch: ['flights.destination': JoinType.INNER]`, the query is restricted to the instances for which the join returns a row, here the airports that have a flight with a destination. The collection and the other associations on the path are fetched as well, with outer joins, so that the collection holds all of its elements: each airport is loaded with all of its flights, also those without a destination. A join type never leaves elements out of a fetched collection, which would leave a collection in the session that lacks some of its elements; it only decides which instances the query returns. To load only some elements of a collection, query for them, as in `Flight.where { airport == someAirport && destination != null }`. A where query, a dynamic finder and `list` return each instance once, and a criteria query and a query by example return an instance once for each element of a collection that they fetch, as for any fetch of a collection. Each instance is counted once.
+
+A requested join type applies whether or not the query has a sort on the association, and also to `count`, to the `totalCount` of a paged list, to a query that is used as a subquery, and to `updateAll` and `deleteAll`, which update or delete the instances that the query returns. The `fetch` argument of `list`, `findWhere`, `findAllWhere`, and of `find` and `findAll` with an example, takes a join type too. `list` fetches the association with the requested join type, and returns each instance once when it fetches a collection. Hibernate does not support right joins in the criteria queries that `list` runs, so `list` applies `JoinType.RIGHT` like `JoinType.INNER`.
+
+MySQL does not allow an update or a delete to select from the table that it modifies, and neither does MariaDB before version 10.3. With a MySQL dialect, or a MariaDB dialect older than `MariaDB103Dialect`, `updateAll` and `deleteAll` throw an `UnsupportedOperationException` for a join type other than `JoinType.LEFT` that is requested for a path that leads back to the queried class, such as the `parent` of a category, or that starts with a collection of a basic type. Restrict such a query with criteria instead, as in `Category.where { parent != null }`.
+
+An association that the query has criteria on is joined for those criteria: in a where query or a detached criteria the requested join type is used for that join, also when a fetch mode is requested for the association afterwards, and in a criteria query the association keeps the join of its criteria. A collection is not fetched through the join of its criteria, which only has the elements that the criteria match: it is loaded when it is read. When such a query requests `JoinType.LEFT` for that collection and also fetches another collection, the other collection is loaded with a query of its own for each instance, right after the query, because Hibernate would otherwise fill it with the elements of the collection that the criteria join when both hold elements of the same class. A join type is requested for a nested association by its path, as in `join('flights.destination', JoinType.LEFT)`.
+
 
 === Using Batch Fetching
 
