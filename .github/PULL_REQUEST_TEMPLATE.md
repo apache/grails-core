@@ -10,10 +10,11 @@ Please review the following checklist before submitting your pull request. Pull 
 - [ ] This PR is linked to an existing issue that has been **acknowledged or approved** by the project team. If no approved issue exists, please give background on why this change is necessary.  Tickets are preferred for release change log history.
 - [ ] This PR addresses the **complete scope** of the linked issue. Partial implementations or unfinished work should not be submitted for review.
 - [ ] This PR contains a **single, focused change**. Unrelated changes should be submitted as separate pull requests.
-- [ ] This PR targets the **correct branch** for the type of change:
-    - **Patch release branches** (e.g., `7.0.x`): Bug fixes only. No new features or API changes.
-    - **Minor release branches** (e.g., `7.1.x`): New features are welcome, but breaking existing APIs must be avoided.
-    - **Major release branches** (e.g., `8.0.x`): Reserved for major changes. Breaking API changes are permitted.
+- [ ] This PR targets the **correct branch** for the type of change (see [Choosing the Branch](../CONTRIBUTING.md#choosing-the-branch)):
+    - **Maintenance branches**, whose minor version has been released (e.g., `7.0.x`, `7.2.x`, `8.0.x`): Bug fixes only, released as the next patch version. No new features or API changes. A bug fix targets the oldest release branch that has the bug, and is merged up.
+    - **Next minor branch**, until its minor version is released (e.g., `8.1.x` before 8.1.0): New features are welcome, but breaking existing APIs must be avoided.
+    - **Next major branch**, until its major version is released (e.g., `9.0.x` before 9.0.0): Reserved for major changes. Breaking API changes are permitted.
+- [ ] If this PR **changes a result**, that is the data a GORM call that works today returns, counts, stores or deletes, with any datastore, or makes such a call throw, it follows [Fixes That Change a Result](../CONTRIBUTING.md#fixes-that-change-a-result): the description says which results change, how to get the old ones, and whether it needs a setting and why; the upgrade guide has a note under the release that carries it; and it waits for **two approving reviews**.
 
 ### Code Quality
 

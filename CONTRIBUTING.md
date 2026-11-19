@@ -43,6 +43,7 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 - [Improving The Documentation](#improving-the-documentation)
 - [Code Style](#code-style)
 - [Commit Messages](#commit-messages)
+- [Choosing the Branch](#choosing-the-branch)
 - [Change Review Process](#change-review-process)
 - [Join The Project Team](#join-the-project-team)
 
@@ -211,7 +212,7 @@ Pull requests prepared with AI tooling must also meet the following expectations
 - **Tests included.** Behavior introduced or modified must be covered by new or updated tests that exercise the change through public APIs. See [Testing Your Change](#testing-your-change).
 - **Documentation included.** User-facing changes must include matching updates to the Grails Guide, including the *What's New* and *Upgrade Notes* sections where applicable. See [Improving The Documentation](#improving-the-documentation).
 - **Code style compliance.** Run `./gradlew codeStyle` locally and resolve violations before opening the PR.
-- **Targets the correct branch.** Respect the branch policy (patch branches accept bug fixes only; minor branches accept features without breaking APIs; major branches accept breaking changes). See the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md) for details.
+- **Targets the correct branch.** Respect the branch policy in [Choosing the Branch](#choosing-the-branch) (maintenance branches accept bug fixes only; the next minor branch accepts features without breaking APIs; the next major branch accepts breaking changes), including the rules for [fixes that change a result](#fixes-that-change-a-result).
 
 Pull requests that appear to be auto-generated, incomplete, unrelated to an approved issue, or otherwise inconsistent with the project's standards may be closed without review so maintainers can focus on reviewed and planned work. See the [Pull Request Template](.github/PULL_REQUEST_TEMPLATE.md) for the full contributor checklist.
 
@@ -295,6 +296,66 @@ project, so two controls limit what runs:
   workflow in `apache/grails-core` follows the same rule unless its `run-tests` input is ticked; in your own fork
   it runs the tests unless the commit message starts with `[skip tests]`.
 
+### Choosing the Branch
+
+Each release branch is named after the minor version it releases, such as `7.0.x`, `8.0.x` or `8.1.x`.
+
+* A **maintenance branch** is a release branch whose minor version has been released, such as `7.0.x`, `7.2.x` and
+  `8.0.x` once 7.0.0, 7.2.0 and 8.0.0 are out. It takes bug fixes only, with no new features and no API changes, and
+  each release from it is the next patch version, such as 7.0.18 or 8.0.1.
+* The **next minor branch**, such as `8.1.x` until 8.1.0 is released, also takes features, as long as existing APIs
+  keep working.
+* The **next major branch**, such as `9.0.x` until 9.0.0 is released, can take breaking changes.
+
+A change goes to the oldest release branch it belongs on, and is merged up from there into every newer branch: a bug
+fix to the oldest release branch that has the bug, a feature to the next minor branch, and a breaking change to the
+next major branch.
+
+#### Fixes That Change a Result
+
+A fix that makes a failing GORM call work, or makes a call do what it asks for without changing the data it returns,
+counts, stores or deletes, such as a requested sort order that was ignored, is a bug fix like any other.
+
+Other fixes change the data that a GORM call that works today returns, counts, stores or deletes, with any datastore,
+such as the rows a query returns or the rows an `updateAll` changes, or make such a call throw. Applications may have
+been built on the old result, and a patch release is often taken without reading its notes, so these fixes follow
+their own rules:
+
+* **A regression.** A fix that restores the result of an earlier release goes to the oldest release branch that has
+  the regression, and is merged up. That includes a Hibernate 7 result that differs from what Hibernate 5 returns for
+  the same call.
+* **A wrong result.** A fix that changes a long-standing result goes to the oldest release branch that has the bug
+  when the old result contradicts what the call asks for, or what the same request returns through another API of the
+  framework, and the documentation does not ask for it.
+* **A wrong result that many applications get.** If such a fix changes the result of a kind of query that many
+  applications run, and no other API of the framework returns the new result yet, it goes to the oldest release
+  branch that has the bug behind a setting. The setting keeps the old result by default on the maintenance branches,
+  is on by default from the next minor release, and is removed in the next major release. For example, a setting added
+  while `8.1.x` is the next minor branch is off by default on `7.0.x`, `7.1.x`, `7.2.x` and `8.0.x`, and on by default
+  from 8.1.0. While an application keeps the old result through the setting, it logs a warning at startup that names
+  the major release that removes the setting.
+* **A result that can be defended.** When the old result can be defended, or it is unclear whether it can, the fix
+  goes to the next major release, or behind a setting as above.
+* **A security fix** follows the [ASF security process](https://www.apache.org/security/) and goes to the earliest
+  supported version. These rules do not apply to it.
+
+A fix that changes a result:
+
+* has two reviewers (see [Change Review Process](#change-review-process)),
+* says in its pull request description which results change, how an application gets the old ones, and whether the
+  fix needs a setting, and why,
+* adds a note to the upgrade guide section of the release that carries it, patch releases included, and the same
+  entry to the upgrade skill under `.agents/skills` where there is one,
+* and, when it adds a setting, lists the setting in the guide with the release that turns it on by default and the
+  release that removes it.
+
+When the reviewers disagree about where a fix belongs, it goes to the dev@grails.apache.org mailing list, and to a
+vote if that does not settle it.
+
+These rules cover the data of GORM calls. A fix that changes another behaviour of a call that works today, such as
+the output it renders, is not covered by them; raise it on the dev@grails.apache.org mailing list before it goes to a
+maintenance branch.
+
 ### Change Review Process
 
 The Apache Grails project uses different review processes based on the change being made. We use both a
@@ -311,6 +372,7 @@ Concerning when a review is required for a `protected` branch:
    * Reasoning: due to the impact of past Spring & Groovy upgrades, it often breaks the entire development chain.  These changes should not be merged without significant review.
    * Minimum # of Reviewers:  2 reviewers, preferred 3
    * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
+* Fixes That Change a Result - `Review then Commit` with 2 reviewers. See [Fixes That Change a Result](#fixes-that-change-a-result).
 * Otherwise - `Review then Commit` with only 1 reviewer required. 
 
 An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given
