@@ -98,6 +98,7 @@ class PackDescriptorParser {
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions'] as Set<String>
     private static final String FEATURE_KIND = 'feature'
+    private static final String MARKUP = '@|'
     private static final String ENVIRONMENTS = 'environments'
     private static final int MAX_DEPTH = 20
     private static final int MAX_LINE = 200
@@ -324,12 +325,17 @@ class PackDescriptorParser {
                     problems << "${place}: has a key that is not text, ${describe(key)}; put it in quotes".toString()
                 } else if (((String) key).isBlank() || ((String) key).length() > MAX_LINE || UNSAFE_CHARACTER.matcher((String) key).find()) {
                     problems << "${place}: has the key ${describe(key)}, and a key is one line of at most ${MAX_LINE} characters, none of them a control character".toString()
+                } else if (((String) key).contains(MARKUP)) {
+                    problems << "${place}: has a key with '${MARKUP}' in it, which the command line reads as the start of markup".toString()
                 } else {
                     checkTree(each, at ? "${at}.${brief((String) key)}".toString() : brief((String) key), problems)
                 }
             }
         } else if (value instanceof List) {
             ((List) value).eachWithIndex { Object each, int index -> checkTree(each, "${at}[${index}]".toString(), problems) }
+        } else if (value instanceof String && ((String) value).contains(MARKUP)) {
+            // what a descriptor says is shown on the command line, in listings and in messages
+            problems << "${at}: has '${MARKUP}' in it, which the command line reads as the start of markup".toString()
         } else if (!(value == null || value instanceof String || value instanceof Boolean || value instanceof Integer ||
                 value instanceof Long || value instanceof Double)) {
             problems << "${at}: must be text, true or false, or a number".toString()

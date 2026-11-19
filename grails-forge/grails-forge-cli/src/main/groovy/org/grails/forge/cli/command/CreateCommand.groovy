@@ -66,9 +66,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = ['--jdk', '--java-version'], description = 'The JDK version the project should target')
     Integer javaVersion
 
-    @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
+    // not shown in the help, the completion and the reference until a pack can have templates
+    @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY', hidden = true,
             description = 'A directory that holds a feature pack (feature.yml and its templates directory), whose feature can then be ' +
-                    'selected like one of the framework. For trying a pack out before it is published. Can be given more than once.')
+                    'selected like one of the framework. For trying a pack out before it is published. A pack adds dependencies, ' +
+                    'build plugins, build script code and files to the application: use a pack only when you trust where it comes from. ' +
+                    'Can be given more than once.')
     List<File> featurePackDirectories = new ArrayList<>()
 
     private final ContextFactory contextFactory
@@ -94,7 +97,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     Integer call() throws Exception {
         if (listFeatures) {
             List<Pack> packs = featurePacks()
-            new ListFeatures(packs.isEmpty() ? availableFeatures : projectGenerator.availableFeatures(applicationType, packs),
+            new ListFeatures(packs.isEmpty() ? availableFeatures : withPacks(packs),
                     new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
                     applicationType,
                     getOperatingSystem(),
@@ -127,13 +130,29 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             projectGenerator.generate(applicationType, project, options, getOperatingSystem(), getSelectedFeatures(), outputHandler, this)
             return
         }
-        // a pack is not part of the framework: say which ones this application is made with
-        for (Pack pack : packs) {
-            out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin}")
-        }
+        withPacks(packs)
         GeneratorContext context = projectGenerator.createGeneratorContext(applicationType, project, options, getOperatingSystem(),
                 getSelectedFeatures(), this, packs)
+        // a pack is not part of the framework: say which ones this application is made with, which are
+        // the selected ones and those they require. What a descriptor says is not markup of this command
+        for (Pack pack : packs) {
+            if (context.getFeatures().contains(pack.descriptor.name)) {
+                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replace('@|', '@ |')}")
+            }
+        }
         projectGenerator.generate(applicationType, project, outputHandler, context)
+    }
+
+    /**
+     * The features to choose from with the packs among them. Packs that cannot be used together, such
+     * as one directory given twice, are a mistake in the command line.
+     */
+    private AvailableFeatures withPacks(List<Pack> packs) {
+        try {
+            return projectGenerator.availableFeatures(applicationType, packs)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+        }
     }
 
     /**

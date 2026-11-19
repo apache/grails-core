@@ -88,7 +88,7 @@ class GeneratorContext implements DependencyContext {
     private final Set<BuildPlugin> buildPlugins = new HashSet<>()
     private final BuildFileContributions buildContributions = new BuildFileContributions()
     private boolean featuresApplied
-    private RuntimeException applyFailure
+    private Throwable applyFailure
     private final List<Runnable> checks = new ArrayList<>()
 
     GeneratorContext(Project project,
@@ -291,7 +291,7 @@ class GeneratorContext implements DependencyContext {
         featuresApplied = true
         try {
             applyOnce()
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | Error e) {
             applyFailure = e
             throw e
         }

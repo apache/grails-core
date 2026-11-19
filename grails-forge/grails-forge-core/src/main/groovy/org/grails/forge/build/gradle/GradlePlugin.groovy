@@ -131,7 +131,7 @@ class GradlePlugin implements BuildPlugin {
     BuildPlugin resolved(CoordinateResolver coordinateResolver) {
         Coordinate coordinate = coordinateResolver.resolve(artifactId)
                 .orElseThrow(() -> new LookupFailedException(artifactId))
-        return new GradlePlugin(id, coordinate.getVersion(), artifactId, extension, settingsExtension, false, order, buildImports)
+        return new GradlePlugin(id, coordinate.getVersion(), artifactId, extension, settingsExtension, false, order, buildImports, useApplyPlugin)
     }
 
     @Override

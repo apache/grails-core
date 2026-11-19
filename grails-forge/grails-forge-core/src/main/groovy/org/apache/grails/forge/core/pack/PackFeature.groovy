@@ -171,7 +171,8 @@ class PackFeature implements Feature {
             addFile(generatorContext, file)
         }
         if (descriptor.readme != null) {
-            String readme = descriptor.readme
+            // a paragraph of its own, whatever it ends with
+            String readme = descriptor.readme.stripTrailing() + '\n\n'
             generatorContext.addHelpTemplate({ OutputStream out -> out.write(readme.getBytes(StandardCharsets.UTF_8)) } as Writable)
         }
         // a feature applied after this one could have replaced what it added, without a word
@@ -209,7 +210,7 @@ class PackFeature implements Feature {
         }
         if (other != null) {
             throw new IllegalArgumentException("The feature ${name} declares ${declared.groupId}:${declared.artifactId} in version " +
-                    "${declared.version}, and the application has it ${other.getVersion() == null ? 'without a version' : 'in version ' + other.getVersion()}")
+                    "${declared.version}, and it is also declared ${other.getVersion() == null ? 'without a version' : 'in version ' + other.getVersion()}")
         }
     }
 

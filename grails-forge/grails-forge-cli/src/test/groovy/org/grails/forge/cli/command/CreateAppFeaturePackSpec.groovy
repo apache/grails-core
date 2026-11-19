@@ -80,6 +80,59 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         !new File(dir, 'shop/build.gradle').text.contains('acme')
+
+        and: 'and is not named as one the application is made with'
+        !out.toString().contains('Feature pack')
+    }
+
+    void "one directory given twice is a mistake in the command line"() {
+        given:
+        File pack = pack('acme', DESCRIPTOR)
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'acme-audit',
+                '--feature-pack-dir', pack.absolutePath, '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 2
+        err.toString().contains('both have the name acme-audit')
+        !new File(dir, 'shop').exists()
+    }
+
+    void "a pack that another selected pack requires is named too"() {
+        given:
+        File first = pack('one', DESCRIPTOR + 'requires: [acme-base]\n')
+        File second = pack('two', DESCRIPTOR.replace('name: acme-audit', 'name: acme-base').replace('acme-audit-grails', 'acme-base').replace('audit.txt', 'base.txt'))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'acme-audit',
+                '--feature-pack-dir', first.absolutePath, '--feature-pack-dir', second.absolutePath)
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${first.absolutePath}")
+        out.toString().contains("Feature pack acme-base from ${second.absolutePath}")
+    }
+
+    void "what a descriptor says cannot be markup of the command line"() {
+        given:
+        File pack = pack('acme', DESCRIPTOR.replace('description: Adds the Acme audit plugin', "description: 'Harmless @|bold,red (+)|@ text'"))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, '--list-features', '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 2
+        err.toString().contains("description: has '@|' in it, which the command line reads as the start of markup")
+    }
+
+    void "the option is not in the help of the command yet"() {
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, '--help')
+
+        then:
+        !out.toString().contains('feature-pack-dir')
+        out.toString().contains('--features')
     }
 
     void "the feature of a pack is not there without its directory"() {

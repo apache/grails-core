@@ -118,6 +118,15 @@ class PackGenerationSpec extends ApplicationContextSpec {
         output['grails-forge-cli.yml'].contains('acme-audit')
     }
 
+    void "a readme of one line is a paragraph of its own"() {
+        when:
+        String readme = generate(['acme-audit'], [pack('acme-audit', 'readme: One line about Acme.\n')])['README.md']
+
+        then:
+        readme.contains('One line about Acme.\n\n')
+        !readme.contains('Acme.#')
+    }
+
     void "a pack that is not selected adds nothing"() {
         given:
         Pack pack = pack('acme-audit', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit-grails\n")
@@ -644,7 +653,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == "The feature ${name} declares org.spockframework:spock-core in version 2.0, and the application has it without a version"
+        e.message == "The feature ${name} declares org.spockframework:spock-core in version 2.0, and it is also declared without a version"
 
         where:
         name << ['acme', 'zzz']
