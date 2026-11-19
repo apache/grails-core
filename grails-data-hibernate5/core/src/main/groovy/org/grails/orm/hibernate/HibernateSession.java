@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +35,9 @@ import org.hibernate.SessionFactory;
 import org.hibernate.proxy.HibernateProxy;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
+import org.grails.datastore.gorm.query.criteria.AbstractDetachedCriteria;
 import org.grails.datastore.gorm.timestamp.DefaultTimestampProvider;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -89,12 +92,71 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     /**
+     * {@code AbstractDetachedCriteria.defaultMax} and {@code defaultOffset}, read by reflection because this patch
+     * line adds no public accessor for them. From 8.1.x on, the criteria has getters for them.
+     */
+    private static final Field DEFAULT_MAX = criteriaField("defaultMax");
+    private static final Field DEFAULT_OFFSET = criteriaField("defaultOffset");
+
+    private static Field criteriaField(String name) {
+        try {
+            Field field = AbstractDetachedCriteria.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        }
+        catch (NoSuchFieldException e) {
+            throw new IllegalStateException("AbstractDetachedCriteria has no field " + name, e);
+        }
+    }
+
+    private static Integer criteriaValue(Field field, AbstractDetachedCriteria<?> criteria) {
+        try {
+            return (Integer) field.get(criteria);
+        }
+        catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot read " + field.getName() + " of " + criteria.getClass().getName(), e);
+        }
+    }
+
+    /**
+     * A bulk {@code delete} or {@code update} statement has no {@code LIMIT} or {@code OFFSET}, so a
+     * criteria that carries {@code max} or an {@code offset} other than 0 would write to every matching row. Refuse it.
+     * An {@code offset} of 0 leaves no row out and is accepted.
+     */
+    private static void rejectPagination(QueryableCriteria<?> criteria, String operation) {
+        if (!(criteria instanceof AbstractDetachedCriteria)) {
+            return;
+        }
+        Integer max = criteriaValue(DEFAULT_MAX, (AbstractDetachedCriteria<?>) criteria);
+        Integer offset = criteriaValue(DEFAULT_OFFSET, (AbstractDetachedCriteria<?>) criteria);
+        if (offset != null && offset == 0) {
+            offset = null;
+        }
+        if (max == null && offset == null) {
+            return;
+        }
+        StringBuilder unsupported = new StringBuilder();
+        if (max != null) {
+            unsupported.append("max(").append(max).append(')');
+        }
+        if (offset != null) {
+            if (unsupported.length() > 0) {
+                unsupported.append(", ");
+            }
+            unsupported.append("offset(").append(offset).append(')');
+        }
+        throw new InvalidDataAccessResourceUsageException(operation + " cannot limit the rows it writes to, " +
+                "so it does not support " + unsupported + "; remove it or select the ids first");
+    }
+
+    /**
      * Deletes all objects matching the given criteria.
      *
      * @param criteria The criteria
      * @return The total number of records deleted
      */
     public long deleteAll(final QueryableCriteria criteria) {
+        rejectPagination(criteria, "deleteAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
@@ -128,6 +190,7 @@ public class HibernateSession extends AbstractHibernateSession {
      * @return The total number of records updated
      */
     public long updateAll(final QueryableCriteria criteria, final Map<String, Object> properties) {
+        rejectPagination(criteria, "updateAll()");
         return getHibernateTemplate().execute((GrailsHibernateTemplate.HibernateCallback<Integer>) session -> {
             JpaQueryBuilder builder = new JpaQueryBuilder(criteria);
             builder.setConversionService(getMappingContext().getConversionService());
