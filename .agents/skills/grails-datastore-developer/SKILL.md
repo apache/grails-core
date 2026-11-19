@@ -97,3 +97,7 @@ A reviewer who finds one bug has found a sample of a class. Find the class yours
 - Do not make a copy shallow when the thing it holds is a node that can be changed later: copy junctions, associations and projections too.
 - Do not cache a derived value next to the state it derives from. The two will diverge the first time something changes the state directly.
 - Do not publish an internal type without the internal-API Javadoc, and do not document it for users.
+
+## Is this change dialect-dependent?
+
+Look it up in `dialect-capabilities.md` (generated from the Hibernate `Dialect` classes; regenerate with `dialect-capabilities/regen.sh` beside it). List the capabilities the change relies on; if every dialect has the same value for each, the change is dialect-independent and needs no container run. Where they differ, the differing dialects need a Testcontainers run, or the PR states why the difference cannot matter. A change that only builds JPA predicates and never renders SQL relies on nothing in the table; say so in the PR.
