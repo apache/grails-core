@@ -135,12 +135,14 @@ class Setup {
 
         xyz.mappingContext.addMappingContextListener({ e -> enhancer.enhance e } as MappingContext.Listener)
         xyz.applicationContext.addApplicationListener new DomainEventListener(xyz)
-        xyz.applicationContext.addApplicationListener new AutoTimestampEventListener(xyz)
+        xyz.applicationContext.addApplicationListener xyz.autoTimestampEventListener
 
         xyz.connect()
     }
 }
 ----
+
+Here `XyzDatastore` implements `AutoTimestampingDatastore`: it creates its `AutoTimestampEventListener` once, as `new AutoTimestampEventListener(this)`, and returns it from `getAutoTimestampEventListener()`, so that `Book.autoTimestampEventListener` on a domain class finds the listener that handles the class's saves. The TCK's `AutoTimestampEventListenerLookupSpec` checks this. A datastore that builds a datastore for each of its connections registers the listeners of each one, because a listener only handles the events whose source is its own datastore.
 
 Then in `src/test/groovy` create test suite class to allow running tests in IDE (without this you won't be able to run TCK tests from the IDE). Example test suite:
 
