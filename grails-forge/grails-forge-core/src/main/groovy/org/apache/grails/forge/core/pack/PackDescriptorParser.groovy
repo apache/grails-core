@@ -98,6 +98,7 @@ class PackDescriptorParser {
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions'] as Set<String>
     private static final String FEATURE_KIND = 'feature'
+    private static final String ENVIRONMENTS = 'environments'
     private static final int MAX_DEPTH = 20
     private static final int MAX_LINE = 200
     private static final int MAX_PARAGRAPH = 2000
@@ -119,6 +120,7 @@ class PackDescriptorParser {
     private static final Pattern PROPERTY_NAME = Pattern.compile(/[A-Za-z0-9_.\-]+/)
     private static final Pattern PROPERTY_VALUE = Pattern.compile(/([\x21-\x5B\x5D-\x7E]([\x20-\x5B\x5D-\x7E]*[\x21-\x5B\x5D-\x7E])?)?/)
     private static final Pattern IDENTIFIER = Pattern.compile(/[A-Za-z_]\w*/)
+    private static final Pattern ENVIRONMENT = Pattern.compile(/[A-Za-z][A-Za-z0-9_\-]{0,49}/)
     private static final Pattern URL = Pattern.compile(/https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!&()*+,;=%]+/)
     private static final Pattern TOKEN = Pattern.compile(/\{([^{}]*)\}/)
     // what is refused in every path and replaced in every message: control, format and private-use
@@ -199,7 +201,7 @@ class PackDescriptorParser {
                 buildPlugins(root, problems),
                 buildProperties(build, problems),
                 buildExtensions(build, problems),
-                map(root, 'configuration', '', problems),
+                configuration(root, problems),
                 files(root, problems),
                 document(root.get('readme'), 'readme', problems),
                 document(root.get('instructions'), 'instructions', problems))
@@ -543,19 +545,56 @@ class PackDescriptorParser {
             }
             literal = TOKEN.matcher(path).replaceAll('x')
         }
-        List<String> steps = literal.split('/', -1).toList()
-        boolean valid = !literal.contains('{') && !literal.contains('}') && steps.size() <= MAX_STEPS && steps.every { String step ->
-            step.length() <= MAX_STEP && PATH_STEP.matcher(step).matches() && step != '.' && step != '..' &&
-                    !step.startsWith(' ') && !step.endsWith(' ') && !step.endsWith('.') && !RESERVED_STEP.matcher(step).matches() &&
-                    !SHORT_NAME.matcher(step).matches()
-        }
-        if (!valid) {
+        if (!isPathBelowRoot(literal)) {
             problems << ("${at}${key}: must be a path below the root with '/' between its at most ${MAX_STEPS} steps, where a step is not '.' or '..', " +
                     "does not start or end with a space or end with '.', is not a name an operating system or Git reserves, " +
                     "and has no character a file system gives a meaning, but is ${describe(path)}").toString()
             return null
         }
         return path
+    }
+
+    /**
+     * Whether a path, with nothing left in it to substitute, is one a pack can read or write: see the
+     * rules of a path in {@link PackDescriptorParser}. What writes the file of a destination checks the
+     * path with this again once its placeholders have their values, which the parser does not know.
+     *
+     * @param path a path without placeholders
+     */
+    static boolean isPathBelowRoot(String path) {
+        if (path == null || path.isEmpty() || path.length() > MAX_PARAGRAPH || path.contains('{') || path.contains('}')) {
+            return false
+        }
+        List<String> steps = path.split('/', -1).toList()
+        return steps.size() <= MAX_STEPS && steps.every { String step ->
+            step.length() <= MAX_STEP && PATH_STEP.matcher(step).matches() && step != '.' && step != '..' &&
+                    !step.startsWith(' ') && !step.endsWith(' ') && !step.endsWith('.') && !RESERVED_STEP.matcher(step).matches() &&
+                    !SHORT_NAME.matcher(step).matches()
+        }
+    }
+
+    /**
+     * The configuration, of which the settings under {@code environments} are those of one environment
+     * each. The name of an environment becomes part of the name of a file, so it is held to a name.
+     */
+    private static Map<String, Object> configuration(Map<String, Object> root, List<String> problems) {
+        Map<String, Object> configuration = map(root, 'configuration', '', problems)
+        if (!configuration.containsKey(ENVIRONMENTS)) {
+            return configuration
+        }
+        Object environments = configuration.get(ENVIRONMENTS)
+        if (!(environments instanceof Map)) {
+            problems << "configuration.${ENVIRONMENTS}: must be a mapping of the names of environments to their settings, but is ${describe(environments)}".toString()
+            return configuration
+        }
+        ((Map<String, Object>) environments).each { String environment, Object settings ->
+            if (!ENVIRONMENT.matcher(environment).matches()) {
+                problems << "configuration.${ENVIRONMENTS}: the name of an environment is letters, digits, '-' and '_', starting with a letter, but one is ${describe(environment)}".toString()
+            } else if (!(settings instanceof Map)) {
+                problems << "configuration.${ENVIRONMENTS}.${environment}: must be a mapping of settings, but is ${describe(settings)}".toString()
+            }
+        }
+        return configuration
     }
 
     private static String version(Map<String, Object> entry, String at, List<String> problems) {

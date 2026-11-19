@@ -20,6 +20,7 @@ package org.grails.forge.application.generator
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
+import org.apache.grails.forge.core.pack.Pack
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
@@ -55,4 +56,26 @@ interface ProjectGenerator {
             @Nullable OperatingSystem operatingSystem,
             List<String> selectedFeatures,
             ConsoleOutput consoleOutput)
+
+    /**
+     * Creates the context of a project that can have the features of feature packs besides those of
+     * the framework. The packs are known to this context only.
+     *
+     * @param selectedFeatures the names of the selected features, of the framework or of a pack
+     * @param packs the feature packs to choose from
+     * @since 9.0
+     */
+    default GeneratorContext createGeneratorContext(
+            ApplicationType applicationType,
+            Project project,
+            Options options,
+            @Nullable OperatingSystem operatingSystem,
+            List<String> selectedFeatures,
+            ConsoleOutput consoleOutput,
+            Collection<Pack> packs) {
+        if (packs.isEmpty()) {
+            return createGeneratorContext(applicationType, project, options, operatingSystem, selectedFeatures, consoleOutput)
+        }
+        throw new UnsupportedOperationException('This generator does not take feature packs')
+    }
 }

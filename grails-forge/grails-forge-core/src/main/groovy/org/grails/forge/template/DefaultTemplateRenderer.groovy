@@ -49,6 +49,18 @@ class DefaultTemplateRenderer implements TemplateRenderer {
     }
 
     protected String replaceVariables(String path, Map<String, String> replacements) {
+        return resolvePath(path, replacements)
+    }
+
+    /**
+     * The path a template is written to: its path with each placeholder, such as {@code {packagePath}},
+     * replaced by its value. A placeholder without a value is kept as it is.
+     *
+     * @param path the path of a template
+     * @param replacements the values of the placeholders, see {@link org.grails.forge.application.Project#getProperties()}
+     * @since 9.0
+     */
+    static String resolvePath(String path, Map<String, String> replacements) {
         Pattern pattern = Pattern.compile('\\{(.+?)\\}')
         Matcher matcher = pattern.matcher(path)
         StringBuilder builder = new StringBuilder()

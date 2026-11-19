@@ -24,8 +24,9 @@ import groovy.transform.CompileStatic
 interface OneOfFeature extends Feature {
 
     /**
-     * @return the type the features of the group share. Features are told apart from other groups by
-     * {@link #getGroup()}; this type only lets compiled code look a feature of the group up by type.
+     * @return the type the features of the group share, or {@code null} for a feature that is not a
+     * class of the framework. Features are told apart from other groups by {@link #getGroup()}; this type
+     * only lets compiled code look a feature of the group up by type.
      */
     Class<?> getFeatureClass()
 
