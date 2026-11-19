@@ -40,6 +40,10 @@ import org.springframework.beans.factory.support.RootBeanDefinition
  * missing or empty, a pack that cannot be read and one that is not for this Grails stop Forge from
  * starting: they are part of Forge.</p>
  *
+ * <p>The templates of these packs are compiled once, the first time each is rendered, and the compiled
+ * pages are used by every generation after it, at once where generations are: they are of Forge, and
+ * as many as its packs have templates.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -48,14 +52,14 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
     private static final String BEAN_PREFIX = 'forgeFeaturePack.'
 
     private ListableBeanFactory beanFactory
+    private PackPages shared
 
     @Override
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
         ClassLoader loader = BundledPackFeatures.classLoader
         PackLoader packs = new PackLoader()
         Function<String, Optional<Feature>> lookup = { String name -> find(name) } as Function<String, Optional<Feature>>
-        // the pages of a template are compiled for each use, and are not shared between two generations
-        Supplier<PackPages> pages = { -> new PackPages(loader) } as Supplier<PackPages>
+        Supplier<PackPages> pages = { -> shared(loader) } as Supplier<PackPages>
         for (String name : names(loader)) {
             Pack pack = packs.fromClasspath(loader, name)
             PackFeatures.checkCompatibility(pack, 'Grails', pack.descriptor.grailsCompatibility, VersionInfo.getGrailsVersion())
@@ -68,6 +72,22 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
     @Override
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
         this.beanFactory = beanFactory
+    }
+
+    /**
+     * @return the number of templates of the packs of Forge that have been compiled since Forge started,
+     * which is at most the number of templates those packs have
+     */
+    synchronized int getCompiledTemplates() {
+        return shared == null ? 0 : shared.getCompiled()
+    }
+
+    // made when the first template is rendered: many uses of Forge render none
+    private synchronized PackPages shared(ClassLoader loader) {
+        if (shared == null) {
+            shared = new PackPages(loader)
+        }
+        return shared
     }
 
     /**

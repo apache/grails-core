@@ -138,7 +138,7 @@ A pack only adds. It cannot change what another selected feature gives the appli
 ==== Templates
 
 
-A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. Templates are GSP: `${...}` expressions, `<% %>` scriptlets, and the `<g:if>`, `<g:else>`, `<g:elseif>` and `<g:each>` tags. A line that holds nothing but logic writes nothing, and what an expression gives is written unescaped.
+A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. Templates are GSP: `${...}` expressions, `<% %>` scriptlets, `<%-- --%>` comments and the tags listed under <<forgeFeaturePackTags,Tags in a Template>>. A line that holds nothing but logic writes nothing, and what an expression gives is written unescaped.
 
 [source,gsp]
 .src/main/forge/templates/AuditConfig.groovy.gsp
@@ -169,7 +169,7 @@ A template can refer to these names. Any other name is an error, so a misspelled
 |The name as that of a class (`Shop`), of a property (`shop`), and as words (`Shop`)
 
 |`features`
-|The names of all features of the application
+|The names of all features of the application, sorted
 
 |`applicationType`
 |`web`, `rest-api`, `plugin` or `web-plugin`
@@ -187,7 +187,89 @@ A template can refer to these names. Any other name is an error, so a misspelled
 |The name of the feature of the pack
 |===
 
+These names are template API 1, the one `templateApi: 1` in the descriptor asks for. A template API does not change once it is released: when a later version of Grails gives templates more, that is template API 2, and a pack that declares 1 is still given exactly the names above. A pack that declares a template API the generator does not have is refused, with the ones it has in the message.
+
 A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB, before and after it is rendered.
+
+A template that cannot be compiled, or that fails while it is rendered, stops the generation before any file is written. The message names the template and the line of it the error is on, for example `The template AuditConfig.groovy.gsp of the feature acme-audit cannot be rendered: line 4: ...`. For an error in a scriptlet of several lines, the line is the one the scriptlet starts on; a block or a tag that is never closed is reported at the end of the template.
+
+
+[[forgeFeaturePackTags]]
+==== Tags in a Template
+
+
+Ten tags are instructions to the generator. They are run when the application is generated and are not written to the file: `<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>` and `<g:def>`. They take the attributes they take in a view.
+
+[source,gsp]
+.src/main/forge/templates/audit.properties.gsp
+----
+audit.store=<g:if test="${options.data == 'mongodb'}">collection</g:if><g:else>table</g:else>
+audit.features=<g:each in="${features}" var="feature">${feature} </g:each>
+----
+
+A line that holds only a tag still writes its line break; only a line of scriptlets, directives and comments writes nothing. So an instruction tag suits a choice within a line, and a scriptlet a choice of whole lines.
+
+Every other tag is output. The generator has no tag libraries, so `<g:link>`, `<g:message>`, `<g:set>`, `<g:render>`, `<g:hasErrors>` and a tag of any other namespace are not run: the tag is written to the file, with its body and its end tag. That is what a pack wants when the file it writes is a view of the application. It also means that `<g:set>` in a template sets nothing; use `<g:def>` or a scriptlet for a value the template itself needs.
+
+A tag that is output is not copied character for character. It is written again from its parts:
+
+* `${...}` in an attribute or in the body is evaluated when the application is generated, and its value is written.
+* The body is part of the template, so the ten instruction tags in it are run.
+* The attributes are written one space apart with their values in quotes, and a start tag directly followed by its end tag is written as an empty tag.
+* An attribute whose whole value is a map, such as `model="[book: book]"`, is evaluated as an expression is.
+* `<tmpl:row/>` and `<link:book/>` are written as the `<g:render>` and `<g:link>` they stand for.
+
+
+===== Writing a View
+
+
+A view usually has GSP of its own, which has to reach the application and must not be evaluated when it is generated. There are three ways to write it, from the simplest:
+
+A view with nothing to fill in is not a template. Give it a name in the pack that does not end with `.gsp`, and its real name in `to`. It is then written byte for byte:
+
+[source,yaml]
+----
+files:
+  - from: book/show.gsp.txt
+    to: grails-app/views/book/show.gsp
+----
+
+In a template, a backslash in front of `${` writes the expression instead of evaluating it. This works in text and in the attributes of a tag that is output:
+
+[source,gsp]
+.src/main/forge/templates/book/show.gsp.gsp
+----
+<h1>\${book.title} in ${project.naturalName}</h1>
+<g:link action="edit" id="\${book.id}">Edit</g:link>
+----
+
+writes, for an application named `shop`:
+
+[source,gsp]
+----
+<h1>${book.title} in Shop</h1>
+<g:link action="edit" id="${book.id}">Edit</g:link>
+----
+
+An instruction tag that the view needs, and any tag that has to be written exactly as it is typed, is kept from the generator by writing its `<` as an expression. Nothing else escapes a tag: a backslash in front of it does not, and neither does an HTML comment around it.
+
+[source,gsp]
+----
+${'<'}g:each in="\${books}" var="book">
+    <li>\${book.title}</li>
+${'<'}/g:each>
+${'<'}g:render template="row" model="[book: book]"/>
+----
+
+writes:
+
+[source,gsp]
+----
+<g:each in="${books}" var="book">
+    <li>${book.title}</li>
+</g:each>
+<g:render template="row" model="[book: book]"/>
+----
 
 
 ==== Checking a Pack
@@ -205,7 +287,7 @@ $ ./gradlew check
 * the whole descriptor: unknown keys, missing or malformed values, destinations outside the application;
 * every file the descriptor names: that it is there under `templates`, is a file and not a link, and is not too large;
 * `compatibility`: that the pack is for the version of Grails it is checked with;
-* every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error.
+* every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error. The problem names the line of the template, as the message does when an application is created. A tag that is not one of the ten <<forgeFeaturePackTags,instruction tags>> is no problem: it is output, and is not looked up in a tag library.
 
 No application is generated. A template is rendered for applications that are made up: one named `com.example.shop` that has the feature of the pack and the features it `requires`, for each of the `applicationTypes` of the descriptor and each value of `options.data`, `options.servlet` and `options.reloading`. What a template does only for another application, for example inside `if (features.contains('grails-spring-security'))` when the pack does not require that feature, is not run and so is not checked; try the pack out for that, as described below. Rendering a template runs its code, as creating an application does.
 

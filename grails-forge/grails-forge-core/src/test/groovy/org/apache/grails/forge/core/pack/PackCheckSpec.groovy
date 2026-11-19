@@ -157,6 +157,38 @@ class PackCheckSpec extends Specification {
     }
 
     @Unroll
+    void "a template that #problem is named with the line of it the problem is on"() {
+        given:
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': source])
+
+        expect:
+        PackCheck.check(pack) == ["files[0].from: The template Audit.groovy.gsp cannot be rendered: ${says}".toString()]
+
+        where:
+        problem                          | source                                                                    || says
+        'throws'                         | '<%-- a\n header --%>\npackage a\n<% throw new IllegalStateException("no") %>\n' || 'line 4: no (for an application with applicationType web, options [data:hibernate5, jdk:' + org.grails.forge.options.JdkVersion.DEFAULT_OPTION.majorVersion() + ', reloading:devtools, servlet:tomcat])'
+        'has code that is not Groovy'    | 'package a\n\n<% int = = 3 %>\n'                                          || 'line 3: it does not compile: ' + "Unexpected input: '='" + ' (for an application with applicationType web, options [data:hibernate5, jdk:' + org.grails.forge.options.JdkVersion.DEFAULT_OPTION.majorVersion() + ', reloading:devtools, servlet:tomcat])'
+    }
+
+    void "a template is compiled once for a check, and rendered for every application that is made up"() {
+        given: 'a template that has the class of its page remembered each time it is rendered'
+        String seen = 'org.apache.grails.forge.core.pack.PackCheckSpec.seen'
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': "<% System.properties.computeIfAbsent('${seen}') { [] } << getClass() %>x".toString()])
+
+        when:
+        List<String> problems = PackCheck.check(pack)
+        List<Class<?>> classes = System.properties[seen] as List<Class<?>>
+
+        then:
+        problems == []
+        classes.size() > 1
+        classes.every { it.is(classes[0]) }
+
+        cleanup:
+        System.properties.remove(seen)
+    }
+
+    @Unroll
     void "a template that fails only for #what fails the check, which says for what"() {
         given:
         Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': source])

@@ -571,6 +571,13 @@ With a database or a schema per tenant, a domain class that does not implement `
 - With GORM for MongoDB, documents of such a class saved inside a tenant block in Grails 8 are in the tenant's database, which Grails 9 no longer reads for it. A class whose instances belong to one tenant implements `MultiTenant` before the upgrade. A class that a multi-tenant class references is loaded from the tenant's database, so it implements `MultiTenant` too. Only shared instances that no multi-tenant class references move to the default database.
 - A data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
+## A GSP Error Names the Line of the Page It Is On
+
+The line a GSP error names was wrong for an error on the last line of a page, which was reported on line 1, and for everything after a `<%-- --%>` or `%{-- --}%` comment of several lines, which was reported too early. Both now name the line of the page: in the message of `GroovyPagesException` and `GrailsTagException` and in their `getLineNumber()`.
+
+- What a page renders is not changed.
+- A test that asserts the earlier line of such an error asserts the line of the page instead. No setting restores the earlier numbers.
+
 # After the Upgrade
 
 ## Verification Checklist

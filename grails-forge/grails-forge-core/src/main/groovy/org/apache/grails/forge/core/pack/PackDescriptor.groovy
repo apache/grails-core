@@ -38,9 +38,11 @@ final class PackDescriptor {
     /** The descriptor format this version of Forge reads */
     public static final int FORMAT = 1
 
-    /** The template API this version of Forge offers to the templates of a pack */
+    /** The latest template API this version of Forge offers to the templates of a pack, see {@link PackModel#APIS} */
     public static final int TEMPLATE_API = 1
 
+    /** The template API the templates of the pack are written against, one of {@link PackModel#APIS} */
+    final int templateApi
     final String name
     final String title
     final String description
@@ -108,6 +110,20 @@ final class PackDescriptor {
                    Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
                    String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
                    Map<String, String> buildBlocks, List<PackLink> readmeLinks) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks, TEMPLATE_API)
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
+                   Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi) {
+        this.templateApi = templateApi
         this.versionsOfForge = Collections.unmodifiableMap(new LinkedHashMap<String, String>(versionsOfForge))
         this.buildBlocks = Collections.unmodifiableMap(new LinkedHashMap<String, String>(buildBlocks))
         this.readmeLinks = List.copyOf(readmeLinks)
@@ -137,7 +153,8 @@ final class PackDescriptor {
     private List<Object> state() {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
-                configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks] as List<Object>
+                configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks,
+                templateApi] as List<Object>
     }
 
     /**

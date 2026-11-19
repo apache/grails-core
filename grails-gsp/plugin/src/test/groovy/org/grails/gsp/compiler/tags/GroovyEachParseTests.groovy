@@ -65,7 +65,7 @@ Writer out = getOut()
 Writer expressionOut = getExpressionOut()
 
 h(0)
-for( t in evaluate('"blah"', 1, it) { return "blah" } ) {
+for( t in evaluate('"blah"', 2, it) { return "blah" } ) {
 }
 }""" + GSP_FOOTER
         ), trimAndRemoveCR(output.toString()))

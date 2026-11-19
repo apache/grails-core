@@ -332,8 +332,8 @@ class PackFeature implements Feature {
             // rendered here and not when the file is written: every feature is chosen by now, and a
             // template that fails does so before anything of the application is written
             String from = file.from.length() > 120 ? file.from.substring(0, 120) + '...' : file.from
-            content = pages.get().render(new String(content, StandardCharsets.UTF_8), "${from} of the feature ${name}".toString(),
-                    PackModel.of(generatorContext, pack.descriptor), PackLoader.MAX_FILE_BYTES)
+            content = pages.get().render(name, new String(content, StandardCharsets.UTF_8), "${from} of the feature ${name}".toString(),
+                    pack.descriptor.templateApi, PackModel.of(generatorContext, pack.descriptor), PackLoader.MAX_FILE_BYTES)
         }
         generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content))
         return content.length

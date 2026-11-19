@@ -30,11 +30,18 @@ import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 
 /**
- * What a template of a feature pack can refer to: template API {@link PackDescriptor#TEMPLATE_API}.
+ * What a template of a feature pack can refer to: the template API, of which there is one, 1.
  * It is made of text, numbers, lists and maps only, and none of them can be changed, so a template
  * depends on these names and not on the classes of Forge, which are free to change. A name that is
  * not here is an error. A template that imports a class of Forge can do so, and is then no longer written
  * against this API alone.
+ *
+ * <p>A pack says which template API its templates are written against, and its model is made for that
+ * one in one place, which {@link #of(GeneratorContext, PackDescriptor)} and {@link #samples} both go
+ * through, so a model that is made up for a check has what a generation gives. A template API is not
+ * changed once it is released: what a later version of Forge adds for templates is a template API of
+ * its own beside the earlier ones, in {@link #APIS} and in that place. The table here is what the
+ * guide says of the names, and {@code PackTemplateApiSpec} holds the two and the models to each other.</p>
  *
  * <table>
  * <caption>The names of template API 1</caption>
@@ -63,13 +70,17 @@ import org.grails.forge.util.VersionInfo
 @CompileStatic
 final class PackModel {
 
+    /** The template APIs this version of Forge renders the templates of */
+    public static final List<Integer> APIS = List.of(1)
+
     private PackModel() {
     }
 
     /**
      * @param generatorContext the application that is generated, with its features chosen
      * @param descriptor the descriptor of the pack the template is of
-     * @return the model, which cannot be changed
+     * @return the model of the template API the descriptor names, which cannot be changed
+     * @throws IllegalArgumentException when this version of Forge does not render that template API
      */
     static Map<String, Object> of(GeneratorContext generatorContext, PackDescriptor descriptor) {
         Map<String, Object> model = model(generatorContext.getProject().getProperties(), generatorContext.getFeatures(),
@@ -84,7 +95,7 @@ final class PackModel {
                     versions.put(artifact, otherwise)
                 }
             }
-            model.put('versionsOfForge', new Names('versionsOfForge', versions))
+            model.put('versionsOfForge', new Names(descriptor.templateApi, 'versionsOfForge', versions))
         }
         return Collections.unmodifiableMap(model)
     }
@@ -120,22 +131,41 @@ final class PackModel {
         return samples
     }
 
+    /**
+     * The model of the template API the descriptor names, for an application that is generated and for
+     * one that is made up alike: the one place a template API has its names from.
+     */
+    @SuppressWarnings('ParameterCount')
     private static Map<String, Object> model(Map<String, String> project, Collection<String> features, ApplicationType applicationType,
                                              JdkVersion jdk, GormImpl data, ServletImpl servlet, DevelopmentReloading reloading,
                                              PackDescriptor descriptor) {
+        switch (descriptor.templateApi) {
+            case 1:
+                return api1(project, features, applicationType, jdk, data, servlet, reloading, descriptor)
+            default:
+                throw new IllegalArgumentException("The feature pack ${descriptor.name} is written against template API " +
+                        "${descriptor.templateApi}, and this version of Forge renders the template APIs ${APIS}")
+        }
+    }
+
+    @SuppressWarnings('ParameterCount')
+    private static Map<String, Object> api1(Map<String, String> project, Collection<String> features, ApplicationType applicationType,
+                                            JdkVersion jdk, GormImpl data, ServletImpl servlet, DevelopmentReloading reloading,
+                                            PackDescriptor descriptor) {
+        int api = 1
         Map<String, Object> model = new LinkedHashMap<>()
-        model.put('project', new Names('project', project))
+        model.put('project', new Names(api, 'project', project))
         model.put('features', Collections.unmodifiableList(new ArrayList<String>(features).toSorted()))
         model.put('applicationType', applicationType.getName().replace('_', '-'))
         // as the options of the create commands are written
-        model.put('options', new Names('options', [
+        model.put('options', new Names(api, 'options', [
                 jdk: jdk.majorVersion(),
                 data: data.name().toLowerCase(Locale.ROOT),
                 servlet: servlet.name().toLowerCase(Locale.ROOT),
                 reloading: reloading.name().toLowerCase(Locale.ROOT),
         ] as Map<String, Object>))
         model.put('grailsVersion', VersionInfo.getGrailsVersion())
-        model.put('pack', new Names('pack', [name: descriptor.name] as Map<String, Object>))
+        model.put('pack', new Names(api, 'pack', [name: descriptor.name] as Map<String, Object>))
         return model
     }
 
@@ -146,10 +176,12 @@ final class PackModel {
      */
     private static final class Names extends AbstractMap<String, Object> {
 
+        private final int api
         private final String of
         private final Map<String, Object> values
 
-        Names(String of, Map<String, ?> values) {
+        Names(int api, String of, Map<String, ?> values) {
+            this.api = api
             this.of = of
             this.values = Collections.unmodifiableMap(new TreeMap<String, Object>(values))
         }
@@ -166,7 +198,7 @@ final class PackModel {
                 for (String each : values.keySet()) {
                     names << "${this.of}.${each}".toString()
                 }
-                throw new MissingPropertyException("There is no '${this.of}.${name}' for a template: template API ${PackDescriptor.TEMPLATE_API} " +
+                throw new MissingPropertyException("There is no '${this.of}.${name}' for a template: template API ${this.api} " +
                         "has ${names}")
             }
             return values.get(name)

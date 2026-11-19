@@ -193,7 +193,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'is not a page that compiles'           | '<% if (true) { %>unclosed'                          || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'refers to what the model has not'      | '${missing.property}'                                || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'changes the features it is given'      | '<% features << "another" %>'                        || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
-        'changes the project it is given'       | '<% project.name = "other" %>'                       || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: The project of a template cannot be changed'
+        'changes the project it is given'       | '<% project.name = "other" %>'                       || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: line 1: The project of a template cannot be changed'
         'throws'                                | '<% throw new IllegalStateException("no\\nway") %>'  || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'writes without end'                    | '<% while (true) { %>' + ('x' * 1000) + '<% } %>'    || 'The template bad.txt.gsp of the feature acme-audit writes more than the 1048576 bytes a file of a feature pack can have'
     }

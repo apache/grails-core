@@ -199,7 +199,7 @@ class PackDescriptorParser {
         failOn(problems, source)
         unknownKeys(root, ofForge ? KEYS.toList() + KEYS_OF_FORGE : KEYS.toList(), '', problems)
         requireNumber(root, 'format', PackDescriptor.FORMAT, problems)
-        requireNumber(root, 'templateApi', PackDescriptor.TEMPLATE_API, problems)
+        int templateApi = requireTemplateApi(root, problems)
         String kind = requiredText(root, 'kind', '', MAX_LINE, problems)
         if (kind != null && kind != FEATURE_KIND) {
             problems << "kind: must be '${FEATURE_KIND}', the only kind this version of Forge reads, but is ${describe(kind)}".toString()
@@ -253,9 +253,27 @@ class PackDescriptorParser {
                         "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems),
                 ofForge ? versionsOfForge(root, problems) : [:] as Map<String, String>,
                 ofForge ? buildBlocks(build, problems) : [:] as Map<String, String>,
-                ofForge ? readmeLinks(root, problems) : [] as List<PackLink>)
+                ofForge ? readmeLinks(root, problems) : [] as List<PackLink>,
+                templateApi)
         failOn(problems, source)
         return descriptor
+    }
+
+    /**
+     * The template API the templates of the pack are written against, which has to be one this version
+     * of Forge renders: a template of a later one would refer to names there are not.
+     */
+    private static int requireTemplateApi(Map<String, Object> root, List<String> problems) {
+        Object value = root.get('templateApi')
+        if (value == null) {
+            problems << "templateApi: is required, and this version of Forge renders the template APIs ${PackModel.APIS}".toString()
+        } else if (!(value instanceof Integer) || !PackModel.APIS.contains(value)) {
+            problems << ("templateApi: must be one of the template APIs this version of Forge renders, ${PackModel.APIS}, " +
+                    "but is ${describe(value)}").toString()
+        } else {
+            return (Integer) value
+        }
+        return PackDescriptor.TEMPLATE_API
     }
 
     /**

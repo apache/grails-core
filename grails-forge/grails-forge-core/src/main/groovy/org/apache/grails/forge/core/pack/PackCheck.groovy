@@ -87,7 +87,8 @@ final class PackCheck {
             // the first application a template fails for says enough about it
             for (Map.Entry<String, Map<String, Object>> sample : samples.entrySet()) {
                 try {
-                    pages.render(source, name, sample.value, PackLoader.MAX_FILE_BYTES)
+                    // compiled for the first application, and rendered for each
+                    pages.render(descriptor.name, source, name, descriptor.templateApi, sample.value, PackLoader.MAX_FILE_BYTES)
                 } catch (IllegalArgumentException e) {
                     problems << line("files[${index}].from: ${e.message} (for an application with ${sample.key})")
                     break
