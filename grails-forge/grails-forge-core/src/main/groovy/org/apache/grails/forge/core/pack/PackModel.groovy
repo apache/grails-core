@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.pack
 
 import groovy.transform.CompileStatic
 import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.util.VersionInfo
 
 /**
@@ -46,6 +47,10 @@ import org.grails.forge.util.VersionInfo
  * <tr><td>{@code grailsVersion}</td><td>the version of Grails the application is generated for</td></tr>
  * <tr><td>{@code pack.name}</td><td>the name of the feature of the pack</td></tr>
  * </table>
+ *
+ * <p>The templates of a pack Forge has in itself that names artifacts under {@code versionsOfForge} have
+ * one name more, which is not of the template API: {@code versionsOfForge}, the version of each of
+ * those artifacts by its name.</p>
  *
  * @since 9.0
  */
@@ -74,6 +79,17 @@ final class PackModel {
         ] as Map<String, Object>))
         model.put('grailsVersion', VersionInfo.getGrailsVersion())
         model.put('pack', new Names('pack', [name: descriptor.name] as Map<String, Object>))
+        if (descriptor.versionsOfForge) {
+            Map<String, Object> versions = new LinkedHashMap<>()
+            descriptor.versionsOfForge.each { String artifact, String otherwise ->
+                try {
+                    versions.put(artifact, generatorContext.resolveCoordinate(artifact).getVersion() ?: otherwise)
+                } catch (LookupFailedException ignored) {
+                    versions.put(artifact, otherwise)
+                }
+            }
+            model.put('versionsOfForge', new Names('versionsOfForge', versions))
+        }
         return Collections.unmodifiableMap(model)
     }
 

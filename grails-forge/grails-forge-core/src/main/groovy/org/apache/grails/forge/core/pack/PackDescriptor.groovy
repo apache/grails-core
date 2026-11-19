@@ -63,6 +63,18 @@ final class PackDescriptor {
     final String instructions
     /** A link to what the feature brings in that is not of Grails, or {@code null} */
     final String thirdPartyDocumentation
+    /**
+     * For a pack Forge has in itself: the artifacts whose versions its templates are given, each with the
+     * version to use when Forge knows none for it
+     */
+    final Map<String, String> versionsOfForge
+    /**
+     * For a pack Forge has in itself: the text it adds to the build file as it is, by the place it is
+     * added at, a key of {@link PackDescriptorParser#ANCHORS}
+     */
+    final Map<String, String> buildBlocks
+    /** For a pack Forge has in itself: the links it adds to the readme, each a line of its own */
+    final List<PackLink> readmeLinks
 
     @SuppressWarnings('ParameterCount')
     PackDescriptor(String name, String title, String description, String category, String documentation,
@@ -83,6 +95,22 @@ final class PackDescriptor {
                    List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
                    Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
                    String readme, String instructions, String thirdPartyDocumentation) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, thirdPartyDocumentation, [:], [:], [])
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
+                   Map<String, String> buildBlocks, List<PackLink> readmeLinks) {
+        this.versionsOfForge = Collections.unmodifiableMap(new LinkedHashMap<String, String>(versionsOfForge))
+        this.buildBlocks = Collections.unmodifiableMap(new LinkedHashMap<String, String>(buildBlocks))
+        this.readmeLinks = List.copyOf(readmeLinks)
         this.thirdPartyDocumentation = thirdPartyDocumentation
         this.name = name
         this.title = title
@@ -109,7 +137,7 @@ final class PackDescriptor {
     private List<Object> state() {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
-                configuration, files, readme, instructions, thirdPartyDocumentation] as List<Object>
+                configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks] as List<Object>
     }
 
     /**
@@ -191,10 +219,37 @@ final class PackDescriptor {
 
         final String id
         final String version
+        /**
+         * The artifact of the plugin, when its version is the one Forge knows for that artifact, or
+         * {@code null}. Only a pack Forge has in itself can name one.
+         */
+        final String artifactOfForge
 
         PackBuildPlugin(String id, String version) {
+            this(id, version, null)
+        }
+
+        PackBuildPlugin(String id, String version, String artifactOfForge) {
             this.id = id
             this.version = version
+            this.artifactOfForge = artifactOfForge
+        }
+    }
+
+    /**
+     * A link a pack Forge has in itself adds to the readme of the application.
+     */
+    @CompileStatic
+    @EqualsAndHashCode
+    @ToString(includeNames = true, includePackage = false)
+    static final class PackLink {
+
+        final String label
+        final String href
+
+        PackLink(String label, String href) {
+            this.label = label
+            this.href = href
         }
     }
 

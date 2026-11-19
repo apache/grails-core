@@ -25,6 +25,7 @@ import java.util.function.Supplier
 import org.apache.grails.forge.core.pack.PackDescriptor.PackBuildPlugin
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
+import org.apache.grails.forge.core.pack.PackDescriptor.PackLink
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
@@ -161,7 +162,10 @@ class PackFeature implements Feature {
             generatorContext.addDependency(toDependency(generatorContext, platform, true))
         }
         for (PackBuildPlugin plugin : descriptor.buildPlugins) {
-            generatorContext.addBuildPlugin(GradlePlugin.builder().id(plugin.id).version(plugin.version).build())
+            // with an artifact, as a compiled feature of the framework looks the version of its plugin up
+            generatorContext.addBuildPlugin(plugin.artifactOfForge == null ?
+                    GradlePlugin.builder().id(plugin.id).version(plugin.version).build() :
+                    GradlePlugin.builder().id(plugin.id).lookupArtifactId(plugin.artifactOfForge).build())
         }
         descriptor.buildProperties.each { String property, String value ->
             checkProperty(generatorContext, property, value)
@@ -174,6 +178,12 @@ class PackFeature implements Feature {
             } else {
                 generatorContext.getBuildContributions().extension(extension, body)
             }
+        }
+        descriptor.buildBlocks.each { String anchor, String text ->
+            generatorContext.getBuildContributions().block(PackDescriptorParser.ANCHORS.get(anchor), text)
+        }
+        for (PackLink link : descriptor.readmeLinks) {
+            generatorContext.addHelpLink(link.label, link.href)
         }
         Map<String, Object> settings = new LinkedHashMap<>()
         flatten(descriptor.configuration, '', settings)

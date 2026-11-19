@@ -26,8 +26,10 @@ import java.util.regex.Pattern
 import org.apache.grails.forge.core.pack.PackDescriptor.PackBuildPlugin
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
+import org.apache.grails.forge.core.pack.PackDescriptor.PackLink
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.build.dependencies.Scope
+import org.grails.forge.build.gradle.BuildFileAnchor
 import org.grails.forge.feature.Category
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
@@ -87,6 +89,13 @@ class PackDescriptorParser {
     public static final Set<String> DESTINATION_TOKENS = Collections.unmodifiableSet(
             ['packageName', 'packagePath', 'className', 'naturalName', 'propertyName', 'name'] as Set<String>)
 
+    /** The places of the build file a pack Forge has in itself can add text at, by their names in a descriptor */
+    public static final Map<String, BuildFileAnchor> ANCHORS = Collections.unmodifiableMap([
+            afterPlugins: BuildFileAnchor.AFTER_PLUGINS,
+            afterDependencies: BuildFileAnchor.AFTER_DEPENDENCIES,
+            end: BuildFileAnchor.END,
+    ] as Map<String, BuildFileAnchor>)
+
     /** The most characters a descriptor can have */
     public static final int MAX_LENGTH = 256 * 1024
 
@@ -97,6 +106,8 @@ class PackDescriptorParser {
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
+    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks']
+    private static final int MAX_ENTRIES_OF_FORGE = 20
     private static final String FEATURE_KIND = 'feature'
     private static final String MARKUP = '@|'
     private static final String ENVIRONMENTS = 'environments'
@@ -112,6 +123,8 @@ class PackDescriptorParser {
     private static final Pattern NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
     private static final String COORDINATE_PART = /[A-Za-z0-9][A-Za-z0-9_.\-]*/
     private static final Pattern COORDINATES = Pattern.compile(COORDINATE_PART + ':' + COORDINATE_PART)
+    private static final Pattern ARTIFACT = Pattern.compile(COORDINATE_PART)
+    private static final Pattern LINK_LABEL = Pattern.compile(/[^\[\]<>\\]+/)
     private static final Pattern EXCLUSION = Pattern.compile(COORDINATE_PART + '(:' + COORDINATE_PART + ')?')
     private static final Pattern FEATURE_ID = Pattern.compile('(' + COORDINATE_PART + ':' + COORDINATE_PART + '#)?' + NAME.pattern())
     private static final Pattern GROUP_ID = Pattern.compile(COORDINATE_PART + '(:' + COORDINATE_PART + ')?')
@@ -149,9 +162,21 @@ class PackDescriptorParser {
     }
 
     /**
-     * Reads the descriptor of a pack Forge has in itself. It is the same format with one thing more:
-     * a dependency can say {@code versionOfForge: true} in place of a version, and has the group and
-     * version Forge knows for the artifact.
+     * Reads the descriptor of a pack Forge has in itself. It is the same format with these things more,
+     * each of which a compiled feature of the framework does and the pack of a plugin cannot:
+     * <ul>
+     * <li>a dependency can say {@code versionOfForge: true} in place of a version, and has the group and
+     * version Forge knows for the artifact;</li>
+     * <li>a build plugin can say {@code artifactOfForge: <artifact>} in place of a version, and has the
+     * version Forge knows for that artifact;</li>
+     * <li>{@code versionsOfForge} maps artifacts to versions: the templates of the pack have
+     * {@code versionsOfForge}, the version Forge knows for each artifact or, when it knows none, the
+     * one written here;</li>
+     * <li>{@code build.blocks} maps {@code afterPlugins}, {@code afterDependencies} and {@code end} to
+     * text that is added to the build file at that place as it is;</li>
+     * <li>{@code readmeLinks} is a list of {@code label} and {@code href}: links the readme of the
+     * application gets, each as an entry of a list.</li>
+     * </ul>
      *
      * @param yaml the text of the descriptor
      * @param source where the descriptor came from, for messages
@@ -167,7 +192,7 @@ class PackDescriptorParser {
         List<String> problems = new Problems()
         checkTree(root, '', problems)
         failOn(problems, source)
-        unknownKeys(root, KEYS.toList(), '', problems)
+        unknownKeys(root, ofForge ? KEYS.toList() + KEYS_OF_FORGE : KEYS.toList(), '', problems)
         requireNumber(root, 'format', PackDescriptor.FORMAT, problems)
         requireNumber(root, 'templateApi', PackDescriptor.TEMPLATE_API, problems)
         String kind = requiredText(root, 'kind', '', MAX_LINE, problems)
@@ -195,7 +220,7 @@ class PackDescriptorParser {
             problems << "conflicts: ${describe(both)} is also required".toString()
         }
         Map<String, Object> build = map(root, 'build', '', problems)
-        unknownKeys(build, ['properties', 'extensions'], 'build.', problems)
+        unknownKeys(build, ofForge ? ['properties', 'extensions', 'blocks'] : ['properties', 'extensions'], 'build.', problems)
 
         PackDescriptor descriptor = new PackDescriptor(
                 name,
@@ -213,7 +238,7 @@ class PackDescriptorParser {
                         "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems),
                 dependencies(root, 'dependencies', true, ofForge, problems),
                 dependencies(root, 'platforms', false, false, problems),
-                buildPlugins(root, problems),
+                buildPlugins(root, ofForge, problems),
                 buildProperties(build, problems),
                 buildExtensions(build, problems),
                 configuration(root, problems),
@@ -221,7 +246,10 @@ class PackDescriptorParser {
                 document(root.get('readme'), 'readme', problems),
                 document(root.get('instructions'), 'instructions', problems),
                 matching(text(root, 'thirdPartyDocumentation', '', MAX_PARAGRAPH, problems), URL, 'thirdPartyDocumentation',
-                        "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems))
+                        "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems),
+                ofForge ? versionsOfForge(root, problems) : [:] as Map<String, String>,
+                ofForge ? buildBlocks(build, problems) : [:] as Map<String, String>,
+                ofForge ? readmeLinks(root, problems) : [] as List<PackLink>)
         failOn(problems, source)
         return descriptor
     }
@@ -445,20 +473,96 @@ class PackDescriptorParser {
         return dependencies
     }
 
-    private static List<PackBuildPlugin> buildPlugins(Map<String, Object> root, List<String> problems) {
+    private static List<PackBuildPlugin> buildPlugins(Map<String, Object> root, boolean ofForge, List<String> problems) {
         List<PackBuildPlugin> plugins = []
         Set<String> declared = new HashSet<>()
         maps(root, 'buildPlugins', problems).each { int index, Map<String, Object> entry ->
             String at = "buildPlugins[${index}]."
-            unknownKeys(entry, ['id', 'version'], at, problems)
+            unknownKeys(entry, ofForge ? ['id', 'version', 'artifactOfForge'] : ['id', 'version'], at, problems)
             String id = matching(requiredText(entry, 'id', at, MAX_LINE, problems), PLUGIN_ID, at + 'id',
                     "must be the id of a Gradle plugin, such as 'com.acme.audit'", problems)
             if (id != null && !declared.add(id)) {
                 problems << "${at}id: ${describe(id)} is declared by an earlier entry too".toString()
             }
-            plugins << new PackBuildPlugin(id, version(entry, at, problems))
+            String artifact = !ofForge ? null : matching(text(entry, 'artifactOfForge', at, MAX_LINE, problems), ARTIFACT, at + 'artifactOfForge',
+                    'must be the artifact Forge knows the version of the plugin by', problems)
+            if (artifact != null && entry.get('version') != null) {
+                problems << "${at}artifactOfForge: has the version Forge knows, and then there is no version".toString()
+            }
+            plugins << new PackBuildPlugin(id, version(entry, at, problems), artifact)
         }
         return plugins
+    }
+
+    /**
+     * The artifacts a pack of Forge has the versions of in its templates, each with the version to use
+     * when Forge knows none.
+     */
+    private static Map<String, String> versionsOfForge(Map<String, Object> root, List<String> problems) {
+        Map<String, String> versions = new LinkedHashMap<>()
+        Map<String, Object> declared = map(root, 'versionsOfForge', '', problems)
+        if (declared.size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "versionsOfForge: can name ${MAX_ENTRIES_OF_FORGE} artifacts, but names ${declared.size()}".toString()
+            return versions
+        }
+        declared.each { String artifact, Object value ->
+            if (!ARTIFACT.matcher(artifact).matches()) {
+                problems << "versionsOfForge: is a mapping of artifacts to versions, but one artifact is ${describe(artifact)}".toString()
+                return
+            }
+            String at = "versionsOfForge.${brief(artifact)}"
+            String otherwise = matching(requiredText(declared, artifact, 'versionsOfForge.', MAX_LINE, problems),
+                    VERSION, at, "must be one version, of letters, digits, '.', '-', '+' and '_', for when Forge knows none", problems)
+            if (otherwise != null) {
+                versions.put(artifact, otherwise)
+            }
+        }
+        return versions
+    }
+
+    /**
+     * The text a pack of Forge adds to the build file as it is, by the name of the place.
+     */
+    private static Map<String, String> buildBlocks(Map<String, Object> build, List<String> problems) {
+        Map<String, String> blocks = new LinkedHashMap<>()
+        map(build, 'blocks', 'build.', problems).each { String anchor, Object value ->
+            if (!ANCHORS.containsKey(anchor)) {
+                problems << "build.blocks: has text for ${ANCHORS.keySet().toList()}, but one place is ${describe(anchor)}".toString()
+                return
+            }
+            String text = document(value, "build.blocks.${anchor}", problems)
+            if (text != null) {
+                blocks.put(anchor, text)
+            } else if (value == null) {
+                problems << "build.blocks.${anchor}: must be text, but is empty".toString()
+            }
+        }
+        return blocks
+    }
+
+    /**
+     * The links a pack of Forge adds to the readme. A label is written between the brackets of a
+     * Markdown link, so it has none of its own.
+     */
+    private static List<PackLink> readmeLinks(Map<String, Object> root, List<String> problems) {
+        List<PackLink> links = []
+        Map<Integer, Map<String, Object>> entries = maps(root, 'readmeLinks', problems)
+        if (entries.size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "readmeLinks: can have ${MAX_ENTRIES_OF_FORGE} links, but has ${entries.size()}".toString()
+            return links
+        }
+        entries.each { int index, Map<String, Object> entry ->
+            String at = "readmeLinks[${index}]."
+            unknownKeys(entry, ['label', 'href'], at, problems)
+            String label = matching(requiredText(entry, 'label', at, MAX_LINE, problems), LINK_LABEL, at + 'label',
+                    "must be text without '[', ']', '<', '>' or a backslash", problems)
+            String href = matching(requiredText(entry, 'href', at, MAX_PARAGRAPH, problems), URL, at + 'href',
+                    "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems)
+            if (label != null && href != null) {
+                links << new PackLink(label, href)
+            }
+        }
+        return links
     }
 
     /**

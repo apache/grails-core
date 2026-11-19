@@ -1105,4 +1105,132 @@ configuration:
         PackDescriptorException e = thrown()
         e.problems == ["It has the key '123456789012345678' without quotes, and a key that is a number, true, false or empty is put in quotes"]
     }
+
+    void "a pack of Forge can say what a compiled feature of the framework does"() {
+        given:
+        String text = MINIMAL + '''\
+versionsOfForge:
+  asciidoctorj: '3.0.0'
+  asciidoctorj-diagram: 2.3.1
+readmeLinks:
+  - label: Shadow Gradle Plugin
+    href: https://plugins.gradle.org/plugin/com.gradleup.shadow
+buildPlugins:
+  - id: com.gradleup.shadow
+    artifactOfForge: shadow-gradle-plugin
+  - id: com.acme.audit
+    version: 1.2.0
+build:
+  blocks:
+    afterPlugins: 'apply from: "gradle/asciidoc.gradle"'
+    end: |
+      tasks.register('audit')
+'''
+
+        when:
+        PackDescriptor descriptor = parser.parseOfForge(text, 'forge.yml')
+
+        then:
+        descriptor.versionsOfForge == [asciidoctorj: '3.0.0', 'asciidoctorj-diagram': '2.3.1']
+        descriptor.readmeLinks.collect { [it.label, it.href] } == [['Shadow Gradle Plugin', 'https://plugins.gradle.org/plugin/com.gradleup.shadow']]
+        descriptor.buildPlugins.collect { [it.id, it.version, it.artifactOfForge] } ==
+                [['com.gradleup.shadow', null, 'shadow-gradle-plugin'], ['com.acme.audit', '1.2.0', null]]
+        descriptor.buildBlocks == [afterPlugins: 'apply from: "gradle/asciidoc.gradle"', end: "tasks.register('audit')\n"]
+        descriptor.buildPlugins.first().toString() == 'PackDescriptor$PackBuildPlugin(id:com.gradleup.shadow, version:null, artifactOfForge:shadow-gradle-plugin)'
+
+        and: 'what it says is part of what it is'
+        descriptor == parser.parseOfForge(text, 'again.yml')
+        descriptor.hashCode() == parser.parseOfForge(text, 'again.yml').hashCode()
+        [["asciidoctorj: '3.0.0'", "asciidoctorj: '3.0.1'"], ['label: Shadow', 'label: Shade'], ['shadow-gradle-plugin', 'shadow'],
+         ['afterPlugins:', 'afterDependencies:']].every { List<String> change ->
+            descriptor != parser.parseOfForge(text.replace(change[0], change[1]), 'other.yml')
+        }
+    }
+
+    void "what only a pack of Forge can say cannot be changed once it is read"() {
+        given:
+        PackDescriptor descriptor = parser.parseOfForge(MINIMAL + "versionsOfForge:\n  a: '1'\nreadmeLinks:\n  - label: a\n    href: https://acme.example\n" +
+                'build:\n  blocks:\n    end: x\n', 'forge.yml')
+
+        when:
+        change(descriptor)
+
+        then:
+        thrown(UnsupportedOperationException)
+
+        where:
+        change << [
+                { PackDescriptor it -> it.versionsOfForge.put('b', '2') },
+                { PackDescriptor it -> it.buildBlocks.clear() },
+                { PackDescriptor it -> it.readmeLinks.clear() },
+        ]
+    }
+
+    void "a pack of Forge that says nothing more is the descriptor a plugin would have"() {
+        given:
+        String text = MINIMAL + DEPENDENCY + 'com.acme:a\nbuildPlugins:\n  - id: com.acme.audit\n'
+
+        when:
+        PackDescriptor descriptor = parser.parseOfForge(text, 'forge.yml')
+
+        then:
+        descriptor == parser.parse(text, 'acme.yml')
+        descriptor.versionsOfForge == [:]
+        descriptor.buildBlocks == [:]
+        descriptor.readmeLinks == []
+        descriptor.buildPlugins.first().artifactOfForge == null
+    }
+
+    @Unroll
+    void "the pack of a plugin cannot say #key, which is for the packs of Forge"() {
+        when:
+        parser.parse(MINIMAL + text, 'acme.yml')
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems.size() == 1
+        e.problems.first().startsWith("${place}: has the key '${key}', which this version of Forge does not read here; the keys are [")
+        e.problems.first().endsWith(keys)
+        !e.problems.first().contains("${key},") && !e.problems.first().contains("${key}]")
+
+        where:
+        key               | place             | keys                       | text
+        'versionsOfForge' | 'the descriptor'  | 'thirdPartyDocumentation]' | "versionsOfForge:\n  asciidoctorj: '3.0.0'\n"
+        'readmeLinks'     | 'the descriptor'  | 'thirdPartyDocumentation]' | 'readmeLinks:\n  - label: Shadow\n    href: https://acme.example\n'
+        'artifactOfForge' | 'buildPlugins[0]' | '[id, version]'            | 'buildPlugins:\n  - id: com.gradleup.shadow\n    artifactOfForge: shadow\n'
+        'blocks'          | 'build'           | '[properties, extensions]' | 'build:\n  blocks:\n    end: x\n'
+    }
+
+    @Unroll
+    void "what only a pack of Forge can say is held to what it is: #problem"() {
+        when:
+        parser.parseOfForge(MINIMAL + text, 'forge.yml')
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == [problem]
+
+        where:
+        text                                                                       | problem
+        'versionsOfForge: [a]\n'                                                   | 'versionsOfForge: must be a mapping of keys to values, but is a list'
+        "versionsOfForge:\n  'a:b': '1.0'\n"                                       | "versionsOfForge: is a mapping of artifacts to versions, but one artifact is 'a:b'"
+        'versionsOfForge:\n  asciidoctorj:\n'                                      | 'versionsOfForge.asciidoctorj: is required'
+        'versionsOfForge:\n  asciidoctorj: 1.5\n'                                  | 'versionsOfForge.asciidoctorj: must be text, but is the number 1.5; put it in quotes'
+        "versionsOfForge:\n  asciidoctorj: \"1.0'\"\n"                             | "versionsOfForge.asciidoctorj: must be one version, of letters, digits, '.', '-', '+' and '_', for when Forge knows none, but is '1.0''"
+        'versionsOfForge:\n' + (1..21).collect { "  a${it}: '1'\n" }.join('')      | 'versionsOfForge: can name 20 artifacts, but names 21'
+        "versionsOfForge:\n  asciidoctorj: '@|red 1|@'\n"                          | "versionsOfForge.asciidoctorj: has '@|' in it, which the command line reads as the start of markup"
+        'buildPlugins:\n  - id: a.b\n    artifactOfForge: a:b\n'                   | "buildPlugins[0].artifactOfForge: must be the artifact Forge knows the version of the plugin by, but is 'a:b'"
+        "buildPlugins:\n  - id: a.b\n    artifactOfForge: a\n    version: '1'\n"   | 'buildPlugins[0].artifactOfForge: has the version Forge knows, and then there is no version'
+        'buildPlugins:\n  - id: a.b\n    artifactOfForge: true\n'                  | 'buildPlugins[0].artifactOfForge: must be text, but is the value true; put it in quotes'
+        'build:\n  blocks:\n    start: x\n'                                        | "build.blocks: has text for [afterPlugins, afterDependencies, end], but one place is 'start'"
+        'build:\n  blocks:\n    end:\n'                                            | 'build.blocks.end: must be text, but is empty'
+        'build:\n  blocks:\n    end: 1\n'                                          | 'build.blocks.end: must be text, but is the number 1; put it in quotes'
+        'build:\n  blocks: x\n'                                                    | "build.blocks: must be a mapping of keys to values, but is 'x'"
+        'readmeLinks:\n  - label: a\n'                                             | 'readmeLinks[0].href: is required'
+        'readmeLinks:\n  - href: https://acme.example\n'                           | 'readmeLinks[0].label: is required'
+        "readmeLinks:\n  - label: 'a](https://b.example) [c'\n    href: https://acme.example\n" | "readmeLinks[0].label: must be text without '[', ']', '<', '>' or a backslash, but is 'a](https://b.example) [c'"
+        'readmeLinks:\n  - label: a\n    href: javascript:alert(1)\n'              | "readmeLinks[0].href: must be an http or https address, without spaces, quotes, '<', '>' or '\$', but is 'javascript:alert(1)'"
+        'readmeLinks:\n  - label: a\n    href: https://acme.example\n    title: b\n' | "readmeLinks[0]: has the key 'title', which this version of Forge does not read here; the keys are [label, href]"
+        'readmeLinks:\n' + ('  - label: a\n    href: https://acme.example\n' * 21) | 'readmeLinks: can have 20 links, but has 21'
+    }
 }

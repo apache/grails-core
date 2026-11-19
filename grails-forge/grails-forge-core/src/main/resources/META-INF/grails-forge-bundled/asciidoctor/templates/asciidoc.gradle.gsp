@@ -16,14 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 --}%
-<%@ page trimLogicLines="true" expressionCodec="none" %>
-<%@ model="String asciidoctorjVersion" %>
-<%@ model="String asciidoctorjModuleDiagramVersion" %>
 asciidoctorj {
-    version '${asciidoctorjVersion}'
+    version '${versionsOfForge['asciidoctorj']}'
     modules {
         diagram {
-            version '${asciidoctorjModuleDiagramVersion}'
+            version '${versionsOfForge['asciidoctorj-diagram']}'
         }
     }
 
