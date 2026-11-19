@@ -24,6 +24,7 @@ import java.util.List;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -174,7 +175,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
         try {
-            closeAdditionalSessions(request);
+            closeAdditionalSessions(request, false);
         }
         finally {
             super.afterCompletion(request, ex);
@@ -184,7 +185,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     /**
      * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
      * handling. The sessions this interceptor opened for the other datasources are closed here, so that the thread
-     * goes back to its pool without them.
+     * goes back to its pool without them. Each is flushed first when {@link #postHandle} would flush it and Hibernate
+     * allows the flush: inside a transaction, or with {@code hibernate.allow_update_outside_transaction}.
      *
      * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
      * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
@@ -193,7 +195,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
         try {
-            closeAdditionalSessions(request);
+            closeAdditionalSessions(request, true);
         }
         finally {
             if (isGrailsAsync(request) && !isParticipating(request) &&
@@ -227,7 +229,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         return request.getAttribute(getParticipateAttributeName(), WebRequest.SCOPE_REQUEST) != null;
     }
 
-    private void closeAdditionalSessions(WebRequest request) {
+    private void closeAdditionalSessions(WebRequest request, boolean flushFirst) {
+        RuntimeException firstFlushException = null;
         for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
             SessionFactory sf = config.sessionFactory;
@@ -237,6 +240,22 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
             if (sessionHolder != null) {
                 Session session = sessionHolder.getSession();
+                if (flushFirst && isFlushAllowed(session)) {
+                    try {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Flushing additional Hibernate session for datasource '" + config.connectionName + "' as asynchronous handling starts");
+                        }
+                        session.flush();
+                    }
+                    catch (RuntimeException flushEx) {
+                        if (firstFlushException == null) {
+                            firstFlushException = flushEx;
+                        }
+                        else {
+                            firstFlushException.addSuppressed(flushEx);
+                        }
+                    }
+                }
                 TransactionSynchronizationManager.unbindResource(sf);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
@@ -249,6 +268,23 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 }
             }
         }
+        if (firstFlushException != null) {
+            throw firstFlushException;
+        }
+    }
+
+    /**
+     * @return whether {@link #postHandle} would flush the session, and Hibernate would let it: a session it would not
+     * flush (MANUAL or COMMIT) is not flushed here either, and one outside a transaction only when
+     * {@code hibernate.allow_update_outside_transaction} is set, since Hibernate refuses that flush otherwise
+     */
+    private static boolean isFlushAllowed(Session session) {
+        FlushMode flushMode = session.getHibernateFlushMode();
+        if (flushMode == FlushMode.MANUAL || flushMode == FlushMode.COMMIT) {
+            return false;
+        }
+        return ((SharedSessionContractImplementor) session).isTransactionInProgress() ||
+                session.getSessionFactory().getSessionFactoryOptions().isAllowOutOfTransactionUpdateOperations();
     }
 
     private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {

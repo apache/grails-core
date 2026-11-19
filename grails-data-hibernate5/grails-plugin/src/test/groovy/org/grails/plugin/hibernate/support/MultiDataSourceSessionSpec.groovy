@@ -213,6 +213,68 @@ class MultiDataSourceSessionSpec extends Specification {
         defaultSession?.close()
     }
 
+    def "a request that goes asynchronous flushes another datasource's session under AUTO when updates outside a transaction are allowed"() {
+        given: "a datastore that flushes in AUTO mode and allows updates outside a transaction, with a book on its secondary datasource"
+        HibernateDatastore autoFlush = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config + [
+                'hibernate.flush.mode': 'AUTO',
+                'hibernate.allow_update_outside_transaction': 'true',
+                'dataSource.url': 'jdbc:h2:mem:outsideTxDefaultDb;LOCK_TIMEOUT=10000',
+                'dataSources.secondary': [url: 'jdbc:h2:mem:outsideTxSecondaryDb;LOCK_TIMEOUT=10000'],
+        ]), OutsideTransactionBook)
+        SessionFactory secondarySf = autoFlush.getDatastoreForConnection('secondary').sessionFactory
+        Serializable bookId = OutsideTransactionBook.withNewTransaction { new OutsideTransactionBook(title: 'Before').save(flush: true).id }
+
+        and: "a request that changes it without a flush"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(autoFlush)
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session secondarySession = boundSession(secondarySf)
+        secondarySession.get(OutsideTransactionBook, bookId).title = 'After'
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the change is written, as postHandle would write it, and the session is closed"
+        titleOf(secondarySf, OutsideTransactionBook, bookId) == 'After'
+        !secondarySession.open
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+
+        cleanup:
+        autoFlush?.close()
+    }
+
+    def "a request that goes asynchronous does not flush another datasource's session under AUTO when Hibernate would refuse it"() {
+        given: "a datastore that flushes in AUTO mode with the default setting, which refuses a flush outside a transaction"
+        HibernateDatastore autoFlush = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config + [
+                'hibernate.flush.mode': 'AUTO',
+                'dataSource.url': 'jdbc:h2:mem:insideTxDefaultDb;LOCK_TIMEOUT=10000',
+                'dataSources.secondary': [url: 'jdbc:h2:mem:insideTxSecondaryDb;LOCK_TIMEOUT=10000'],
+        ]), InsideTransactionBook)
+        SessionFactory secondarySf = autoFlush.getDatastoreForConnection('secondary').sessionFactory
+        Serializable bookId = InsideTransactionBook.withNewTransaction { new InsideTransactionBook(title: 'Before').save(flush: true).id }
+
+        and: "a request that changes it without a flush"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(autoFlush)
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session secondarySession = boundSession(secondarySf)
+        secondarySession.get(InsideTransactionBook, bookId).title = 'After'
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "nothing is flushed or thrown, and the session is closed"
+        notThrown(Exception)
+        titleOf(secondarySf, InsideTransactionBook, bookId) == 'Before'
+        !secondarySession.open
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+
+        cleanup:
+        autoFlush?.close()
+    }
+
     def "a request that Grails makes asynchronous closes its default session too"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
@@ -346,6 +408,16 @@ class MultiDataSourceSessionSpec extends Specification {
         interceptor.afterCompletion(webRequest, null)
     }
 
+    private static String titleOf(SessionFactory sessionFactory, Class type, Serializable id) {
+        Session session = sessionFactory.openSession()
+        try {
+            session.get(type, id).title
+        }
+        finally {
+            session.close()
+        }
+    }
+
     private WebRequest webRequest() {
         Map<String, Object> attributes = [:]
         Stub(WebRequest) {
@@ -374,4 +446,22 @@ class OsivBook {
 @Entity
 class OsivAuthor {
     String name
+}
+
+@Entity
+class OutsideTransactionBook {
+    String title
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+
+@Entity
+class InsideTransactionBook {
+    String title
+
+    static mapping = {
+        datasource 'secondary'
+    }
 }
