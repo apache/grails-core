@@ -19,6 +19,7 @@
 
 package gorm
 
+import spock.lang.PendingFeature
 import spock.lang.Specification
 
 import grails.gorm.transactions.Rollback
@@ -110,6 +111,7 @@ class QueryEntryPointScenariosSpec extends Specification {
         clubs*.name == ['c1']
     }
 
+    @PendingFeature(reason = 'Hibernate 7 now drops the club without a team for ne on a property of a left alias, as Hibernate 5 does, because <> is unknown for a null (#16905)')
     void "not over a left-joined association: a missing association matches ne but not not-eq"() {
         when:
         List<QsClub> notEqual = QsClub.withCriteria {
