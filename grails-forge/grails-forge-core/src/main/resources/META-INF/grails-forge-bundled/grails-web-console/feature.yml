@@ -28,6 +28,7 @@ documentation: 'https://github.com/grails-plugins/grails-web-console/#readme'
 dependencies:
   - scope: runtimeOnly
     coordinates: org.grails.plugins:grails-web-console
+    versionOfForge: true
 configuration:
   environments:
     production:

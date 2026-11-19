@@ -363,14 +363,6 @@ class GeneratorContext implements DependencyContext {
         addTemplate(templateName, new GspTemplate(triggerFile, view))
     }
 
-    /**
-     * @param artifactId the artifact of a dependency
-     * @return the group and version Forge knows for the artifact, when it knows one
-     */
-    Optional<Coordinate> findCoordinate(String artifactId) {
-        return coordinateResolver.resolve(artifactId)
-    }
-
     @Override
     void addDependency(@Nonnull Dependency dependency) {
         if (dependency.requiresLookup()) {

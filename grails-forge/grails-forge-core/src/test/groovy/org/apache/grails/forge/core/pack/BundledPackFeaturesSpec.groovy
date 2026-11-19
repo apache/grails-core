@@ -22,15 +22,8 @@ import java.nio.file.Files
 import java.nio.file.Path
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.application.OperatingSystem
-import org.grails.forge.application.Project
-import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureRegistry
-import org.grails.forge.io.ConsoleOutput
-import org.grails.forge.io.MapOutputHandler
-import org.grails.forge.options.Options
-import org.grails.forge.util.NameUtils
 import spock.lang.TempDir
 
 class BundledPackFeaturesSpec extends ApplicationContextSpec {
@@ -73,23 +66,34 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
         e.problems == ['There is no META-INF/grails-forge-bundled/no-such-pack/feature.yml, or it is larger than a descriptor can be']
     }
 
-    void "a pack that is not of Forge takes no version from what Forge knows"() {
+    void "a pack that is not of Forge cannot ask for the version Forge knows"() {
         given:
         Files.createDirectories(directory.resolve('templates'))
         Files.writeString(directory.resolve('feature.yml'), new String(
                 getClass().classLoader.getResourceAsStream('META-INF/grails-forge-bundled/grails-web-console/feature.yml').readAllBytes(), 'UTF-8')
                 .replace('name: grails-web-console', 'name: acme-console'))
-        Pack pack = new PackLoader().fromDirectory(directory)
-        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
-        Project project = NameUtils.parse('example.grails.foo')
-        MapOutputHandler output = new MapOutputHandler()
 
         when:
-        generator.generate(ApplicationType.WEB, project, output, generator.createGeneratorContext(ApplicationType.WEB, project,
-                new Options(), OperatingSystem.LINUX, ['acme-console'], ConsoleOutput.NOOP, [pack]))
+        new PackLoader().fromDirectory(directory)
 
         then:
-        !pack.bundled
-        output.getProject()['build.gradle'].contains('    runtimeOnly "org.grails.plugins:grails-web-console"\n')
+        PackDescriptorException e = thrown()
+        e.problems == ["dependencies[0]: has the key 'versionOfForge', which this version of Forge does not read here; " +
+                               'the keys are [scope, coordinates, version, excludes]']
+    }
+
+    void "a pack of Forge that asks for the version Forge knows names no version of its own"() {
+        when:
+        new PackDescriptorParser().parseOfForge(PackGenerationSpec.HEADER + 'name: acme\ndependencies:\n  - scope: implementation\n' +
+                "    coordinates: com.acme:a\n    version: '1.0'\n    versionOfForge: true\n", 'test')
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == ['dependencies[0].versionOfForge: must be true, and then there is no version']
+    }
+
+    void "every pack of Forge gives the applications a compiled feature of the same name would"() {
+        expect: 'the names here are the features that were compiled once; a pack that goes missing is a feature that goes missing'
+        BundledPackFeatures.names(getClass().classLoader) == ['cache-ehcache', 'grails-quartz', 'grails-web-console']
     }
 }

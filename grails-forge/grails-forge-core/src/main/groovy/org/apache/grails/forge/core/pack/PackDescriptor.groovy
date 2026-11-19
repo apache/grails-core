@@ -61,6 +61,8 @@ final class PackDescriptor {
     final List<PackFile> files
     final String readme
     final String instructions
+    /** A link to what the feature brings in that is not of Grails, or {@code null} */
+    final String thirdPartyDocumentation
 
     @SuppressWarnings('ParameterCount')
     PackDescriptor(String name, String title, String description, String category, String documentation,
@@ -69,6 +71,19 @@ final class PackDescriptor {
                    List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
                    Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
                    String readme, String instructions) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, null)
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation) {
+        this.thirdPartyDocumentation = thirdPartyDocumentation
         this.name = name
         this.title = title
         this.description = description
@@ -94,7 +109,7 @@ final class PackDescriptor {
     private List<Object> state() {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
-                configuration, files, readme, instructions] as List<Object>
+                configuration, files, readme, instructions, thirdPartyDocumentation] as List<Object>
     }
 
     /**
@@ -146,8 +161,18 @@ final class PackDescriptor {
         final String version
         /** Each {@code group} or {@code group:artifact} */
         final List<String> excludes
+        /**
+         * Whether the group and version are those Forge knows for the artifact. Only a pack Forge has
+         * in itself can say so: a feature of the framework names its versions in one place.
+         */
+        final boolean versionOfForge
 
         PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes) {
+            this(scope, groupId, artifactId, version, excludes, false)
+        }
+
+        PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes, boolean versionOfForge) {
+            this.versionOfForge = versionOfForge
             this.scope = scope
             this.groupId = groupId
             this.artifactId = artifactId

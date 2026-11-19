@@ -23,7 +23,6 @@ import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
-import org.grails.forge.feature.other.GrailsQuartz
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
@@ -53,7 +52,7 @@ class CreateJobCommand extends CodeGenCommand {
 
     @Override
     boolean applies() {
-        return config.getFeatures().contains(GrailsQuartz.FEATURE_NAME)
+        return config.getFeatures().contains('grails-quartz')
     }
 
     @Override

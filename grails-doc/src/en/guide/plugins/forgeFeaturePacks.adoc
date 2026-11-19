@@ -92,6 +92,9 @@ readme: The audit trail is configured in `AuditConfig`.
 |`title`, `description`, `category`, `documentation`
 |`description` is what `--list-features` shows for the feature, under its `category`. `title` and `documentation`, a link, are for tools that present features.
 
+|`thirdPartyDocumentation`
+|A link to the documentation of what the plugin integrates, for the `README.md` of the application.
+
 |`applicationTypes`
 |The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`. All of them when left out.
 

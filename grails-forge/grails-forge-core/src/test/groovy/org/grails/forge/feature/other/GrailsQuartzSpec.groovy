@@ -32,16 +32,16 @@ class GrailsQuartzSpec extends ApplicationContextSpec implements CommandOutputFi
 
     void "test grails-quartz feature"() {
         when:
-        final Features features = getFeatures([GrailsQuartz.FEATURE_NAME])
+        final Features features = getFeatures(['grails-quartz'])
 
         then:
-        features.contains(GrailsQuartz.FEATURE_NAME)
+        features.contains('grails-quartz')
     }
 
     void "test grails-quartz dependency version is managed by the grails-bom"() {
         when:
         final String template = new BuildBuilder(beanContext)
-                .features([GrailsQuartz.FEATURE_NAME])
+                .features(['grails-quartz'])
                 .render()
 
         then:
@@ -51,7 +51,7 @@ class GrailsQuartzSpec extends ApplicationContextSpec implements CommandOutputFi
 
     void "test grails-quartz enables quartz auto startup"() {
         when:
-        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), [GrailsQuartz.FEATURE_NAME])
+        final def output = generate(ApplicationType.WEB, new Options(DevelopmentReloading.DEVTOOLS), ['grails-quartz'])
         final def config = new YamlSlurper().parseText(output["grails-app/conf/application.yml"])
 
         then:

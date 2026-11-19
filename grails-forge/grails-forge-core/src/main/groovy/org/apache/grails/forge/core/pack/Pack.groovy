@@ -91,7 +91,7 @@ final class Pack {
 
     /**
      * @return whether the pack is one Forge has in itself: a feature of the framework that is written
-     * as a pack. A dependency such a pack declares without a version has the version Forge knows for it.
+     * as a pack
      */
     boolean isBundled() {
         return bundled

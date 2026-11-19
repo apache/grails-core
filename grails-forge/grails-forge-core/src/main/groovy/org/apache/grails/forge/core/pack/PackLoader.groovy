@@ -115,7 +115,7 @@ class PackLoader {
         if (descriptorBytes == null) {
             throw new PackDescriptorException(origin, ["There is no ${base}${Pack.DESCRIPTOR}, or it is larger than a descriptor can be".toString()])
         }
-        PackDescriptor descriptor = parser.parse(text(descriptorBytes, origin), origin)
+        PackDescriptor descriptor = parser.parseOfForge(text(descriptorBytes, origin), origin)
         List<String> problems = []
         if (descriptor.name != name) {
             problems << "name: is ${descriptor.name}, and the pack is in the directory ${name}".toString()

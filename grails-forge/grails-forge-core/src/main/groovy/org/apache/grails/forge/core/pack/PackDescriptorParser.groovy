@@ -96,7 +96,7 @@ class PackDescriptorParser {
     private static final Set<String> KEYS = ['format', 'kind', 'name', 'templateApi', 'compatibility', 'title',
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
-                                             'configuration', 'files', 'readme', 'instructions'] as Set<String>
+                                             'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
     private static final String FEATURE_KIND = 'feature'
     private static final String MARKUP = '@|'
     private static final String ENVIRONMENTS = 'environments'
@@ -145,10 +145,24 @@ class PackDescriptorParser {
      * @throws PackDescriptorException when the descriptor cannot be used
      */
     PackDescriptor parse(String yaml, String source) {
-        return read(yaml, shown(source ?: 'of an unknown origin', MAX_LINE))
+        return read(yaml, shown(source ?: 'of an unknown origin', MAX_LINE), false)
     }
 
-    private static PackDescriptor read(String yaml, String source) {
+    /**
+     * Reads the descriptor of a pack Forge has in itself. It is the same format with one thing more:
+     * a dependency can say {@code versionOfForge: true} in place of a version, and has the group and
+     * version Forge knows for the artifact.
+     *
+     * @param yaml the text of the descriptor
+     * @param source where the descriptor came from, for messages
+     * @return the descriptor
+     * @throws PackDescriptorException when the descriptor is not valid
+     */
+    PackDescriptor parseOfForge(String yaml, String source) {
+        return read(yaml, shown(source ?: 'of an unknown origin', MAX_LINE), true)
+    }
+
+    private static PackDescriptor read(String yaml, String source, boolean ofForge) {
         Map<String, Object> root = load(yaml, source)
         List<String> problems = new Problems()
         checkTree(root, '', problems)
@@ -197,15 +211,17 @@ class PackDescriptorParser {
                 conflicts,
                 matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
                         "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems),
-                dependencies(root, 'dependencies', true, problems),
-                dependencies(root, 'platforms', false, problems),
+                dependencies(root, 'dependencies', true, ofForge, problems),
+                dependencies(root, 'platforms', false, false, problems),
                 buildPlugins(root, problems),
                 buildProperties(build, problems),
                 buildExtensions(build, problems),
                 configuration(root, problems),
                 files(root, problems),
                 document(root.get('readme'), 'readme', problems),
-                document(root.get('instructions'), 'instructions', problems))
+                document(root.get('instructions'), 'instructions', problems),
+                matching(text(root, 'thirdPartyDocumentation', '', MAX_PARAGRAPH, problems), URL, 'thirdPartyDocumentation',
+                        "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems))
         failOn(problems, source)
         return descriptor
     }
@@ -392,12 +408,18 @@ class PackDescriptorParser {
         return ids
     }
 
-    private static List<PackDependency> dependencies(Map<String, Object> root, String key, boolean scoped, List<String> problems) {
+    private static List<PackDependency> dependencies(Map<String, Object> root, String key, boolean scoped, boolean ofForge,
+                                                     List<String> problems) {
         List<PackDependency> dependencies = []
         Set<String> declared = new HashSet<>()
         maps(root, key, problems).each { int index, Map<String, Object> entry ->
             String at = "${key}[${index}]."
-            unknownKeys(entry, scoped ? ['scope', 'coordinates', 'version', 'excludes'] : ['coordinates', 'version'], at, problems)
+            List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes'] : ['coordinates', 'version']
+            unknownKeys(entry, ofForge ? keys + ['versionOfForge'] : keys, at, problems)
+            boolean versionOfForge = ofForge && entry.get('versionOfForge') != null
+            if (versionOfForge && (entry.get('versionOfForge') != Boolean.TRUE || entry.get('version') != null)) {
+                problems << "${at}versionOfForge: must be true, and then there is no version".toString()
+            }
             String scope = scoped ? requiredText(entry, 'scope', at, MAX_LINE, problems) : null
             boolean scopeKnown = !scoped || SCOPES.containsKey(scope)
             if (scope != null && !scopeKnown) {
@@ -418,7 +440,7 @@ class PackDescriptorParser {
                     }
                 }
             }
-            dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes)
+            dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes, versionOfForge)
         }
         return dependencies
     }

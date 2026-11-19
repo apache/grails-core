@@ -80,6 +80,10 @@ class FeatureRegistry {
             if (group == null || group.isBlank()) {
                 throw new IllegalArgumentException("The feature ${feature.getName()} names no exclusive group")
             }
+            if (oneOf.getFeatureClass() == null) {
+                // a feature that is written as a pack is of no class of its own: its group is its identifier
+                continue
+            }
             Class<?> family = familyByGroup.putIfAbsent(group, oneOf.getFeatureClass())
             String known = groupByFamily.putIfAbsent(oneOf.getFeatureClass(), group)
             if ((family != null && family != oneOf.getFeatureClass()) || (known != null && known != group)) {

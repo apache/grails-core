@@ -33,12 +33,12 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
         when:
         Map<String, String> familyByGroup = beanContext.getBean(FeatureRegistry).all()
                 .findAll { it instanceof OneOfFeature }
-                .collectEntries { [((OneOfFeature) it).group, ((OneOfFeature) it).featureClass.simpleName] }
+                .collectEntries { [((OneOfFeature) it).group, ((OneOfFeature) it).featureClass?.simpleName ?: 'a pack of Forge'] }
 
         then:
         familyByGroup == [
                 'api-views'           : 'GrailsViews',
-                'cache-provider'      : 'CacheFeature',
+                'cache-provider'      : 'a pack of Forge',
                 'configuration'       : 'ConfigurationFeature',
                 'data-nosql'          : 'GormOneOfFeature',
                 'database-driver'     : 'DatabaseDriverFeature',

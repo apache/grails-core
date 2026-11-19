@@ -175,7 +175,7 @@ class PackDescriptorParserSpec extends Specification {
         first.hashCode() == second.hashCode()
         first != parser.parse(text.replace('com.acme:a', 'com.acme:b'), 'three.yml')
         first.toString().contains('name:acme-audit')
-        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[])'
+        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[], versionOfForge:false)'
     }
 
     @Unroll
