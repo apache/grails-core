@@ -82,6 +82,18 @@ jobs:
             (( left > 0 )) || return 124
             timeout "$left" "$@"
           }
+          # A request of the check, asked again once after a pause when it fails, as long as the check has time left:
+          # an approval kept this way is checked again on every hourly run, and one passing error of the API should
+          # not dismiss it. Only the answer of the request that succeeds is printed, not the error body gh prints.
+          requested() {
+            local answer
+            answer=$(bounded gh api "$@") || {
+              (( deadline - SECONDS > 5 )) || return 124
+              sleep 5
+              answer=$(bounded gh api "$@") || return
+            }
+            printf '%s\n' "$answer"
+          }
           # Whether a merge commit changed a conflicted file only inside its conflicts. The file git merges by itself
           # holds each conflict between markers labelled with the two parents, and the pushed file has to keep every
           # line outside them as it is, with the same mode. Answers 1 when it does not, also for a conflict git
@@ -141,14 +153,14 @@ jobs:
                 # The commit was fetched as the first parent of the merge before it, so its parents are read from it.
                 parents=$(set -o pipefail; bounded env GIT_NO_LAZY_FETCH=1 git -C merges.git cat-file commit "$commit" | sed -n '1,/^$/s/^parent //p' | tr '\n' ' ') || return 1
               else
-                parents=$(bounded gh api "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")') || return 1
+                parents=$(requested "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")') || return 1
               fi
               read -r first second other <<< "$parents"
               [[ -n "$first" ]] || return 1
               [[ -n "$second" && -z "$other" ]] || { reason="the pull request changed after this approval"; return 1; }
-              behind=$(bounded gh api "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by') || return 1
+              behind=$(requested "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by') || return 1
               [[ "$behind" == 0 ]] || { reason="the pull request changed after this approval"; return 1; }
-              fork=$(bounded gh api "repos/$REPO/compare/$first...$second?per_page=1" --jq '.merge_base_commit.sha') || return 1
+              fork=$(requested "repos/$REPO/compare/$first...$second?per_page=1" --jq '.merge_base_commit.sha') || return 1
               [[ -n "$fork" ]] || return 1
               bounded git -C merges.git fetch --quiet --depth=1 --filter=blob:none origin "$commit" "$first" "$second" "$fork" || return 1
               # The first line is the merged tree, the lines after it name the conflicted files, which fail the command.
