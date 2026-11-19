@@ -71,6 +71,8 @@ class GrailsContentNegotiationStrategy {
 
     private static final String ALL_FORMAT = 'all'
 
+    private static final String REQUEST_STRATEGY_ATTRIBUTE = GrailsContentNegotiationStrategy.name + '.REQUEST_STRATEGY'
+
     /** The formats a type with the structured syntax suffix of RFC 6839 of their name is a document of. */
     private static final Set<String> SUFFIX_FORMATS = Set.of('json', 'xml')
 
@@ -335,13 +337,24 @@ class GrailsContentNegotiationStrategy {
     /**
      * The strategy that resolves the formats of a request: that of the application's {@code MimeTypesConfiguration}, or,
      * in a context without it, such as one a test builds by hand, one built for the request from the application's
-     * settings.
+     * settings. It is looked up once for each request, which keeps it as an attribute, so that {@code request.format},
+     * {@code response.format}, {@code withFormat} and {@code respond} do not look it up again.
      *
      * @param request the request
      * @return the strategy
      * @since 9.0
      */
     static GrailsContentNegotiationStrategy forRequest(HttpServletRequest request) {
+        Object kept = request.getAttribute(REQUEST_STRATEGY_ATTRIBUTE)
+        if (kept instanceof GrailsContentNegotiationStrategy) {
+            return (GrailsContentNegotiationStrategy) kept
+        }
+        GrailsContentNegotiationStrategy strategy = lookUp(request)
+        request.setAttribute(REQUEST_STRATEGY_ATTRIBUTE, strategy)
+        return strategy
+    }
+
+    private static GrailsContentNegotiationStrategy lookUp(HttpServletRequest request) {
         ApplicationContext applicationContext = GrailsWebRequest.lookup()?.applicationContext
         if (applicationContext == null && request.servletContext != null) {
             applicationContext = WebApplicationContextUtils.getWebApplicationContext(request.servletContext)

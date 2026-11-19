@@ -69,6 +69,34 @@ class SpringFormatNegotiationSpec extends Specification {
         RequestContextHolder.resetRequestAttributes()
     }
 
+    void 'the strategy that resolves the formats of a request is looked up once for it, #how'() {
+        given:
+        if (configured) {
+            start((Settings.MIME_NEGOTIATION_SPRING): true)
+        }
+        def first = configured ? request('Accept': 'application/json') : GrailsWebMockUtil.bindMockWebRequest().currentRequest
+        def strategy = GrailsContentNegotiationStrategy.forRequest(first)
+
+        when: 'the format of the request is read, and the strategy asked for again'
+        String format = GrailsWebRequest.lookup().currentResponse.format
+
+        then:
+        format == (configured ? 'json' : 'all')
+        GrailsContentNegotiationStrategy.forRequest(first).is(strategy)
+
+        when: 'another request is negotiated'
+        RequestContextHolder.resetRequestAttributes()
+        def second = configured ? request('Accept': 'application/json') : GrailsWebMockUtil.bindMockWebRequest().currentRequest
+
+        then: "it gets the application's strategy, or, without one, one of its own"
+        GrailsContentNegotiationStrategy.forRequest(second).is(strategy) == configured
+
+        where:
+        how                                                    | configured
+        "of the application's MimeTypesConfiguration"          | true
+        'built for the request in a context without one'       | false
+    }
+
     void "without the setting, Spring MVC's manager is left as it is"() {
         when:
         start([:])
