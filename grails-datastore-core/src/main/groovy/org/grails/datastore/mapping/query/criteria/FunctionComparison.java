@@ -136,10 +136,7 @@ public final class FunctionComparison {
             }
             List<Object> converted = new ArrayList<>();
             for (Object value : in.getValues()) {
-                // a null never equals anything, so it is left out of the list, as in a comparison without a function
-                if (value != null) {
-                    converted.add(FunctionCallingCriterion.convertOperand(conversionService, functionName, value));
-                }
+                converted.add(FunctionCallingCriterion.convertOperand(conversionService, functionName, value));
             }
             return new FunctionComparison(functionName, property, Kind.IN_VALUES, null, null,
                     Collections.unmodifiableList(converted), null);

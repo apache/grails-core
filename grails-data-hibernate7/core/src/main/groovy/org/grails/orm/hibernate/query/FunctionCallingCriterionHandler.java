@@ -61,9 +61,6 @@ class FunctionCallingCriterionHandler implements InternalCriterionHandler<Functi
             case IN_SUBQUERY:
                 return left.in(PropertyCriterionHandler.buildSubquery(context, left, comparison.getSubquery(), comparison.getProperty()));
             case IN_VALUES:
-                if (comparison.getValues().isEmpty()) {
-                    return cb.disjunction();
-                }
                 // the parameters of a list take the type of the function, an int, which would not hold a fraction;
                 // a literal keeps its own type
                 if (comparison.getValues().stream().anyMatch(FunctionComparison::needsLiteral)) {

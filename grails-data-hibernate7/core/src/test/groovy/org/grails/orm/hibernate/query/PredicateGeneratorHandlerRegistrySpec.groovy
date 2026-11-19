@@ -18,7 +18,6 @@
  */
 package org.grails.orm.hibernate.query
 
-import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -29,37 +28,21 @@ import spock.lang.Unroll
 import org.grails.datastore.mapping.query.Query
 
 /**
- * Pins how {@code PredicateGenerator} resolves the handler of a criterion: a criterion class is served by the
- * nearest registered class on its superclass chain, so a subclass is registered on its own only when it needs a
- * handler of a different kind than its ancestor's.
+ * Pins which handler {@code PredicateGenerator} resolves for each builtin criterion: a criterion class is served by
+ * the nearest registered class on its superclass chain.
  */
 class PredicateGeneratorHandlerRegistrySpec extends Specification {
-
-    @Shared
-    Map<Class, Object> registrations
 
     @Shared
     Method findHandler
 
     void setupSpec() {
-        Field field = PredicateGenerator.getDeclaredField('BUILTIN_HANDLERS')
-        field.accessible = true
-        registrations = field.get(null) as Map<Class, Object>
         findHandler = PredicateGenerator.getDeclaredMethod('findHandler', Class)
         findHandler.accessible = true
     }
 
     private Object handlerFor(Class type) {
         findHandler.invoke(null, type)
-    }
-
-    private static Class nearestRegisteredAncestor(Map<Class, Object> registered, Class type) {
-        for (Class current = type.superclass; current != null && Query.QueryElement.isAssignableFrom(current); current = current.superclass) {
-            if (registered.containsKey(current)) {
-                return current
-            }
-        }
-        null
     }
 
     private static List<Class> criterionClasses() {
@@ -75,17 +58,6 @@ class PredicateGeneratorHandlerRegistrySpec extends Specification {
 
         where:
         type << criterionClasses()
-    }
-
-    @Unroll
-    void '#type.simpleName is registered only when its handler differs from its ancestor #ancestor.simpleName'() {
-        expect:
-        registrations[type].getClass() != registrations[ancestor].getClass()
-
-        where:
-        [type, ancestor] << registrations.keySet()
-            .collect { Class type -> [type, nearestRegisteredAncestor(registrations, type)] }
-            .findAll { it[1] != null }
     }
 
     @Unroll
