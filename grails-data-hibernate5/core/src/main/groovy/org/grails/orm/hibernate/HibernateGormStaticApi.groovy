@@ -31,6 +31,7 @@ import org.hibernate.FlushMode
 import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
+import org.hibernate.jpa.QueryHints
 import org.hibernate.query.Query
 
 import org.springframework.core.convert.ConversionService
@@ -91,6 +92,7 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
             CriteriaQuery criteriaQuery = criteriaBuilder.createQuery(persistentEntity.javaClass)
             Root queryRoot = criteriaQuery.from(persistentEntity.javaClass)
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
+                    sessionFactory,
                     persistentEntity,
                     criteriaQuery,
                     queryRoot,
@@ -100,6 +102,11 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
                     true
             )
             Query query = session.createQuery(criteriaQuery)
+            if (criteriaQuery.isDistinct()) {
+                // a query that fetches a collection returns each instance once, without a distinct in the SQL,
+                // which would compare every fetched column and reject an order by a column that it does not select
+                query.setHint(QueryHints.HINT_PASS_DISTINCT_THROUGH, false)
+            }
 
             GrailsHibernateQueryUtils.populateArgumentsForCriteria(
                     persistentEntity,
@@ -237,7 +244,10 @@ class HibernateGormStaticApi<D> extends AbstractHibernateGormStaticApi<D> {
 
     @Override
     protected void firePreQueryEvent(Session session, Criteria criteria) {
-        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, new HibernateQuery(criteria, persistentEntity)))
+        HibernateQuery query = new HibernateQuery(criteria, persistentEntity)
+        datastore.applicationEventPublisher.publishEvent(new PreQueryEvent(datastore, query))
+        // makes the joins that criteria a listener added need, since the query itself is not executed
+        query.getHibernateCriteria()
     }
 
     @Override
