@@ -171,17 +171,22 @@ class CacheAutoConfigurationSpec extends Specification {
         given: 'the application\'s grailsCacheManager, created from a bean that has a cache manager injected itself'
         GrailsCacheManager mine = Mock(GrailsCacheManager)
         AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
-        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
-            context.getBean(CacheAware)
-            mine
-        } as Supplier<GrailsCacheManager>)
+
+        and: 'the cache manager Spring prefers, created first'
         if (preferred == 'with a priority') {
             context.registerBean('preferredCacheManager', HighPriorityCacheManager)
+        }
+        else if (preferred == 'with a priority only on the object its factory returns') {
+            context.registerBean('preferredCacheManager', CacheManager, { -> new HighPriorityCacheManager() } as Supplier<CacheManager>)
         }
         else {
             context.registerBean('preferredCacheManager', ConcurrentMapCacheManager,
                     { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
         }
+        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
+            context.getBean(CacheAware)
+            mine
+        } as Supplier<GrailsCacheManager>)
         context.registerBean(CacheAware)
         context.register(CacheAutoConfiguration)
 
@@ -196,7 +201,7 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
 
         where:
-        preferred << ['with a priority', 'marked primary']
+        preferred << ['with a priority', 'with a priority only on the object its factory returns', 'marked primary']
     }
 
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {

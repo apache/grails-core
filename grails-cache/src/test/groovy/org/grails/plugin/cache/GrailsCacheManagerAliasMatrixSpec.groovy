@@ -51,7 +51,8 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
 
     private static final List<String> NAMED_KINDS = ['absent', 'plain', 'primary', 'lazy', 'notCandidate', 'wrongType', 'cyclic']
 
-    private static final List<String> OTHER_KINDS = ['plain', 'primary', 'lazy', 'notCandidate', 'fallback', 'notDefault', 'priority']
+    private static final List<String> OTHER_KINDS = ['plain', 'primary', 'lazy', 'notCandidate', 'fallback', 'notDefault',
+            'priority', 'priorityOnObject']
 
     void 'the alias is the name the trait\'s field has in a class that implements it'() {
         expect:
@@ -69,7 +70,7 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
             Map<String, Object> was = run(row, false)
             Map<String, Object> now = run(row, true)
             boolean namedUsable = row[NAMED] in ['plain', 'primary', 'lazy']
-            boolean anotherPreferred = row.any { String name, String kind -> name != NAMED && kind in ['primary', 'priority'] }
+            boolean anotherPreferred = row.any { String name, String kind -> name != NAMED && kind in ['primary', 'priority', 'priorityOnObject'] }
             Object expected = (was.failed && namedUsable && !anotherPreferred) ? NAMED : (was.failed ? 'failed' : was.chosen)
             Object got = now.failed ? 'failed' : now.chosen
             List<String> allowedToCreate = ((List<String>) was.created) + [NAMED]
@@ -152,7 +153,9 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
                 context.registerBean(name, String, { -> 'not a cache manager' } as Supplier<String>)
                 return
             }
-            Class<? extends CacheManager> type = kind == 'priority' ? HighPriorityCacheManager : ConcurrentMapCacheManager
+            Class<? extends CacheManager> type = kind in ['priority', 'priorityOnObject'] ? HighPriorityCacheManager : ConcurrentMapCacheManager
+            // declared as a plain CacheManager, as a factory method would declare it, so only the object has the priority
+            Class<? extends CacheManager> declared = kind == 'priorityOnObject' ? CacheManager : type
             Supplier<CacheManager> supplier = { ->
                 if (kind == 'cyclic') {
                     context.getBean('probe')
@@ -170,7 +173,7 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
                 bean.fallback = kind == 'fallback'
                 bean.defaultCandidate = kind != 'notDefault'
             } as BeanDefinitionCustomizer
-            context.registerBean(name, (Class<CacheManager>) type, supplier, customizer)
+            context.registerBean(name, (Class<CacheManager>) declared, supplier, customizer)
         }
         BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
         context.registerBean('probe', CacheAware, lazy)
