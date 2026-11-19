@@ -23,7 +23,10 @@ import java.nio.charset.StandardCharsets
 import org.grails.gsp.GroovyPageTemplate
 import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.gsp.io.DefaultGroovyPageLocator
+import org.grails.taglib.AbstractTemplateVariableBinding
+import org.grails.taglib.TemplateVariableBinding
 import org.grails.taglib.encoder.DefaultOutputContextLookup
+import org.grails.taglib.encoder.OutputContext
 
 /**
  * Renders the templates of feature packs, which are GSP pages a pack brings as source.
@@ -48,12 +51,20 @@ final class PackPages {
     private static final int MAX_MESSAGE = 500
 
     private final GroovyPagesTemplateEngine engine
+    private int compiled
 
     /**
      * @param classLoader the class loader the pages are compiled against
      */
     PackPages(ClassLoader classLoader) {
-        engine = new GroovyPagesTemplateEngine()
+        engine = new GroovyPagesTemplateEngine() {
+
+            @Override
+            String getGspEncoding() {
+                // the source is handed over in UTF-8, whatever the platform reads its files in
+                return StandardCharsets.UTF_8.name()
+            }
+        }
         engine.groovyPageLocator = new DefaultGroovyPageLocator()
         engine.classLoader = classLoader
         engine.afterPropertiesSet()
@@ -73,21 +84,105 @@ final class PackPages {
     byte[] render(String source, String name, Map<String, Object> model, int limit) {
         StringWriter out = new Bounded(limit)
         try {
-            GroovyPageTemplate template = (GroovyPageTemplate) engine.createTemplate(DIRECTIVES + '\n' + source, name, false)
-            new GroovyPageTemplate(template.metaInfo, new DefaultOutputContextLookup()).make(model).writeTo(out)
+            // on the first line of the source, so that the lines of a message are those of the template; a
+            // name of its own for the page, since the name of a file is not always one a page can have
+            String page = "template${++compiled}.gsp"
+            String text = source.startsWith('\uFEFF') ? source.substring(1) : source
+            GroovyPageTemplate template = (GroovyPageTemplate) engine.createTemplate(DIRECTIVES + text, page, false)
+            new GroovyPageTemplate(template.metaInfo, new Names(model.keySet())).make(model).writeTo(out)
         } catch (TooMuch ignored) {
             throw new IllegalArgumentException("The template ${name} writes more than the ${limit} bytes a file of a feature pack can have")
-        } catch (Exception e) {
-            // what went wrong is in words of the template's author and of the compiler: a few of them, on one line
-            String reason = (e.message ?: e.class.simpleName).readLines().join(' ').replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/, ' ').replace('@|', '@ |')
-            throw new IllegalArgumentException("The template ${name} cannot be rendered: " +
-                    (reason.length() > MAX_MESSAGE ? reason.substring(0, MAX_MESSAGE) + '...' : reason))
+        } catch (StackOverflowError e) {
+            throw new IllegalArgumentException("The template ${name} cannot be rendered: it calls itself without end", e)
+        } catch (VirtualMachineError e) {
+            // not for this to say anything about
+            throw e
+        } catch (Throwable e) {
+            // an assertion and a missing class are errors of the template like any other. What went wrong
+            // is in words of its author and of the compiler: a few of them, on one line, and with the
+            // error itself for whoever asks for the whole of it
+            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${reason(e)}", e)
         }
         byte[] written = out.toString().getBytes(StandardCharsets.UTF_8)
         if (written.length > limit) {
             throw new IllegalArgumentException("The template ${name} writes more than the ${limit} bytes a file of a feature pack can have")
         }
         return written
+    }
+
+    private static String reason(Throwable e) {
+        String message
+        try {
+            message = e.getMessage()
+        } catch (Throwable ignored) {
+            message = null
+        }
+        String reason = (message ?: e.class.simpleName).readLines().join(' ')
+                .replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/, ' ').replace('@|', '@ |')
+        return reason.length() > MAX_MESSAGE ? reason.substring(0, reason.offsetByCodePoints(0, reason.codePointCount(0, MAX_MESSAGE))) + '...' : reason
+    }
+
+    /**
+     * Has a page fail for a name that is neither in its model nor one the pages of GSP have of their
+     * own, which without it would be nothing: a template with a name misspelled, or written for a later
+     * template API, would write a wrong file and not say so.
+     */
+    private static final class Names extends DefaultOutputContextLookup {
+
+        // what a page of GSP looks for whether a template uses it or not; none of it is there for a pack
+        private static final Set<String> OF_PAGES = ['it', 'out', 'expressionOut', 'pagePlugin', 'pluginContextPath', 'params', 'request',
+                                                     'response', 'session', 'flash', 'application', 'applicationContext',
+                                                     'grailsApplication', 'webRequest', 'pageScope', 'controllerName', 'actionName',
+                                                     'variables', 'metaClass'] as Set<String>
+
+        private final OutputContext context
+
+        Names(Set<String> model) {
+            Set<String> known = new HashSet<>(model)
+            known.addAll(OF_PAGES)
+            context = new DefaultOutputContext() {
+
+                @Override
+                AbstractTemplateVariableBinding createAndRegisterRootBinding() {
+                    AbstractTemplateVariableBinding root = new Root(known)
+                    setBinding(root)
+                    return root
+                }
+            }
+        }
+
+        @Override
+        OutputContext lookupOutputContext() {
+            // registers what the encoders of GSP look their state up with
+            super.lookupOutputContext()
+            return context
+        }
+    }
+
+    /**
+     * The binding every name a page does not have itself is looked up in.
+     */
+    private static final class Root extends TemplateVariableBinding {
+
+        private final Set<String> known
+
+        Root(Set<String> known) {
+            this.known = known
+        }
+
+        @Override
+        Binding findBindingForVariable(String name) {
+            return this
+        }
+
+        @Override
+        Object getVariable(String name) {
+            if (getVariablesMap().containsKey(name) || known.contains(name)) {
+                return getVariablesMap().get(name)
+            }
+            throw new MissingPropertyException("There is no '${name}' for a template: template API ${PackDescriptor.TEMPLATE_API} has " +
+                    "${known.findAll { String each -> !Names.OF_PAGES.contains(each) }.toSorted()}")
+        }
     }
 
     private static final class TooMuch extends RuntimeException {

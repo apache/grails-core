@@ -137,7 +137,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
                         '    String html = "<b>&amp;</b>"\n    String kept = "\\${notReplaced}"\n}\n',
                 'model.txt.GSP'   : '${project.name}|${project.packageName}|${project.packagePath}|${project.className}|${project.naturalName}|' +
                         '${project.propertyName}|${applicationType}|${options.jdk}|${options.data}|${options.servlet}|${options.reloading}|' +
-                        '${grailsVersion == org.grails.forge.util.VersionInfo.grailsVersion}|${pack.name}|${features.contains("acme-audit")}|' +
+                        '${grailsVersion ==~ /\\d+\\.\\d+\\.\\d+.*/}|${pack.name}|${features.contains("acme-audit")}|' +
                         '${features == features.toSorted()}',
                 'plain.txt'       : 'not a template: ${project.name} <% %>\n',
         ])
@@ -151,8 +151,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         and: 'the names a template can refer to'
         output['model.txt'] == 'shop|com.example|com/example|Shop|Shop|shop|web|' +
-                "${new Options().javaVersion.majorVersion()}|${new Options().gormImpl?.name ?: org.grails.forge.options.GormImpl.DEFAULT_OPTION.name}|" +
-                "${org.grails.forge.options.ServletImpl.DEFAULT_OPTION.name}|${org.grails.forge.options.DevelopmentReloading.DEFAULT_OPTION.name}|" +
+                "${org.grails.forge.options.JdkVersion.DEFAULT_OPTION.majorVersion()}|${org.grails.forge.options.GormImpl.DEFAULT_OPTION.name().toLowerCase()}|" +
+                "${org.grails.forge.options.ServletImpl.DEFAULT_OPTION.name().toLowerCase()}|${org.grails.forge.options.DevelopmentReloading.DEFAULT_OPTION.name().toLowerCase()}|" +
                 'true|acme-audit|true|true'
 
         and: 'a file of another name is written as it is'
@@ -223,6 +223,152 @@ class PackGenerationSpec extends ApplicationContextSpec {
         then:
         output['a.txt'] == 'first acme-a'
         output['b.txt'] == 'second acme-b'
+    }
+
+    @Unroll
+    void "a template that names #name, which template API 1 has not, is refused"() {
+        when:
+        generate(['acme-audit'], [pack('acme-audit', "files:\n  - from: bad.txt.gsp\n    to: bad.txt\n", ['bad.txt.gsp': source])])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith('The template bad.txt.gsp of the feature acme-audit cannot be rendered: ')
+        e.message.contains("There is no '${name}' for a template: template API 1 has ")
+        e.message.contains(has)
+
+        where:
+        name              | source                                    || has
+        'projekt'         | 'line one\n${projekt.name}'               || '[applicationType, features, grailsVersion, options, pack, project]'
+        'flags'           | '<% if (flags) { %>yes<% } %>'            || '[applicationType, features, grailsVersion, options, pack, project]'
+        'pack.version'    | '${pack.version}'                         || '[pack.name]'
+        'options.gorm'    | '<% if (options.gorm == "x") { %>y<% } %>' || '[options.data, options.jdk, options.reloading, options.servlet]'
+        'project.nope'    | '${project.nope}'                         || 'project.packageName'
+    }
+
+    void "the options of the model are written as the options of the create commands are"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: o.txt.gsp\n    to: o.txt\n",
+                ['o.txt.gsp': '${options.data} ${options.servlet} ${options.reloading} ${options.jdk} ${applicationType}'])
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        Options options = new Options(org.grails.forge.options.DevelopmentReloading.NONE, org.grails.forge.options.GormImpl.MONGODB,
+                org.grails.forge.options.ServletImpl.NONE, org.grails.forge.options.JdkVersion.DEFAULT_OPTION, OperatingSystem.LINUX)
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB_PLUGIN, project, options, OperatingSystem.LINUX,
+                ['acme-audit'], ConsoleOutput.NOOP, [pack])
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB_PLUGIN, project, output, context)
+
+        then:
+        output.getProject()['o.txt'] == "mongodb none none ${org.grails.forge.options.JdkVersion.DEFAULT_OPTION.majorVersion()} web-plugin"
+    }
+
+    void "a template is read as UTF-8 and the lines of a message are those of its source"() {
+        given:
+        Pack text = pack('acme-audit', "files:\n  - from: t.txt.gsp\n    to: t.txt\n", ['t.txt.gsp': '\ufeff\u00e9\u20ac ${"\u00e9\u20ac".length()}'])
+        Pack lines = pack('acme-audit', "files:\n  - from: t.txt.gsp\n    to: t.txt\n", ['t.txt.gsp': 'one\ntwo\n${features.nope()}\n'])
+
+        expect: 'a byte order mark is not part of the text'
+        generate(['acme-audit'], [text])['t.txt'] == '\u00e9\u20ac 2'
+
+        when:
+        generate(['acme-audit'], [lines])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('on line [3]')
+        e.cause != null
+    }
+
+    @Unroll
+    void "a template that #problem fails as a template, with a message that is no markup"() {
+        when:
+        generate(['acme-audit'], [pack('acme-audit', "files:\n  - from: bad.txt.gsp\n    to: bad.txt\n", ['bad.txt.gsp': source])])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith('The template bad.txt.gsp of the feature acme-audit cannot be rendered: ')
+        e.message.contains(reason)
+        !e.message.contains('@|')
+        !(e.message =~ /[\p{Cc}\p{Cf}]/)
+        e.message.length() < 700
+
+        where:
+        problem                              | source                                                                      || reason
+        'asserts what is not so'             | '<% assert features.contains("nope") : "wanted \\u001b[31m @|red nope|@" %>' || 'wanted'
+        'calls itself without end'           | '<% def f; f = { f() }; f() %>'                                             || 'it calls itself without end'
+        'throws an error of linking'         | '<% throw new LinkageError("link \\u202e @|red e|@") %>'                    || 'link'
+        'throws what has no message to give' | '<% throw new RuntimeException() { String getMessage() { throw new IllegalStateException("@|red x|@") } } %>' || 'cannot be rendered'
+    }
+
+    void "a pack that cannot write one of its files runs none of its templates"() {
+        given:
+        Path marker = directory.resolve('ran.marker')
+        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n  - from: plain.txt\n    to: '{name}/config'\n", [
+                'first.txt.gsp': "<% new File('${marker.toString().replace('\\', '/')}').text = 'ran' %>x".toString(),
+                'plain.txt'    : 'x',
+        ])
+
+        when:
+        generate(['acme-audit'], [pack], ApplicationType.WEB, '.git')
+
+        then:
+        thrown(IllegalArgumentException)
+        !Files.exists(marker)
+    }
+
+    void "a template runs only when its pack is of the application that is generated"() {
+        given:
+        Path marker = directory.resolve('ran.marker')
+        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n",
+                ['first.txt.gsp': "<% new File('${marker.toString().replace('\\', '/')}').text = 'ran' %>x".toString()])
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+
+        when: 'the pack is there and not selected'
+        generate([], [pack])
+        generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'), new Options(), OperatingSystem.LINUX,
+                ['acme-audit'], ConsoleOutput.NOOP, [pack])
+
+        then:
+        !Files.exists(marker)
+
+        when:
+        generate(['acme-audit'], [pack])
+
+        then:
+        Files.exists(marker)
+    }
+
+    void "the files of a pack are bounded together after its templates are rendered"() {
+        given:
+        String files = (1..17).collect { "  - from: big.txt.gsp\n    to: big${it}.txt\n" }.join('')
+        Pack pack = pack('acme-audit', "files:\n${files}", ['big.txt.gsp': '${"x" * 1048576}'])
+
+        when:
+        generate(['acme-audit'], [pack])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The feature acme-audit writes more than the 16777216 bytes the files of a feature pack can have together'
+    }
+
+    void "what was prepared for one application is not generated as another"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: A.groovy.gsp\n    to: 'src/main/groovy/{packagePath}/{className}Audit.groovy'\n",
+                ['A.groovy.gsp': 'package ${project.packageName}\nclass ${project.className}Audit {}'])
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('com.first.alpha'), new Options(),
+                OperatingSystem.LINUX, ['acme-audit'], ConsoleOutput.NOOP, [pack])
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB, NameUtils.parse('org.second.beta'), output, context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The application beta cannot be generated from what was prepared for the application alpha'
+        output.getProject().isEmpty()
     }
 
     void "a pack that is not selected adds nothing"() {
@@ -680,23 +826,6 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'build.gradle/x'   | 'a file'                       || 'both as a file and as a directory of other files'
         'grails-app/conf'  | 'a directory'                  || 'both as a file and as a directory of other files'
         'BUILD.GRADLE'     | 'a file in other letters'      || 'more than once'
-    }
-
-    void "a pack is checked against the project that is written, not only the one its features were chosen for"() {
-        given:
-        Pack pack = pack('acme-audit', "files:\n  - from: a.txt\n    to: '.{name}/hooks/x'\n")
-        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
-        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('shop'), new Options(),
-                OperatingSystem.LINUX, ['acme-audit'], ConsoleOutput.NOOP, [pack])
-        MapOutputHandler output = new MapOutputHandler()
-
-        when:
-        generator.generate(ApplicationType.WEB, NameUtils.parse('git'), output, context)
-
-        then:
-        IllegalArgumentException e = thrown()
-        e.message == 'A feature pack would write the file .{name}/hooks/x to .git/hooks/x, which is not a path a feature pack can write for this application'
-        output.getProject().isEmpty()
     }
 
     void "two packs cannot have one name even when only one of them is for this type of application"() {

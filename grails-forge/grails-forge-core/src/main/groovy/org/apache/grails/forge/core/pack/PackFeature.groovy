@@ -174,8 +174,17 @@ class PackFeature implements Feature {
             checkSetting(generatorContext, setting, value)
             generatorContext.getConfiguration().put(setting, value)
         }
+        // every destination before the first template: a pack that cannot write one of its files runs none
         for (PackFile file : descriptor.files) {
-            addFile(generatorContext, file)
+            checkDestination(generatorContext, file)
+        }
+        long written = 0
+        for (PackFile file : descriptor.files) {
+            written += addFile(generatorContext, file)
+            if (written > PackLoader.MAX_PACK_BYTES) {
+                throw new IllegalArgumentException("The feature ${name} writes more than the ${PackLoader.MAX_PACK_BYTES} bytes " +
+                        'the files of a feature pack can have together')
+            }
         }
         if (descriptor.readme != null) {
             // a paragraph of its own, whatever it ends with
@@ -280,20 +289,28 @@ class PackFeature implements Feature {
      * Here they have their values, which come from the name the application was given, so the path that
      * is written is checked again.
      */
-    private void addFile(GeneratorContext generatorContext, PackFile file) {
+    private void checkDestination(GeneratorContext generatorContext, PackFile file) {
         String written = DefaultTemplateRenderer.resolvePath(file.to, generatorContext.getProject().getProperties())
         if (!PackDescriptorParser.isPathBelowRoot(written)) {
             throw new IllegalArgumentException("The feature ${name} would write the file ${file.to} to ${written}, which is not a " +
                     'path a feature pack can write for this application')
         }
+    }
+
+    /**
+     * @return the bytes the file has in the application
+     */
+    private int addFile(GeneratorContext generatorContext, PackFile file) {
         byte[] content = pack.content(file.from)
         if (Pack.isTemplate(file.from)) {
             // rendered here and not when the file is written: every feature is chosen by now, and a
             // template that fails does so before anything of the application is written
-            content = pages.get().render(new String(content, StandardCharsets.UTF_8), "${file.from} of the feature ${name}".toString(),
+            String from = file.from.length() > 120 ? file.from.substring(0, 120) + '...' : file.from
+            content = pages.get().render(new String(content, StandardCharsets.UTF_8), "${from} of the feature ${name}".toString(),
                     PackModel.of(generatorContext, pack.descriptor), PackLoader.MAX_FILE_BYTES)
         }
         generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content))
+        return content.length
     }
 
     /**

@@ -94,6 +94,11 @@ class DefaultProjectGenerator implements ProjectGenerator {
                 new GspTemplate('grails-forge-cli.yml',
                         GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType])))
 
+        if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {
+            // what the features add was made for the project of the context, its name in it
+            throw new IllegalArgumentException("The application ${project.getName()} cannot be generated from what was prepared for " +
+                    "the application ${generatorContext.getProject().getName()}")
+        }
         generatorContext.applyFeatures()
 
         checkPaths(project, generatorContext.getTemplates().values())
