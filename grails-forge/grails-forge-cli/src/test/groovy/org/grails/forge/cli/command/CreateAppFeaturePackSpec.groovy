@@ -226,7 +226,11 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
                 "  extensions:\n    tasks.bootRun: systemProperty 'acme.text.console', 'true'\n" +
                 "    assets: minifyJs = false\n" +
                 'configuration:\n  acme.text.enabled: true\n  environments:\n    production:\n      acme.text.cache: 30s\n' +
-                "files:\n  - from: audit.txt\n    to: 'grails-app/conf/{packagePath}/text.txt'\n")
+                "files:\n  - from: audit.txt\n    to: 'grails-app/conf/{packagePath}/text.txt'\n" +
+                "  - from: Text.groovy.gsp\n    to: 'src/main/groovy/{packagePath}/{className}Text.groovy'\n")
+        new File(pack, 'templates/Text.groovy.gsp').setText('package ${project.packageName}\n\nimport org.apache.commons.lang3.StringUtils\n\n' +
+                'class ${project.className}Text {\n<% if (features.contains("gsp")) { %>\n    static final boolean VIEWS = true\n<% } %>\n' +
+                '    static String shout(String text) {\n        StringUtils.upperCase(text)\n    }\n}\n', 'UTF-8')
 
         when:
         int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--inplace', '--features', 'acme-text',
@@ -236,6 +240,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         exit == 0
         new File(dir, 'build.gradle').text.contains(
                 'implementation("org.apache.commons:commons-lang3") { exclude group: "org.slf4j", module: "slf4j-simple"; exclude group: "commons-logging" }')
+        new File(dir, 'src/main/groovy/com/example/ShopText.groovy').text.contains('class ShopText {\n    static final boolean VIEWS = true\n')
 
         when: 'Gradle configures the build, resolves what it declares and compiles the application'
         System.setOut(originalOut)
@@ -245,6 +250,9 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         then:
         testOutputContains('org.apache.commons:commons-lang3')
         testOutputContains('BUILD SUCCESSFUL')
+
+        and: 'the class the template of the pack wrote is compiled'
+        new File(dir, 'build/classes/groovy/main/com/example/ShopText.class').exists()
     }
 
     private File pack(String directory, String descriptor) {

@@ -21,6 +21,7 @@ package org.apache.grails.forge.core.pack
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
 import java.util.function.Function
+import java.util.function.Supplier
 import java.util.stream.Stream
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.AvailableFeatures
@@ -57,8 +58,16 @@ final class PackFeatures implements AvailableFeatures {
                 .collect { Feature feature -> ((OneOfFeature) feature).getGroup() } as Set<String>
         Function<String, Optional<Feature>> lookup = { String required -> findFeature(required, true) } as Function<String, Optional<Feature>>
         Map<String, Pack> named = new HashMap<>()
+        // one for this generation, and only when a pack has a template
+        PackPages[] made = new PackPages[1]
+        Supplier<PackPages> pages = { ->
+            if (made[0] == null) {
+                made[0] = new PackPages(PackPages.classLoader)
+            }
+            return made[0]
+        } as Supplier<PackPages>
         for (Pack pack : packs) {
-            PackFeature feature = PackFeature.of(pack, lookup)
+            PackFeature feature = PackFeature.of(pack, lookup, pages)
             String name = feature.getName()
             if (frameworkNames.contains(name)) {
                 throw new IllegalArgumentException("The feature pack ${pack.origin} has the name of a feature of the framework, ${name}")

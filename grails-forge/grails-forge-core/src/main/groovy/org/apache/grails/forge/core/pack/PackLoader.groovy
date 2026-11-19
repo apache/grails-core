@@ -37,9 +37,6 @@ import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 @CompileStatic
 class PackLoader {
 
-    /** The suffix of a file of a pack that is a template and not a file copied as it is */
-    public static final String TEMPLATE_SUFFIX = '.gsp'
-
     /** The most bytes one file of a pack can have */
     public static final int MAX_FILE_BYTES = 1024 * 1024
 
@@ -59,8 +56,8 @@ class PackLoader {
      * to an application later is what was checked. The descriptor, {@code templates} and every file and
      * directory on the way to a file the descriptor names have to be what they look like, not links, so
      * a pack cannot name a file outside itself; a file that has a second name somewhere else (a hard
-     * link) is refused where the file system can tell. Templates are not read by this version of Forge:
-     * a file whose name ends with {@code .gsp} is refused.</p>
+     * link) is refused where the file system can tell. A file whose name ends with {@code .gsp} is a
+     * template, see {@link PackPages}, and has to be text in UTF-8.</p>
      *
      * @param directory the directory of the pack
      * @return the pack
@@ -91,10 +88,6 @@ class PackLoader {
         long total = 0
         descriptor.files.eachWithIndex { PackFile file, int index ->
             String at = "files[${index}].from: '${file.from}'"
-            if (file.from.toLowerCase(Locale.ROOT).endsWith(TEMPLATE_SUFFIX)) {
-                problems << "${at} is a template, and this version of Forge reads only files that are copied as they are".toString()
-                return
-            }
             if (!isPlainFileBelow(templates, file.from)) {
                 problems << "${at} is not a file under ${Pack.TEMPLATES} of the pack, or is a link or is reached through one".toString()
                 return
@@ -111,6 +104,8 @@ class PackLoader {
                 problems << "${at} has more than the ${MAX_FILE_BYTES} bytes a file of a pack can have".toString()
             } else if (total > MAX_PACK_BYTES) {
                 problems << "${at} takes the files of the pack over the ${MAX_PACK_BYTES} bytes they can have together".toString()
+            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+                problems << "${at} is a template and is not text in UTF-8".toString()
             } else {
                 files.put(file.from, content)
             }
@@ -161,13 +156,26 @@ class PackLoader {
 
     private static String text(byte[] bytes, String origin) {
         try {
-            return StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(bytes))
-                    .toString()
+            return decode(bytes)
         } catch (CharacterCodingException ignored) {
             throw new PackDescriptorException(origin, ["${Pack.DESCRIPTOR} is not text in UTF-8".toString()])
         }
+    }
+
+    private static boolean isText(byte[] bytes) {
+        try {
+            decode(bytes)
+            return true
+        } catch (CharacterCodingException ignored) {
+            return false
+        }
+    }
+
+    private static String decode(byte[] bytes) throws CharacterCodingException {
+        return StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(bytes))
+                .toString()
     }
 }

@@ -127,6 +127,104 @@ class PackGenerationSpec extends ApplicationContextSpec {
         !readme.contains('Acme.#')
     }
 
+    void "a file of a pack whose name ends with gsp is a template, rendered with the application it is generated for"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: Audit.groovy.gsp\n    to: 'src/main/groovy/{packagePath}/{className}Audit.groovy'\n" +
+                "  - from: model.txt.GSP\n    to: model.txt\n  - from: plain.txt\n    to: plain.txt\n", [
+                'Audit.groovy.gsp': 'package ${project.packageName}\n\nclass ${project.className}Audit {\n' +
+                        '<% if (features.contains("gsp")) { %>\n    boolean views = true\n<% } %>\n' +
+                        '<% if (features.contains("gorm-mongodb")) { %>\n    boolean mongo = true\n<% } %>\n' +
+                        '    String html = "<b>&amp;</b>"\n    String kept = "\\${notReplaced}"\n}\n',
+                'model.txt.GSP'   : '${project.name}|${project.packageName}|${project.packagePath}|${project.className}|${project.naturalName}|' +
+                        '${project.propertyName}|${applicationType}|${options.jdk}|${options.data}|${options.servlet}|${options.reloading}|' +
+                        '${grailsVersion == org.grails.forge.util.VersionInfo.grailsVersion}|${pack.name}|${features.contains("acme-audit")}|' +
+                        '${features == features.toSorted()}',
+                'plain.txt'       : 'not a template: ${project.name} <% %>\n',
+        ])
+
+        when:
+        Map<String, String> output = generate(['acme-audit'], [pack], ApplicationType.WEB, 'com.example.shop')
+
+        then: 'lines that hold only logic write nothing, and what is written is not encoded'
+        output['src/main/groovy/com/example/ShopAudit.groovy'] == 'package com.example\n\nclass ShopAudit {\n    boolean views = true\n' +
+                '    String html = "<b>&amp;</b>"\n    String kept = "${notReplaced}"\n}\n'
+
+        and: 'the names a template can refer to'
+        output['model.txt'] == 'shop|com.example|com/example|Shop|Shop|shop|web|' +
+                "${new Options().javaVersion.majorVersion()}|${new Options().gormImpl?.name ?: org.grails.forge.options.GormImpl.DEFAULT_OPTION.name}|" +
+                "${org.grails.forge.options.ServletImpl.DEFAULT_OPTION.name}|${org.grails.forge.options.DevelopmentReloading.DEFAULT_OPTION.name}|" +
+                'true|acme-audit|true|true'
+
+        and: 'a file of another name is written as it is'
+        output['plain.txt'] == 'not a template: ${project.name} <% %>\n'
+    }
+
+    void "a template sees the features that were chosen for it, and those another feature requires"() {
+        given:
+        Pack pack = pack('acme-audit', "requires: [database-migration]\nfiles:\n  - from: f.txt.gsp\n    to: f.txt\n",
+                ['f.txt.gsp': '${features.contains("database-migration")} ${features.contains("postgres")} ${features.contains("h2")} ${applicationType}'])
+
+        expect:
+        generate(['acme-audit', 'postgres'], [pack], ApplicationType.REST_API)['f.txt'] == 'true true false rest-api'
+    }
+
+    @Unroll
+    void "a template that #problem is refused, and nothing of the application is written"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: bad.txt.gsp\n    to: bad.txt\n", ['bad.txt.gsp': source])
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                ['acme-audit'], ConsoleOutput.NOOP, [pack])
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB, project, output, context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith(message)
+        e.message.length() < 700
+        !(e.message =~ /[\p{Cc}]/)
+        output.getProject().isEmpty()
+
+        where:
+        problem                                 | source                                               || message
+        'is not a page that compiles'           | '<% if (true) { %>unclosed'                          || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'refers to what the model has not'      | '${missing.property}'                                || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'changes the features it is given'      | '<% features << "another" %>'                        || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'changes the project it is given'       | '<% project.name = "other" %>'                       || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'throws'                                | '<% throw new IllegalStateException("no\\nway") %>'  || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'writes without end'                    | '<% while (true) { %>' + ('x' * 1000) + '<% } %>'    || 'The template bad.txt.gsp of the feature acme-audit writes more than the 1048576 bytes a file of a feature pack can have'
+    }
+
+    void "a template has to be text"() {
+        given:
+        Path packDirectory = Files.createDirectories(directory.resolve('acme/templates')).parent
+        Files.write(packDirectory.resolve('feature.yml'), descriptor('files:\n  - from: a.txt.gsp\n    to: a.txt\n'))
+        Files.write(packDirectory.resolve('templates/a.txt.gsp'), [0xC3, 0x28] as byte[])
+
+        when:
+        new PackLoader().fromDirectory(packDirectory)
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == ["files[0].from: 'a.txt.gsp' is a template and is not text in UTF-8"]
+    }
+
+    void "templates of two packs with one name for a page are each their own"() {
+        given:
+        Pack first = pack('acme-a', "files:\n  - from: page.txt.gsp\n    to: a.txt\n", ['page.txt.gsp': 'first ${pack.name}'])
+        Pack second = pack('acme-b', "files:\n  - from: page.txt.gsp\n    to: b.txt\n", ['page.txt.gsp': 'second ${pack.name}'])
+
+        when:
+        Map<String, String> output = generate(['acme-a', 'acme-b'], [first, second])
+
+        then:
+        output['a.txt'] == 'first acme-a'
+        output['b.txt'] == 'second acme-b'
+    }
+
     void "a pack that is not selected adds nothing"() {
         given:
         Pack pack = pack('acme-audit', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit-grails\n")
@@ -240,7 +338,6 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'its descriptor is not valid'        | (HEADER.replace('format: 1', 'format: 2') + 'name: acme\n').bytes | { Path it -> }                                                                  || 'format: must be the number 1, the one this version of Forge reads, but is the number 2'
         'a file it names is not there'       | descriptor('files:\n  - from: a.txt\n    to: a.txt\n') | { Path it -> }                                                       || "files[0].from: 'a.txt' is not a file under templates of the pack, or is a link or is reached through one"
         'a file it names is a directory'     | descriptor('files:\n  - from: a\n    to: a.txt\n')     | { Path it -> Files.createDirectories(it.resolve('templates/a')) }    || "files[0].from: 'a' is not a file under templates of the pack, or is a link or is reached through one"
-        'a file it names is a template'      | descriptor('files:\n  - from: A.GROOVY.GSP\n    to: a.groovy\n') | { Path it -> Files.writeString(it.resolve('templates/A.GROOVY.GSP'), 'x') } || "files[0].from: 'A.GROOVY.GSP' is a template, and this version of Forge reads only files that are copied as they are"
     }
 
     @IgnoreIf({ os.windows })

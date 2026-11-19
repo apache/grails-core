@@ -21,6 +21,7 @@ package org.apache.grails.forge.core.pack
 import groovy.transform.CompileStatic
 import java.nio.charset.StandardCharsets
 import java.util.function.Function
+import java.util.function.Supplier
 import org.apache.grails.forge.core.pack.PackDescriptor.PackBuildPlugin
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
@@ -38,7 +39,9 @@ import org.grails.forge.template.Writable
 /**
  * The feature a pack describes. It does what a feature written as a class does, from the data of the
  * descriptor: it brings in the features it requires, and adds its dependencies, build plugins, build
- * properties and extensions, configuration, files and readme to the application.
+ * properties and extensions, configuration, files and readme to the application. A file whose name
+ * in the pack ends with {@code .gsp} is a template, rendered with {@link PackModel}; any other file is
+ * written as it is.
  *
  * <p>A pack adds to an application and does not change what another feature gave it. Where a pack and
  * another feature set the same build property, plugin, dependency or setting differently, generation
@@ -55,23 +58,27 @@ class PackFeature implements Feature {
 
     private final Pack pack
     private final Function<String, Optional<Feature>> features
+    private final Supplier<PackPages> pages
 
     /**
      * @param pack the pack
      * @param features finds a feature the application can have by its name
+     * @param pages renders the templates of the pack
      */
-    protected PackFeature(Pack pack, Function<String, Optional<Feature>> features) {
+    protected PackFeature(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
         this.pack = pack
         this.features = features
+        this.pages = pages
     }
 
     /**
      * @param pack a pack
      * @param features finds a feature the application can have by its name
+     * @param pages renders the templates of the pack
      * @return the feature of the pack, which belongs to an exclusive group when the descriptor names one
      */
-    static PackFeature of(Pack pack, Function<String, Optional<Feature>> features) {
-        return pack.descriptor.oneOf == null ? new PackFeature(pack, features) : new Exclusive(pack, features)
+    static PackFeature of(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
+        return pack.descriptor.oneOf == null ? new PackFeature(pack, features, pages) : new Exclusive(pack, features, pages)
     }
 
     Pack getPack() {
@@ -279,7 +286,14 @@ class PackFeature implements Feature {
             throw new IllegalArgumentException("The feature ${name} would write the file ${file.to} to ${written}, which is not a " +
                     'path a feature pack can write for this application')
         }
-        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, pack.content(file.from)))
+        byte[] content = pack.content(file.from)
+        if (Pack.isTemplate(file.from)) {
+            // rendered here and not when the file is written: every feature is chosen by now, and a
+            // template that fails does so before anything of the application is written
+            content = pages.get().render(new String(content, StandardCharsets.UTF_8), "${file.from} of the feature ${name}".toString(),
+                    PackModel.of(generatorContext, pack.descriptor), PackLoader.MAX_FILE_BYTES)
+        }
+        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content))
     }
 
     /**
@@ -287,8 +301,8 @@ class PackFeature implements Feature {
      */
     static class Exclusive extends PackFeature implements OneOfFeature {
 
-        protected Exclusive(Pack pack, Function<String, Optional<Feature>> features) {
-            super(pack, features)
+        protected Exclusive(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
+            super(pack, features, pages)
         }
 
         @Override

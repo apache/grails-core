@@ -36,6 +36,9 @@ final class Pack {
     /** The directory of a pack that holds the files its descriptor names */
     public static final String TEMPLATES = 'templates'
 
+    /** The end of the name of a file of a pack that is a template and not a file written as it is */
+    public static final String TEMPLATE_SUFFIX = '.gsp'
+
     private final PackDescriptor descriptor
     private final String origin
     private final Map<String, byte[]> files
@@ -74,6 +77,14 @@ final class Pack {
             throw new IllegalArgumentException("The feature pack ${origin} has no file ${from}")
         }
         return content.clone()
+    }
+
+    /**
+     * @param from the {@code from} of a file of the descriptor
+     * @return whether the file is a template, which is rendered, and not a file that is written as it is
+     */
+    static boolean isTemplate(String from) {
+        return from.toLowerCase(Locale.ROOT).endsWith(TEMPLATE_SUFFIX)
     }
 
     @Override
