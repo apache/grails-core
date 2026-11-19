@@ -38,8 +38,11 @@ class HqlListQueryBuilderSpec extends Specification {
     GrailsHibernatePersistentEntity entity = Mock(GrailsHibernatePersistentEntity)
     HibernateMappingContext mappingContext = Mock(HibernateMappingContext)
     MappingCacheHolder cacheHolder = Mock(MappingCacheHolder)
+    // the grails.gorm.leftJoinAssociationSort setting
+    boolean leftJoinSort = true
 
     def setup() {
+        mappingContext.isLeftJoinAssociationSort() >> { leftJoinSort }
         entity.getName() >> "Person"
         entity.getJavaClass() >> Object
         entity.getMappingContext() >> mappingContext
@@ -388,6 +391,17 @@ class HqlListQueryBuilderSpec extends Specification {
 
         expect: "the path is not left to Hibernate, which would join the association with an inner join"
         builder.buildListHql() == "from Person e left join e.author s0 order by upper(s0.name) asc"
+    }
+
+    void "test buildListHql sorts by a property of an association through an inner join without the leftJoinAssociationSort setting"() {
+        given:
+        leftJoinSort = false
+        property(associated(entity, "author"), "name", String)
+
+        def builder = new HqlListQueryBuilder(entity, [(HibernateQueryArgument.SORT.value()): "author.name"])
+
+        expect:
+        builder.buildListHql() == "from Person e join e.author s0 order by upper(s0.name) asc"
     }
 
     void "test buildListHql joins every association of a nested sort path"() {

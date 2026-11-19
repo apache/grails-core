@@ -45,6 +45,7 @@ public class JpaQueryContext implements Cloneable {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
     private final ExpressionResolver resolver;
+    private boolean leftJoinSort;
     private final Map<ParameterExpression<?>, Object> parameterValues = new LinkedHashMap<>();
     private final Map<String, Expression<?>> selectionAliases = new HashMap<>();
     // only the context of a query, which has no parent, records the contexts of its association blocks
@@ -109,6 +110,10 @@ public class JpaQueryContext implements Cloneable {
                 new JoinTracker(parent != null ? parent.getJoinTracker() : null, root);
         this.aliasRegistry = new AliasRegistry(parent != null ? parent.getAliasRegistry() : null);
         this.resolver = new ExpressionResolver(aliasRegistry, joinTracker);
+        if (parent != null) {
+            this.resolver.setLeftJoinSort(parent.leftJoinSort);
+            this.leftJoinSort = parent.leftJoinSort;
+        }
         if (aliases != null) {
             for (HibernateAlias alias : aliases) {
                 aliasRegistry.define(alias.alias(), alias);
@@ -117,6 +122,16 @@ public class JpaQueryContext implements Cloneable {
         if (root != null) {
             this.joinTracker.addJoin("root", root);
         }
+    }
+
+    /**
+     * Sets whether an association that is joined only for a sort is joined with a left join, as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting requests. The contexts of the blocks and the
+     * subqueries that are created from this one take it over.
+     */
+    public void setLeftJoinSort(boolean leftJoinSort) {
+        this.leftJoinSort = leftJoinSort;
+        this.resolver.setLeftJoinSort(leftJoinSort);
     }
 
     protected JoinTracker getJoinTracker() {

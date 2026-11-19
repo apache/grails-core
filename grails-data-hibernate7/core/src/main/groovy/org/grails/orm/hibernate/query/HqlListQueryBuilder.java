@@ -80,7 +80,9 @@ public class HqlListQueryBuilder {
                 hql.append(' ').append(alias);
             }
         });
-        sortJoins.forEach((path, alias) -> hql.append(" left join ").append(path).append(' ').append(alias));
+        // with the leftJoinAssociationSort setting, a left join, which keeps the rows where the association is null
+        String sortJoin = ((HibernateMappingContext) entity.getMappingContext()).isLeftJoinAssociationSort() ? " left join " : " join ";
+        sortJoins.forEach((path, alias) -> hql.append(sortJoin).append(path).append(' ').append(alias));
         if (!sortHql.isEmpty()) {
             hql.append(" order by ").append(sortHql);
         }

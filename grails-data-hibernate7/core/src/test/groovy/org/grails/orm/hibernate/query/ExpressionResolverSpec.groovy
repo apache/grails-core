@@ -315,6 +315,7 @@ class ExpressionResolverSpec extends Specification {
         def clubJoin = Mock(SqmAttributeJoin)
         def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('club.name')
@@ -327,6 +328,24 @@ class ExpressionResolverSpec extends Specification {
         result == namePath
     }
 
+    def 'a sort by a property of an association joins the association with an inner join without the leftJoinAssociationSort setting'() {
+        given:
+        def root = Mock(SqmFrom)
+        def clubJoin = Mock(SqmAttributeJoin)
+        def namePath = Mock(SqmPath)
+        def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+
+        when:
+        def result = resolver.resolveSort('club.name')
+
+        then:
+        _ * root.get('club') >> attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
+        _ * root.getSqmJoins() >> []
+        1 * root.join('club', JoinType.INNER) >> clubJoin
+        1 * clubJoin.get('name') >> namePath
+        result == namePath
+    }
+
     def 'a sort by a nested association property joins every association on the path'() {
         given:
         def root = Mock(SqmFrom)
@@ -334,6 +353,7 @@ class ExpressionResolverSpec extends Specification {
         def clubJoin = Mock(SqmAttributeJoin)
         def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('team.club.name')
@@ -464,6 +484,7 @@ class ExpressionResolverSpec extends Specification {
         def aliasRegistry = new AliasRegistry()
         aliasRegistry.define('team.club', new HibernateAlias('team.club', 'team.club', JoinType.INNER, false))
         def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('team.club.name')
@@ -488,6 +509,7 @@ class ExpressionResolverSpec extends Specification {
         def aliasRegistry = new AliasRegistry()
         aliasRegistry.define('t', new HibernateAlias('team', 't', JoinType.INNER))
         def resolver = new ExpressionResolver(aliasRegistry, new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('t.club.name')
@@ -526,6 +548,7 @@ class ExpressionResolverSpec extends Specification {
         def clubPath = attributePath(Attribute.PersistentAttributeType.MANY_TO_ONE)
         def idPath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('team.club.id', true)
@@ -572,6 +595,7 @@ class ExpressionResolverSpec extends Specification {
         def contractJoin = Mock(SqmAttributeJoin)
         def idPath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when: 'the path does not end with a foreign key'
         def result = resolver.resolveSort('contract.id')
@@ -609,6 +633,7 @@ class ExpressionResolverSpec extends Specification {
         def authorJoin = Mock(SqmAttributeJoin)
         def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('details.author.name')
@@ -631,6 +656,7 @@ class ExpressionResolverSpec extends Specification {
         def authorJoin = Mock(SqmAttributeJoin)
         def namePath = Mock(SqmPath)
         def resolver = new ExpressionResolver(new AliasRegistry(), new JoinTracker(root))
+        resolver.leftJoinSort = true
 
         when:
         def result = resolver.resolveSort('details.author.name')

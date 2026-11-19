@@ -24,14 +24,23 @@ import grails.gorm.tests.entities.Player
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-
 import spock.lang.Issue
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
 class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
+    /**
+     * Whether the specification runs with the {@code grails.gorm.leftJoinAssociationSort} setting, with which
+     * a sort by a property of an association joins the association with a left join
+     */
+    protected boolean isLeftJoinSort() {
+        false
+    }
+
     void setupSpec() {
+        manager.grailsConfig.grails.gorm.leftJoinAssociationSort = leftJoinSort
         manager.registerDomainClasses(Club, Team, Player, Contract)
     }
 
@@ -45,7 +54,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         manager.session.clear()
     }
 
-    private void saveTeamWithoutClub() {
+    protected void saveTeamWithoutClub() {
         final team = new Team(name: 'Unattached First Team').save(failOnError: true)
         new Player(name: 'Unattached Player', team: team, contract: new Contract(salary: 1)).save(failOnError: true)
         manager.session.flush()
@@ -179,6 +188,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name == ['Bukayo', 'Cole', 'Bruno']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'sort by #sort keeps a team without a club'() {
         given:
         saveTeamWithoutClub()
@@ -232,6 +242,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name == ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a paged list sorted by an association property returns the rows that it counts'() {
         given:
         saveTeamWithoutClub()
@@ -246,6 +257,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results.totalCount == 4
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'sort by #sort #direction keeps a player whose team has no club'() {
         given:
         saveTeamWithoutClub()
@@ -269,6 +281,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         'team.club.name' | 'desc'    || ['Bruno', 'Cole', 'Bukayo']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'sort by a nested association property through an explicit alias keeps a player whose team has no club'() {
         given:
         saveTeamWithoutClub()
@@ -284,6 +297,7 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         results*.name - 'Unattached Player' == ['Bukayo', 'Cole', 'Bruno']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'sort by a nested association property keeps a player whose team has no club when the where query uses the first association'() {
         given:
         saveTeamWithoutClub()

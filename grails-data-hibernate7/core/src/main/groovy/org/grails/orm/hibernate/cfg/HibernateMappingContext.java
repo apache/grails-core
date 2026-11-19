@@ -46,6 +46,7 @@ public class HibernateMappingContext extends AbstractMappingContext {
     private final HibernateMappingFactory mappingFactory;
     private final MappingConfigurationStrategy syntaxStrategy;
     private final MappingCacheHolder mappingCacheHolder = new MappingCacheHolder();
+    private final boolean leftJoinAssociationSort;
 
     public HibernateMappingContext(
             HibernateConnectionSourceSettings settings, Object contextObject, Class<?>... persistentClasses) {
@@ -54,10 +55,19 @@ public class HibernateMappingContext extends AbstractMappingContext {
         this.mappingFactory.setDefaultMapping(settings.getDefault().getMapping());
         this.mappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
         this.mappingFactory.setDefaultNullable(settings.getDefault().isNullable());
+        this.leftJoinAssociationSort = settings.isLeftJoinAssociationSort();
         this.mappingFactory.setContextObject(contextObject);
         this.syntaxStrategy = new GrailsJpaMappingConfigurationStrategy(mappingFactory);
         this.proxyFactory = new HibernateProxyHandler();
         addPersistentEntities(persistentClasses);
+    }
+
+    /**
+     * @return Whether a sort by a property of an association joins the association with a left join, as the
+     * {@code grails.gorm.leftJoinAssociationSort} setting requests. It is otherwise joined with an inner join.
+     */
+    public boolean isLeftJoinAssociationSort() {
+        return leftJoinAssociationSort;
     }
 
     public HibernateMappingContext(HibernateConnectionSourceSettings settings, Class<?>... persistentClasses) {

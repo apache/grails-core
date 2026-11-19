@@ -43,6 +43,7 @@ import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.ToOne;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.orm.hibernate.cfg.HibernateMappingContext;
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity;
 
 /**
@@ -122,6 +123,8 @@ public class JpaCriteriaQueryCreator<T> {
         Root<?> root = cq.from(javaClass);
 
         context = aliasRegistrar.createContext(parentContext, root);
+        context.setLeftJoinSort(entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
+                mappingContext.isLeftJoinAssociationSort());
 
         applyRequestedJoins(root, projectionList);
 
@@ -181,6 +184,8 @@ public class JpaCriteriaQueryCreator<T> {
         Root<?> root = subquery.from(javaClass);
 
         context = aliasRegistrar.createContext(parentContext, root);
+        context.setLeftJoinSort(entity.getMappingContext() instanceof HibernateMappingContext mappingContext &&
+                mappingContext.isLeftJoinAssociationSort());
 
         new JpaProjectionAdapter(criteriaBuilder, context, entity).adapt(projections, (AbstractQuery<?>) subquery);
 

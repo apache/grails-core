@@ -28,11 +28,11 @@ import jakarta.persistence.metamodel.Bindable;
 import jakarta.persistence.metamodel.PluralAttribute;
 import jakarta.persistence.metamodel.SingularAttribute;
 
-import grails.orm.HibernateCriteriaBuilder;
-
 import org.hibernate.query.sqm.tree.from.SqmAttributeJoin;
 import org.hibernate.query.sqm.tree.from.SqmFrom;
 import org.hibernate.query.sqm.tree.from.SqmJoin;
+
+import grails.orm.HibernateCriteriaBuilder;
 
 /**
  * Resolves string paths and aliases into JPA Expressions and Paths.
@@ -42,10 +42,20 @@ import org.hibernate.query.sqm.tree.from.SqmJoin;
 public class ExpressionResolver {
     private final AliasRegistry aliasRegistry;
     private final JoinTracker joinTracker;
+    // whether an association that only a sort uses is joined with a left join: the leftJoinAssociationSort setting
+    private boolean leftJoinSort;
 
     public ExpressionResolver(AliasRegistry aliasRegistry, JoinTracker joinTracker) {
         this.aliasRegistry = aliasRegistry;
         this.joinTracker = joinTracker;
+    }
+
+    /**
+     * @param leftJoinSort whether an association that is joined only for a sort is joined with a left join, which
+     *     keeps the rows where the association is {@code null}, and not with an inner join
+     */
+    public void setLeftJoinSort(boolean leftJoinSort) {
+        this.leftJoinSort = leftJoinSort;
     }
 
     public Expression<?> resolve(String path) {
@@ -131,8 +141,9 @@ public class ExpressionResolver {
      * Resolves the property that an order sorts by. A path that crosses associations is not resolved as a plain
      * path, because Hibernate joins such a path with an implicit inner join, which leaves out the rows where an
      * association is {@code null}. Each association on the path is joined explicitly instead: a join that the
-     * query already has for the association is reused, and any other is a left join, unless a join type was
-     * requested for the association.
+     * query already has for the association is reused, and any other is joined for the sort, unless a join type
+     * was requested for the association: with a left join when the {@code grails.gorm.leftJoinAssociationSort}
+     * setting is enabled, and with an inner join otherwise.
      *
      * @param path the property path of the order
      * @return the expression to sort by, or {@code null} if the path cannot be resolved
@@ -228,7 +239,7 @@ public class ExpressionResolver {
         if (requested != null && !requested.explicit()) {
             return from.join(attributeName, requested.joinType());
         }
-        return foreignKey ? null : from.join(attributeName, JoinType.LEFT);
+        return foreignKey ? null : from.join(attributeName, leftJoinSort ? JoinType.LEFT : JoinType.INNER);
     }
 
     /**

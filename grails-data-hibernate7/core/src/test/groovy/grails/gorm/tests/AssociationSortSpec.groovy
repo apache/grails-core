@@ -26,6 +26,7 @@ import grails.gorm.tests.entities.Player
 import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate7.core.GrailsDataHibernate7TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import spock.lang.Requires
 
 import jakarta.persistence.criteria.JoinType
 
@@ -34,7 +35,16 @@ import jakarta.persistence.criteria.JoinType
  */
 class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManager> {
 
+    /**
+     * Whether the specification runs with the {@code grails.gorm.leftJoinAssociationSort} setting, with which
+     * a sort by a property of an association joins the association with a left join
+     */
+    protected boolean isLeftJoinSort() {
+        false
+    }
+
     void setupSpec() {
+        manager.grailsConfig.grails.gorm.leftJoinAssociationSort = leftJoinSort
         manager.registerDomainClasses(Club, Team, Player, Contract, AssociationSortBook, AssociationSortAuthor,
                 AssociationSortOwner, AssociationSortScore, AssociationSortPet)
     }
@@ -63,6 +73,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         manager.session.clear()
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'list sorted by #sort keeps a team without a club'() {
         when:
         final results = Team.list(sort: sort)
@@ -79,6 +90,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'club.id'   || ['Manchester United First Team', 'Arsenal First Team', 'Chelsea First Team']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'list sorted by a nested association property keeps a player whose team has no club'() {
         when:
         final results = Player.list(sort: 'team.club.name', order: 'desc')
@@ -99,6 +111,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.name - 'Unattached First Team' == ['Arsenal Second Team', 'Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a paged list sorted by an association property returns the teams that it counts'() {
         when:
         final results = Team.list(sort: 'club.name', max: 10)
@@ -118,6 +131,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         Team.findWhere([name: 'Unattached First Team'], [sort: 'club.name'])?.name == 'Unattached First Team'
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a criteria query with pagination arguments sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.createCriteria().list(sort: 'club.name', max: 10) {
@@ -130,6 +144,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 4
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a criteria query with pagination arguments sorted by a nested association property keeps a player whose team has no club'() {
         when:
         final results = Player.createCriteria().list(sort: 'team.club.name', max: 10) {
@@ -142,6 +157,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 4
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a criteria query with pagination arguments sorted by a nested association property reuses a join of the criteria'() {
         when:
         final results = Player.createCriteria().list(sort: 'team.club.name', order: 'desc', max: 10) {
@@ -156,6 +172,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.totalCount == 4
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'an order by an association property in a criteria query keeps a team without a club'() {
         when:
         final results = Team.createCriteria().list {
@@ -326,6 +343,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }*.name == ['Arsenal First Team', 'Chelsea First Team']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a #api sorted by #sort keeps a player without a contract'() {
         given: 'the contract of a player has the key, so the player has no column to sort by'
         new Player(name: 'Free Agent', team: Team.findByName('Arsenal First Team')).save(failOnError: true, flush: true)
@@ -427,6 +445,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.player*.name == ['Unattached Player', 'Cole', 'Bukayo', 'Bruno']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a distinct list is ordered by a property of an association'() {
         when:
         final results = Team.createCriteria().listDistinct {
@@ -552,7 +571,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'criteria count'       || 3
     }
 
-    private static Object resultOf(String query) {
+    protected static Object resultOf(String query) {
         switch (query) {
             case 'count':
                 return Team.where {
@@ -570,6 +589,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         }
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a dynamic finder sorted by an association property keeps a team without a club'() {
         when:
         final results = Team.findAllByNameLike('%First%', [sort: 'club.name'])
@@ -962,6 +982,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results*.name == ['Manchester United', 'Chelsea', 'Arsenal']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a #api sorted through an embedded component keeps a book whose component has no author'() {
         when:
         final results = booksSortedByAuthor(api)
@@ -976,6 +997,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         api << ['where query', 'list', 'criteria query', 'dynamic finder']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'a paged list sorted through an embedded component returns the books that it counts'() {
         when:
         final results = AssociationSortBook.where {
@@ -1009,6 +1031,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         'desc'    || ['Anonymous', 'Guide', 'It']
     }
 
+    @Requires({ instance.leftJoinSort })
     void 'an order inside a block of an embedded component sorts through an association of the component'() {
         when:
         final results = AssociationSortBook.withCriteria {
@@ -1034,7 +1057,7 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate7TckManag
         results.size() == 3
     }
 
-    private static List<AssociationSortBook> booksSortedByAuthor(String api) {
+    protected static List<AssociationSortBook> booksSortedByAuthor(String api) {
         switch (api) {
             case 'where query':
                 return AssociationSortBook.where {
