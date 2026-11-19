@@ -1,3 +1,10 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+build plugin: org.asciidoctor.jvm.convert in the version Forge has for asciidoctor-gradle-jvm
+build block: afterPlugins
+
 # web
 title: AsciiDoc
 description: Add support for creating AsciiDoc documentation.
@@ -5,6 +12,7 @@ category: Documentation
 documentation: null
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == build.gradle
 +     id "org.asciidoctor.jvm.convert" version "4.0.5"
 + apply from: "gradle/asciidoc.gradle"
@@ -85,6 +93,7 @@ category: Documentation
 documentation: null
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == build.gradle
 +     id "org.asciidoctor.jvm.convert" version "4.0.5"
 + apply from: "gradle/asciidoc.gradle"
@@ -165,6 +174,7 @@ category: Documentation
 documentation: null
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == build.gradle
 +     id "org.asciidoctor.jvm.convert" version "4.0.5"
 + apply from: "gradle/asciidoc.gradle"
@@ -245,6 +255,7 @@ category: Documentation
 documentation: null
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == build.gradle
 +     id "org.asciidoctor.jvm.convert" version "4.0.5"
 + apply from: "gradle/asciidoc.gradle"

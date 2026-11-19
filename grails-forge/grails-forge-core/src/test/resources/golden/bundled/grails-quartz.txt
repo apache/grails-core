@@ -1,3 +1,9 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-quartz without a version
+
 # web
 title: Quartz Job Scheduling
 description: Add Quartz framework integration to provide job scheduling capabilities.
@@ -5,6 +11,7 @@ category: Other
 documentation: https://apache.github.io/grails-quartz/latest/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-quartz documentation
 + - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
@@ -22,6 +29,7 @@ category: Other
 documentation: https://apache.github.io/grails-quartz/latest/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-quartz documentation
 + - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
@@ -39,6 +47,7 @@ category: Other
 documentation: https://apache.github.io/grails-quartz/latest/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-quartz documentation
 + - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)
@@ -56,6 +65,7 @@ category: Other
 documentation: https://apache.github.io/grails-quartz/latest/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-quartz documentation
 + - [Grails Quartz Job Scheduling documentation](https://apache.github.io/grails-quartz/latest/)

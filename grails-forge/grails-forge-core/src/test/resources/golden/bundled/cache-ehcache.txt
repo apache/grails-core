@@ -1,3 +1,9 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: cache-provider
+dependency: implementation org.grails.plugins:cache-ehcache in the version of Forge
+
 # web
 title: Ehcache Plugin
 description: The Grails Ehcache Plugin extends the Cache Plugin and uses Ehcache as the storage provider for cached content.
@@ -5,6 +11,7 @@ category: Cache
 documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
 thirdPartyDocumentation: https://www.ehcache.org/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache-ehcache documentation
 + - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
@@ -27,6 +34,7 @@ category: Cache
 documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
 thirdPartyDocumentation: https://www.ehcache.org/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache-ehcache documentation
 + - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
@@ -49,6 +57,7 @@ category: Cache
 documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
 thirdPartyDocumentation: https://www.ehcache.org/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache-ehcache documentation
 + - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)
@@ -71,6 +80,7 @@ category: Cache
 documentation: https://grails-plugins.github.io/grails-cache-ehcache/latest/
 thirdPartyDocumentation: https://www.ehcache.org/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache-ehcache documentation
 + - [Grails Ehcache Plugin documentation](https://grails-plugins.github.io/grails-cache-ehcache/latest/)

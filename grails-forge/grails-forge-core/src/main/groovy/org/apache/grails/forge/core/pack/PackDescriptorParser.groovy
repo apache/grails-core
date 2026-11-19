@@ -138,7 +138,9 @@ class PackDescriptorParser {
     private static final Pattern PROPERTY_VALUE = Pattern.compile(/([\x21-\x5B\x5D-\x7E]([\x20-\x5B\x5D-\x7E]*[\x21-\x5B\x5D-\x7E])?)?/)
     private static final Pattern IDENTIFIER = Pattern.compile(/[A-Za-z_]\w*/)
     private static final Pattern ENVIRONMENT = Pattern.compile(/[A-Za-z][A-Za-z0-9_\-]{0,49}/)
-    private static final Pattern URL = Pattern.compile(/https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!&()*+,;=%]+/)
+    // without square brackets: an address is written into a link in Markdown, and with them it could
+    // end the text of the link and start another address
+    private static final Pattern URL = Pattern.compile(/https?:\/\/[A-Za-z0-9\-._~:\/?#@!&()*+,;=%]+/)
     private static final Pattern TOKEN = Pattern.compile(/\{([^{}]*)\}/)
     // what is refused in every path and replaced in every message: control, format and private-use
     // characters, unpaired surrogates, and line and paragraph separators
@@ -264,7 +266,11 @@ class PackDescriptorParser {
     private static String documentation(Map<String, Object> root, boolean ofForge, List<String> problems) {
         String link = matching(text(root, 'documentation', '', MAX_PARAGRAPH, problems), URL, 'documentation',
                 "must be an http or https address, without spaces, quotes, '<', '>' or '\$'", problems)
-        if (!ofForge || root.get('guideOfGrails') == null) {
+        if (!ofForge || !root.containsKey('guideOfGrails')) {
+            return link
+        }
+        if (root.get('guideOfGrails') == null) {
+            problems << 'guideOfGrails: is there without a page'
             return link
         }
         String page = matching(text(root, 'guideOfGrails', '', MAX_LINE, problems), GUIDE_PAGE, 'guideOfGrails',
@@ -465,7 +471,7 @@ class PackDescriptorParser {
             String at = "${key}[${index}]."
             List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes'] : ['coordinates', 'version']
             unknownKeys(entry, ofForge ? keys + ['versionOfForge'] : keys, at, problems)
-            boolean versionOfForge = ofForge && entry.get('versionOfForge') != null
+            boolean versionOfForge = ofForge && entry.containsKey('versionOfForge')
             if (versionOfForge && (entry.get('versionOfForge') != Boolean.TRUE || entry.get('version') != null)) {
                 problems << "${at}versionOfForge: must be true, and then there is no version".toString()
             }
@@ -507,6 +513,9 @@ class PackDescriptorParser {
             }
             String artifact = !ofForge ? null : matching(text(entry, 'artifactOfForge', at, MAX_LINE, problems), ARTIFACT, at + 'artifactOfForge',
                     'must be the artifact Forge knows the version of the plugin by', problems)
+            if (ofForge && entry.containsKey('artifactOfForge') && entry.get('artifactOfForge') == null) {
+                problems << "${at}artifactOfForge: is there without an artifact".toString()
+            }
             if (artifact != null && entry.get('version') != null) {
                 problems << "${at}artifactOfForge: has the version Forge knows, and then there is no version".toString()
             }

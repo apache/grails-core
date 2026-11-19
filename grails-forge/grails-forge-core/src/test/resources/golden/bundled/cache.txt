@@ -1,3 +1,9 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-cache without a version
+
 # web
 title: Cache
 description: The Cache Plugin provides powerful and easy-to-use caching functionality for Grails applications and plugins.
@@ -5,6 +11,7 @@ category: Cache
 documentation: https://grails.apache.org/docs/VERSION/guide/cache.html
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache documentation
 + - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
@@ -25,6 +32,7 @@ category: Cache
 documentation: https://grails.apache.org/docs/VERSION/guide/cache.html
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache documentation
 + - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
@@ -45,6 +53,7 @@ category: Cache
 documentation: https://grails.apache.org/docs/VERSION/guide/cache.html
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache documentation
 + - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)
@@ -65,6 +74,7 @@ category: Cache
 documentation: https://grails.apache.org/docs/VERSION/guide/cache.html
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature cache documentation
 + - [Grails Cache documentation](https://grails.apache.org/docs/VERSION/guide/cache.html)

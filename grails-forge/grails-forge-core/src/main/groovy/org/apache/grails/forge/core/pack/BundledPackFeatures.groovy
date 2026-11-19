@@ -87,8 +87,12 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
                     .collect { String line -> line.trim() }
                     .findAll { String line -> line && !line.startsWith('#') }
         }
-        if (names.isEmpty() || names.toUnique().size() != names.size()) {
-            throw new IllegalStateException("Forge is not whole: ${Pack.BUNDLED_INDEX} names no pack, or one twice")
+        if (names.isEmpty()) {
+            throw new IllegalStateException("Forge is not whole: ${Pack.BUNDLED_INDEX} names no pack")
+        }
+        List<String> twice = names.findAll { String name -> names.count(name) > 1 }.toUnique()
+        if (twice) {
+            throw new IllegalStateException("Forge is not whole: ${Pack.BUNDLED_INDEX} names ${twice.join(', ')} more than once")
         }
         return names
     }

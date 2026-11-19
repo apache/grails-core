@@ -1,3 +1,10 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-openapi without a version
+dependency: implementation org.springdoc:springdoc-openapi-starter-webmvc-ui without a version
+
 # web
 title: OpenAPI / Swagger UI
 description: Describes the application's URL mappings and domain classes as an OpenAPI document, served at /v3/api-docs and browsable at /swagger-ui/index.html outside production.
@@ -5,6 +12,7 @@ category: API
 documentation: https://grails.apache.org/docs/VERSION/guide/REST.html#openApi
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature openapi documentation
 + - [Grails OpenAPI / Swagger UI documentation](https://grails.apache.org/docs/VERSION/guide/REST.html#openApi)
@@ -28,6 +36,7 @@ category: API
 documentation: https://grails.apache.org/docs/VERSION/guide/REST.html#openApi
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature openapi documentation
 + - [Grails OpenAPI / Swagger UI documentation](https://grails.apache.org/docs/VERSION/guide/REST.html#openApi)

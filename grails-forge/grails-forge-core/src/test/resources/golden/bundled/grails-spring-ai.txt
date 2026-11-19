@@ -1,3 +1,10 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.apache.grails:grails-spring-ai without a version
+dependency: testImplementation org.apache.grails:grails-testing-support-ai without a version
+
 # web
 title: Grails Spring AI
 description: Integrates Spring AI: a chat client over the provider of your choice, chat responses streamed from controller actions, and scripted models for tests.
@@ -5,6 +12,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
@@ -23,6 +31,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
@@ -41,6 +50,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
@@ -59,6 +69,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)

@@ -1,3 +1,9 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+dependency: implementation org.hibernate.validator:hibernate-validator without a version
+
 # web
 title: Hibernate Validator
 description: Add support for the Hibernate Validator.
@@ -5,6 +11,7 @@ category: Validation
 documentation: https://hibernate.org/validator/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature hibernate-validator documentation
 + - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
@@ -20,6 +27,7 @@ category: Validation
 documentation: https://hibernate.org/validator/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature hibernate-validator documentation
 + - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
@@ -35,6 +43,7 @@ category: Validation
 documentation: https://hibernate.org/validator/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature hibernate-validator documentation
 + - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
@@ -50,6 +59,7 @@ category: Validation
 documentation: https://hibernate.org/validator/
 thirdPartyDocumentation: null
 visible: true
+dependentFeatures: []
 == README.md
 + ## Feature hibernate-validator documentation
 + - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)

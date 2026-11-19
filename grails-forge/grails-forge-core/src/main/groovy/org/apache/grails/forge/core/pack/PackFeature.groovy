@@ -219,7 +219,13 @@ class PackFeature implements Feature {
     private Dependency.Builder toDependency(GeneratorContext generatorContext, PackDependency declared, boolean platform) {
         Dependency.Builder dependency = Dependency.builder()
         if (declared.versionOfForge) {
-            // as a compiled feature of the framework looks its version up
+            // as a compiled feature of the framework looks its version up; the group is the one Forge knows,
+            // and the one the descriptor names has to be that group and not only look like it
+            String known = generatorContext.resolveCoordinate(declared.artifactId).getGroupId()
+            if (known != declared.groupId) {
+                throw new IllegalStateException("The feature ${name} names ${declared.groupId}:${declared.artifactId} for a version of " +
+                        "Forge, and Forge knows the artifact as ${known}:${declared.artifactId}")
+            }
             dependency.groupId(declared.groupId).lookupArtifactId(declared.artifactId)
         } else {
             dependency.groupId(declared.groupId).artifactId(declared.artifactId).version(declared.version)

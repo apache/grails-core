@@ -178,6 +178,21 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
         'one family whose features name two groups' | [new GroupedFeature('first', 'one', String), new GroupedFeature('second', 'two', String)]      || "The feature second puts String in the exclusive group 'two', which does not match the other features of that group"
         'a feature that names a blank group'        | [new GroupedFeature('first', ' ', String)]                                                    || 'The feature first names no exclusive group'
         'a feature that names no group'             | [new GroupedFeature('first', null, String)]                                                   || 'The feature first names no exclusive group'
+        'a pack beside features found by their type' | [new GroupedFeature('first', 'shared', String), new GroupedFeature('second', 'shared', null)]  || "The exclusive group 'shared' has features that are packs and compiled features that are looked for by their type, which a pack has not"
+        'the same with the pack first'              | [new GroupedFeature('a', 'shared', null), new GroupedFeature('b', 'shared', String)]           || "The exclusive group 'shared' has features that are packs and compiled features that are looked for by their type, which a pack has not"
+    }
+
+    void "a group whose compiled features are found by the group can have packs, and a group can be of packs only"() {
+        when:
+        new FeatureRegistry([new GroupedFeature('first', 'shared', String, true), new GroupedFeature('second', 'shared', null),
+                             new GroupedFeature('third', 'packs', null), new GroupedFeature('fourth', 'packs', null)], [])
+
+        then:
+        noExceptionThrown()
+
+        and: 'the layouts are such a group: a compiled default and a pack'
+        beanContext.getBean(FeatureRegistry).all().findAll { it instanceof OneOfFeature && ((OneOfFeature) it).group == 'gsp-layout' }
+                .collectEntries { [it.name, ((OneOfFeature) it).featureClass?.simpleName] } == ['grails-layout': null, 'sitemesh3': 'GspLayout']
     }
 
     static class GroupedFeature implements OneOfFeature {
@@ -186,10 +201,13 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
         final String group
         final Class<?> featureClass
 
-        GroupedFeature(String name, String group, Class<?> featureClass) {
+        final boolean foundByGroup
+
+        GroupedFeature(String name, String group, Class<?> featureClass, boolean foundByGroup = false) {
             this.name = name
             this.group = group
             this.featureClass = featureClass
+            this.foundByGroup = foundByGroup
         }
 
         @Override

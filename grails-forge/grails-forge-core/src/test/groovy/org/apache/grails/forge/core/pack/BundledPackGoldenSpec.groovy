@@ -47,14 +47,14 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
         given:
         String now = describe(name)
         File golden = new File(GOLDEN, "${name}.txt")
-        if (System.getenv('FORGE_UPDATE_GOLDEN') == 'true') {
+        if (System.getenv('FORGE_UPDATE_GOLDEN') == 'true' && !System.getenv('CI')) {
             golden.parentFile.mkdirs()
             golden.setText(now, 'UTF-8')
         }
 
         expect:
         golden.isFile()
-        now == golden.getText('UTF-8')
+        now == golden.getText('UTF-8').replace('\r\n', '\n')
 
         where:
         name << BundledPackFeatures.names(BundledPackGoldenSpec.classLoader)
@@ -68,6 +68,18 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
     private String describe(String name) {
         FeatureRegistry registry = beanContext.getBean(FeatureRegistry)
         StringBuilder text = new StringBuilder()
+        // what the lines of an application cannot show: where a version comes from, and how the feature is selected
+        PackDescriptor descriptor = new PackLoader().fromClasspath(BundledPackGoldenSpec.classLoader, name).descriptor
+        text << "compatibility: grails ${descriptor.grailsCompatibility}, forge ${descriptor.forgeCompatibility}\n"
+        text << "requires: ${descriptor.requires}\nconflicts: ${descriptor.conflicts}\noneOf: ${descriptor.oneOf}\n"
+        descriptor.dependencies.each {
+            text << "dependency: ${it.scope} ${it.groupId}:${it.artifactId} ${it.versionOfForge ? 'in the version of Forge' : it.version ?: 'without a version'}\n"
+        }
+        descriptor.buildPlugins.each {
+            text << "build plugin: ${it.id} ${it.artifactOfForge ? 'in the version Forge has for ' + it.artifactOfForge : it.version ?: 'without a version'}\n"
+        }
+        descriptor.buildBlocks.each { String anchor, String block -> text << "build block: ${anchor}\n" }
+        text << '\n'
         ApplicationType.values().each { ApplicationType type ->
             Feature feature = registry.find(type, name, true).orElse(null)
             text << "# ${type.name}\n"
@@ -78,6 +90,7 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
             text << "title: ${feature.title}\ndescription: ${feature.description}\ncategory: ${feature.category}\n"
             text << "documentation: ${feature.documentation}\nthirdPartyDocumentation: ${feature.thirdPartyDocumentation}\n"
             text << "visible: ${feature.visible}\n"
+            text << "dependentFeatures: ${feature.dependentFeatures}\n"
             Map<String, String> without = generate(type, [])
             Map<String, String> with = generate(type, [name])
             // the record of the features of the application changes with every feature the framework gains

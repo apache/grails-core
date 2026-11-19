@@ -1,3 +1,9 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: [grails-spring-ai]
+conflicts: []
+oneOf: spring-ai-provider
+dependency: implementation org.springframework.ai:spring-ai-starter-model-ollama without a version
+
 # web
 title: Spring AI Ollama
 description: Uses models served by a local Ollama through Spring AI; no credentials needed.
@@ -5,6 +11,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html
 visible: true
+dependentFeatures: [grails-spring-ai]
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
@@ -32,6 +39,7 @@ category: AI
 documentation: https://grails.apache.org/docs/VERSION/guide/usingAi.html
 thirdPartyDocumentation: https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html
 visible: true
+dependentFeatures: [grails-spring-ai]
 == README.md
 + ## Feature grails-spring-ai documentation
 + - [Grails Spring AI documentation](https://grails.apache.org/docs/VERSION/guide/usingAi.html)
