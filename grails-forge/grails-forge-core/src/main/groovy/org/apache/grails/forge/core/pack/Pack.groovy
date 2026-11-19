@@ -116,7 +116,15 @@ final class Pack {
             lines << "build file blocks, which are code of the build: ${some(descriptor.buildExtensions.keySet())}".toString()
         }
         if (descriptor.files) {
-            lines << "files it writes: ${some(descriptor.files.collect { PackFile each -> each.to })}".toString()
+            // a file outside the sources can be code of the build or of what builds it: none of those is left out
+            List<String> sources = descriptor.files.collect { PackFile each -> each.to }.findAll { String to -> isSource(to) }
+            List<String> others = descriptor.files.collect { PackFile each -> each.to }.findAll { String to -> !isSource(to) }
+            if (others) {
+                lines << "files it writes outside the sources: ${others.collect { String to -> item(to) }.join(', ')}".toString()
+            }
+            if (sources) {
+                lines << "source files it writes: ${some(sources)}".toString()
+            }
         }
         if (descriptor.buildPlugins) {
             lines << "build plugins: ${some(descriptor.buildPlugins.collect { PackBuildPlugin each -> each.version ? each.id + ':' + each.version : each.id })}".toString()
@@ -146,12 +154,22 @@ final class Pack {
         return lines
     }
 
+    private static boolean isSource(String to) {
+        return to.startsWith('src/main/') || to.startsWith('src/test/') || to.startsWith('src/integration-test/') ||
+                (to.startsWith('grails-app/') && !to.startsWith('grails-app/conf/'))
+    }
+
     private static String some(Collection<String> all) {
-        List<String> shown = all.take(MAX_SUMMARY_ITEMS).collect { String each ->
-            each.length() > MAX_SUMMARY_ITEM ? each.substring(0, MAX_SUMMARY_ITEM) + '...' : each
-        }
+        List<String> shown = all.take(MAX_SUMMARY_ITEMS).collect { String each -> item(each) }
         String text = shown.join(', ')
         return all.size() > shown.size() ? "${text} and ${all.size() - shown.size()} more" : text
+    }
+
+    // one thing of a line: cut when long, and in quotes when it could be read as several
+    private static String item(String each) {
+        String text = each.length() > MAX_SUMMARY_ITEM ?
+                each.substring(0, each.offsetByCodePoints(0, each.codePointCount(0, MAX_SUMMARY_ITEM))) + '...' : each
+        return text.contains(',') ? "'${text}'".toString() : text
     }
 
     private static String coordinates(PackDependency dependency) {
@@ -159,7 +177,12 @@ final class Pack {
         if (dependency.version) {
             coordinates += ':' + dependency.version
         }
-        return dependency.excludes ? "${coordinates} without ${dependency.excludes.join(' and ')}" : coordinates
+        if (!dependency.excludes) {
+            return coordinates
+        }
+        List<String> shown = dependency.excludes.take(3)
+        String more = dependency.excludes.size() > shown.size() ? " and ${dependency.excludes.size() - shown.size()} more" : ''
+        return "${coordinates} without ${shown.join(' and ')}${more}"
     }
 
     private static int leaves(Object value) {

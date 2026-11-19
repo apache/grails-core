@@ -80,7 +80,8 @@ class PackLoader {
      * the descriptor names. Nothing else of the jar is read and nothing of it is loaded as code here.
      *
      * <p>The limits are those of a pack in a directory, and they are on what is read, not on the sizes
-     * the jar gives for its entries.</p>
+     * the jar gives for its entries. A jar with two entries of one name for a file of the pack is refused.
+     * The signature of a signed jar is not checked.</p>
      *
      * @param jar the jar
      * @return the pack
@@ -93,7 +94,7 @@ class PackLoader {
         }
         try (ZipFile zip = new ZipFile(jar.toFile())) {
             return read(zip, origin)
-        } catch (IOException | InvalidPathException | IllegalArgumentException e) {
+        } catch (IOException | InvalidPathException | IllegalArgumentException | UnsupportedOperationException e) {
             throw new PackDescriptorException(origin, ["It cannot be read as a jar: ${e.class.simpleName}".toString()])
         }
     }
@@ -102,6 +103,11 @@ class PackLoader {
         ZipEntry descriptorEntry = zip.getEntry("${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR}")
         if (descriptorEntry == null || descriptorEntry.isDirectory()) {
             throw new PackDescriptorException(origin, ["There is no ${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR} in the jar".toString()])
+        }
+        // a jar can hold two entries of one name, and which of them is read is not for the jar to choose
+        Set<String> repeated = repeatedEntries(zip)
+        if (repeated.contains(descriptorEntry.name)) {
+            throw new PackDescriptorException(origin, ["${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR} is in the jar more than once".toString()])
         }
         byte[] descriptorBytes = read(zip, descriptorEntry, MAX_DESCRIPTOR_BYTES)
         if (descriptorBytes == null) {
@@ -113,10 +119,16 @@ class PackLoader {
         long total = 0
         descriptor.files.eachWithIndex { PackFile file, int index ->
             String at = "files[${index}].from: '${file.from}'"
-            if (files.containsKey(file.from)) {
+            // enough was said, or the pack is too large whatever the rest of it is
+            if (problems.size() >= PackDescriptorParser.MAX_PROBLEMS || total > MAX_PACK_BYTES) {
                 return
             }
-            ZipEntry entry = zip.getEntry("${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES}/${file.from}")
+            String path = "${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES}/${file.from}"
+            ZipEntry entry = zip.getEntry(path)
+            if (repeated.contains(path)) {
+                problems << "${at} is in the jar more than once".toString()
+                return
+            }
             if (entry == null || entry.isDirectory()) {
                 problems << "${at} is not a file under ${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES} of the jar".toString()
                 return
@@ -137,6 +149,20 @@ class PackLoader {
             throw new PackDescriptorException(origin, problems)
         }
         return new Pack(descriptor, origin, files)
+    }
+
+    private static Set<String> repeatedEntries(ZipFile zip) {
+        Set<String> seen = new HashSet<>()
+        Set<String> repeated = new HashSet<>()
+        String prefix = Pack.JAR_DIRECTORY + '/'
+        Enumeration<? extends ZipEntry> entries = zip.entries()
+        while (entries.hasMoreElements()) {
+            String name = entries.nextElement().name
+            if (name.startsWith(prefix) && !seen.add(name)) {
+                repeated << name
+            }
+        }
+        return repeated
     }
 
     /**
@@ -166,6 +192,10 @@ class PackLoader {
         long total = 0
         descriptor.files.eachWithIndex { PackFile file, int index ->
             String at = "files[${index}].from: '${file.from}'"
+            // enough was said, or the pack is too large whatever the rest of it is
+            if (problems.size() >= PackDescriptorParser.MAX_PROBLEMS || total > MAX_PACK_BYTES) {
+                return
+            }
             if (!isPlainFileBelow(templates, file.from)) {
                 problems << "${at} is not a file under ${Pack.TEMPLATES} of the pack, or is a link or is reached through one".toString()
                 return

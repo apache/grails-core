@@ -120,6 +120,16 @@ final class PackModel {
             return containsKey(name) ? values.get(name) : otherwise
         }
 
+        @Override
+        Object put(String name, Object value) {
+            throw new UnsupportedOperationException("The ${of} of a template cannot be changed")
+        }
+
+        @Override
+        void setProperty(String name, Object value) {
+            put(name, value)
+        }
+
         // a name after a dot is a name of the model and nothing else: not a property of this class
         @Override
         Object getProperty(String name) {

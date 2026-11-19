@@ -98,6 +98,57 @@ class GrailsPluginGradlePluginForgePackSpec extends GradleSpecification {
         name == null
     }
 
+    def "the second build of an unchanged pack does nothing again"() {
+        given:
+        setupTestResourceProject('plugin-forge-pack')
+        executeTask('jar')
+
+        when:
+        def result = executeTask('jar')
+
+        then:
+        result.output.contains('Reusing configuration cache')
+        result.tasks.find { it.path == ':copyForgePack' }.outcome == org.gradle.testkit.runner.TaskOutcome.UP_TO_DATE
+        result.tasks.find { it.path == ':jar' }.outcome == org.gradle.testkit.runner.TaskOutcome.UP_TO_DATE
+    }
+
+    def "the name of the pack is the one the descriptor gives as YAML, however it is written"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        new File(runner.projectDir, 'src/main/forge/feature.yml').setText(
+                'description: "first\nname: evil\n rest"\n"name" : acme-trail\nfiles: []\n', 'UTF-8')
+        new File(runner.projectDir, 'src/main/forge/templates').deleteDir()
+
+        when:
+        executeTask('jar')
+        JarFile jar = new JarFile(new File(runner.projectDir, 'build/libs').listFiles().find { it.name.endsWith('.jar') })
+        String name = jar.manifest.mainAttributes.getValue('Grails-Forge-Pack')
+        jar.close()
+
+        then:
+        name == 'acme-trail'
+    }
+
+    def "a pack with #problem fails the build, since Forge could not read it from the jar"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        change.call(new File(runner.projectDir, 'src/main/forge'))
+
+        when:
+        def result = runner.withArguments('jar').buildAndFail()
+
+        then:
+        result.output.contains(message)
+
+        where:
+        problem                              | change                                                              || message
+        'a file Gradle leaves out of a copy' | { File pack -> new File(pack, 'templates/.gitignore').text = 'x' }  || 'has files Gradle leaves out of a jar, so it cannot name them: templates/.gitignore'
+        'templates and no descriptor'        | { File pack -> new File(pack, 'feature.yml').delete() }             || 'src/main/forge has files of a feature pack and no feature.yml that is a file'
+        'a link'                             | { File pack -> java.nio.file.Files.createSymbolicLink(new File(pack, 'templates/link.txt').toPath(), new File(pack, 'notes.md').toPath()) } || 'has a link, which a pack cannot have: templates/link.txt'
+        'a name that is not text'            | { File pack -> new File(pack, 'feature.yml').text = 'name: true\n' } || 'src/main/forge/feature.yml does not name the feature pack'
+        'a descriptor that is not YAML'      | { File pack -> new File(pack, 'feature.yml').text = 'name: [\n' }   || 'src/main/forge/feature.yml cannot be read as YAML'
+    }
+
     def "a descriptor that does not name the pack fails the build"() {
         given:
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')

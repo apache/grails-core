@@ -18,8 +18,11 @@
  */
 package org.grails.gradle.plugin.core
 
-import java.util.regex.Matcher
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
 import java.util.regex.Pattern
+import java.util.stream.Stream
 
 import javax.inject.Inject
 
@@ -47,6 +50,10 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
+import org.yaml.snakeyaml.error.YAMLException
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
@@ -86,7 +93,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     /** The manifest attribute that names the Forge feature pack a jar holds. */
     public static final String FORGE_PACK_MANIFEST_ATTRIBUTE = 'Grails-Forge-Pack'
 
-    private static final Pattern FORGE_PACK_NAME = Pattern.compile(/name:[ \t]*(['"]?)([a-z][a-z0-9]*(?:-[a-z0-9]+)*)\1[ \t]*(?:#.*)?/)
+    private static final Pattern FORGE_PACK_NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
+
+    private static final int FORGE_PACK_NAME_LENGTH = 200
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
@@ -317,7 +326,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      * Packages the Forge feature pack of the plugin, when it has one: the {@code feature.yml} and the
      * {@code templates} directory under {@code src/main/forge} go into {@code META-INF/grails-forge}
      * of the jar, and the manifest of the jar names the pack, so that a tool can tell a jar holds one
-     * without reading the descriptor. A plugin without that directory is built as before.
+     * without reading the descriptor. A plugin without that directory is built as before. The build
+     * fails for a pack Forge could not read from the jar: one without a descriptor, with a link, or with
+     * a file Gradle leaves out of every copy, such as {@code .gitignore}.
      *
      * <p>The pack is staged in a directory of its own, attached to the output of the main source set
      * like the templates of the plugin are, so the GSP templates of a pack are not dropped by the
@@ -327,12 +338,28 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         ProjectLayout layout = project.layout
         Directory source = layout.projectDirectory.dir(FORGE_PACK_SOURCE_DIR)
 
+        File sourceDirectory = source.asFile
         TaskProvider<Copy> copyForgePack = project.tasks.register('copyForgePack', Copy) { Copy copy ->
             copy.from(source) { CopySpec spec ->
                 spec.include(FORGE_PACK_DESCRIPTOR, 'templates/**')
             }
             copy.into(layout.buildDirectory.dir("${FORGE_PACK_STAGING_DIR}/${FORGE_PACK_JAR_DIR}"))
+            copy.includeEmptyDirs = false
+            // Gradle leaves some files out of every copy (.gitignore, backup files and the like) and does
+            // not look at them as inputs either: the names of all files of the pack are an input, so one of
+            // those that is added is checked, and refused, and does not go missing from the jar unseen
+            copy.inputs.property('forgePackFiles', project.provider { forgePackFiles(sourceDirectory) })
             regenerateStagingTree(copy)
+            copy.doFirst { Task task ->
+                checkForgePackSource(sourceDirectory)
+            }
+            copy.doLast { Task task ->
+                List<String> missing = forgePackFiles(sourceDirectory) - forgePackFiles(((Copy) task).destinationDir)
+                if (missing) {
+                    throw new GradleException("The feature pack in ${FORGE_PACK_SOURCE_DIR} has files Gradle leaves out of a jar, " +
+                            "so it cannot name them: ${missing.join(', ')}")
+                }
+            }
         }
 
         SourceSetContainer sourceSets = project.extensions.getByType(SourceSetContainer)
@@ -349,18 +376,68 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     }
 
     /**
+     * The files of a pack below a directory, by their path from it: the descriptor and what is under
+     * {@code templates}. Links are not followed.
+     */
+    private static List<String> forgePackFiles(File directory) {
+        List<String> files = []
+        Path root = directory.toPath()
+        Path descriptor = root.resolve(FORGE_PACK_DESCRIPTOR)
+        if (Files.isRegularFile(descriptor, LinkOption.NOFOLLOW_LINKS)) {
+            files << FORGE_PACK_DESCRIPTOR
+        }
+        Path templates = root.resolve('templates')
+        if (Files.isDirectory(templates, LinkOption.NOFOLLOW_LINKS)) {
+            Files.walk(templates).withCloseable { Stream<Path> paths ->
+                paths.filter { Path path -> Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS) }
+                        .forEach { Path path -> files << root.relativize(path).join('/') }
+            }
+        }
+        return files.toSorted()
+    }
+
+    /**
+     * A directory for a pack holds a descriptor, and nothing of it is a link: Forge reads no link when
+     * it reads a pack from a directory, and a link here would put a file from somewhere else in the jar.
+     */
+    private static void checkForgePackSource(File directory) {
+        Path root = directory.toPath()
+        if (!Files.isRegularFile(root.resolve(FORGE_PACK_DESCRIPTOR), LinkOption.NOFOLLOW_LINKS)) {
+            throw new GradleException("${FORGE_PACK_SOURCE_DIR} has files of a feature pack and no ${FORGE_PACK_DESCRIPTOR} that is a file")
+        }
+        Path templates = root.resolve('templates')
+        if (Files.exists(templates, LinkOption.NOFOLLOW_LINKS)) {
+            Files.walk(templates).withCloseable { Stream<Path> paths ->
+                Path link = paths.filter { Path path -> Files.isSymbolicLink(path) }.findFirst().orElse(null)
+                if (link != null) {
+                    throw new GradleException("The feature pack in ${FORGE_PACK_SOURCE_DIR} has a link, which a pack cannot have: " +
+                            root.relativize(link).join('/'))
+                }
+            }
+        }
+    }
+
+    /**
      * The name a descriptor of a Forge feature pack gives the pack. Forge checks the whole of a
      * descriptor when the pack is used; only the name is read here, for the manifest.
      */
     protected static String forgePackName(String descriptor) {
-        for (String line : descriptor.readLines()) {
-            Matcher matcher = FORGE_PACK_NAME.matcher(line)
-            if (matcher.matches()) {
-                return matcher.group(2)
-            }
+        Object name = null
+        try {
+            LoaderOptions options = new LoaderOptions()
+            options.allowDuplicateKeys = false
+            options.maxAliasesForCollections = 0
+            Object root = new Yaml(new SafeConstructor(options)).load(descriptor.startsWith('\uFEFF') ? descriptor.substring(1) : descriptor)
+            name = root instanceof Map ? ((Map) root).get('name') : null
+        } catch (YAMLException e) {
+            throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} cannot be read as YAML: " +
+                    (e.message ?: e.class.simpleName).readLines().first())
         }
-        throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} does not name the feature pack: it needs a line " +
-                "'name: <name>' with a name of lowercase letters, digits and single hyphens that starts with a letter")
+        if (name instanceof String && name.length() <= FORGE_PACK_NAME_LENGTH && FORGE_PACK_NAME.matcher((String) name).matches()) {
+            return (String) name
+        }
+        throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} does not name the feature pack: 'name' has to be " +
+                'text of lowercase letters, digits and single hyphens that starts with a letter')
     }
 
     /**

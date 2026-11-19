@@ -66,8 +66,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = ['--jdk', '--java-version'], description = 'The JDK version the project should target')
     Integer javaVersion
 
-    // not shown in the help, the completion and the reference until a pack can have templates
-    @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY', hidden = true,
+    @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
             description = 'A directory that holds a feature pack (feature.yml and its templates directory), whose feature can then be ' +
                     'selected like one of the framework. For trying a pack out before it is published. A pack adds dependencies, ' +
                     'build plugins, build script code and files to the application: use a pack only when you trust where it comes from. ' +
@@ -143,7 +142,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         // the selected ones and those they require. What a descriptor says is not markup of this command
         for (Pack pack : packs) {
             if (context.getFeatures().contains(pack.descriptor.name)) {
-                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replace('@|', '@ |')}")
+                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}")
                 for (String line : pack.summary()) {
                     out("    ${line.replace('@|', '@ |')}")
                 }

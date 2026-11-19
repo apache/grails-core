@@ -66,7 +66,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
 
         and: 'what the pack adds is said before the application is written'
         out.toString().contains('    dependencies: implementation com.acme:acme-audit-grails:2.3.0')
-        out.toString().contains('    files it writes: grails-app/conf/{packagePath}/audit.txt')
+        out.toString().contains('    files it writes outside the sources: grails-app/conf/{packagePath}/audit.txt')
 
         and:
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
@@ -160,12 +160,12 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         err.toString().contains("description: has '@|' in it, which the command line reads as the start of markup")
     }
 
-    void "the option is not in the help of the command yet"() {
+    void "the option for a directory is in the help of the command, and the one for a jar is not yet"() {
         when:
         CliRunner.run(CreateAppCommand, beanContext, '--help')
 
         then:
-        !out.toString().contains('feature-pack-dir')
+        out.toString().contains('--feature-pack-dir')
         !out.toString().contains('feature-pack-jar')
         out.toString().contains('--features')
     }

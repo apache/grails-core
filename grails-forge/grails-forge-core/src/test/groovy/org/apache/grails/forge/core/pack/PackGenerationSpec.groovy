@@ -193,7 +193,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'is not a page that compiles'           | '<% if (true) { %>unclosed'                          || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'refers to what the model has not'      | '${missing.property}'                                || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'changes the features it is given'      | '<% features << "another" %>'                        || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
-        'changes the project it is given'       | '<% project.name = "other" %>'                       || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
+        'changes the project it is given'       | '<% project.name = "other" %>'                       || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: The project of a template cannot be changed'
         'throws'                                | '<% throw new IllegalStateException("no\\nway") %>'  || 'The template bad.txt.gsp of the feature acme-audit cannot be rendered: '
         'writes without end'                    | '<% while (true) { %>' + ('x' * 1000) + '<% } %>'    || 'The template bad.txt.gsp of the feature acme-audit writes more than the 1048576 bytes a file of a feature pack can have'
     }
@@ -411,7 +411,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
     void "what a pack adds is summed up, what of it is code first, and a long list is cut"() {
         given:
-        String many = (1..40).collect { "  - from: plain.txt\n    to: 'docs/file${it}.txt'\n" }.join('')
+        String many = (1..40).collect { "  - from: plain.txt\n    to: 'src/main/groovy/file${it}.txt'\n" }.join('')
         Pack audit = pack('acme-audit', 'requires: [postgres]\nconflicts: [mysql]\n' +
                 "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit\n    version: '1.0'\n    excludes: ['org.slf4j:slf4j-simple']\n" +
                 "platforms:\n  - coordinates: com.acme:acme-bom\n    version: '1.0'\n" +
@@ -419,7 +419,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
                 "build:\n  properties:\n    systemProp.http.proxyHost: proxy.example\n  extensions:\n    assets: minifyJs = false\n" +
                 'configuration:\n  acme.audit.enabled: true\n' +
                 'readme: Read this.\n' +
-                "files:\n  - from: t.txt.gsp\n    to: one.txt\n  - from: t.txt.gsp\n    to: buildSrc/build.gradle\n" + many,
+                "files:\n  - from: t.txt.gsp\n    to: one.txt\n  - from: t.txt.gsp\n    to: buildSrc/build.gradle\n" + many +
+                "  - from: plain.txt\n    to: settings.gradle\n  - from: plain.txt\n    to: 'docs/a.txt, README.md and 0 more'\n",
                 ['t.txt.gsp': 'x', 'plain.txt': 'x'])
 
         when:
@@ -428,8 +429,9 @@ class PackGenerationSpec extends ApplicationContextSpec {
         then:
         summary[0] == 'templates, which are code that runs when the application is generated: t.txt.gsp'
         summary[1] == 'build file blocks, which are code of the build: assets'
-        summary[2].startsWith('files it writes: one.txt, buildSrc/build.gradle, docs/file1.txt, ')
-        summary[2].endsWith(', docs/file18.txt and 22 more')
+        summary[2] == "files it writes outside the sources: one.txt, buildSrc/build.gradle, settings.gradle, 'docs/a.txt, README.md and 0 more'"
+        summary[3].startsWith('source files it writes: src/main/groovy/file1.txt, ')
+        summary[3].endsWith(', src/main/groovy/file20.txt and 20 more')
         summary.contains('build plugins: com.acme.audit:2.0')
         summary.contains('build properties: systemProp.http.proxyHost=proxy.example')
         summary.contains('platforms: com.acme:acme-bom:1.0')
@@ -443,7 +445,68 @@ class PackGenerationSpec extends ApplicationContextSpec {
         pack('acme-none', '').summary() == []
     }
 
-    void "a pack is read from the jar of a plugin, and is the pack its directory would be"() {
+    void "a jar with two entries of one name for a file of the pack is refused"() {
+        given:
+        Path jar = directory.resolve('twice.jar')
+        new java.util.zip.ZipOutputStream(Files.newOutputStream(jar)).withCloseable { zip ->
+            [['META-INF/grails-forge/feature.yml', HEADER + "name: acme\nfiles:\n  - from: a.txt\n    to: a.txt\n"],
+             ['META-INF/grails-forge/templates/a.txt', 'first'],
+             ['META-INF/grails-forge/templates/A.txt', 'second']].each { List<String> entry ->
+                zip.putNextEntry(new java.util.zip.ZipEntry(entry[0]))
+                zip.write(entry[1].bytes)
+                zip.closeEntry()
+            }
+        }
+        // the stream refuses a second entry of one name, so the name of one is changed where the jar keeps it
+        byte[] bytes = Files.readAllBytes(jar)
+        String text = new String(bytes, 'ISO-8859-1').replace('templates/A.txt', 'templates/a.txt')
+        Files.write(jar, text.getBytes('ISO-8859-1'))
+
+        when:
+        new PackLoader().fromJar(jar)
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == ["files[0].from: 'a.txt' is in the jar more than once"]
+    }
+
+    void "a pack that names many files that are not there is told so only so many times"() {
+        given:
+        String files = (1..200).collect { "  - from: none${it}.txt\n    to: none${it}.txt\n" }.join('')
+        Path jar = jar('many.jar', ['META-INF/grails-forge/feature.yml': HEADER + 'name: acme\nfiles:\n' + files])
+        Path packDirectory = Files.createDirectories(directory.resolve('many/templates')).parent
+        Files.writeString(packDirectory.resolve('feature.yml'), HEADER + 'name: acme\nfiles:\n' + files)
+
+        when:
+        new PackLoader().fromJar(jar)
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems.size() == PackDescriptorParser.MAX_PROBLEMS
+
+        when:
+        new PackLoader().fromDirectory(packDirectory)
+
+        then:
+        PackDescriptorException fromDirectory = thrown()
+        fromDirectory.problems.size() == PackDescriptorParser.MAX_PROBLEMS
+    }
+
+    void "the files of a pack in a jar are counted as those of a directory are, each time they are named"() {
+        given:
+        String files = (1..17).collect { "  - from: big.txt\n    to: big${it}.txt\n" }.join('')
+        Path jar = jar('big.jar', ['META-INF/grails-forge/feature.yml': HEADER + 'name: acme\nfiles:\n' + files,
+                                   'META-INF/grails-forge/templates/big.txt': 'x' * PackLoader.MAX_FILE_BYTES])
+
+        when:
+        new PackLoader().fromJar(jar)
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == ["files[16].from: 'big.txt' takes the files of the pack over the 16777216 bytes they can have together"]
+    }
+
+    void "a pack is read from the jar of a plugin as it is from a directory"() {
         given:
         String body = "files:\n  - from: Audit.groovy.gsp\n    to: 'src/main/groovy/{packagePath}/{className}Audit.groovy'\n" +
                 "  - from: conf/a.txt\n    to: a.txt\n  - from: conf/a.txt\n    to: b.txt\n"
