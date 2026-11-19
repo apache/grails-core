@@ -190,6 +190,38 @@ A template can refer to these names. Any other name is an error, so a misspelled
 A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB, before and after it is rendered.
 
 
+==== Checking a Pack
+
+
+A plugin with a pack has it checked when the plugin is checked:
+
+[source,console]
+----
+$ ./gradlew check
+----
+
+`check` runs the task `checkForgePack`, which can also be run by itself. It reads the pack with the generator, the way the pack is read when an application is created, and fails the build with every problem it finds, each with the key of the descriptor it is at:
+
+* the whole descriptor: unknown keys, missing or malformed values, destinations outside the application;
+* every file the descriptor names: that it is there under `templates`, is a file and not a link, and is not too large;
+* `compatibility`: that the pack is for the version of Grails it is checked with;
+* every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error.
+
+No application is generated. A template is rendered for applications that are made up: one named `com.example.shop` that has the feature of the pack and the features it `requires`, for each of the `applicationTypes` of the descriptor and each value of `options.data`, `options.servlet` and `options.reloading`. What a template does only for another application, for example inside `if (features.contains('grails-spring-security'))` when the pack does not require that feature, is not run and so is not checked; try the pack out for that, as described below. Rendering a template runs its code, as creating an application does.
+
+A plugin without `src/main/forge` skips the task. The task is up to date when neither the pack nor the generator changed. Building the jar does not run it: `jar` and `assemble` package a pack that was not checked, and `check` and `build` are what fail for a pack that cannot be used.
+
+The generator runs in a JVM of its own and is not a dependency of the plugin. It is resolved from the repositories of the build as `org.apache.grails.forge:grails-forge-core`, in the version of Grails the plugin is built with (`grailsVersion`). To check the pack with another version, declare it:
+
+[source,groovy]
+.build.gradle
+----
+dependencies {
+    grailsForgePackTooling 'org.apache.grails.forge:grails-forge-core:9.0.1'
+}
+----
+
+
 ==== Trying a Pack Out
 
 

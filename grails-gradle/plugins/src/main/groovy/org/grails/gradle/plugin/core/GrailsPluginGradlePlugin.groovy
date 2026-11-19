@@ -26,18 +26,32 @@ import java.util.stream.Stream
 
 import javax.inject.Inject
 
+import grails.util.BuildSettings
 import grails.util.GrailsNameUtils
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
 import org.gradle.api.GradleException
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.attributes.AttributeContainer
+import org.gradle.api.attributes.Bundling
+import org.gradle.api.attributes.Category
+import org.gradle.api.attributes.LibraryElements
+import org.gradle.api.attributes.Usage
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
 import org.gradle.api.file.ProjectLayout
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.ValueSourceSpec
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
@@ -46,6 +60,9 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.util.PatternFilterable
+import org.gradle.jvm.toolchain.JavaLauncher
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
@@ -95,6 +112,14 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
 
     /** The manifest attribute that names the Forge feature pack a jar holds. */
     public static final String FORGE_PACK_MANIFEST_ATTRIBUTE = 'Grails-Forge-Pack'
+
+    /** The configuration that holds Forge, which checks the feature pack of the plugin. */
+    public static final String FORGE_PACK_TOOLING_CONFIGURATION = 'grailsForgePackTooling'
+
+    /** The task that checks the Forge feature pack of the plugin. */
+    public static final String FORGE_PACK_CHECK_TASK = 'checkForgePack'
+
+    private static final String FORGE_PACK_TOOLING = 'org.apache.grails.forge:grails-forge-core'
 
     private static final Pattern FORGE_PACK_NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
 
@@ -147,6 +172,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configurePluginResources(project)
         configureJarTask(project)
         configureForgePack(project)
+        configureForgePackCheck(project)
         configureSourcesJarTask(project)
     }
 
@@ -377,6 +403,76 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             if (descriptor.isPresent()) {
                 jarTask.manifest.attributes([(FORGE_PACK_MANIFEST_ATTRIBUTE): forgePackName(descriptor.get())])
             }
+        }
+    }
+
+    /**
+     * Checks the Forge feature pack of the plugin, when it has one, as a part of {@code check}: the
+     * task {@code checkForgePack} has Forge read the pack the way it reads one when an application is
+     * created, and compile and render every template. A plugin without {@code src/main/forge} is built
+     * as before, and resolves nothing for it.
+     *
+     * <p>Forge is resolved from {@code grailsForgePackTooling}, a configuration of this task alone that
+     * nothing of the plugin is published or compiled with, and runs in a JVM of its own. The
+     * configuration has the Forge of the Grails version of the project unless the build declares
+     * another.</p>
+     *
+     * <p>The jar is built without the check: {@code jar} and {@code assemble} need no Forge to be
+     * resolved, as they need no test to pass. {@code check}, and so {@code build}, is what fails for a
+     * pack Forge could not use.</p>
+     */
+    protected void configureForgePackCheck(Project project) {
+        ProjectLayout layout = project.layout
+        ProviderFactory providers = project.providers
+        Directory source = layout.projectDirectory.dir(FORGE_PACK_SOURCE_DIR)
+        DependencyHandler dependencyHandler = project.dependencies
+        ObjectFactory objects = project.objects
+
+        Provider<String> presence = providers.of(ForgePackStateValueSource) { ValueSourceSpec<ForgePackStateValueSource.Parameters> spec ->
+            spec.parameters.packDirectory.set(source)
+            spec.parameters.digest.set(false)
+        }
+        NamedDomainObjectProvider<Configuration> tooling = project.configurations.register(FORGE_PACK_TOOLING_CONFIGURATION) { Configuration configuration ->
+            configuration.description = 'Forge, which checks the feature pack of the plugin. It is not a dependency of the plugin.'
+            configuration.canBeConsumed = false
+            configuration.canBeResolved = true
+            configuration.attributes { AttributeContainer attributes ->
+                attributes.attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_RUNTIME))
+                attributes.attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category, Category.LIBRARY))
+                attributes.attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements, LibraryElements.JAR))
+                attributes.attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling, Bundling.EXTERNAL))
+            }
+            configuration.defaultDependencies { DependencySet dependencies ->
+                // read here as an input of the configuration: a pack that is added later is seen, and a
+                // plugin without a pack has nothing to resolve
+                if (presence.get() != ForgePackStateValueSource.ABSENT) {
+                    String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+                    dependencies.add(dependencyHandler.create("${FORGE_PACK_TOOLING}:${grailsVersion}".toString()))
+                }
+            }
+        }
+
+        File sourceDirectory = source.asFile
+        Provider<JavaLauncher> launcher = project.extensions.getByType(JavaToolchainService)
+                .launcherFor(project.extensions.getByType(JavaPluginExtension).toolchain)
+        TaskProvider<CheckForgePackTask> checkForgePack = project.tasks.register(FORGE_PACK_CHECK_TASK, CheckForgePackTask) { CheckForgePackTask task ->
+            task.group = LifecycleBasePlugin.VERIFICATION_GROUP
+            task.description = "Checks the Forge feature pack in ${FORGE_PACK_SOURCE_DIR} with Forge."
+            task.packDirectory.set(source)
+            // not read while the build is configured, so it is read again by every build
+            task.packState.set(providers.of(ForgePackStateValueSource) { ValueSourceSpec<ForgePackStateValueSource.Parameters> spec ->
+                spec.parameters.packDirectory.set(source)
+                spec.parameters.digest.set(true)
+            })
+            task.toolingClasspath.from(tooling)
+            task.javaLauncher.set(launcher)
+            task.markerFile.set(layout.buildDirectory.file('grails/forge-pack-check/checked'))
+            task.onlyIf("there is a feature pack in ${FORGE_PACK_SOURCE_DIR}") { Task checked ->
+                Files.exists(sourceDirectory.toPath(), LinkOption.NOFOLLOW_LINKS)
+            }
+        }
+        project.tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure { Task check ->
+            check.dependsOn(checkForgePack)
         }
     }
 

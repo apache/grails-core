@@ -19,8 +19,14 @@
 package org.apache.grails.forge.core.pack
 
 import groovy.transform.CompileStatic
+import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.LookupFailedException
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.ServletImpl
+import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 
 /**
@@ -66,19 +72,9 @@ final class PackModel {
      * @return the model, which cannot be changed
      */
     static Map<String, Object> of(GeneratorContext generatorContext, PackDescriptor descriptor) {
-        Map<String, Object> model = new LinkedHashMap<>()
-        model.put('project', new Names('project', generatorContext.getProject().getProperties()))
-        model.put('features', Collections.unmodifiableList(new ArrayList<String>(generatorContext.getFeatures()).toSorted()))
-        model.put('applicationType', generatorContext.getApplicationType().getName().replace('_', '-'))
-        // as the options of the create commands are written
-        model.put('options', new Names('options', [
-                jdk: generatorContext.getJdkVersion().majorVersion(),
-                data: generatorContext.getGorm().name().toLowerCase(Locale.ROOT),
-                servlet: generatorContext.getServlet().name().toLowerCase(Locale.ROOT),
-                reloading: generatorContext.getDevelopmentReloading().name().toLowerCase(Locale.ROOT),
-        ] as Map<String, Object>))
-        model.put('grailsVersion', VersionInfo.getGrailsVersion())
-        model.put('pack', new Names('pack', [name: descriptor.name] as Map<String, Object>))
+        Map<String, Object> model = model(generatorContext.getProject().getProperties(), generatorContext.getFeatures(),
+                generatorContext.getApplicationType(), generatorContext.getJdkVersion(), generatorContext.getGorm(),
+                generatorContext.getServlet(), generatorContext.getDevelopmentReloading(), descriptor)
         if (descriptor.versionsOfForge) {
             Map<String, Object> versions = new LinkedHashMap<>()
             descriptor.versionsOfForge.each { String artifact, String otherwise ->
@@ -91,6 +87,56 @@ final class PackModel {
             model.put('versionsOfForge', new Names('versionsOfForge', versions))
         }
         return Collections.unmodifiableMap(model)
+    }
+
+    /**
+     * Models of applications that are made up, for checking the templates of a pack where no application
+     * is generated: an application {@code com.example.shop} with the feature of the pack and the features
+     * it requires, and nothing else. There are as many as it takes for every type of application the
+     * descriptor names and every value of {@code options.data}, {@code options.servlet} and
+     * {@code options.reloading} to be in one of them; they are not every combination, and a combination
+     * can be one no application has. The models have the names {@link #of} gives a template of a pack
+     * that is not of Forge.
+     *
+     * @param descriptor the descriptor of the pack the templates are of
+     * @return the models, none of which can be changed, each with what tells it from the others
+     */
+    static Map<String, Map<String, Object>> samples(PackDescriptor descriptor) {
+        Map<String, String> project = NameUtils.parse('com.example.shop').getProperties()
+        Set<String> features = new TreeSet<String>(descriptor.requires)
+        features.add(descriptor.name)
+        List<ApplicationType> types = ApplicationType.values().findAll { ApplicationType type -> descriptor.applicationTypes.contains(type) }
+        GormImpl[] data = GormImpl.values()
+        ServletImpl[] servlets = ServletImpl.values()
+        DevelopmentReloading[] reloading = DevelopmentReloading.values()
+        int count = [types.size(), data.length, servlets.length, reloading.length].max()
+        Map<String, Map<String, Object>> samples = new LinkedHashMap<>()
+        for (int index = 0; index < count; index++) {
+            Map<String, Object> model = model(project, features, types[index % types.size()], JdkVersion.DEFAULT_OPTION,
+                    data[index % data.length], servlets[index % servlets.length], reloading[index % reloading.length], descriptor)
+            samples.put("applicationType ${model.get('applicationType')}, options ${model.get('options')}".toString(),
+                    Collections.unmodifiableMap(model))
+        }
+        return samples
+    }
+
+    private static Map<String, Object> model(Map<String, String> project, Collection<String> features, ApplicationType applicationType,
+                                             JdkVersion jdk, GormImpl data, ServletImpl servlet, DevelopmentReloading reloading,
+                                             PackDescriptor descriptor) {
+        Map<String, Object> model = new LinkedHashMap<>()
+        model.put('project', new Names('project', project))
+        model.put('features', Collections.unmodifiableList(new ArrayList<String>(features).toSorted()))
+        model.put('applicationType', applicationType.getName().replace('_', '-'))
+        // as the options of the create commands are written
+        model.put('options', new Names('options', [
+                jdk: jdk.majorVersion(),
+                data: data.name().toLowerCase(Locale.ROOT),
+                servlet: servlet.name().toLowerCase(Locale.ROOT),
+                reloading: reloading.name().toLowerCase(Locale.ROOT),
+        ] as Map<String, Object>))
+        model.put('grailsVersion', VersionInfo.getGrailsVersion())
+        model.put('pack', new Names('pack', [name: descriptor.name] as Map<String, Object>))
+        return model
     }
 
     /**

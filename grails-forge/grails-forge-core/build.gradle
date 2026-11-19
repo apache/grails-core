@@ -141,3 +141,22 @@ apply {
 tasks.named('test', Test).configure { Test test ->
     test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
 }
+
+// PackCheckSpec runs the check of a feature pack as the Grails Gradle plugin does: in a JVM of its own
+// that has what this module needs to run and nothing of its tests. The class path goes through a file,
+// since it can be longer than a command line.
+def packCheckClasspathFile = layout.buildDirectory.file('pack-check/classpath.txt')
+TaskProvider<Task> writePackCheckClasspath = tasks.register('writePackCheckClasspath') { Task task ->
+    FileCollection classpath = sourceSets.main.runtimeClasspath
+    task.inputs.files(classpath)
+    task.outputs.file(packCheckClasspathFile)
+    task.doLast {
+        packCheckClasspathFile.get().asFile.setText(classpath.files*.absolutePath.join('\n'), 'UTF-8')
+    }
+}
+tasks.named('test', Test).configure { Test test ->
+    test.dependsOn(writePackCheckClasspath)
+    test.jvmArgumentProviders.add({
+        ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString()]
+    } as CommandLineArgumentProvider)
+}

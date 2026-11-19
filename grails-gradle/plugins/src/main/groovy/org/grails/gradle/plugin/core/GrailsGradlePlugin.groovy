@@ -800,7 +800,9 @@ ${importStatements}
         name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
                 name == 'spotbugs' || name == 'spotbugsPlugins' ||
                 name == 'jacocoAgent' || name == 'jacocoAnt' ||
-                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor')
+                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor') ||
+                // Forge, which brings the platform of the Grails it belongs to
+                name == GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
     }
 
     protected void applySpringBootPlugin(Project project) {

@@ -8,3 +8,11 @@ grails {
     bom = null
     cliAutoProvision = false
 }
+
+// Forge is in no repository this build has, so the pack is checked by a stand-in that is started and
+// read the way Forge is. A test that wants the Forge the plugin resolves by itself says so.
+if (!providers.gradleProperty('forgeOfGrails').present) {
+    dependencies {
+        grailsForgePackTooling 'org.example.forge:forge-stub'
+    }
+}
