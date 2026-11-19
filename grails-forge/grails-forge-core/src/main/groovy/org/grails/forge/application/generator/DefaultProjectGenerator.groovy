@@ -96,7 +96,8 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         generatorContext.addTemplate('grailsCli',
                 new GspTemplate('grails-forge-cli.yml',
-                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext)])))
+                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext),
+                                                              excludedFeatures: generatorContext.getExcludedFeatures()])))
 
         if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {
             // what the features add was made for the project of the context, its name in it
@@ -193,9 +194,22 @@ class DefaultProjectGenerator implements ProjectGenerator {
             List<String> selectedFeatures,
             ConsoleOutput consoleOutput,
             Collection<Pack> packs) {
+        return createGeneratorContext(applicationType, project, options, operatingSystem, selectedFeatures, consoleOutput, packs, [])
+    }
+
+    @Override
+    GeneratorContext createGeneratorContext(
+            ApplicationType applicationType,
+            Project project,
+            Options options,
+            @Nullable OperatingSystem operatingSystem,
+            List<String> selectedFeatures,
+            ConsoleOutput consoleOutput,
+            Collection<Pack> packs,
+            Collection<String> excludedFeatures) {
         AvailableFeatures availableFeatures = availableFeatures(applicationType, packs)
 
-        FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem)
+        FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem, excludedFeatures)
         return contextFactory.createGeneratorContext(project, featureContext, consoleOutput)
     }
 

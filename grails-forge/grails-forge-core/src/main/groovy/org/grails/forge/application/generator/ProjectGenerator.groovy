@@ -81,6 +81,32 @@ interface ProjectGenerator {
     }
 
     /**
+     * Creates the context of a project that is not to have some features it would have by default.
+     *
+     * @param selectedFeatures the names of the selected features, of the framework or of a pack
+     * @param packs the feature packs to choose from
+     * @param excludedFeatures the names of the features to leave out. A feature that is applied by
+     * default and is named here is not applied. A name that is no feature, that cannot be selected by
+     * name, that is selected too or that a feature of the application requires is refused with an
+     * {@link IllegalArgumentException}
+     * @since 9.0
+     */
+    default GeneratorContext createGeneratorContext(
+            ApplicationType applicationType,
+            Project project,
+            Options options,
+            @Nullable OperatingSystem operatingSystem,
+            List<String> selectedFeatures,
+            ConsoleOutput consoleOutput,
+            Collection<Pack> packs,
+            Collection<String> excludedFeatures) {
+        if (excludedFeatures.isEmpty()) {
+            return createGeneratorContext(applicationType, project, options, operatingSystem, selectedFeatures, consoleOutput, packs)
+        }
+        throw new UnsupportedOperationException('This generator does not take excluded features')
+    }
+
+    /**
      * The features an application of a type can have when the given feature packs are there to choose
      * from besides the features of the framework, for listing them.
      *

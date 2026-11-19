@@ -134,7 +134,7 @@ final class ProjectStateRecorder {
                 options,
                 ProjectManifest.TRACKED,
                 generatorContext.getRequestedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
-                [],
+                generatorContext.getExcludedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
                 [:]).toBytes()
         List<Feature> applied = new ArrayList<>(generatorContext.getFeatures().getFeatures())
         applied.sort(FeatureContext.FEATURE_ORDER)

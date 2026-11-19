@@ -70,6 +70,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = ['--jdk', '--java-version'], description = 'The JDK version the project should target')
     Integer javaVersion
 
+    @CommandLine.Option(names = ['--exclude-features'], paramLabel = 'FEATURE', split = ',',
+            description = 'The features to leave out of those the application would have by default (marked in --list-features). ' +
+                    'A feature that is selected, or that a feature of the application requires, cannot be left out.')
+    List<String> excludedFeatures = new ArrayList<>()
+
     @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
             description = 'A directory that holds a feature pack (feature.yml and its templates directory), whose feature can then be ' +
                     'selected like one of the framework. For trying a pack out before it is published. A pack adds dependencies, ' +
@@ -159,14 +164,22 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {
         Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem())
-        List<Pack> packs = selection().packs
-        if (packs.isEmpty()) {
-            projectGenerator.generate(applicationType, project, options, getOperatingSystem(), selection().features, outputHandler, this)
-            return
+        // an exclusion is the name of a feature; a plugin is not left out by its coordinates, and this is
+        // said before a repository is asked for anything
+        for (String excluded : excludedFeatures) {
+            if (excluded.contains(':')) {
+                throw new CommandLine.ParameterException(this.spec.commandLine(),
+                        "--exclude-features takes the names of features, and ${excluded.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')} " +
+                                'is not one: the feature of a plugin is excluded by the name of the feature, not by the coordinates of the plugin')
+            }
         }
-        withPacks(packs)
+        List<Pack> packs = selection().packs
+        if (!packs.isEmpty()) {
+            withPacks(packs)
+        }
         GeneratorContext context = projectGenerator.createGeneratorContext(applicationType, project, options, getOperatingSystem(),
-                selection().features, this, packs)
+                selection().features, this, packs, excludedFeatures)
+        checkOptions(context)
         // a pack is not part of the framework: say which ones this application is made with, which are
         // the selected ones and those they require. What a descriptor says is not markup of this command
         for (Pack pack : packs) {
@@ -193,6 +206,29 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             }
         }
         projectGenerator.generate(applicationType, project, outputHandler, context)
+    }
+
+    /**
+     * An option that was given is a choice like a selected feature: when the features that were selected
+     * or excluded leave the application without what the option asks for, the two do not agree, and one
+     * of them would be dropped without a word. An option that was not given has a default, which gives way.
+     */
+    private void checkOptions(GeneratorContext context) {
+        if (gormImpl != null && !context.getFeatures().contains(gormImpl.getName())) {
+            throw disagreement('--data', gormImpl.name().toLowerCase(Locale.ENGLISH), "the feature ${gormImpl.getName()}")
+        }
+        if (servletImpl != null && servletImpl != ServletImpl.NONE && !context.getFeatures().contains(servletImpl.getName())) {
+            throw disagreement('--servlet', servletImpl.name().toLowerCase(Locale.ENGLISH), "the feature ${servletImpl.getName()}")
+        }
+        if (reloading != null && reloading != DevelopmentReloading.NONE && context.getFeatures().reloading()?.getReloading() != reloading) {
+            throw disagreement('--reloading', reloading.getName(), "${reloading.getLabel()}")
+        }
+    }
+
+    private CommandLine.ParameterException disagreement(String option, String value, String missing) {
+        return new CommandLine.ParameterException(this.spec.commandLine(),
+                "The option ${option} ${value} does not agree with the features that are selected or excluded: " +
+                        "the application would be made without ${missing}. Leave out the option, or the feature that takes its place")
     }
 
     /**

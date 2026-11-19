@@ -45,6 +45,7 @@ class CodeGenConfig {
     private DevelopmentReloading reloading
     private Language sourceLanguage
     private List<String> features
+    private List<String> excludedFeatures = Collections.emptyList()
 
     private boolean legacy
 
@@ -88,6 +89,17 @@ class CodeGenConfig {
         this.features = features
     }
 
+    /**
+     * @return the names of the features that were excluded when the application was created
+     */
+    List<String> getExcludedFeatures() {
+        return excludedFeatures
+    }
+
+    void setExcludedFeatures(List<String> excludedFeatures) {
+        this.excludedFeatures = excludedFeatures
+    }
+
     boolean isLegacy() {
         return legacy
     }
@@ -113,6 +125,7 @@ class CodeGenConfig {
                 codeGenConfig.setReloading(state.manifest.options.reloading)
                 codeGenConfig.setSourceLanguage(Language.DEFAULT_OPTION)
                 codeGenConfig.setFeatures(new ArrayList<String>(state.lock.featureNames))
+                codeGenConfig.setExcludedFeatures(new ArrayList<String>(state.manifest.excludedFeatures*.name))
                 return codeGenConfig
             } catch (ProjectStateException e) {
                 consoleOutput.warning(e.getMessage())
@@ -162,6 +175,13 @@ class CodeGenConfig {
                         features.add(feature.toString())
                     }
                     codeGenConfig.setFeatures(features)
+                }
+                if (map.get('excludedFeatures') instanceof List) {
+                    List<String> excluded = new ArrayList<>()
+                    for (Object feature : (List<?>) map.get('excludedFeatures')) {
+                        excluded.add(feature.toString())
+                    }
+                    codeGenConfig.setExcludedFeatures(excluded)
                 }
 
                 if (map.containsKey('testFramework') && !map.containsKey('reloading')) {

@@ -35,6 +35,7 @@ under the License.
 <%@ model="List<String> features" %>
 <%@ model="ApplicationType applicationType" %>
 <%@ model="List<PackArtifact> packArtifacts" %>
+<%@ model="List<String> excludedFeatures" %>
 applicationType: ${applicationType.getName()}
 defaultPackage: ${project.getPackageName()}
 reloading: ${reloading.getName()}
@@ -42,7 +43,8 @@ sourceLanguage: ${language.getName()}
 buildTool: ${buildTool.getName()}
 gormImpl: ${gormImpl.getName()}
 servletImpl: ${servletImpl.getName()}
-features: ${features.toString()}
+features: ${features.toString()}<g:if test="${excludedFeatures}">
+excludedFeatures: ${excludedFeatures.toString()}</g:if>
 <% if (packArtifacts) { %>
 featurePacks:
 <% for (PackArtifact artifact : packArtifacts) { %>

@@ -51,6 +51,8 @@ class FeatureContext {
     private final List<Feature> features = new ArrayList<>()
     private final List<FeaturePredicate> exclusions = new ArrayList<>()
     private List<String> requestedFeatures = Collections.emptyList()
+    private final Set<String> excludedNames = new TreeSet<>()
+    private final Deque<Feature> processing = new ArrayDeque<>()
     private ListIterator<Feature> iterator
 
     FeatureContext(Options options,
@@ -94,14 +96,35 @@ class FeatureContext {
         this.features.sort(FEATURE_ORDER)
         this.iterator = this.features.listIterator()
         while (iterator.hasNext()) {
-            Feature feature = iterator.next()
-            feature.processSelectedFeatures(this)
+            process(iterator.next())
         }
         this.iterator = null
     }
 
     void exclude(FeaturePredicate exclusion) {
         exclusions.add(exclusion)
+    }
+
+    /**
+     * Excludes the feature of a name because the application is not to have it. Unlike another
+     * exclusion this one is not silent: a feature that adds the excluded one, because it cannot be
+     * without it, is refused.
+     *
+     * @param name the name of a feature
+     * @since 9.0
+     */
+    void exclude(String name) {
+        if (excludedNames.add(name)) {
+            exclusions.add(new NamedExclusion(name))
+        }
+    }
+
+    /**
+     * @return the names given to {@link #exclude(String)}, sorted
+     * @since 9.0
+     */
+    List<String> getExcludedFeatures() {
+        return Collections.unmodifiableList(new ArrayList<String>(excludedNames))
     }
 
     /**
@@ -140,12 +163,47 @@ class FeatureContext {
      * @param feature The feature to add
      */
     void addFeature(Feature feature) {
+        if (excludedNames.contains(feature.getName())) {
+            Feature requiring = processing.peek()
+            throw new IllegalArgumentException("The feature ${feature.getName()} cannot be excluded: " +
+                    (requiring != null ? "the feature ${requiring.getName()} requires it" : 'a feature of the application requires it'))
+        }
         if (iterator != null) {
             iterator.add(feature)
         } else {
             features.add(feature)
         }
-        feature.processSelectedFeatures(this)
+        process(feature)
+    }
+
+    // the feature that is being processed is the one that requires what is added meanwhile
+    private void process(Feature feature) {
+        processing.push(feature)
+        try {
+            feature.processSelectedFeatures(this)
+        } finally {
+            processing.pop()
+        }
+    }
+
+    private static final class NamedExclusion implements FeaturePredicate {
+
+        private final String name
+
+        NamedExclusion(String name) {
+            this.name = name
+        }
+
+        @Override
+        boolean test(Feature feature) {
+            return feature.getName() == name
+        }
+
+        // a feature that is among the selected ones although it is excluded was brought in by another
+        @Override
+        Optional<String> getWarning() {
+            return Optional.of("The feature ${name} cannot be excluded: a feature of the application requires it".toString())
+        }
     }
 
     ApplicationType getApplicationType() {

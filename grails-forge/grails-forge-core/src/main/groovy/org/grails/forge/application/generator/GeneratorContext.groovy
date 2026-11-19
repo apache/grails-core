@@ -91,6 +91,7 @@ class GeneratorContext implements DependencyContext {
     private Throwable applyFailure
     private final List<Runnable> checks = new ArrayList<>()
     private List<String> requestedFeatures = Collections.emptyList()
+    private final List<String> excludedFeatures
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -98,6 +99,21 @@ class GeneratorContext implements DependencyContext {
                             @Nullable OperatingSystem operatingSystem,
                             Set<Feature> features,
                             CoordinateResolver coordinateResolver) {
+        this(project, type, options, operatingSystem, features, coordinateResolver, Collections.<String>emptyList())
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that were excluded when the features were selected
+     * @since 9.0
+     */
+    GeneratorContext(Project project,
+                            ApplicationType type,
+                            Options options,
+                            @Nullable OperatingSystem operatingSystem,
+                            Set<Feature> features,
+                            CoordinateResolver coordinateResolver,
+                            Collection<String> excludedFeatures) {
+        this.excludedFeatures = Collections.unmodifiableList(new ArrayList<String>(new TreeSet<String>(excludedFeatures)))
         this.command = type
         this.project = project
         this.operatingSystem = operatingSystem
@@ -278,6 +294,14 @@ class GeneratorContext implements DependencyContext {
      */
     void setRequestedFeatures(@Nonnull List<String> requestedFeatures) {
         this.requestedFeatures = Collections.unmodifiableList(new ArrayList<String>(requestedFeatures))
+    }
+
+    /**
+     * @return the names of the features that were excluded when the features were selected, sorted
+     * @since 9.0
+     */
+    @Nonnull List<String> getExcludedFeatures() {
+        return excludedFeatures
     }
 
     /**

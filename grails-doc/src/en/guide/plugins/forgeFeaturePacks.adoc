@@ -99,10 +99,10 @@ readme: The audit trail is configured in `AuditConfig`.
 |The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`. All of them when left out.
 
 |`requires`
-|Features that are selected with this one. They can be features of Grails or of other packs given to the same command.
+|Features that are selected with this one. They can be features of Grails or of other packs given to the same command. Two packs can require each other: both are selected, whichever of them is named. A required feature cannot be left out with `--exclude-features`.
 
 |`conflicts`
-|Features this one cannot be used with.
+|Features this one cannot be used with. The application is refused, before anything of it is written, when it would have one of them, whether that feature was selected, is there by default or was brought in by another feature.
 
 |`oneOf`
 |An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
