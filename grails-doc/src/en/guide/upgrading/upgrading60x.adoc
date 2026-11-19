@@ -1308,3 +1308,34 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+==== `list` sorts by every property of a sort map
+
+With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.list(sort: [title: 'asc', 'author.name': 'desc'])`, sorted by the last entry of the map only. As of Grails 7.0.18, it sorts by every entry, in the order of the map. The same applies to a default sort that the mapping declares for more than one property, as in `sort author: 'asc', title: 'desc'`: `list` sorted by its last property only. An association is joined once for all the entries that sort by it. `list` joined it once for each entry, and `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path`. To sort by one property, as before, pass that property alone.
+
+==== `count` works for a where query that has a sort
+
+With GORM for Hibernate, `count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of Grails 7.0.18, the count is made without the sort. The join that a sort by a property of an association makes is kept, so `count` returns the number of instances that `list` returns for the same query.
+
+==== A setting makes a sort by an association keep every instance
+
+With GORM for Hibernate, a sort by a property of an association, such as `Book.list(sort: 'author.name')`, joins the association with an inner join. The sort therefore leaves out the instances whose association is `null`, and the `totalCount` of a paged list and `count` do not count them. That is unchanged by default. As of Grails 7.0.18, the new `grails.gorm.leftJoinAssociationSort` setting makes such a sort join the association with a left join, so that a sort no longer changes which instances a query returns:
+
+[source,yaml]
+----
+grails:
+    gorm:
+        leftJoinAssociationSort: true
+----
+
+The setting applies to `list`, to `find` and `findAll` with an example, to `findWhere` and `findAllWhere`, to dynamic finders, to a criteria query that is passed pagination arguments, such as `Book.createCriteria().list(sort: 'author.name', max: 10) { ... }`, and to where queries and detached criteria.
+
+* With the setting, the instances whose association is `null` are returned and counted. Whether they come first or last depends on how the database sorts nulls. To leave them out, add a criterion that the association is not `null`, such as `Book.where { author != null }.list(sort: 'author.name')`.
+* A where query or a detached criteria that has criteria on the association still joins it for those criteria, with an inner join by default, and the sort uses that join.
+* A sort by a property of a collection, such as `Author.list(sort: 'books.title')`, still joins the collection with an inner join, and leaves out the instances whose collection is empty.
+* The setting is disabled by default in Grails 7 and in Grails 8.0, enabled by default as of Grails 8.1, and removed in Grails 9. It is listed with the other settings of this kind in link:resultSettings.html[Settings for Fixes That Change a Result].
+
+==== A where query uses the join type that it requests for each join of the association
+With GORM for Hibernate, a where query, a detached criteria or a dynamic finder can request the type of the join of an association, with the `fetch` argument, as in `Book.where { ... }.list(fetch: [author: JoinType.INNER])`, or with `join('author', JoinType.INNER)`. The join type is used when the criteria, a projection or a sort of the query join the association. As of Grails 7.0.18, it no longer matters in which order the query was put together.
+* A join type that the `fetch` argument requests is now also used for an association that the where query or the detached criteria itself has criteria or a projection on. Such an association was joined before the argument was read: with an inner join for criteria and with a left join for a projection, whatever the argument requested. `Book.where { author.name == 'Stephen King' || title == 'Anonymous' }.list(fetch: [author: JoinType.LEFT])` now also returns the book without an author that matches the title, as it already did when the join type was requested with `join('author', JoinType.LEFT)`.
+* A join type for a nested association is requested by its path. `join('author.publisher', JoinType.LEFT)` is now used for the join that criteria on `author.publisher` make, which was an inner join whatever was requested. A join type requested for an association of the queried class, such as `publisher`, is no longer used for a nested association of the same name.
