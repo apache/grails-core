@@ -213,6 +213,47 @@ class MultiDataSourceSessionSpec extends Specification {
         defaultSession?.close()
     }
 
+    def "a request that Grails makes asynchronous closes its default session too"() {
+        given: "the request has opened its sessions"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+
+        when: "the action returns a promise or calls startAsync(), which Spring's asynchronous interceptors never see"
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the default session is unbound and closed"
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !defaultSession.open
+
+        cleanup:
+        if (defaultSession?.open) {
+            defaultSession.close()
+        }
+    }
+
+    def "a request that Spring makes asynchronous leaves its default session open for Spring to close"() {
+        given: "the request has opened its sessions"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+
+        when: "the action returns a Callable or DeferredResult, whose processing rebinds the session and closes it"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the default session is unbound, and left open"
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        defaultSession.open
+
+        cleanup:
+        defaultSession?.close()
+    }
+
     def "a session of another datasource bound before the request stays bound and open when the request goes asynchronous"() {
         given: "a pre-bound session for the secondary datasource"
         def interceptor = new GrailsOpenSessionInViewInterceptor()

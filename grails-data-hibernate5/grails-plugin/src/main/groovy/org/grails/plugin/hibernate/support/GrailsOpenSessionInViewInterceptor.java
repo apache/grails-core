@@ -56,6 +56,9 @@ import org.grails.orm.hibernate.connections.HibernateConnectionSourceSettings;
  */
 public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterceptor {
 
+    /** The value of {@code GrailsApplicationAttributes.ASYNC_STARTED}, which is in a module this plugin does not use. */
+    private static final String GRAILS_ASYNC_STARTED = "org.grails.ASYNC_STARTED";
+
     protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
 
     private final List<AdditionalSessionFactoryConfig> additionalSessionFactories = new ArrayList<>();
@@ -180,8 +183,12 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
 
     /**
      * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
-     * handling. The parent class unbinds the default session; the sessions this interceptor opened for the other
-     * datasources are closed here, so that the thread goes back to its pool without them.
+     * handling. The sessions this interceptor opened for the other datasources are closed here, so that the thread
+     * goes back to its pool without them.
+     *
+     * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
+     * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
+     * asynchronous handling without them, so the default session this interceptor opened is closed here too.
      */
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
@@ -189,8 +196,35 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             closeAdditionalSessions(request);
         }
         finally {
-            super.afterConcurrentHandlingStarted(request);
+            if (isGrailsAsync(request) && !isParticipating(request) &&
+                    TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+                SessionHolder sessionHolder =
+                        (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+                }
+                SessionFactoryUtils.closeSession(sessionHolder.getSession());
+            }
+            else {
+                super.afterConcurrentHandlingStarted(request);
+            }
         }
+    }
+
+    /**
+     * @return whether Grails started asynchronous handling, for a promise or {@code startAsync()}: both set
+     * {@code GrailsApplicationAttributes.ASYNC_STARTED}
+     */
+    private static boolean isGrailsAsync(WebRequest request) {
+        return request.getAttribute(GRAILS_ASYNC_STARTED, WebRequest.SCOPE_REQUEST) != null;
+    }
+
+    /**
+     * @return whether the default session was already bound when the request started, so that it belongs to
+     * whoever bound it
+     */
+    private boolean isParticipating(WebRequest request) {
+        return request.getAttribute(getParticipateAttributeName(), WebRequest.SCOPE_REQUEST) != null;
     }
 
     private void closeAdditionalSessions(WebRequest request) {
