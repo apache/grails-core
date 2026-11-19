@@ -18,15 +18,13 @@ package org.apache.grails.security.cli
 import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
-import org.apache.grails.core.cli.CommandOption
-import org.apache.grails.core.cli.CommandParameter
 import org.apache.grails.core.cli.GrailsApplicationCommand
 import groovy.transform.CompileStatic
 
 /**
  * Creates domain classes and updates config settings for the Spring Security plugin.
  * Usage: <code>./grailsw s2-quickstart [DOMAIN_CLASS_PACKAGE] [USER_CLASS_NAME] [ROLE_CLASS_NAME] [REQUEST_MAP_CLASS_NAME] --groupClassName=[GROUP_CLASS_NAME]</code> or
- * <code>./grailsw s2-quickstart --uiOnly</code>
+ * <code>s2-quickstart --ui-only</code>
  *
  * For Example:
  * 1. <code>./grailsw s2-quickstart com.yourapp User Role --groupClassName=RoleGroup</code>
@@ -36,16 +34,6 @@ import groovy.transform.CompileStatic
  *
  * @since 6.0.0
  */
-@CommandParameter(name = 'domain-class-package', required = false,
-        description = 'The package of the domain classes')
-@CommandParameter(name = 'user-class-name', required = false, description = 'The name of the user class')
-@CommandParameter(name = 'role-class-name', required = false, description = 'The name of the role class')
-@CommandParameter(name = 'requestmap-class-name', required = false,
-        description = 'The name of the request map class, when request maps secure the URLs')
-@CommandOption(name = 'groupClassName', description = 'Also creates role group classes with this name')
-@CommandOption(name = 'uiOnly', flag = true,
-        description = 'Configures the plugin without creating domain classes, as LDAP or CAS authentication needs')
-@CommandOption(name = 'salt', flag = true, description = 'Creates a password encoder listener that salts the passwords')
 @CompileStatic
 class S2QuickstartCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
