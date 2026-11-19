@@ -20,49 +20,33 @@ github:
   environments:
     close:
       required_reviewers:
-        - id: jdaugherty
-          type: User
+        - id: grails-public
+          type: Team
         - id: matrei
-          type: User
-        - id: jamesfredley
-          type: User
-        - id: sbglasius
           type: User
       wait_timer: 0
       prevent_self_review: false
     docs:
       required_reviewers:
-        - id: jdaugherty
-          type: User
+        - id: grails-public
+          type: Team
         - id: matrei
-          type: User
-        - id: jamesfredley
-          type: User
-        - id: sbglasius
           type: User
       wait_timer: 0
       prevent_self_review: false
     sdkman:
       required_reviewers:
-        - id: jdaugherty
-          type: User
+        - id: grails-public
+          type: Team
         - id: matrei
-          type: User
-        - id: jamesfredley
-          type: User
-        - id: sbglasius
           type: User
       wait_timer: 0
       prevent_self_review: false
     release:
       required_reviewers:
-        - id: jdaugherty
-          type: User
+        - id: grails-public
+          type: Team
         - id: matrei
-          type: User
-        - id: jamesfredley
-          type: User
-        - id: sbglasius
           type: User
       wait_timer: 0
       prevent_self_review: false
