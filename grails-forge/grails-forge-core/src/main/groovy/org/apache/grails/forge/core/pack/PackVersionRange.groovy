@@ -34,7 +34,8 @@ import java.util.regex.Pattern
  * out is zero, so {@code 9} is {@code 9.0.0}. A version that is compared with a range is taken for the
  * release it leads to: {@code 9.0.0-SNAPSHOT}, {@code 9.0.0-M2} and {@code 9.0.0-RC1} are in the range
  * when 9.0.0 is. A pack that is for a release is for what leads to it, so that it can be tried
- * before the release is there.</p>
+ * before the release is there. A version that is not a release with nothing or a qualifier after it,
+ * such as {@code 9.0.1a} or one of five numbers, is in no range.</p>
  *
  * @since 9.0
  */
@@ -45,7 +46,8 @@ final class PackVersionRange {
     private static final Pattern ONE = Pattern.compile(RELEASE)
     private static final Pattern INTERVAL = Pattern.compile('([\\[(]) *(' + RELEASE + ')? *, *(' + RELEASE + ')? *([\\])])')
     private static final Pattern ONLY = Pattern.compile('\\[ *(' + RELEASE + ') *\\]')
-    private static final Pattern LEADS_TO = Pattern.compile('(' + RELEASE + ')(?:[-.+].*)?')
+    // after the release nothing, or what is no part of a number: 9.0.1a is not 9.0.0 with something after it
+    private static final Pattern LEADS_TO = Pattern.compile('(' + RELEASE + ')(?:[-+].*|\\.[^0-9].*)?')
     private static final Pattern BETWEEN = Pattern.compile(' *, *')
     private static final int MAX_INTERVALS = 20
 

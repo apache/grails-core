@@ -108,15 +108,40 @@ class GrailsPluginGradlePluginForgePackSpec extends GradleSpecification {
 
         then:
         result.output.contains('Reusing configuration cache')
-        result.tasks.find { it.path == ':copyForgePack' }.outcome == org.gradle.testkit.runner.TaskOutcome.UP_TO_DATE
         result.tasks.find { it.path == ':jar' }.outcome == org.gradle.testkit.runner.TaskOutcome.UP_TO_DATE
+    }
+
+    def "a pack that is spoiled after it was built once fails the next build: #problem"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        executeTask('jar')
+        change.call(new File(runner.projectDir, 'src/main/forge'))
+
+        when: 'the configuration of the first build is used again'
+        def result = runner.withArguments('jar').buildAndFail()
+
+        then:
+        result.output.contains('Reusing configuration cache')
+        result.output.contains(message)
+
+        where:
+        problem                              | change                                                              || message
+        'a file Gradle leaves out of a copy' | { File pack -> new File(pack, 'templates/.gitignore').text = 'x' }  || 'has files Gradle leaves out of a jar, so it cannot name them: templates/.gitignore'
+        'a file replaced by a link to it'    | { File pack -> GrailsPluginGradlePluginForgePackSpec.replaceByLink(new File(pack, 'templates/conf/audit.txt')) } || 'has a link, which a pack cannot have: templates/conf/audit.txt'
+    }
+
+    static void replaceByLink(File file) {
+        File elsewhere = new File(file.parentFile.parentFile.parentFile.parentFile, 'audit-elsewhere.txt')
+        elsewhere.bytes = file.bytes
+        file.delete()
+        java.nio.file.Files.createSymbolicLink(file.toPath(), elsewhere.toPath())
     }
 
     def "the name of the pack is the one the descriptor gives as YAML, however it is written"() {
         given:
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
         new File(runner.projectDir, 'src/main/forge/feature.yml').setText(
-                'description: "first\nname: evil\n rest"\n"name" : acme-trail\nfiles: []\n', 'UTF-8')
+                'description: "first\nname: evil\n rest"\n"name" : >\n  on\nfiles: []\n', 'UTF-8')
         new File(runner.projectDir, 'src/main/forge/templates').deleteDir()
 
         when:
@@ -126,7 +151,7 @@ class GrailsPluginGradlePluginForgePackSpec extends GradleSpecification {
         jar.close()
 
         then:
-        name == 'acme-trail'
+        name == 'on'
     }
 
     def "a pack with #problem fails the build, since Forge could not read it from the jar"() {
@@ -146,6 +171,7 @@ class GrailsPluginGradlePluginForgePackSpec extends GradleSpecification {
         'templates and no descriptor'        | { File pack -> new File(pack, 'feature.yml').delete() }             || 'src/main/forge has files of a feature pack and no feature.yml that is a file'
         'a link'                             | { File pack -> java.nio.file.Files.createSymbolicLink(new File(pack, 'templates/link.txt').toPath(), new File(pack, 'notes.md').toPath()) } || 'has a link, which a pack cannot have: templates/link.txt'
         'a name that is not text'            | { File pack -> new File(pack, 'feature.yml').text = 'name: true\n' } || 'src/main/forge/feature.yml does not name the feature pack'
+        'a descriptor that is too large'     | { File pack -> new File(pack, 'feature.yml').text = 'name: acme\n#' + ('x' * 300_000) } || 'has more than the 262144 characters a descriptor can have'
         'a descriptor that is not YAML'      | { File pack -> new File(pack, 'feature.yml').text = 'name: [\n' }   || 'src/main/forge/feature.yml cannot be read as YAML'
     }
 

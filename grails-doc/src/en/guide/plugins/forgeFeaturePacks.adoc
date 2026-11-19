@@ -20,7 +20,7 @@ under the License.
 
 A plugin can describe what an application needs in order to use it: the dependency on the plugin, settings, files. That description is a _feature pack_. With it, the plugin is a feature that can be selected when an application is created, like the features Grails itself offers.
 
-NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory or as the jar of a plugin. Selecting a pack by the coordinates of its plugin is not available yet.
+NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory. Selecting the pack of a published plugin by the coordinates of the plugin is not available yet.
 
 
 ==== The Layout of a Pack
@@ -39,7 +39,7 @@ src/main/forge/
 <1> The descriptor: what the feature is called and what it adds.
 <2> The files the descriptor names. Nothing else in `src/main/forge` is part of the pack.
 
-When the directory exists, the `org.apache.grails.gradle.grails-plugin` Gradle plugin puts `feature.yml` and `templates` into `META-INF/grails-forge` of the plugin's jar and records the name of the pack in the jar's manifest as `Grails-Forge-Pack`. A pack is published with the plugin; there is nothing else to configure. The build fails when the pack could not be read from the jar: when `src/main/forge` has templates and no `feature.yml`, when a file under `templates` is a symbolic link, and when a file is one Gradle leaves out of every archive, such as `.gitignore` or `.DS_Store`. Give such a file another name in the pack and its real name in `to`.
+When the directory exists, the `org.apache.grails.gradle.grails-plugin` Gradle plugin puts `feature.yml` and `templates` into `META-INF/grails-forge` of the plugin's jar and records the name of the pack in the jar's manifest as `Grails-Forge-Pack`. A pack is published with the plugin; there is nothing else to configure. The build fails when the pack could not be read from the jar: when `src/main/forge` has templates and no `feature.yml`, when a file under `templates` is a symbolic link, and when a file is one Gradle leaves out of every archive, such as `.gitignore` or `.DS_Store`. Give such a file another name in the pack and its real name in `to`; this is for a file in a directory of its own, since the `.gitignore` at the root of the application is written by Grails and a pack cannot write it too.
 
 
 ==== The Descriptor
@@ -90,7 +90,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |Required. The versions of Grails (`grails`) and of the generator (`forge`) the pack is for. `[9.0.0,10.0.0)` is 9.0.0 and later and before 10.0.0, `[9.1,)` is 9.1.0 and later, `9.0.0` is that release only, and several intervals are separated by commas. A snapshot, milestone or release candidate counts as the release it leads to. A pack that is not for the Grails that generates the application is refused.
 
 |`title`, `description`, `category`, `documentation`
-|What `--list-features` shows for the feature.
+|`description` is what `--list-features` shows for the feature, under its `category`. `title` and `documentation`, a link, are for tools that present features.
 
 |`applicationTypes`
 |The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`. All of them when left out.
@@ -102,7 +102,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |Features this one cannot be used with.
 
 |`oneOf`
-|An exclusive group the feature belongs to, such as `database-driver`: only one feature of a group can be selected.
+|An exclusive group the feature belongs to, such as `acme-audit-store`: only one feature of a group can be selected. The group is one of packs; a pack cannot join a group of Grails, such as `database-driver`.
 
 |`dependencies`
 |Dependencies of the application. `scope` is a Gradle configuration (`implementation`, `compileOnly`, `runtimeOnly`, `developmentOnly`, `testImplementation`, `testCompileOnly`, `testRuntimeOnly`), `coordinates` is `group:artifact`, `version` is optional and left out when the Grails BOM or a platform manages it, and `excludes` lists `group:artifact` or `group` to exclude.
@@ -143,7 +143,7 @@ A file whose name ends with `.gsp` is a template. It is rendered when the applic
 package ${project.packageName}
 
 class AuditConfig {
-<% if (features.contains('spring-security')) { %>
+<% if (features.contains('grails-spring-security')) { %>
     boolean recordUser = true
 <% } %>
     String application = '${project.name}'

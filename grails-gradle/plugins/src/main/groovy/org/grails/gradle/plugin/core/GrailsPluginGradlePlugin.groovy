@@ -50,10 +50,13 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
 
 import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.yaml.snakeyaml.error.YAMLException
+import org.yaml.snakeyaml.representer.Representer
+import org.yaml.snakeyaml.resolver.Resolver
 
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
@@ -96,6 +99,8 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     private static final Pattern FORGE_PACK_NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
 
     private static final int FORGE_PACK_NAME_LENGTH = 200
+
+    private static final int FORGE_PACK_DESCRIPTOR_LENGTH = 256 * 1024
 
     @Inject
     GrailsPluginGradlePlugin(ToolingModelBuilderRegistry registry) {
@@ -346,9 +351,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             copy.into(layout.buildDirectory.dir("${FORGE_PACK_STAGING_DIR}/${FORGE_PACK_JAR_DIR}"))
             copy.includeEmptyDirs = false
             // Gradle leaves some files out of every copy (.gitignore, backup files and the like) and does
-            // not look at them as inputs either: the names of all files of the pack are an input, so one of
-            // those that is added is checked, and refused, and does not go missing from the jar unseen
-            copy.inputs.property('forgePackFiles', project.provider { forgePackFiles(sourceDirectory) })
+            // not look at them, or at what is a link, as inputs either, so it would take the task for up to
+            // date when one is added. The pack is small: it is staged and checked every time
+            copy.outputs.upToDateWhen { false }
             regenerateStagingTree(copy)
             copy.doFirst { Task task ->
                 checkForgePackSource(sourceDirectory)
@@ -402,6 +407,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      */
     private static void checkForgePackSource(File directory) {
         Path root = directory.toPath()
+        if (Files.isSymbolicLink(root)) {
+            throw new GradleException("${FORGE_PACK_SOURCE_DIR} is a link, which the directory of a feature pack cannot be")
+        }
         if (!Files.isRegularFile(root.resolve(FORGE_PACK_DESCRIPTOR), LinkOption.NOFOLLOW_LINKS)) {
             throw new GradleException("${FORGE_PACK_SOURCE_DIR} has files of a feature pack and no ${FORGE_PACK_DESCRIPTOR} that is a file")
         }
@@ -422,18 +430,34 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      * descriptor when the pack is used; only the name is read here, for the manifest.
      */
     protected static String forgePackName(String descriptor) {
+        if (descriptor.length() > FORGE_PACK_DESCRIPTOR_LENGTH) {
+            throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} has more than the ${FORGE_PACK_DESCRIPTOR_LENGTH} " +
+                    'characters a descriptor can have')
+        }
         Object name = null
         try {
             LoaderOptions options = new LoaderOptions()
             options.allowDuplicateKeys = false
             options.maxAliasesForCollections = 0
-            Object root = new Yaml(new SafeConstructor(options)).load(descriptor.startsWith('\uFEFF') ? descriptor.substring(1) : descriptor)
+            // every value as it is written, as Forge reads a name: yes and on are names, not true
+            Resolver asWritten = new Resolver() {
+
+                @Override
+                protected void addImplicitResolvers() {
+                }
+            }
+            Object root = new Yaml(new SafeConstructor(options), new Representer(new DumperOptions()), new DumperOptions(), options, asWritten)
+                    .load(descriptor.startsWith('\uFEFF') ? descriptor.substring(1) : descriptor)
             name = root instanceof Map ? ((Map) root).get('name') : null
+            if (name instanceof String) {
+                name = ((String) name).replaceAll(/[\r\n]+$/, '')
+            }
         } catch (YAMLException e) {
             throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} cannot be read as YAML: " +
                     (e.message ?: e.class.simpleName).readLines().first())
         }
-        if (name instanceof String && name.length() <= FORGE_PACK_NAME_LENGTH && FORGE_PACK_NAME.matcher((String) name).matches()) {
+        if (name instanceof String && name.length() <= FORGE_PACK_NAME_LENGTH && FORGE_PACK_NAME.matcher((String) name).matches() &&
+                !(name in ['true', 'false', 'null'])) {
             return (String) name
         }
         throw new GradleException("${FORGE_PACK_SOURCE_DIR}/${FORGE_PACK_DESCRIPTOR} does not name the feature pack: 'name' has to be " +
