@@ -38,17 +38,18 @@ import spock.lang.Specification
  *
  * <p>The matrix crosses the ways a bean named {@code grailsCacheManager} can be defined with none, one
  * or two other cache managers, each defined in one of the ways a bean is chosen or passed over for
- * injection. The deliberate differences: where Spring could not choose, which failed startup, the class
- * gets {@code grailsCacheManager}, unless two cache managers are marked primary, which Spring rejects
- * before it looks at names; and where it chose a cache manager by its {@code @Priority} beside
- * {@code grailsCacheManager}, the name now comes first. Otherwise the choice, and every failure, is
- * 8.0.0's, and no cache manager is created that 8.0.0 did not create, other than {@code grailsCacheManager}.</p>
+ * injection. One way to define {@code grailsCacheManager} creates it from the cache-aware bean, which so
+ * has a cache manager injected while {@code grailsCacheManager} is being created. The one deliberate
+ * difference: where Spring could not choose, which failed startup, the class gets
+ * {@code grailsCacheManager}, unless another cache manager is marked primary or has a priority, where
+ * Spring's choice is left as it was. Otherwise the choice, and every failure, is 8.0.0's, and no cache
+ * manager is created that 8.0.0 did not create, other than {@code grailsCacheManager}.</p>
  */
 class GrailsCacheManagerAliasMatrixSpec extends Specification {
 
     private static final String NAMED = GrailsCacheManagerAliasRegistrar.CACHE_MANAGER_BEAN_NAME
 
-    private static final List<String> NAMED_KINDS = ['absent', 'plain', 'primary', 'lazy', 'notCandidate', 'wrongType']
+    private static final List<String> NAMED_KINDS = ['absent', 'plain', 'primary', 'lazy', 'notCandidate', 'wrongType', 'cyclic']
 
     private static final List<String> OTHER_KINDS = ['plain', 'primary', 'lazy', 'notCandidate', 'fallback', 'notDefault', 'priority']
 
@@ -57,7 +58,7 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
         CacheAware.declaredFields*.name.contains(GrailsCacheManagerAliasRegistrar.ALIAS)
     }
 
-    void 'the cache manager a cache-aware class gets is 8.0.0\'s, except where it failed or chose by priority'() {
+    void 'the cache manager a cache-aware class gets is 8.0.0\'s, except where it failed with none preferred'() {
         given:
         List<Map<String, String>> rows = arrangements()
         assert rows.size() == NAMED_KINDS.size() * (1 + OTHER_KINDS.size() + OTHER_KINDS.size() * OTHER_KINDS.size())
@@ -68,11 +69,8 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
             Map<String, Object> was = run(row, false)
             Map<String, Object> now = run(row, true)
             boolean namedUsable = row[NAMED] in ['plain', 'primary', 'lazy']
-            // Spring rejects two primary candidates before it looks at names, as it did in 8.0.0
-            boolean twoPrimaries = row.values().count { it == 'primary' } > 1
-            boolean choseByPriority = !was.failed && was.chosen != NAMED && row[was.chosen as String] == 'priority'
-            Object expected = (namedUsable && !twoPrimaries && (was.failed || choseByPriority)) ? NAMED :
-                    (was.failed ? 'failed' : was.chosen)
+            boolean anotherPreferred = row.any { String name, String kind -> name != NAMED && kind in ['primary', 'priority'] }
+            Object expected = (was.failed && namedUsable && !anotherPreferred) ? NAMED : (was.failed ? 'failed' : was.chosen)
             Object got = now.failed ? 'failed' : now.chosen
             List<String> allowedToCreate = ((List<String>) was.created) + [NAMED]
             if (got != expected) {
@@ -85,41 +83,60 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
         mismatches == []
     }
 
-    void 'no alias is registered where there is no grailsCacheManager, or where its name is taken'() {
+    void 'no alias is registered where there is no grailsCacheManager, where its name is taken, or beside a preferred singleton'() {
         given:
         GenericApplicationContext withNone = context([first: 'plain'], [:], [], true)
         GenericApplicationContext taken = context([(NAMED): 'plain'], [:], [], false)
         taken.beanFactory.registerAlias('first', GrailsCacheManagerAliasRegistrar.ALIAS)
         taken.registerBean('first', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
 
+        and: 'cache managers registered as singletons, which have no bean definition, one of a class with a priority'
+        GenericApplicationContext besidePriority = context([(NAMED): 'plain'], [:], [], false)
+        besidePriority.beanFactory.registerSingleton('preferred', new HighPriorityCacheManager())
+        GenericApplicationContext besidePlain = context([(NAMED): 'plain'], [:], [], false)
+        besidePlain.beanFactory.registerSingleton('other', new ConcurrentMapCacheManager())
+
         when:
-        new GrailsCacheManagerAliasRegistrar().postProcessBeanFactory(taken.beanFactory)
+        [taken, besidePriority, besidePlain].each { GenericApplicationContext context ->
+            new GrailsCacheManagerAliasRegistrar().postProcessBeanFactory(context.beanFactory)
+        }
 
         then:
         !withNone.beanFactory.isAlias(GrailsCacheManagerAliasRegistrar.ALIAS)
         taken.beanFactory.getAliases('first').contains(GrailsCacheManagerAliasRegistrar.ALIAS)
         !taken.beanFactory.getAliases(NAMED).contains(GrailsCacheManagerAliasRegistrar.ALIAS)
+        !besidePriority.beanFactory.isAlias(GrailsCacheManagerAliasRegistrar.ALIAS)
+
+        and: 'a singleton without a priority leaves the alias to be registered'
+        besidePlain.beanFactory.getAliases(NAMED).contains(GrailsCacheManagerAliasRegistrar.ALIAS)
 
         cleanup:
         withNone?.close()
         taken?.close()
+        besidePriority?.close()
+        besidePlain?.close()
     }
 
     private Map<String, Object> run(Map<String, String> row, boolean withAlias) {
         Map<String, CacheManager> instances = [:]
         List<String> created = []
-        GenericApplicationContext context = context(row, instances, created, withAlias)
-        List<String> atStartup = new ArrayList<>(created)
+        List<String> atStartup = []
         Map<String, Object> result = [failed: false]
+        GenericApplicationContext started = null
         try {
-            CacheManager chosen = ((CacheAware) context.getBean('probe')).grailsCacheManager
+            // a cyclic grailsCacheManager has the probe injected while the context starts
+            started = context(row, instances, created, withAlias)
+            atStartup.addAll(created)
+            CacheManager chosen = ((CacheAware) started.getBean('probe')).grailsCacheManager
             result.chosen = chosen == null ? null : instances.find { String name, CacheManager instance -> instance.is(chosen) }?.key
         }
         catch (BeansException ignored) {
             result.failed = true
         }
+        finally {
+            started?.close()
+        }
         result.created = created - atStartup
-        context.close()
         result
     }
 
@@ -137,6 +154,9 @@ class GrailsCacheManagerAliasMatrixSpec extends Specification {
             }
             Class<? extends CacheManager> type = kind == 'priority' ? HighPriorityCacheManager : ConcurrentMapCacheManager
             Supplier<CacheManager> supplier = { ->
+                if (kind == 'cyclic') {
+                    context.getBean('probe')
+                }
                 created << name
                 CacheManager instance = type.getDeclaredConstructor().newInstance()
                 instances[name] = instance

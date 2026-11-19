@@ -5008,8 +5008,6 @@ As of Grails 8.0.1, with `grails.plugin.springsecurity.rest.token.storage.jwt.us
 
 ==== A Second Cache Manager No Longer Stops a Cached Application From Starting
 
-The cache annotations receive their cache manager by type. Grails 8.0.0 failed to start when the application context had a second `CacheManager` beside the plugin's `grailsCacheManager` and neither was marked primary, which is what happens when the Spring Security plugin's `cacheUsers` is set. Spring now uses `grailsCacheManager` there. Where one of them is marked primary, Spring uses that one, as before, and with caching turned off (`grails.cache.enabled: false`) nothing changes. This applies to classes compiled against Grails 8.0.0 too, so plugins need not be recompiled.
-
-One case changes: a cache manager with a `@Priority`, not marked primary, beside `grailsCacheManager`. The annotations used it in 8.0.0, and now use `grailsCacheManager`. Mark it primary to keep caching with it.
+The cache annotations receive their cache manager by type. Grails 8.0.0 failed to start when the application context had a second `CacheManager` beside the plugin's `grailsCacheManager` and neither was marked primary or had a `@Priority`, which is what happens when the Spring Security plugin's `cacheUsers` is set. Spring now uses `grailsCacheManager` there. Where one of them is marked primary or has a `@Priority`, Spring uses that one, as before, and with caching turned off (`grails.cache.enabled: false`) nothing changes. This applies to classes compiled against Grails 8.0.0 too, so plugins need not be recompiled.
 
 Where the cache manager has no cache of the name an annotation gives, as a `JCacheCacheManager` has none it was not configured with, the annotated method now runs uncached, and a warning names the class and the cache once. Grails 8.0.0 failed with a `NullPointerException` on each call. This applies to classes compiled against this version.

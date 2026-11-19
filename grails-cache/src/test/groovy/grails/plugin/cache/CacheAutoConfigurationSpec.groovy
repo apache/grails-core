@@ -22,7 +22,10 @@ import java.util.function.Supplier
 
 import groovy.transform.CompileStatic
 
+import jakarta.annotation.Priority
+
 import org.springframework.beans.factory.config.BeanDefinition
+import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
@@ -163,6 +166,39 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
     }
 
+    @Unroll
+    void 'a grailsCacheManager built from a cache-aware bean starts beside a cache manager #preferred, which that bean gets, as in 8.0.0'() {
+        given: 'the application\'s grailsCacheManager, created from a bean that has a cache manager injected itself'
+        GrailsCacheManager mine = Mock(GrailsCacheManager)
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.registerBean('grailsCacheManager', GrailsCacheManager, { ->
+            context.getBean(CacheAware)
+            mine
+        } as Supplier<GrailsCacheManager>)
+        if (preferred == 'with a priority') {
+            context.registerBean('preferredCacheManager', HighPriorityCacheManager)
+        }
+        else {
+            context.registerBean('preferredCacheManager', ConcurrentMapCacheManager,
+                    { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+        }
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then: 'the context starts, and the cache-aware beans get the cache manager Spring prefers'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('preferredCacheManager'))
+        context.getBean(GrailsCacheAdminService).grailsCacheManager.is(context.getBean('preferredCacheManager'))
+
+        cleanup:
+        context.close()
+
+        where:
+        preferred << ['with a priority', 'marked primary']
+    }
+
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
         given: 'Spring Security defines cacheManager when cacheUsers is set'
         CacheManager other = new ConcurrentMapCacheManager()
@@ -242,6 +278,11 @@ class CacheAutoConfigurationSpec extends Specification {
     private static final Supplier<CacheManager> STORE_DOWN = { ->
         throw new IllegalStateException('the cache store is down')
     } as Supplier<CacheManager>
+
+    /** A cache manager Spring prefers over others by the priority of its class. */
+    @Priority(1)
+    static class HighPriorityCacheManager extends ConcurrentMapCacheManager {
+    }
 
     /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
     static class CacheAware implements GrailsCacheManagerAware {
