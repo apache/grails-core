@@ -402,6 +402,73 @@ class PackGenerationSpec extends ApplicationContextSpec {
         features.getAllFeatures().count() == features.getFeatures().count() + features.getAllFeatures().filter { !it.visible }.count()
     }
 
+    @Unroll
+    void "a pack cannot write #to, which the application has as #what"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: a.txt\n    to: '" + to + "'\n")
+
+        when:
+        generate(['acme-audit'], [pack])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.endsWith(message)
+
+        where:
+        to                 | what                           || message
+        'build.gradle/x'   | 'a file'                       || 'both as a file and as a directory of other files'
+        'grails-app/conf'  | 'a directory'                  || 'both as a file and as a directory of other files'
+        'BUILD.GRADLE'     | 'a file in other letters'      || 'more than once'
+    }
+
+    void "a pack is checked against the project that is written, not only the one its features were chosen for"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: a.txt\n    to: '.{name}/hooks/x'\n")
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('shop'), new Options(),
+                OperatingSystem.LINUX, ['acme-audit'], ConsoleOutput.NOOP, [pack])
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB, NameUtils.parse('git'), output, context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'A feature pack would write the file .{name}/hooks/x to .git/hooks/x, which is not a path a feature pack can write for this application'
+        output.getProject().isEmpty()
+    }
+
+    void "two packs cannot have one name even when only one of them is for this type of application"() {
+        given:
+        Pack first = pack('acme-audit', '', [:], 'one')
+        Pack second = pack('acme-audit', 'applicationTypes: [rest-api]\n', [:], 'two')
+
+        when:
+        generate([], [first, second])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.endsWith('both have the name acme-audit')
+    }
+
+    void "a pack cannot name an exclusive group the framework has for another type of application"() {
+        given:
+        org.grails.forge.feature.FeatureRegistry registry = beanContext.getBean(org.grails.forge.feature.FeatureRegistry)
+        Set<String> groups = registry.all().findAll { it instanceof org.grails.forge.feature.OneOfFeature }
+                .collect { ((org.grails.forge.feature.OneOfFeature) it).group } as Set<String>
+        Set<String> ofPlugins = registry.availableFeatures(ApplicationType.PLUGIN).getAllFeatures()
+                .filter { it instanceof org.grails.forge.feature.OneOfFeature }
+                .map { ((org.grails.forge.feature.OneOfFeature) it).group }.toList() as Set<String>
+        String group = (groups - ofPlugins).first()
+
+        when:
+        generate([], [pack('acme-audit', 'oneOf: ' + group + '\n')], ApplicationType.PLUGIN)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.endsWith("names the exclusive group ${group} of the framework, which a pack cannot join yet")
+    }
+
     private static void real(Path pack, String name) {
         Files.createDirectories(pack.resolve('templates'))
         Files.writeString(pack.resolve('templates').resolve(name), 'a')

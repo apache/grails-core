@@ -34,7 +34,6 @@ import org.grails.forge.feature.OneOfFeature
 import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.Configuration
 import org.grails.forge.template.DefaultTemplateRenderer
-import org.grails.forge.template.Template
 import org.grails.forge.template.Writable
 
 /**
@@ -216,31 +215,7 @@ class PackFeature implements Feature {
             throw new IllegalArgumentException("The feature ${name} would write the file ${file.to} to ${written}, which is not a " +
                     'path a feature pack can write for this application')
         }
-        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new Content(file.to, pack.content(file.from)))
-    }
-
-    /**
-     * A file of a pack that is written as it is.
-     */
-    private static class Content implements Template {
-
-        private final String path
-        private final byte[] content
-
-        Content(String path, byte[] content) {
-            this.path = path
-            this.content = content
-        }
-
-        @Override
-        String getPath() {
-            return path
-        }
-
-        @Override
-        void write(OutputStream outputStream) throws IOException {
-            outputStream.write(content)
-        }
+        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, pack.content(file.from)))
     }
 
     /**

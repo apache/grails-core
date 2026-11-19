@@ -21,6 +21,8 @@ package org.grails.forge.application.generator
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackContent
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.apache.grails.forge.core.pack.PackFeatures
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
@@ -41,6 +43,7 @@ import org.grails.forge.template.Template
 import org.grails.forge.template.TemplateRenderer
 import org.grails.forge.template.GspTemplate
 import org.grails.forge.template.GspView
+import java.text.Normalizer
 import java.util.function.Function
 
 @Component('projectGenerator')
@@ -92,17 +95,7 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         generatorContext.applyFeatures()
 
-        // of two templates for one file only the first is written, and nothing says so. The paths are
-        // compared as they are written, with their placeholders replaced, and as a file system that
-        // ignores the case of letters sees them
-        Map<String, String> replacements = project.getProperties()
-        Set<String> paths = new HashSet<>()
-        for (Template template : generatorContext.getTemplates().values()) {
-            String path = DefaultTemplateRenderer.resolvePath(template.getPath(), replacements)
-            if (!paths.add(path.toUpperCase(Locale.ROOT).toLowerCase(Locale.ROOT))) {
-                throw new IllegalArgumentException("The features write the file ${path} more than once")
-            }
-        }
+        checkPaths(project, generatorContext.getTemplates().values())
 
         try (TemplateRenderer templateRenderer = TemplateRenderer.create(project, outputHandler)) {
             for (Template template: generatorContext.getTemplates().values()) {
@@ -111,6 +104,39 @@ class DefaultProjectGenerator implements ProjectGenerator {
                     throw renderResult.getError()
                 }
             }
+        }
+    }
+
+    /**
+     * Before anything is written: of two templates for one file only the first is written, and nothing
+     * says so, and a file where another template needs a directory fails half way. The paths are
+     * compared as they are written, with their placeholders replaced, and as a file system that ignores
+     * the case and the composed form of letters sees them. The file of a feature pack is also held to
+     * the paths a pack can write, now that its placeholders have the values of this project.
+     */
+    private static void checkPaths(Project project, Collection<Template> templates) {
+        Map<String, String> replacements = project.getProperties()
+        Set<String> files = new HashSet<>()
+        Set<String> directories = new HashSet<>()
+        for (Template template : templates) {
+            String path = DefaultTemplateRenderer.resolvePath(template.getPath(), replacements)
+            if (template instanceof PackContent && !PackDescriptorParser.isPathBelowRoot(path)) {
+                throw new IllegalArgumentException("A feature pack would write the file ${template.getPath()} to ${path}, " +
+                        'which is not a path a feature pack can write for this application')
+            }
+            String folded = Normalizer.normalize(path, Normalizer.Form.NFC).toUpperCase(Locale.ROOT).toLowerCase(Locale.ROOT)
+            List<String> above = []
+            for (int slash = folded.indexOf('/'); slash >= 0; slash = folded.indexOf('/', slash + 1)) {
+                above << folded.substring(0, slash)
+            }
+            if (files.contains(folded)) {
+                throw new IllegalArgumentException("The features write the file ${path} more than once")
+            }
+            if (directories.contains(folded) || above.any { String directory -> files.contains(directory) }) {
+                throw new IllegalArgumentException("The features write ${path} both as a file and as a directory of other files")
+            }
+            files << folded
+            directories.addAll(above)
         }
     }
 

@@ -56,6 +56,7 @@ final class PackFeatures implements AvailableFeatures {
                 .findAll { Feature feature -> feature instanceof OneOfFeature }
                 .collect { Feature feature -> ((OneOfFeature) feature).getGroup() } as Set<String>
         Function<String, Optional<Feature>> lookup = { String required -> findFeature(required, true) } as Function<String, Optional<Feature>>
+        Map<String, Pack> named = new HashMap<>()
         for (Pack pack : packs) {
             PackFeature feature = PackFeature.of(pack, lookup)
             String name = feature.getName()
@@ -66,13 +67,12 @@ final class PackFeatures implements AvailableFeatures {
                 throw new IllegalArgumentException("The feature pack ${pack.origin} names the exclusive group " +
                         "${((OneOfFeature) feature).getGroup()} of the framework, which a pack cannot join yet")
             }
-            if (!feature.supports(applicationType)) {
-                continue
-            }
-            Feature other = this.packs.put(name, feature)
+            Pack other = named.put(name, pack)
             if (other != null) {
-                throw new IllegalArgumentException("The feature packs ${((PackFeature) other).pack.origin} and ${pack.origin} " +
-                        "both have the name ${name}")
+                throw new IllegalArgumentException("The feature packs ${other.origin} and ${pack.origin} both have the name ${name}")
+            }
+            if (feature.supports(applicationType)) {
+                this.packs.put(name, feature)
             }
         }
     }

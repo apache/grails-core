@@ -24,6 +24,7 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
@@ -69,7 +70,7 @@ class PackLoader {
         String origin = directory.toString()
         try {
             return read(directory, origin)
-        } catch (IOException e) {
+        } catch (IOException | InvalidPathException e) {
             throw new PackDescriptorException(origin, ["It cannot be read: ${e.class.simpleName}".toString()])
         }
     }
@@ -99,6 +100,12 @@ class PackLoader {
                 return
             }
             byte[] content = read(templates.resolve(file.from), MAX_FILE_BYTES)
+            // what was read is only the file that was checked if nothing on the way to it was changed
+            // into a link meanwhile, which is looked for again; it narrows that chance and does not end it
+            if (!isPlainFileBelow(templates, file.from)) {
+                problems << "${at} changed while the pack was read".toString()
+                return
+            }
             total += content == null ? 0 : content.length
             if (content == null) {
                 problems << "${at} has more than the ${MAX_FILE_BYTES} bytes a file of a pack can have".toString()
