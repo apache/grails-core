@@ -27,6 +27,8 @@ import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 
 /**
@@ -69,6 +71,82 @@ class PackLoader {
             return read(directory, origin)
         } catch (IOException | InvalidPathException e) {
             throw new PackDescriptorException(origin, ["It cannot be read: ${e.class.simpleName}".toString()])
+        }
+    }
+
+    /**
+     * Reads the pack a jar holds under {@code META-INF/grails-forge}, which is where the Grails Gradle
+     * plugin puts the pack of a plugin: its {@code feature.yml}, and under {@code templates} the files
+     * the descriptor names. Nothing else of the jar is read and nothing of it is loaded as code here.
+     *
+     * <p>The limits are those of a pack in a directory, and they are on what is read, not on the sizes
+     * the jar gives for its entries.</p>
+     *
+     * @param jar the jar
+     * @return the pack
+     * @throws PackDescriptorException when the jar holds no pack that can be used
+     */
+    Pack fromJar(Path jar) {
+        String origin = jar.toString()
+        if (!Files.isRegularFile(jar)) {
+            throw new PackDescriptorException(origin, ['It is not a file'])
+        }
+        try (ZipFile zip = new ZipFile(jar.toFile())) {
+            return read(zip, origin)
+        } catch (IOException | InvalidPathException | IllegalArgumentException e) {
+            throw new PackDescriptorException(origin, ["It cannot be read as a jar: ${e.class.simpleName}".toString()])
+        }
+    }
+
+    private Pack read(ZipFile zip, String origin) {
+        ZipEntry descriptorEntry = zip.getEntry("${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR}")
+        if (descriptorEntry == null || descriptorEntry.isDirectory()) {
+            throw new PackDescriptorException(origin, ["There is no ${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR} in the jar".toString()])
+        }
+        byte[] descriptorBytes = read(zip, descriptorEntry, MAX_DESCRIPTOR_BYTES)
+        if (descriptorBytes == null) {
+            throw new PackDescriptorException(origin, ["${Pack.DESCRIPTOR} is larger than a descriptor can be".toString()])
+        }
+        PackDescriptor descriptor = parser.parse(text(descriptorBytes, origin), origin)
+        List<String> problems = []
+        Map<String, byte[]> files = new LinkedHashMap<>()
+        long total = 0
+        descriptor.files.eachWithIndex { PackFile file, int index ->
+            String at = "files[${index}].from: '${file.from}'"
+            if (files.containsKey(file.from)) {
+                return
+            }
+            ZipEntry entry = zip.getEntry("${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES}/${file.from}")
+            if (entry == null || entry.isDirectory()) {
+                problems << "${at} is not a file under ${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES} of the jar".toString()
+                return
+            }
+            byte[] content = read(zip, entry, MAX_FILE_BYTES)
+            total += content == null ? 0 : content.length
+            if (content == null) {
+                problems << "${at} has more than the ${MAX_FILE_BYTES} bytes a file of a pack can have".toString()
+            } else if (total > MAX_PACK_BYTES) {
+                problems << "${at} takes the files of the pack over the ${MAX_PACK_BYTES} bytes they can have together".toString()
+            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+                problems << "${at} is a template and is not text in UTF-8".toString()
+            } else {
+                files.put(file.from, content)
+            }
+        }
+        if (problems) {
+            throw new PackDescriptorException(origin, problems)
+        }
+        return new Pack(descriptor, origin, files)
+    }
+
+    /**
+     * The bytes of an entry, or {@code null} when it has more than the limit, however large the jar
+     * says it is.
+     */
+    private static byte[] read(ZipFile zip, ZipEntry entry, long limit) {
+        try (InputStream input = zip.getInputStream(entry)) {
+            byte[] bytes = input.readNBytes((int) limit + 1)
+            return bytes.length > limit ? null : bytes
         }
     }
 

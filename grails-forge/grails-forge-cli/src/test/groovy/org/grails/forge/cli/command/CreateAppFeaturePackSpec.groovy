@@ -74,6 +74,36 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'shop/grails-forge-cli.yml').text.contains('acme-audit')
     }
 
+    void "an application is created with the feature of a pack in the jar of a plugin"() {
+        given:
+        File jar = new File(packs, 'acme-plugin.jar')
+        new java.util.zip.ZipOutputStream(new FileOutputStream(jar)).withCloseable { zip ->
+            ['META-INF/grails-forge/feature.yml': DESCRIPTOR, 'META-INF/grails-forge/templates/audit.txt': 'kept as it is'].each { String path, String text ->
+                zip.putNextEntry(new java.util.zip.ZipEntry(path))
+                zip.write(text.getBytes('UTF-8'))
+                zip.closeEntry()
+            }
+        }
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--features', 'acme-audit',
+                '--feature-pack-jar', jar.absolutePath)
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${jar.absolutePath}")
+        new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
+        new File(dir, 'shop/grails-app/conf/com/example/audit.txt').text == 'kept as it is'
+
+        when: 'a file that is no jar is a mistake in the command line'
+        int refused = CliRunner.run(CreateAppCommand, beanContext, 'other', '--feature-pack-jar', new File(packs, 'none.jar').absolutePath)
+
+        then:
+        refused == 2
+        err.toString().contains('It is not a file')
+        !new File(dir, 'other').exists()
+    }
+
     void "a pack that is given and not selected adds nothing"() {
         given:
         File pack = pack('acme', DESCRIPTOR)
@@ -136,6 +166,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
 
         then:
         !out.toString().contains('feature-pack-dir')
+        !out.toString().contains('feature-pack-jar')
         out.toString().contains('--features')
     }
 

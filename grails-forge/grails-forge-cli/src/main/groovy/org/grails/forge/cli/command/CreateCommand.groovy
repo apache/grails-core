@@ -74,6 +74,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     'Can be given more than once.')
     List<File> featurePackDirectories = new ArrayList<>()
 
+    // not shown either: a pack is to come from the plugin an application depends on, by its coordinates
+    @CommandLine.Option(names = ['--feature-pack-jar'], paramLabel = 'JAR', hidden = true,
+            description = 'The jar of a plugin that holds a feature pack under META-INF/grails-forge, whose feature can then be selected ' +
+                    'like one of the framework. Use a pack only when you trust where it comes from. Can be given more than once.')
+    List<File> featurePackJars = new ArrayList<>()
+
     private final ContextFactory contextFactory
     private final ApplicationType applicationType
     private final ProjectGenerator projectGenerator
@@ -159,7 +165,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     }
 
     /**
-     * The feature packs of the directories given with {@code --feature-pack-dir}.
+     * The feature packs of the directories given with {@code --feature-pack-dir} and of the jars given
+     * with {@code --feature-pack-jar}.
      */
     private List<Pack> featurePacks() {
         List<Pack> packs = []
@@ -167,6 +174,13 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         for (File directory : featurePackDirectories) {
             try {
                 packs << loader.fromDirectory(directory.toPath().toAbsolutePath().normalize())
+            } catch (PackDescriptorException e) {
+                throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
+            }
+        }
+        for (File jar : featurePackJars) {
+            try {
+                packs << loader.fromJar(jar.toPath().toAbsolutePath().normalize())
             } catch (PackDescriptorException e) {
                 throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
             }

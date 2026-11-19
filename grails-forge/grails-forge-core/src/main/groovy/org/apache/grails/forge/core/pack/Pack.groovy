@@ -39,6 +39,9 @@ final class Pack {
     /** The directory of a pack that holds the files its descriptor names */
     public static final String TEMPLATES = 'templates'
 
+    /** Where a pack is in the jar of the plugin it belongs to */
+    public static final String JAR_DIRECTORY = 'META-INF/grails-forge'
+
     /** The end of the name of a file of a pack that is a template and not a file written as it is */
     public static final String TEMPLATE_SUFFIX = '.gsp'
 

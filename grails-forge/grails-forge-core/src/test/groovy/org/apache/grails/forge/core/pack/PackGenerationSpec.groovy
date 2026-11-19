@@ -443,6 +443,67 @@ class PackGenerationSpec extends ApplicationContextSpec {
         pack('acme-none', '').summary() == []
     }
 
+    void "a pack is read from the jar of a plugin, and is the pack its directory would be"() {
+        given:
+        String body = "files:\n  - from: Audit.groovy.gsp\n    to: 'src/main/groovy/{packagePath}/{className}Audit.groovy'\n" +
+                "  - from: conf/a.txt\n    to: a.txt\n  - from: conf/a.txt\n    to: b.txt\n"
+        Map<String, String> files = ['Audit.groovy.gsp': 'package ${project.packageName}\nclass ${project.className}Audit {}\n', 'conf/a.txt': 'kept']
+        Path jar = jar('plugin.jar', [
+                'META-INF/MANIFEST.MF'                                   : 'Manifest-Version: 1.0\nGrails-Forge-Pack: acme-audit\n',
+                'META-INF/grails-forge/feature.yml'                      : HEADER + 'name: acme-audit\n' + body,
+                'META-INF/grails-forge/templates/Audit.groovy.gsp'       : files['Audit.groovy.gsp'],
+                'META-INF/grails-forge/templates/conf/a.txt'             : files['conf/a.txt'],
+                'META-INF/grails-forge/templates/not-named.txt'          : 'not of the pack',
+                'com/acme/Plugin.class'                                  : 'not read',
+        ])
+
+        when:
+        Pack fromJar = new PackLoader().fromJar(jar)
+        Pack fromDirectory = pack('acme-audit', body, files)
+
+        then:
+        fromJar.descriptor == fromDirectory.descriptor
+        fromJar.origin == jar.toString()
+        generate(['acme-audit'], [fromJar]) == generate(['acme-audit'], [fromDirectory])
+        generate(['acme-audit'], [fromJar], ApplicationType.WEB, 'com.example.shop')['src/main/groovy/com/example/ShopAudit.groovy'] ==
+                'package com.example\nclass ShopAudit {}\n'
+    }
+
+    @Unroll
+    void "a jar #problem is refused"() {
+        when:
+        new PackLoader().fromJar(jarOf.call(this))
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == problems
+
+        where:
+        problem                                  | jarOf                                                                                        || problems
+        'that is not there'                      | { spec -> spec.directory.resolve('none.jar') }                                               || ['It is not a file']
+        'that is no jar'                         | { spec -> Files.writeString(spec.directory.resolve('text.jar'), 'not a jar') }                || ['It cannot be read as a jar: ZipException']
+        'without a pack'                         | { spec -> spec.jar('a.jar', ['com/acme/Plugin.class': 'x']) }                                 || ['There is no META-INF/grails-forge/feature.yml in the jar']
+        'whose descriptor is a directory'        | { spec -> spec.jar('b.jar', ['META-INF/grails-forge/feature.yml/': '']) }                     || ['There is no META-INF/grails-forge/feature.yml in the jar']
+        'without a file its descriptor names'    | { spec -> spec.jar('c.jar', ['META-INF/grails-forge/feature.yml': HEADER + "name: acme\nfiles:\n  - from: a.txt\n    to: a.txt\n"]) } || ["files[0].from: 'a.txt' is not a file under META-INF/grails-forge/templates of the jar"]
+        'with a file larger than a pack can have' | { spec -> spec.jar('d.jar', ['META-INF/grails-forge/feature.yml': HEADER + "name: acme\nfiles:\n  - from: a.txt\n    to: a.txt\n", 'META-INF/grails-forge/templates/a.txt': 'x' * (PackLoader.MAX_FILE_BYTES + 1)]) } || ["files[0].from: 'a.txt' has more than the 1048576 bytes a file of a pack can have"]
+        'with a template that is not text'       | { spec -> spec.jar('e.jar', ['META-INF/grails-forge/feature.yml': HEADER + "name: acme\nfiles:\n  - from: a.gsp\n    to: a.txt\n", 'META-INF/grails-forge/templates/a.gsp': new String([0xC3, 0x28] as byte[], 'ISO-8859-1')]) } || ["files[0].from: 'a.gsp' is a template and is not text in UTF-8"]
+    }
+
+    void "a descriptor in a jar is held to what a descriptor can be however small the jar makes it"() {
+        given:
+        Path jar = jar('bomb.jar', ['META-INF/grails-forge/feature.yml': HEADER + 'name: acme\ndescription: ' + ('x' * 4_000_000) + '\n'])
+
+        expect: 'the entry is small in the jar'
+        Files.size(jar) < 100_000
+
+        when:
+        new PackLoader().fromJar(jar)
+
+        then:
+        PackDescriptorException e = thrown()
+        e.problems == ['feature.yml is larger than a descriptor can be']
+    }
+
     void "a pack that is not selected adds nothing"() {
         given:
         Pack pack = pack('acme-audit', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit-grails\n")
@@ -1064,6 +1125,18 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
     private static byte[] descriptor(String body) {
         return (HEADER + 'name: acme\n' + body).bytes
+    }
+
+    Path jar(String name, Map<String, String> entries) {
+        Path jar = directory.resolve(name)
+        new java.util.zip.ZipOutputStream(Files.newOutputStream(jar)).withCloseable { zip ->
+            entries.each { String path, String text ->
+                zip.putNextEntry(new java.util.zip.ZipEntry(path))
+                zip.write(text.getBytes('ISO-8859-1'))
+                zip.closeEntry()
+            }
+        }
+        return jar
     }
 
     private Pack pack(String name, String body, Map<String, String> files = [:], String directoryName = name) {
