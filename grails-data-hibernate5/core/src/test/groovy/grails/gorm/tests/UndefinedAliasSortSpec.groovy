@@ -25,6 +25,8 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
+        // a sort through an association keeps the instances without it with this setting
+        manager.configuration['grails.gorm.leftJoinAssociationSort'] = true
         manager.domainClasses.addAll([Club, Team, Player, Contract])
     }
 
@@ -35,6 +37,48 @@ class UndefinedAliasSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMa
         }
         manager.session.flush()
         manager.session.clear()
+    }
+
+    void '#api sorts by a path that starts with the alias of the queried class'() {
+        given: 'a team without a club'
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        expect:
+        query.call()*.name == expected
+
+        where:
+        api                                                     | query                                                                                       || expected
+        'a detached criteria'                                   | { new DetachedCriteria(Team, 't').list(sort: 't.name') }                                    || TEAMS_BY_NAME
+        'a detached criteria in descending order'               | { new DetachedCriteria(Team, 't').list(sort: 't.name', order: 'desc') }                     || TEAMS_BY_NAME.reverse()
+        'the sort of a detached criteria'                       | { new DetachedCriteria(Team, 't').sort('t.name').list() }                                   || TEAMS_BY_NAME
+        'a detached criteria with a criterion'                  | { new DetachedCriteria(Team, 't').build { like('name', '%First Team') }.list(sort: 't.name') } || TEAMS_BY_NAME
+        'a where query, through the alias Hibernate gives it'   | { Team.where { name ==~ '%' }.list(sort: 'this.name') }                                     || TEAMS_BY_NAME
+        'a dynamic finder, through the alias Hibernate gives it' | { Team.findAllByNameLike('%', [sort: 'this.name']) }                                       || TEAMS_BY_NAME
+        'findAll by example, through the alias Hibernate gives it' | { Team.findAll(new Team(), [sort: 'this.name']) }                                        || TEAMS_BY_NAME
+        'a criteria query, through the alias Hibernate gives it' | { Team.createCriteria().list(sort: 'this.name') { } }                                       || TEAMS_BY_NAME
+    }
+
+    void 'a paged detached criteria sorted through the alias of the queried class counts every team'() {
+        when:
+        final results = new DetachedCriteria(Team, 't').list(max: 2, sort: 't.name', order: 'desc')
+
+        then:
+        results*.name == ['Manchester United First Team', 'Chelsea First Team']
+        results.totalCount == 3
+    }
+
+    void 'a sort through an association after the alias of the queried class keeps a team without the association'() {
+        given:
+        new Team(name: 'Unattached First Team').save(failOnError: true, flush: true)
+        manager.session.clear()
+
+        when:
+        final results = new DetachedCriteria(Team, 't').list(sort: 't.club.name', order: 'desc')
+
+        then:
+        'Unattached First Team' in results*.name
+        results*.name - 'Unattached First Team' == ['Manchester United First Team', 'Chelsea First Team', 'Arsenal First Team']
     }
 
     private static final List<String> TEAMS_BY_NAME = ['Arsenal First Team', 'Chelsea First Team', 'Manchester United First Team', 'Unattached First Team']

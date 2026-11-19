@@ -261,7 +261,12 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         Class<?> currentClass = targetClass;
         String associationPath = null;
         String property = sort;
-        int firstDotPos;
+        int firstDotPos = property.indexOf('.');
+        if (firstDotPos != -1 && property.substring(0, firstDotPos).equals(c.getAlias()) &&
+                getGrailsDomainClassProperty(datastore, currentClass, property.substring(0, firstDotPos)) == null) {
+            // the alias of the queried class: the rest of the path starts from the queried class
+            property = property.substring(firstDotPos + 1);
+        }
         while ((firstDotPos = property.indexOf('.')) != -1) {
             String sortHead = property.substring(0, firstDotPos);
             PersistentProperty persistentProperty = getGrailsDomainClassProperty(datastore, currentClass, sortHead);

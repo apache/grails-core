@@ -412,6 +412,11 @@ public class GrailsHibernateQueryUtils {
             String sortHead = sort.substring(0, firstDotPos);
             String sortTail = sort.substring(firstDotPos + 1);
             PersistentProperty property = entity.getPropertyByName(sortHead);
+            if (property == null && associationPath == null && sortHead.equals(c.getAlias())) {
+                // the alias of the queried class: the rest of the path starts from the queried class
+                addOrderPossiblyNested(c, null, entity, sortTail, order, ignoreCase);
+                return;
+            }
             if (property instanceof Embedded) {
                 // embedded objects cannot reference entities (at time of writing), so no more recursion needed
                 addOrder(c, sort, order, ignoreCase);

@@ -770,8 +770,20 @@ public abstract class AbstractHibernateQuery extends Query {
         String sortHead = property.substring(0, i);
         if (!createdAssociationPaths.containsKey(sortHead)) {
             PersistentProperty persistentProperty = entity.getPropertyByName(sortHead);
+            if (persistentProperty == null) {
+                String rootAlias = criteria != null ? criteria.getAlias() : detachedCriteria.getAlias();
+                if (sortHead.equals(rootAlias)) {
+                    // the alias of the queried class, as in new DetachedCriteria(Book, 'b'): the rest of the path
+                    // starts from the queried class
+                    Order relative = new Order(property.substring(i + 1), order.getDirection());
+                    applyOrder(order.isIgnoreCase() ? relative.ignoreCase() : relative);
+                    return;
+                }
+                // neither an alias of this query nor a property of the entity, so there is nothing to sort by: the sort is ignored
+                return;
+            }
             if (!(persistentProperty instanceof Association)) {
-                // neither an alias of this query nor an association, so there is nothing to sort by: the sort is ignored
+                // a property that is not an association has no properties to sort by: the sort is ignored
                 return;
             }
             if (persistentProperty instanceof Embedded) {
