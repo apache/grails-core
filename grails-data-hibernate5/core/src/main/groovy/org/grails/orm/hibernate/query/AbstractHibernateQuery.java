@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ import org.hibernate.criterion.Restrictions;
 import org.hibernate.criterion.SimpleExpression;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.function.SQLFunction;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.ManyToOneType;
@@ -902,6 +904,7 @@ public abstract class AbstractHibernateQuery extends Query {
             criteria.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY);
         }
 
+        removeOrdersOfRowCount();
         applyDefaultSortOrderAndCaching();
         applyFetchStrategies();
 
@@ -920,6 +923,23 @@ public abstract class AbstractHibernateQuery extends Query {
             publisher.publishEvent(new PostQueryEvent(datastore, this, results));
         }
         return results;
+    }
+
+    /**
+     * Removes the orders of a query that only counts its rows. Such a query returns one row, and a
+     * database rejects an order by a column that the query neither groups by nor aggregates. The joins
+     * that the orders made are kept, so that the query counts the rows that it lists.
+     */
+    private void removeOrdersOfRowCount() {
+        if (hibernateProjectionList == null || !hibernateProjectionList.isRowCount() ||
+                hibernateProjectionList.getHibernateProjectionList().getLength() != 1 || !(criteria instanceof CriteriaImpl)) {
+            return;
+        }
+        Iterator<CriteriaImpl.OrderEntry> orders = ((CriteriaImpl) criteria).iterateOrderings();
+        while (orders.hasNext()) {
+            orders.next();
+            orders.remove();
+        }
     }
 
     protected void applyDefaultSortOrderAndCaching() {
@@ -972,6 +992,7 @@ public abstract class AbstractHibernateQuery extends Query {
             criteria.setProjection(hibernateProjectionList.getHibernateProjectionList());
         }
         criteria.setResultTransformer(CriteriaSpecification.DISTINCT_ROOT_ENTITY);
+        removeOrdersOfRowCount();
         applyDefaultSortOrderAndCaching();
         applyFetchStrategies();
 

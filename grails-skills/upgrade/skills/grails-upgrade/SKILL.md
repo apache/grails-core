@@ -857,6 +857,12 @@ The guide gives no setting that restores encrypted JWTs without a signature.
 - To sort by one property, as before, pass that property alone.
 - An association is joined once for all the entries that sort by it. `find` and `findAll` with an example, `findWhere` and `findAllWhere` failed with `duplicate association path` for such a sort and now work.
 
+## GORM for Hibernate: `count` with a sort
+
+`count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of 7.0.18 the count is made without the sort, and it returns the number of instances that `list` returns for the same query.
+
+- Nothing needs to change. Search for code that catches the exception or builds a second query without the sort to count: it can call `count` on the sorted query.
+
 # After the Upgrade
 
 ## Verification Checklist
