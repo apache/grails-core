@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.19). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
 license: Apache-2.0
 ---
 
@@ -31,7 +31,7 @@ Activate this skill when:
 The base version of this skill is Grails 6. After this section the skill has one part per release, in ascending order, each under a heading such as "Grails 7.0.0", and a last part, "After the Upgrade". A change sits in the part of the first release that carried it, as in the upgrade guide. A change that adds a configuration setting names the setting and its default.
 
 1. Read the application's current Grails version from `grailsVersion` in `gradle.properties`.
-2. Establish the target version. This skill covers targets up to Grails 7.0.18.
+2. Establish the target version. This skill covers targets up to Grails 7.0.19.
 3. Apply the part of every release after the application's current version, up to and including the target version, in ascending order.
 4. An application on Grails 6 starts at "Grails 7.0.0" and applies every part from there up to and including the target version. An application on Grails 5 or earlier first upgrades to the last Grails 6 release.
 5. Finish with "After the Upgrade".
@@ -848,6 +848,44 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 - An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
 The guide gives no setting that restores encrypted JWTs without a signature.
+
+# Grails 7.0.19
+
+Apply this part when the application is on Grails 6 or on Grails 7.0.18 or earlier. Each change below restores a documented behavior or ends a silent wrong result, so search the application for the calls it names.
+
+## GORM for Hibernate 5: Query Arguments Reach Where Queries and Dynamic Finders
+
+- `readOnly`, `fetchSize`, `timeout` and `flushMode` were ignored by `where` queries, dynamic finders and `findAll(Map, Closure)`. They are applied now, so `Person.where { age > 18 }.list(readOnly: true)` loads read-only entities. Search for these four arguments on those calls. To keep the earlier result, remove the argument from the call.
+
+## GORM for Hibernate 5: Bulk deleteAll and updateAll Reject max and offset
+
+- `deleteAll()` and `updateAll(Map)` on a `where` query or `DetachedCriteria` run one statement with no row limit, so a query with `max` or an `offset` other than 0 wrote to every matching row. It now throws `InvalidDataAccessResourceUsageException` and writes nothing; an `offset` of 0 is accepted. Search for `deleteAll` and `updateAll` after `max` or `offset`.
+- To keep writing every matching row, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it. To limit the rows written, select the ids with the limit, then delete or update by id: `Person.where { id in ids }.deleteAll()`.
+
+## GORM for Hibernate 5: Sorts, Empty in Lists and Paged Totals
+
+- A map as the `sort` argument, `list(sort: [a: 'asc', b: 'desc'])`, orders by every property in the order listed; the static `list(sort: map)` kept only the last one. Sorting by a property of a composite id works. A sort no longer joins an association that the query's own block already joined. Review code that relied on the old order.
+- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB. To keep the earlier rows, remove the criterion.
+- The `totalCount` of a paged criteria with a `groupProperty` projection is the number of groups, not the number of rows before grouping. Remove workarounds for the larger number.
+- A default `sort` of a `hasMany` that names a property the associated entity does not have fails at startup with an error that names the association and the sort.
+
+## GORM: A Dynamic Finder Refuses Text After Its Operator
+
+- A finder name with trailing text it does not understand, such as `findAllByAgeGreaterThanOrderByName(18)`, ran as if the text were absent, unsorted and with no error. It now throws `IllegalArgumentException` naming the `sort` and `order` arguments. Search for finders with `OrderBy` or other trailing text and move the sort into the arguments: `findAllByAgeGreaterThan(18, [sort: 'name'])`.
+
+## GORM for Hibernate 5: Enum Columns Take the Length of maxSize
+
+- An enum stored as a string ignored a `maxSize` constraint, so its column was `VARCHAR(255)`; it takes the length a `String` property takes now, and a column created from an `inList` of enum constants is as long as the longest constant name. Only a schema that Hibernate creates changes: an application that manages its schema by hand or by migration keeps its columns, and `hbm2ddl.auto: update` does not change an existing one.
+
+## GORM for Hibernate 5: The Query Cache Follows the cache Option, and lock: false No Longer Locks
+
+- A query is cached when the mapping of its entity caches, when `cache: true` or `cache(true)` asks for it, or when `grails.hibernate.cache.queries` is `true`; an explicit `false` always keeps it out of the cache. A criteria `cache(false)` and a `cache: false` argument were overridden before, and a sort through a cached association cached a query that nothing asked to cache. To keep the old result for one query, pass `cache: true`.
+- A finder with `lock: false` took a write lock, as with `true`. It takes none now, so `[lock: params.boolean('lock')]` locks only when the parameter is true. An application that relied on `lock: false` to lock must pass `lock: true`.
+
+## Spring Security: Remember-Me Redirect
+
+- A remember-me login is redirected only for a GET page request that is not an Ajax call and not the request for the login form. A POST, PUT, PATCH, DELETE, HEAD or Ajax request goes on to the controller as the remembered user instead of being turned into a GET, and the login form request reaches the login controller.
+- `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler; the redirect is decided in `onSuccessfulAuthentication`. A subclass that overrides it without calling `super` no longer redirects. To redirect another kind of request, subclass the filter, override `redirects(request)` to return `true` for it, and register it as the `rememberMeAuthenticationFilter` bean.
 
 # After the Upgrade
 
