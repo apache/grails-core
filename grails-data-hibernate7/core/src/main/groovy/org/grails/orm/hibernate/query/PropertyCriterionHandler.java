@@ -201,8 +201,9 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
 
     @SuppressWarnings("unchecked")
     static Subquery<?> buildSubquery(CriterionContext context, Expression<?> propertyPath, QueryableCriteria<?> qc, String propertyName) {
+        QueryableCriteria<?> materialized = qc.materializeLazyCriteria();
         Query.ProjectionList projectionList = new Query.ProjectionList();
-        for (Object p : qc.getProjections()) {
+        for (Object p : materialized.getProjections()) {
             projectionList.add((Query.Projection) p);
         }
 
@@ -212,16 +213,16 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
                 propName = propName.split(grails.orm.HibernateCriteriaBuilder.ALIAS_SEPARATOR)[1];
             }
             if (propName != null) {
-                PersistentProperty prop = qc.getPersistentEntity().getPropertyByName(propName);
+                PersistentProperty prop = materialized.getPersistentEntity().getPropertyByName(propName);
                 if (prop != null) {
                     projectionList.add(Projections.property(propName));
                 }
             }
         }
 
-        Class<?> expectedType = resolveSubqueryType(propertyPath, qc, projectionList);
+        Class<?> expectedType = resolveSubqueryType(propertyPath, materialized, projectionList);
         Subquery<?> subquery = context.getCriteriaQuery().subquery(expectedType);
-        var creator = new JpaCriteriaQueryCreator(projectionList, context.getCriteriaBuilder(), (GrailsHibernatePersistentEntity) qc.getPersistentEntity(), (DetachedCriteria) qc, context.getConversionService());
+        var creator = new JpaCriteriaQueryCreator(projectionList, context.getCriteriaBuilder(), (GrailsHibernatePersistentEntity) materialized.getPersistentEntity(), (DetachedCriteria) materialized, context.getConversionService());
         creator.setParentContext(context.getQueryContext());
         creator.populateSubquery((JpaSubQuery) subquery);
         return subquery;

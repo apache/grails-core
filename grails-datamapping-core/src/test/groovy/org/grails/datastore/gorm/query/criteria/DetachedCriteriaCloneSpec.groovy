@@ -18,9 +18,20 @@
  */
 package org.grails.datastore.gorm.query.criteria
 
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
+
+import spock.lang.Specification
+
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.mapping.core.connections.ConnectionSource
-import spock.lang.Specification
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.query.Query
 
 class DetachedCriteriaCloneSpec extends Specification {
 
@@ -36,41 +47,54 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@connectionName == 'secondary'
     }
 
-    void "clone preserves lazyQuery"() {
+    void "clone carries the result of the deferred query and no query"() {
         given:
-        def lazy = { -> }
-        def criteria = new DetachedCriteria(TestEntity)
-        criteria.@lazyQuery = lazy
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            add(new Query.Equals('name', 'A'))
+        }
 
         when:
         def cloned = criteria.clone()
 
         then:
-        cloned.@lazyQuery.is(lazy)
+        cloned.@lazyQuery == null
+        cloned.@criteria*.property == ['name']
+        criteria.@lazyQuery == null
+    }
+
+    void "a clone owns its projection list"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity)
+        def cloned = criteria.clone()
+
+        expect:
+        !cloned.projectionList.is(criteria.projectionList)
+        cloned.projectionList.projections.is(cloned.@projections)
     }
 
     void "clone preserves associationCriteriaMap"() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
-        def placeholder = 'marker'
-        criteria.@associationCriteriaMap['books'] = placeholder
+        def node = associationNode('books', 'b')
+        criteria.@associationCriteriaMap['books'] = node
 
         when:
         def cloned = criteria.clone()
 
         then:
         cloned.@associationCriteriaMap.size() == 1
-        cloned.@associationCriteriaMap['books'].is(placeholder)
+        cloned.@associationCriteriaMap['books'].associationPath == 'books'
+        cloned.@associationCriteriaMap['books'].alias == 'b'
     }
 
     void "clone creates independent copy of associationCriteriaMap"() {
         given:
         def criteria = new DetachedCriteria(TestEntity)
-        criteria.@associationCriteriaMap['books'] = 'marker'
+        criteria.@associationCriteriaMap['books'] = associationNode('books', 'b')
 
         when:
         def cloned = criteria.clone()
-        cloned.@associationCriteriaMap['authors'] = 'another'
+        cloned.@associationCriteriaMap['authors'] = associationNode('authors', 'a')
 
         then:
         criteria.@associationCriteriaMap.size() == 1
@@ -114,6 +138,352 @@ class DetachedCriteriaCloneSpec extends Specification {
         then:
         cloned.defaultMax == 50
         cloned.defaultOffset == 10
+    }
+
+    void "clone preserves alias"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity, 't')
+
+        when:
+        def cloned = criteria.clone()
+
+        then:
+        cloned.alias == 't'
+    }
+
+    void "clone copies association criteria so the original nodes are never shared"() {
+        given:
+        def node = associationNode('books', 'b')
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << node
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        DetachedAssociationCriteria copy = cloned.@associationCriteriaMap['books']
+
+        then: 'the copy is a distinct association node that keeps its identity'
+        !copy.is(node)
+        copy instanceof DetachedAssociationCriteria
+        copy.association.is(node.association)
+        copy.associationPath == 'books'
+        copy.alias == 'b'
+
+        and: 'the criteria list and the association map of the copy refer to the same node'
+        cloned.@criteria.size() == 1
+        cloned.@criteria[0].is(copy)
+    }
+
+    void "changing a copied association node does not reach the original"() {
+        given:
+        def node = associationNode('books', 'b')
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << node
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        DetachedAssociationCriteria copy = cloned.@associationCriteriaMap['books']
+        copy.setAlias('changed')
+        copy.add(new Query.Equals('title', 'x'))
+
+        then:
+        node.alias == 'b'
+        node.criteria.isEmpty()
+        copy.alias == 'changed'
+        copy.criteria.size() == 1
+    }
+
+    void "clone copies nested association nodes"() {
+        given:
+        def inner = associationNode('author', 'a')
+        def outer = associationNode('books', 'b')
+        outer.@criteria << inner
+        outer.@associationCriteriaMap['author'] = inner
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << outer
+        criteria.@associationCriteriaMap['books'] = outer
+
+        when:
+        def cloned = criteria.clone()
+        DetachedAssociationCriteria outerCopy = cloned.@associationCriteriaMap['books']
+        DetachedAssociationCriteria innerCopy = outerCopy.@associationCriteriaMap['author']
+
+        then:
+        !outerCopy.is(outer)
+        !innerCopy.is(inner)
+        outerCopy.@criteria[0].is(innerCopy)
+        innerCopy.alias == 'a'
+    }
+
+    void "materializeLazyCriteria applies the deferred alias once and hands out a copy"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            setAlias('lazyAlias')
+        }
+
+        when:
+        def materialized = criteria.materializeLazyCriteria()
+
+        then:
+        materialized.alias == 'lazyAlias'
+        !materialized.is(criteria)
+
+        and: 'what the closure added is part of the criteria, which has no deferred query left'
+        criteria.alias == 'lazyAlias'
+        criteria.@lazyQuery == null
+    }
+
+    void "materializing a deferred closure that changes an association node leaves the criteria it was built from untouched"() {
+        given:
+        def node = associationNode('books', 'b')
+        def base = new DetachedCriteria(TestEntity)
+        base.@criteria << node
+        base.@associationCriteriaMap['books'] = node
+        def lazy = base.buildLazy {
+            def books = associationCriteriaMap['books']
+            books.setAlias('deferred')
+            books.add(new Query.Equals('title', 'x'))
+        }
+
+        when:
+        def first = lazy.materializeLazyCriteria()
+        def second = lazy.materializeLazyCriteria()
+
+        then: 'the deferred closure ran once, and each materialization has its own copy of the result'
+        first.@associationCriteriaMap['books'].criteria.size() == 1
+        second.@associationCriteriaMap['books'].criteria.size() == 1
+        !first.@associationCriteriaMap['books'].is(second.@associationCriteriaMap['books'])
+        lazy.@associationCriteriaMap['books'].criteria.size() == 1
+
+        and: 'the node of the criteria it was built from is never changed'
+        node.alias == 'b'
+        node.criteria.isEmpty()
+    }
+
+    void "clone copies an association node inside #junctionClass.simpleName through the same map as the association map"() {
+        given:
+        def node = associationNode('books', 'b')
+        Query.Junction junction = junctionClass.getDeclaredConstructor().newInstance()
+        Query.Criterion plain = new Query.Equals('title', 'x')
+        junction.add(node)
+        junction.add(plain)
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << junction
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        Query.Junction junctionCopy = cloned.@criteria[0]
+        DetachedAssociationCriteria copy = cloned.@associationCriteriaMap['books']
+
+        then: 'the junction is a copy of the same kind and holds the copied node, the one the association map holds'
+        !junctionCopy.is(junction)
+        junctionCopy.class == junctionClass
+        junctionCopy.criteria[0].is(copy)
+        !copy.is(node)
+
+        and: 'a criterion that cannot change is shared'
+        junctionCopy.criteria[1].is(plain)
+
+        and: 'the original junction still holds the original node'
+        junction.criteria[0].is(node)
+
+        where:
+        junctionClass << [Query.Conjunction, Query.Disjunction, Query.Negation]
+    }
+
+    void "a restriction added to the association map copy reaches the node inside the junction copy"() {
+        given:
+        def node = associationNode('books', 'b')
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << new Query.Disjunction().add(node)
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        cloned.@associationCriteriaMap['books'].add(new Query.Equals('title', 'wanted'))
+        DetachedAssociationCriteria inTree = ((Query.Junction) cloned.@criteria[0]).criteria[0]
+
+        then:
+        inTree.criteria.size() == 1
+        node.criteria.isEmpty()
+    }
+
+    void "clone copies junctions nested in junctions"() {
+        given:
+        def node = associationNode('books', 'b')
+        def inner = new Query.Negation().add(node)
+        def outer = new Query.Conjunction().add(inner)
+        def criteria = new DetachedCriteria(TestEntity)
+        criteria.@criteria << outer
+        criteria.@associationCriteriaMap['books'] = node
+
+        when:
+        def cloned = criteria.clone()
+        Query.Junction outerCopy = cloned.@criteria[0]
+        Query.Junction innerCopy = outerCopy.criteria[0]
+
+        then:
+        !outerCopy.is(outer)
+        !innerCopy.is(inner)
+        innerCopy instanceof Query.Negation
+        innerCopy.criteria[0].is(cloned.@associationCriteriaMap['books'])
+    }
+
+    void "the deferred closure runs once and each materialization is a distinct copy"() {
+        given:
+        int runs = 0
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            setAlias('deferred')
+        }
+
+        when:
+        def first = criteria.materializeLazyCriteria()
+        def second = criteria.materializeLazyCriteria()
+
+        then:
+        runs == 1
+        !first.is(second)
+        first.alias == 'deferred'
+        second.alias == 'deferred'
+
+        and: 'what the closure added stays in the criteria, and the deferred query is spent'
+        criteria.alias == 'deferred'
+        criteria.@lazyQuery == null
+    }
+
+    void "changing a materialized copy does not change the next materialization"() {
+        given:
+        def criteria = new DetachedCriteria(TestEntity).buildLazy {
+            setAlias('deferred')
+        }
+
+        when:
+        def first = criteria.materializeLazyCriteria()
+        first.@criteria << new Query.Equals('title', 'x')
+        first.setAlias('changed')
+        def second = criteria.materializeLazyCriteria()
+
+        then:
+        second.alias == 'deferred'
+        second.@criteria.isEmpty()
+    }
+
+    void "a restriction added to an association of the criteria after the first query reaches the next query"() {
+        given:
+        def node = associationNode('books', 'b')
+        def base = new DetachedCriteria(TestEntity)
+        base.@criteria << node
+        base.@associationCriteriaMap['books'] = node
+        def lazy = base.buildLazy {
+            setAlias('deferred')
+        }
+        lazy.materializeLazyCriteria()
+
+        when: 'the existing association is extended after the first query has run'
+        lazy.@associationCriteriaMap['books'].add(new Query.Equals('title', 'x'))
+        lazy.setAlias('changed')
+        def second = lazy.materializeLazyCriteria()
+
+        then:
+        second.@associationCriteriaMap['books'].criteria.size() == 1
+        second.alias == 'changed'
+    }
+
+    void "a restriction added to the criteria after the first query reaches the next query"() {
+        given:
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            add(new Query.Equals('name', 'A'))
+        }
+        lazy.materializeLazyCriteria()
+
+        when:
+        lazy.add(new Query.Equals('id', 1L))
+
+        then:
+        lazy.materializeLazyCriteria().@criteria*.property == ['name', 'id']
+    }
+
+    void "a criteria derived after the first query keeps what the closure added and does not run it again"() {
+        given: 'a closure that reads a value that changes'
+        int runs = 0
+        def wanted = [name: 'A']
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            add(new Query.Equals('name', wanted.name))
+        }
+        lazy.materializeLazyCriteria()
+
+        when: 'the value changes and the criteria is extended'
+        wanted.name = 'B'
+        def derived = lazy.clone()
+        derived.add(new Query.NotEquals('name', 'Z'))
+        def derivedQuery = derived.materializeLazyCriteria()
+
+        then: 'the derived criteria has the restriction of the first run and the new one'
+        runs == 1
+        derivedQuery.@criteria.collect { [it.class.simpleName, it.property, it.value] } ==
+                [['Equals', 'name', 'A'], ['NotEquals', 'name', 'Z']]
+
+        and: 'the original still has what the first run added'
+        lazy.materializeLazyCriteria().@criteria.collect { it.value } == ['A']
+    }
+
+    void "threads that use a deferred criteria for the first time at once see the closure run once"() {
+        given:
+        int threads = 8
+        AtomicInteger runs = new AtomicInteger()
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs.incrementAndGet()
+            add(new Query.Equals('name', 'first'))
+            Thread.sleep(50)
+            add(new Query.Equals('id', 1L))
+        }
+        CountDownLatch start = new CountDownLatch(1)
+        ExecutorService pool = Executors.newFixedThreadPool(threads)
+
+        when:
+        List<Future<Integer>> sizes = (1..threads).collect {
+            pool.submit({
+                start.await()
+                lazy.materializeLazyCriteria().@criteria.size()
+            } as Callable<Integer>)
+        }
+        start.countDown()
+        List<Integer> seen = sizes*.get(10, TimeUnit.SECONDS)
+
+        then: 'every thread read the finished criteria, built by one run'
+        runs.get() == 1
+        seen == [2] * threads
+
+        cleanup:
+        pool.shutdownNow()
+    }
+
+    void "the calls a deferred closure makes on its criteria do not run it again"() {
+        given:
+        int runs = 0
+        def lazy = new DetachedCriteria(TestEntity).buildLazy {
+            runs++
+            add(new Query.Equals('name', 'A'))
+            add(new Query.Equals('id', 1L))
+        }
+
+        when:
+        lazy.add(new Query.Equals('version', 2L))
+
+        then:
+        runs == 1
+        lazy.@criteria*.property == ['name', 'id', 'version']
+    }
+
+    private DetachedAssociationCriteria associationNode(String path, String alias) {
+        Association association = Stub(Association) {
+            getName() >> path
+        }
+        new DetachedAssociationCriteria(TestEntity, association, path, alias)
     }
 }
 

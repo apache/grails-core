@@ -115,6 +115,235 @@ class DetachCriteriaSubquerySpec extends HibernateGormDatastoreSpec {
         result.size() == 1
     }
 
+    void "test a lazy subquery keeps its restriction when used with inList"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { inList('name', subquery) }.list()
+
+        then:
+        result*.name == ['A']
+        subquery.criteria.size() == 1
+        subquery.projections.isEmpty()
+    }
+
+    void "test a lazy subquery keeps its restriction when used with gtAll"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { gtAll('name', subquery) }.list()
+
+        then:
+        result*.name == ['B']
+        subquery.criteria.size() == 1
+        subquery.projections.isEmpty()
+    }
+
+    void "test a buildLazy subquery keeps its restriction when used with notIn"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = new DetachedCriteria<>(Organisation).buildLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { notIn('name', subquery) }.list()
+
+        then:
+        result*.name == ['B']
+        subquery.criteria.size() == 1
+        subquery.projections.isEmpty()
+    }
+
+    void "test a lazy subquery keeps its restriction when used with exists and notExists"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> matchingSubquery = Organisation.whereLazy { eq('name', 'A') }.id()
+        DetachedCriteria<Organisation> nonMatchingSubquery = Organisation.whereLazy { eq('name', 'NON_EXISTENT') }.id()
+        List<Organisation> existsResult = Organisation.where { exists(matchingSubquery) }.list()
+        List<Organisation> notExistsResult = Organisation.where { notExists(nonMatchingSubquery) }.list()
+
+        then:
+        existsResult.size() == 2
+        notExistsResult.size() == 2
+        matchingSubquery.criteria.size() == 1
+        nonMatchingSubquery.criteria.size() == 1
+    }
+
+    void "test a lazy criteria is materialized on a copy and keeps only what its closure added"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', 'A') }
+        DetachedCriteria<Organisation> materialized = criteria.materializeLazyCriteria()
+        DetachedCriteria<Organisation> materializedAgain = materialized.materializeLazyCriteria()
+        List<Organisation> fromOriginal = criteria.list()
+        List<Organisation> fromCopy = materialized.list()
+
+        then: 'the copy is a different criteria and both read the restriction and the original keeps only what its closure added'
+        !materialized.is(criteria)
+        materializedAgain.is(materialized)
+        criteria.criteria.size() == 1
+        materialized.criteria.size() == 1
+        fromOriginal*.name == ['A']
+        fromCopy*.name == ['A']
+    }
+
+    void "test a lazy criteria with defaultMax and defaultOffset applies them on execution"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        new Organisation(name: 'C').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy {
+            ne('name', 'Z')
+        }.sort('name').max(1).offset(1)
+        List<Organisation> result = criteria.list()
+
+        then:
+        result*.name == ['B']
+        criteria.criteria.size() == 1
+    }
+
+    void "test a lazy criteria invoked with a dynamic finder keeps only what its closure added"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { ne('name', 'Z') }
+        Organisation found = criteria.findByName('A')
+
+        then:
+        found != null
+        found.name == 'A'
+        criteria.criteria.size() == 1
+    }
+
+    void "test a lazy criteria used with updateAll and deleteAll keeps only what its closure added"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> updateCriteria = Organisation.whereLazy { eq('name', 'A') }
+        Number updated = updateCriteria.updateAll(name: 'A_UPDATED')
+        DetachedCriteria<Organisation> deleteCriteria = Organisation.whereLazy { eq('name', 'A_UPDATED') }
+        Number deleted = deleteCriteria.deleteAll()
+
+        then:
+        updated == 1
+        deleted == 1
+        updateCriteria.criteria.size() == 1
+        deleteCriteria.criteria.size() == 1
+    }
+
+    void "test a lazy criteria runs its deferred closure once however often it is executed"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        Map wanted = [name: 'A']
+
+        when:
+        DetachedCriteria<Organisation> criteria = Organisation.whereLazy { eq('name', wanted.name) }
+        List<String> first = criteria.list()*.name
+        wanted.name = 'B'
+        List<String> second = criteria.list()*.name
+
+        then: 'a later change to what the closure reads does not change the criteria'
+        first == ['A']
+        second == ['A']
+    }
+
+    void "test a lazy subquery without a projection can be translated twice and is never changed"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+
+        when:
+        List<String> first = Organisation.where { inList('name', subquery) }.list()*.name
+        List<String> second = Organisation.where { inList('name', subquery) }.list()*.name
+
+        then:
+        first == ['A']
+        second == ['A']
+
+        and: 'translating the subquery added no projection and no restriction to the shared criteria'
+        subquery.projections.isEmpty()
+        subquery.criteria.size() == 1
+    }
+
+    void "test a not-equals subquery materializes a lazy criteria"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+
+        when:
+        DetachedCriteria<Organisation> subquery = Organisation.whereLazy { eq('name', 'A') }
+        List<Organisation> result = Organisation.where { ne('name', subquery) }.list()
+
+        then: 'the lazy subquery keeps its restriction and gains nothing from translation'
+        result*.name == ['B']
+        subquery.criteria.size() == 1
+        subquery.projections.isEmpty()
+    }
+
+    void "a restriction added to a deferred criteria after its first execution reaches the next execution"() {
+        setup:
+        Organisation orgA = new Organisation(name: 'A')
+        orgA.addToUsers(email: 'a1@a')
+        orgA.addToUsers(email: 'a2@a')
+        orgA.save(flush: true)
+        Organisation orgB = new Organisation(name: 'B')
+        orgB.addToUsers(email: 'b1@b')
+        orgB.save(flush: true)
+        DetachedCriteria<User> criteria = new DetachedCriteria<>(User).buildLazy {
+            createAlias('organisation', 'o')
+        }
+
+        when: 'the criteria runs, and an existing alias is then restricted'
+        List<String> first = criteria.list()*.email.sort()
+        criteria.eq('o.name', 'A')
+        List<String> second = criteria.list()*.email.sort()
+
+        then:
+        first == ['a1@a', 'a2@a', 'b1@b']
+        second == ['a1@a', 'a2@a']
+    }
+
+    void "a criteria derived from a deferred one after its first execution keeps what the closure added"() {
+        setup:
+        new Organisation(name: 'A').save(flush: true)
+        new Organisation(name: 'B').save(flush: true)
+        new Organisation(name: 'Z').save(flush: true)
+        def wanted = [name: 'A']
+        DetachedCriteria<Organisation> criteria = new DetachedCriteria<>(Organisation).buildLazy {
+            eq('name', wanted.name)
+        }
+
+        when: 'the value the closure reads changes after the first execution, and the criteria is extended'
+        List<String> first = criteria.list()*.name
+        wanted.name = 'B'
+        DetachedCriteria<Organisation> derived = criteria.where { ne('name', 'Z') }
+
+        then: 'the derived criteria has the restriction of the first run and the new one, and the original is unchanged'
+        first == ['A']
+        derived.list()*.name == ['A']
+        criteria.list()*.name == ['A']
+    }
+
     private User createUser(String email) {
         User user = new User(email: email)
         Organisation defaultOrg = Organisation.findOrCreateByName("default")
