@@ -398,6 +398,7 @@ plugins:
   addingDynamicMethodsAtRuntime: Adding Dynamic Methods at Runtime
   participatingInAutoReloadEvents: Participating in Auto Reload Events
   understandingPluginLoadOrder: Understanding Plugin Load Order
+  forgeFeaturePacks: Adding a Feature to Application Creation
   artefactApi:
     title: The Artefact API
     queryingArtefacts: Asking About Available Artefacts

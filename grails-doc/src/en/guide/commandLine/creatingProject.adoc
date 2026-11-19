@@ -190,4 +190,12 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 --inplace
 ----
 
+| --feature-pack-dir
+| A directory that holds the feature pack of a plugin, whose feature can then be selected with `--features`. Can be given more than once. A pack is code: use one only when you trust where it comes from. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+|
+[source,shell]
+----
+--feature-pack-dir ../acme-audit/src/main/forge
+----
+
 |===
