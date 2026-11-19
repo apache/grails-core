@@ -28,7 +28,7 @@ import spock.lang.Issue
  * A criteria call that opens its own session closes it whether the call returns or throws, and leaves the session
  * of a caller that it only participates in as it was.
  */
-@Issue('https://github.com/apache/grails-core/issues/16823')
+@Issue('https://github.com/apache/grails-core/issues/16808')
 class CriteriaSessionCleanupSpec extends HibernateGormDatastoreSpec {
 
     private SessionHolder requestHolder
