@@ -33,6 +33,20 @@ final class OutputUtils {
     private OutputUtils() {
     }
 
+    /**
+     * Whether a path stays inside what it is written to: it is not absolute, has {@code /} between its
+     * steps and none of them is {@code ..}.
+     *
+     * @param path the path of a file of a generated application
+     * @since 9.0
+     */
+    static boolean isRelativePath(String path) {
+        if (path == null || path.isEmpty() || path.startsWith('/') || path.contains('\\') || path ==~ /[A-Za-z]:.*/) {
+            return false
+        }
+        return !path.split('/', -1).any { String step -> step == '..' }
+    }
+
     static Instant createLastModified() {
         return createLastModified(Instant.now())
     }

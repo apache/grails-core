@@ -34,6 +34,7 @@ import org.springframework.stereotype.Component
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
+import org.grails.forge.io.OutputUtils
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
@@ -120,11 +121,16 @@ class DefaultProjectGenerator implements ProjectGenerator {
         Set<String> directories = new HashSet<>()
         for (Template template : templates) {
             String path = DefaultTemplateRenderer.resolvePath(template.getPath(), replacements)
+            if (!OutputUtils.isRelativePath(path)) {
+                throw new IllegalArgumentException("The features write the file ${path}, which is not a path inside the application")
+            }
             if (template instanceof PackContent && !PackDescriptorParser.isPathBelowRoot(path)) {
                 throw new IllegalArgumentException("A feature pack would write the file ${template.getPath()} to ${path}, " +
                         'which is not a path a feature pack can write for this application')
             }
-            String folded = Normalizer.normalize(path, Normalizer.Form.NFC).toUpperCase(Locale.ROOT).toLowerCase(Locale.ROOT)
+            // a/b, a//b and a/./b are one file
+            String steps = path.split('/').findAll { String step -> !step.isEmpty() && step != '.' }.join('/')
+            String folded = Normalizer.normalize(steps, Normalizer.Form.NFC).toUpperCase(Locale.ROOT).toLowerCase(Locale.ROOT)
             List<String> above = []
             for (int slash = folded.indexOf('/'); slash >= 0; slash = folded.indexOf('/', slash + 1)) {
                 above << folded.substring(0, slash)

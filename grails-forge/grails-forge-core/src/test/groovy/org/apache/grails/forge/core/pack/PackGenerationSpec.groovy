@@ -104,8 +104,8 @@ class PackGenerationSpec extends ApplicationContextSpec {
         output['gradle.properties'].contains('acme.audit.verbose=false\n')
         output['grails-app/conf/application.yml'].contains('acme:\n  audit:\n    enabled: true\n    sinks:\n')
         output['grails-app/conf/application.yml'].contains('    - file\n    - table\n')
-        !output['grails-app/conf/application.yml'].contains('flush')
-        output['grails-app/conf/application-production.yml'].contains('flush: 30s')
+        (new org.yaml.snakeyaml.Yaml().load(output['grails-app/conf/application.yml']) as Map).environments.production.acme.audit.flush == '30s'
+        !output.containsKey('grails-app/conf/application-production.yml')
 
         and: 'the file, as it is, where the descriptor puts it'
         output['grails-app/conf/example/grails/audit.txt'] == 'kept as it is: ${notATemplate}\n'
@@ -343,20 +343,141 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'src/{name}.txt'     | 'nul' || 'src/nul.txt'
     }
 
-    void "the settings of the test environment are among the test resources, with those of the framework"() {
+    void "the settings of an environment are with those the framework has for it"() {
         given:
         Pack pack = pack('acme-audit', 'configuration:\n  environments:\n    test:\n      acme.audit.enabled: false\n    staging:\n      acme.audit.enabled: true\n')
 
         when:
         Map<String, String> output = generate(['acme-audit'], [pack])
+        Map<String, Object> configuration = new org.yaml.snakeyaml.Yaml().load(output['grails-app/conf/application.yml']) as Map<String, Object>
 
         then:
-        output['src/test/resources/application-test.yml'].contains('enabled: false')
-        output['grails-app/conf/application-staging.yml'].contains('enabled: true')
-        !output.containsKey('grails-app/conf/application-test.yml')
+        configuration.environments.test.acme.audit.enabled == false
+        configuration.environments.staging.acme.audit.enabled == true
+        configuration.environments.test.dataSource != null
+        !output.keySet().any { it.contains('application-test') || it.contains('application-staging') }
     }
 
-    void "a pack cannot set a setting another feature has set to another value"() {
+    @Unroll
+    void "a pack named #name cannot change what another feature gives the application: #what"() {
+        when:
+        generate([name], [pack(name, body)])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == message.replace('NAME', name)
+
+        where:
+        [name, what, body, message] << [['acme', 'zzz'], [
+                ['a setting', 'configuration:\n  dataSource.pooled: false\n',
+                 'The feature NAME sets dataSource.pooled, which another feature sets to another value'],
+                ['a setting of one environment', 'configuration:\n  environments:\n    production:\n      dataSource.dbCreate: create-drop\n',
+                 'The feature NAME sets environments.production.dataSource.dbCreate, which another feature sets to another value'],
+                ['a build property set last', "build:\n  properties:\n    org.gradle.jvmargs: '-Xmx8g'\n",
+                 "The feature NAME sets the build property org.gradle.jvmargs to '-Xmx8g', and another feature sets it to '-Dfile.encoding=UTF-8 -Xmx1024M'"],
+        ]].combinations().collect { String packName, List row -> [packName, row[0], row[1], row[2]] }
+    }
+
+    @Unroll
+    void "a pack named #name cannot turn the settings of #setting into one value"() {
+        when:
+        generate([name], [pack(name, 'configuration:\n  ' + setting + ': x\n')])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The feature ${name} sets ${setting}, and another feature sets a setting of the same name " +
+                'but one of the two is a value where the other is a group of settings'
+
+        where:
+        [name, setting] << [['acme', 'zzz'], ['dataSource', 'grails.views', 'dataSource.pooled.size', 'environments.development']].combinations()
+    }
+
+    @Unroll
+    void "a pack named #name cannot set the build property grailsVersion"() {
+        when:
+        generate([name], [pack(name, "build:\n  properties:\n    grailsVersion: '0.0.1'\n")])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith("The feature ${name} sets the build property grailsVersion to '0.0.1', and another feature sets it to '")
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    @Unroll
+    void "a pack named #name cannot declare a dependency of the framework in another version"() {
+        when:
+        generate([name], [pack(name, "dependencies:\n  - scope: testImplementation\n    coordinates: org.spockframework:spock-core\n    version: '2.0'\n")])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('org.spockframework:spock-core')
+        e.message.contains('without a version')
+        e.message.contains('version 2.0')
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    @Unroll
+    void "a pack named #name cannot apply a build plugin of the framework in another version"() {
+        when:
+        generate([name], [pack(name, "buildPlugins:\n  - id: eclipse\n    version: '1.0'\n")])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains('build plugin eclipse')
+        e.message.contains('without a version')
+        e.message.contains('in version 1.0')
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    void "a pack can say again what the framework says"() {
+        given:
+        Pack pack = pack('acme', 'dependencies:\n  - scope: testImplementation\n    coordinates: org.spockframework:spock-core\n' +
+                'buildPlugins:\n  - id: eclipse\nbuild:\n  properties:\n    org.gradle.caching: true\n' +
+                'configuration:\n  dataSource.pooled: true\n')
+
+        when:
+        Map<String, String> with = generate(['acme'], [pack])
+        Map<String, String> without = generate([], [])
+
+        then:
+        with['build.gradle'] == without['build.gradle']
+        with['gradle.properties'].readLines().toSorted() == without['gradle.properties'].readLines().toSorted()
+        new org.yaml.snakeyaml.Yaml().load(with['grails-app/conf/application.yml']) == new org.yaml.snakeyaml.Yaml().load(without['grails-app/conf/application.yml'])
+    }
+
+    void "a pack can require one of an exclusive group, which is then not given its default"() {
+        given:
+        Pack pack = pack('acme-audit', 'requires: [postgres]\n')
+
+        when:
+        Map<String, String> output = generate(['acme-audit'], [pack])
+
+        then:
+        output['build.gradle'].contains('org.postgresql:postgresql')
+        !output['build.gradle'].contains('com.h2database')
+        output['grails-forge-cli.yml'].contains('postgres')
+    }
+
+    void "what a pack requires through another pack is selected before the defaults too"() {
+        given:
+        Pack audit = pack('acme-audit', 'requires: [acme-base]\n')
+        Pack base = pack('acme-base', 'requires: [mysql]\n')
+
+        when:
+        String buildGradle = generate(['acme-audit'], [audit, base])['build.gradle']
+
+        then:
+        buildGradle.contains('mysql')
+        !buildGradle.contains('com.h2database')
+    }
+
+    void "two packs cannot set one setting to two values"() {
         given:
         Pack first = pack('acme-a', 'configuration:\n  acme.audit.enabled: true\n  acme.shared: 1\n')
         Pack second = pack('acme-b', 'configuration:\n  acme.shared: 1\n  acme:\n    audit:\n      enabled: false\n')
@@ -366,7 +487,41 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then:
         IllegalArgumentException e = thrown()
-        e.message == 'The feature acme-b sets acme.audit.enabled, which another feature has set to another value'
+        e.message == 'The feature acme-b sets acme.audit.enabled, which another feature sets to another value'
+    }
+
+    @Unroll
+    void "no feature can write the file #path"() {
+        given:
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                [], ConsoleOutput.NOOP)
+        context.addTemplate('outside', new PackContent(path, 'x'.bytes))
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB, project, output, context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The features write the file ${path}, which is not a path inside the application"
+        output.getProject().isEmpty()
+
+        where:
+        path << ['../outside.txt', 'a/../../outside.txt', '/etc/outside.txt', 'a\\..\\outside.txt', 'C:/outside.txt']
+    }
+
+    void "an archive takes no file that is not inside it"() {
+        given:
+        org.grails.forge.io.ZipOutputHandler archive = new org.grails.forge.io.ZipOutputHandler('shop', new ByteArrayOutputStream())
+
+        when:
+        archive.write('../outside.txt', new PackContent('../outside.txt', 'x'.bytes))
+
+        then:
+        IOException e = thrown()
+        e.message == 'The file ../outside.txt is not a path inside the archive'
     }
 
     void "a pack cannot have the name of a feature or the group of features of another type of application"() {
@@ -467,6 +622,128 @@ class PackGenerationSpec extends ApplicationContextSpec {
         then:
         IllegalArgumentException e = thrown()
         e.message.endsWith("names the exclusive group ${group} of the framework, which a pack cannot join yet")
+    }
+
+    @Unroll
+    void "a pack named #name cannot apply a plugin of the framework in another way"() {
+        when:
+        generate([name], [pack(name, 'buildPlugins:\n  - id: org.apache.grails.gradle.grails-web\n')])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The build plugin org.apache.grails.gradle.grails-web is applied twice, once in the plugins block and once with apply plugin'
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    @Unroll
+    void "a pack named #name cannot give a dependency of the framework a version in another scope"() {
+        when:
+        generate([name], [pack(name, "dependencies:\n  - scope: runtimeOnly\n    coordinates: org.spockframework:spock-core\n    version: '2.0'\n")])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The feature ${name} declares org.spockframework:spock-core in version 2.0, and the application has it without a version"
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    @Unroll
+    void "a pack named #name cannot set what the framework sets in the file of one environment"() {
+        when:
+        generate([name], [pack(name, 'configuration:\n  environments:\n    development:\n      spring.devtools.livereload.enabled: false\n')])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The feature ${name} sets environments.development.spring.devtools.livereload.enabled, which another feature sets to another value"
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    @Unroll
+    void "a mapping without settings in the configuration of a pack named #name sets nothing"() {
+        expect:
+        new org.yaml.snakeyaml.Yaml().load(generate([name], [pack(name, 'configuration:\n  dataSource: {}\n  acme: {}\n')])['grails-app/conf/application.yml']) ==
+                new org.yaml.snakeyaml.Yaml().load(generate([], [])['grails-app/conf/application.yml'])
+
+        where:
+        name << ['acme', 'zzz']
+    }
+
+    void "a context whose features could not be applied generates nothing afterwards either"() {
+        given:
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                ['acme'], ConsoleOutput.NOOP, [pack('acme', 'configuration:\n  dataSource.pooled: false\n')])
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        context.applyFeatures()
+
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        generator.generate(ApplicationType.WEB, project, output, context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The feature acme sets dataSource.pooled, which another feature sets to another value'
+        output.getProject().isEmpty()
+    }
+
+    @Unroll
+    void "templates for #first and #second are for one file"() {
+        given:
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                [], ConsoleOutput.NOOP)
+        context.addTemplate('first', new org.grails.forge.template.StringTemplate(first, 'one'))
+        context.addTemplate('second', new org.grails.forge.template.StringTemplate(second, 'two'))
+
+        when:
+        generator.generate(ApplicationType.WEB, project, new MapOutputHandler(), context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The features write the file ${second} more than once"
+
+        where:
+        first      | second
+        'a/b.txt'  | 'a//b.txt'
+        'a/b.txt'  | 'a/./b.txt'
+        'a/b.txt'  | 'A/B.TXT'
+    }
+
+    @Unroll
+    void "a context refuses #what declared twice"() {
+        given:
+        GeneratorContext context = beanContext.getBean(ProjectGenerator).createGeneratorContext(ApplicationType.WEB,
+                NameUtils.parse('example.grails.foo'), new Options(), OperatingSystem.LINUX, [], ConsoleOutput.NOOP)
+
+        when:
+        declare.call(context)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == message
+
+        where:
+        what                                  | declare || message
+        'a dependency in two versions'        | { GeneratorContext it -> it.addDependency(acme().version('1')); it.addDependency(acme().version('2')) } || 'The dependency com.acme:acme is declared twice, as a dependency of version 1 and as a dependency of version 2'
+        'a dependency and a platform'         | { GeneratorContext it -> it.addDependency(acme()); it.addDependency(acme().pom(true)) } || 'The dependency com.acme:acme is declared twice, as a dependency without a version and as a platform without a version'
+        'a platform and an enforced platform' | { GeneratorContext it -> it.addDependency(acme().pom(true)); it.addDependency(acme().pom(true).enforced(true)) } || 'The dependency com.acme:acme is declared twice, as a platform without a version and as an enforced platform without a version'
+        'a build dependency in two versions'  | { GeneratorContext it -> it.addBuildscriptDependency(acme().version('1')); it.addBuildscriptDependency(acme().version('2')) } || 'The dependency com.acme:acme is declared twice, as a dependency of version 1 and as a dependency of version 2'
+        'a build plugin in two versions'      | { GeneratorContext it -> it.addBuildPlugin(org.grails.forge.build.gradle.GradlePlugin.builder().id('com.acme').version('1').build()); it.addBuildPlugin(org.grails.forge.build.gradle.GradlePlugin.builder().id('com.acme').build()) } || 'The build plugin com.acme is applied twice, in version 1 and without a version'
+    }
+
+    private static org.grails.forge.build.dependencies.Dependency.Builder acme() {
+        return org.grails.forge.build.dependencies.Dependency.builder().groupId('com.acme').artifactId('acme').implementation()
     }
 
     private static void real(Path pack, String name) {

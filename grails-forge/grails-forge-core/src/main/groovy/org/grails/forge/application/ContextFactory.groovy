@@ -64,6 +64,21 @@ class ContextFactory {
             }
         }
 
+        // what the selected features cannot be without comes before the defaults, which are only for
+        // what nothing has chosen: a feature that needs one database driver is not given another
+        Deque<Feature> pending = new ArrayDeque<>(features)
+        while (!pending.isEmpty()) {
+            Feature feature = pending.pop()
+            for (String name : feature.getDependentFeatures()) {
+                Feature required = availableFeatures.findFeature(name, true).orElseThrow {
+                    new IllegalArgumentException("The feature ${feature.getName()} requires the feature ${name}, which there is not for this type of application")
+                }
+                if (features.add(required)) {
+                    pending.push(required)
+                }
+            }
+        }
+
         Options newOptions = options
             .withDevelopmentReloading(determineDevelopmentReloading(options.getDevelopmentReloading()))
             .withGormImpl(determineGormImpl(options.getGormImpl()))

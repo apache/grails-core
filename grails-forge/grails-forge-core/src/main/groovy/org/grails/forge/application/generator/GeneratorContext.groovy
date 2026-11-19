@@ -33,6 +33,7 @@ import org.grails.forge.build.dependencies.DependencyContext
 import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.build.gradle.BuildFileContributions
+import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
@@ -87,6 +88,8 @@ class GeneratorContext implements DependencyContext {
     private final Set<BuildPlugin> buildPlugins = new HashSet<>()
     private final BuildFileContributions buildContributions = new BuildFileContributions()
     private boolean featuresApplied
+    private RuntimeException applyFailure
+    private final List<Runnable> checks = new ArrayList<>()
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -275,19 +278,46 @@ class GeneratorContext implements DependencyContext {
 
     /**
      * Applies the features to this context, in {@link FeatureContext#FEATURE_ORDER}. Each feature is applied
-     * once: applying the features of a context a second time does nothing.
+     * once: applying the features of a context a second time does nothing, or fails as the first time did.
      */
     void applyFeatures() {
+        if (applyFailure != null) {
+            // half of the features are applied: there is no application to generate from this context
+            throw applyFailure
+        }
         if (featuresApplied) {
             return
         }
         featuresApplied = true
+        try {
+            applyOnce()
+        } catch (RuntimeException e) {
+            applyFailure = e
+            throw e
+        }
+    }
+
+    private void applyOnce() {
         List<Feature> features = new ArrayList<>(this.features.getFeatures())
         features.sort(FeatureContext.FEATURE_ORDER)
 
         for (Feature feature: features) {
             feature.apply(this)
         }
+        for (Runnable check : checks) {
+            check.run()
+        }
+    }
+
+    /**
+     * Has a check run once every feature is applied. A feature uses it to see that what it added is
+     * still what it added, after the features applied later than it.
+     *
+     * @param check the check, which throws an {@link IllegalArgumentException} for what it finds
+     * @since 9.0
+     */
+    void afterFeaturesApplied(Runnable check) {
+        checks.add(check)
     }
 
     boolean isFeaturePresent(Class<? extends Feature> feature) {
@@ -346,19 +376,31 @@ class GeneratorContext implements DependencyContext {
 
     /**
      * Adds a dependency unless the same one, by group, artifact and scope, is already declared. The one
-     * declared first is kept, but two declarations that exclude different transitive dependencies are an
-     * error, since keeping either would silently drop what the other asked for.
+     * declared first is kept, but two declarations of different versions or kinds, or that exclude
+     * different transitive dependencies, are an error, since keeping either would silently drop what
+     * the other asked for.
      */
     private static void addDeclared(Set<Dependency> declared, Dependency dependency) {
         if (declared.add(dependency)) {
             return
         }
         Dependency existing = declared.find { Dependency each -> each == dependency }
+        if (existing.getVersion() != dependency.getVersion() || existing.isPom() != dependency.isPom() ||
+                existing.isEnforced() != dependency.isEnforced()) {
+            throw new IllegalArgumentException(
+                    "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice, " +
+                    "as ${describe(existing)} and as ${describe(dependency)}")
+        }
         if (new HashSet<>(existing.getExclusions()) != new HashSet<>(dependency.getExclusions())) {
             throw new IllegalArgumentException(
                     "The dependency ${dependency.getGroupId()}:${dependency.getArtifactId()} is declared twice " +
                     "with different exclusions: ${existing.getExclusions()} and ${dependency.getExclusions()}")
         }
+    }
+
+    private static String describe(Dependency dependency) {
+        String kind = dependency.isPom() ? (dependency.isEnforced() ? 'an enforced platform' : 'a platform') : 'a dependency'
+        return dependency.getVersion() == null ? "${kind} without a version" : "${kind} of version ${dependency.getVersion()}"
     }
 
     @Override
@@ -406,11 +448,26 @@ class GeneratorContext implements DependencyContext {
         return buildRepositories
     }
 
+    /**
+     * Applies a plugin to the build unless the same one is already applied. The one applied first is
+     * kept, but applying one plugin in two versions, or once in the plugins block and once with
+     * {@code apply plugin}, is an error, since keeping either would silently drop what the other asked for.
+     */
     void addBuildPlugin(BuildPlugin buildPlugin) {
-        if (buildPlugin.requiresLookup()) {
-            this.buildPlugins.add(buildPlugin.resolved(coordinateResolver))
-        } else {
-            this.buildPlugins.add(buildPlugin)
+        BuildPlugin plugin = buildPlugin.requiresLookup() ? buildPlugin.resolved(coordinateResolver) : buildPlugin
+        if (this.buildPlugins.add(plugin) || !(plugin instanceof GradlePlugin)) {
+            return
+        }
+        GradlePlugin applied = (GradlePlugin) this.buildPlugins.find { BuildPlugin each -> each == plugin }
+        String version = ((GradlePlugin) plugin).getVersion()
+        if (applied.getVersion() != version) {
+            throw new IllegalArgumentException("The build plugin ${applied.getId()} is applied twice, " +
+                    "${applied.getVersion() == null ? 'without a version' : 'in version ' + applied.getVersion()} and " +
+                    "${version == null ? 'without a version' : 'in version ' + version}")
+        }
+        if (applied.useApplyPlugin() != ((GradlePlugin) plugin).useApplyPlugin()) {
+            throw new IllegalArgumentException("The build plugin ${applied.getId()} is applied twice, " +
+                    'once in the plugins block and once with apply plugin')
         }
     }
 

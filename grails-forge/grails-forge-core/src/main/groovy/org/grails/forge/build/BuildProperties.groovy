@@ -45,6 +45,16 @@ class BuildProperties {
         })
     }
 
+    /**
+     * @param key the name of a property
+     * @return its value, or {@code null} when it is not set
+     * @since 9.0
+     */
+    String get(String key) {
+        Property property = propertyMap.get(key)
+        return property == null || property.isComment() ? null : property.getValue()
+    }
+
     void addComment(String comment) {
         propertyMap.put(comment, (Comment) () -> comment)
     }
