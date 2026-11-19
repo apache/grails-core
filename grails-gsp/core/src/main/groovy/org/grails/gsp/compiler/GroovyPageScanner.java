@@ -106,8 +106,8 @@ class GroovyPageScanner implements Tokens {
                 return i;
             }
         }
-        // unknown
-        return 1;
+        // no line begins after the token: it is on the last one
+        return lineNumberPositions.size();
     }
 
     String getNamespace() {
@@ -296,8 +296,17 @@ class GroovyPageScanner implements Tokens {
                 break;
             }
         }
-        text = text.substring(0, --end1) + text.substring(ix + 4);
+        int removedFrom = --end1;
+        int removed = ix + 4 - removedFrom;
+        text = text.substring(0, removedFrom) + text.substring(ix + 4);
         len = text.length();
+        // the lines of the comment still count: one that began in it or after it begins where its text is now
+        for (int i = 0; i < lineNumberPositions.size(); i++) {
+            int position = lineNumberPositions.get(i);
+            if (position > removedFrom) {
+                lineNumberPositions.set(i, Math.max(removedFrom, position - removed));
+            }
+        }
         return true;
     }
 
