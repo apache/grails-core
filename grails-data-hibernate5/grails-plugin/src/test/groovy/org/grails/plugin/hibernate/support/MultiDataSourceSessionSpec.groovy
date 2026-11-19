@@ -21,6 +21,7 @@ package org.grails.plugin.hibernate.support
 import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.orm.hibernate.HibernateDatastore
+import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
@@ -237,6 +238,38 @@ class MultiDataSourceSessionSpec extends Specification {
         }
         preBoundSession.close()
         defaultSession?.close()
+    }
+
+    def "a request that goes asynchronous closes the session of another datasource without a flush"() {
+        given: "a book of the other datasource"
+        OsivBook.withTransaction { new OsivBook(title: 'Before').save() }
+
+        and: "a request that changes it without a flush"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        WebRequest webRequest = webRequest()
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(datastore.sessionFactory)
+        Session secondarySession = boundSession(secondarySf)
+        OsivBook book = OsivBook.findByTitle('Before')
+        book.title = 'Changed before going asynchronous'
+
+        expect: "the default flush mode, under which the change is not written when an action returns either"
+        secondarySession.hibernateFlushMode == FlushMode.COMMIT
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "the change is not written, and the session is closed"
+        OsivBook.withNewSession { OsivBook.findByTitle('Before') } != null
+        OsivBook.withNewSession { OsivBook.findByTitle('Changed before going asynchronous') } == null
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !secondarySession.open
+
+        cleanup:
+        defaultSession?.close()
+        OsivBook.withTransaction { OsivBook.list()*.delete(flush: true) }
     }
 
     def "CRUD operations work on secondary datasource with OSIV"() {
