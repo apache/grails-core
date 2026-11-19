@@ -22,12 +22,15 @@ import javax.sql.DataSource
 
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.cfg.Settings
+import org.springframework.core.Ordered
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 @Issue('https://github.com/apache/grails-core/issues/16783')
 class WithNewSessionNonLazyPoolSpec extends Specification {
@@ -141,6 +144,75 @@ class WithNewSessionNonLazyPoolSpec extends Specification {
         tomcatDataSource.pool.active == 0
         NonLazyBook.count() == 1
         NonLazyAuthor.count() == 2
+    }
+
+    @Unroll
+    void "a #hook callback of the inner transaction that lazy loads the outer session leaves it a usable connection with a non-lazy pool"() {
+        given:
+        NonLazyBook.withTransaction {
+            NonLazyAuthor author = new NonLazyAuthor(name: 'Stephen King').save(flush: true)
+            new NonLazyBook(title: 'The Stand', author: author).save(flush: true)
+        }
+        NonLazyBook book = NonLazyBook.withTransaction { NonLazyBook.first() }
+        requestSession.disconnect()
+        Closure load = { assert book.author.name == 'Stephen King' }
+        String cbHook = hook
+        int cbOrder = callbackOrder
+
+        when: 'the callback reads the author of the request session while the transaction completes'
+        NonLazyBook.withNewSession {
+            NonLazyBook.withNewSession {
+                NonLazyBook.withTransaction {
+                    NonLazyBook.count()
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        int getOrder() {
+                            cbOrder
+                        }
+
+                        @Override
+                        void beforeCommit(boolean readOnly) {
+                            if (cbHook == 'beforeCommit') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void beforeCompletion() {
+                            if (cbHook == 'beforeCompletion') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void afterCommit() {
+                            if (cbHook == 'afterCommit') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void afterCompletion(int status) {
+                            if (cbHook == 'afterCompletion') {
+                                load()
+                            }
+                        }
+                    })
+                }
+            }
+        }
+
+        then: 'the next query of the request session does not use the connection the transaction closed'
+        requestSession.createQuery('from NonLazyAuthor', NonLazyAuthor).list().size() == 1
+
+        where:
+        hook               | callbackOrder
+        'beforeCommit'     | Ordered.LOWEST_PRECEDENCE
+        'beforeCompletion' | Ordered.LOWEST_PRECEDENCE
+        'beforeCompletion' | Ordered.HIGHEST_PRECEDENCE
+        'afterCommit'      | Ordered.LOWEST_PRECEDENCE
+        'afterCompletion'  | Ordered.LOWEST_PRECEDENCE
+        'afterCompletion'  | Ordered.HIGHEST_PRECEDENCE
     }
 
     void "an outer session is usable after the inner transaction ends inside the scope with a non-lazy pool"() {

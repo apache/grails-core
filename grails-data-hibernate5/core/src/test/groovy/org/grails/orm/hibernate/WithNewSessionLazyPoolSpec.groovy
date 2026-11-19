@@ -22,12 +22,15 @@ import javax.sql.DataSource
 
 import grails.gorm.annotation.Entity
 import org.grails.orm.hibernate.cfg.Settings
+import org.springframework.core.Ordered
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.support.TransactionSynchronization
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * A lazy data source with a pool of one connection: withNewSession must not hold a second connection for the outer
@@ -164,6 +167,71 @@ class WithNewSessionLazyPoolSpec extends Specification {
         then:
         seen == 1
         requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
+    }
+
+    @Unroll
+    void "a #hook callback of the inner transaction that lazy loads the outer session leaves it a usable connection"() {
+        given:
+        LazyPoolBook book = LazyPoolBook.withTransaction { LazyPoolBook.first() }
+        requestSession.disconnect()
+        Closure load = { assert book.author.name == 'Stephen King' }
+        String cbHook = hook
+        int cbOrder = callbackOrder
+
+        when: 'the callback reads the author of the request session while the transaction completes'
+        LazyPoolBook.withNewSession {
+            LazyPoolBook.withNewSession {
+                LazyPoolBook.withTransaction {
+                    LazyPoolBook.count()
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        int getOrder() {
+                            cbOrder
+                        }
+
+                        @Override
+                        void beforeCommit(boolean readOnly) {
+                            if (cbHook == 'beforeCommit') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void beforeCompletion() {
+                            if (cbHook == 'beforeCompletion') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void afterCommit() {
+                            if (cbHook == 'afterCommit') {
+                                load()
+                            }
+                        }
+
+                        @Override
+                        void afterCompletion(int status) {
+                            if (cbHook == 'afterCompletion') {
+                                load()
+                            }
+                        }
+                    })
+                }
+            }
+        }
+
+        then: 'the next query of the request session does not use the connection the transaction closed'
+        requestSession.createQuery('from LazyPoolAuthor', LazyPoolAuthor).list().size() == 1
+
+        where:
+        hook               | callbackOrder
+        'beforeCommit'     | Ordered.LOWEST_PRECEDENCE
+        'beforeCompletion' | Ordered.LOWEST_PRECEDENCE
+        'beforeCompletion' | Ordered.HIGHEST_PRECEDENCE
+        'afterCommit'      | Ordered.LOWEST_PRECEDENCE
+        'afterCompletion'  | Ordered.LOWEST_PRECEDENCE
+        'afterCompletion'  | Ordered.HIGHEST_PRECEDENCE
     }
 
     void "an outer session that lazy loads outside any transaction in the scope keeps no connection after it"() {
