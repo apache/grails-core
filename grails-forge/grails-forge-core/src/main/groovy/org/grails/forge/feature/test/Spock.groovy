@@ -64,6 +64,15 @@ class Spock implements Feature, DefaultFeature {
                         .artifactId('spock-core')
                         .testImplementation()
                 .build())
+        String testTasks = 'useJUnitPlatform()'
+        if (generatorContext.getFeatures().contains('geb-with-local-browsers')) {
+            testTasks += '''
+                def gebEnv = providers.systemProperty('geb.env')
+                if (gebEnv.present) {
+                    systemProperty('geb.env', gebEnv.get())
+                }'''.stripIndent()
+        }
+        generatorContext.getBuildContributions().extension('tasks.withType(Test).configureEach', testTasks)
     }
 
     @Override

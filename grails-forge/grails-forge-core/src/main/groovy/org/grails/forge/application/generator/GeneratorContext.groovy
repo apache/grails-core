@@ -32,6 +32,7 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.dependencies.DependencyContext
 import org.grails.forge.build.dependencies.LookupFailedException
 import org.grails.forge.build.dependencies.Scope
+import org.grails.forge.build.gradle.BuildFileContributions
 import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
@@ -84,6 +85,8 @@ class GeneratorContext implements DependencyContext {
     private final Set<GradleRepository> repositories
 
     private final Set<BuildPlugin> buildPlugins = new HashSet<>()
+    private final BuildFileContributions buildContributions = new BuildFileContributions()
+    private boolean featuresApplied
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -270,7 +273,15 @@ class GeneratorContext implements DependencyContext {
         return operatingSystem
     }
 
+    /**
+     * Applies the features to this context, in {@link FeatureContext#FEATURE_ORDER}. Each feature is applied
+     * once: applying the features of a context a second time does nothing.
+     */
     void applyFeatures() {
+        if (featuresApplied) {
+            return
+        }
+        featuresApplied = true
         List<Feature> features = new ArrayList<>(this.features.getFeatures())
         features.sort(FeatureContext.FEATURE_ORDER)
 
@@ -410,5 +421,14 @@ class GeneratorContext implements DependencyContext {
 
     Set<BuildPlugin> getBuildPlugins() {
         return buildPlugins
+    }
+
+    /**
+     * @return what the features add to the build file besides dependencies, plugins and repositories
+     * @since 9.0
+     */
+    @Nonnull
+    BuildFileContributions getBuildContributions() {
+        return buildContributions
     }
 }

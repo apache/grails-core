@@ -38,6 +38,7 @@ class GradleBuild {
     private final List<GradleDependency> dependencies
     private final List<GradleDependency> buildscriptDependencies
     private final List<GradlePlugin> plugins
+    private final BuildFileContributions contributions
 
     GradleBuild() {
         this(GradleDsl.GROOVY, Collections.emptyList(), Collections.emptyList())
@@ -55,6 +56,17 @@ class GradleBuild {
                        @Nonnull List<GradlePlugin> plugins,
                        @Nonnull List<GradleRepository> buildRepositories,
                        @Nonnull List<GradleRepository> repositories) {
+        this(gradleDsl, dependencies, buildscriptDependencies, plugins, buildRepositories, repositories, new BuildFileContributions())
+    }
+
+    GradleBuild(@Nonnull GradleDsl gradleDsl,
+                       @Nonnull List<GradleDependency> dependencies,
+                       @Nonnull List<GradleDependency> buildscriptDependencies,
+                       @Nonnull List<GradlePlugin> plugins,
+                       @Nonnull List<GradleRepository> buildRepositories,
+                       @Nonnull List<GradleRepository> repositories,
+                       @Nonnull BuildFileContributions contributions) {
+        this.contributions = contributions
         this.dsl = gradleDsl
         this.dependencies = dependencies
         this.buildscriptDependencies = buildscriptDependencies
@@ -121,6 +133,22 @@ class GradleBuild {
     @Nonnull
     String renderExtensions() {
         return renderWritableExtensions(plugins.stream().map(GradlePlugin::getExtension))
+    }
+
+    /**
+     * @return the named blocks the features contributed, see {@link BuildFileContributions#renderExtensions()}
+     */
+    @Nonnull
+    String renderContributedExtensions() {
+        return contributions.renderExtensions()
+    }
+
+    /**
+     * @return the blocks the features added at the anchor, see {@link BuildFileContributions#renderBlocks(BuildFileAnchor)}
+     */
+    @Nonnull
+    String renderBlocks(@Nonnull BuildFileAnchor anchor) {
+        return contributions.renderBlocks(anchor)
     }
 
     @Nonnull

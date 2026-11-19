@@ -24,6 +24,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Coordinate
 import org.grails.forge.build.dependencies.CoordinateResolver
+import org.grails.forge.build.gradle.BuildFileAnchor
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.Feature
@@ -62,6 +63,8 @@ class Asciidoctor implements Feature {
         final String asciidoctorjDiagramVersion = coordinateResolver.resolve('asciidoctorj-diagram')
                 .map(Coordinate::getVersion).orElse('2.3.1')
         generatorContext.addTemplate('asciidocGradle', new GspTemplate('gradle/asciidoc.gradle', GspView.of('/forge/feature/asciidoctor/template/asciidocGradle.gsp', [asciidoctorjVersion: asciidoctorjVersion, asciidoctorjModuleDiagramVersion: asciidoctorjDiagramVersion])))
+
+        generatorContext.getBuildContributions().block(BuildFileAnchor.AFTER_PLUGINS, 'apply from: "gradle/asciidoc.gradle"')
 
         generatorContext.addBuildPlugin(GradlePlugin.builder()
                 .id('org.asciidoctor.jvm.convert')

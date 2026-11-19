@@ -21,6 +21,7 @@ package org.grails.forge.feature.grails
 import groovy.transform.CompileStatic
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.Feature
 
@@ -28,8 +29,8 @@ import org.grails.forge.feature.Feature
  * Compiles the application statically through the Grails Gradle plugin's {@code compileStatic} options:
  * {@code controllers}, {@code services} and {@code tagLibs}, and {@code gsp} for the views when the
  * application has GSP. Each is set on its own rather than through {@code all}, so an artefact type a later
- * release adds to {@code all} is not compiled statically without being asked for. The block itself is
- * written by the {@code build.gradle} template.
+ * release adds to {@code all} is not compiled statically without being asked for. The feature
+ * contributes the block to the build file.
  */
 @Component
 @CompileStatic
@@ -60,5 +61,15 @@ class GrailsCompileStatic implements Feature {
     @Override
     String getCategory() {
         return Category.CONFIGURATION
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        List<String> options = ['controllers = true', 'services = true', 'tagLibs = true']
+        if (generatorContext.getFeatures().contains('gsp')) {
+            options << 'gsp = true'
+        }
+        generatorContext.getBuildContributions().extension('grails',
+                'compileStatic {\n' + options.collect { String option -> '    ' + option }.join('\n') + '\n}')
     }
 }

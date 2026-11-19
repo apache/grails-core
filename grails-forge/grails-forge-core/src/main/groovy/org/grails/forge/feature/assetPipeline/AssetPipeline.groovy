@@ -61,6 +61,33 @@ class AssetPipeline implements DefaultFeature {
                 'Read more at https://github.com/wondrify/asset-pipeline.'
     }
 
+    /**
+     * The webjars that only serve development and tests are left out of the packaged assets, apart
+     * from the files of them the application uses.
+     */
+    private static String assetsExtension(GeneratorContext generatorContext) {
+        List<String> lines = []
+        if (generatorContext.getApplicationType() == ApplicationType.WEB_PLUGIN) {
+            lines << 'packagePlugin = true'
+        }
+        lines << 'excludes = ['
+        lines << "        'webjars/jquery/**',"
+        lines << "        'webjars/bootstrap/**',"
+        lines << "        'webjars/bootstrap-icons/**',"
+        if (generatorContext.getFeatures().contains('openapi')) {
+            lines << "        'webjars/swagger-ui/**',"
+        }
+        lines << ']'
+        lines << 'includes = ['
+        lines << "        'webjars/jquery/*/dist/jquery.js',"
+        lines << "        'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',"
+        lines << "        'webjars/bootstrap/*/dist/css/bootstrap.css',"
+        lines << "        'webjars/bootstrap-icons/*/font/bootstrap-icons.css',"
+        lines << "        'webjars/bootstrap-icons/*/font/fonts/*',"
+        lines << ']'
+        return lines.join('\n')
+    }
+
     @Override
     void apply(GeneratorContext generatorContext) {
 
@@ -90,6 +117,8 @@ class AssetPipeline implements DefaultFeature {
                 .groupId('org.webjars.npm')
                 .artifactId('jquery')
                 .testAndDevelopmentOnly())
+
+        generatorContext.getBuildContributions().extension('assets', assetsExtension(generatorContext))
 
         var assetPaths = List.of(
                 // Keep categories separate for readability.

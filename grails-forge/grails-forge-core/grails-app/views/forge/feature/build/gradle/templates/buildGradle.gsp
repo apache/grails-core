@@ -22,6 +22,7 @@ under the License.
 <%@ page import="org.grails.forge.build.dependencies.CoordinateResolver" %>
 <%@ page import="org.grails.forge.application.Project" %>
 <%@ page import="org.grails.forge.build.dependencies.Coordinate" %>
+<%@ page import="org.grails.forge.build.gradle.BuildFileAnchor" %>
 <%@ page import="org.grails.forge.build.gradle.GradleBuild" %>
 <%@ page import="org.grails.forge.build.gradle.GradleDsl" %>
 <%@ page import="org.grails.forge.build.gradle.GradlePlugin" %>
@@ -72,10 +73,7 @@ apply plugin: "${gradlePlugin.getId()}"
 
 group = "${project.getPackageName()}"
 
-<% if (features.contains('asciidoctor')) { %>
-apply from: "gradle/asciidoc.gradle"
-<% } %>
-repositories {
+${gradleBuild.renderBlocks(BuildFileAnchor.AFTER_PLUGINS)}repositories {
     <% for (GradleRepository repo : gradleBuild.getRepositories()) { %>
     ${repo.toSnippet('    ')}
     <% } %>
@@ -84,60 +82,4 @@ repositories {
 ${GspView.of('/forge/feature/build/gradle/templates/dependencies.gsp', [applicationType: applicationType, project: project, features: features, gradleBuild: gradleBuild]).render()}
 compileJava.options.release = ${features.getTargetJdk()}
 
-<% if (features.contains('jrebel')) { %>
-tasks.named('bootRun') {
-    dependsOn(generateRebel)
-    if (project.hasProperty("rebelAgent")) {
-        jvmArgs(rebelAgent)
-    }
-}
-
-<% } %>
-<% if (features.contains('spock')) { %>
-tasks.withType(Test).configureEach {
-    useJUnitPlatform()
-    <% if (features.contains('geb-with-local-browsers')) { %>
-    def gebEnv = providers.systemProperty('geb.env')
-    if (gebEnv.present) {
-        systemProperty('geb.env', gebEnv.get())
-    }
-    <% } %>
-}
-<% } %>
-${gradleBuild.renderExtensions()}
-<% if (features.contains('grails-compile-static')) { %>
-grails {
-    compileStatic {
-        controllers = true
-        services = true
-        tagLibs = true
-        <% if (features.contains('gsp')) { %>
-        gsp = true
-        <% } %>
-    }
-}
-
-<% } %>
-<% if (features.contains('asset-pipeline-grails')) { %>
-assets {
-    <% if (applicationType == ApplicationType.WEB_PLUGIN) { %>
-    packagePlugin = true
-    <% } %>
-    excludes = [
-            'webjars/jquery/**',
-            'webjars/bootstrap/**',
-            'webjars/bootstrap-icons/**',
-    <% if (features.contains('openapi')) { %>
-            'webjars/swagger-ui/**',
-    <% } %>
-    ]
-    includes = [
-            'webjars/jquery/*/dist/jquery.js',
-            'webjars/bootstrap/*/dist/js/bootstrap.bundle.js',
-            'webjars/bootstrap/*/dist/css/bootstrap.css',
-            'webjars/bootstrap-icons/*/font/bootstrap-icons.css',
-            'webjars/bootstrap-icons/*/font/fonts/*',
-    ]
-}
-
-<% } %>
+${gradleBuild.renderBlocks(BuildFileAnchor.AFTER_DEPENDENCIES)}${gradleBuild.renderContributedExtensions()}${gradleBuild.renderExtensions()}${gradleBuild.renderBlocks(BuildFileAnchor.END)}

@@ -38,6 +38,10 @@ interface ProjectGenerator {
                   OutputHandler outputHandler,
                   ConsoleOutput consoleOutput) throws Exception
 
+    /**
+     * Generates the project of a context. The features of the context are applied unless they already
+     * were: a context is applied once, so what is changed on it afterwards is not applied again.
+     */
     void generate(
             ApplicationType applicationType,
             Project project,
