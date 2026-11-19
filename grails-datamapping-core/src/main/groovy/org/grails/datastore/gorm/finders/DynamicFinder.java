@@ -585,6 +585,11 @@ public abstract class DynamicFinder extends AbstractFinder implements QueryBuild
             Map<String, FetchType> fetchStrategies = detachedCriteria.getFetchStrategies();
             for (Map.Entry<String, FetchType> entry : fetchStrategies.entrySet()) {
                 String property = entry.getKey();
+                JoinType supersededJoinType = (JoinType) detachedCriteria.getSupersededJoinTypes().get(property);
+                if (supersededJoinType != null) {
+                    // requested before the fetch mode below, which replaces it
+                    query.join(property, supersededJoinType);
+                }
                 switch (entry.getValue()) {
                     case EAGER:
                         JoinType joinType = (JoinType) detachedCriteria.getJoinTypes().get(property);
