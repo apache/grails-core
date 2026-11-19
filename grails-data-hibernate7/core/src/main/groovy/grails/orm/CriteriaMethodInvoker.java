@@ -32,6 +32,7 @@ import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 
 import org.hibernate.NonUniqueResultException;
+
 import org.springframework.beans.BeanUtils;
 
 import grails.gorm.DetachedCriteria;
