@@ -379,7 +379,8 @@ public class HibernateCriteriaBuilder extends GroovyObjectSupport implements Bui
      */
     @Override
     public BuildableCriteria join(String associationPath) {
-        join(associationPath, JoinType.INNER);
+        // a fetch mode: the association is fetched with a left join, which never leaves out an instance
+        hibernateQuery.join(associationPath);
         return this;
     }
 

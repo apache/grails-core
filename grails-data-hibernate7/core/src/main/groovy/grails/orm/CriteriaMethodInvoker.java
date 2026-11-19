@@ -25,6 +25,7 @@ import java.util.Map;
 import groovy.lang.Closure;
 import groovy.lang.MetaMethod;
 
+import jakarta.persistence.FetchType;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.ManagedType;
@@ -105,6 +106,10 @@ public class CriteriaMethodInvoker {
                 }
             }
             invokeClosureNode(args[1]);
+            if (args[0] instanceof Map<?, ?> map) {
+                // the fetch argument is read last, so it replaces what the criteria request for the same association
+                applyFetchArgument(hibernateQuery, map.get(HibernateQueryArgument.FETCH.value()));
+            }
         } else {
             invokeClosureNode(args[0]);
         }
@@ -150,6 +155,28 @@ public class CriteriaMethodInvoker {
             builder.closeSession();
         }
         return result;
+    }
+
+    /**
+     * Applies the {@code fetch} argument of {@code list}: a join type joins and fetches the association with that
+     * join type, and a fetch mode fetches it with a left join or leaves it to be loaded when it is read.
+     */
+    private static void applyFetchArgument(HibernateQuery hibernateQuery, Object fetch) {
+        if (!(fetch instanceof Map<?, ?> fetchMap)) {
+            return;
+        }
+        fetchMap.forEach((association, value) -> {
+            String path = String.valueOf(association);
+            if (value instanceof JoinType joinType) {
+                hibernateQuery.join(path, joinType);
+            }
+            else if ((value instanceof FetchType fetchType ? fetchType : DynamicFinder.getFetchMode(value)) == FetchType.EAGER) {
+                hibernateQuery.join(path);
+            }
+            else {
+                hibernateQuery.getDetachedCriteria().select(path);
+            }
+        });
     }
 
     protected Object tryMetaMethod(String name, Object... args) {

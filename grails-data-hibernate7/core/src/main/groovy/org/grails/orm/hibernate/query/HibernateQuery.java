@@ -465,8 +465,12 @@ public class HibernateQuery extends Query {
     @Override
     public Query select(String property) {
         detachedCriteria.select(property);
-        // Ensure property is added to projections for Hibernate 7
-        projections.property(property);
+        if (!(entity.getPropertyByName(property) instanceof Association)) {
+            // Ensure property is added to projections for Hibernate 7
+            projections.property(property);
+        }
+        // for an association it is a fetch mode: the association is loaded when it is read, and the query still
+        // returns its entities
         return this;
     }
 
