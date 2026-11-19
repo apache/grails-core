@@ -13,7 +13,10 @@ App-facing skills, useful when building or upgrading Grails applications, are al
 | Published skill | Gradle project | Maven coordinates | Use |
 |-----------------|----------------|-------------------|-----|
 | `grails-developer` | `:grails-skills-developer` (`grails-skills/developer/skills/grails-developer`) | `org.apache.grails.skills:grails-developer` | Building Grails web applications, REST APIs, GORM models, controllers, services, views, plugins, and tests |
-| `grails-8-upgrade` | `:grails-skills-upgrade-guide-8` (`grails-skills/upgrade-guide-8/skills/grails-8-upgrade`) | `org.apache.grails.skills:grails-8-upgrade` | Upgrading Grails applications from Grails 7.x to Grails 8 |
+| `grails-upgrade` | `:grails-skills-upgrade` (`grails-skills/upgrade/skills/grails-upgrade`) | `org.apache.grails.skills:grails-upgrade` | Upgrading Grails applications from Grails 7.x to Grails 8, and from one Grails 8 release to a later one |
+| `grails-8-upgrade` | `:grails-skills-upgrade-guide-8` (`grails-skills/upgrade-guide-8/skills/grails-8-upgrade`) | `org.apache.grails.skills:grails-8-upgrade` | Superseded by `grails-upgrade`; published for the Grails 8 releases so that builds which declare it keep resolving |
+
+There is one upgrade skill, `grails-upgrade`, on every release branch, not one per major version; `grails-skills/upgrade/README.md` describes how it is kept current and when it is cleared.
 
 The jars use the [SkillsJars](https://www.skillsjars.com/) layout, holding the skill directory at `META-INF/skills/apache/grails-core/<skill>/`, so SkillsJars tooling extracts them the same way it would a SkillsJars catalog jar of this repository. They are released, signed, and voted on with the rest of Grails, and the Grails BOM manages their versions, so an application declares them without a version. Applications extract them with the SkillsJars Gradle plugin, as the Agent Skills section of the user guide describes.
 

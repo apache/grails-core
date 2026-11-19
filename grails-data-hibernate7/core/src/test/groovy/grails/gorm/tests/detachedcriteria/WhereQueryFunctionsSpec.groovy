@@ -45,6 +45,10 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         criteria
     }
 
+    private static DetachedCriteria<WhereQueryFunctionEntity> lengthIn(List values) {
+        criteriaOf(new FunctionCallingCriterion('length', new Query.In('name', values)))
+    }
+
     private static Date date(int year, int month, int day) {
         new GregorianCalendar(year, month - 1, day).time
     }
@@ -189,6 +193,23 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
     }
 
+    void "an empty list in a function comparison matches nothing, and its negation matches every row, in a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        DetachedCriteria<WhereQueryFunctionEntity> empty = lengthIn([])
+        DetachedCriteria<WhereQueryFunctionEntity> notEmpty = criteriaOf(new Query.Negation().add(new FunctionCallingCriterion('length', new Query.In('name', []))))
+
+        expect: 'a read'
+        empty.list().isEmpty()
+        notEmpty.list().size() == 4
+
+        and: 'a bulk write changes nothing for the list and every row for its negation'
+        empty.updateAll(label: 'x') == 0
+        empty.deleteAll() == 0
+        WhereQueryFunctionEntity.count() == 4
+        notEmpty.updateAll(label: 'all') == 4
+    }
+
     void "a function in over a subquery works in a bulk statement"() {
         given:
         seedEntities()
@@ -254,6 +275,140 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         then: 'the row without an amount is not compared, as in SQL'
         equalToMax == ['c']
         notMax == ['a', 'b']
+    }
+
+    void "an ordered comparison of a function with a one-row subquery runs: #criterion.simpleName"() {
+        given:
+        seedEntities()
+        new WhereQueryFunctionEntity(name: 'g', label: 'Gamma', amount: 5, created: date(2014, 1, 1)).save(flush: true)
+        DetachedCriteria<WhereQueryFunctionEntity> largestAmount = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { max('amount') }
+        }
+
+        when: 'the largest amount is 5, and the label lengths are 5, 4, 5 and 5'
+        def names = criteriaOf(new FunctionCallingCriterion('length', criterion.newInstance('label', largestAmount))).list()*.name.sort()
+
+        then: 'the row without a label is not compared, as in SQL'
+        names == expected
+
+        where:
+        criterion                 || expected
+        Query.GreaterThan         || []
+        Query.GreaterThanEquals   || ['a', 'd', 'g']
+        Query.LessThan            || ['b']
+        Query.LessThanEquals      || ['a', 'b', 'd', 'g']
+    }
+
+    void "a fractional number compared with a function keeps its precision"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def above = WhereQueryFunctionEntity.where { length(name) > 3.5 }.list()*.name
+        def atLeast = WhereQueryFunctionEntity.where { length(name) >= 3.5 }.list()*.name
+        def below = WhereQueryFunctionEntity.where { length(name) < 3.5 }.list()*.name.sort()
+        def whole = WhereQueryFunctionEntity.where { length(name) == 3.0 }.list()*.name
+        def yearAbove = WhereQueryFunctionEntity.where { year(created) > 2013.5 }.list()*.name.sort()
+
+        then:
+        above == ['abcd']
+        atLeast == ['abcd']
+        below == ['abc']
+        whole == ['abc']
+        yearAbove == ['abc', 'abcd']
+    }
+
+    void "a number a hair past a whole number is not the whole number"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def equal = WhereQueryFunctionEntity.where { length(name) == 3.0000000000000000001 }.list()*.name
+        def notEqual = WhereQueryFunctionEntity.where { length(name) != 3.0000000000000000001 }.list()*.name.sort()
+        def atLeast = WhereQueryFunctionEntity.where { length(name) >= 3.0000000000000000001 }.list()*.name
+        def atMost = WhereQueryFunctionEntity.where { length(name) <= 3.0000000000000000001 }.list()*.name
+
+        then:
+        equal == []
+        notEqual == ['abc', 'abcd']
+        atLeast == ['abcd']
+        atMost == ['abc']
+    }
+
+    void "an in-list of a function can hold a fraction"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        expect: 'a fraction is never the length of a name, and the whole numbers beside it still match'
+        lengthIn([3, 3.5]).list()*.name == ['abc']
+        lengthIn([3.5, 4, 3.0000000000000000001]).list()*.name == ['abcd']
+        lengthIn([3.5]).list() == []
+    }
+
+    void "a string function compared with a number compares text, in a read and in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        def readFraction = WhereQueryFunctionEntity.where { lower(name) == 3.5 }.list()
+        def readLong = WhereQueryFunctionEntity.where { lower(name) == 3L }.list()
+        int bulkFraction = WhereQueryFunctionEntity.where { lower(name) == 3.5 }.updateAll(amount: 7)
+        int bulkOrdered = WhereQueryFunctionEntity.where { lower(name) > 3.5 }.updateAll(amount: 7)
+        int bulkLong = WhereQueryFunctionEntity.where { upper(name) == 3L }.updateAll(amount: 7)
+        int bulkIn = criteriaOf(new FunctionCallingCriterion('lower', new Query.In('name', ['abc', 3.5, 4L]))).updateAll(amount: 9)
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then: 'a number is the text of the number, so no name matches it'
+        readFraction == []
+        readLong == []
+        bulkFraction == 0
+        bulkOrdered == 2
+        bulkLong == 0
+        bulkIn == 1
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abc: 9, abcd: 7]
+    }
+
+    void "a whole number passed as a Long compares with a numeric function in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        int equal = WhereQueryFunctionEntity.where { length(name) == 3L }.updateAll(amount: 2)
+        int inList = criteriaOf(new FunctionCallingCriterion('length', new Query.In('name', [4L, 9L]))).updateAll(amount: 3)
+        int year = WhereQueryFunctionEntity.where { year(created) == 2014L }.updateAll(amount: 4)
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then:
+        equal == 1
+        inList == 1
+        year == 2
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abc: 4, abcd: 4]
+    }
+
+    void "a bulk statement compares a function with a fraction as it is"() {
+        given:
+        new WhereQueryFunctionEntity(name: 'abc', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcd', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'abcde', amount: 1, created: date(2014, 1, 1)).save(flush: true)
+
+        when:
+        int above = WhereQueryFunctionEntity.where { length(name) > 3.5 }.updateAll(amount: 2)
+        int equal = WhereQueryFunctionEntity.where { length(name) == 3.5 }.updateAll(amount: 3)
+        int inList = lengthIn([3, 3.5]).updateAll(amount: 4)
+        int deleted = WhereQueryFunctionEntity.where { length(name) < 3.5 }.deleteAll()
+        WhereQueryFunctionEntity.withSession { it.clear() }
+
+        then:
+        above == 2
+        equal == 0
+        inList == 1
+        deleted == 1
+        WhereQueryFunctionEntity.list().collectEntries { [it.name, it.amount] } == [abcd: 2, abcde: 2]
     }
 
     void "the documented date functions execute on every part of a date"() {
@@ -347,6 +502,75 @@ class WhereQueryFunctionsSpec extends HibernateGormDatastoreSpec {
         then:
         deleted == 1
         WhereQueryFunctionEntity.list()*.name.sort() == ['b', 'c', 'd']
+    }
+
+    void "a string function compared with a fraction matches the text on a read and in a bulk statement"() {
+        given:
+        new WhereQueryFunctionEntity(name: '3.5', amount: 1).save(flush: true)
+        new WhereQueryFunctionEntity(name: 'x', amount: 2).save(flush: true)
+        def criterion = new FunctionCallingCriterion('upper', new Query.Equals('name', 3.5d))
+
+        expect:
+        criteriaOf(criterion).list()*.name == ['3.5']
+
+        when:
+        int deleted = criteriaOf(criterion).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name == ['x']
+    }
+
+    void "a GString operand is compared by its text on a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        String letter = 'B'
+        def text = new FunctionCallingCriterion('upper', new Query.Equals('name', "${letter}"))
+        def number = new FunctionCallingCriterion('length', new Query.Equals('name', "${1}"))
+
+        expect:
+        criteriaOf(text).list()*.name == ['b']
+        criteriaOf(number).list()*.name.sort() == ['a', 'b', 'c', 'd']
+
+        when:
+        int deleted = criteriaOf(text).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.list()*.name.sort() == ['a', 'c', 'd']
+
+        when:
+        int deletedByLength = criteriaOf(number).deleteAll()
+
+        then:
+        deletedByLength == 3
+    }
+
+    void "a function compared with a one-row subquery works on a read and in a bulk statement"() {
+        given:
+        seedEntities()
+        new WhereQueryFunctionEntity(name: 'long name', amount: 9).save(flush: true)
+        DetachedCriteria<WhereQueryFunctionEntity> maxAmount = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { max('amount') }
+        }
+        DetachedCriteria<WhereQueryFunctionEntity> shortest = new DetachedCriteria<>(WhereQueryFunctionEntity).build {
+            projections { property('name') }
+            eq('amount', 1)
+        }
+
+        expect: 'the length of the name against the greatest amount, 9, and the amount of a row'
+        criteriaOf(new FunctionCallingCriterion('length', new Query.GreaterThanEquals('name', maxAmount))).list()*.name == ['long name']
+        criteriaOf(new FunctionCallingCriterion('lower', new Query.Equals('name', shortest))).list()*.name == ['a']
+
+        when:
+        int deleted = criteriaOf(new FunctionCallingCriterion('length', new Query.GreaterThanEquals('name', maxAmount))).deleteAll()
+        session.clear()
+
+        then:
+        deleted == 1
+        WhereQueryFunctionEntity.count() == 4
     }
 }
 
