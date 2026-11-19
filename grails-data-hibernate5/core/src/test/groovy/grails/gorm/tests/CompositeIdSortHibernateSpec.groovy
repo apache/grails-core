@@ -56,8 +56,8 @@ class CompositeIdSortHibernateSpec extends GrailsDataTckSpec<GrailsDataHibernate
         List<String> byMap = CompUserRole.list(sort: [user: 'asc', role: 'desc']).collect { it.user.name + ':' + it.role.name }
 
         then: 'sorting by an association sorts by its id'
-        byRole.size() == 3
-        byUserDesc.size() == 3
+        byRole == ['admin', 'admin', 'user']
+        byUserDesc == ['bob', 'ann', 'ann']
         byMap == ['ann:user', 'ann:admin', 'bob:admin']
     }
 
