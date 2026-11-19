@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ import org.hibernate.criterion.Order;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.Status;
+import org.hibernate.internal.CriteriaImpl;
 import org.hibernate.internal.util.StringHelper;
 import org.hibernate.proxy.HibernateProxy;
 import org.slf4j.Logger;
@@ -211,6 +213,76 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             return (FlushMode) object;
         }
         return FlushMode.valueOf(String.valueOf(object));
+    }
+
+    private static CriteriaImpl getRootCriteria(Criteria criteria) {
+        Criteria root = criteria;
+        while (root instanceof CriteriaImpl.Subcriteria) {
+            root = ((CriteriaImpl.Subcriteria) root).getParent();
+        }
+        return root instanceof CriteriaImpl ? (CriteriaImpl) root : null;
+    }
+
+    /**
+     * Returns the criteria of the join that a query has for an association path, whichever part of
+     * the query made the join.
+     *
+     * @param criteria The root criteria of the query, or the criteria of one of its joins
+     * @param associationPath The path of the association from the root entity
+     * @return The criteria of the join, or null when the query does not join the association
+     */
+    public static Criteria findJoinCriteria(Criteria criteria, String associationPath) {
+        return findCriteria(getRootCriteria(criteria), associationPath);
+    }
+
+    /**
+     * Returns the criteria that the root criteria have for an association path, or null.
+     */
+    private static CriteriaImpl.Subcriteria findCriteria(Criteria root, String associationPath) {
+        if (root instanceof CriteriaImpl) {
+            CriteriaImpl criteria = (CriteriaImpl) root;
+            Iterator<CriteriaImpl.Subcriteria> subcriteria = criteria.iterateSubcriteria();
+            while (subcriteria.hasNext()) {
+                CriteriaImpl.Subcriteria existing = subcriteria.next();
+                if (associationPath.equals(getWholePath(criteria, existing))) {
+                    return existing;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns the path of a criteria from the root criteria. The path that a criteria is created with
+     * is relative to the criteria it is created from, or starts with the alias of another criteria.
+     */
+    private static String getWholePath(CriteriaImpl root, CriteriaImpl.Subcriteria subcriteria) {
+        String path = subcriteria.getPath();
+        Criteria parent = subcriteria.getParent();
+        int firstDotPos = path.indexOf('.');
+        if (firstDotPos > 0) {
+            String qualifier = path.substring(0, firstDotPos);
+            Criteria qualified = qualifier.equals(subcriteria.getAlias()) ? null : findCriteriaByAlias(root, qualifier);
+            if (qualified != null) {
+                parent = qualified;
+                path = path.substring(firstDotPos + 1);
+            }
+        }
+        return parent instanceof CriteriaImpl.Subcriteria ? getWholePath(root, (CriteriaImpl.Subcriteria) parent) + '.' + path : path;
+    }
+
+    private static Criteria findCriteriaByAlias(CriteriaImpl root, String alias) {
+        if (alias.equals(root.getAlias())) {
+            return root;
+        }
+        Iterator<CriteriaImpl.Subcriteria> subcriteria = root.iterateSubcriteria();
+        while (subcriteria.hasNext()) {
+            CriteriaImpl.Subcriteria existing = subcriteria.next();
+            if (alias.equals(existing.getAlias())) {
+                return existing;
+            }
+        }
+        return null;
     }
 
     /**
