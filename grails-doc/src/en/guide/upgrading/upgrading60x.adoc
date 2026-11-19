@@ -1275,14 +1275,6 @@ With `DISCRIMINATOR` multi-tenancy, GORM for MongoDB and GORM's in-memory datast
 * Inside `Tenants.withoutId { }` a lookup by id is still not restricted to a tenant, and neither is a proxy returned by `load` or `proxy` that is initialized there. As the previous note says, only `withoutId` lifts the restriction: a tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
 * A lookup by id still finds an instance that the session holds for the current tenant, including one that has been saved but not flushed, and it does not flush the session.
 
-==== The total of a paged criteria with groupProperty counts the groups
-
-The `totalCount` of a paged criteria result that uses a `groupProperty` projection, for example
-`Item.createCriteria().list(max: 10) { projections { groupProperty('city') } }`, is now the number of groups, as the page it
-belongs to is. Previously it was the number of rows before grouping, so a page of 3 groups from 6 rows reported a total of 6.
-Code that paged through such a result by `totalCount` now stops after the last group, and code that worked around the
-larger number needs no workaround. Criteria without a grouping projection count rows as before.
-
 ==== Data binding white lists apply wherever a class is compiled
 
 As of Grails 7.0.18, the list of bindable properties that Grails generates for a class at compile time, from its statically typed properties, its `bindable` constraints, its `transients` list and its `transient` fields, is generated for every class that implements `grails.validation.Validateable` or declares `constraints` or `transients`, and for every class that extends one, wherever the class is compiled with the data binding library, `grails-web-databinding`, on the compilation's classpath, as it is in an application or a plugin. A library module that compiles against GORM alone generates no list and gets no warning. Previously only domain classes and the parameter types of controller actions compiled with their controller got the list, and a class without one was bound without restriction.
@@ -1316,3 +1308,14 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+[[grails-7-0-19]]
+=== Grails 7.0.19
+
+==== The total of a paged criteria with groupProperty counts the groups
+
+The `totalCount` of a paged criteria result that uses a `groupProperty` projection, for example
+`Item.createCriteria().list(max: 10) { projections { groupProperty('city') } }`, is now the number of groups, as the page it
+belongs to is. Previously it was the number of rows before grouping, so a page of 3 groups from 6 rows reported a total of 6.
+Code that paged through such a result by `totalCount` now stops after the last group, and code that worked around the
+larger number needs no workaround. Criteria without a grouping projection count rows as before.
