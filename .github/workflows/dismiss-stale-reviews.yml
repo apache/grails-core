@@ -88,13 +88,16 @@ jobs:
           # writes without markers, such as one of a binary file or of a file deleted on one side, which leaves no
           # line to tell the resolution by; and 2 when a git command fails.
           resolved_within_conflicts() {
-            local tree=$1 commit=$2 path=$3 first=$4 second=$5 entry regions hunks
+            local tree=$1 commit=$2 path=$3 first=$4 second=$5 entry pushed regions hunks
             entry=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$tree" -- "$path") || return 2
             [[ "$entry" == 100*' blob' ]] || return 1
-            [[ "$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path")" == "$entry" ]] || return 1
+            pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path") || return 2
+            [[ "$pushed" == "$entry" ]] || return 1
             # The first and last line of each conflict. A marker is matched with its label, the id of a parent, so
-            # that a line of the file that merely looks like one does not open a conflict.
-            regions=$(bounded git -C merges.git cat-file blob "$tree:$path" | awk -v opening="<<<<<<< $first" -v closing=">>>>>>> $second" '
+            # that a line of the file that merely looks like one does not open a conflict. The step runs without
+            # pipefail, so it is set here: a git command that fails or runs out of time would otherwise leave awk
+            # nothing to read, and the file would look like one without conflicts.
+            regions=$(set -o pipefail; bounded git -C merges.git cat-file blob "$tree:$path" | awk -v opening="<<<<<<< $first" -v closing=">>>>>>> $second" '
               { sub(/\r$/, "") }
               $0 == opening || index($0, opening ":") == 1 { if (start) exit 1; start = NR; next }
               $0 == closing || index($0, closing ":") == 1 { if (!start) exit 1; printf "%d %d ", start, NR; start = 0 }
@@ -127,17 +130,20 @@ jobs:
           # GitHub does not move an approval kept this way, so each hourly run walks its merges again, and the time
           # limit is what bounds that cost.
           only_merges_base() {
-            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) fork= first second other behind merged tree conflicts changed path
+            local base=$1 approved=$2 commit=$3 deadline=$(( SECONDS + 120 )) fork= parents first second other behind merged tree conflicts changed path
             (( deadline <= checks_end )) || deadline=$checks_end
             accepted=
             reason="the commits after this approval could not be checked"
             while [[ "$commit" != "$approved" ]]; do
+              # The parents are read into a variable first, so that a failed command answers as one: gh prints the
+              # body of a failed request, which split into words would look like a commit with more than two parents.
               if [[ -n "$fork" ]]; then
                 # The commit was fetched as the first parent of the merge before it, so its parents are read from it.
-                read -r first second other < <(bounded env GIT_NO_LAZY_FETCH=1 git -C merges.git cat-file commit "$commit" | sed -n '/^$/q; s/^parent //p' | tr '\n' ' ')
+                parents=$(set -o pipefail; bounded env GIT_NO_LAZY_FETCH=1 git -C merges.git cat-file commit "$commit" | sed -n '1,/^$/s/^parent //p' | tr '\n' ' ') || return 1
               else
-                read -r first second other < <(bounded gh api "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")')
+                parents=$(bounded gh api "repos/$REPO/commits/$commit" --jq '[.parents[].sha] | join(" ")') || return 1
               fi
+              read -r first second other <<< "$parents"
               [[ -n "$first" ]] || return 1
               [[ -n "$second" && -z "$other" ]] || { reason="the pull request changed after this approval"; return 1; }
               behind=$(bounded gh api "repos/$REPO/compare/$second...$base?per_page=1" --jq '.behind_by') || return 1
