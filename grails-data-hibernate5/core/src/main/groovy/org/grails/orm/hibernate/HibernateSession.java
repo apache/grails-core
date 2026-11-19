@@ -19,6 +19,7 @@
 package org.grails.orm.hibernate;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -91,15 +92,46 @@ public class HibernateSession extends AbstractHibernateSession {
     }
 
     /**
+     * {@code AbstractDetachedCriteria.defaultMax} and {@code defaultOffset}, read by reflection because this patch
+     * line adds no public accessor for them. From 8.1.x on, the criteria has getters for them.
+     */
+    private static final Field DEFAULT_MAX = criteriaField("defaultMax");
+    private static final Field DEFAULT_OFFSET = criteriaField("defaultOffset");
+
+    private static Field criteriaField(String name) {
+        try {
+            Field field = AbstractDetachedCriteria.class.getDeclaredField(name);
+            field.setAccessible(true);
+            return field;
+        }
+        catch (NoSuchFieldException e) {
+            throw new IllegalStateException("AbstractDetachedCriteria has no field " + name, e);
+        }
+    }
+
+    private static Integer criteriaValue(Field field, AbstractDetachedCriteria<?> criteria) {
+        try {
+            return (Integer) field.get(criteria);
+        }
+        catch (IllegalAccessException e) {
+            throw new IllegalStateException("Cannot read " + field.getName() + " of " + criteria.getClass().getName(), e);
+        }
+    }
+
+    /**
      * A bulk {@code delete} or {@code update} statement has no {@code LIMIT} or {@code OFFSET}, so a
-     * criteria that carries {@code max} or {@code offset} would write to every matching row. Refuse it.
+     * criteria that carries {@code max} or an {@code offset} above 0 would write to every matching row. Refuse it.
+     * An {@code offset} of 0 leaves no row out and is accepted.
      */
     private static void rejectPagination(QueryableCriteria<?> criteria, String operation) {
         if (!(criteria instanceof AbstractDetachedCriteria)) {
             return;
         }
-        Integer max = ((AbstractDetachedCriteria<?>) criteria).getDefaultMax();
-        Integer offset = ((AbstractDetachedCriteria<?>) criteria).getDefaultOffset();
+        Integer max = criteriaValue(DEFAULT_MAX, (AbstractDetachedCriteria<?>) criteria);
+        Integer offset = criteriaValue(DEFAULT_OFFSET, (AbstractDetachedCriteria<?>) criteria);
+        if (offset != null && offset <= 0) {
+            offset = null;
+        }
         if (max == null && offset == null) {
             return;
         }

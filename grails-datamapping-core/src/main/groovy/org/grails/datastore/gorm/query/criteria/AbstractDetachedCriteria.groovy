@@ -56,27 +56,6 @@ abstract class AbstractDetachedCriteria<T> implements Criteria, Cloneable {
     protected Integer defaultOffset
     protected Integer defaultMax
 
-    /**
-     * The maximum number of rows the criteria was limited to with {@code max}, or {@code null}. A datastore that
-     * runs a bulk write reads it, as a bulk write has no row limit. It is for datastore implementations; an
-     * application has no reason to call it.
-     *
-     * @return The maximum, or {@code null} when none was set
-     */
-    Integer getDefaultMax() {
-        defaultMax
-    }
-
-    /**
-     * The number of rows the criteria skips with {@code offset}, or {@code null}. It is for datastore
-     * implementations, like {@link #getDefaultMax()}.
-     *
-     * @return The offset, or {@code null} when none was set
-     */
-    Integer getDefaultOffset() {
-        defaultOffset
-    }
-
     protected List<Query.Junction> junctions = []
     protected PersistentEntity persistentEntity
     protected Map<String, FetchType> fetchStrategies = [:]

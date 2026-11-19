@@ -25,7 +25,7 @@ import spock.lang.Specification
 /**
  * A bulk write has no LIMIT or OFFSET, so a criteria with max or offset is refused and writes nothing.
  */
-@Integration(applicationClass = Application)
+@Integration
 class BulkWriteGuardScenarioSpec extends Specification {
 
     void setup() {

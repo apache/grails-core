@@ -36,20 +36,6 @@ class DetachedCriteriaCloneSpec extends Specification {
         cloned.@connectionName == 'secondary'
     }
 
-    void "max and offset are readable by a datastore that runs a bulk write"() {
-        given:
-        def plain = new DetachedCriteria(TestEntity)
-        def limited = new DetachedCriteria(TestEntity).max(5).offset(2)
-
-        expect: 'a criteria without a limit reports none'
-        plain.defaultMax == null
-        plain.defaultOffset == null
-
-        and: 'a limited criteria reports the values'
-        limited.defaultMax == 5
-        limited.defaultOffset == 2
-    }
-
     void "clone preserves lazyQuery"() {
         given:
         def lazy = { -> }
