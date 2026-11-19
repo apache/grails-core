@@ -158,6 +158,12 @@ class DefaultProjectGenerator implements ProjectGenerator {
     }
 
     @Override
+    AvailableFeatures availableFeatures(ApplicationType applicationType, Collection<Pack> packs) {
+        AvailableFeatures framework = featureRegistry.availableFeatures(applicationType)
+        return packs.isEmpty() ? framework : new PackFeatures(framework, featureRegistry.all(), packs, applicationType)
+    }
+
+    @Override
     GeneratorContext createGeneratorContext(
             ApplicationType applicationType,
             Project project,
@@ -166,10 +172,7 @@ class DefaultProjectGenerator implements ProjectGenerator {
             List<String> selectedFeatures,
             ConsoleOutput consoleOutput,
             Collection<Pack> packs) {
-        AvailableFeatures availableFeatures = featureRegistry.availableFeatures(applicationType)
-        if (!packs.isEmpty()) {
-            availableFeatures = new PackFeatures(availableFeatures, featureRegistry.all(), packs, applicationType)
-        }
+        AvailableFeatures availableFeatures = availableFeatures(applicationType, packs)
 
         FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem)
         return contextFactory.createGeneratorContext(project, featureContext, consoleOutput)

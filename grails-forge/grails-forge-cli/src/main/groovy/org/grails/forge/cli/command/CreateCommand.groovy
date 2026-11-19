@@ -20,9 +20,13 @@ package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
+import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackDescriptorException
+import org.apache.grails.forge.core.pack.PackLoader
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.Project
+import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.io.FileSystemOutputHandler
@@ -62,6 +66,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     @CommandLine.Option(names = ['--jdk', '--java-version'], description = 'The JDK version the project should target')
     Integer javaVersion
 
+    @CommandLine.Option(names = ['--feature-pack-dir'], paramLabel = 'DIRECTORY',
+            description = 'A directory that holds a feature pack (feature.yml and its templates directory), whose feature can then be ' +
+                    'selected like one of the framework. For trying a pack out before it is published. Can be given more than once.')
+    List<File> featurePackDirectories = new ArrayList<>()
+
     private final ContextFactory contextFactory
     private final ApplicationType applicationType
     private final ProjectGenerator projectGenerator
@@ -84,7 +93,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     @Override
     Integer call() throws Exception {
         if (listFeatures) {
-            new ListFeatures(availableFeatures,
+            List<Pack> packs = featurePacks()
+            new ListFeatures(packs.isEmpty() ? availableFeatures : projectGenerator.availableFeatures(applicationType, packs),
                     new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
                     applicationType,
                     getOperatingSystem(),
@@ -112,8 +122,34 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {
         Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem())
+        List<Pack> packs = featurePacks()
+        if (packs.isEmpty()) {
+            projectGenerator.generate(applicationType, project, options, getOperatingSystem(), getSelectedFeatures(), outputHandler, this)
+            return
+        }
+        // a pack is not part of the framework: say which ones this application is made with
+        for (Pack pack : packs) {
+            out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin}")
+        }
+        GeneratorContext context = projectGenerator.createGeneratorContext(applicationType, project, options, getOperatingSystem(),
+                getSelectedFeatures(), this, packs)
+        projectGenerator.generate(applicationType, project, outputHandler, context)
+    }
 
-        projectGenerator.generate(applicationType, project, options, getOperatingSystem(), getSelectedFeatures(), outputHandler, this)
+    /**
+     * The feature packs of the directories given with {@code --feature-pack-dir}.
+     */
+    private List<Pack> featurePacks() {
+        List<Pack> packs = []
+        PackLoader loader = new PackLoader()
+        for (File directory : featurePackDirectories) {
+            try {
+                packs << loader.fromDirectory(directory.toPath().toAbsolutePath().normalize())
+            } catch (PackDescriptorException e) {
+                throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
+            }
+        }
+        return packs
     }
 
     private JdkVersion getJdkVersion() {

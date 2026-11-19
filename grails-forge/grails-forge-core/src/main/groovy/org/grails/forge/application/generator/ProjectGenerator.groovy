@@ -24,6 +24,7 @@ import org.apache.grails.forge.core.pack.Pack
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
+import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.Options
@@ -76,6 +77,16 @@ interface ProjectGenerator {
         if (packs.isEmpty()) {
             return createGeneratorContext(applicationType, project, options, operatingSystem, selectedFeatures, consoleOutput)
         }
+        throw new UnsupportedOperationException('This generator does not take feature packs')
+    }
+
+    /**
+     * The features an application of a type can have when the given feature packs are there to choose
+     * from besides the features of the framework, for listing them.
+     *
+     * @since 9.0
+     */
+    default AvailableFeatures availableFeatures(ApplicationType applicationType, Collection<Pack> packs) {
         throw new UnsupportedOperationException('This generator does not take feature packs')
     }
 }
