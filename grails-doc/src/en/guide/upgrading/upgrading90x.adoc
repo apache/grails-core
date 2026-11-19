@@ -1484,7 +1484,37 @@ With GORM for MongoDB, a class that is not multi-tenant and was saved inside a t
 
 Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
-==== 26. JLine 4
+==== 26. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 28 does not apply to them.
+
+===== Required Actions
+
+* A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+* A test that expected a domain class event not to run on such a save expects what the event does.
+* The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
+
+==== 27. A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
+
+===== Required Actions
+
+* Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
+
+==== 28. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
+
+* sets the `@CreatedBy` and `@LastModifiedBy` properties from the application's `AuditorAware`. In Grails 8 only a save through the default data source set them.
+* follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`. In Grails 8 it overwrote a `dateCreated` or `lastUpdated` that an instance was saved with, whatever `autoTimestampInsertOverwrite` said.
+* with GORM for Neo4j, runs the domain class's events, such as `beforeInsert`, and sets `dateCreated` and `lastUpdated`. In Grails 8 a save through another Neo4j connection ran neither.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
+==== 29. JLine 4
 
 Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
 
@@ -1495,7 +1525,7 @@ Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is 
 
 picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
 
-==== 27. Command Lines of Application Commands
+==== 30. Command Lines of Application Commands
 
 The command line parser of the `grails` command line tool and of `runCommand`, which reads the command line of an application or plugin command, reads two kinds of input differently:
 
