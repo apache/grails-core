@@ -30,3 +30,7 @@ spring:
     groovy:
         template:
             check-template-location: false
+    mvc:
+        contentnegotiation:
+            media-types:
+                plain: text/plain

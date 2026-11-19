@@ -259,12 +259,32 @@ class GrailsContentNegotiationStrategy {
     }
 
     /**
-     * @return the media types of every configured MIME type Spring can read, which a request that names a format no type
-     * is configured for is not acceptable in
+     * The media type Spring MVC's content negotiation manager maps a format to, as {@code spring.mvc.contentnegotiation.media-types}
+     * maps one, for a format no type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request
+     * that names it is in that type, as without {@code grails.mime.negotiation.spring}.
+     *
+     * @param format the format
+     * @return the media type, as a list, or {@code null} where the manager maps no type to the format
+     * @since 9.0
+     */
+    List<MediaType> springMediaTypesOf(String format) {
+        MediaType mediaType = format != null ?
+                contentNegotiationManager?.get()?.mediaTypeMappings?.get(format.toLowerCase(Locale.ENGLISH)) : null
+        return mediaType != null ? [mediaType] : null
+    }
+
+    /**
+     * @return the media types of every configured MIME type Spring can read, and of every format Spring MVC's content
+     * negotiation manager maps, which a request that names a format neither maps is not acceptable in
      * @since 9.0
      */
     List<MediaType> getConfiguredMediaTypes() {
-        return mediaTypes.findAll { it }.unique() as List<MediaType>
+        List<MediaType> configured = mediaTypes.findAll { it } as List<MediaType>
+        Map<String, MediaType> springMappings = contentNegotiationManager?.get()?.mediaTypeMappings
+        if (springMappings) {
+            configured.addAll(springMappings.values())
+        }
+        return configured.unique()
     }
 
     /**

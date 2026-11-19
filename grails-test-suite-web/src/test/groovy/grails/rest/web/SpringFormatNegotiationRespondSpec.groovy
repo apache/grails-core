@@ -187,7 +187,8 @@ class SpringFormatNegotiationWithoutAllRespondSpec extends Specification impleme
 /**
  * With {@code grails.mime.negotiation.spring} and Spring MVC's parameter negotiation of the {@code format} parameter,
  * which {@code spring.mvc.contentnegotiation.favor-parameter} enables, {@code respond} answers the format the parameter
- * names, and the {@code all} format with the {@code Accept} header.
+ * names, and the {@code all} format with the {@code Accept} header. A format only Spring MVC's media types map is not one
+ * {@code respond} renders.
  */
 class SpringFormatNegotiationParameterRespondSpec extends Specification implements ControllerUnitTest<NegotiatedResponseController> {
 
@@ -196,6 +197,7 @@ class SpringFormatNegotiationParameterRespondSpec extends Specification implemen
             config[Settings.WEB_RENDERING_JSON_SPRING] = true
             config[Settings.MIME_NEGOTIATION_SPRING] = true
             config['spring.mvc.contentnegotiation.favor-parameter'] = true
+            config['spring.mvc.contentnegotiation.media-types.plain'] = 'text/plain'
         }
     }
 
@@ -216,6 +218,7 @@ class SpringFormatNegotiationParameterRespondSpec extends Specification implemen
         'all'     || 200    | 'application/json'
         'xml'     || 200    | 'text/xml'
         'unknown' || 406    | ''
+        'plain'   || 406    | ''
     }
 }
 

@@ -304,7 +304,9 @@ Spring cannot read, has no format: `response.format` and `response.mimeType` are
 that accepts any type, with the `all` format.
 * The `format` parameter and a URL extension name the format, ahead of the `Accept` header, as before. The first value
 of the parameter counts, as for Spring MVC; a format no type is configured for is not acceptable, where the Grails rules
-answer in the first configured format; and the `all` format, which is any type whether or not `grails.mime.types` lists
+answer in the first configured format, but what Spring MVC writes for a format `grails.mime.types` does not list and
+`spring.mvc.contentnegotiation.media-types` maps is in the type that maps it, while `respond` answers it with
+`406 Not Acceptable`; and the `all` format, which is any type whether or not `grails.mime.types` lists
 it, leaves the format to the `Accept` header. Where `spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read
 the `format` parameter too, Grails reads it in its place for a request a URL mapping handles, so `?format=all` is left
 to the `Accept` header there as well, while a Spring MVC endpoint reads it as Spring MVC does.
@@ -327,8 +329,9 @@ no URL mapping handles. Each rule of Grails' negotiation becomes:
 |Grails rule |With `grails.mime.negotiation.spring`
 
 |The `format` parameter and URL extensions select the format
-|Kept, ahead of Spring MVC's strategies, and also for what Spring MVC writes for the request. An unknown format is not
-acceptable, and the `all` format leaves the choice to the `Accept` header.
+|Kept, ahead of Spring MVC's strategies, and also for what Spring MVC writes for the request, which a format only
+`spring.mvc.contentnegotiation.media-types` maps decides too. A format neither maps is not acceptable, and the `all`
+format leaves the choice to the `Accept` header.
 
 |`grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header
 |Kept, also for what Spring MVC writes for the request.

@@ -44,7 +44,17 @@ class SpringFormatNegotiationSpec extends Specification implements HttpClientSup
         http('/springWritten/text.text', Accept: 'application/json').assertStatus(200).contentType.startsWith('text/plain')
     }
 
-    void 'a request that names a format no type is configured for is not acceptable'() {
+    void "a format only Spring MVC's media types map decides what Spring MVC writes for an action, by #how"() {
+        expect:
+        http(uri, Accept: 'application/json').assertStatus(200).contentType.startsWith('text/plain')
+
+        where:
+        how                       | uri
+        'the format parameter'    | '/springWritten/text?format=plain'
+        'the URL extension'       | '/springWritten/text.plain'
+    }
+
+    void 'a request that names a format neither grails.mime.types nor Spring MVC maps is not acceptable'() {
         expect:
         http('/springWritten/entity?format=unknown', Accept: 'application/json').assertStatus(406)
     }

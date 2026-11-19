@@ -420,6 +420,38 @@ class SpringFormatNegotiationSpec extends Specification {
         'all'  || 'not acceptable'
     }
 
+    void "a format only Spring MVC's media types map is written in the type they map it to, #how"() {
+        given: 'plain mapped to text/plain in Spring MVC only, as spring.mvc.contentnegotiation.media-types.plain maps it'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, (ParameterConfiguration.PLAIN): true,
+                (ParameterConfiguration.ENABLED): favorParameter, (ParameterConfiguration.NAME): 'format')
+        def request = request('Accept': 'application/json')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == expected
+
+        where:
+        how                                                    | favorParameter | format    || expected
+        'without parameter negotiation'                        | false          | 'plain'   || [MediaType.TEXT_PLAIN]
+        'with parameter negotiation of the format parameter'   | true           | 'plain'   || [MediaType.TEXT_PLAIN]
+        'whatever the case of the format'                      | false          | 'PLAIN'   || [MediaType.TEXT_PLAIN]
+        'and a format neither maps is not acceptable'          | false          | 'unknown' || 'not acceptable'
+        'and with parameter negotiation, still not acceptable' | true           | 'unknown' || 'not acceptable'
+    }
+
+    void "a format Grails configures keeps the types grails.mime.types gives it, whatever type Spring MVC's media types map it to"() {
+        given:
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', json: 'application/json', plain: 'text/csv'],
+                (ParameterConfiguration.PLAIN): true)
+        def request = request('Accept': 'application/json')
+        request.addParameter('format', 'plain')
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.parseMediaType('text/csv')]
+    }
+
     void 'the Content-Type #contentType is the request format #format'() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true)
@@ -585,19 +617,28 @@ class SpringFormatNegotiationSpec extends Specification {
 
         static final String NAME = 'test.parameter.negotiation.name'
 
+        /** Maps the {@code plain} format to {@code text/plain}, as {@code spring.mvc.contentnegotiation.media-types.plain} does. */
+        static final String PLAIN = 'test.parameter.negotiation.plain'
+
         private final boolean enabled
 
         private final String name
 
+        private final boolean plain
+
         ParameterConfiguration(ConfigurableEnvironment environment) {
             enabled = environment.getProperty(ENABLED, Boolean, false)
             name = environment.getProperty(NAME, 'mediaType')
+            plain = environment.getProperty(PLAIN, Boolean, false)
         }
 
         @Override
         void configureContentNegotiation(ContentNegotiationConfigurer configurer) {
             if (enabled) {
                 configurer.favorParameter(true).parameterName(name)
+            }
+            if (plain) {
+                configurer.mediaType('plain', MediaType.TEXT_PLAIN)
             }
         }
     }
