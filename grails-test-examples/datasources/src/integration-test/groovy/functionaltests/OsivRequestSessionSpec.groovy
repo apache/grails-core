@@ -18,11 +18,15 @@
  */
 package functionaltests
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 
 import datasources.RequestSessions
 import grails.testing.mixin.integration.Integration
 import org.apache.grails.testing.http.client.HttpClientSupport
+import org.apache.grails.testing.http.client.TestHttpResponse
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 
@@ -47,20 +51,32 @@ class OsivRequestSessionSpec extends Specification implements HttpClientSupport 
         given:
         RequestSessions.release = new CountDownLatch(1)
         RequestSessions.asyncSecondarySession = null
-        final asyncRequest = Thread.start { http('/requestSession/promise').assertStatus(200) }
 
-        expect: 'the session the action ran with is closed once the request has gone asynchronous'
+        when: 'the request goes asynchronous and waits'
+        CompletableFuture<TestHttpResponse> asyncResponse = CompletableFuture.supplyAsync({ http('/requestSession/promise') } as Supplier<TestHttpResponse>)
+
+        then: 'the session the action ran with is closed once the request has gone asynchronous'
         new PollingConditions(timeout: 10).eventually {
             assert RequestSessions.asyncSecondarySession != null
             assert !RequestSessions.asyncSecondarySession.open
         }
 
-        and: 'a later request gets a session of its own'
-        !http('/requestSession/current').body().startsWith("${System.identityHashCode(RequestSessions.asyncSecondarySession)}/")
+        when: 'another request runs while the first one waits'
+        TestHttpResponse later = http('/requestSession/current')
+
+        then: 'it gets an open session of its own'
+        later.assertStatus(200)
+        later.body() ==~ /\d+\/open/
+        !later.body().startsWith("${System.identityHashCode(RequestSessions.asyncSecondarySession)}/")
+
+        when: 'the first request is released'
+        RequestSessions.release.countDown()
+
+        then: 'it completes successfully'
+        asyncResponse.get(30, TimeUnit.SECONDS).assertStatus(200)
 
         cleanup:
         RequestSessions.release.countDown()
-        asyncRequest?.join(30000)
     }
 
     private Map<String, String> pageLines(String path) {

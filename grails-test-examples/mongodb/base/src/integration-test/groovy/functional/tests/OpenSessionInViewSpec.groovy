@@ -19,7 +19,10 @@
 
 package functional.tests
 
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationContext
@@ -89,6 +92,15 @@ class OpenSessionInViewSpec extends Specification implements HttpClientSupport {
         Player.withNewSession { Player.get(playerId).name } == 'Player 0'
     }
 
+    void "an action included from a view has its save written"() {
+        when: 'the view, rendered after the outer action has flushed, includes an action that saves without a flush'
+        String body = http('/player/includeSave').assertStatus(200).body()
+
+        then:
+        body.contains('saved')
+        Player.withNewSession { Player.countByName('From View') } == 1
+    }
+
     void "an include uses the session of the request and leaves it open for the rest of the page"() {
         when:
         final page = pageLines('/requestSession/page?include=true')
@@ -105,9 +117,11 @@ class OpenSessionInViewSpec extends Specification implements HttpClientSupport {
         given:
         RequestSessions.release = new CountDownLatch(1)
         RequestSessions.asyncSession = null
-        final asyncRequest = Thread.start { http(path).assertStatus(200) }
 
-        expect: 'the session the action ran with is closed once the request has gone asynchronous'
+        when: 'the request goes asynchronous and waits'
+        CompletableFuture<TestHttpResponse> asyncResponse = CompletableFuture.supplyAsync({ http(path) } as Supplier<TestHttpResponse>)
+
+        then: 'the session the action ran with is closed once the request has gone asynchronous'
         new PollingConditions(timeout: 10).eventually {
             assert RequestSessions.asyncSession != null
             assert !RequestSessions.asyncSession.connected
@@ -116,12 +130,22 @@ class OpenSessionInViewSpec extends Specification implements HttpClientSupport {
         and: 'what the action saved was flushed then, as when an action returns'
         Player.withNewSession { Player.findByName('Saved before going asynchronous') } != null
 
-        and: 'a later request gets a session of its own'
-        !http('/requestSession/current').body().startsWith("${System.identityHashCode(RequestSessions.asyncSession)}/")
+        when: 'another request runs while the first one waits'
+        TestHttpResponse later = http('/requestSession/current')
+
+        then: 'it gets an open session of its own'
+        later.assertStatus(200)
+        later.body() ==~ /\d+\/open/
+        !later.body().startsWith("${System.identityHashCode(RequestSessions.asyncSession)}/")
+
+        when: 'the first request is released'
+        RequestSessions.release.countDown()
+
+        then: 'it completes successfully'
+        asyncResponse.get(30, TimeUnit.SECONDS).assertStatus(200)
 
         cleanup:
         RequestSessions.release.countDown()
-        asyncRequest?.join(30000)
 
         where:
         how                            | path
