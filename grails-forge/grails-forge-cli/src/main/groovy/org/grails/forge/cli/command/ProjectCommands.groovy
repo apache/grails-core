@@ -145,8 +145,11 @@ class ProjectCommands {
             problem = 'its build wrote no manifest'
         }
         if (problem == null) {
+            // a manifest naming other files is recorded as they are now, unless one of the files known
+            // before the build changed while it ran: then the record from before makes the build run again
             Inputs after = inputsOf(manifest)
-            save(after == before ? recorded : snapshotOrNull(after), null, console)
+            boolean changedDuringBuild = after != before && snapshotOrNull(before) != recorded
+            save(after == before || changedDuringBuild ? recorded : snapshotOrNull(after), null, console)
             return
         }
         save(recorded, problem, console)

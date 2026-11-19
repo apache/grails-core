@@ -310,9 +310,15 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations().size() == 1
     }
 
-    void 'a file changed while the build runs makes the build run again next time'() {
+    void 'a file changed while the build runs makes the build run again next time, with a manifest #naming'() {
         given: 'a build during which a command is saved'
-        buildWrites(URL_MAPPINGS_REPORT)
+        if (namesInputs) {
+            buildWritesWithInputs([buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path]],
+                    URL_MAPPINGS_REPORT)
+        }
+        else {
+            buildWrites(URL_MAPPINGS_REPORT)
+        }
         new File(dir, 'during-build.sh').text = 'printf "class Hello {}" > "$1/grails-app/commands/Hello.groovy"\n'
 
         when:
@@ -323,6 +329,22 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         gradleInvocations().size() == 2
+
+        where:
+        namesInputs << [false, true]
+        naming = namesInputs ? 'naming its inputs' : 'naming no inputs'
+    }
+
+    void 'a first build whose manifest names its inputs runs once while nothing changes'() {
+        given:
+        buildWritesWithInputs([buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path]],
+                URL_MAPPINGS_REPORT)
+
+        when:
+        3.times { ForgeCli.createCommandLine(context, false) }
+
+        then:
+        gradleInvocations().size() == 1
     }
 
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
