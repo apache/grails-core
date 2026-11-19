@@ -18,3 +18,4 @@ cache-ehcache
 grails-layout
 grails-quartz
 grails-web-console
+hibernate-validator

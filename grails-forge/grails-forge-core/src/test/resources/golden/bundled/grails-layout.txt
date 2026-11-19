@@ -1,0 +1,28 @@
+# web
+title: GSP SiteMesh 2 Layouts
+description: Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3
+category: View Rendering
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+== build.gradle
+-     implementation "org.apache.grails:grails-sitemesh3"
++     implementation "org.apache.grails:grails-layout"
+
+# rest_api
+not for this kind of application
+
+# web_plugin
+title: GSP SiteMesh 2 Layouts
+description: Adds support for legacy SiteMesh 2 based GSP layouts (grails-layout) instead of SiteMesh 3
+category: View Rendering
+documentation: null
+thirdPartyDocumentation: null
+visible: true
+== build.gradle
+-     implementation "org.apache.grails:grails-sitemesh3"
++     implementation "org.apache.grails:grails-layout"
+
+# plugin
+not for this kind of application
+

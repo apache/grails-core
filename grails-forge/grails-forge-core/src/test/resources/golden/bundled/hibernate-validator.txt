@@ -1,0 +1,60 @@
+# web
+title: Hibernate Validator
+description: Add support for the Hibernate Validator.
+category: Validation
+documentation: https://hibernate.org/validator/
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature hibernate-validator documentation
++ - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
++ 
++ 
+== build.gradle
++     implementation "org.hibernate.validator:hibernate-validator"
+
+# rest_api
+title: Hibernate Validator
+description: Add support for the Hibernate Validator.
+category: Validation
+documentation: https://hibernate.org/validator/
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature hibernate-validator documentation
++ - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
++ 
++ 
+== build.gradle
++     implementation "org.hibernate.validator:hibernate-validator"
+
+# web_plugin
+title: Hibernate Validator
+description: Add support for the Hibernate Validator.
+category: Validation
+documentation: https://hibernate.org/validator/
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature hibernate-validator documentation
++ - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
++ 
++ 
+== build.gradle
++     implementation "org.hibernate.validator:hibernate-validator"
+
+# plugin
+title: Hibernate Validator
+description: Add support for the Hibernate Validator.
+category: Validation
+documentation: https://hibernate.org/validator/
+thirdPartyDocumentation: null
+visible: true
+== README.md
++ ## Feature hibernate-validator documentation
++ - [Grails Hibernate Validator documentation](https://hibernate.org/validator/)
++ 
++ 
+== build.gradle
++     implementation "org.hibernate.validator:hibernate-validator"
+
