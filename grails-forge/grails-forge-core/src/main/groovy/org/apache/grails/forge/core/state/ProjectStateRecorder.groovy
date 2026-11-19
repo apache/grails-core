@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor
 import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
@@ -168,10 +169,18 @@ final class ProjectStateRecorder {
         if (pack.isBundled()) {
             return new LockedFeature(feature.getName(), LockedFeature.BUNDLED_PACK)
         }
-        // the state is committed, and where a pack was read from is a path of the machine it was
-        // generated on: the lock says no more of a pack than that the feature is of one, until a pack
-        // knows the coordinates and the digest of the artifact it came from
-        return new LockedFeature(feature.getName(), LockedFeature.PACK)
+        PackArtifact artifact = pack.getArtifact()
+        if (artifact == null) {
+            // the state is committed, and where a pack of a directory was read from is a path of the
+            // machine it was generated on: the lock says no more of it than that the feature is of a pack
+            return new LockedFeature(feature.getName(), LockedFeature.PACK)
+        }
+        // a pack that was taken by the coordinates of its plugin: which artifact, and its very bytes.
+        // The repository is said when it is one anybody can ask, not a directory of this machine
+        int version = artifact.coordinates.lastIndexOf(':')
+        return new LockedFeature(feature.getName(), LockedFeature.PACK,
+                artifact.repository != null && artifact.repository.startsWith('https://') ? artifact.repository : null,
+                artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256)
     }
 
     private String path(Template template) {

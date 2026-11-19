@@ -589,6 +589,27 @@ class PackGenerationSpec extends ApplicationContextSpec {
         'another Forge'     | '[9.0.0,10.0.0)'  | '(,9.0.0)'        || 'Forge'  | '(,9.0.0)'
     }
 
+    void "the lock of a project says which artifact a pack was taken from, and nothing of a directory"() {
+        given:
+        String digest = 'ab' * 32
+        Pack fromRepository = pack('acme-audit', '').withArtifact(new PackArtifact('acme-audit', 'com.acme:acme-audit-grails:2.3.0',
+                'https://repo.acme.example/maven/', 'acme-audit-grails-2.3.0.jar', digest, 'sha256', false))
+        Pack fromFiles = pack('acme-base', '').withArtifact(new PackArtifact('acme-base', 'com.acme:acme-base:1.0-SNAPSHOT',
+                'file:/home/someone/repository/', 'acme-base-1.0-SNAPSHOT.jar', digest, null, false))
+        Pack fromDirectory = pack('acme-local', '')
+
+        when:
+        String lock = generate(['acme-audit', 'acme-base', 'acme-local'], [fromRepository, fromFiles, fromDirectory])['.grails/forge.lock.yml']
+
+        then:
+        lock.contains("- name: acme-audit\n  source: pack\n  origin: https://repo.acme.example/maven/\n  coordinates: com.acme:acme-audit-grails\n" +
+                "  version: 2.3.0\n  sha256: ${digest}\n")
+        lock.contains("- name: acme-base\n  source: pack\n  coordinates: com.acme:acme-base\n  version: 1.0-SNAPSHOT\n  sha256: ${digest}\n")
+        lock.contains('- name: acme-local\n  source: pack\n')
+        !lock.contains('someone')
+        !lock.contains(directory.toString())
+    }
+
     void "a pack that is not selected adds nothing"() {
         given:
         Pack pack = pack('acme-audit', "dependencies:\n  - scope: implementation\n    coordinates: com.acme:acme-audit-grails\n")
