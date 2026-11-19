@@ -145,6 +145,33 @@ class QueryLockSpec extends Specification {
         outcome = cached ? 'cached again' : 'still not cached'
     }
 
+    @Rollback
+    @Unroll
+    void 'cache(#first) then lock(true) then cache(#second) then lock(false) leaves the cache #outcome'() {
+        given:
+        HibernateQuery query = hibernateDatastore.currentSession.createQuery(Club) as HibernateQuery
+
+        when:
+        query.cache(first).lock(true).cache(second)
+
+        then: 'a locking query is never cached, whatever cache() is asked for'
+        !((CriteriaImpl) query.hibernateCriteria).cacheable
+
+        when:
+        query.lock(false)
+
+        then: 'the setting that was asked for last is the one that comes back'
+        ((CriteriaImpl) query.hibernateCriteria).cacheable == second
+
+        where:
+        first | second
+        true  | false
+        false | true
+        true  | true
+        false | false
+        outcome = second ? 'on' : 'off'
+    }
+
     static class SqlCapture implements StatementInspector {
         final List<String> statements = Collections.synchronizedList(new ArrayList<String>())
 

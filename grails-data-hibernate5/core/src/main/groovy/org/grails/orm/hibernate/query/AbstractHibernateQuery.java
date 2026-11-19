@@ -596,7 +596,13 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query cache(boolean cache) {
-        criteria.setCacheable(cache);
+        if (cacheableBeforeLock != null) {
+            // a locking query stays out of the cache; the setting that is asked for now is the one that comes back
+            cacheableBeforeLock = cache;
+        }
+        else {
+            criteria.setCacheable(cache);
+        }
 
         return super.cache(cache);
     }
