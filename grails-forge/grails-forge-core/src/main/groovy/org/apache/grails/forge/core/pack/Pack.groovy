@@ -60,6 +60,7 @@ final class Pack {
     private final String origin
     private final Map<String, byte[]> files
     private final boolean bundled
+    private final PackArtifact artifact
 
     /**
      * @param descriptor the descriptor of the pack
@@ -77,6 +78,11 @@ final class Pack {
      * @param bundled whether the pack is one Forge has in itself
      */
     Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled) {
+        this(descriptor, origin, files, bundled, null)
+    }
+
+    private Pack(PackDescriptor descriptor, String origin, Map<String, byte[]> files, boolean bundled, PackArtifact artifact) {
+        this.artifact = artifact
         this.bundled = bundled
         this.descriptor = descriptor
         this.origin = origin
@@ -102,6 +108,25 @@ final class Pack {
      */
     String getOrigin() {
         return origin
+    }
+
+    /**
+     * @return the published jar the pack was read from, or {@code null} for a pack that was not taken
+     * from a repository
+     */
+    PackArtifact getArtifact() {
+        return artifact
+    }
+
+    /**
+     * @param artifact the published jar this pack was read from
+     * @return this pack, with the jar it was read from
+     */
+    Pack withArtifact(PackArtifact artifact) {
+        if (bundled) {
+            throw new IllegalArgumentException("The feature pack ${origin} is one of Forge and comes from no repository")
+        }
+        return new Pack(descriptor, origin, files, false, Objects.requireNonNull(artifact))
     }
 
     /**

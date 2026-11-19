@@ -24,6 +24,7 @@ under the License.
 <%@ page import="org.grails.forge.options.ServletImpl" %>
 <%@ page import="org.grails.forge.application.Project" %>
 <%@ page import="org.grails.forge.application.ApplicationType" %>
+<%@ page import="org.apache.grails.forge.core.pack.PackArtifact" %>
 <%@ page import="java.util.List" %>
 <%@ model="Language language" %>
 <%@ model="DevelopmentReloading reloading" %>
@@ -33,6 +34,7 @@ under the License.
 <%@ model="Project project" %>
 <%@ model="List<String> features" %>
 <%@ model="ApplicationType applicationType" %>
+<%@ model="List<PackArtifact> packArtifacts" %>
 applicationType: ${applicationType.getName()}
 defaultPackage: ${project.getPackageName()}
 reloading: ${reloading.getName()}
@@ -41,3 +43,13 @@ buildTool: ${buildTool.getName()}
 gormImpl: ${gormImpl.getName()}
 servletImpl: ${servletImpl.getName()}
 features: ${features.toString()}
+<% if (packArtifacts) { %>
+featurePacks:
+<% for (PackArtifact artifact : packArtifacts) { %>
+  - name: ${artifact.name}
+    coordinates: '${artifact.coordinates}'
+    repository: '${artifact.repository.replace("'", "''")}'
+    artifact: '${artifact.file}'
+    sha256: '${artifact.sha256}'
+<% } %>
+<% } %>

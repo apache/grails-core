@@ -21,8 +21,10 @@ package org.grails.forge.application.generator
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackContent
 import org.apache.grails.forge.core.pack.PackDescriptorParser
+import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.pack.PackFeatures
 import org.apache.grails.forge.core.state.ProjectStateRecorder
 import org.grails.forge.application.ApplicationType
@@ -30,6 +32,7 @@ import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.feature.AvailableFeatures
+import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureRegistry
 import org.springframework.stereotype.Component
 import org.grails.forge.feature.FeatureContext
@@ -93,7 +96,7 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         generatorContext.addTemplate('grailsCli',
                 new GspTemplate('grails-forge-cli.yml',
-                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType])))
+                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext)])))
 
         if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {
             // what the features add was made for the project of the context, its name in it
@@ -194,5 +197,19 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem)
         return contextFactory.createGeneratorContext(project, featureContext, consoleOutput)
+    }
+
+    /**
+     * The published jars the packs of the application were read from, in the order of their names, which
+     * are written next to the features so that it can be seen later what the application was made with.
+     */
+    private static List<PackArtifact> packArtifacts(GeneratorContext generatorContext) {
+        List<PackArtifact> artifacts = []
+        for (Feature feature : generatorContext.getFeatures().getFeatures()) {
+            if (feature instanceof PackFeature && ((PackFeature) feature).getPack().getArtifact() != null) {
+                artifacts << ((PackFeature) feature).getPack().getArtifact()
+            }
+        }
+        return artifacts.sort { PackArtifact artifact -> artifact.name }
     }
 }

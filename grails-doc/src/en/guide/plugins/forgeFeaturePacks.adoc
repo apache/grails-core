@@ -20,7 +20,7 @@ under the License.
 
 A plugin can describe what an application needs in order to use it: the dependency on the plugin, settings, files. That description is a _feature pack_. With it, the plugin is a feature that can be selected when an application is created, like the features Grails itself offers.
 
-NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory. Selecting the pack of a published plugin by the coordinates of the plugin is not available yet.
+NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory, or is that of a published plugin that is given by its coordinates. Selecting the feature of a plugin by its name alone, from the list of published plugins, is not available yet.
 
 
 ==== The Layout of a Pack
@@ -205,3 +205,54 @@ $ grails -t forge create-app com.example.shop \
 The command names every pack the application is made with and says what it adds before it writes anything: the templates and build file blocks, which are code, first, then every file it writes outside the sources, the source files, plugins, properties and dependencies. `--list-features` with the same option lists the feature of the pack among the others. The option can be given more than once.
 
 WARNING: A pack is code. Its templates run when the application is generated, with everything the command can do, and what it adds to `build.gradle` runs when the application is built. Use a pack only when you trust where it comes from.
+
+
+==== Using the Pack of a Published Plugin
+
+
+Once the plugin is published, its feature is selected by giving the coordinates of the plugin, with its version, to `--features`, alone or among the names of other features:
+
+[source,console]
+----
+$ grails -t forge create-app com.example.shop \
+    --features=h2,com.acme:acme-audit-grails:2.3.0
+----
+
+The command takes the jar of that one version from a Maven repository, reads the pack in it and selects the feature of the pack, under the name the pack gives it. Nothing else of the plugin is fetched, none of its dependencies are resolved and nothing of the jar is run. The version is always given, and is one version: a range, a version with a `+` and `latest.release` are refused. A snapshot version can be given; the latest build of it is used and the file name of that build is recorded.
+
+A pack does not add its plugin to the application by itself: the descriptor declares the plugin in `dependencies`, as in the example above. The command warns when the pack of a plugin does not declare that plugin, since the application is then generated without it.
+
+The jar is looked for in the repositories of the `GRAILS_REPO_URL` environment variable, in their order, and then in Maven Central. To look somewhere else, name the repositories with `--feature-pack-repository`, which can be given more than once. Only those repositories are asked then, so the coordinates of a private plugin are sent nowhere else:
+
+[source,console]
+----
+$ grails -t forge create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-pack-repository=https://repo.acme.example/maven
+----
+
+The address of a repository is `https`, or `file:` for a directory laid out as a Maven repository, such as `file:///home/me/.m2/repository`. An `http` address is refused, a redirect is followed only to another `https` address, and an address cannot carry a user name or password: a repository that asks for credentials cannot be used yet. A jar can have at most 64 MiB.
+
+A repository that does not have the jar is passed over and the next one is asked. Any other failure ends the command: a repository that cannot be reached, one that answers with an error, a time-out, or a jar that fails a check below. The error is one line that names the coordinates and every repository that was asked with the reason, nothing is created, and the exit code is 1. Coordinates or an option that cannot be read are a mistake in the command line, with exit code 2.
+
+Before anything is written, the command says where each pack came from and the SHA-256 of the jar that was read:
+
+[source]
+----
+| Feature pack acme-audit from com.acme:acme-audit-grails:2.3.0 (https://repo.acme.example/maven/), sha256 5f2c...
+    the jar matches the sha256 checksum the repository publishes for it
+    dependencies: implementation com.acme:acme-audit-grails:2.3.0
+----
+
+When the repository publishes a `.sha256` or `.sha1` file for the jar, the jar is checked against it and refused when it differs; when it publishes neither, the command says that there was no checksum to check against. A checksum of the repository shows that the download is complete. It does not show who published the jar. To use only a jar you have looked at, give its SHA-256 with `--feature-pack-sha256`; a jar with another one is refused before it is opened:
+
+[source,console]
+----
+$ grails -t forge create-app com.example.shop \
+    --features=com.acme:acme-audit-grails:2.3.0 \
+    --feature-pack-sha256=com.acme:acme-audit-grails:2.3.0=5f2c...
+----
+
+The signature of a signed jar is not verified. The coordinates, the repository, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features.
+
+The hosted application generator at https://start.grails.org offers the features of Grails only: it takes neither a pack nor the coordinates of a plugin.

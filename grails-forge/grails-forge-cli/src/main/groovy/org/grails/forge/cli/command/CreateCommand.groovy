@@ -20,7 +20,11 @@ package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
+import org.apache.grails.forge.cli.pack.PackArtifactException
+import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.core.pack.Pack
+import org.apache.grails.forge.core.pack.PackArtifact
+import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptorException
 import org.apache.grails.forge.core.pack.PackLoader
 import org.grails.forge.application.ApplicationType
@@ -79,6 +83,21 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     'like one of the framework. Use a pack only when you trust where it comes from. Can be given more than once.')
     List<File> featurePackJars = new ArrayList<>()
 
+    @CommandLine.Option(names = ['--feature-pack-repository'], paramLabel = 'URL',
+            description = 'A Maven repository to take the feature pack of a plugin from, when the plugin is given to --features by its ' +
+                    'coordinates, as group:artifact:version. The address is https, or file: for a directory. When the option is given, ' +
+                    'only the repositories it names are asked; without it, those of GRAILS_REPO_URL and then Maven Central are. ' +
+                    'Can be given more than once.')
+    List<String> featurePackRepositories = new ArrayList<>()
+
+    @CommandLine.Option(names = ['--feature-pack-sha256'], paramLabel = 'COORDINATES=SHA256',
+            description = 'The SHA-256 the jar of a plugin that is given to --features by its coordinates has to have, as ' +
+                    'group:artifact:version=sha256. A jar with another one is refused before it is opened. Can be given more than once.')
+    List<String> featurePackDigests = new ArrayList<>()
+
+    private final PackArtifacts packArtifacts = new PackArtifacts()
+    private Selection selection
+
     private final ContextFactory contextFactory
     private final ApplicationType applicationType
     private final ProjectGenerator projectGenerator
@@ -100,8 +119,18 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     @Override
     Integer call() throws Exception {
+        try {
+            return create()
+        } catch (PackArtifactException e) {
+            // nothing was written: the packs are taken before the application is
+            err(e.getMessage().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+            return 1
+        }
+    }
+
+    private Integer create() throws Exception {
         if (listFeatures) {
-            List<Pack> packs = featurePacks()
+            List<Pack> packs = selection().packs
             new ListFeatures(packs.isEmpty() ? availableFeatures : withPacks(packs),
                     new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
                     applicationType,
@@ -130,21 +159,36 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     void generate(Project project, OutputHandler outputHandler) throws Exception {
         Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem())
-        List<Pack> packs = featurePacks()
+        List<Pack> packs = selection().packs
         if (packs.isEmpty()) {
-            projectGenerator.generate(applicationType, project, options, getOperatingSystem(), getSelectedFeatures(), outputHandler, this)
+            projectGenerator.generate(applicationType, project, options, getOperatingSystem(), selection().features, outputHandler, this)
             return
         }
         withPacks(packs)
         GeneratorContext context = projectGenerator.createGeneratorContext(applicationType, project, options, getOperatingSystem(),
-                getSelectedFeatures(), this, packs)
+                selection().features, this, packs)
         // a pack is not part of the framework: say which ones this application is made with, which are
         // the selected ones and those they require. What a descriptor says is not markup of this command
         for (Pack pack : packs) {
             if (context.getFeatures().contains(pack.descriptor.name)) {
-                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}")
+                PackArtifact artifact = pack.artifact
+                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}" +
+                        (artifact == null ? '' : ", sha256 ${artifact.sha256}"))
+                if (artifact != null) {
+                    // the digest says which jar was read; only a checksum from elsewhere says it is the one that was published
+                    if (artifact.pinned) {
+                        out('    the jar has the SHA-256 that was asked for with --feature-pack-sha256')
+                    }
+                    out(artifact.checkedAgainst == null ? '    the repository publishes no checksum the jar could be checked against' :
+                            "    the jar matches the ${artifact.checkedAgainst} checksum the repository publishes for it")
+                }
                 for (String line : pack.summary()) {
                     out("    ${line.replace('@|', '@ |')}")
+                }
+                if (artifact != null && !dependsOnItsPlugin(pack)) {
+                    warning("The feature pack ${pack.descriptor.name} declares no dependency on " +
+                            "${artifact.coordinates.substring(0, artifact.coordinates.lastIndexOf(':'))}, the plugin it was taken from: " +
+                            'the application is generated without that plugin')
                 }
             }
         }
@@ -160,6 +204,88 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             return projectGenerator.availableFeatures(applicationType, packs)
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+        }
+    }
+
+    private static boolean dependsOnItsPlugin(Pack pack) {
+        return pack.descriptor.dependencies.any { PackDependency dependency ->
+            pack.artifact.coordinates.startsWith("${dependency.groupId}:${dependency.artifactId}:")
+        }
+    }
+
+    /**
+     * What was asked for, read once: the packs, and the names of the features with the name of its pack
+     * in the place of each plugin that was given by its coordinates.
+     */
+    private Selection selection() {
+        if (selection == null) {
+            selection = select()
+        }
+        return selection
+    }
+
+    private Selection select() {
+        List<Pack> packs = featurePacks()
+        // every mistake in the command line is found before a repository is asked for anything
+        Map<String, String> digests = new LinkedHashMap<>()
+        Map<String, PackArtifacts.Coordinates> plugins = new LinkedHashMap<>()
+        List<URI> repositories
+        try {
+            for (String given : featurePackDigests) {
+                Map.Entry<String, String> digest = PackArtifacts.digest(given)
+                if (digests.containsKey(digest.key) && digests.get(digest.key) != digest.value) {
+                    throw new IllegalArgumentException("--feature-pack-sha256 gives two different SHA-256 for ${digest.key}")
+                }
+                digests.put(digest.key, digest.value)
+            }
+            for (String feature : getSelectedFeatures()) {
+                if (PackArtifacts.isCoordinates(feature)) {
+                    PackArtifacts.Coordinates coordinates = PackArtifacts.coordinates(feature)
+                    plugins.put(coordinates.toString(), coordinates)
+                }
+            }
+            for (String pinned : digests.keySet()) {
+                if (!plugins.containsKey(pinned)) {
+                    throw new IllegalArgumentException("--feature-pack-sha256 names ${pinned}, which is not among the features asked for with --features")
+                }
+            }
+            // the environment is only read when there is something to look for
+            repositories = PackArtifacts.repositories(featurePackRepositories, plugins.isEmpty() ? null : System.getenv('GRAILS_REPO_URL'))
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
+        }
+        Map<String, String> names = new HashMap<>()
+        for (PackArtifacts.Coordinates coordinates : plugins.values()) {
+            Pack pack
+            try {
+                pack = packArtifacts.resolve(coordinates, repositories, digests.get(coordinates.toString()))
+            } catch (PackDescriptorException e) {
+                throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
+            }
+            packs << pack
+            names.put(coordinates.toString(), pack.descriptor.name)
+        }
+        List<String> features = []
+        Set<String> taken = new HashSet<>()
+        for (String feature : getSelectedFeatures()) {
+            // the same coordinates given twice are one selection
+            if (!PackArtifacts.isCoordinates(feature)) {
+                features << feature
+            } else if (taken.add(feature)) {
+                features << names.get(feature)
+            }
+        }
+        return new Selection(packs, features)
+    }
+
+    private static final class Selection {
+
+        final List<Pack> packs
+        final List<String> features
+
+        Selection(List<Pack> packs, List<String> features) {
+            this.packs = packs
+            this.features = features
         }
     }
 

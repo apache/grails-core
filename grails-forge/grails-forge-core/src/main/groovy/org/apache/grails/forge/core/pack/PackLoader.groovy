@@ -88,7 +88,19 @@ class PackLoader {
      * @throws PackDescriptorException when the jar holds no pack that can be used
      */
     Pack fromJar(Path jar) {
-        String origin = jar.toString()
+        return fromJar(jar, jar.toString())
+    }
+
+    /**
+     * Reads the pack of a jar as {@link #fromJar(Path)} does, for a jar that is a copy of what the pack
+     * is known by.
+     *
+     * @param jar the jar
+     * @param origin where the pack came from, for messages, such as the coordinates of the plugin
+     * @return the pack
+     * @throws PackDescriptorException when the jar holds no pack that can be used
+     */
+    Pack fromJar(Path jar, String origin) {
         if (!Files.isRegularFile(jar)) {
             throw new PackDescriptorException(origin, ['It is not a file'])
         }
