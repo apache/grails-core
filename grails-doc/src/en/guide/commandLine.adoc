@@ -522,6 +522,10 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |the shell
 |replaced: `create-app --list-features`, and the same option of the other create commands.
 
+|`query-tail`
+|a script command of Grails Data
+|a command of a plugin: `gradle runScriptCommand --arg=query-tail`, with each option of the script as a further `--arg`, where the build of the project runs scripts.
+
 |`quit`
 |the shell, in interactive mode
 |replaced: `exit`
