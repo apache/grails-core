@@ -34,7 +34,9 @@ class GrailsWebTestingSupport implements DefaultFeature {
 
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
-        return applicationType == ApplicationType.WEB || applicationType == ApplicationType.WEB_PLUGIN
+        // every type of project has controllers and interceptors, and create-controller and create-interceptor
+        // write a test for each that is a ControllerUnitTest or an InterceptorUnitTest
+        return true
     }
 
     @Override
