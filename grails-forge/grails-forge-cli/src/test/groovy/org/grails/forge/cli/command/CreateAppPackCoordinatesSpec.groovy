@@ -23,10 +23,15 @@ import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import org.apache.grails.forge.cli.pack.PackArtifacts
+import org.grails.forge.application.ContextFactory
+import org.grails.forge.application.WebAvailableFeatures
+import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.GrailsPicocliFactory
 import org.yaml.snakeyaml.Yaml
+import picocli.CommandLine
 import spock.lang.Unroll
 
 /**
@@ -70,7 +75,7 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 0
         out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address}), sha256 ${sha256(jar)}")
-        out.toString().contains('    the repository publishes no checksum the jar could be checked against')
+        out.toString().contains('    the jar was not checked: the repository gave no checksum for it')
         out.toString().contains('    dependencies: implementation com.acme:acme-audit-grails:2.3.0')
         !out.toString().contains('Warning')
         out.toString().contains('Application created')
@@ -82,13 +87,28 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         and: 'what the application was made with is written next to its features, where the commands of the application still read them'
         Map config = new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map
         (config.features as List).containsAll(['acme-audit', 'h2'])
-        config.featurePacks == [[name: 'acme-audit', coordinates: COORDINATES, repository: address,
-                                 artifact: 'acme-audit-grails-2.3.0.jar', sha256: sha256(jar)]]
+        config.featurePacks == [[name: 'acme-audit', coordinates: COORDINATES, artifact: 'acme-audit-grails-2.3.0.jar', sha256: sha256(jar)]]
+
+        and: 'no file of the application, its state among them, says where on this computer the pack was taken from'
+        List<String> places = [repository.absolutePath, repository.canonicalPath, address, new File(System.getProperty('java.io.tmpdir')).canonicalPath]
+        // the home of the user is not looked for: the build of these specs sets GRAILS_REPO_URL to a
+        // directory, which the generator writes into build.gradle as the repository of the application,
+        // and that directory is under the home wherever the sources are
+        List<String> telling = []
+        new File(dir, 'shop').eachFileRecurse(groovy.io.FileType.FILES) { File file ->
+            String text = new String(file.bytes, 'ISO-8859-1')
+            places.each { String place ->
+                if (text.contains(place)) {
+                    telling << "${file.path}: ${place}".toString()
+                }
+            }
+        }
+        telling.isEmpty()
     }
 
     void "the feature of the plugin is listed with the others"() {
         given:
-        publish(COORDINATES)
+        File jar = publish(COORDINATES)
 
         when:
         int exit = CliRunner.run(CreateAppCommand, beanContext, '--list-features', '--features', COORDINATES,
@@ -97,6 +117,11 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 0
         out.toString() =~ /acme-audit\s+Adds the Acme audit plugin/
+
+        and: 'the jar that was taken for the list is named before it, as it is before an application is made'
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address}), sha256 ${sha256(jar)}")
+        out.toString().contains('    the jar was not checked: the repository gave no checksum for it')
+        out.toString().indexOf('Feature pack acme-audit from') < out.toString().indexOf('Adds the Acme audit plugin')
     }
 
     void "a plugin that no repository has is said to be found in none, and nothing is created"() {
@@ -190,7 +215,7 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 1
         err.toString().contains('checksum mismatch')
-        err.toString().contains('(1 more repository not asked)')
+        err.toString().contains('(1 more repository not asked). A repository that fails ends the search; --feature-pack-repository names the repositories to ask')
 
         cleanup:
         other.deleteDir()
@@ -237,6 +262,7 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 2
         err.toString().contains(message)
+        !err.toString().contains('secret')
         !new File(dir, 'shop').exists()
 
         where:
@@ -248,8 +274,10 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
          '--feature-pack-sha256', "${COORDINATES}=${'2' * 64}".toString()]               || 'gives two different SHA-256'
         ['--feature-pack-repository', 'http://repository.invalid/maven']                 || 'the address has to be https, or file: for a directory'
         ['--feature-pack-repository', 'ftp://repository.invalid/maven']                  || 'the address has to be https, or file: for a directory'
-        ['--feature-pack-repository', 'https://user:secret@repository.invalid/maven']    || 'the address cannot have a user, a query or a fragment'
-        ['--feature-pack-repository', 'https://repository.invalid/maven?token=1']        || 'the address cannot have a user, a query or a fragment'
+        ['--feature-pack-repository', 'https://user:secret@repository.invalid/maven']    || "'https://repository.invalid/maven' is not a repository a feature pack is taken from: the address has a user or password, and credentials are not sent"
+        ['--feature-pack-repository', 'https://repository.invalid/maven?token=secret']   || "'https://repository.invalid/maven' is not a repository a feature pack is taken from: the address cannot have a query or a fragment"
+        ['--feature-pack-repository', 'https://localhost:99999/maven']                   || 'its host or port is not one a request can be made to'
+        ['--feature-pack-repository', 'https://localhost./maven']                        || 'its host or port is not one a request can be made to'
         ['--feature-pack-repository', 'repository']                                      || 'the address has to be https, or file: for a directory'
     }
 
@@ -301,10 +329,14 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
 
         then:
-        exit == 2
-        err.toString().contains("The feature pack descriptor ${COORDINATES} (${address}) is not valid")
-        err.toString().contains('There is no META-INF/grails-forge/feature.yml in the jar')
+        exit == 1
+        err.toString().contains("The feature pack of ${COORDINATES} from ${address} cannot be used:")
+        err.toString().contains('  - There is no META-INF/grails-forge/feature.yml in the jar')
         !new File(dir, 'shop').exists()
+
+        and: 'the command line was right: how to write one is not shown'
+        !err.toString().contains('Usage:')
+        !err.toString().contains('Exception')
     }
 
     void "a file that is no jar is said not to be one"() {
@@ -315,8 +347,10 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
 
         then:
-        exit == 2
-        err.toString().contains('It cannot be read as a jar')
+        exit == 1
+        err.toString().contains("The feature pack of ${COORDINATES} from ${address} cannot be used:")
+        err.toString().contains('  - It cannot be read as a jar')
+        !err.toString().contains('Usage:')
         !new File(dir, 'shop').exists()
     }
 
@@ -347,7 +381,7 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
 
         then:
         exit == 2
-        err.toString().contains('both have the name acme-audit')
+        err.toString().contains("The feature packs ${COORDINATES} (${address}) and com.acme:acme-audit-grails:2.4.0 (${address}) both have the name acme-audit")
         !new File(dir, 'shop').exists()
     }
 
@@ -359,8 +393,9 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
 
         then:
-        exit == 2
-        err.toString().contains('h2')
+        exit == 1
+        err.toString().contains("The feature pack ${COORDINATES} (${address}) has the name of a feature of the framework, h2")
+        !err.toString().contains('Usage:')
         !new File(dir, 'shop').exists()
     }
 
@@ -446,6 +481,175 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         'names a build of another version' | '<metadata><versioning><snapshotVersions><snapshotVersion><extension>jar</extension><value>9.9.9-1</value></snapshotVersion></snapshotVersions></versioning></metadata>' || 'maven-metadata.xml names a build that is not one of this snapshot'
         'names a path'                   | '<metadata><versioning><snapshotVersions><snapshotVersion><extension>jar</extension><value>2.4.0-1/../../x</value></snapshotVersion></snapshotVersions></versioning></metadata>' || 'maven-metadata.xml names a build that is not one of this snapshot'
         'is larger than it can be'       | '<metadata>' + ' ' * PackArtifacts.MAX_METADATA_BYTES + '</metadata>'                || 'maven-metadata.xml has more than the 262144 bytes it can have'
+    }
+
+    void "every problem of the descriptor of a jar is said, without the usage of the command"() {
+        given:
+        publish(COORDINATES, pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('format: 1', 'format: 2').replace('version: 2.3.0', "version: '2.3.0\"'")))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
+
+        then:
+        exit == 1
+        err.toString().contains("The feature pack of ${COORDINATES} from ${address} cannot be used:")
+        err.toString().contains('  - format: must be the number 1')
+        err.toString().contains('  - dependencies[0].version: must be one version')
+        !err.toString().contains('Usage:')
+        !new File(dir, 'shop').exists()
+    }
+
+    void "a pack of a repository that requires a feature there is none of ends the command in a line, not in a stack trace"() {
+        given:
+        publish(COORDINATES, pack(CreateAppFeaturePackSpec.DESCRIPTOR + 'requires: [no-such-feature]\n'))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
+
+        then: 'a mistake that the command line can put right, by naming the feature or the plugin that has it'
+        exit == 2
+        err.toString().contains('The feature acme-audit requires the feature no-such-feature')
+        err.toString().contains("The feature acme-audit is that of the feature pack of ${COORDINATES} (${address})")
+        !err.toString().contains('\tat ')
+        !err.toString().contains('IllegalArgumentException')
+        !new File(dir, 'shop').exists()
+    }
+
+    void "a feature there is none of ends the command in a line, not in a stack trace"() {
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'no-such-feature')
+
+        then:
+        exit != 0
+        err.toString().contains('no-such-feature')
+        !err.toString().contains('\tat ')
+        !new File(dir, 'shop').exists()
+    }
+
+    @Unroll
+    void "a pack that declares its plugin in version #declared and was taken from 9.9.9 is #what"() {
+        given:
+        publish('com.acme:acme-audit-grails:9.9.9', pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('    version: 2.3.0\n', declared == null ? '' : "    version: ${declared}\n")))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:9.9.9',
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains('Warning') == warned
+        !warned || out.toString().contains('The feature pack acme-audit was taken from version 9.9.9 of com.acme:acme-audit-grails and declares ' +
+                'that plugin in version 2.3.0: the application is generated with 2.3.0, not with 9.9.9')
+
+        where:
+        declared || warned | what
+        '2.3.0'  || true   | 'warned of, with the version the application gets'
+        '9.9.9'  || false  | 'used without a word'
+        null     || false  | 'used without a word, since a platform of the build gives the version'
+    }
+
+    void "a checksum with a byte order mark before it is a checksum"() {
+        given:
+        File jar = publish(COORDINATES)
+        new File(jar.path + '.sha256').bytes = ([0xEF, 0xBB, 0xBF] + (sha256(jar).bytes as List)) as byte[]
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains('    the jar matches the sha256 checksum the repository publishes for it')
+    }
+
+    void "the repositories of GRAILS_REPO_URL are asked when none is given, and one that cannot be is left out with a warning"() {
+        given:
+        File jar = publish(COORDINATES)
+        String environment = "https://user:secret@nexus.invalid/private;${repository.absolutePath}"
+        CreateAppCommand command = new CreateAppCommand(beanContext.getBean(WebAvailableFeatures), beanContext.getBean(ContextFactory),
+                beanContext.getBean(ProjectGenerator)) {
+
+            @Override
+            protected String grailsRepoUrl() {
+                return environment
+            }
+        }
+
+        when:
+        int exit = new CommandLine(command, new GrailsPicocliFactory(beanContext)).execute('shop', '--features', COORDINATES)
+
+        then:
+        exit == 0
+        out.toString().contains("Entry 1 of GRAILS_REPO_URL is not asked for the feature pack. 'https://nexus.invalid/private' is not a repository " +
+                'a feature pack is taken from: the address has a user or password, and credentials are not sent')
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address}), sha256 ${sha256(jar)}")
+
+        and: 'the password is said nowhere'
+        !out.toString().contains('secret')
+        !err.toString().contains('secret')
+        !new File(dir, 'shop/grails-forge-cli.yml').text.contains('secret')
+    }
+
+    @Unroll
+    void "the metadata of a snapshot that names the build #build is refused: a build is the version with a time and a number"() {
+        given:
+        File jar = publish('com.acme:acme-audit-grails:2.4.0-SNAPSHOT')
+        new File(jar.parentFile, "acme-audit-grails-${build}.jar").bytes = jar.bytes
+        new File(jar.parentFile, 'maven-metadata.xml').setText('<metadata><versioning><snapshotVersions><snapshotVersion>' +
+                "<extension>jar</extension><value>${build}</value></snapshotVersion></snapshotVersions></versioning></metadata>", 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:2.4.0-SNAPSHOT',
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 1
+        err.toString().contains("${address}: maven-metadata.xml names a build that is not one of this snapshot")
+
+        where:
+        build << ['2.4.0-RC1', '2.4.0-', '2.4.0-2.4.0', '2.4.0-x.jar.sha256', '2.4.0-20261119.101112', '2.4.0-20261119.101112-7-x',
+                  '2.4.0-2026.1-7', '2.4.0.1-20261119.101112-7', '2.4.0-20261119.101112-7.1']
+    }
+
+    @Unroll
+    void "the metadata of a snapshot that is of another #what is refused"() {
+        given:
+        File jar = publish('com.acme:acme-audit-grails:2.4.0-SNAPSHOT')
+        new File(jar.parentFile, 'maven-metadata.xml').setText("<metadata>${said}<versioning><snapshot><timestamp>20261119.101112</timestamp>" +
+                '<buildNumber>7</buildNumber></snapshot></versioning></metadata>', 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:2.4.0-SNAPSHOT',
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 1
+        err.toString().contains("${address}: maven-metadata.xml is that of another ${what} than the one asked for")
+
+        where:
+        what         | said
+        'groupId'    | '<groupId>com.other</groupId>'
+        'artifactId' | '<groupId>com.acme</groupId><artifactId>other</artifactId>'
+        'version'    | '<version>2.5.0-SNAPSHOT</version>'
+    }
+
+    void "the newest build of the main jar is the one that is taken, wherever the metadata names it"() {
+        given:
+        File jar = publish('com.acme:acme-audit-grails:2.4.0-SNAPSHOT', pack(CreateAppFeaturePackSpec.DESCRIPTOR), 'acme-audit-grails-2.4.0-20261119.101112-10.jar')
+        new File(jar.parentFile, 'maven-metadata.xml').setText('<metadata><groupId>com.acme</groupId><artifactId>acme-audit-grails</artifactId>' +
+                '<version>2.4.0-SNAPSHOT</version><versioning><snapshotVersions>' +
+                '<snapshotVersion><extension>jar</extension><value>2.4.0-20261119.101112-9</value></snapshotVersion>' +
+                '<snapshotVersion><extension>jar</extension><value>2.4.0-20261119.101112-10</value></snapshotVersion>' +
+                '<snapshotVersion><extension>jar</extension><value>2.4.0-20261118.235959-99</value></snapshotVersion>' +
+                '<snapshotVersion><classifier>sources</classifier><extension>jar</extension><value>2.4.0-20261120.000000-1</value></snapshotVersion>' +
+                '</snapshotVersions></versioning></metadata>', 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:2.4.0-SNAPSHOT',
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        (new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map).featurePacks[0].artifact == 'acme-audit-grails-2.4.0-20261119.101112-10.jar'
     }
 
     void "the options for the repository and the SHA-256 are in the help of the command"() {

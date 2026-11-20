@@ -50,7 +50,9 @@ featurePacks:
 <% for (PackArtifact artifact : packArtifacts) { %>
   - name: ${artifact.name}
     coordinates: '${artifact.coordinates}'
-    repository: '${artifact.repository.replace("'", "''")}'
+<% if (artifact.recordableRepository != null) { %>
+    repository: '${artifact.recordableRepository.replace("'", "''")}'
+<% } %>
     artifact: '${artifact.file}'
     sha256: '${artifact.sha256}'
 <% } %>

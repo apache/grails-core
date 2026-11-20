@@ -182,7 +182,7 @@ final class ProjectStateRecorder {
         // The repository is said when it is one anybody can ask, not a directory of this machine
         int version = artifact.coordinates.lastIndexOf(':')
         return new LockedFeature(feature.getName(), LockedFeature.PACK,
-                artifact.repository != null && artifact.repository.startsWith('https://') ? artifact.repository : null,
+                artifact.getRecordableRepository(),
                 artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256)
     }
 

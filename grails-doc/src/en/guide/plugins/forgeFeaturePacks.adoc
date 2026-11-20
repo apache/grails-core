@@ -373,9 +373,9 @@ $ grails -t forge create-app com.example.shop \
 
 The command takes the jar of that one version from a Maven repository, reads the pack in it and selects the feature of the pack, under the name the pack gives it. Nothing else of the plugin is fetched, none of its dependencies are resolved and nothing of the jar is run. The version is always given, and is one version: a range, a version with a `+` and `latest.release` are refused. A snapshot version can be given; the latest build of it is used and the file name of that build is recorded.
 
-A pack does not add its plugin to the application by itself: the descriptor declares the plugin in `dependencies`, as in the example above. The command warns when the pack of a plugin does not declare that plugin, since the application is then generated without it.
+A pack does not add its plugin to the application by itself: the descriptor declares the plugin in `dependencies`, as in the example above. The command warns when the pack of a plugin does not declare that plugin, since the application is then generated without it. It also warns when the pack declares the plugin in another version than the one the pack was taken from, and says which version the application gets; a dependency without a version, which a BOM of the build manages, gets no warning.
 
-The jar is looked for in the repositories of the `GRAILS_REPO_URL` environment variable, in their order, and then in Maven Central. To look somewhere else, name the repositories with `--feature-pack-repository`, which can be given more than once. Only those repositories are asked then, so the coordinates of a private plugin are sent nowhere else:
+The jar is looked for in the repositories of the `GRAILS_REPO_URL` environment variable, in their order, and then in Maven Central. That variable is written for the build of the application, so an entry of it that a pack cannot be taken from is left out with a warning and is not an error: an entry that is not `https` or a directory, and an entry with a user name and password in it. Credentials are not sent, and the warning does not repeat them. To look somewhere else, name the repositories with `--feature-pack-repository`, which can be given more than once. Only those repositories are asked then, so the coordinates of a private plugin are sent nowhere else:
 
 [source,console]
 ----
@@ -384,9 +384,9 @@ $ grails -t forge create-app com.example.shop \
     --feature-pack-repository=https://repo.acme.example/maven
 ----
 
-The address of a repository is `https`, or `file:` for a directory laid out as a Maven repository, such as `file:///home/me/.m2/repository`. An `http` address is refused, a redirect is followed only to another `https` address, and an address cannot carry a user name or password: a repository that asks for credentials cannot be used yet. A jar can have at most 64 MiB.
+The address of a repository is `https`, or `file:` for a directory laid out as a Maven repository, such as `file:///home/me/.m2/repository`. An `http` address is refused, and an address cannot carry a user name, a password or a query: a repository that asks for credentials cannot be used yet. A redirect is followed only to another `https` address, and a repository on the internet is not followed to an address of your own computer or network. A jar can have at most 64 MiB. A repository that does not answer a request, or stops in the middle of an answer, is waited for for 60 seconds, and one file for 5 minutes.
 
-A repository that does not have the jar is passed over and the next one is asked. Any other failure ends the command: a repository that cannot be reached, one that answers with an error, a time-out, or a jar that fails a check below. The error is one line that names the coordinates and every repository that was asked with the reason, nothing is created, and the exit code is 1. Coordinates or an option that cannot be read are a mistake in the command line, with exit code 2.
+A repository that does not have the jar is passed over and the next one is asked. Any other failure ends the command, and the next repository is not asked: a repository that cannot be reached, one that answers with an error, a time-out, or a jar that fails a check below. The error is one line that names the coordinates and every repository that was asked with the reason. A repository that answers that access to the jar is refused (HTTP 401 or 403) ends the search too, and the message says so: the jar may be there, and asking the next repository would send the coordinates of a private plugin to it. A jar that was fetched and holds no pack that can be used is reported with the coordinates, the repository and every problem of its descriptor, each on a line; so is a pack whose feature has the name of a feature of Grails. In all of these cases nothing is created and the exit code is 1. A pack that requires a feature the application does not have is refused like any selection that cannot be had, with exit code 2, and the message names the coordinates the pack was taken by: name the missing feature, or the plugin that has it, in `--features`. Coordinates or an option that cannot be read are a mistake in the command line, with exit code 2 and the usage of the command.
 
 Before anything is written, the command says where each pack came from and the SHA-256 of the jar that was read:
 
@@ -397,7 +397,9 @@ Before anything is written, the command says where each pack came from and the S
     dependencies: implementation com.acme:acme-audit-grails:2.3.0
 ----
 
-When the repository publishes a `.sha256` or `.sha1` file for the jar, the jar is checked against it and refused when it differs; when it publishes neither, the command says that there was no checksum to check against. A checksum of the repository shows that the download is complete. It does not show who published the jar. To use only a jar you have looked at, give its SHA-256 with `--feature-pack-sha256`; a jar with another one is refused before it is opened:
+`--list-features` with coordinates takes the jar too, and prints the first two of these lines before the list.
+
+When the repository publishes a `.sha256` or `.sha1` file for the jar, the jar is checked against it and refused when it differs; when it gives neither, the command says that the jar was not checked. A checksum of the repository shows that the download is complete. It does not show who published the jar. To use only a jar you have looked at, give its SHA-256 with `--feature-pack-sha256`; a jar with another one is refused before it is opened:
 
 [source,console]
 ----
@@ -406,6 +408,6 @@ $ grails -t forge create-app com.example.shop \
     --feature-pack-sha256=com.acme:acme-audit-grails:2.3.0=5f2c...
 ----
 
-The signature of a signed jar is not verified. The coordinates, the repository, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features.
+The signature of a signed jar is not verified. The coordinates, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features, and with them the repository when it is an `https` address. A directory is not written, since its path names your computer.
 
 The hosted application generator at https://start.grails.org offers the features of Grails only: it takes neither a pack nor the coordinates of a plugin.

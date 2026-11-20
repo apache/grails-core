@@ -207,7 +207,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | --feature-pack-repository
-| A Maven repository to take the feature pack of a published plugin from, when the plugin is given to `--features` by its coordinates (`group:artifact:version`). The address is `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL` and then Maven Central are. Can be given more than once.
+| A Maven repository to take the feature pack of a published plugin from, when the plugin is given to `--features` by its coordinates (`group:artifact:version`). The address is `https`, or `file:` for a directory. When the option is given, only the repositories it names are asked; without it, those of `GRAILS_REPO_URL` and then Maven Central are, and an entry of `GRAILS_REPO_URL` that is not `https` or a directory, or that has credentials in it, is left out with a warning. A repository that fails, or a jar that cannot be used, ends the command with exit code 1; an address that cannot be read is exit code 2. Can be given more than once.
 |
 [source,shell]
 ----

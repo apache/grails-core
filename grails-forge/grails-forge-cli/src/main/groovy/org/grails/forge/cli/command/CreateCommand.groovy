@@ -45,6 +45,7 @@ import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
 import picocli.CommandLine
 import java.util.concurrent.Callable
+import java.util.regex.Pattern
 
 @CompileStatic
 abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
@@ -130,16 +131,43 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         try {
             return create()
         } catch (PackArtifactException e) {
-            // nothing was written: the packs are taken before the application is
-            err(e.getMessage().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
-            return 1
+            // nothing was written: the packs are taken before the application is. The command line was
+            // right and what a repository gave is not, so the usage of the command is not shown
+            return failed(e)
+        } catch (FeatureSelectionException e) {
+            // features that cannot be had as they were asked for are a mistake in the command line,
+            // wherever in the command the refusal comes from
+            throw mistake(e)
+        } catch (IllegalArgumentException e) {
+            // anything else an application cannot be made with, which a pack of a repository can cause
+            // as well as the command line: said in its own words, not as a failure of this program
+            return failed(e)
         }
+    }
+
+    private Integer failed(RuntimeException e) {
+        List<String> lines = (e.getMessage() ?: e.getClass().getSimpleName()).readLines()
+                .collect { String line -> line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |') }
+        err(lines ? lines.first() : e.getClass().getSimpleName())
+        for (String line : lines.drop(1)) {
+            spec.commandLine().getErr().println(line)
+        }
+        if (showStacktrace()) {
+            e.printStackTrace(spec.commandLine().getErr())
+        }
+        return 1
     }
 
     private Integer create() throws Exception {
         if (listFeatures) {
             checkExcludedNames()
             List<Pack> packs = selection().packs
+            // a jar was taken from a repository for this list too: which one, and from where
+            for (Pack pack : packs) {
+                if (pack.artifact != null) {
+                    origin(pack)
+                }
+            }
             try {
                 new ListFeatures(packs.isEmpty() ? availableFeatures : withPacks(packs),
                         new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem()),
@@ -191,28 +219,36 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         // the selected ones and those they require. What a descriptor says is not markup of this command
         for (Pack pack : packs) {
             if (context.getFeatures().contains(pack.descriptor.name)) {
-                PackArtifact artifact = pack.artifact
-                out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}" +
-                        (artifact == null ? '' : ", sha256 ${artifact.sha256}"))
-                if (artifact != null) {
-                    // the digest says which jar was read; only a checksum from elsewhere says it is the one that was published
-                    if (artifact.pinned) {
-                        out('    the jar has the SHA-256 that was asked for with --feature-pack-sha256')
-                    }
-                    out(artifact.checkedAgainst == null ? '    the repository publishes no checksum the jar could be checked against' :
-                            "    the jar matches the ${artifact.checkedAgainst} checksum the repository publishes for it")
-                }
+                origin(pack)
                 for (String line : pack.summary()) {
                     out("    ${line.replace('@|', '@ |')}")
                 }
-                if (artifact != null && !dependsOnItsPlugin(pack)) {
-                    warning("The feature pack ${pack.descriptor.name} declares no dependency on " +
-                            "${artifact.coordinates.substring(0, artifact.coordinates.lastIndexOf(':'))}, the plugin it was taken from: " +
-                            'the application is generated without that plugin')
+                if (pack.artifact != null) {
+                    String unlike = unlikeItsPlugin(pack)
+                    if (unlike != null) {
+                        warning(unlike)
+                    }
                 }
             }
         }
         projectGenerator.generate(applicationType, project, outputHandler, context)
+    }
+
+    /**
+     * Says where a pack came from, and of one that was taken from a repository which jar it was.
+     */
+    private void origin(Pack pack) {
+        PackArtifact artifact = pack.artifact
+        out("@|blue ||@ Feature pack ${pack.descriptor.name} from ${pack.origin.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')}" +
+                (artifact == null ? '' : ", sha256 ${artifact.sha256}"))
+        if (artifact != null) {
+            // the digest says which jar was read; only a checksum from elsewhere says it is the one that was published
+            if (artifact.pinned) {
+                out('    the jar has the SHA-256 that was asked for with --feature-pack-sha256')
+            }
+            out(artifact.checkedAgainst == null ? '    the jar was not checked: the repository gave no checksum for it' :
+                    "    the jar matches the ${artifact.checkedAgainst} checksum the repository publishes for it")
+        }
     }
 
     private Set<OptionName> given() {
@@ -254,7 +290,23 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     "without ${e.getWithout()}. Leave out the option, or the feature that takes its place" :
                     "with ${e.getWith()}. Leave out the option, or the feature that requires it")
         }
-        return new CommandLine.ParameterException(this.spec.commandLine(), message.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        return new CommandLine.ParameterException(this.spec.commandLine(), (message + taken(message)).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+    }
+
+    /**
+     * A refusal names a feature, and the feature of a pack that was taken from a repository is one the
+     * command line does not name: it gave coordinates. Which coordinates each such feature of the message
+     * came by is said after it, so that it can be found in what was typed.
+     */
+    private String taken(String message) {
+        StringBuilder taken = new StringBuilder()
+        for (Pack pack : (selection == null ? Collections.<Pack>emptyList() : selection.packs)) {
+            if (pack.artifact != null &&
+                    Pattern.compile('(?<![A-Za-z0-9-])' + Pattern.quote(pack.descriptor.name) + '(?![A-Za-z0-9-])').matcher(message).find()) {
+                taken.append(". The feature ${pack.descriptor.name} is that of the feature pack of ${pack.origin}")
+            }
+        }
+        return taken.toString()
     }
 
     private String typed(OptionName option) {
@@ -284,14 +336,42 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         try {
             return projectGenerator.availableFeatures(applicationType, packs)
         } catch (IllegalArgumentException e) {
-            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+            // two packs of one name were both asked for, which is the command line's doing. A pack that
+            // cannot be used whatever it is asked for with (the name of a feature of the framework, a
+            // group of it, versions it is not for) is, when it was taken from a repository, a fault of
+            // what the repository gave: the message names the pack by its coordinates and repository
+            String message = e.getMessage() ?: ''
+            if (!message.startsWith('The feature packs ') && packs.any { Pack pack -> pack.artifact != null && message.contains(pack.origin) }) {
+                throw new PackArtifactException(message)
+            }
+            throw new CommandLine.ParameterException(this.spec.commandLine(), message.replace('@|', '@ |'))
         }
     }
 
-    private static boolean dependsOnItsPlugin(Pack pack) {
-        return pack.descriptor.dependencies.any { PackDependency dependency ->
-            pack.artifact.coordinates.startsWith("${dependency.groupId}:${dependency.artifactId}:")
+    /**
+     * A pack adds its plugin to the application only by declaring it. What it declares can be something
+     * else than the plugin it was taken from: no dependency on it, or one on another version of it.
+     *
+     * @return what to warn of, or {@code null} when the application gets the plugin the pack was taken
+     * from, in that version or in the one a platform of the build gives it
+     */
+    private static String unlikeItsPlugin(Pack pack) {
+        int at = pack.artifact.coordinates.lastIndexOf(':')
+        String plugin = pack.artifact.coordinates.substring(0, at)
+        String version = pack.artifact.coordinates.substring(at + 1)
+        List<PackDependency> declared = pack.descriptor.dependencies.findAll { PackDependency dependency ->
+            "${dependency.groupId}:${dependency.artifactId}".toString() == plugin
         }
+        if (declared.isEmpty()) {
+            return "The feature pack ${pack.descriptor.name} declares no dependency on ${plugin}, the plugin it was taken from: " +
+                    'the application is generated without that plugin'
+        }
+        if (declared.any { PackDependency dependency -> dependency.version == null || dependency.version == version }) {
+            return null
+        }
+        return "The feature pack ${pack.descriptor.name} was taken from version ${version} of ${plugin} and declares that plugin in " +
+                "version ${declared*.version.unique().join(' and ')}: the application is generated with ${declared*.version.unique().join(' and ')}, " +
+                "not with ${version}"
     }
 
     /**
@@ -311,6 +391,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         Map<String, String> digests = new LinkedHashMap<>()
         Map<String, PackArtifacts.Coordinates> plugins = new LinkedHashMap<>()
         List<URI> repositories
+        List<String> unused = []
         try {
             for (String given : featurePackDigests) {
                 Map.Entry<String, String> digest = PackArtifacts.digest(given)
@@ -331,18 +412,16 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 }
             }
             // the environment is only read when there is something to look for
-            repositories = PackArtifacts.repositories(featurePackRepositories, plugins.isEmpty() ? null : System.getenv('GRAILS_REPO_URL'))
+            repositories = PackArtifacts.repositories(featurePackRepositories, plugins.isEmpty() ? null : grailsRepoUrl(), unused)
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
+        for (String each : unused) {
+            warning(each.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        }
         Map<String, String> names = new HashMap<>()
         for (PackArtifacts.Coordinates coordinates : plugins.values()) {
-            Pack pack
-            try {
-                pack = packArtifacts.resolve(coordinates, repositories, digests.get(coordinates.toString()))
-            } catch (PackDescriptorException e) {
-                throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
-            }
+            Pack pack = packArtifacts.resolve(coordinates, repositories, digests.get(coordinates.toString()))
             packs << pack
             names.put(coordinates.toString(), pack.descriptor.name)
         }
@@ -357,6 +436,14 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             }
         }
         return new Selection(packs, features)
+    }
+
+    /**
+     * @return the repositories of the build of a generated application, which are asked for a feature
+     * pack when the command names none
+     */
+    protected String grailsRepoUrl() {
+        return System.getenv('GRAILS_REPO_URL')
     }
 
     private static final class Selection {

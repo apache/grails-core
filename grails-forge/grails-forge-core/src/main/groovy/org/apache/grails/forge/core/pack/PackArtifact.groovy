@@ -59,4 +59,23 @@ final class PackArtifact {
         this.checkedAgainst = checkedAgainst
         this.pinned = pinned
     }
+
+    /**
+     * The repository as it may be written into a project, which others read: an https address, without
+     * a user in it. A directory of this computer is not written, since its path names the computer and
+     * often the user.
+     *
+     * @return the address, or {@code null} when it is not one to write
+     */
+    String getRecordableRepository() {
+        if (repository == null) {
+            return null
+        }
+        try {
+            URI address = new URI(repository)
+            return 'https'.equalsIgnoreCase(address.scheme) && address.host != null && address.rawUserInfo == null ? repository : null
+        } catch (URISyntaxException ignored) {
+            return null
+        }
+    }
 }
