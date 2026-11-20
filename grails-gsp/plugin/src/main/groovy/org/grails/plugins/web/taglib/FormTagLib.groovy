@@ -1229,7 +1229,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 // ignore
             }
         }
-        keyValue = processFormFieldValueIfNecessary(selectName, "${keyValue}", 'option')
+        keyValue = processFormFieldValueIfNecessary(selectName, keyValue instanceof String ? keyValue : "${keyValue}", 'option')
         writer << "value=\"${keyValue.toString().encodeAsHTML()}\" "
 
         if (dataAttrsMap) {
@@ -1339,7 +1339,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
     private processFormFieldValueIfNecessary(name, value, type) {
         if (requestDataValueProcessor != null) {
-            return requestDataValueProcessor.processFormFieldValue(request, name, "${value}", type)
+            // A String is handed on as it is, because a new String would lose the encoder's record that the value is
+            // already encoded, and the processor's result would be encoded again even when the processor returns it unchanged
+            return requestDataValueProcessor.processFormFieldValue(request, name, value instanceof String ? value : "${value}", type)
         }
         return value
     }

@@ -96,6 +96,7 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         'g:actionSubmitImage'  | '<g:actionSubmitImage value="${value.encodeAsHTML()}" src="${value.encodeAsHTML()}"/>'  || '<input type="image" name="_action_' + ENCODED + '" value="' + ENCODED + '" src="' + ENCODED + '" '
         'g:datePicker'         | '<g:datePicker name="${value.encodeAsHTML()}" precision="year" years="${2000..2000}"/>' || '<select name="' + ENCODED + '_year" id="' + ENCODED + '_year" '
         'g:select'             | '<g:select name="s" from="${[1]}" noSelection="${[(value.encodeAsHTML()): \'Pick\']}"/>' || '<option value="' + ENCODED + '">Pick</option>'
+        'g:select'             | '<g:select name="s" from="${[value.encodeAsHTML()]}"/>'                                 || '<option value="' + ENCODED + '" >'
         'g:radio'              | '<g:radio name="${value.encodeAsHTML()}" value="v"/>'                                   || '<input type="radio" name="' + ENCODED + '" value="v" id="' + ENCODED + '" '
         'g:field'              | '<g:field type="${value.encodeAsHTML()}" name="f"/>'                                    || '<input type="' + ENCODED + '" name="f" '
         'g:withTag'            | '<g:withTag name="span" attrs="${[title: value.encodeAsHTML()]}">x</g:withTag>'         || '<span title="' + ENCODED + '">x</span>'
@@ -116,9 +117,55 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         'an already encoded' | '<g:radio name="r" value="${value.encodeAsHTML()}"/>'
     }
 
+    void '#tag writes #description value once through a processor that returns it unchanged'() {
+        given:
+        tagLib.requestDataValueProcessor = new PassThroughProcessor()
+
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains(expected)
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        tag                   | description          | template                                                                      || expected
+        'g:checkBox'          | 'a plain'            | '<g:checkBox name="c" value="${value}"/>'                                     || ' value="' + ENCODED + '" '
+        'g:checkBox'          | 'an already encoded' | '<g:checkBox name="c" value="${value.encodeAsHTML()}"/>'                      || ' value="' + ENCODED + '" '
+        'g:actionSubmit'      | 'a plain'            | '<g:actionSubmit value="${value}"/>'                                          || ' value="' + ENCODED + '" '
+        'g:actionSubmit'      | 'an already encoded' | '<g:actionSubmit value="${value.encodeAsHTML()}"/>'                           || ' value="' + ENCODED + '" '
+        'g:actionSubmitImage' | 'a plain'            | '<g:actionSubmitImage value="${value}" src="/images/go.png"/>'                || ' value="' + ENCODED + '" '
+        'g:actionSubmitImage' | 'an already encoded' | '<g:actionSubmitImage value="${value.encodeAsHTML()}" src="/images/go.png"/>' || ' value="' + ENCODED + '" '
+        'g:radio'             | 'a plain'            | '<g:radio name="r" value="${value}"/>'                                        || ' value="' + ENCODED + '" '
+        'g:radio'             | 'an already encoded' | '<g:radio name="r" value="${value.encodeAsHTML()}"/>'                         || ' value="' + ENCODED + '" '
+        'g:textField'         | 'an already encoded' | '<g:textField name="t" value="${value.encodeAsHTML()}"/>'                     || ' value="' + ENCODED + '" '
+        'g:hiddenField'       | 'an already encoded' | '<g:hiddenField name="t" value="${value.encodeAsHTML()}"/>'                   || ' value="' + ENCODED + '" '
+        'g:select'            | 'an already encoded' | '<g:select name="s" from="${[value.encodeAsHTML()]}"/>'                       || '<option value="' + ENCODED + '" >'
+    }
+
+    void '#tag encodes the value that a processor returns'() {
+        given:
+        tagLib.requestDataValueProcessor = new AppendingProcessor()
+
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains(' value="' + ENCODED + '_processed" ')
+        !output.contains(VALUE)
+
+        where:
+        tag                   | template
+        'g:checkBox'          | '<g:checkBox name="c" value="${value}"/>'
+        'g:actionSubmit'      | '<g:actionSubmit value="${value}"/>'
+        'g:actionSubmitImage' | '<g:actionSubmitImage value="${value}" src="/images/go.png"/>'
+        'g:textField'         | '<g:textField name="t" value="${value}"/>'
+    }
+
     void 'g:form encodes the hidden fields of the request data value processor'() {
         given:
-        tagLib.requestDataValueProcessor = new HiddenFieldsProcessor(fields: [(VALUE): VALUE])
+        tagLib.requestDataValueProcessor = new PassThroughProcessor(fields: [(VALUE): VALUE])
 
         when:
         def output = applyTemplate('<g:form controller="book" action="save"></g:form>')
@@ -160,9 +207,9 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         source?.delete()
     }
 
-    static class HiddenFieldsProcessor implements RequestDataValueProcessor {
+    static class PassThroughProcessor implements RequestDataValueProcessor {
 
-        Map<String, String> fields
+        Map<String, String> fields = [:]
 
         @Override
         String processAction(HttpServletRequest request, String action, String httpMethod) {
@@ -182,6 +229,14 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         @Override
         String processUrl(HttpServletRequest request, String url) {
             url
+        }
+    }
+
+    static class AppendingProcessor extends PassThroughProcessor {
+
+        @Override
+        String processFormFieldValue(HttpServletRequest request, String name, String value, String type) {
+            value + '_processed'
         }
     }
 }
