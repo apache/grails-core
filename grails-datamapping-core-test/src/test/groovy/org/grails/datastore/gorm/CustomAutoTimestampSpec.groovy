@@ -93,8 +93,7 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
 
     void "Test when the auto timestamp properties are already set, they are not overwritten if config is set"() {
         when: "An entity is persisted and insertOverwrite is false"
-        AutoTimestampEventListener autoTimestampEventListener =
-                RecordCustom.gormPersistentEntity.mappingContext.eventListeners.find { it.class == AutoTimestampEventListener }
+        AutoTimestampEventListener autoTimestampEventListener = RecordCustom.autoTimestampEventListener
         autoTimestampEventListener.insertOverwrite = false
 
         def r = new RecordCustom(name: "Test")
@@ -180,8 +179,7 @@ class CustomAutoTimestampSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
 
     void "Test @CreatedDate and @LastModifiedDate with insertOverwrite config"() {
         when: "An entity is persisted and insertOverwrite is false"
-        AutoTimestampEventListener autoTimestampEventListener =
-                RecordWithAliases.gormPersistentEntity.mappingContext.eventListeners.find { it.class == AutoTimestampEventListener }
+        AutoTimestampEventListener autoTimestampEventListener = RecordWithAliases.autoTimestampEventListener
         autoTimestampEventListener.insertOverwrite = false
 
         def r = new RecordWithAliases(name: "Test")

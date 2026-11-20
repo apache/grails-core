@@ -381,21 +381,45 @@ WARNING: If you have `nullable: false` constraints on either `dateCreated` or `l
 
 It is also possible to disable the automatic timestamping temporarily. This is most typically done in the case of a test where you need to define values for the `dateCreated` or `lastUpdated` in the past. It may also be useful for importing old data from other systems where you would like to keep the current values of the timestamps.
 
-Timestamps can be temporarily disabled for all domains, a specified list of domains, or a single domain. To get started, you need to get a reference to the `AutoTimestampEventListener`. If you already have access to the datastore, you can execute the `getAutoTimestampEventListener` method. If you don't have access to the datastore, inject the `autoTimestampEventListener` bean.
-
-Once you have a reference to the event listener, you can execute `withoutDateCreated`, `withoutLastUpdated`, or `withoutTimestamps`. The `withoutTimestamps` method will temporarily disable both `dateCreated` and `lastUpdated`.
-
-Example:
+Timestamps can be temporarily disabled for all domains, a specified list of domains, or a single domain. To get started, you need a reference to the `AutoTimestampEventListener` that handles the domain class, which the domain class answers with:
 
 [source,groovy]
 ----
+Foo.autoTimestampEventListener.withoutTimestamps {
+    new Foo(dateCreated: new Date() - 2, lastUpdated: new Date() - 1).save(flush: true)
+}
+----
+
+Each datastore has a listener of its own, and so does each data source of an application with several and each tenant with a database or schema of its own. A listener only handles the saves made through its own datastore, so turning timestamps off on one leaves the saves to another data source timestamped. `Foo.autoTimestampEventListener` is the listener of the data source that a save of `Foo` made from the same place goes to: its default data source, the one a `Foo.secondary.withTransaction { }` block or a method annotated `@Transactional(connection = 'secondary')` routes it to, or the current tenant's for a multi-tenant class. For another data source of a class mapped to several, name the data source, as in `Foo.secondary.autoTimestampEventListener`.
+
+[source,groovy]
+----
+// Car is mapped to the default data source and Person to the 'people' data source
+Car.autoTimestampEventListener.withoutTimestamps {
+    car.save(flush: true)
+}
+Person.autoTimestampEventListener.withoutTimestamps {
+    person.save(flush: true)
+}
+----
+
+The `autoTimestampEventListener` bean, and the `getAutoTimestampEventListener` method of the datastore bean, return the listener of the default data source.
+
+Once you have a reference to the event listener, you can execute `withoutDateCreated`, `withoutLastUpdated`, or `withoutTimestamps`. The `withoutTimestamps` method will temporarily disable both `dateCreated` and `lastUpdated`.
+
+Example, where `Foo`, `Bar` and `FooBar` share a data source:
+
+[source,groovy]
+----
+def autoTimestampEventListener = Foo.autoTimestampEventListener
+
 //Only the dateCreated property handling will be disabled for only the Foo domain
 autoTimestampEventListener.withoutDateCreated(Foo) {
     new Foo(dateCreated: new Date() - 1).save(flush: true)
 }
 
 //Only the lastUpdated property handling will be disabled for only the Foo and Bar domains
-autoTimestampEventListener.withoutLastUpdated(Foo, Bar) {
+autoTimestampEventListener.withoutLastUpdated([Foo, Bar]) {
     new Foo(lastUpdated: new Date() - 1, bar: new Bar(lastUpdated: new Date() + 1)).save(flush: true)
 }
 
