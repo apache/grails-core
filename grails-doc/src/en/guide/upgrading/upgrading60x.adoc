@@ -1316,6 +1316,7 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 
 These calls on Hibernate 5 returned the wrong rows or failed. Each now does what it asks:
 
+* A `where` query or `findAll` with a condition on an association, `Team.where { club.name == 'Arsenal' }`, can be sorted by a property of that association, `list(sort: 'club.name')`, on the join that the condition made. It threw `QueryException` (could not resolve property) unless the association was given an alias that the sort named.
 * A map as the `sort` argument of a criteria or detached criteria, `list(sort: [a: 'asc', b: 'desc'])`, threw a `ClassCastException`. It now orders by every property, in the order the map lists them. The static `list(sort: map)` kept only the last property of the map (issue https://github.com/apache/grails-core/issues/14533[#14533]); it now orders by all of them, so the order of the rows it returns can differ from before.
 * Sorting a domain class with a composite id by one of the properties of the id threw a `NullPointerException`; it sorts now (issue https://github.com/apache/grails-core/issues/14451[#14451]).
 * A map sort, or a string sort on an association that the query's own block already joined, no longer joins the association a second time (which failed with a duplicate association path), and a sort that the call gives keeps the default sort of the mapping off, as `sort:` always did.

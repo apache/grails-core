@@ -20,7 +20,6 @@ package grails.gorm.tests
 
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import org.hibernate.QueryException
 import spock.lang.Issue
 
 /**
@@ -45,18 +44,18 @@ class WhereQueryWithAssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibe
         }.list(sort:'club.name')
 
 
-        then:"an exception is thrown because no alias is specified"
-        thrown QueryException
+        then:"the sort uses the join that the condition made, and no alias has to be specified"
+        results*.name == ["MU First Team"]
 
 
-        when:"a where query uses a sort on an association"
+        when:"a where query uses a sort on an association through an alias of its own"
         results = Team.where {
             def c1 = club
             c1.name ==~ '%e%'
         }.list(sort:'c1.name')
 
 
-        then:"an exception is thrown because no alias is specified"
+        then:"the alias names the join"
         results.size() == 2
         results.first().name == "Arsenal First Team"
     }
