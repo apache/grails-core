@@ -22,6 +22,7 @@ import org.hibernate.criterion.CriteriaSpecification
 import spock.lang.AutoCleanup
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
@@ -77,6 +78,38 @@ class CriteriaOrAssociationJoinTypeSpec extends Specification {
         then:
         found*.name == ['orphan']
     }
+    @Unroll
+    void 'after an or that asks for the child, a second block #shape gives #expected'() {
+        given:
+        createParents()
+        Closure second = block
+
+        when:
+        def found = JoinParent.createCriteria().list {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            with(second)
+        }
+
+        then: 'with has the child kid, other has stranger, orphan has none'
+        found*.name.sort() == expected
+
+        where:
+        shape                                               | block                                                                                   || expected
+        'top level, plain block'                            | { child { eq('name', 'kid') } }                                                         || ['with']
+        'top level, inner join'                             | { child(CriteriaSpecification.INNER_JOIN) { eq('name', 'kid') } }                       || ['with']
+        'top level, left join with isNull'                  | { child(CriteriaSpecification.LEFT_JOIN) { isNull('name') } }                           || ['orphan']
+        'top level, left join with a value'                 | { child(CriteriaSpecification.LEFT_JOIN) { eq('name', 'kid') } }                        || ['with']
+        'top level, without criteria'                       | { child { } }                                                                           || ['with']
+        'a branch of or, plain block'                       | { or { eq('name', 'orphan'); child { eq('name', 'kid') } } }                            || ['orphan', 'with']
+        'a branch of or, left join'                         | { or { eq('name', 'orphan'); child(CriteriaSpecification.LEFT_JOIN) { eq('name', 'kid') } } } || ['orphan', 'with']
+        'a branch of or, inner join'                        | { or { eq('name', 'orphan'); child(CriteriaSpecification.INNER_JOIN) { eq('name', 'kid') } } } || ['with']
+        'a branch of or, inner join without criteria (not a branch: the entity must have a child)' | { or { eq('name', 'orphan'); child(CriteriaSpecification.INNER_JOIN) { } } } || []
+        'in a not, inner join'                              | { not { child(CriteriaSpecification.INNER_JOIN) { eq('name', 'stranger') } } }          || ['with']
+    }
+
     void 'a block that names an inner join in a second or asks for the association on the whole query'() {
         given:
         createParents()
