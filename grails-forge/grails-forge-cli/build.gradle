@@ -98,11 +98,10 @@ dependencies {
     compileOnly 'org.apache.grails.views:grails-web-gsp'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "info.picocli:picocli:$picocliVersion"
-    implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
     // InteractiveShell drives JLine directly, and since the ansi stream install was dropped it also
-    // relies on JLine's terminal for virtual-terminal processing; pin it rather than inheriting
-    // whatever version picocli-shell-jline3 happens to bring
+    // relies on JLine's terminal for virtual-terminal processing. CommandLineCompleter connects it to
+    // picocli's completion itself: picocli's own bridge, picocli-shell-jline3, is built for JLine 3.
     implementation 'org.jline:jline'
     implementation 'org.yaml:snakeyaml'
     runtimeOnly 'org.slf4j:slf4j-nop'
