@@ -37,6 +37,6 @@ class CleanCommand extends GradleTaskCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        return ['clean']
+        return [project.task('clean')]
     }
 }

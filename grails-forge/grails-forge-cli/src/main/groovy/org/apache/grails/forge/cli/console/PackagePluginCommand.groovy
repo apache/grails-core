@@ -37,6 +37,6 @@ class PackagePluginCommand extends GradleTaskCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        return ['jar']
+        return [project.task('jar')]
     }
 }

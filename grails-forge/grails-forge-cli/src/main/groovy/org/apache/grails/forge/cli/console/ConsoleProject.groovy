@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.file.DirectoryStream
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -45,6 +46,12 @@ import org.apache.grails.forge.core.state.ProjectState
  * Owners, modes and link counts are what is looked at: not access control lists, and nothing is held
  * between the look and the run.</p>
  *
+ * <p>A project can be a part of a larger Gradle build: its directory then has no settings of its own,
+ * and the nearest directory above it that has them is the root of the build, which is where Gradle
+ * itself takes the build to be. The Gradle wrapper of that root is the one that is run, and the
+ * tasks a command runs are named by the path the project has in that build, so that they are the
+ * tasks of this project and of no other.</p>
+ *
  * <p>The user who runs the command is the one {@link ProcessUser} establishes from the process. For
  * root, also under {@code sudo}, that is root, so that root does not run from below it what another
  * user owns. A directory named in the environment variable {@link #SAFE_DIRECTORY} is used whatever
@@ -64,6 +71,8 @@ final class ConsoleProject {
     // what makes a directory a project, and what the commands read to know what the project is
     private static final List<String> MARKERS = [SOURCES, ProjectState.DIRECTORY, ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.EARLIER_RECORD, 'grails-cli.yml']
     private static final List<String> SETTINGS = ['settings.gradle', 'settings.gradle.kts']
+    // a directory name Gradle takes for the name of a project as it is
+    private static final Pattern PROJECT_NAME = Pattern.compile(/[A-Za-z0-9_][A-Za-z0-9_.-]{0,199}/)
     private static final Predicate<Path> OWNED_BY_USER = { Path path -> ProcessUser.current().owns(path) } as Predicate<Path>
 
     /**
@@ -75,6 +84,11 @@ final class ConsoleProject {
     public static final String SAFE_DIRECTORY = 'GRAILS_SAFE_DIRECTORY'
 
     private static final String EVERY_DIRECTORY = '*'
+    // where the Grails projects of a build are looked for: not in what a build writes, and not deeper or wider than this
+    private static final List<String> NOT_SOURCES = ['build', 'node_modules', 'out', 'target']
+    private static final int MAX_DEPTH = 5
+    private static final int MAX_ENTRIES = 20000
+    private static final int MAX_NAMED = 10
     // what the wrapper script of a directory runs
     private static final List<String> WRAPPER_FILES = ['gradle', 'gradle/wrapper', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']
     private static final Supplier<String> ENVIRONMENT = { System.getenv(SAFE_DIRECTORY) } as Supplier<String>
@@ -84,6 +98,8 @@ final class ConsoleProject {
 
     private final Path directory
     private final boolean above
+    private Path buildRoot
+    private boolean buildRootLooked
 
     private ConsoleProject(Path directory, boolean above) {
         this.directory = directory
@@ -139,6 +155,18 @@ final class ConsoleProject {
     static Path directoryFor(Path from) {
         ConsoleProject project = find(from)
         return project == null ? from : project.directory
+    }
+
+    /**
+     * The Gradle build a directory is in, for a command that runs Gradle and needs no Grails project:
+     * the directory when it has the settings of a build, or is below a directory that has them.
+     *
+     * @param from the directory Gradle is to run in
+     * @return the directory as what Gradle is run for, or {@code null} when it is in no Gradle build
+     */
+    static ConsoleProject build(Path from) {
+        ConsoleProject build = new ConsoleProject(from.toAbsolutePath().normalize(), false)
+        return hasSettings(build.directory) || build.getBuildRoot() != null ? build : null
     }
 
     /**
@@ -222,6 +250,64 @@ final class ConsoleProject {
     }
 
     /**
+     * @return the root of the Gradle build the project is a part of: the nearest directory above it,
+     * within the repository, that has the settings of a build. {@code null} for a project that has
+     * settings itself, which is a build of its own, and where no directory above has any
+     */
+    Path getBuildRoot() {
+        if (!buildRootLooked) {
+            buildRootLooked = true
+            if (!hasSettings(directory) && !isRepositoryRoot(directory)) {
+                Path each = directory.getParent()
+                for (int level = 1; each != null && level <= MAX_LEVELS; level++) {
+                    if (hasSettings(each)) {
+                        buildRoot = each
+                        break
+                    }
+                    if (isRepositoryRoot(each)) {
+                        break
+                    }
+                    each = each.getParent()
+                }
+            }
+        }
+        return buildRoot
+    }
+
+    /**
+     * @return the path of the project in the build it is a part of, as {@code :apps:shop} for the
+     * directory {@code apps/shop} of the root, which is the path Gradle gives a project that is
+     * included by its directory. {@code null} for a project that is a build of its own, and where
+     * a directory on the way has a name that is no name of a Gradle project
+     */
+    String getGradlePath() {
+        Path root = getBuildRoot()
+        if (root == null) {
+            return null
+        }
+        StringBuilder path = new StringBuilder()
+        for (Path step : root.relativize(directory)) {
+            String name = step.toString()
+            if (!(name ==~ PROJECT_NAME)) {
+                return null
+            }
+            path.append(':').append(name)
+        }
+        return path.length() == 0 ? null : path.toString()
+    }
+
+    /**
+     * @param name the name of a task of the project, as {@code bootRun}
+     * @return the task as a command gives it to Gradle: by the path of the project where the project is
+     * a part of a larger build, so that it is the task of this project and of no project below or
+     * beside it, and by its name alone otherwise
+     */
+    String task(String name) {
+        String path = getGradlePath()
+        return path == null ? name : "${path}:${name}".toString()
+    }
+
+    /**
      * The Gradle wrapper of the project: the one in its directory, or for a project that is part of a
      * larger build the nearest one above it, within the repository. The wrapper is a file, or a link
      * to a file in the directory the link is in or below it. A wrapper that is not in the directory the
@@ -234,6 +320,14 @@ final class ConsoleProject {
      */
     Wrapper gradleWrapper(boolean windows) {
         String name = wrapperName(windows)
+        Path root = getBuildRoot()
+        if (root != null && Files.isRegularFile(root.resolve(name))) {
+            // the build decides which Gradle it is built with: a wrapper that was left in the project is not the build's
+            Path wrapper = root.resolve(name)
+            String refused = refuseWrapper(root, wrapper, true)
+            return refused == null ? new Wrapper(wrapper, null) :
+                    new Wrapper(null, "The Gradle wrapper ${GradleRunner.line(wrapper)} is not run for the project in ${GradleRunner.line(directory)}: ${refused}")
+        }
         Path each = directory
         for (int level = 0; each != null && level <= MAX_LEVELS; level++) {
             Path wrapper = each.resolve(name)
@@ -285,7 +379,7 @@ final class ConsoleProject {
     // why the wrapper found in a directory is not run, or null when it is
     private String refuseWrapper(Path holder, Path wrapper, boolean aboveProject) {
         if (aboveProject) {
-            if (!SETTINGS.any { String settings -> Files.isRegularFile(holder.resolve(settings)) }) {
+            if (!hasSettings(holder)) {
                 return "${GradleRunner.line(holder)} is above the project and has no ${SETTINGS.join(' or ')}, so it is not the root of a build the project is part of"
             }
         }
@@ -389,6 +483,56 @@ final class ConsoleProject {
         return RECORDS.any { String record -> Files.isRegularFile(directory.resolve(record), LinkOption.NOFOLLOW_LINKS) }
     }
 
+    private static boolean hasSettings(Path directory) {
+        return SETTINGS.any { String settings -> Files.isRegularFile(directory.resolve(settings)) }
+    }
+
+    /**
+     * The Grails projects below the root of a Gradle build, for the line that says where a command of
+     * a project can be run. Only the names of directories are read: no link is followed, what a build
+     * writes and what is hidden is not looked into, and nothing is looked for inside a project.
+     *
+     * @param root the root of the build
+     * @return the directories of the projects as paths in the root, sorted, and {@code null} in the
+     * last place when there were more directories than are looked at
+     */
+    private static List<String> projectsBelow(Path root) {
+        List<String> found = []
+        int[] looked = [0] as int[]
+        boolean complete = projectsBelow(root, root, 0, found, looked)
+        found.sort()
+        if (!complete) {
+            found.add(null)
+        }
+        return found
+    }
+
+    private static boolean projectsBelow(Path root, Path directory, int depth, List<String> found, int[] looked) {
+        List<Path> entries = []
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory)) {
+            for (Path entry : stream) {
+                if (++looked[0] > MAX_ENTRIES) {
+                    return false
+                }
+                String name = entry.getFileName().toString()
+                if (!name.startsWith('.') && !(name in NOT_SOURCES) && Files.isDirectory(entry, LinkOption.NOFOLLOW_LINKS)) {
+                    entries.add(entry)
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            return true
+        }
+        boolean complete = true
+        for (Path entry : entries) {
+            if (isProject(entry)) {
+                found.add(root.relativize(entry).collect { Path step -> step.toString() }.join('/'))
+            } else if (depth + 1 < MAX_DEPTH) {
+                complete &= projectsBelow(root, entry, depth + 1, found, looked)
+            }
+        }
+        return complete
+    }
+
     // .git is a directory in a clone and a file in a work tree or a submodule
     private static boolean isRepositoryRoot(Path directory) {
         return Files.exists(directory.resolve('.git'), LinkOption.NOFOLLOW_LINKS)
@@ -427,6 +571,10 @@ final class ConsoleProject {
             if (untrusted != null) {
                 return "${untrusted}. ${needs}, and was not run"
             }
+            String inBuild = inBuild(needs)
+            if (inBuild != null) {
+                return inBuild
+            }
             String above = 'above it'
             if (repository != null) {
                 above = 'above it in the same repository'
@@ -434,6 +582,33 @@ final class ConsoleProject {
                 above = "in the ${MAX_LEVELS} directories above it, which is as far as is looked"
             }
             return "${needs}; there is none in ${GradleRunner.line(from)} or ${above}"
+        }
+
+        // In a Gradle build that has Grails projects and at a directory that is in none of them, the
+        // command is not run for one of them by a guess: which ones there are is said instead. A root
+        // above the current directory is read only when it is the user's own.
+        private String inBuild(String needs) {
+            ConsoleProject build = build(from)
+            if (build == null) {
+                return null
+            }
+            Path root = build.getBuildRoot() ?: from
+            if (root != from && distrust(root, SETTINGS) != null) {
+                return null
+            }
+            List<String> projects = projectsBelow(root)
+            boolean more = !projects.isEmpty() && projects.last() == null
+            projects.removeAll { String project -> project == null }
+            if (projects.isEmpty()) {
+                return null
+            }
+            String where = root == from ? "${GradleRunner.line(from)} is the root of a Gradle build and is no Grails project itself" :
+                    "${GradleRunner.line(from)} is in the Gradle build of ${GradleRunner.line(root)} and in no Grails project"
+            String named = projects.take(MAX_NAMED).collect { String project -> GradleRunner.line(project) }.join(', ')
+            String rest = projects.size() > MAX_NAMED ? " and ${projects.size() - MAX_NAMED} more" : (more ? ', and there may be more: not every directory was looked at' : '')
+            return "${needs}; ${where}. ${projects.size() == 1 ? 'The Grails project' : 'The Grails projects'} of the build: ${named}${rest}. " +
+                    "Run the command in the directory of ${projects.size() == 1 ? 'that project' : 'the one that is meant'}" +
+                    (root == from ? ", as in: cd ${GradleRunner.line(projects.first())}" : '')
         }
     }
 

@@ -32,9 +32,12 @@ import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.feature.AvailableFeatures
+import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.feature.FeatureRegistry
 import org.springframework.stereotype.Component
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.feature.build.gradle.GradleSettingsFileFeature
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.io.OutputUtils
@@ -92,16 +95,17 @@ class DefaultProjectGenerator implements ProjectGenerator {
         }
         generatorContext.applyFeatures()
 
-        checkPaths(project, generatorContext.getTemplates().values())
+        Collection<Template> templates = ofApplication(project, generatorContext)
+        checkPaths(project, templates)
 
         // Everything is rendered, and the state of the project under .grails is read back from what
         // it will be, before the first file is written: a template that fails and a state that could
         // not be read leave nothing behind. The state is written last, its manifest at the very end,
         // and holds what was rendered for the application, so it is not part of its own baseline
         ProjectStateRecorder state = new ProjectStateRecorder(applicationType, project, generatorContext, outputHandler)
-        state.check(generatorContext.getTemplates().values())
+        state.check(templates)
         List<Template> rendered = []
-        for (Template template : generatorContext.getTemplates().values()) {
+        for (Template template : templates) {
             rendered << state.record(template)
         }
         List<Template> stateFiles = state.state()
@@ -135,6 +139,28 @@ class DefaultProjectGenerator implements ProjectGenerator {
             if (!kept.isEmpty()) {
                 outputHandler.kept(kept)
             }
+        }
+    }
+
+    /**
+     * The files that are written. An application that is a project of a Gradle build that is not its
+     * own has its own files only: the Gradle wrapper, the settings and the other files that are read
+     * at the root of a build, or that are there for the wrapper scripts, are those of the build it is
+     * put into, and are not written a second time where nothing reads them.
+     */
+    private static Collection<Template> ofApplication(Project project, GeneratorContext generatorContext) {
+        Collection<Template> templates = generatorContext.getTemplates().values()
+        if (!generatorContext.getOptions().isSubproject()) {
+            return templates
+        }
+        String settings = generatorContext.getFeatures().getFeatures().find { Feature feature -> feature instanceof GradleSettingsFileFeature }?.getName()
+        if (settings != null) {
+            throw new FeatureSelectionException("The feature ${settings} writes the settings of a Gradle build, and an application that is created " +
+                    'as a project of an existing build has none: the settings are those of that build')
+        }
+        Map<String, String> replacements = project.getProperties()
+        return templates.findAll { Template template ->
+            !ProjectState.isOfBuildRoot(DefaultTemplateRenderer.resolvePath(template.getPath(), replacements))
         }
     }
 

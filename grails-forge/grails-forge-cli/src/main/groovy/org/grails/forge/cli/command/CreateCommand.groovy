@@ -20,6 +20,8 @@ package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nonnull
+import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
@@ -73,6 +75,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     @CommandLine.Option(names = ['-i', '--inplace'], description = 'Create a service using the current directory')
     boolean inplace
+
+    @CommandLine.Option(names = ['--subproject'],
+            description = 'Create the application as a project of the Gradle build the directory is in: only the files of the application ' +
+                    'are written, and not those of the root of a build (the Gradle wrapper, the settings, the Grails wrapper), which that ' +
+                    'build has. The settings of the build are not changed: the command says which line includes the application.')
+    boolean subproject
 
     @CommandLine.Option(names = ['--list-features'], description = 'Output the available features and their descriptions')
     boolean listFeatures
@@ -265,11 +273,48 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         }
 
         OutputHandler outputHandler = new FileSystemOutputHandler(project, inplace, this)
+        Path directory = Path.of(outputHandler.getOutputLocation())
+        ConsoleProject place = ConsoleProject.build(directory)
+        Path build = place == null ? null : place.getBuildRoot()
+        if (subproject && build == null) {
+            // nothing is written: without a build above there is nothing the application would be a project of
+            throw new CommandLine.ParameterException(this.spec.commandLine(), place != null ?
+                    "--subproject creates the application as a project of a Gradle build, and ${GradleRunner.line(directory)} has the settings of a build itself: " +
+                            'it is the root of one. Create the application in a directory below it' :
+                    '--subproject creates the application as a project of an existing Gradle build, and there is no settings.gradle or settings.gradle.kts ' +
+                            "in a directory above ${GradleRunner.line(directory)}, as far as the repository it is in goes. " +
+                            'Run the command in a directory of the build, or leave the option out for an application that is a build of its own')
+        }
 
         generate(project, outputHandler)
 
         out('@|blue ||@ Application created at ' + outputHandler.getOutputLocation())
+        if (subproject) {
+            included(place, build)
+        } else if (build != null && ConsoleProject.build(directory).getBuildRoot() != null) {
+            // Gradle looks for the settings of a build in the directories above, and fails in a directory they do not include
+            warning("${GradleRunner.line(directory)} is inside the Gradle build of ${GradleRunner.line(build)} and has no settings of its own, " +
+                    'so Gradle takes it for a part of that build, which does not include it: its Gradle wrapper fails until it is. ' +
+                    'An application that is to be a project of that build is created with --subproject, ' +
+                    'and one that is to be a build of its own with the feature gradle-settings-file')
+        }
         return 0
+    }
+
+    // The settings of a build are the user's: what includes the application is said, and nothing is written there
+    private void included(ConsoleProject place, Path build) {
+        String settings = ['settings.gradle', 'settings.gradle.kts'].find { String file -> build.resolve(file).toFile().isFile() }
+        String path = place.getGradlePath()
+        if (path == null) {
+            out("@|blue ||@ The application is not a part of the build yet. Include its directory in ${GradleRunner.line(build.resolve(settings))}, " +
+                    'under a name Gradle takes for a project: the names of the directories from there to the application are not such names, ' +
+                    'so the commands of the application are then run by Gradle from its directory, and not by its path in the build')
+            return
+        }
+        String project = path.substring(1)
+        out('@|blue ||@ The application is not a part of the build yet. Add this line to ' + GradleRunner.line(build.resolve(settings)) + ':')
+        out('    ' + (settings.endsWith('.kts') ? "include(\"${project}\")" : "include '${project}'"))
+        out("@|blue ||@ Its tasks are then those of the project ${path}, run with the Gradle wrapper of the build, as the commands of the application do")
     }
 
     void generate(OutputHandler outputHandler) throws Exception {
@@ -280,7 +325,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         Options options = new Options(reloading, gormImpl, servletImpl, getJdkVersion(), getOperatingSystem())
         checkExcludedNames()
         // an option that is given is a choice, which the features that are selected do not replace
-        options = options.withGiven(given())
+        options = options.withGiven(given()).withSubproject(subproject)
         List<Pack> packs = selection().packs
         if (!packs.isEmpty()) {
             withPacks(packs)

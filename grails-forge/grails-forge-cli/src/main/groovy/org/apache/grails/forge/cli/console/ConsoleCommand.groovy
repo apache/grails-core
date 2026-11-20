@@ -68,7 +68,7 @@ class ConsoleCommand extends GradleEnvironmentCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        List<String> arguments = ['console']
+        List<String> arguments = [project.task('console')]
         if (debugJvm || debugJvmOfShell) {
             arguments.add('--debug-jvm')
         }

@@ -199,6 +199,42 @@ This "grails-forge-cli.yml" configuration records the application type, default 
 
 The commands that work on a project (the `create-*` code generation commands, `add-property`, `feature add`, `project show`, `project regenerate` and `gradle`) can be given in any directory of the project, not only in the one at its top. The project is the nearest directory, from the current one upwards, that has a `grails-app` directory, a `.grails/project.yml`, a `grails-forge-cli.yml` or a `grails-cli.yml`. Its record is read there and the files are written there, so `create-controller Book` given in `grails-app/views` creates the same `grails-app/controllers/.../BookController.groovy` as when it is given at the top of the project, and the paths the commands report are relative to the project. The templates of the project are the ones under `src/main/templates` at its top too, which is also where `install-templates` copies them, wherever in the project the command is given. The search does not go above the root of the Git repository the directory is in, and stops at the first project it finds: in a project that lies inside another one, the commands are those of the inner project, and when the inner project has no record there are no code generation commands, rather than those of the project around it.
 
+=== In a Gradle Build of Several Projects
+
+A Grails application can be one project of a larger Gradle build: beside other applications, beside libraries, any number of directories below the root of the build. The commands work there as they do in an application that is a build of its own.
+
+[source]
+----
+acme/
+  settings.gradle        include 'apps:shop', 'apps:admin', 'libs:core'
+  gradlew
+  apps/shop/             a Grails application
+  apps/admin/            another one
+  libs/core/             a library, no Grails project
+----
+
+The root of the build is the nearest directory above the project that has a `settings.gradle` or a `settings.gradle.kts`, which is where Gradle itself takes the build to be; like the search for the project, the search does not go above the root of the Git repository. A project whose directory has settings of its own is a build of its own, also when another build includes it with `includeBuild`.
+
+* In the directory of an application or anywhere below it, every command is a command of that application: `create-controller` writes into it, `stats` counts it, `feature add` changes it, `run-app` starts it and `stop-app` stops it and no other. In `apps/shop`, or in `apps/shop/grails-app/views`, `run-app` is the application `shop`.
+* The Gradle that runs is the wrapper of the root of the build, since the build decides which Gradle it is built with. A wrapper that was left in the directory of the application is not run while the root has one.
+* The commands that are a Gradle build name their tasks by the path of the project: `compile` in `apps/shop` runs `:apps:shop:classes`, `run-app` runs `:apps:shop:bootRun`, `test-app` runs `:apps:shop:test`. So the task of this project runs, and not the task of the same name of a project beside it or below it. The path is the one the directories give, which is the path of a project that is included by its directory (`include 'apps:shop'`). When the build gives the project another path (`project(':shop').projectDir = file('apps/shop')`), these commands fail with what Gradle says of the path and a note; `gradle`, which names no project, still works there.
+* `gradle` runs Gradle in the directory of the project with the arguments as they are, so an unqualified task name is, as always with Gradle, the task of that project and of the projects below it.
+* A root above the current directory is used under the rule for a project above it: its directory, its `settings.gradle`, its wrapper script and the jar and properties of the wrapper have to be your own, and the directory must not be writable by everybody. `GRAILS_SAFE_DIRECTORY` names a root that is to be used all the same.
+
+At the root of the build, or in a directory of it that is in no Grails project, such as `libs/core`:
+
+* `gradle` works, because Gradle does: at the root, `gradle build` builds every project.
+* A command of a project is not run from there for one of the projects, and there is no option that names the project: this is a limitation for now. The command does not guess which project is meant; it names the Grails projects of the build, says to run it in the directory of the one that is meant, and ends with exit code 1:
++
+[source]
+----
+| Error compile is a command of a Grails project; /work/acme is the root of a Gradle build and is no Grails project itself. The Grails projects of the build: apps/admin, apps/shop. Run the command in the directory of the one that is meant, as in: cd apps/admin
+----
++
+The projects are looked for by the names of directories only, five directories deep, not inside `build`, `out`, `target`, `node_modules` or a directory whose name begins with a dot, and at most ten are named.
+
+To create an application in an existing build, see the `--subproject` option of the `create-` commands.
+
 === Short forms of commands
 
 With the Grails Forge CLI the name of a command can be shortened to the first letters of its words, with the first letter of every word after the first in upper case:

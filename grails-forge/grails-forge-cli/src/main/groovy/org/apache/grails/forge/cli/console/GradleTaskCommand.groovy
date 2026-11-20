@@ -76,6 +76,14 @@ abstract class GradleTaskCommand extends InProjectCommand {
             succeeded(project)
         } else {
             failed(project)
+            if (project.getGradlePath() != null) {
+                // Which project the tasks were asked of is in no line of Gradle that can be told from another
+                // failure, so it is said after every one: the path is taken from the directories
+                spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string("@|bold | Note|@ The tasks were asked of the project ${project.getGradlePath()} " +
+                        "of the Gradle build in ${GradleRunner.line(project.getBuildRoot())}, which is the path the directories give. If Gradle said that the directory " +
+                        "is not part of the build, or that there is no such project, the settings of that build do not include ${GradleRunner.line(project.directory)} by its directory: " +
+                        "the line for that is include '${project.getGradlePath().substring(1)}'"))
+            }
         }
         return exit
     }

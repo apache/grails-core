@@ -377,17 +377,19 @@ final class RunningApplication {
             return false
         }
         List<String> arguments = shown.get().toList()
+        // as run-app names it: by the path of the project where the project is a part of a larger build
+        String task = project.task(TASK)
         Path jar = wrapper.getParent().resolve(WRAPPER_JAR)
         for (int i = 0; i < arguments.size(); i++) {
             List<String> after = arguments.subList(i + 1, arguments.size())
-            if (!(TASK in after)) {
+            if (!(task in after)) {
                 return false
             }
             if (same(arguments.get(i), wrapper)) {
                 return true
             }
             if (i > 0 && same(arguments.get(i), jar) &&
-                    (arguments.get(i - 1) == '-jar' || (arguments.get(i - 1) in CLASS_PATH_OPTIONS && WRAPPER_MAIN in after && after.indexOf(WRAPPER_MAIN) < after.lastIndexOf(TASK)))) {
+                    (arguments.get(i - 1) == '-jar' || (arguments.get(i - 1) in CLASS_PATH_OPTIONS && WRAPPER_MAIN in after && after.indexOf(WRAPPER_MAIN) < after.lastIndexOf(task)))) {
                 return true
             }
         }

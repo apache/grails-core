@@ -86,6 +86,9 @@ final class ProjectState {
      */
     public static final String IGNORE_CONTENT = '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n'
 
+    private static final Set<String> OF_BUILD_ROOT = ['gradlew', 'gradlew.bat', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties',
+                                                     'settings.gradle', 'settings.gradle.kts', 'grailsw', 'grailsw.bat', 'grails-wrapper.jar', '.gitattributes'].toSet().asImmutable()
+
     /** The directory of the baseline, the index and the content */
     public static final String BASELINE = '.grails/baseline'
 
@@ -124,6 +127,19 @@ final class ProjectState {
     static boolean isStatePath(String path) {
         String first = path.split('/').find { String step -> !step.isEmpty() && step != '.' }
         return first != null && BaselineIndex.folded(first) == DIRECTORY
+    }
+
+    /**
+     * @param path the path of a file of a project, with {@code /} between its steps
+     * @return whether the file is one of the root of a Gradle build and not of an application in it:
+     * the Gradle wrapper, the settings, the Grails wrapper, and the rules for Git that are there for
+     * the wrapper scripts. An application that is created as a project of an existing build is
+     * written without them
+     * @since 9.0
+     */
+    static boolean isOfBuildRoot(String path) {
+        String steps = path.split('/').findAll { String step -> !step.isEmpty() && step != '.' }.join('/')
+        return BaselineIndex.folded(steps) in OF_BUILD_ROOT
     }
 
     /**

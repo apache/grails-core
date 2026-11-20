@@ -38,6 +38,7 @@ import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.diff.FeatureDiffer
+import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputFailedException
@@ -1376,6 +1377,72 @@ class ProjectStateSpec extends ApplicationContextSpec {
         then:
         ProjectStateException e = thrown()
         e.message == '.grails/project.yml: a????b is not a key this version of Grails reads'
+    }
+
+    void "an application that is a project of another build has its own files only, and its state says so"() {
+        given:
+        Path alone = generate('shop', [], ApplicationType.WEB, 'alone')
+        Path project = generate('shop', [], ApplicationType.WEB, 'part', new Options().withSubproject(true))
+
+        when:
+        ProjectState state = ProjectState.read(project)
+        state.verifyBaseline(project)
+        Set<String> files = state.baseline.files*.path as Set<String>
+        Set<String> ofAlone = ProjectState.read(alone).baseline.files*.path as Set<String>
+
+        then: 'what is of the root of a build is left out, and nothing else'
+        ofAlone - files == ['.gitattributes', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties', 'gradlew', 'gradlew.bat',
+                            'grails-wrapper.jar', 'grailsw', 'grailsw.bat'] as Set<String>
+        files - ofAlone == [] as Set<String>
+        (ofAlone - files).every { String path -> ProjectState.isOfBuildRoot(path) && !Files.exists(project.resolve(path)) }
+        !Files.exists(project.resolve('gradle'))
+        files.containsAll(['build.gradle', 'gradle.properties', '.gitignore'])
+
+        and: 'the properties are those of the project, without the ones Gradle reads at the root of a build only'
+        project.resolve('gradle.properties').toFile().readLines().findAll { String line -> line.startsWith('org.gradle.') } == []
+        project.resolve('gradle.properties').toFile().text.contains("grailsVersion=${VersionInfo.grailsVersion}")
+        alone.resolve('gradle.properties').toFile().text.contains('org.gradle.daemon=true')
+
+        and: 'the manifest and the lock say which kind of application it is, and those of an application of its own do not'
+        state.manifest.options.subproject
+        state.lock.options == state.manifest.options
+        project.resolve('.grails/project.yml').toFile().getText('UTF-8').contains('  reloading: devtools\n  layout: subproject\ngenerationState: tracked\n')
+        project.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains('  layout: subproject\n')
+        !ProjectState.read(alone).manifest.options.subproject
+        !alone.resolve('.grails/project.yml').toFile().getText('UTF-8').contains('layout')
+        !alone.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains('layout')
+
+        when: 'the settings of a build are asked for with it'
+        generate('shop', ['gradle-settings-file'], ApplicationType.WEB, 'both', new Options().withSubproject(true))
+
+        then:
+        FeatureSelectionException refused = thrown()
+        refused.message.contains('gradle-settings-file')
+        directory.resolve('both').toFile().list().length == 0
+    }
+
+    @Unroll
+    void "#path is of the root of a build: #ofRoot"() {
+        expect:
+        ProjectState.isOfBuildRoot(path) == ofRoot
+
+        where:
+        path                                       | ofRoot
+        'gradlew'                                  | true
+        'GRADLEW.BAT'                              | true
+        './gradle//wrapper/gradle-wrapper.jar'     | true
+        'gradle/wrapper/gradle-wrapper.properties' | true
+        'settings.gradle'                          | true
+        'settings.gradle.kts'                      | true
+        'grailsw'                                  | true
+        'grailsw.bat'                              | true
+        'grails-wrapper.jar'                       | true
+        '.gitattributes'                           | true
+        '.gitignore'                               | false
+        'build.gradle'                             | false
+        'gradle.properties'                        | false
+        'src/main/gradlew'                         | false
+        'grails-app/conf/settings.gradle'          | false
     }
 
     private List<String> appliedFeatures(ApplicationType type, List<String> features, Options options = new Options(),

@@ -171,7 +171,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        List<String> arguments = ['bootRun']
+        List<String> arguments = [project.task('bootRun')]
         if (debugJvm) {
             arguments.add('--debug-jvm')
         }

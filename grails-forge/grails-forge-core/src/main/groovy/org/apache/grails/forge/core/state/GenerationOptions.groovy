@@ -30,6 +30,8 @@ import org.grails.forge.options.ServletImpl
 /**
  * The options an application was generated with, written as the create commands take them:
  * {@code jdk: 21}, {@code servlet: tomcat}, {@code data: hibernate7}, {@code reloading: devtools}.
+ * An application that was created as a project of a Gradle build that is not its own also has
+ * {@code layout: subproject}; one that is a build of its own has no {@code layout}.
  *
  * @since 9.0
  */
@@ -42,16 +44,27 @@ final class GenerationOptions {
     final GormImpl data
     final DevelopmentReloading reloading
 
+    /** Whether the application has only its own files, and not those of the root of a Gradle build. */
+    final boolean subproject
+
+    /** What {@code layout} is for an application that is a project of a build that is not its own. */
+    public static final String SUBPROJECT = 'subproject'
+
     GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading) {
+        this(jdk, servlet, data, reloading, false)
+    }
+
+    GenerationOptions(JdkVersion jdk, ServletImpl servlet, GormImpl data, DevelopmentReloading reloading, boolean subproject) {
         this.jdk = jdk
         this.servlet = servlet
         this.data = data
         this.reloading = reloading
+        this.subproject = subproject
     }
 
     @PackageScope
     static GenerationOptions of(Options options) {
-        return new GenerationOptions(options.getJavaVersion(), options.getServletImpl(), options.getGormImpl(), options.getDevelopmentReloading())
+        return new GenerationOptions(options.getJavaVersion(), options.getServletImpl(), options.getGormImpl(), options.getDevelopmentReloading(), options.isSubproject())
     }
 
     @PackageScope
@@ -61,6 +74,10 @@ final class GenerationOptions {
         map.put('servlet', written(servlet))
         map.put('data', written(data))
         map.put('reloading', written(reloading))
+        if (subproject) {
+            // written only for such an application, so that the state of every other one is what it was
+            map.put('layout', SUBPROJECT)
+        }
         return map
     }
 
@@ -75,7 +92,8 @@ final class GenerationOptions {
                 jdk,
                 ServletImpl.valueOf(named(section, 'servlet', ServletImpl.values() as List<Enum>)),
                 GormImpl.valueOf(named(section, 'data', GormImpl.values() as List<Enum>)),
-                DevelopmentReloading.valueOf(named(section, 'reloading', DevelopmentReloading.values() as List<Enum>)))
+                DevelopmentReloading.valueOf(named(section, 'reloading', DevelopmentReloading.values() as List<Enum>)),
+                section.has('layout') && section.oneOf('layout', [SUBPROJECT]) == SUBPROJECT)
         section.end()
         return options
     }

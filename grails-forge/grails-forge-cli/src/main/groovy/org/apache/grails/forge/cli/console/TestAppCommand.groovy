@@ -77,10 +77,10 @@ class TestAppCommand extends GradleEnvironmentCommand {
         boolean hasIntegrationTests = Files.isDirectory(project.directory.resolve(INTEGRATION_TESTS))
         List<String> arguments = []
         if (unit || !integration) {
-            arguments.addAll(phase('test'))
+            arguments.addAll(phase(project, 'test'))
         }
         if (hasIntegrationTests && (integration || !unit)) {
-            arguments.addAll(phase('integrationTest'))
+            arguments.addAll(phase(project, 'integrationTest'))
             both = unit || !integration
         }
         if (arguments.isEmpty()) {
@@ -110,12 +110,12 @@ class TestAppCommand extends GradleEnvironmentCommand {
         out('| Tests PASSED')
     }
 
-    private List<String> phase(String task) {
+    private List<String> phase(ConsoleProject project, String task) {
         List<String> arguments = []
         if (clean) {
-            arguments.add('clean' + task.capitalize())
+            arguments.add(project.task('clean' + task.capitalize()))
         }
-        arguments.add(task)
+        arguments.add(project.task(task))
         for (String test : names + tests) {
             arguments.add('--tests')
             arguments.add(test)

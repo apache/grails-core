@@ -364,6 +364,8 @@ final class FeatureAddition {
         // the place of the one the application has is refused, and replaces nothing
         Options options = new Options(recorded.reloading, recorded.data, recorded.servlet, recorded.jdk, operatingSystem)
                 .withGiven(optionsAreChoices ? EnumSet.allOf(OptionName) : EnumSet.noneOf(OptionName))
+                // an application that was created without the files of the root of a build stays without them
+                .withSubproject(recorded.subproject)
         GeneratorContext context = generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, [],
                 manifest.excludedFeatures*.name)
         RenderedProject rendered = new RenderedProject()

@@ -49,9 +49,9 @@ class AssembleCommand extends GradleEnvironmentCommand {
     protected List<String> gradleArguments(ConsoleProject project) {
         List<String> arguments = []
         if (clean) {
-            arguments.add('clean')
+            arguments.add(project.task('clean'))
         }
-        arguments.add('assemble')
+        arguments.add(project.task('assemble'))
         arguments.addAll(systemPropertyArguments())
         return arguments
     }

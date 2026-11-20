@@ -73,7 +73,7 @@ class RunScriptCommand extends GradleEnvironmentCommand {
                 return null
             }
         }
-        List<String> arguments = ['runScript', '-Pargs=' + files.collect { String file -> quoted(file) }.join(' ')]
+        List<String> arguments = [project.task('runScript'), '-Pargs=' + files.collect { String file -> quoted(file) }.join(' ')]
         arguments.addAll(systemPropertyArguments())
         return arguments
     }

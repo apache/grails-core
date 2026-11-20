@@ -186,13 +186,24 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         out.toString().contains('Runs Gradle in the Grails project of the current directory')
     }
 
-    void "outside a project nothing is run, also where there is a Gradle build"() {
+    void "outside a project Gradle is run where there is a Gradle build, and nothing is run where there is none"() {
         given:
         plainProject(dir)
         new File(dir, 'grails-app').deleteDir()
 
-        when:
+        when: 'the directory is the root of a build, as that of a build of several projects is'
         int exit = ForgeCli.execute(beanContext, 'gradle', 'show')
+
+        then:
+        exit == 0
+        errors() == []
+        out.toString().contains('show ran')
+
+        when: 'a directory with a wrapper and no settings is no build'
+        out.reset()
+        new File(dir, 'settings.gradle').delete()
+        new File(dir, '.gradle').deleteDir()
+        exit = ForgeCli.execute(beanContext, 'gradle', 'show')
 
         then:
         exit == 1

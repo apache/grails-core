@@ -37,6 +37,6 @@ class CompileCommand extends GradleTaskCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        return ['classes']
+        return [project.task('classes')]
     }
 }

@@ -86,6 +86,10 @@ class Gradle implements BuildFeature {
 
     private void configureDefaultGradleProps(GeneratorContext generatorContext) {
         generatorContext.getBuildProperties().put('version', '0.1')
+        if (generatorContext.getOptions().isSubproject()) {
+            // Gradle reads these in the root of a build only, and the build the application is put into has its own
+            return
+        }
         generatorContext.getBuildProperties().put('org.gradle.caching', 'true')
         generatorContext.getBuildProperties().put('org.gradle.configuration-cache', 'true')
         generatorContext.getBuildProperties().put('org.gradle.daemon', 'true')

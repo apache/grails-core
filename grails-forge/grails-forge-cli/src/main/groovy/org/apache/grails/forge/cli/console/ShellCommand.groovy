@@ -69,7 +69,7 @@ class ShellCommand extends GradleEnvironmentCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        List<String> arguments = ['shell']
+        List<String> arguments = [project.task('shell')]
         if (debugJvm || debugJvmOfShell) {
             arguments.add('--debug-jvm')
         }

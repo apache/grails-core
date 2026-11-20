@@ -47,7 +47,7 @@ class DependencyReportCommand extends GradleEnvironmentCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        List<String> arguments = ['dependencies']
+        List<String> arguments = [project.task('dependencies')]
         if (configuration != null) {
             arguments.add('--configuration')
             arguments.add(configuration)

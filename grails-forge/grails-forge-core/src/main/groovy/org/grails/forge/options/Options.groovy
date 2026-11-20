@@ -33,13 +33,14 @@ class Options {
     private final ServletImpl servletImpl
     private final JdkVersion javaVersion
     private final Set<OptionName> given
+    private final boolean subproject
 
     Options(DevelopmentReloading reloading,
                    GormImpl gormImpl,
                    ServletImpl servletImpl,
                    JdkVersion javaVersion,
                    OperatingSystem operatingSystem) {
-        this(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, Collections.<OptionName>emptySet())
+        this(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, Collections.<OptionName>emptySet(), false)
     }
 
     private Options(DevelopmentReloading reloading,
@@ -47,9 +48,11 @@ class Options {
                     ServletImpl servletImpl,
                     JdkVersion javaVersion,
                     OperatingSystem operatingSystem,
-                    Set<OptionName> given) {
+                    Set<OptionName> given,
+                    boolean subproject) {
 
         this.given = given
+        this.subproject = subproject
         this.reloading = reloading
         this.buildTool = BuildTool.DEFAULT_OPTION
         this.gormImpl = gormImpl
@@ -118,23 +121,23 @@ class Options {
     }
 
     Options withOperatingSystem(OperatingSystem operatingSystem) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 
     Options withDevelopmentReloading(DevelopmentReloading reloading) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 
     Options withGormImpl(GormImpl gormImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 
     Options withServletImpl(ServletImpl servletImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 
     Options withJavaVersion(JdkVersion javaVersion) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 
     /**
@@ -157,6 +160,25 @@ class Options {
      */
     Options withGiven(Collection<OptionName> given) {
         Set<OptionName> names = given.isEmpty() ? Collections.<OptionName>emptySet() : Collections.unmodifiableSet(EnumSet.copyOf(given))
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, names)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, names, subproject)
+    }
+
+    /**
+     * @return whether the application is a project of a Gradle build that is not its own: it then has
+     * only its own files, and none of those that belong to the root of a build, such as the Gradle
+     * wrapper and the settings
+     * @since 9.0
+     */
+    boolean isSubproject() {
+        return subproject
+    }
+
+    /**
+     * @param subproject whether the application is a project of a Gradle build that is not its own
+     * @return these options for such an application, or for one that is a build of its own
+     * @since 9.0
+     */
+    Options withSubproject(boolean subproject) {
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given, subproject)
     }
 }

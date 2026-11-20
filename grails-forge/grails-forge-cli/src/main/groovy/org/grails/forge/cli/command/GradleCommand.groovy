@@ -67,7 +67,9 @@ class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCom
     Integer call() throws Exception {
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
         ConsoleProject.Search search = ConsoleProject.search(current)
-        ConsoleProject project = search.project
+        // Gradle is run in the current directory, so a directory of a Gradle build that is in no Grails
+        // project, such as the root of a build with several, is one it can be run in as well
+        ConsoleProject project = search.project ?: (search.untrusted == null ? ConsoleProject.build(current) : null)
         if (project == null) {
             err(search.none(NAME))
             return 1

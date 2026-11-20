@@ -92,7 +92,7 @@ class RunCommandCommand extends GradleEnvironmentCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        List<String> arguments = ['runCommand', argumentsOption]
+        List<String> arguments = [project.task('runCommand'), argumentsOption]
         arguments.addAll(systemPropertyArguments())
         return arguments
     }

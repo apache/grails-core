@@ -37,6 +37,6 @@ class PublishPluginCommand extends GradleTaskCommand {
 
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
-        return ['publish']
+        return [project.task('publish')]
     }
 }

@@ -162,7 +162,7 @@ class ApplicationCommandCommand extends InProjectCommand {
             }
             said.flush()
             GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
-            return runner.run(project, gradleArguments(file))
+            return runner.run(project, gradleArguments(project, file))
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
@@ -174,8 +174,8 @@ class ApplicationCommandCommand extends InProjectCommand {
     // for the same command, argument for argument, so that the two are one build to Gradle and to its
     // configuration cache: the task, the file, the environment run-command has by default, and what
     // --stacktrace in front of the command stands for.
-    private List<String> gradleArguments(CommandArgumentsFile file) {
-        List<String> all = [task(), file.option]
+    private List<String> gradleArguments(ConsoleProject project, CommandArgumentsFile file) {
+        List<String> all = [project.task(task()), file.option]
         if (!entry.isScript()) {
             all.add("-Dgrails.env=${ENVIRONMENT}".toString())
         }

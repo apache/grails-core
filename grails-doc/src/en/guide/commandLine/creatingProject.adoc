@@ -198,6 +198,14 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 --inplace
 ----
 
+| --subproject
+| Create the project as a project of the Gradle build the directory is in, with the files of the application only. See "Creating a project in an existing Gradle build" below.
+|
+[source,shell]
+----
+--subproject
+----
+
 | --feature-pack-dir
 | A directory that holds the feature pack of a plugin, whose feature can then be selected with `--features`. Can be given more than once. A pack is code: use one only when you trust where it comes from. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
 |
@@ -257,6 +265,34 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 |===
 
 The features of a project do not depend on the order they are named in. A feature brings in the features it requires, and the features that nothing selected are then given their defaults: selecting `postgres`, for example, leaves out the default database driver `h2`. The servlet container and the reloading a project has when `--servlet` and `--reloading` are not given are defaults of the same kind and give way in the same way: without `--servlet`, a feature that requires Jetty gives a project with Jetty and without Tomcat. Without `--data`, the default Grails Data implementation, Hibernate 5, gives way to Hibernate 7: `--features gorm-hibernate7` gives a Hibernate 7 project. An option that is given on the command line is a choice and does not give way: `--data hibernate5 --features gorm-hibernate7` asks for two things that cannot both be had, as does `--servlet none` with a feature that requires a servlet container, and the command refuses them rather than choose one. What is recorded of the options is what the project has: `data: hibernate7` in the first example, and `servlet: none` for a plugin, which has no servlet container unless one is asked for. Features and options that cannot be had as they were asked for, and a value an option cannot have, are a mistake in the command line: the command says what is wrong, shows its usage and ends with exit code 2, and nothing is created.
+
+=== Creating a project in an existing Gradle build
+
+In a directory of a Gradle build, that is at or below a directory with a `settings.gradle` or a `settings.gradle.kts`, `--subproject` creates the application as a project of that build:
+
+[source,shell]
+----
+cd acme/apps
+grails create-app --subproject com.acme.shop
+----
+
+[source]
+----
+| Application created at /work/acme/apps/shop
+| The application is not a part of the build yet. Add this line to /work/acme/settings.gradle:
+    include 'apps:shop'
+| Its tasks are then those of the project :apps:shop, run with the Gradle wrapper of the build, as the commands of the application do
+----
+
+* Only the files of the application are written. The files that belong to the root of a build are not: the Gradle wrapper (`gradlew`, `gradlew.bat`, `gradle/wrapper`), a `settings.gradle`, the Grails wrapper (`grailsw`, `grailsw.bat`, `grails-wrapper.jar`) and the `.gitattributes` that is there for the wrapper scripts. The `gradle.properties` of the application has its `grailsVersion` and `version`, and not the `org.gradle.` settings, which Gradle reads at the root of a build only.
+* The settings of the build are yours and are not changed. The command prints the line that includes the application, in the syntax of the settings file there is, and until the line is there Gradle does not know the application.
+* The `build.gradle` of the application is the one every application gets: it names its own repositories and plugins, so the build around it needs nothing for it.
+* `.grails/project.yml` and `.grails/forge.lock.yml` record this as `layout: subproject` among the options, and the baseline has the files of the application only. `feature add` therefore adds to such an application what it adds to any other, without the files of the root of a build.
+* The command is refused, and nothing is written, when no directory above has the settings of a build, when the directory of the application would itself be the root of one (`--inplace` at the root), and together with the feature `gradle-settings-file`.
+
+Without `--subproject` a `create-` command creates a whole application wherever it is given. Inside another build that application has a wrapper of its own and no settings, and Gradle, which looks for the settings in the directories above, takes it for a directory of the build around it that the build does not include, and fails. The command says so when it has created the application: create it with `--subproject` to make it a project of that build, or with the feature `gradle-settings-file` to make it a build of its own.
+
+How the commands behave in such a build is described under "In a Gradle Build of Several Projects" in the section on the command line.
 
 === The `.grails` directory of a project
 
