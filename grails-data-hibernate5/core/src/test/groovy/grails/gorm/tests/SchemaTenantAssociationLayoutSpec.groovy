@@ -108,6 +108,9 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         'declares datasource ALL'                       | [KnownOwnerAll, KnownTargetAll]
         'is mapped by a JPA annotation and lists no datasource' | [KnownOwnerJpa, KnownJpaTarget]
         'is a multi tenant entity that lists no datasource'     | [KnownOwnerToTenant, KnownTenantTarget]
+        'is a multi tenant entity that excludes a schema that does not exist' | [KnownOwnerToOtherExcluded, KnownOtherExcludedTarget]
+        'excludes the tenant schema, from an owner that excludes it too'      | [KnownOwnerExcludingBoth, KnownExcludingBothTarget]
+        'uses every datasource and excludes the tenant schema, from an owner that excludes it too' | [KnownOwnerExcludingAll, KnownAllExcludingTarget2]
     }
 
     @Unroll
@@ -123,11 +126,21 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         layout                                                  | classes
         'lists only the default connection'                     | [KnownOwnerDefaultOnly, KnownTargetDefaultOnly]
         'is a multi tenant entity that excludes the tenant schema' | [KnownOwnerToExcludingTenant, KnownExcludingTenantTarget]
+        'is a multi tenant entity mapped to every datasource that excludes the tenant schema' | [KnownOwnerToAllExcluding, KnownAllExcludingTarget]
+        'is a multi tenant entity that lists the tenant schema and excludes it' | [KnownOwnerToListedExcluding, KnownListedExcludingTarget]
     }
 
     void "with the tenant schemas known, an owner pointing at a target that lists only the tenant schema does not start"() {
         when: 'the default connection also maps the owner, and not the target; Hibernate refuses it before the schema check runs'
         startWithTenants(KnownOwnerTenantOnly, KnownTargetTenantOnly)
+
+        then:
+        thrown(Exception)
+    }
+
+    void "with the tenant schemas known, an owner pointing at a target that excludes the default connection does not start"() {
+        when: 'the default connection maps the owner, and not the target; Hibernate refuses it before the schema check runs'
+        startWithTenants(KnownOwnerToDefaultExcluded, KnownDefaultExcludedTarget)
 
         then:
         thrown(Exception)
@@ -347,4 +360,90 @@ class KnownExcludingTenantTarget implements MultiTenant<KnownExcludingTenantTarg
 class KnownOwnerToExcludingTenant implements MultiTenant<KnownOwnerToExcludingTenant> {
     String name
     KnownExcludingTenantTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownAllExcludingTarget implements MultiTenant<KnownAllExcludingTarget> {
+    String name
+
+    static mapping = {
+        datasource 'ALL'
+    }
+}
+
+@Entity
+class KnownOwnerToAllExcluding implements MultiTenant<KnownOwnerToAllExcluding> {
+    String name
+    KnownAllExcludingTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownListedExcludingTarget implements MultiTenant<KnownListedExcludingTarget> {
+    String name
+
+    static mapping = {
+        datasources(['default', 'tenant1'])
+    }
+}
+
+@Entity
+class KnownOwnerToListedExcluding implements MultiTenant<KnownOwnerToListedExcluding> {
+    String name
+    KnownListedExcludingTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['DEFAULT'])
+class KnownDefaultExcludedTarget implements MultiTenant<KnownDefaultExcludedTarget> {
+    String name
+}
+
+@Entity
+class KnownOwnerToDefaultExcluded implements MultiTenant<KnownOwnerToDefaultExcluded> {
+    String name
+    KnownDefaultExcludedTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant2'])
+class KnownOtherExcludedTarget implements MultiTenant<KnownOtherExcludedTarget> {
+    String name
+}
+
+@Entity
+class KnownOwnerToOtherExcluded implements MultiTenant<KnownOwnerToOtherExcluded> {
+    String name
+    KnownOtherExcludedTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownExcludingBothTarget implements MultiTenant<KnownExcludingBothTarget> {
+    String name
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownOwnerExcludingBoth implements MultiTenant<KnownOwnerExcludingBoth> {
+    String name
+    KnownExcludingBothTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownAllExcludingTarget2 implements MultiTenant<KnownAllExcludingTarget2> {
+    String name
+
+    static mapping = {
+        datasource 'ALL'
+    }
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownOwnerExcludingAll implements MultiTenant<KnownOwnerExcludingAll> {
+    String name
+    KnownAllExcludingTarget2 target
 }

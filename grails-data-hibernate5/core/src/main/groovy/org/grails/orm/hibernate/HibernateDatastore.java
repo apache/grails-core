@@ -751,23 +751,27 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
     /**
      * Whether the target is mapped on every connection source the owner is mapped on: each tenant schema, and the default
      * connection, which also maps a multi tenant entity. A target that lists the tenant schema but not the default connection
-     * leaves the default session factory with an association to an entity it does not map.
+     * leaves the default session factory with an association to an entity it does not map. A multi tenant target is mapped on
+     * each connection source except the ones it excludes, whatever else its mapping says, so the schemas are checked one by one.
+     * Without the names of the tenant schemas only an entity that uses every connection can be known to be mapped.
      */
     private static boolean isMappedWhereOwnerIs(PersistentEntity owner, PersistentEntity target, Collection<String> tenantSchemaNames) {
-        if (ConnectionSourcesSupport.getConnectionSourceNames(target).contains(ConnectionSource.ALL) || isMappedByJpaAnnotation(target)) {
-            return true;
-        }
         if (tenantSchemaNames == null || tenantSchemaNames.isEmpty()) {
-            return false;
+            return ConnectionSourcesSupport.getConnectionSourceNames(target).contains(ConnectionSource.ALL) || isMappedByJpaAnnotation(target);
         }
         Set<String> names = new LinkedHashSet<>(tenantSchemaNames);
         names.add(ConnectionSource.DEFAULT);
         for (String name : names) {
-            if (ConnectionSourcesSupport.usesConnectionSource(owner, name) && !ConnectionSourcesSupport.usesConnectionSource(target, name)) {
+            if (ConnectionSourcesSupport.usesConnectionSource(owner, name) && !isMappedOn(target, name)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean isMappedOn(PersistentEntity target, String connectionSourceName) {
+        return ConnectionSourcesSupport.usesConnectionSource(target, connectionSourceName) ||
+                (!target.isMultiTenant() && isMappedByJpaAnnotation(target));
     }
 
     /**
