@@ -136,7 +136,7 @@ Presence-based flags (property **present**, value optional) match `skipFunctiona
 
 ## Gradle Version Sync (Hard Rule)
 
-Current line: **Gradle 9.9.1** (`distributionUrl` + `gradleToolingApiVersion=9.9.1`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
+Current line: **Gradle 9.9.1** (`distributionUrl`). Upstream may already ship a newer 9.9.x patch - this repo rides close to latest **only after** a deliberate multi-location bump PR. Do not "helpfully" jump one wrapper ahead of the rest.
 
 **Two Groovy stacks:** Gradle itself embeds **Groovy 4** for build logic. Application/runtime code on 8.0.x is **Groovy 5**. That is why `dependencies.gradle` keeps separate maps:
 
@@ -165,7 +165,6 @@ Never unify those casually.
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew.bat`
      - `grails-forge/grails-forge-core/src/main/resources/gradle/wrapper/gradle-wrapper.jar`
-   - `gradle.properties` → `gradleToolingApiVersion` (must match the new Gradle version)
 
 4. Verify every **main-line** tree matches on properties **and** scripts/jars. The only intentional holdout is `end-to-end/legacy-g7-command-plugin` (Gradle 8.x).
 
@@ -282,7 +281,7 @@ See `grails-test-examples/app1/build.gradle`:
 | File | What it owns |
 |------|----------------|
 | **Root** `dependencies.gradle` | Application/runtime BOM versions (`bomDependencyVersions`, `bomDependencies`, `bomPlatformDependencies`) **and** gradle-tooling maps (`gradleBomDependencyVersions`, etc.). `grails-gradle` applies this same file via `../dependencies.gradle` - there is no separate `grails-gradle/dependencies.gradle` on this line |
-| **`gradle.properties`** | Non-BOM pins (tool versions, javaVersion, gradleToolingApiVersion, checkstyle/codenarc/pmd/jacoco versions) |
+| **`gradle.properties`** | Non-BOM pins (tool versions, javaVersion, checkstyle/codenarc/pmd/jacoco versions) |
 
 **No `gradle/libs.versions.toml`.** This monorepo does **not** use Gradle version catalogs. Do not introduce a catalog "because Gradle docs recommend it." Dependabot and the published BOM pipeline are built around the root `dependencies.gradle` maps (see comment at top of that file).
 

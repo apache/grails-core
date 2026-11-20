@@ -16,9 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.cli
+package org.grails.build.parsing
 
-import org.grails.build.parsing.ScriptNameResolver
 import org.junit.jupiter.api.Test
 
 import static org.junit.jupiter.api.Assertions.assertTrue
