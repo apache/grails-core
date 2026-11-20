@@ -22,13 +22,17 @@ import groovy.transform.CompileStatic
 import groovy.transform.stc.ClosureParams
 import groovy.transform.stc.SimpleType
 
+import liquibase.changelog.ChangeLogParameters
 import liquibase.parser.ChangeLogParserFactory
 import liquibase.serializer.ChangeLogSerializerFactory
 
+import org.apache.grails.core.cli.ApplicationCommand
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic
-class DbmChangelogToGroovy implements ScriptDatabaseMigrationCommand {
+class DbmChangelogToGroovyCommand implements ApplicationCommand, ApplicationContextDatabaseMigrationCommand {
+
+    final String description = 'Converts a changelog file to a Groovy DSL file'
 
     @Override
     void handle() {
@@ -40,11 +44,13 @@ class DbmChangelogToGroovy implements ScriptDatabaseMigrationCommand {
         def resourceAccessor = createResourceAccessor()
 
         def parser = ChangeLogParserFactory.instance.getParser(srcFilename, resourceAccessor)
-        def databaseChangeLog = parser.parse(srcFilename, null, resourceAccessor)
+        // the parsers of YAML and JSON changelogs expand expressions with the parameters they are given, and take none for an error
+        def databaseChangeLog = parser.parse(srcFilename, new ChangeLogParameters(), resourceAccessor)
 
         def destFilename = args[1]
         def destChangeLogFile = resolveChangeLogFile(destFilename)
-        if (destChangeLogFile) {
+        // asked whether there is one, not whether it exists: a file that does not exist yet is false to Groovy
+        if (destChangeLogFile != null) {
             if (!destChangeLogFile.path.endsWith('.groovy')) {
                 throw new DatabaseMigrationException("Destination ChangeLogFile ${destChangeLogFile} must be a Groovy file")
             }
@@ -62,13 +68,13 @@ class DbmChangelogToGroovy implements ScriptDatabaseMigrationCommand {
             serializer.write(databaseChangeLog.changeSets, out)
         }
 
-        if (destChangeLogFile && hasOption('add')) {
+        if (destChangeLogFile != null && hasOption('add')) {
             appendToChangeLog(changeLogFile, destChangeLogFile)
         }
     }
 
     private static void withFileOrSystemOutputStream(File file, @ClosureParams(value = SimpleType, options = 'java.io.OutputStream') Closure closure) {
-        if (!file) {
+        if (file == null) {
             closure.call(System.out)
             return
         }

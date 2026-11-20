@@ -23,10 +23,13 @@ import groovy.transform.CompileStatic
 import liquibase.serializer.ChangeLogSerializer
 import liquibase.serializer.ChangeLogSerializerFactory
 
+import org.apache.grails.core.cli.ApplicationCommand
 import org.grails.plugins.databasemigration.DatabaseMigrationException
 
 @CompileStatic
-class DbmCreateChangelog implements ScriptDatabaseMigrationCommand {
+class DbmCreateChangelogCommand implements ApplicationCommand, ApplicationContextDatabaseMigrationCommand {
+
+    final String description = 'Creates an empty changelog file'
 
     @Override
     void handle() {
