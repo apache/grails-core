@@ -613,8 +613,17 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        err.toString().contains('There is no application here that a feature can be added to: .grails/project.yml is missing')
+        err.toString().readLines() == ["| Error feature add is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
         dir.list() as List == ['build.gradle']
+
+        when: 'a project that was not generated, or by an earlier version'
+        new File(dir, 'grails-app').mkdirs()
+        err.reset()
+        exit = add('grails-quartz')
+
+        then:
+        exit == 1
+        err.toString().contains('There is no application here that a feature can be added to: .grails/project.yml is missing')
     }
 
     @Unroll

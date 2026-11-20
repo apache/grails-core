@@ -89,8 +89,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         // the project the current directory is in, so that the command does the same in every directory of it
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
         ConsoleProject.Search search = ConsoleProject.search(current)
-        if (search.untrusted != null) {
-            err(search.none('No feature was added'))
+        if (search.project == null) {
+            err(search.none('feature add'))
             return 1
         }
         Path directory = search.project == null ? current : search.project.directory

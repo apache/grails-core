@@ -106,7 +106,8 @@ final class RunDirectory {
         Path ignore = run.resolve(IGNORE)
         if (!Files.exists(ignore, LinkOption.NOFOLLOW_LINKS)) {
             try {
-                Files.writeString(ignore, '*\n')
+                // for its owner alone, as everything else in the directory
+                Files.writeString(create(run, IGNORE), '*\n')
             } catch (IOException ignored) {
                 // the directory is used all the same: the file only keeps it out of a commit
             }

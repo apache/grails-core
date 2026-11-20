@@ -146,7 +146,7 @@ class LauncherSpec extends Specification {
         ['bug-report']                        | 1
         ['gradle', 'build']                   | 1
         ['gradle', '--help']                  | 1
-        ['create-controller', 'Book']         | 2
+        ['create-controller', 'Book']         | 1
     }
 
     @IgnoreIf({ os.windows })
@@ -290,8 +290,9 @@ class LauncherSpec extends Specification {
         exit == 2
         started.get() == 0
         err.toString().readLines()[0].startsWith('Missing required parameter for option')
-        err.toString().contains('Usage: grails-forge-cli create-app ')
-        err.toString().replaceAll(/\s+/, ' ').contains('The features to use. Possible values: those the option --list-features lists')
+        err.toString().readLines()[1] == 'Usage: grails-forge-cli create-app [OPTIONS] [NAME]'
+        err.toString().readLines()[2] == "Run 'grails-forge-cli help create-app' for the options"
+        err.toString().readLines().size() == 3
     }
 
     void "a record of the oldest kind, which only the generator can read, is said not to be used when the generator cannot be started"() {

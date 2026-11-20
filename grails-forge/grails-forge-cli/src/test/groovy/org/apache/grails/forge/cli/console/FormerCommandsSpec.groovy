@@ -32,8 +32,7 @@ import spock.lang.Unroll
 class FormerCommandsSpec extends CommandSpec {
 
     static final String CLI = 'grails-forge-cli'
-    static final String MISSING = 'The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json. ' +
-            'They are listed after: grails-forge-cli gradle grailsCommandCatalog'
+    static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
             rest       : ['create-restapi', 'example.rest'],
@@ -74,6 +73,10 @@ class FormerCommandsSpec extends CommandSpec {
         lines[1] == said
         lines[2] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
 
+        and: 'and where the help is, which is not shown for a mistake'
+        lines[3] == "Run 'grails-forge-cli help' for the commands"
+        lines.size() == 4
+
         where:
         typed                      | said
         'test'                     | 'test was another name of test-app in the Grails shell. Type: grails-forge-cli test-app'
@@ -84,9 +87,21 @@ class FormerCommandsSpec extends CommandSpec {
         'open'                     | 'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in grails-forge-cli'
         'create-profile'           | 'create-profile created a profile for the Grails shell. Profiles are replaced by application types, features and feature packs, and no command creates any of these'
         'generate-functional-test' | 'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in grails-forge-cli; create-functional-test writes an empty test in a REST API application'
-        'create-controller'        | 'create-controller is a command in the directory of a Grails project whose record is read, and the current directory is in none'
-        'create-restful-controller' | 'create-restful-controller is a command in the directory of a REST API application (create-restapi), and the current directory is in none'
-        'publish-plugin'           | 'publish-plugin is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
+    }
+
+    @Unroll
+    void "outside a project #typed, which is a command of some projects, is known and says in one line that there is no project"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, typed)
+
+        then: 'no mistake in the command line: the same refusal as of every command of a project, and no line of the table'
+        exit == 1
+        out.toString().isEmpty()
+        err.toString().readLines() == ["| Error ${typed} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
+        dir.list().length == 0
+
+        where:
+        typed << FormerCommands.all().findAll { it.status == FormerCommands.Status.ELSEWHERE }*.name
     }
 
     void "every command of the table is refused with its line where it is no command, and is a command where the table says it is one"() {
@@ -111,9 +126,9 @@ class FormerCommandsSpec extends CommandSpec {
             commands.values().every { !it.contains(each.name) }
         }
 
-        and: 'a command of some directories only is one in a project of some kind, and is none outside a project'
+        and: 'a command of some directories only is one in a project of some kind'
         table.findAll { it.status == FormerCommands.Status.ELSEWHERE }.every { FormerCommands.Former each ->
-            !commands.outside.contains(each.name) && commands.findAll { it.key != 'outside' }.values().any { it.contains(each.name) }
+            commands.findAll { it.key != 'outside' }.values().any { it.contains(each.name) }
         }
 
         and: 'every command that is not there in every directory is in the table, so that none is refused without a word'
@@ -133,7 +148,8 @@ class FormerCommandsSpec extends CommandSpec {
                 int exit = ForgeCli.execute(beanContext, 'help', each.name)
                 List<String> lines = err.toString().readLines()
                 List<String> ofTheTable = lines.findAll { String line -> table.any { it.hint.replace('{cli}', CLI) == line } }
-                commands[kind].contains(each.name) ?
+                // outside a project a command of some projects is known too: it says there that it needs a project
+                commands[kind].contains(each.name) || (kind == 'outside' && each.status == FormerCommands.Status.ELSEWHERE) ?
                         exit == 0 && lines.isEmpty() :
                         exit == 2 && lines[0].startsWith("There is no command ${each.name}") && ofTheTable == [each.hint.replace('{cli}', CLI)] &&
                                 lines.indexOf(ofTheTable[0]) == (kind == 'outside' ? 1 : 2)
@@ -156,6 +172,8 @@ class FormerCommandsSpec extends CommandSpec {
         lines[1] == MISSING
         lines[2] == 'create-tag-lib was another name of create-taglib in the Grails shell. Type: grails-forge-cli create-taglib'
         lines[3] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        lines[4] == "Run 'grails-forge-cli help' for the commands"
+        lines.size() == 5
         !new File(top, 'web/grails-app/taglib/example/FormatTagLib.groovy').exists()
 
         when: 'a command of another kind of project'
@@ -228,10 +246,21 @@ class FormerCommandsSpec extends CommandSpec {
         List<String> lines = err.toString().readLines()
 
         then:
+        exit == 1
+        lines.size() == 1
+        lines[0].startsWith("| Error The Grails project in ${project.canonicalPath}, above ${below.canonicalPath}, is not used: ")
+        lines[0].endsWith('. create-controller is a command of a Grails project, and was not run')
+
+        when: 'something that is no command of any project'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'generate-all', 'example.Book')
+        lines = err.toString().readLines()
+
+        then:
         exit == 2
-        lines[0].startsWith('There is no command create-controller')
+        lines[0].startsWith('There is no command generate-all')
         lines[1].startsWith('The commands of a project are not there: The Grails project in ')
-        lines[2] == 'create-controller is a command in the directory of a Grails project whose record is read, and the current directory is in none'
+        lines[2].startsWith('generate-all is a command of the scaffolding plugin')
     }
 
     @Unroll

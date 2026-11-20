@@ -35,10 +35,6 @@ abstract class GradleEnvironmentCommand extends GradleTaskCommand {
     private static final String ENVIRONMENT = 'grails.env'
     private static final String SYSTEM_PROPERTY = '-D'
 
-    @CommandLine.Option(names = [SYSTEM_PROPERTY], paramLabel = 'NAME=VALUE', mapFallbackValue = '',
-            description = 'A system property for the build; can be given more than once. -Dgrails.env=NAME selects the Grails environment.')
-    Map<String, String> systemProperties = new LinkedHashMap<>()
-
     /**
      * @return the environment the build runs for when none is given
      */

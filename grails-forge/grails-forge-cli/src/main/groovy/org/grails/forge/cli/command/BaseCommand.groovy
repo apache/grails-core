@@ -57,12 +57,24 @@ class BaseCommand implements ConsoleOutput {
         spec.commandLine().getOut().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red ' + message + '|@'))
     }
 
+    /**
+     * @return whether the full stack trace is asked for, after the name of the command or in front of it
+     */
     boolean showStacktrace() {
-        return commonOptions.showStacktrace
+        return commonOptions.showStacktrace || (ofCommandLine() != null && ofCommandLine().commonOptions.showStacktrace)
     }
 
+    /**
+     * @return whether verbose output is asked for, after the name of the command or in front of it
+     */
     boolean verbose() {
-        return commonOptions.verbose
+        return commonOptions.verbose || (ofCommandLine() != null && ofCommandLine().commonOptions.verbose)
+    }
+
+    // the command line itself, for an option that was given in front of the command; null for the command line
+    private BaseCommand ofCommandLine() {
+        Object root = spec == null ? null : spec.root().userObject()
+        return root instanceof BaseCommand && !root.is(this) ? (BaseCommand) root : null
     }
 
     /**

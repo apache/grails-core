@@ -138,7 +138,7 @@ class AddPropertyCommand extends CodeGenCommand {
 
         if (domainFile == null || !domainFile.exists()) {
             err('Domain class not found: ' + domainClassName)
-            err('Run \'grails create-domain-class ' + domainClassName + '\' first.')
+            err("Run '${spec.root().name()} create-domain-class ${domainClassName}' first.")
             return 1
         }
 

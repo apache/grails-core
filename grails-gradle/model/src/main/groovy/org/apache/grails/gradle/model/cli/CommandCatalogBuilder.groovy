@@ -217,6 +217,28 @@ class CommandCatalogBuilder {
     }
 
     private Entry resolve(String className, List<Candidate> candidates, Set<String> said) {
+        // A class the application registers is the application's: what it says of it holds, also when
+        // that is nothing, and a jar that comes later on the class path does not give the command of
+        // the application another name by carrying a descriptor for its class.
+        List<Candidate> own = candidates.findAll { Candidate candidate -> candidate.origin == ORIGIN_APPLICATION }
+        if (!own.isEmpty() && own.every { Candidate candidate -> candidate.digest == own[0].digest }) {
+            Candidate application = own[0]
+            List<String> elsewhere = candidates.findAll { Candidate candidate ->
+                candidate.origin != ORIGIN_APPLICATION && candidate.digest != null && candidate.digest != application.digest
+            }.collect { Candidate candidate -> candidate.origin }.unique()
+            if (elsewhere) {
+                said << line("The command class ${className} is listed as the application has it: another descriptor for it, in ${some(elsewhere)}, is not used.")
+            }
+            if (application.digest == null) {
+                return named(application.origin, className, REGISTRATION_FACTORIES, said)
+            }
+            if (application.refusal != null) {
+                said << line("The command class ${className} of ${application.origin} is not listed: its descriptor ${application.refusal}.")
+                return null
+            }
+            return new Entry(name: application.described.name, description: application.described.description, origin: application.origin,
+                    className: className, registration: REGISTRATION_DESCRIPTOR)
+        }
         List<Candidate> described = candidates.findAll { Candidate candidate -> candidate.digest != null }
         if (described.isEmpty()) {
             return named(candidates[0].origin, className, REGISTRATION_FACTORIES, said)

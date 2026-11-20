@@ -304,10 +304,14 @@ final class CommandCatalog {
         if (!SHORT_FORM.matcher(typed).matches()) {
             return Collections.emptyList()
         }
-        return listed(parent).findAll { CommandLine command ->
+        List<CommandLine> fits = listed(parent).findAll { CommandLine command ->
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
             ScriptNameResolver.resolvesTo(typed, spec.name()) || spec.aliases().any { String alias -> ScriptNameResolver.resolvesTo(typed, alias) }
         }
+        // The commands of the CLI itself come first: what a project or one of its plugins calls a
+        // command does not change what a short form of theirs means, or make it stand for two.
+        List<CommandLine> own = fits.findAll { CommandLine command -> !(command.getCommandSpec().userObject() instanceof ApplicationCommandCommand) }
+        return own.isEmpty() ? fits : own
     }
 
     // the lines of a description as plain text: without the markup of the help, which a tool would show as it is

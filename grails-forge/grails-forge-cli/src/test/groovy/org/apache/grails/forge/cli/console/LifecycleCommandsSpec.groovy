@@ -949,8 +949,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 1
         errors().size() == 1
-        errors()[0].startsWith('| Error There is no Grails project here: neither ')
-        errors()[0].endsWith(notDone)
+        errors()[0] == "| Error ${line[0]} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it"
 
         when:
         scriptedProject('record')
@@ -967,19 +966,12 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 1
         errors().size() == 1
         errors()[0].contains(', is not used: ')
-        errors()[0].endsWith(notDone)
+        errors()[0].endsWith("GRAILS_SAFE_DIRECTORY. ${line[0]} is a command of a Grails project, and was not run")
         !new File(dir, 'invoked.txt').exists()
         !new File(dir, '.grails').exists()
 
         where:
-        line                                  | notDone
-        ['run-app']                           | 'Gradle was not run'
-        ['run-app', '--detach']               | 'Gradle was not run'
-        ['stop-app']                          | 'Nothing was stopped'
-        ['console']                           | 'Gradle was not run'
-        ['shell']                             | 'Gradle was not run'
-        ['run-script', 'scripts/one.groovy']  | 'Gradle was not run'
-        ['run-command', 'name', 'argument']   | 'Gradle was not run'
+        line << [['run-app'], ['run-app', '--detach'], ['stop-app'], ['console'], ['shell'], ['run-script', 'scripts/one.groovy'], ['run-command', 'name', 'argument']]
         command = line[0..<(line.size() > 1 && line[1].startsWith('--') ? 2 : 1)].join(' ')
     }
 

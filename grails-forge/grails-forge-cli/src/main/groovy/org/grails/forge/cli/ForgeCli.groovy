@@ -27,6 +27,8 @@ import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
+import org.apache.grails.forge.cli.console.ProjectOnlyCommand
+import org.apache.grails.forge.cli.console.UsageHelp
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine
 import org.apache.grails.forge.cli.console.CommandCatalog
@@ -356,10 +358,9 @@ final class ForgeCli {
         if (context.commandName != null) {
             commandLine.setCommandName(context.commandName)
         }
-        // after a mistake the command is shown to be used without the features being listed, which only the generator can
-        CommandLine.IParameterExceptionHandler mistakes = commandLine.getParameterExceptionHandler()
+        // a mistake is answered with what is wrong and one line of how the command is used, not with the whole help
         commandLine.setParameterExceptionHandler({ CommandLine.ParameterException e, String[] given ->
-            context.withoutListing({ mistakes.handleParseException(e, given) } as Supplier<Integer>)
+            UsageHelp.answer(e, given)
         } as CommandLine.IParameterExceptionHandler)
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
             EXCEPTION_HANDLER.apply(ex, failed)
@@ -379,6 +380,17 @@ final class ForgeCli {
                 }
             }
         }
+        if (readsProject && codeGenConfig == null) {
+            // A command that writes into a project is known where the record of none was read as well:
+            // it then says what every command of a project says there, and is not taken for a mistyped name.
+            for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
+                String name = type.getAnnotation(CommandLine.Command).name()
+                commandLine.addSubcommand(name, new CommandLine(ProjectOnlyCommand.specOf(name, factory), factory))
+            }
+            if (!inProject()) {
+                commandLine.getCommandSpec().usageMessage().footer('', 'A Grails project has more commands: those that create its classes, and those of the application.')
+            }
+        }
         ConsoleCommands.addTo(commandLine, readsProject)
         // last: a command of the application does not take the name of a command that is there
         ApplicationCommands.addTo(commandLine, readsProject)
@@ -386,6 +398,9 @@ final class ForgeCli {
         PlainOutput.notForWhatIsPassedOn(commandLine)
         // once every command is there: the width is given to the commands there are when it is set
         commandLine.setUsageHelpWidth(USAGE_WIDTH)
+        commandLine.setHelpFactory({ CommandLine.Model.CommandSpec spec, CommandLine.Help.ColorScheme scheme ->
+            new UsageHelp(spec, scheme)
+        } as CommandLine.IHelpFactory)
         return commandLine
     }
 

@@ -30,7 +30,7 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateWebPluginCommand.NAME, description = 'Creates an Grails Web Plugin')
+@CommandLine.Command(name = CreateWebPluginCommand.NAME, description = 'Creates a Grails plugin with a web layer')
 @Component
 @Scope('prototype')
 @CompileStatic

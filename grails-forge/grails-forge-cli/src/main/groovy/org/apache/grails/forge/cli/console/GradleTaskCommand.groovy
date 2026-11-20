@@ -36,6 +36,11 @@ abstract class GradleTaskCommand extends InProjectCommand {
     /** What followed {@code --} on the command line. */
     List<String> passedOn = []
 
+    // every command that is a build takes it; one that runs for an environment reads grails.env from it as well
+    @CommandLine.Option(names = ['-D'], paramLabel = 'NAME=VALUE', mapFallbackValue = '',
+            description = 'A system property for the build, as in -Dgrails.env=test. Can be given more than once.')
+    Map<String, String> systemProperties = new LinkedHashMap<>()
+
     @Override
     protected String notDone() {
         return 'Gradle was not run'
@@ -48,6 +53,10 @@ abstract class GradleTaskCommand extends InProjectCommand {
             return 1
         }
         arguments = new ArrayList<String>(arguments)
+        if (!(this instanceof GradleEnvironmentCommand)) {
+            // a command for an environment has put them among its arguments, after the environment
+            systemProperties.each { String name, String value -> arguments.add("-D${name}=${value}".toString()) }
+        }
         if (showStacktrace()) {
             arguments.add('--stacktrace')
             arguments.add('-Dgrails.full.stacktrace=true')
@@ -65,6 +74,8 @@ abstract class GradleTaskCommand extends InProjectCommand {
         }
         if (exit == 0) {
             succeeded(project)
+        } else {
+            failed(project)
         }
         return exit
     }
@@ -80,7 +91,14 @@ abstract class GradleTaskCommand extends InProjectCommand {
      * @return what {@code --verbose} of the command is for Gradle
      */
     protected List<String> verboseArguments() {
-        return ['--debug']
+        // what the build does, task by task; the debug log of Gradle is that of Gradle itself and is asked for after --
+        return ['--info']
+    }
+
+    /**
+     * Called when Gradle did not end with success, after the line that says so, for what the command adds to it.
+     */
+    protected void failed(ConsoleProject project) {
     }
 
     /**

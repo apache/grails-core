@@ -113,6 +113,10 @@ dependencies {
         exclude group: 'org.apache.groovy', module: 'groovy-all'
     }
     testImplementation 'org.apache.groovy:groovy-test'
+    // what writes the catalog of the application commands, for the spec that reads what it writes: that class alone, and nothing it brings
+    testImplementation "org.apache.grails.gradle:grails-gradle-model:$projectVersion", {
+        transitive = false
+    }
     testRuntimeOnly 'org.objenesis:objenesis'
 }
 

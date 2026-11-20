@@ -30,7 +30,7 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreatePluginCommand.NAME, description = 'Creates an Grails Plugin')
+@CommandLine.Command(name = CreatePluginCommand.NAME, description = 'Creates a Grails plugin')
 @Component
 @Scope('prototype')
 @CompileStatic

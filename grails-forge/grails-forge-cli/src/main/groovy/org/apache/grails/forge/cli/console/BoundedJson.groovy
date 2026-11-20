@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
  * without repeating anything of the document.
  *
  * <p>An object is a {@link Map} in the order of the document, an array a {@link List}, a text a
- * {@link String}, a number a {@link BigDecimal}, and {@code true}, {@code false} and {@code null}
+ * {@link String}, a number that is written with digits only a {@link Long} and any other number a {@link BigDecimal}, and {@code true}, {@code false} and {@code null}
  * are themselves. An object that has a key twice is refused: which of the two a reader takes would
  * be the reader's choice.</p>
  *
@@ -197,7 +197,7 @@ final class BoundedJson {
         return true
     }
 
-    private BigDecimal number() throws Refused {
+    private Number number() throws Refused {
         int start = at
         take('-' as char)
         int whole = digits()
@@ -219,7 +219,12 @@ final class BoundedJson {
             throw new Refused("has a number of more than ${MAX_NUMBER} characters")
         }
         try {
-            return new BigDecimal(text.substring(start, at))
+            String written = text.substring(start, at)
+            // a whole number as it is written, so that 1 is told from 1.0 and from 1e0
+            if (written.length() <= 18 && written ==~ /-?[0-9]+/) {
+                return Long.valueOf(written)
+            }
+            return new BigDecimal(written)
         } catch (NumberFormatException | ArithmeticException ignored) {
             throw new Refused('has a number that cannot be read')
         }

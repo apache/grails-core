@@ -21,11 +21,13 @@ package org.apache.grails.forge.cli.console
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -52,11 +54,15 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
             @Input @Optional @Option(option = 'args-file', description = 'The file of the arguments')
             String argsFile
 
+            // read when the task is made: the task is run from the configuration cache as well
+            @Internal
+            final File base = project.projectDir
+
             @TaskAction
             void run() {
-                File file = new File(argsFile)
+                File file = new File(base, argsFile)
                 println 'file=' + file.absolutePath
-                println 'only=' + file.parentFile.list().toList()
+                println 'option=' + argsFile
                 if (file.toPath().fileSystem.supportedFileAttributeViews().contains('posix')) {
                     println 'permissions=' + java.nio.file.attribute.PosixFilePermissions.toString(java.nio.file.Files.getPosixFilePermissions(file.toPath())) +
                             ' ' + java.nio.file.attribute.PosixFilePermissions.toString(java.nio.file.Files.getPosixFilePermissions(file.parentFile.toPath()))
@@ -67,7 +73,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                     throw new GradleException('this command fails on purpose')
                 }
                 if (vector.contains('hang')) {
-                    new File(project.projectDir, 'started.txt').text = file.absolutePath + '\\n'
+                    new File(base, 'started.txt').text = file.absolutePath + '\\n'
                     Thread.sleep(180000)
                 }
             }
@@ -78,8 +84,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         '''.stripIndent()
 
     static final Map HELLO = [name: 'hello-world', aliases: [], description: 'Says hello', origin: 'org.example:hello-cli:1.2.3', target: 'application', registration: 'descriptor']
-    static final String MISSING = 'The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json. ' +
-            'They are listed after: grails-forge-cli gradle grailsCommandCatalog'
+    static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
     static final String REFUSED = 'The commands of the application and its plugins are not listed: build/grails/command-catalog.json '
 
     PrintStream originalOut
@@ -227,6 +232,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines()[1] == MISSING
         err.toString().readLines()[2].startsWith('Usage: grails-forge-cli ')
 
+        and: 'the list of the commands is not shown for a mistake: the line that says where the help is ends it'
+        err.toString().readLines()[3] == "Run 'grails-forge-cli help' for the commands"
+        err.toString().readLines().size() == 4
+
         when:
         err.reset()
         exit = ForgeCli.execute(beanContext, 'help', 'hello-world')
@@ -263,14 +272,15 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         given:
         catalog([HELLO])
         catalogFile().setLastModified(System.currentTimeMillis() - 120_000)
-        File newer = new File(dir, changed)
-        if (changed.contains('.')) {
-            newer.text = '// changed\n'
-        } else {
-            newer.mkdirs()
+        File newer = new File(dir, written)
+        newer.parentFile.mkdirs()
+        newer.text = '// changed\n'
+        // only the file is new: a directory it was put into long ago says nothing
+        for (File each = newer.parentFile; each != dir && written.contains('/'); each = each.parentFile) {
+            assert each.setLastModified(System.currentTimeMillis() - 240_000)
         }
-        String stale = "The commands of the application and its plugins may not be the ones that are listed: ${changed} was changed after " +
-                'build/grails/command-catalog.json was written. They are listed again after: grails-forge-cli gradle grailsCommandCatalog --rerun'
+        String stale = "The commands of the application and its plugins may have changed: ${changed} is newer than build/grails/command-catalog.json. " +
+                'To list them again: grails-forge-cli gradle grailsCommandCatalog --rerun'
 
         when:
         int exit = ForgeCli.execute(beanContext, 'help', '--json')
@@ -291,7 +301,51 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines()[1] == stale
 
         where:
-        changed << ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'gradle.properties', 'grails-app/commands', 'build/classes/groovy/main/META-INF/grails-commands']
+        changed                                             | written
+        'build.gradle'                                      | 'build.gradle'
+        'build.gradle.kts'                                  | 'build.gradle.kts'
+        'settings.gradle'                                   | 'settings.gradle'
+        'gradle.properties'                                 | 'gradle.properties'
+        'grails-app/commands'                               | 'grails-app/commands/BarCommand.groovy'
+        'grails-app/commands'                               | 'grails-app/commands/demo/deep/BarCommand.groovy'
+        'build/classes/groovy/main/META-INF/grails-commands' | 'build/classes/groovy/main/META-INF/grails-commands/demo.BarCommand.json'
+    }
+
+    @Unroll
+    void "a file of the build is said to be possibly out of date when #what, wherever below the commands of the application"() {
+        given:
+        File packaged = new File(dir, 'grails-app/commands/demo')
+        packaged.mkdirs()
+        new File(packaged, 'FooCommand.groovy').text = 'class FooCommand { }\n'
+        new File(packaged, 'notes.txt').text = 'no command\n'
+        catalog([HELLO])
+        long before = System.currentTimeMillis() - 240_000
+        [new File(packaged, 'FooCommand.groovy'), new File(packaged, 'notes.txt'), packaged, packaged.parentFile].each { File each -> assert each.setLastModified(before) }
+        assert catalogFile().setLastModified(System.currentTimeMillis() - 120_000)
+
+        when: 'nothing was changed since'
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+
+        then:
+        exit == 0
+        document().complete == true
+
+        when:
+        change.call(packaged)
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', '--json')
+
+        then:
+        exit == 0
+        document().complete == !stale
+        document().diagnostics.size() == (stale ? 1 : 0)
+        !stale || document().diagnostics[0].startsWith('The commands of the application and its plugins may have changed: grails-app/commands is newer than')
+
+        where:
+        what                                        | stale | change
+        'a command was written again'               | true  | { File directory -> new File(directory, 'FooCommand.groovy').text = 'class FooCommand { int a }\n' }
+        'a command was deleted'                     | true  | { File directory -> assert new File(directory, 'FooCommand.groovy').delete() }
+        'a file that is no command was written again' | false | { File directory -> new File(directory, 'notes.txt').setLastModified(System.currentTimeMillis()) }
     }
 
     void "a file of the build that is as new as what it is made from is not out of date"() {
@@ -332,7 +386,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         described.complete == false
-        described.diagnostics == [REFUSED + reason + '. It is written again by: grails-forge-cli gradle grailsCommandCatalog --rerun']
+        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsCommandCatalog --rerun']
         ((List<Map>) described.commands).every { it.origin == 'built-in' }
 
         when: 'the help a person reads says the same, with nothing of the file in it'
@@ -356,7 +410,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                      | content                                                             | reason
-        'more bytes than a file has'              | (' ' * (4 * 1024 * 1024 + 1)).bytes                                 | 'has more than the 4194304 bytes it can have'
+        'more bytes than a file has'              | (' ' * (256 * 1024 + 1)).bytes                                      | 'has more than the 262144 bytes it can have'
         'nothing'                                 | ''                                                                  | 'ends before the JSON document does'
         'no JSON'                                 | 'hostile'                                                           | 'is not JSON'
         'arrays in arrays'                        | '[' * 200_000                                                       | 'is nested deeper than 8'
@@ -372,6 +426,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'an array'                                | '[]'                                                                | 'is not a JSON object'
         'another format'                          | doc([HELLO], [format: 2])                                           | 'is not of format 1, the one that is read here'
         'a format that is text'                   | doc([HELLO], [format: '1'])                                         | 'is not of format 1, the one that is read here'
+        'a format that is 1.0'                    | doc([HELLO]).replace('"format":1', '"format":1.0')                  | 'is not of format 1, the one that is read here'
+        'a format that is 1e0'                    | doc([HELLO]).replace('"format":1', '"format":1e0')                  | 'is not of format 1, the one that is read here'
+        'no format'                               | doc([HELLO]).replace('"format":1,', '')                             | 'is not of format 1, the one that is read here'
         'no word on whether it is complete'       | doc([HELLO], [complete: 'yes'])                                     | 'does not say with true or false whether it is complete'
         'diagnostics that are no list'            | doc([HELLO], [diagnostics: 'hostile'])                              | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'a diagnostic with an escape sequence'    | doc([HELLO], [diagnostics: ['hostile \u001b[31m']])                 | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
@@ -380,47 +437,144 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'too many diagnostics'                    | doc([HELLO], [diagnostics: ['hostile'] * 66])                       | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'a diagnostic that is too long'           | doc([HELLO], [diagnostics: ['h' * 2049]])                           | 'has diagnostics that are not at most 65 lines of at most 2048 characters of printable ASCII'
         'commands that are no list'               | doc([HELLO], [commands: [name: 'hostile']])                         | 'has no list of commands'
-        'ten thousand commands'                   | doc((1..10_000).collect { HELLO + [name: 'hostile-' + it] })        | 'has more than the 2048 commands it can have'
-        'a command that is text'                  | doc([HELLO, 'hostile'])                                             | 'has something that is no command as command 2'
-        'a name in upper case'                    | doc([HELLO + [name: 'Hostile']])                                    | NAME + ' for command 1'
-        'a name that is a number'                 | doc([HELLO + [name: 7]])                                            | NAME + ' for command 1'
-        'no name'                                 | doc([HELLO, HELLO - [name: 'hello-world']])                         | NAME + ' for command 2'
-        'a name with two hyphens'                 | doc([HELLO + [name: 'hostile--x']])                                 | NAME + ' for command 1'
-        'a name that is an option'                | doc([HELLO + [name: '--hostile']])                                  | NAME + ' for command 1'
-        'a name that is a path'                   | doc([HELLO + [name: '../hostile']])                                 | NAME + ' for command 1'
-        'a name with a space'                     | doc([HELLO + [name: 'hostile x']])                                  | NAME + ' for command 1'
-        'a name with markup'                      | doc([HELLO + [name: '@|red hostile|@']])                            | NAME + ' for command 1'
-        'a name with an escape sequence'          | doc([HELLO + [name: 'hostile\u001b[31m']])                          | NAME + ' for command 1'
-        'a name that turns the line around'       | doc([HELLO + [name: 'hostile\u202e']])                              | NAME + ' for command 1'
-        'a name of 65 characters'                 | doc([HELLO + [name: 'h' * 65]])                                     | NAME + ' for command 1'
-        'other names that are no list'            | doc([HELLO + [aliases: 'hostile']])                                 | 'has other names that are not at most 16 names of a command for command 1'
-        'another name that is none'               | doc([HELLO + [aliases: ['@|red hostile|@']]])                       | 'has other names that are not at most 16 names of a command for command 1'
-        'seventeen other names'                   | doc([HELLO + [aliases: (1..17).collect { 'hostile-' + it }]])       | 'has other names that are not at most 16 names of a command for command 1'
-        'a description of two lines'              | doc([HELLO + [description: 'hostile\nline']])                       | DESCRIPTION + ' for command 1'
-        'a description with an escape sequence'   | doc([HELLO + [description: 'hostile \u001b[31m']])                  | DESCRIPTION + ' for command 1'
-        'a description that turns the line around' | doc([HELLO + [description: 'hostile \u202e']])                     | DESCRIPTION + ' for command 1'
-        'a description with half a character'     | doc([HELLO + [description: 'hostile \ud83d']])                      | DESCRIPTION + ' for command 1'
-        'a description of 513 characters'         | doc([HELLO + [description: 'h' * 513]])                             | DESCRIPTION + ' for command 1'
-        'a description that is a list'            | doc([HELLO + [description: ['hostile']]])                           | DESCRIPTION + ' for command 1'
-        'an origin with a space'                  | doc([HELLO + [origin: 'hostile origin']])                           | ORIGIN + ' for command 1'
-        'an origin of two parts'                  | doc([HELLO + [origin: 'hostile:x']])                                | ORIGIN + ' for command 1'
-        'an origin with markup'                   | doc([HELLO + [origin: '@|red hostile|@:a:1']])                      | ORIGIN + ' for command 1'
-        'an origin with an escape sequence'       | doc([HELLO + [origin: 'hostile:a:1\u001b[31m']])                    | ORIGIN + ' for command 1'
-        'an origin that turns the line around'    | doc([HELLO + [origin: 'hostile:\u202ea:1']])                        | ORIGIN + ' for command 1'
-        'an origin that is a path'                | doc([HELLO + [origin: 'file:../hostile']])                          | ORIGIN + ' for command 1'
-        'an origin of 201 characters'             | doc([HELLO + [origin: 'h' * 197 + ':a:1']])                         | ORIGIN + ' for command 1'
-        'no origin'                               | doc([HELLO - [origin: 'org.example:hello-cli:1.2.3']])              | ORIGIN + ' for command 1'
-        'a command for Gradle'                    | doc([HELLO + [target: 'gradle']])                                   | 'has the target gradle, which is not run from here, for command 1'
-        'a target there is not'                   | doc([HELLO + [target: 'hostile']])                                  | 'has a target that is none for command 1'
-        'no target'                               | doc([HELLO - [target: 'application']])                              | 'has a target that is none for command 1'
-        'a registration there is not'             | doc([HELLO + [registration: 'hostile']])                            | 'has a registration that is none of descriptor, factories, legacy for command 1'
-        'a name twice'                            | doc([HELLO, HELLO])                                                 | 'has a second command of the same name as command 2'
-        'another name that is a name'             | doc([HELLO, HELLO + [name: 'other', aliases: ['hello-world']]])     | 'has a second command of the same name as command 2'
     }
 
-    static final String NAME = 'has a name that is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most 64 characters,'
-    static final String DESCRIPTION = 'has a description that is not one line of at most 512 characters that can be shown'
-    static final String ORIGIN = 'has an origin that is neither application, nor file: and the name of a file, nor group:artifact:version, in letters, digits and _.+- and of at most 200 characters,'
+    static final String NAME = 'its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most 64 characters'
+    static final String DESCRIPTION = 'its description is not one line of at most 512 characters that can be shown'
+    static final String ORIGIN = 'its origin is not at most 120 characters of printable ASCII without a space, an @ or a dollar sign'
+    static final Map FINE = [name: 'fine', description: 'Is fine', origin: 'application', target: 'application', registration: 'descriptor']
+
+    @Unroll
+    void "a command that is not as the build writes one is left out, and the others are used: #what"() {
+        given: 'the command between two that are as they should be'
+        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: [HELLO, bad, FINE]]))
+        String leftOut = 'Command 2 of build/grails/command-catalog.json is not used: ' + reason
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        described.complete == false
+        described.diagnostics == [leftOut]
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == ['hello-world', 'fine']
+
+        when: 'the help a person reads lists the others and says the same, with nothing of the command in it'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help')
+        String help = out.toString()
+
+        then:
+        exit == 0
+        help.contains('  hello-world  Says hello (org.example:hello-cli:1.2.3)')
+        help.contains('  fine         Is fine (application)')
+        help.replaceAll(/\s+/, ' ').contains(leftOut)
+        !help.contains('hostile') && !help.contains('\u001b') && !help.contains('\u202e')
+
+        where:
+        what                                      | bad                                                    | reason
+        'a command that is text'                  | 'hostile'                                              | 'it is no command'
+        'a command that is a list'                | ['hostile']                                            | 'it is no command'
+        'a name in upper case'                    | HELLO + [name: 'Hostile']                              | NAME
+        'a name that is a number'                 | HELLO + [name: 7]                                      | NAME
+        'no name'                                 | HELLO - [name: 'hello-world']                          | NAME
+        'a name with two hyphens'                 | HELLO + [name: 'hostile--x']                           | NAME
+        'a name that is an option'                | HELLO + [name: '--hostile']                            | NAME
+        'a name that is a path'                   | HELLO + [name: '../hostile']                           | NAME
+        'a name with a space'                     | HELLO + [name: 'hostile x']                            | NAME
+        'a name with markup'                      | HELLO + [name: '@|red hostile|@']                      | NAME
+        'a name with an escape sequence'          | HELLO + [name: 'hostile\u001b[31m']                    | NAME
+        'a name that turns the line around'       | HELLO + [name: 'hostile\u202e']                        | NAME
+        'a name of 65 characters'                 | HELLO + [name: 'h' * 65]                               | NAME
+        'other names that are no list'            | HELLO + [name: 'other', aliases: 'hostile']            | 'its other names are not at most 16 names of a command'
+        'another name that is none'               | HELLO + [name: 'other', aliases: ['@|red hostile|@']]  | 'its other names are not at most 16 names of a command'
+        'seventeen other names'                   | HELLO + [name: 'other', aliases: (1..17).collect { 'hostile-' + it }] | 'its other names are not at most 16 names of a command'
+        'a description of two lines'              | HELLO + [name: 'other', description: 'hostile\nline']  | DESCRIPTION
+        'a description with an escape sequence'   | HELLO + [name: 'other', description: 'hostile \u001b[31m'] | DESCRIPTION
+        'a description that turns the line around' | HELLO + [name: 'other', description: 'hostile \u202e'] | DESCRIPTION
+        'a description with half a character'     | HELLO + [name: 'other', description: 'hostile \ud83d'] | DESCRIPTION
+        'a description of 513 characters'         | HELLO + [name: 'other', description: 'h' * 513]        | DESCRIPTION
+        'a description that is a list'            | HELLO + [name: 'other', description: ['hostile']]      | DESCRIPTION
+        'an origin with a space'                  | HELLO + [name: 'other', origin: 'hostile origin']      | ORIGIN
+        'an origin with markup'                   | HELLO + [name: 'other', origin: '@|red hostile|@:a:1'] | ORIGIN
+        'an origin with a variable'               | HELLO + [name: 'other', origin: 'hostile:${sys:user.home}:1'] | ORIGIN
+        'an origin with an escape sequence'       | HELLO + [name: 'other', origin: 'hostile:a:1\u001b[31m'] | ORIGIN
+        'an origin that turns the line around'    | HELLO + [name: 'other', origin: 'hostile:\u202ea:1']   | ORIGIN
+        'an origin of 121 characters'             | HELLO + [name: 'other', origin: 'h' * 117 + ':a:1']    | ORIGIN
+        'an origin that is empty'                 | HELLO + [name: 'other', origin: '']                    | ORIGIN
+        'no origin'                               | HELLO + [name: 'other'] - [origin: 'org.example:hello-cli:1.2.3'] | ORIGIN
+        'a command for Gradle'                    | HELLO + [name: 'other', target: 'gradle']              | 'its target is gradle, which is not run from here'
+        'a target there is not'                   | HELLO + [name: 'other', target: 'hostile']             | 'its target is none there is'
+        'no target'                               | HELLO + [name: 'other'] - [target: 'application']      | 'its target is none there is'
+        'a registration there is not'             | HELLO + [name: 'other', registration: 'hostile']       | 'its registration is none of descriptor, factories, legacy'
+        'a name twice'                            | HELLO                                                  | 'it has a name that a command before it has'
+        'another name that is a name'             | HELLO + [name: 'other', aliases: ['hello-world']]      | 'it has a name that a command before it has'
+        'its own name twice'                      | HELLO + [name: 'other', aliases: ['other']]            | 'it has a name that a command before it has'
+    }
+
+    void "of many commands that are not as the build writes them the first are named and the others counted, and of too many commands the first are used"() {
+        given:
+        List commands = (1..5).collect { HELLO + [name: 'Hostile' + it] } + (1..600).collect { FINE + [name: 'fine-' + it] }
+        write(JsonOutput.toJson([format: 1, complete: true, diagnostics: [], commands: commands]))
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then:
+        exit == 0
+        described.complete == false
+        described.diagnostics == [
+                'Command 1 of build/grails/command-catalog.json is not used: ' + NAME,
+                'Command 2 of build/grails/command-catalog.json is not used: ' + NAME,
+                'Command 3 of build/grails/command-catalog.json is not used: ' + NAME,
+                '2 more commands of build/grails/command-catalog.json are not used, for reasons like these',
+                'The commands of build/grails/command-catalog.json after the first 512 are not used: 88 of them']
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == (1..512).collect { 'fine-' + it }
+    }
+
+    @Unroll
+    void "what the task of the build writes for a command of #origin is read"() {
+        given: 'the catalog as the builder of the task writes it, for a class that the element registers'
+        File element = new File(dir, 'element')
+        new File(element, 'META-INF').mkdirs()
+        new File(element, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=demo.SeedCommand\n'
+        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        builder.add(origin, element)
+        String json = builder.toJson()
+        write(json)
+        String written = ((List<Map>) ((Map) new JsonSlurper().parseText(json)).commands)[0].origin
+        element.deleteDir()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then: 'one definition of where a command can come from: nothing the task writes is refused'
+        ApplicationCommandFile.isOrigin(written)
+        exit == 0
+        described.diagnostics == []
+        described.complete == true
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' } ==
+                [[name: 'seed', aliases: [], description: '', project: true, origin: written, target: 'application', registration: 'factories', commands: []]]
+
+        when: 'and it is shown as it is written'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        out.toString().contains("  seed  (${written})")
+
+        where:
+        origin << ['application', 'org.example:reports:1.0', 'file:reports-1.0.jar', 'file:my plugin.jar', 'file:lib (1).jar', 'file:reports~1.jar', 'file:.hidden.jar',
+                   'my app:reports-cli:unspecified', ':reports-cli:unspecified', 'org.example:reports:1.0-SNAPSHOT', 'org.example:reports:[1.0,2.0)', 'file:r\u00e9ports.jar',
+                   'org.example:reports:1.0:extra', 'file:' + 'a' * 130 + '.jar', 'org.example:rep@rts:$1', 'org.example:reports:1.0+build.5', 'com.github.User:repo:-SNAPSHOT',
+                   'file:plugin#1.jar', 'file:plugin,v2.jar', 'file:plugin%20x.jar', "file:it's.jar", 'file:a\u001b[31mb.jar', 'file:\u202egro.jar', 'file:@|red x|@.jar',
+                   'file:${sys:user.home}.jar', 'x' * 500]
+    }
 
     @IgnoreIf({ os.windows })
     @Timeout(value = 120, unit = TimeUnit.SECONDS)
@@ -439,7 +593,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         described.complete == false
-        described.diagnostics == [REFUSED + reason + '. It is written again by: grails-forge-cli gradle grailsCommandCatalog --rerun']
+        described.diagnostics == [REFUSED + reason + '. To write it again: grails-forge-cli gradle grailsCommandCatalog --rerun']
         ((List<Map>) described.commands).every { it.origin == 'built-in' }
 
         where:
@@ -560,22 +714,32 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
                                            'That one is run with: grails-forge-cli run-command compile']
     }
 
-    void "a short form is looked for among the commands of the CLI and of the build alike"() {
-        given: 'a generated application, which has create-controller and create-command'
+    void "a short form is one of a command of the CLI before it is one of a command of the build, which takes none away"() {
+        given: 'a generated application, which has create-controller and create-command, and commands of the build that are named like commands of the CLI'
         generateProject(ApplicationType.WEB)
-        catalog([HELLO, [name: 'create-cat', origin: 'application', target: 'application', registration: 'descriptor'],
-                 [name: 'hello-there', origin: 'application', target: 'application', registration: 'descriptor']])
+        catalog([HELLO] + ['create-cat', 'hello-there', 'hlep', 'complie', 'create-application'].collect { String name ->
+            [name: name, origin: 'org.example:typos:1.0', target: 'application', registration: 'descriptor']
+        })
 
-        when:
+        when: 'what was short for two commands of the CLI is short for those two'
         int exit = ForgeCli.execute(beanContext, 'cC', 'Book')
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command, create-cat. Type more of the name of the one that is meant'
+        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command. Type more of the name of the one that is meant'
         !new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').exists()
 
-        when: 'a short form that only a command of the build has'
+        when: 'and what was short for one command of the CLI is that command'
         err.reset()
+        out.reset()
+        exit = ForgeCli.execute(beanContext, typed, '--help')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines()[0].startsWith("Usage: grails-forge-cli ${command} ")
+
+        when: 'a short form that only commands of the build have is theirs'
         out.reset()
         exit = ForgeCli.execute(beanContext, 'help', 'hT')
 
@@ -583,6 +747,22 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         out.toString().readLines()[0] == 'Usage: grails-forge-cli hello-there [ARGS...]'
+
+        when: 'the commands of the build are all there, under their names'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', '--json')
+
+        then:
+        exit == 0
+        document().diagnostics == []
+        ((List<Map>) document().commands).findAll { it.origin != 'built-in' }*.name == ['complie', 'create-application', 'create-cat', 'hello-there', 'hello-world', 'hlep']
+
+        where:
+        typed  | command
+        'h'    | 'help'
+        'comp' | 'compile'
+        'cA'   | 'create-app'
+        'cApp' | 'create-app'
     }
 
     @IgnoreIf({ os.windows })
@@ -601,16 +781,17 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         lineOf('requested=') == '<runCommand><--args-file=>'
         lineOf('vector=') == (['hello-world'] + arguments).collect { '<' + it.getBytes('UTF-8').encodeHex() + '>' }.join('')
-        lineOf('only=') == '[arguments.json]'
         lineOf('permissions=') == 'rw------- rwx------'
         errors() == []
 
-        and: 'the file is in a directory of its own, and neither is left'
-        file.name == 'arguments.json'
-        file.parentFile.name.startsWith('grails-command')
-        !file.exists()
-        !file.parentFile.exists()
-        ConsoleProject.isOwnedByUser(file.parentFile.parentFile.toPath()) || file.parentFile.parentFile == new File(System.getProperty('java.io.tmpdir'))
+        and: 'before Gradle is started it is said what is run, and where it comes from, on the error stream'
+        err.toString().readLines()[0] == '| Running the command hello-world of org.example:hello-cli:1.2.3, with the Gradle task runCommand'
+
+        and: 'the file has the same name in the project every time, which is what Gradle is given, and is gone afterwards'
+        lineOf('option=') == '.grails/run/command-args-0.json'
+        file.canonicalFile == new File(dir, '.grails/run/command-args-0.json').canonicalFile
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+        permissions('.grails/run/.gitignore') == 'rw-------'
 
         when: 'by another name of the command, and without arguments'
         out.reset()
@@ -619,7 +800,30 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         lineOf('vector=') == '<' + 'hello-world'.bytes.encodeHex() + '>'
-        !new File(lineOf('file=')).parentFile.exists()
+        lineOf('option=') == '.grails/run/command-args-0.json'
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a build with the configuration cache configures once for a command, whatever its arguments are the next time"() {
+        given:
+        plainProject()
+        new File(dir, 'gradle.properties') << 'org.gradle.configuration-cache=true\n'
+        catalog([HELLO])
+
+        when:
+        int first = ForgeCli.execute(beanContext, 'hello-world', 'one')
+        String stored = out.toString()
+        out.reset()
+        int second = ForgeCli.execute(beanContext, 'hello-world', 'two', 'three  words')
+
+        then:
+        first == 0
+        stored.contains('Configuration cache entry stored')
+        second == 0
+        out.toString().contains('Reusing configuration cache')
+        out.toString().contains('Configuration cache entry reused')
+        lineOf('vector=') == ['hello-world', 'two', 'three  words'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
     }
 
     @IgnoreIf({ os.windows })
@@ -636,7 +840,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         all().contains('this command fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
-        !new File(lineOf('file=')).parentFile.exists()
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
     }
 
     @IgnoreIf({ os.windows })
@@ -664,7 +868,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit.get() == 1
         errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
         !file.exists()
-        !file.parentFile.exists()
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
     }
 
     @Unroll
@@ -677,17 +881,18 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == message
-        !err.toString().contains('hostile')
+        err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
+                                       'Usage: grails-forge-cli hello-world [ARGS...]',
+                                       "Run 'grails-forge-cli help hello-world' for the options"]
         dir.list().sort() == ['build', 'grails-app']
 
         where:
         what                    | arguments                         | message
-        'the character U+0000'  | ['fine', 'hostile\u0000']         | 'Argument 2 of hello-world has a character that cannot be given to a command: the character U+0000, or half of a character of two parts'
-        'half a character'      | ['hostile\ud83d']                 | 'Argument 1 of hello-world has a character that cannot be given to a command: the character U+0000, or half of a character of two parts'
-        'the other half'        | ['\ude00hostile']                 | 'Argument 1 of hello-world has a character that cannot be given to a command: the character U+0000, or half of a character of two parts'
-        'too many'              | ['hostile'] * 4096                | 'hello-world was given more than the 4095 arguments the Gradle task runCommand takes'
-        'too much'              | ['hostile' * 150_000]             | 'The arguments of hello-world are more than the 1048576 bytes the Gradle task runCommand takes'
+        'the character U+0000'  | ['fine', 'hostile\u0000']         | 'argument 3 has the character U+0000, which no command line carries'
+        'half a character'      | ['hostile\ud83d']                 | 'argument 2 has half of a character of two code units, which cannot be written as text'
+        'the other half'        | ['\ude00hostile']                 | 'argument 2 has half of a character of two code units, which cannot be written as text'
+        'too many'              | ['hostile'] * 4096                | 'these are 4097 arguments, and the task that runs a command takes 4096 at most'
+        'too much'              | ['hostile' * 150_000]             | 'the arguments are more than 1048576 bytes in UTF-8, and the task that runs a command reads no more'
     }
 
     void "a command of the build is not run without the Gradle wrapper of the project, and not outside the project"() {
@@ -769,6 +974,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         !out.toString().contains('command-catalog')
+    }
+
+    private String permissions(String path) {
+        return PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(dir, path).toPath()))
     }
 
     private File catalogFile() {

@@ -36,7 +36,7 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'stats', description = 'Prints how many source files the Grails project has, and how many lines of code, by the kind of class.')
+@CommandLine.Command(name = 'stats', description = 'Prints how many source files the Grails project has, and how many lines of code, by the kind of class')
 @CompileStatic
 class StatsCommand extends InProjectCommand {
 

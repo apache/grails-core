@@ -27,7 +27,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateInterceptorCommand.NAME, description = 'Creates a Interceptor Class')
+@CommandLine.Command(name = CreateInterceptorCommand.NAME, description = 'Creates an interceptor')
 @CompileStatic
 class CreateInterceptorCommand extends CodeGenCommand {
 

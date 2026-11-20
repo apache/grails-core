@@ -30,7 +30,7 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateRestApiCommand.NAME, description = 'Creates an REST API')
+@CommandLine.Command(name = CreateRestApiCommand.NAME, description = 'Creates a REST API application')
 @Component
 @Scope('prototype')
 @CompileStatic

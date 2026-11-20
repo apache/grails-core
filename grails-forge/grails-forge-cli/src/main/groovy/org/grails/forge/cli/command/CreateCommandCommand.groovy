@@ -64,8 +64,13 @@ class CreateCommandCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        return generate('command', newArtefact(commandName, 'Command'), [
+        Integer exit = generate('command', newArtefact(commandName, 'Command'), [
                 'grails-app/commands/{packagePath}/{className}Command.groovy': ArtefactTemplate.COMMAND
         ])
+        if (exit == 0) {
+            // the build lists the commands of the application, and is not run for it from here
+            out("@|blue ||@ To make it a command of ${spec.root().name()}, list the commands of the application again: ${spec.root().name()} gradle grailsCommandCatalog")
+        }
+        return exit
     }
 }

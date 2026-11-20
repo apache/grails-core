@@ -161,7 +161,13 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         line                                 | requested   | system                                                | start
         ['compile', '--stacktrace']          | '<classes>' | '<grails.full.stacktrace=true>'                       | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
         ['test-app', '-x']                   | '<test>'    | '<grails.env=test><grails.full.stacktrace=true>'      | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
-        ['clean', '--verbose']               | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=DEBUG continuous=false offline=false'
+        ['clean', '--verbose']               | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=INFO continuous=false offline=false'
+        ['-v', 'clean']                      | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=INFO continuous=false offline=false'
+        ['-x', 'compile']                    | '<classes>' | '<grails.full.stacktrace=true>'                       | 'ALWAYS level=LIFECYCLE continuous=false offline=false'
+        ['-xv', 'test-app', '--unit']        | '<test>'    | '<grails.env=test><grails.full.stacktrace=true>'      | 'ALWAYS level=INFO continuous=false offline=false'
+        ['compile', '-Dfoo=bar', '-Dflag']   | '<classes>' | '<flag=><foo=bar>'                                    | 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=false offline=false'
+        ['clean', '-D', 'grails.env=test']   | '<clean>'   | '<grails.env=test>'                                   | 'INTERNAL_EXCEPTIONS level=LIFECYCLE continuous=false offline=false'
+        ['clean', '--', '--debug']           | '<clean>'   | ''                                                    | 'INTERNAL_EXCEPTIONS level=DEBUG continuous=false offline=false'
         ['compile', '--', '--offline', '-q'] | '<classes>' | ''                                                    | 'INTERNAL_EXCEPTIONS level=QUIET continuous=false offline=true'
     }
 
@@ -220,37 +226,85 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         !out.toString().contains('Tests PASSED')
         !out.toString().contains('Usage:')
         !out.toString().contains('\tat ')
+        !out.toString().contains('| Note')
     }
 
     @Unroll
-    void "outside a project #command runs nothing and says so"() {
+    void "when #line fails, it is #said that Gradle fails a test task that has no test of a name"() {
+        given: 'a project with integration tests, whose build fails'
+        plainProject(dir)
+        new File(dir, 'src/integration-test/groovy').mkdirs()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (line + ['-Dfail=true']) as String[])
+
+        then: 'the failure is the one line it was, and the note is another kind of line'
+        exit == 1
+        errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
+        out.toString().readLines().findAll { String each -> each.startsWith('| Note') } == (said == 'said' ? [
+                '| Note The tests that were named were asked of the unit tests and of the integration tests, and Gradle fails a task that has no test of a name ' +
+                        '("No tests found for given includes"). If that is what happened, say which are meant with --unit or with --integration'] : [])
+
+        where:
+        line                                          | said
+        ['test-app', '*BookControllerSpec']           | 'said'
+        ['test-app', '--tests', '*BookControllerSpec'] | 'said'
+        ['test-app', '--unit', 'BookControllerSpec']  | 'not said'
+        ['test-app', '--integration', 'BookSpec']     | 'not said'
+        ['test-app']                                  | 'not said'
+    }
+
+    @Unroll
+    void "#command takes a system property and gives it to Gradle, as every command that is a build does"() {
+        given:
+        plainProject(dir)
+        new File(dir, 'src/main/groovy/example').mkdirs()
+        new File(dir, 'src/main/groovy/example/ShopGrailsPlugin.groovy').text = 'package example\nclass ShopGrailsPlugin { }\n'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, command, '-Dfoo=two  words', '-D', 'other=1')
+
+        then:
+        exit == 0
+        lineOf('system=').contains('<foo=two  words>')
+        lineOf('system=').contains('<other=1>')
+        errors() == []
+
+        when: 'and says so in its help, as it is typed'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', command)
+
+        then:
+        exit == 0
+        out.toString().contains('[-DNAME=VALUE]...')
+        out.toString().readLines().any { String line -> line.trim().startsWith('-DNAME=VALUE ') }
+        !out.toString().contains('-D=')
+
+        where:
+        command << ['compile', 'clean', 'assemble', 'dependency-report', 'test-app', 'package-plugin', 'publish-plugin']
+    }
+
+    @Unroll
+    void "outside a project #typed runs nothing and says so, as every command of a project does"() {
         given:
         plainProject(dir)
         new File(dir, 'grails-app').deleteDir()
 
         when:
-        int exit = ForgeCli.execute(beanContext, command)
+        int exit = ForgeCli.execute(beanContext, typed)
 
         then:
         exit == 1
         errors().size() == 1
-        errors()[0].startsWith('| Error There is no Grails project here: neither ')
-        errors()[0].endsWith(notDone)
+        errors()[0] == "| Error ${command} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it"
         !out.toString().contains('Usage:')
         !new File(dir, '.gradle').exists()
         !new File(dir, 'build').exists()
 
         where:
-        command             | notDone
-        'compile'           | 'Gradle was not run'
-        'clean'             | 'Gradle was not run'
-        'assemble'          | 'Gradle was not run'
-        'war'               | 'Gradle was not run'
-        'package'           | 'Gradle was not run'
-        'dependency-report' | 'Gradle was not run'
-        'test-app'          | 'Gradle was not run'
-        'stats'             | 'Nothing was counted'
-        'bug-report'        | 'No bug report was created'
+        typed << ['compile', 'clean', 'assemble', 'war', 'package', 'dependency-report', 'test-app', 'stats', 'bug-report', 'package-plugin', 'publish-plugin']
+        // a command says its name, whichever of its names was typed
+        command = typed in ['war', 'package'] ? 'assemble' : typed
     }
 
     void "a project without a Gradle wrapper is not built with another Gradle"() {
@@ -455,8 +509,10 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
             out.toString().readLines().any { String line -> line.trim().startsWith(name + ' ') }
         }
         !out.toString().readLines().any { String line -> line.trim().startsWith('install ') }
-        !out.toString().contains('package-plugin')
-        !out.toString().contains('publish-plugin')
+
+        and: 'the two of a plugin project too: they say outside a project what the others say, and are left out in a project that is no plugin'
+        out.toString().contains('  package-plugin ')
+        out.toString().contains('  publish-plugin ')
 
         when:
         out.reset()
@@ -467,7 +523,11 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         out.toString().contains('--integration')
         out.toString().contains('--continuous')
-        out.toString().contains('-D=NAME=VALUE') || out.toString().contains('-D NAME=VALUE')
+
+        and: 'a system property is shown as it is typed, in the line of the usage and among the options'
+        out.toString().contains(' [-DNAME=VALUE]...')
+        out.toString().readLines().any { String line -> line.trim().startsWith('-DNAME=VALUE ') }
+        !out.toString().contains('-D=')
         !out.toString().contains('requested=')
         !new File(dir, '.gradle').exists()
     }
@@ -789,9 +849,9 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         compile == 1
         errors().size() == 3
         errors().every { String line -> line.startsWith("| Error The Grails project in ${dir.canonicalPath}, above ${below.canonicalPath}, is not used: ${dir.canonicalPath} is owned by ") }
-        errors()[0].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. Nothing was counted")
-        errors()[1].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. No bug report was created")
-        errors()[2].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. Gradle was not run")
+        errors()[0].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. stats is a command of a Grails project, and was not run")
+        errors()[1].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. bug-report is a command of a Grails project, and was not run")
+        errors()[2].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. compile is a command of a Grails project, and was not run")
         !out.toString().contains('Domain Classes')
         !new File(dir, 'build').exists()
 

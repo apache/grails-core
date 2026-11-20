@@ -120,7 +120,7 @@ final class ApplicationCommands {
      * not there because the CLI has one by its name is named in the diagnostics, and leaves this as it is
      */
     boolean isComplete() {
-        return file.state == ApplicationCommandFile.State.CURRENT && file.complete && scripts.complete
+        return file.state == ApplicationCommandFile.State.CURRENT && file.complete && file.leftOut.isEmpty() && scripts.complete
     }
 
     /**
@@ -136,6 +136,7 @@ final class ApplicationCommands {
         for (String line : file.diagnostics) {
             lines.add("The Gradle task ${ApplicationCommandFile.TASK} says: ${line}".toString())
         }
+        lines.addAll(file.leftOut)
         lines.addAll(scripts.diagnostics)
         // once for a command, whichever of its names are taken
         Set<ApplicationCommandFile.Entry> named = Collections.newSetFromMap(new IdentityHashMap<ApplicationCommandFile.Entry, Boolean>())
@@ -230,12 +231,11 @@ final class ApplicationCommands {
         String gradle = "${root.getCommandName()} gradle ${ApplicationCommandFile.TASK}"
         switch (file.state) {
             case ApplicationCommandFile.State.MISSING:
-                return "${OF_WHAT} are not listed: the project has no ${ApplicationCommandFile.LOCATION}. They are listed after: ${gradle}"
+                return "${OF_WHAT} are not listed yet. To list them: ${gradle}"
             case ApplicationCommandFile.State.REFUSED:
-                return "${OF_WHAT} are not listed: ${ApplicationCommandFile.LOCATION} ${file.reason}. It is written again by: ${gradle} --rerun"
+                return "${OF_WHAT} are not listed: ${ApplicationCommandFile.LOCATION} ${file.reason}. To write it again: ${gradle} --rerun"
             case ApplicationCommandFile.State.STALE:
-                return "${OF_WHAT} may not be the ones that are listed: ${file.reason} was changed after ${ApplicationCommandFile.LOCATION} was written. " +
-                        "They are listed again after: ${gradle} --rerun"
+                return "${OF_WHAT} may have changed: ${file.reason} is newer than ${ApplicationCommandFile.LOCATION}. To list them again: ${gradle} --rerun"
             default:
                 return null
         }
@@ -273,34 +273,33 @@ final class ApplicationCommands {
         listed.append(String.format('%n')).append(scheme.ansi().string('@|bold,underline Commands of the application and its plugins:|@')).append(String.format('%n'))
         if (!commands.isEmpty()) {
             int names = Math.min(commands.values().collect { CommandLine.Help each -> each.commandNamesText(', ').getCJKAdjustedLength() }.max(), width.intdiv(2))
-            CommandLine.Help.TextTable table = CommandLine.Help.TextTable.forColumns(scheme,
-                    new CommandLine.Help.Column(names + 2, 2, CommandLine.Help.Column.Overflow.SPAN),
-                    new CommandLine.Help.Column(width - (names + 2), 2, CommandLine.Help.Column.Overflow.WRAP))
             for (CommandLine.Help each : commands.values()) {
                 ApplicationCommandFile.Entry entry = ((ApplicationCommandCommand) each.commandSpec().userObject()).getEntry()
                 String origin = entry.isScript() ? 'script of the application' : entry.origin
                 String description = entry.description.isEmpty() ? "(${origin})" : "${ApplicationCommandCommand.shown(entry.description)} (${origin})"
-                table.addRowValues(each.commandNamesText(', '), scheme.text(description))
+                listed.append(wrapped('  ' + each.commandNamesText(', ').plainString().padRight(names + 2), description, names + 4, width))
             }
-            listed.append(table.toString())
         }
         for (String note : notes) {
-            listed.append(wrapped(note, width))
+            listed.append(wrapped('  ', note, 4, width))
         }
         return listed.toString()
     }
 
-    // A line for the help, broken between words only: what is to be typed stays in one piece. It is
-    // written as it is, and is not read for the markup of the command line.
-    private static String wrapped(String note, int width) {
+    // Lines for the help, broken between words only: coordinates, and what is to be typed, stay in one
+    // piece. The text is written as it is, and is not read for the markup of the command line.
+    private static String wrapped(String start, String text, int indent, int width) {
         StringBuilder wrapped = new StringBuilder()
-        String line = ' '
-        for (String word : note.split(' ')) {
-            if (line.length() > 3 && line.length() + 1 + word.length() > width) {
+        String line = start
+        boolean first = true
+        for (String word : text.split(' ')) {
+            if (!first && line.length() + 1 + word.length() > width) {
                 wrapped.append(line).append(String.format('%n'))
-                line = '   '
+                line = ' ' * indent
+                first = true
             }
-            line = line + ' ' + word
+            line = first ? line + word : line + ' ' + word
+            first = false
         }
         return wrapped.append(line).append(String.format('%n')).toString()
     }

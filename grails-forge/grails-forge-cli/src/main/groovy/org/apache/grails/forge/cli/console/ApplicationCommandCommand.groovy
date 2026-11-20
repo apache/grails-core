@@ -18,13 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.FileSystems
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.PosixFilePermissions
 import java.util.function.Consumer
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import org.grails.forge.application.OperatingSystem
 import picocli.CommandLine
@@ -38,7 +32,9 @@ import picocli.CommandLine
  *
  * <p>Everything after the name of the command is the command's and is given to it as the list of
  * arguments it is, one for one: the command of the CLI has no options of its own. The arguments are
- * handed to Gradle in a file only the user can read, so that none of them is on a command line.</p>
+ * handed to Gradle in a file only the user can read, see {@link CommandArgumentsFile}, so that none
+ * of them is on a command line. Before Gradle is started one line on the error stream says which
+ * command of which origin is run.</p>
  *
  * @since 9.0
  */
@@ -46,20 +42,11 @@ import picocli.CommandLine
 @CompileStatic
 class ApplicationCommandCommand extends InProjectCommand {
 
-    /** How many arguments the Gradle task takes, the name of the command among them. */
-    public static final int MAX_ARGUMENTS = 4096
-
-    /** How many bytes the file of the arguments has, at most, for the Gradle task to read it. */
-    public static final int MAX_BYTES = 1024 * 1024
-
     /** The Gradle task that runs a command in the application. */
     public static final String TASK = 'runCommand'
 
     /** What is said of every script: scripts are kept for the applications that have them. */
     public static final String DEPRECATED = 'Script commands are deprecated. Write a new command as a class of the application: create-command'
-
-    private static final String DIRECTORY_PREFIX = 'grails-command'
-    private static final String FILE = 'arguments.json'
 
     @CommandLine.Parameters(arity = '0..*', paramLabel = 'ARGS', description = 'The arguments of the command, which are given to it as they are.')
     List<String> arguments = []
@@ -150,92 +137,41 @@ class ApplicationCommandCommand extends InProjectCommand {
     protected int run(ConsoleProject project) {
         List<String> vector = [entry.name]
         vector.addAll(arguments)
-        String refused = refusal(vector)
-        byte[] bytes = refused == null ? JsonOutput.toJson(vector).getBytes(StandardCharsets.UTF_8) : null
-        if (refused == null && bytes.length > MAX_BYTES) {
-            refused = "The arguments of ${entry.name} are more than the ${MAX_BYTES} bytes the Gradle task ${task()} takes"
-        }
+        String refused = CommandArgumentsFile.refusal(vector)
         if (refused != null) {
-            throw new CommandLine.ParameterException(spec.commandLine(), refused)
+            throw new CommandLine.ParameterException(spec.commandLine(), "The command cannot be given these arguments: ${refused}")
         }
-        Path directory
-        Path file
+        CommandArgumentsFile file
         try {
-            directory = privateDirectory()
-        } catch (IOException | UnsupportedOperationException | SecurityException e) {
-            err("No directory could be created for the file that gives Gradle the arguments of ${entry.name}: ${GradleRunner.line(e.getMessage())}. The command was not run")
+            file = CommandArgumentsFile.write(project, vector)
+        } catch (IOException e) {
+            err("The arguments of the command could not be written for Gradle: ${GradleRunner.line(e.getMessage())}. Gradle was not run")
             return 1
         }
-        // when this JVM is ended while Gradle runs, the arguments are not left behind
-        Thread whenEnded = new Thread({ delete(directory) } as Runnable, 'grails-command-arguments')
-        Runtime.getRuntime().addShutdownHook(whenEnded)
         try {
-            try {
-                file = privateFile(directory)
-                Files.write(file, bytes)
-            } catch (IOException | UnsupportedOperationException | SecurityException e) {
-                err("The file that gives Gradle the arguments of ${entry.name} could not be written: ${GradleRunner.line(e.getMessage())}. The command was not run")
-                return 1
-            }
-            GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+            // On the error stream, since what the command writes is the output: what is typed can be
+            // the name of a command of a plugin by one letter, and this says what runs before it does.
+            PrintWriter said = spec.commandLine().getErr()
+            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${running()}"))
             if (entry.isScript()) {
-                // on the error stream: what the script writes is the output of the command
-                spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
+                said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
             }
-            return runner.run(project, [task(), '--args-file=' + file])
+            said.flush()
+            GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+            return runner.run(project, [task(), file.option])
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
-            delete(directory)
-            try {
-                Runtime.getRuntime().removeShutdownHook(whenEnded)
-            } catch (IllegalStateException ignored) {
-                // the JVM is shutting down, and the hook runs
-            }
+            file.close()
         }
     }
 
-    // what the Gradle task refuses is refused here, before a build is started for it, and without repeating the argument
-    private String refusal(List<String> vector) {
-        if (vector.size() > MAX_ARGUMENTS) {
-            return "${entry.name} was given more than the ${MAX_ARGUMENTS - 1} arguments the Gradle task ${task()} takes"
+    // what is about to run and where it comes from; every part of it was held to what can be shown
+    private String running() {
+        if (entry.isScript()) {
+            return "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}"
         }
-        for (int i = 1; i < vector.size(); i++) {
-            String argument = vector.get(i)
-            for (int at = 0; at < argument.length(); at++) {
-                char character = argument.charAt(at)
-                boolean half = Character.isHighSurrogate(character) ? at + 1 == argument.length() || !Character.isLowSurrogate(argument.charAt(at + 1)) :
-                        Character.isLowSurrogate(character) && (at == 0 || !Character.isHighSurrogate(argument.charAt(at - 1)))
-                if (character == (0 as char) || half) {
-                    return "Argument ${i} of ${entry.name} has a character that cannot be given to a command: the character U+0000, or half of a character of two parts"
-                }
-            }
-        }
-        return null
-    }
-
-    private static boolean isPosix() {
-        return FileSystems.getDefault().supportedFileAttributeViews().contains('posix')
-    }
-
-    // a directory of the user's own, where no one else can put or read a file
-    private static Path privateDirectory() throws IOException {
-        return isPosix() ? Files.createTempDirectory(DIRECTORY_PREFIX, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------'))) :
-                Files.createTempDirectory(DIRECTORY_PREFIX)
-    }
-
-    private static Path privateFile(Path directory) throws IOException {
-        Path file = directory.resolve(FILE)
-        return isPosix() ? Files.createFile(file, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rw-------'))) : Files.createFile(file)
-    }
-
-    private static void delete(Path directory) {
-        try {
-            Files.deleteIfExists(directory.resolve(FILE))
-            Files.deleteIfExists(directory)
-        } catch (IOException | SecurityException ignored) {
-            // what is left is in a directory only the user can read
-        }
+        return "the command ${entry.name} of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, with the Gradle task ${task()}"
     }
 
     /**

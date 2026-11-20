@@ -308,15 +308,9 @@ final class RunningApplication {
         return began.isPresent() && began.get().toEpochMilli() == started
     }
 
+    // a number that is written with digits alone is read as one of these, and no other number is
     private static Long whole(Object value) {
-        if (!(value instanceof BigDecimal)) {
-            return null
-        }
-        BigDecimal number = (BigDecimal) value
-        if (number.scale() != 0 || number.precision() > 18) {
-            return null
-        }
-        return Long.valueOf(number.longValueExact())
+        return value instanceof Long ? (Long) value : null
     }
 
     // the numbers of a record; whether run-app left the application is 1 or 0

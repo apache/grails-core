@@ -21,9 +21,12 @@ package org.apache.grails.forge.cli.console
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitOption
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
@@ -36,9 +39,10 @@ import groovy.transform.CompileStatic
  * The CLI reads it and never writes it, and runs nothing to have it.
  *
  * <p>The file is in a directory every build writes to, so nothing in it is taken as it is: it is a
- * file, not a link and not behind one, of a bounded size; it is read strictly as the document the
- * task writes, every member is held to what the task can write, and a file that is anything else is
- * not used at all. Why not is one line that repeats nothing of the file.</p>
+ * file, not a link and not behind one, of a bounded size, and it is read strictly as the document the
+ * task writes. A file that is not such a document is not used at all. A command in it that is not as
+ * the task writes one is left out, alone, and the others are used; why is one line that repeats
+ * nothing of the file.</p>
  *
  * @since 9.0
  */
@@ -52,10 +56,10 @@ final class ApplicationCommandFile {
     public static final String TASK = 'grailsCommandCatalog'
 
     /** How many bytes the file has, at most. */
-    public static final int MAX_BYTES = 4 * 1024 * 1024
+    public static final int MAX_BYTES = 256 * 1024
 
-    /** How many commands the file has, at most: as many as the task writes. */
-    public static final int MAX_COMMANDS = 2048
+    /** How many commands of the file are used, at most: the first of them. */
+    public static final int MAX_COMMANDS = 512
 
     /** How many lines the file has about what the build could not list: as many as the task writes, with its line that says how many more. */
     public static final int MAX_DIAGNOSTICS = 65
@@ -72,8 +76,17 @@ final class ApplicationCommandFile {
     /** How many characters the description of a command has, at most. */
     public static final int MAX_DESCRIPTION = 512
 
-    /** How many characters the origin of a command has, at most. */
-    public static final int MAX_ORIGIN = 200
+    /** How many characters the origin of a command has, at most: as many as the task writes. */
+    public static final int MAX_ORIGIN = 120
+
+    /** How many of the commands that are left out are named by their place in the file; the others are counted. */
+    public static final int MAX_LEFT_OUT = 3
+
+    /** How many entries of a directory of commands are looked at for what was changed, at most. */
+    public static final int MAX_WALKED = 4096
+
+    /** How deep a directory of commands is looked at for what was changed, at most. */
+    public static final int MAX_WALK_DEPTH = 24
 
     /** The origin of a command of the project itself, and the target of every command of the file. */
     public static final String APPLICATION = 'application'
@@ -83,8 +96,6 @@ final class ApplicationCommandFile {
     private static final int MAX_VALUES = 100_000
     private static final int MAX_TEXT = 4096
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
-    private static final String PART = '[A-Za-z0-9_][A-Za-z0-9_.+-]*'
-    private static final Pattern ORIGIN = Pattern.compile(APPLICATION + '|file:' + PART + '|' + PART + ':' + PART + ':' + PART)
     private static final List<String> REGISTRATIONS = ['descriptor', 'factories', 'legacy']
     private static final List<String> OTHER_TARGETS = ['console', 'standalone', 'gradle', 'session']
     private static final List<Integer> NOT_SHOWN = [(int) Character.CONTROL, (int) Character.FORMAT, (int) Character.LINE_SEPARATOR,
@@ -92,8 +103,11 @@ final class ApplicationCommandFile {
                                                     (int) Character.UNASSIGNED]
     // What the list of the commands is made from, as far as it is in a fixed place: when one of these
     // was changed after the file was written, the file may not say what the build would say now.
-    private static final List<String> SOURCES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties',
-                                                 'grails-app/commands', 'build/classes/groovy/main/META-INF/grails-commands']
+    private static final List<String> SOURCES = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts', 'gradle.properties']
+    // The directories the commands of the application are in, as sources and as what the compiler says
+    // of them: every directory below them and every file of these endings is looked at, since a
+    // command is written into the directory of its package.
+    private static final Map<String, String> COMMAND_DIRECTORIES = ['grails-app/commands': '.groovy', 'build/classes/groovy/main/META-INF/grails-commands': '.json']
 
     /** What there is of the file. */
     static enum State {
@@ -129,12 +143,16 @@ final class ApplicationCommandFile {
     /** What the build could not list, as the file says: one line each, of printable ASCII. */
     final List<String> diagnostics
 
-    private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics) {
+    /** The commands of the file that are not used, and why: one line each, with nothing of the file in it. */
+    final List<String> leftOut
+
+    private ApplicationCommandFile(State state, String reason, List<Entry> commands, boolean complete, List<String> diagnostics, List<String> leftOut) {
         this.state = state
         this.reason = reason
         this.commands = commands
         this.complete = complete
         this.diagnostics = diagnostics
+        this.leftOut = leftOut
     }
 
     /**
@@ -178,18 +196,18 @@ final class ApplicationCommandFile {
             }
             ApplicationCommandFile read = parse(bytes)
             String changed = read.state == State.CURRENT ? changedSince(project, attributes.lastModifiedTime()) : null
-            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics)
+            return changed == null ? read : new ApplicationCommandFile(State.STALE, changed, read.commands, read.complete, read.diagnostics, read.leftOut)
         } catch (IOException | RuntimeException ignored) {
             return refused('cannot be read')
         }
     }
 
     private static ApplicationCommandFile missing() {
-        return new ApplicationCommandFile(State.MISSING, null, Collections.<Entry>emptyList(), true, Collections.<String>emptyList())
+        return new ApplicationCommandFile(State.MISSING, null, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
     }
 
     private static ApplicationCommandFile refused(String reason) {
-        return new ApplicationCommandFile(State.REFUSED, reason, Collections.<Entry>emptyList(), true, Collections.<String>emptyList())
+        return new ApplicationCommandFile(State.REFUSED, reason, Collections.<Entry>emptyList(), true, Collections.<String>emptyList(), Collections.<String>emptyList())
     }
 
     // the bytes the file had when its size was read, and no more however long it has become since; null when it has more
@@ -228,8 +246,8 @@ final class ApplicationCommandFile {
             return refused('is not a JSON object')
         }
         Map<String, Object> members = (Map<String, Object>) document
-        Object format = members.get('format')
-        if (!(format instanceof BigDecimal) || ((BigDecimal) format).compareTo(BigDecimal.ONE) != 0) {
+        // the number as it is written: 1.0 and 1e0 are not what the task writes
+        if (!(members.get('format') instanceof Long) || ((Long) members.get('format')).longValue() != 1L) {
             return refused('is not of format 1, the one that is read here')
         }
         if (!(members.get('complete') instanceof Boolean)) {
@@ -243,62 +261,100 @@ final class ApplicationCommandFile {
         if (!(listed instanceof List)) {
             return refused('has no list of commands')
         }
-        if (((List) listed).size() > MAX_COMMANDS) {
-            return refused("has more than the ${MAX_COMMANDS} commands it can have")
-        }
+        // One command that is not as the task writes it is left out, and the others are used: a jar
+        // with an unusual name does not take the commands of every other plugin away.
         List<Entry> commands = []
+        List<String> leftOut = []
+        int notUsed = 0
         Set<String> names = new HashSet<>()
         int number = 0
         for (Object each : (List) listed) {
             number++
+            String wrong
+            Entry entry = null
+            if (commands.size() == MAX_COMMANDS) {
+                leftOut.add("The commands of ${LOCATION} after the first ${MAX_COMMANDS} are not used: ${((List) listed).size() - number + 1} of them".toString())
+                break
+            }
             if (!(each instanceof Map)) {
-                return refused("has something that is no command as command ${number}")
-            }
-            Map<String, Object> command = (Map<String, Object>) each
-            String wrong = wrongWith(command)
-            if (wrong != null) {
-                return refused("has ${wrong} for command ${number}")
-            }
-            Entry entry = new Entry((String) command.get('name'), command.containsKey('aliases') ? (List<String>) command.get('aliases') : Collections.<String>emptyList(),
-                    command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'))
-            for (String name : entry.names()) {
-                if (!names.add(name)) {
-                    return refused("has a second command of the same name as command ${number}")
+                wrong = 'it is no command'
+            } else {
+                Map<String, Object> command = (Map<String, Object>) each
+                wrong = wrongWith(command)
+                if (wrong == null) {
+                    entry = new Entry((String) command.get('name'), command.containsKey('aliases') ? (List<String>) command.get('aliases') : Collections.<String>emptyList(),
+                            command.containsKey('description') ? (String) command.get('description') : '', (String) command.get('origin'), (String) command.get('registration'))
+                    if (entry.names().any { String name -> names.contains(name) } || entry.names().toSet().size() < entry.names().size()) {
+                        wrong = 'it has a name that a command before it has'
+                    }
                 }
             }
+            if (wrong != null) {
+                if (notUsed++ < MAX_LEFT_OUT) {
+                    leftOut.add("Command ${number} of ${LOCATION} is not used: ${wrong}".toString())
+                }
+                continue
+            }
+            names.addAll(entry.names())
             commands.add(entry)
         }
-        return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable())
+        if (notUsed > MAX_LEFT_OUT) {
+            leftOut.add(MAX_LEFT_OUT, "${notUsed - MAX_LEFT_OUT} more commands of ${LOCATION} are not used, for reasons like these".toString())
+        }
+        return new ApplicationCommandFile(State.CURRENT, null, commands.asImmutable(), (Boolean) members.get('complete'), ((List<String>) said).asImmutable(), leftOut.asImmutable())
     }
 
-    // what a command of the file has that the task does not write, as something the file has; null when there is nothing
+    // what a command of the file has that the task does not write, as what is said of the command; null when there is nothing
     private static String wrongWith(Map<String, Object> command) {
         if (!isName(command.get('name'))) {
-            return "a name that is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most ${MAX_NAME} characters,"
+            return "its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most ${MAX_NAME} characters"
         }
         Object aliases = command.get('aliases')
         if (command.containsKey('aliases') && (!(aliases instanceof List) || ((List) aliases).size() > MAX_ALIASES || !((List) aliases).every { Object alias -> isName(alias) })) {
-            return "other names that are not at most ${MAX_ALIASES} names of a command"
+            return "its other names are not at most ${MAX_ALIASES} names of a command"
         }
         if (command.containsKey('description') && !isDescription(command.get('description'))) {
-            return "a description that is not one line of at most ${MAX_DESCRIPTION} characters that can be shown"
+            return "its description is not one line of at most ${MAX_DESCRIPTION} characters that can be shown"
         }
-        Object origin = command.get('origin')
-        if (!(origin instanceof String) || ((String) origin).length() > MAX_ORIGIN || !ORIGIN.matcher((String) origin).matches()) {
-            return "an origin that is neither ${APPLICATION}, nor file: and the name of a file, nor group:artifact:version, in letters, digits and _.+- and of at most ${MAX_ORIGIN} characters,"
+        if (!isOrigin(command.get('origin'))) {
+            return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign"
         }
         Object target = command.get('target')
         if (target != APPLICATION) {
-            return target in OTHER_TARGETS ? "the target ${target}, which is not run from here," : 'a target that is none'
+            return target in OTHER_TARGETS ? "its target is ${target}, which is not run from here" : 'its target is none there is'
         }
         if (!(command.get('registration') in REGISTRATIONS)) {
-            return "a registration that is none of ${REGISTRATIONS.join(', ')}"
+            return "its registration is none of ${REGISTRATIONS.join(', ')}"
         }
         return null
     }
 
     private static boolean isName(Object name) {
         return name instanceof String && ((String) name).length() <= MAX_NAME && NAME.matcher((String) name).matches()
+    }
+
+    /**
+     * The rule of the task for where a command comes from. The task writes the coordinates of an
+     * artifact, or {@code file:} and the name of a file, with every character that is not printable
+     * ASCII, and every space, {@code @} and dollar sign, replaced, and no more than this many
+     * characters. What an origin is made of is not held to anything else: it is the name of a jar or
+     * of a project, which can be almost anything, and it is only shown.
+     *
+     * @param origin what a file says where a command comes from
+     * @return whether the task can have written it
+     */
+    static boolean isOrigin(Object origin) {
+        if (!(origin instanceof String) || ((String) origin).isEmpty() || ((String) origin).length() > MAX_ORIGIN) {
+            return false
+        }
+        String text = (String) origin
+        for (int i = 0; i < text.length(); i++) {
+            char each = text.charAt(i)
+            if (each <= (' ' as char) || each > ('~' as char) || each == ('@' as char) || each == ('$' as char)) {
+                return false
+            }
+        }
+        return true
     }
 
     private static boolean isDiagnostic(Object line) {
@@ -342,7 +398,55 @@ final class ApplicationCommandFile {
                 // it is not there
             }
         }
+        for (Map.Entry<String, String> directory : COMMAND_DIRECTORIES.entrySet()) {
+            if (isChangedBelow(project.resolve(directory.key), directory.value, written)) {
+                return directory.key
+            }
+        }
         return null
+    }
+
+    // Whether a directory, a directory below it or a file of the ending in one of them was changed
+    // after an instant: a new or a deleted file changes its directory, a file that was written again
+    // only itself. No link is followed, and no more is looked at than a bounded number of entries; a
+    // directory that has more is taken for changed, since it cannot be said that it is not.
+    private static boolean isChangedBelow(Path top, String ending, FileTime since) {
+        if (!Files.isDirectory(top, LinkOption.NOFOLLOW_LINKS)) {
+            return false
+        }
+        boolean[] changed = [false] as boolean[]
+        int[] seen = [0] as int[]
+        try {
+            Files.walkFileTree(top, Collections.<FileVisitOption>emptySet(), MAX_WALK_DEPTH, new SimpleFileVisitor<Path>() {
+
+                @Override
+                FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
+                    return look(attributes, true)
+                }
+
+                @Override
+                FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                    // at the depth that is the last looked at, a directory is given as a file
+                    return look(attributes, attributes.isDirectory() || (attributes.isRegularFile() && file.getFileName().toString().endsWith(ending)))
+                }
+
+                @Override
+                FileVisitResult visitFileFailed(Path file, IOException e) {
+                    return FileVisitResult.CONTINUE
+                }
+
+                private FileVisitResult look(BasicFileAttributes attributes, boolean counts) {
+                    if (++seen[0] > MAX_WALKED || (counts && attributes.lastModifiedTime().compareTo(since) > 0)) {
+                        changed[0] = true
+                        return FileVisitResult.TERMINATE
+                    }
+                    return FileVisitResult.CONTINUE
+                }
+            })
+        } catch (IOException | RuntimeException ignored) {
+            return true
+        }
+        return changed[0]
     }
 
     /** A command of the file. */

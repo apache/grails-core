@@ -418,21 +418,22 @@ final class ConsoleProject {
         }
 
         /**
-         * @param notDone what did not happen because no project is used, as a sentence without the full stop
-         * @return the one line that says there is no project, or that the one above is not used and why
+         * @param command the command that was not run because no project is used, as it is typed
+         * @return the one line that says so, the same for every command: that there is no project, or
+         * that the one above is not used and why
          */
-        String none(String notDone) {
+        String none(String command) {
+            String needs = "${command} is a command of a Grails project"
             if (untrusted != null) {
-                return "${untrusted}. ${notDone}"
+                return "${untrusted}. ${needs}, and was not run"
             }
-            String above = 'a directory above it'
+            String above = 'above it'
             if (repository != null) {
-                above = 'a directory above it in the same repository'
+                above = 'above it in the same repository'
             } else if (limit) {
-                above = "one of the ${MAX_LEVELS} directories above it, which is as far as is looked,"
+                above = "in the ${MAX_LEVELS} directories above it, which is as far as is looked"
             }
-            return "There is no Grails project here: neither ${GradleRunner.line(from)} nor ${above} has a grails-app directory " +
-                    "or the record of a generated project. ${notDone}"
+            return "${needs}; there is none in ${GradleRunner.line(from)} or ${above}"
         }
     }
 

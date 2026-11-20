@@ -87,11 +87,11 @@ The Grails Forge CLI has the commands of the `grails` shell that are a Gradle bu
 
 |`compile`
 |`gradlew classes`
-|
+|`-Dname=value`
 
 |`clean`
 |`gradlew clean`
-|
+|`-Dname=value`
 
 |`assemble`, `war`, `package`
 |`gradlew assemble -Dgrails.env=production`
@@ -107,11 +107,11 @@ The Grails Forge CLI has the commands of the `grails` shell that are a Gradle bu
 
 |`package-plugin`
 |`gradlew jar`
-|Only in a plugin project.
+|`-Dname=value`. In a project, only in a plugin project.
 
 |`publish-plugin`
 |`gradlew publish`
-|Only in a plugin project.
+|`-Dname=value`. In a project, only in a plugin project.
 |===
 
 [source,console]
@@ -121,15 +121,17 @@ $ grails -t forge war -Dgrails.env=staging
 $ grails -t forge compile -- --offline --console=rich
 ----
 
-Every option of a command becomes arguments of Gradle one for one, so a test filter or a property value with spaces or quotes reaches Gradle as the one argument it was. Whatever follows `--` is not read by the command and is given to Gradle as it is, after the arguments of the command; an option of a Gradle task there, such as `--tests`, belongs to the last task the command names. An option the command does not have is a mistake and is not passed on without the `--`. `--stacktrace` (`-x`) adds `--stacktrace` and `-Dgrails.full.stacktrace=true` to the arguments of Gradle and `--verbose` (`-v`) adds `--debug`; use `-- -x TASK` to leave a task out. The spellings of the shell with one dash (`-unit`, `-integration`, `-clean`, `-continuous`, `-debug-jvm`) are accepted too. A system property is written as `-Dname=value`, or `-Dname` for one without a value; `-D name=value` with a space is accepted as well. A `-D` that stands alone and is not followed by `name=value`, as in `test-app -D BookSpec`, and a `-D` without a name, as in `-D=x`, are mistakes: the command runs nothing, shows its usage and ends with exit code 2. On Windows an argument that a batch file does not receive unchanged is refused, as by the `gradle` command.
+Every option of a command becomes arguments of Gradle one for one, so a test filter or a property value with spaces or quotes reaches Gradle as the one argument it was. Whatever follows `--` is not read by the command and is given to Gradle as it is, after the arguments of the command; an option of a Gradle task there, such as `--tests`, belongs to the last task the command names. An option the command does not have is a mistake and is not passed on without the `--`. `--stacktrace` (`-x`) adds `--stacktrace` and `-Dgrails.full.stacktrace=true` to the arguments of Gradle and `--verbose` (`-v`) adds `--info`, which shows what the build does task by task; both mean the same in front of the command (`grails -t forge -v compile`) and after its name. The debug log of Gradle is asked for with `-- --debug`. Use `-- -x TASK` to leave a task out. The spellings of the shell with one dash (`-unit`, `-integration`, `-clean`, `-continuous`, `-debug-jvm`) are accepted too. A system property is written as `-Dname=value`, or `-Dname` for one without a value; `-D name=value` with a space is accepted as well. A `-D` that stands alone and is not followed by `name=value`, as in `test-app -D BookSpec`, and a `-D` without a name, as in `-D=x`, are mistakes: the command runs nothing, shows its usage and ends with exit code 2. On Windows an argument that a batch file does not receive unchanged is refused, as by the `gradle` command.
 
 These things differ from the `grails` shell:
 
 * The environment is selected with `-Dgrails.env=NAME` after the name of the command. The environment in front of the command (`grails prod war`) is not read by the Grails Forge CLI.
 * `test-app --continuous` is the continuous build of Gradle: the tests run once, and again whenever a file they depend on changes, until the command is cancelled. The shell watches four source directories itself and does not run the tests when it starts.
 * `test-app --integration` in a project that has no `src/integration-test` directory runs nothing and ends with exit code 1.
+* `test-app BookControllerSpec`, like the shell, asks both test tasks for the test, and Gradle fails a test task that has no test of a name it is given ("No tests found for given includes"), so the command ends with exit code 1 although the test passed in the other task. Gradle has no option on its command line to let such a task pass. Say which tests are meant: `test-app --unit BookControllerSpec`. When the build fails after tests were named for both tasks, the command says this in one line that starts with `| Note`.
+* Every command that is a build takes `-Dname=value`, `compile` and `clean` too, and shows it in its help as it is typed, `-DNAME=VALUE`.
 * `assemble --clean` runs `clean` first. The shell accepts the option and does nothing for it.
-* `package-plugin` and `publish-plugin` are commands only where the project has a plugin class (a file whose name ends with `GrailsPlugin.groovy` under `src/main/groovy`). `install` runs nothing: it says that a plugin is installed into the local Maven repository with `gradle publishToMavenLocal`, and ends with exit code 1.
+* In a project, `package-plugin` and `publish-plugin` are commands only where the project has a plugin class (a file whose name ends with `GrailsPlugin.groovy` under `src/main/groovy`). Outside a project they are listed with the others and say what every command of a project says there. `install` runs nothing: it says that a plugin is installed into the local Maven repository with `gradle publishToMavenLocal`, and ends with exit code 1.
 
 Two more commands look at the project without running Gradle:
 

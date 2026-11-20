@@ -91,7 +91,8 @@ final class ConsoleCommands {
         ] as List<Object>
         if (readsProject) {
             ConsoleProject project = ConsoleProject.find(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
-            if (project != null && isPlugin(project)) {
+            // outside a project they are there as the others are, and say that they are commands of a project
+            if (project == null || isPlugin(project)) {
                 commands.add(new PackagePluginCommand())
                 commands.add(new PublishPluginCommand())
             }

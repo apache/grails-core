@@ -40,7 +40,8 @@ import picocli.CommandLine
 @CommandLine.Command(name = GradleCommand.NAME,
         description = [
                 'Runs Gradle in the Grails project of the current directory, with the Gradle wrapper of the project.',
-                'Everything after @|bold gradle|@ is given to Gradle as it is, the options too.'
+                'Everything after @|bold gradle|@ is given to Gradle as it is, the options too.',
+                'So @|bold gradle --help|@ is the help of Gradle, and this text is what @|bold help gradle|@ shows.'
         ],
         preprocessor = GradleCommand.EverythingIsGradles)
 @CompileStatic
@@ -71,7 +72,7 @@ class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCom
         ConsoleProject.Search search = ConsoleProject.search(current)
         ConsoleProject project = search.project
         if (project == null) {
-            err(search.none('Gradle was not run'))
+            err(search.none(NAME))
             return 1
         }
         GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)

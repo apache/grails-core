@@ -195,8 +195,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        out.toString().contains('| Error There is no Grails project here: neither ')
-        out.toString().contains('Gradle was not run')
+        errors() == ["| Error gradle is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
         !out.toString().contains('Usage:')
         !out.toString().contains('show ran')
         !new File(dir, '.gradle').exists()
@@ -282,7 +281,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        out.toString().contains('There is no Grails project here')
+        errors() == ["| Error gradle is a command of a Grails project; there is none in ${new File(checkout, 'sub').canonicalPath} or above it in the same repository".toString()]
 
         when: 'the checkout has a project and no wrapper'
         out.reset()
@@ -426,8 +425,8 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                  | notOwned     | said                                                              | ends
-        'the directory is another user\'s'    | '.'          | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one, or name DIR in the environment variable GRAILS_SAFE_DIRECTORY. Gradle was not run'
-        'the grails-app is another user\'s'   | 'grails-app' | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one, or name DIR in the environment variable GRAILS_SAFE_DIRECTORY. Gradle was not run'
+        'the directory is another user\'s'    | '.'          | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one, or name DIR in the environment variable GRAILS_SAFE_DIRECTORY. gradle is a command of a Grails project, and was not run'
+        'the grails-app is another user\'s'   | 'grails-app' | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one, or name DIR in the environment variable GRAILS_SAFE_DIRECTORY. gradle is a command of a Grails project, and was not run'
         'the wrapper is another user\'s'      | 'gradlew'    | '| Error The Gradle wrapper DIR/gradlew is not run for the project in DIR: ' | 'Gradle was not run, since the command runs the Gradle of the project and no other'
     }
 
@@ -543,8 +542,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        errors() == ["| Error There is no Grails project here: neither ${deep.canonicalPath} nor one of the 32 directories above it, which is as far as is looked, " +
-                'has a grails-app directory or the record of a generated project. Gradle was not run']
+        errors() == ["| Error gradle is a command of a Grails project; there is none in ${deep.canonicalPath} or in the 32 directories above it, which is as far as is looked".toString()]
 
         when: 'a project whose wrapper would be further up than is looked'
         out.reset()
@@ -563,7 +561,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        errors() == ["| Error There is no Grails project here: neither ${dir.canonicalPath} nor a directory above it has a grails-app directory or the record of a generated project. Gradle was not run"]
+        errors() == ["| Error gradle is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
 
         where:
         wrapperName = System.getProperty('os.name').toLowerCase().contains('win') ? 'gradlew.bat' : 'gradlew'
@@ -867,7 +865,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         exit == 1
         errors() == ["| Error The Grails project in ${dir.canonicalPath}, above ${below.canonicalPath}, is not used: ${dir.canonicalPath} can be written to by everybody, " +
                 "so what is in it need not be the user's (chmod o-w keeps the others out). A project above the current directory is used when it is the user's own; " +
-                "run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. Gradle was not run"]
+                "run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. gradle is a command of a Grails project, and was not run"]
 
         when: 'the environment names the directory, or every directory'
         out.reset()

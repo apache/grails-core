@@ -149,7 +149,9 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 '| Rendered integration test to src/integration-test/groovy/example/grails/FooBarFlowSpec.groovy',
                 '| Rendered integration test to src/integration-test/groovy/other/pkg/BazFlowSpec.groovy',
                 '| Rendered command to grails-app/commands/example/grails/FooBarCommand.groovy',
+                '| To make it a command of grails-forge-cli, list the commands of the application again: grails-forge-cli gradle grailsCommandCatalog',
                 '| Rendered command to grails-app/commands/other/pkg/BazCommand.groovy',
+                '| To make it a command of grails-forge-cli, list the commands of the application again: grails-forge-cli gradle grailsCommandCatalog',
                 '| Rendered script to src/main/scripts/foo-bar.groovy',
                 '| Rendered script to src/main/scripts/other-thing.groovy'
         ]
@@ -261,9 +263,43 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-integration-test'   | ApplicationType.PLUGIN
     }
 
-    void "a directory without the record of a project has none of the commands"() {
+    void "a command that is given an option it does not have says so, and not that its name is missing"() {
+        given:
+        project(ApplicationType.WEB)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-controller', '--nonsense-option')
+
+        then:
+        exit == 2
+        out.toString().readLines().size() == 3
+        out.toString().readLines()[0] == 'create-controller has no option --nonsense-option'
+        out.toString().readLines()[1].startsWith('Usage: grails-forge-cli create-controller ')
+        out.toString().readLines()[1].endsWith(' CONTROLLER-NAME')
+        out.toString().readLines()[2] == "Run 'grails-forge-cli help create-controller' for the options"
+
+        when: 'without anything, what is missing is what is wrong'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'create-controller')
+
+        then:
+        exit == 2
+        out.toString().readLines()[0] == "Missing required parameter: 'CONTROLLER-NAME'"
+
+        when: 'a command names the command line by the name it was started under'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'add-property', 'Nope', 'title:String')
+
+        then:
+        exit == 1
+        out.toString().contains("Run 'grails-forge-cli create-domain-class Nope' first.")
+        !out.toString().contains("'grails create-domain-class")
+    }
+
+    void "in a directory without the record of a project the commands write nothing, and say that they are commands of a project"() {
         expect:
-        ForgeCli.execute(beanContext, command, 'Book') == 2
+        ForgeCli.execute(beanContext, command, 'Book') == 1
+        out.toString().readLines() == ["| Error ${command} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
         dir.list().length == 0
 
         where:

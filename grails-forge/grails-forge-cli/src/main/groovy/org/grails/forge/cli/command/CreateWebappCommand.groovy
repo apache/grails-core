@@ -30,7 +30,7 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import picocli.CommandLine
 
-@CommandLine.Command(name = CreateWebappCommand.NAME, description = 'Creates an application')
+@CommandLine.Command(name = CreateWebappCommand.NAME, description = 'Creates an application; another name of create-app')
 @Component
 @Scope('prototype')
 @CompileStatic

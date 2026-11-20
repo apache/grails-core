@@ -32,7 +32,7 @@ import picocli.CommandLine
  * @since 9.0
  */
 @CommandLine.Command(name = 'install', hidden = true,
-        description = 'Says how a plugin is installed into the local Maven repository: with the Gradle task publishToMavenLocal.')
+        description = 'Says how a plugin is installed into the local Maven repository: with the Gradle task publishToMavenLocal')
 @CompileStatic
 class InstallCommand extends BaseCommand implements Callable<Integer> {
 

@@ -32,8 +32,8 @@ import picocli.CommandLine
 @CommandLine.Command(name = 'test-app',
         description = [
                 'Runs the tests of the Grails project.',
-                'Runs the Gradle task test and, where the project has a src/integration-test directory, integrationTest,',
-                'for the test environment unless -Dgrails.env names another one.',
+                'Runs the Gradle task test and, where the project has a src/integration-test directory, integrationTest, ' +
+                        'for the test environment unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
         preprocessor = GradleTaskCommand.PassedOn)
@@ -64,6 +64,9 @@ class TestAppCommand extends GradleEnvironmentCommand {
     @CommandLine.Option(names = ['--debug-jvm', '-debug-jvm'], description = 'Start the JVM of the tests suspended, waiting for a debugger on port 5005.')
     boolean debugJvm
 
+    // whether the unit tests and the integration tests are both run
+    private boolean both
+
     @Override
     protected String defaultEnvironment() {
         return 'test'
@@ -78,6 +81,7 @@ class TestAppCommand extends GradleEnvironmentCommand {
         }
         if (hasIntegrationTests && (integration || !unit)) {
             arguments.addAll(phase('integrationTest'))
+            both = unit || !integration
         }
         if (arguments.isEmpty()) {
             err("The project in ${GradleRunner.line(project.directory)} has no integration tests: there is no ${INTEGRATION_TESTS} directory in it. Gradle was not run")
@@ -88,6 +92,17 @@ class TestAppCommand extends GradleEnvironmentCommand {
         }
         arguments.addAll(systemPropertyArguments())
         return arguments
+    }
+
+    @Override
+    protected void failed(ConsoleProject project) {
+        // Gradle has no switch on its command line that lets a task pass which has no test of a name, so
+        // it is said: which of the two tasks failed is in what Gradle wrote, and is not read from there.
+        if (both && !(names + tests).isEmpty()) {
+            spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold | Note|@ The tests that were named were asked of the unit tests and of the ' +
+                    'integration tests, and Gradle fails a task that has no test of a name ("No tests found for given includes"). ' +
+                    'If that is what happened, say which are meant with --unit or with --integration'))
+        }
     }
 
     @Override

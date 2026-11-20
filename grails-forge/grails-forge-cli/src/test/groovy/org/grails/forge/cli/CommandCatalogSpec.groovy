@@ -278,14 +278,69 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines()[0].startsWith('There is no command craete-app. Did you mean: create-app or ')
         !new File(dir, 'shop').exists()
 
+        and: 'then how the command line is used, in one line, and where the help is: not the help itself'
+        err.toString().readLines().drop(1) == ['Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]',
+                                               "Run 'grails-forge-cli help' for the commands"]
+
         when:
         err.reset()
         exit = ForgeCli.execute(beanContext, 'feature', 'remove', 'x')
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'There is no command remove of feature'
-        err.toString().contains('Usage: grails-forge-cli feature [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
+        err.toString().readLines() == ['There is no command remove of feature',
+                                       'Usage: grails-forge-cli feature [-hvVx] [--non-interactive] [--plain-output] [COMMAND]',
+                                       "Run 'grails-forge-cli help feature' for the options"]
+    }
+
+    void "outside a project the help says that a project has more commands, and such a command is known by its name"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help')
+
+        then:
+        exit == 0
+        !out.toString().contains('create-controller')
+        out.toString().readLines().findAll { it.trim() }.last() == 'A Grails project has more commands: those that create its classes, and those of the application.'
+
+        when:
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', 'create-controller')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().readLines()[0] == 'Usage: grails-forge-cli create-controller'
+        out.toString().contains('create-controller is a command of a Grails project')
+
+        when: 'its short form is none there, as of every command that is not listed'
+        exit = ForgeCli.execute(beanContext, 'cCont', 'Book')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith('There is no command cCont')
+
+        when: 'a tool is not told of it'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', '--json')
+
+        then:
+        exit == 0
+        !((List<Map>) ((Map) new JsonSlurper().parseText(out.toString())).commands).any { it.name == 'create-controller' }
+    }
+
+    void "the descriptions of the commands are worded alike, and say what a command is that has the description of another"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        List<Map> commands = (List<Map>) ((Map) new JsonSlurper().parseText(out.toString())).commands
+
+        then:
+        exit == 0
+        commands.find { it.name == 'create-plugin' }.description == 'Creates a Grails plugin'
+        commands.find { it.name == 'create-web-plugin' }.description == 'Creates a Grails plugin with a web layer'
+        commands.find { it.name == 'create-restapi' }.description == 'Creates a REST API application'
+        commands.find { it.name == 'create-webapp' }.description == 'Creates an application; another name of create-app'
+        commands.find { it.name == 'create-webapp' }.description != commands.find { it.name == 'create-app' }.description
+        commands.every { !(it.description =~ /\b[Aa]n (Grails|REST)\b|\b[Aa] Interceptor\b/) }
     }
 
     @Unroll
@@ -348,7 +403,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         commands.find { it.name == 'gradle' }.options == []
         commands.find { it.name == 'gradle' }.parameters == [[label: 'ARGS', arity: '1..*', description: 'The tasks to run and the options of Gradle, for example: build --offline']]
         commands.find { it.name == 'gradle' }.description == 'Runs Gradle in the Grails project of the current directory, with the Gradle wrapper of the project. ' +
-                'Everything after gradle is given to Gradle as it is, the options too.'
+                'Everything after gradle is given to Gradle as it is, the options too. So gradle --help is the help of Gradle, and this text is what help gradle shows.'
 
         and: 'the options with their names and how many values they take'
         Map createApp = commands.find { it.name == 'create-app' }
@@ -444,8 +499,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         and: 'the build of the project has not listed the commands of the application, so they are not all there'
         described.complete == false
-        described.diagnostics == ['The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json. ' +
-                                          'They are listed after: grails-forge-cli gradle grailsCommandCatalog']
+        described.diagnostics == ['The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog']
     }
 
     void "the commands are not those of a project in another repository, or of a project above the nearest one"() {
@@ -469,8 +523,11 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         help == 0
         !out.toString().contains('create-controller')
-        controller == 2
-        err.toString().readLines()[0].startsWith('There is no command create-controller')
+
+        and: 'the command is known, as one of a project, and says that there is none here'
+        controller == 1
+        err.toString().readLines().size() == 1
+        err.toString().readLines()[0].startsWith('| Error create-controller is a command of a Grails project')
         !new File(project, 'grails-app/controllers/example/BookController.groovy').exists()
 
         where:
@@ -491,7 +548,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         described.complete == false
         described.diagnostics.size() == 2
         described.diagnostics[0].startsWith("grails-forge-cli.yml: applicationType is not a type of application, but 'nonsense'")
-        described.diagnostics[1].startsWith('The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json')
+        described.diagnostics[1] == 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
         described.projectDirectory == dir.canonicalPath
         !((List<Map>) described.commands).any { it.name == 'create-controller' }
 
@@ -610,13 +667,12 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         int feature = ForgeCli.execute(beanContext, 'feature', 'add', 'mongodb')
 
         then:
-        controller == 2
-        err.toString().readLines()[0].startsWith('There is no command create-controller')
-        err.toString().readLines()[1].startsWith("The commands of a project are not there: The Grails project in ${project.canonicalPath}, above ${below.canonicalPath}, is not used: ")
-        err.toString().readLines()[1].endsWith("or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY")
+        controller == 1
         feature == 1
-        out.toString().readLines().findAll { it.contains('| Error') }.size() == 1 || err.toString().readLines().findAll { it.contains('| Error') }.size() == 1
-        (out.toString() + err.toString()).contains("to use this one, or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. No feature was added")
+        err.toString().readLines().size() == 2
+        err.toString().readLines().every { it.startsWith("| Error The Grails project in ${project.canonicalPath}, above ${below.canonicalPath}, is not used: ") }
+        err.toString().readLines()[0].endsWith("or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. create-controller is a command of a Grails project, and was not run")
+        err.toString().readLines()[1].endsWith("or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. feature add is a command of a Grails project, and was not run")
         !new File(project, 'grails-app/controllers/example/BookController.groovy').exists()
         !new File(below, 'grails-app').exists()
 

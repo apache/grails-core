@@ -348,14 +348,17 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         lineOf('requested=') == '<runScriptCommand><--args-file=>'
         lineOf('vector=') == (['data-import'] + arguments).collect { '<' + it.getBytes('UTF-8').encodeHex() + '>' }.join('')
-        lineOf('only=') == '[arguments.json]'
+        lineOf('option=') == '.grails/run/command-args-0.json'
         lineOf('permissions=') == 'rw------- rwx------'
         errors() == []
-        err.toString().readLines()[0] == DEPRECATED
 
-        and: 'the file of the arguments is in a directory of its own, and neither is left'
+        and: 'before Gradle is started it is said what is run, and that scripts are deprecated'
+        err.toString().readLines()[0] == '| Running the script data-import of src/main/scripts, with the Gradle task runScriptCommand'
+        err.toString().readLines()[1] == DEPRECATED
+
+        and: 'the file of the arguments is gone'
         !file.exists()
-        !file.parentFile.exists()
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
 
         and: 'the script was run by nothing but the build, which here is a stand-in that runs none'
         notEvaluated()
@@ -376,7 +379,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         all().contains('this command fails on purpose')
         errors() == ['| Error Gradle did not succeed: it ended with exit code 1']
         !all().contains('Usage:')
-        !new File(lineOf('file=')).parentFile.exists()
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
     }
 
     @Unroll
@@ -390,18 +393,18 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == message
-        !err.toString().contains('hostile')
-        !err.toString().contains('| Warning')
+        err.toString().readLines() == ['The command cannot be given these arguments: ' + message,
+                                       'Usage: grails-forge-cli report [ARGS...]',
+                                       "Run 'grails-forge-cli help report' for the options"]
         dir.list().sort() == ['build', 'grails-app', 'src']
         notEvaluated()
 
         where:
         what                   | arguments                 | message
-        'the character U+0000' | ['fine', 'hostile\u0000'] | 'Argument 2 of report has a character that cannot be given to a command: the character U+0000, or half of a character of two parts'
-        'half a character'     | ['hostile\ud83d']         | 'Argument 1 of report has a character that cannot be given to a command: the character U+0000, or half of a character of two parts'
-        'too many'             | ['hostile'] * 4096        | 'report was given more than the 4095 arguments the Gradle task runScriptCommand takes'
-        'too much'             | ['hostile' * 150_000]     | 'The arguments of report are more than the 1048576 bytes the Gradle task runScriptCommand takes'
+        'the character U+0000' | ['fine', 'hostile\u0000'] | 'argument 3 has the character U+0000, which no command line carries'
+        'half a character'     | ['hostile\ud83d']         | 'argument 2 has half of a character of two code units, which cannot be written as text'
+        'too many'             | ['hostile'] * 4096        | 'these are 4097 arguments, and the task that runs a command takes 4096 at most'
+        'too much'             | ['hostile' * 150_000]     | 'the arguments are more than 1048576 bytes in UTF-8, and the task that runs a command reads no more'
     }
 
     void "a script is not run without the Gradle wrapper of the project"() {
