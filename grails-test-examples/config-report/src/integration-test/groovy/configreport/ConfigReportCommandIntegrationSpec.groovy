@@ -104,11 +104,11 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         content.contains('== Web & Controllers')
         content.contains('== DataSource')
 
-        and: 'grails.profile appears in the Core Properties section with its description'
-        content.contains('`grails.profile`')
+        and: 'grails.codegen.defaultPackage appears in the Core Properties section with its description'
+        content.contains('`grails.codegen.defaultPackage`')
 
-        and: 'runtime value overrides the static default for grails.profile'
-        content.contains('`web`')
+        and: 'runtime value overrides the static default for grails.codegen.defaultPackage'
+        content.contains('`configreport`')
 
         cleanup:
         reportFile?.delete()
@@ -226,9 +226,9 @@ class ConfigReportCommandIntegrationSpec extends Specification {
         otherIdx >= 0
         coreIdx < otherIdx
 
-        and: 'grails.profile is in the Core Properties section (not Other Properties)'
+        and: 'grails.codegen.defaultPackage is in the Core Properties section (not Other Properties)'
         String otherSection = content.substring(otherIdx)
-        !otherSection.contains('`grails.profile`')
+        !otherSection.contains('`grails.codegen.defaultPackage`')
 
         and: 'custom myapp properties are in Other Properties (not in categorized sections)'
         String beforeOther = content.substring(0, otherIdx)

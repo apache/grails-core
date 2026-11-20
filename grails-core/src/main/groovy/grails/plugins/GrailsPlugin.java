@@ -150,8 +150,13 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     String PROVIDED_ARTEFACTS = "providedArtefacts";
 
     /**
-     * The profiles for which this plugin is active
+     * The name of a property plugin descriptors declared to name the profiles they were active for.
+     *
+     * @deprecated The property is not read: since Grails 7.1 a plugin is enabled whatever it declares
+     * here, and since Grails 9 an application has no profile. A plugin that contributes beans for some
+     * Spring profiles only asks the environment of the application context for them.
      */
+    @Deprecated(since = "9.0.0", forRemoval = true)
     String PROFILES = "profiles";
 
     /**
@@ -328,8 +333,12 @@ public interface GrailsPlugin extends ApplicationContextAware, Comparable, Grail
     boolean isEnabled();
 
     /**
-     * Check whether the plugin is enabled for the given profile
-     * @param activeProfiles
+     * Whether the plugin is enabled for the given profiles. The plugin manager asks with the active
+     * profiles of the Spring environment, and a plugin that answers {@code false} takes no part in
+     * the plugin lifecycle. A plugin loaded from a plugin descriptor is enabled for every profile:
+     * the {@code profiles} property of a descriptor is not read.
+     *
+     * @param activeProfiles the active profiles of the Spring environment
      * @return True if it is
      */
     boolean isEnabled(String[] activeProfiles);

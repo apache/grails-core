@@ -64,7 +64,6 @@ class ConfigReportCommandSpec extends Specification {
     def "handle generates AsciiDoc report file"() {
         given:
         Map<String, Object> props = [
-            'grails.profile': 'web',
             'grails.codegen.defaultPackage': 'myapp',
             'server.port': '8080',
             'spring.main.banner-mode': 'off',
@@ -97,7 +96,6 @@ class ConfigReportCommandSpec extends Specification {
         content.contains('= Grails Application Configuration Report')
 
         and: "known Grails properties appear in their metadata category sections"
-        content.contains('`grails.profile`')
         content.contains('`grails.codegen.defaultPackage`')
 
         and: "unknown runtime properties appear in the Other Properties section"
@@ -194,7 +192,7 @@ class ConfigReportCommandSpec extends Specification {
         given:
         Map<String, String> runtimeProperties = new TreeMap<String, String>()
         runtimeProperties.put('grails.gorm.autoFlush', 'true')
-        runtimeProperties.put('grails.profile', 'web')
+        runtimeProperties.put('grails.codegen.defaultPackage', 'example.app')
         runtimeProperties.put('server.port', '8080')
 
         File reportFile = new File(tempDir, 'test-report.adoc')
@@ -218,11 +216,11 @@ class ConfigReportCommandSpec extends Specification {
         content.contains('| Property | Description | Default')
 
         and: "known properties appear with descriptions"
-        content.contains('`grails.profile`')
+        content.contains('`grails.codegen.defaultPackage`')
         content.contains('`grails.gorm.autoFlush`')
 
         and: "runtime values override static defaults for known properties"
-        content.contains('`web`')
+        content.contains('`example.app`')
         content.contains('`true`')
 
         and: "unknown runtime properties go to Other Properties section"
@@ -244,14 +242,14 @@ class ConfigReportCommandSpec extends Specification {
 
         and: "metadata categories are still present with static defaults"
         content.contains('== Core Properties')
-        content.contains('`grails.profile`')
+        content.contains('`grails.codegen.defaultPackage`')
         content.contains('Set by project template')
     }
 
     def "writeReport runtime values override static defaults"() {
         given:
         Map<String, String> runtimeProperties = new TreeMap<String, String>()
-        runtimeProperties.put('grails.profile', 'rest-api')
+        runtimeProperties.put('grails.codegen.defaultPackage', 'example.api')
 
         File reportFile = new File(tempDir, 'override-report.adoc')
 
@@ -262,7 +260,7 @@ class ConfigReportCommandSpec extends Specification {
         String content = reportFile.text
 
         and: "runtime value overrides the static default"
-        content.contains('`rest-api`')
+        content.contains('`example.api`')
     }
 
     def "writeReport escapes pipe characters in values"() {
@@ -305,7 +303,7 @@ class ConfigReportCommandSpec extends Specification {
         given:
         Map<String, String> runtimeProperties = new TreeMap<String, String>()
         runtimeProperties.put('custom.app.setting', 'myvalue')
-        runtimeProperties.put('grails.profile', 'web')
+        runtimeProperties.put('grails.codegen.defaultPackage', 'example.app')
 
         File reportFile = new File(tempDir, 'other-props-report.adoc')
 
@@ -317,7 +315,7 @@ class ConfigReportCommandSpec extends Specification {
 
         and: "known property is in its category, not in Other Properties"
         content.contains('== Core Properties')
-        content.contains('`grails.profile`')
+        content.contains('`grails.codegen.defaultPackage`')
 
         and: "unknown property appears in Other Properties"
         content.contains('== Other Properties')
@@ -335,7 +333,7 @@ class ConfigReportCommandSpec extends Specification {
         given:
         Map<String, String> runtimeProperties = new TreeMap<String, String>()
         runtimeProperties.put('my.custom.value', 'custom')
-        runtimeProperties.put('grails.profile', 'web')
+        runtimeProperties.put('grails.codegen.defaultPackage', 'example.app')
         File reportFile = new File(tempDir, 'env-report.adoc')
 
         and:
@@ -374,13 +372,13 @@ class ConfigReportCommandSpec extends Specification {
 
         then: "metadata is loaded from spring-configuration-metadata.json on the classpath"
         !metadataResult.properties.isEmpty()
-        metadataResult.properties.find { ConfigReportCommand.ConfigPropertyMetadata property -> property.name == 'grails.profile' }
+        metadataResult.properties.find { ConfigReportCommand.ConfigPropertyMetadata property -> property.name == 'grails.codegen.defaultPackage' }
 
         and: "each entry has the expected fields"
-        ConfigReportCommand.ConfigPropertyMetadata profileEntry = metadataResult.properties.find { ConfigReportCommand.ConfigPropertyMetadata property -> property.name == 'grails.profile' }
-        profileEntry.name == 'grails.profile'
-        profileEntry.description != null
-        profileEntry.description.length() > 0
+        ConfigReportCommand.ConfigPropertyMetadata packageEntry = metadataResult.properties.find { ConfigReportCommand.ConfigPropertyMetadata property -> property.name == 'grails.codegen.defaultPackage' }
+        packageEntry.name == 'grails.codegen.defaultPackage'
+        packageEntry.description != null
+        packageEntry.description.length() > 0
         metadataResult.groupDescriptions.get('grails') == 'Core Properties'
     }
 
