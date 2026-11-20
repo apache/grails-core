@@ -134,7 +134,7 @@ trait ResponseRenderer extends WebAttributes {
         GrailsWebRequest webRequest = (GrailsWebRequest) RequestContextHolder.currentRequestAttributes()
         HttpServletResponse response = webRequest.currentResponse
         webRequest.renderView = false
-        applyContentType(response, null, object)
+        applyContentType(response, null, object, true, 'text/plain')
 
         try {
             response.writer.write(object.inspect())
@@ -428,7 +428,7 @@ trait ResponseRenderer extends WebAttributes {
                 response.contentType = GrailsWebUtil.getContentType(MimeType.JSON.name, DEFAULT_ENCODING)
                 renderWritable((JSONElement) argMap, response)
             } else {
-                applyContentType(response, argMap, argMap)
+                applyContentType(response, argMap, argMap, true, 'text/plain')
                 try {
                     response.writer.write(argMap.inspect())
                 }
@@ -516,8 +516,12 @@ trait ResponseRenderer extends WebAttributes {
     }
 
     private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault) {
+        applyContentType(response, argMap, renderArgument, useDefault, TEXT_HTML)
+    }
+
+    private boolean applyContentType(HttpServletResponse response, Map argMap, Object renderArgument, boolean useDefault, String defaultContentType) {
         boolean contentTypeIsDefault = true
-        String contentType = resolveContentTypeBySourceType(renderArgument, useDefault ? TEXT_HTML : null)
+        String contentType = resolveContentTypeBySourceType(renderArgument, useDefault ? defaultContentType : null)
         String encoding = DEFAULT_ENCODING
         if (argMap != null) {
             if (argMap.containsKey(ARGUMENT_CONTENT_TYPE)) {
