@@ -39,6 +39,7 @@ class MigrationSettingsMetadataSpec extends Specification {
         Settings.DATABINDING_JSON_JACKSON   | Settings.DATABINDING_JSON_JACKSON_DEFAULT
         Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS | Settings.SETTING_EXCEPTION_RESOLVER_SPRING_HANDLERS_DEFAULT
         Settings.CONTROLLERS_RESPONSE_BODY  | Settings.CONTROLLERS_RESPONSE_BODY_DEFAULT
+        Settings.MIME_NEGOTIATION_SPRING    | Settings.MIME_NEGOTIATION_SPRING_DEFAULT
     }
 
     private static Map<String, Object> metadataDefaults() {

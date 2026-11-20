@@ -574,6 +574,7 @@ include(
         'grails-test-examples-datasources',
         'grails-test-examples-demo33',
         'grails-test-examples-enable-mvc-check',
+        'grails-test-examples-spring-format-negotiation',
         'grails-test-examples-exploded',
         'grails-test-examples-external-configuration',
         'grails-test-examples-geb',
@@ -644,6 +645,7 @@ project(':grails-test-examples-issue-views-182').projectDir = file('grails-test-
 project(':grails-test-examples-issue-11102').projectDir = file('grails-test-examples/issue-11102')
 project(':grails-test-examples-demo33').projectDir = file('grails-test-examples/demo33')
 project(':grails-test-examples-enable-mvc-check').projectDir = file('grails-test-examples/enable-mvc-check')
+project(':grails-test-examples-spring-format-negotiation').projectDir = file('grails-test-examples/spring-format-negotiation')
 project(':grails-test-examples-plugins-loadfirst').projectDir = file('grails-test-examples/plugins/loadfirst')
 project(':grails-test-examples-plugins-loadsecond').projectDir = file('grails-test-examples/plugins/loadsecond')
 project(':grails-test-examples-plugins-loadafter').projectDir = file('grails-test-examples/plugins/loadafter')

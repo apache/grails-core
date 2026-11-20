@@ -26,6 +26,7 @@ import org.springframework.transaction.TransactionDefinition
 import grails.gorm.DetachedCriteria
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.mapping.core.Datastore
 import org.grails.datastore.mapping.model.PersistentEntity
@@ -208,6 +209,13 @@ class TenantDelegatingGormOperations<D> implements GormAllOperations<D> {
     @Override
     List<FinderMethod> getGormDynamicFinders() {
         return allOperations.gormDynamicFinders
+    }
+
+    @Override
+    AutoTimestampEventListener getAutoTimestampEventListener() {
+        Tenants.withId(requireMultiTenantCapableDatastore(), tenantId) {
+            allOperations.autoTimestampEventListener
+        }
     }
 
     @Override

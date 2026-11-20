@@ -20,7 +20,9 @@ package org.grails.datastore.gorm.multitenancy
 
 import grails.gorm.api.GormAllOperations
 import grails.gorm.multitenancy.Tenants
+import org.grails.datastore.gorm.events.AutoTimestampEventListener
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.springframework.transaction.TransactionDefinition
@@ -72,6 +74,20 @@ class TenantDelegatingGormOperationsSpec extends Specification {
         then:
         1 * delegate.delete(instance, params)
         0 * delegate.save(_, _)
+    }
+
+    void "getAutoTimestampEventListener delegates to the wrapped operations under the bound tenant"() {
+        given:
+        def delegate = Mock(GormAllOperations)
+        def ops = buildOperations(delegate)
+        def listener = new AutoTimestampEventListener(Stub(Datastore) { getMappingContext() >> new KeyValueMappingContext('test') })
+
+        when:
+        def result = ops.autoTimestampEventListener
+
+        then:
+        1 * delegate.getAutoTimestampEventListener() >> listener
+        result.is(listener)
     }
 
     void "deleteAll() delegates to the wrapped operations under the bound tenant"() {
