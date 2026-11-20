@@ -57,7 +57,7 @@ class DataBindingConfigurationSpec extends Specification implements GrailsUnitTe
 
         then:
         person.prop.value == "test2"
-
+        person.name == "John Doe"
     }
 
     void "test customize data binding for the types which have standard ValueConverters using @Order"() {
