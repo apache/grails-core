@@ -34,6 +34,7 @@ import org.gradle.work.DisableCachingByDefault
 import javax.inject.Inject
 
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+import org.grails.gradle.plugin.core.GrailsSystemPropertyArgumentProvider
 
 /**
  * Runs a Grails command with the application context.
@@ -74,7 +75,9 @@ abstract class ApplicationContextCommandTask extends JavaExec {
     ApplicationContextCommandTask() {
         mainClass.set('grails.ui.command.GrailsApplicationContextCommandRunner')
         dependsOn('classes', 'findMainClass')
-        systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') } as Map<String, Object>)
+        // read when the task runs, so that a build that reuses a configuration cache entry passes its own
+        jvmArgumentProviders.add(new GrailsSystemPropertyArgumentProvider(
+                project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), systemProperties, true))
         argumentsFileBase.convention(project.layout.projectDirectory)
     }
 

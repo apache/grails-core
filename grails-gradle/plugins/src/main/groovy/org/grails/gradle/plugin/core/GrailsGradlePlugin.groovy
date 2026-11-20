@@ -1060,16 +1060,11 @@ ${importStatements}
 
     protected <T extends JavaForkOptions & DefaultTask> void configureForkSettings(Project project, String grailsVersion) {
         def systemPropertyConfigurer = { String defaultGrailsEnv, T task ->
-            def map = System.properties.findAll { entry ->
-                entry.key?.toString()?.startsWith('grails.')
-            }
-            for (key in map.keySet()) {
-                def value = map.get(key)
-                if (value) {
-                    def sysPropName = key.toString().substring(7)
-                    task.systemProperty(sysPropName, value.toString())
-                }
-            }
+            // -Dgrails.server.port=9090 on the command line of the build reaches the JVM as server.port. The
+            // properties are read when the task runs: read here they were written into the configuration cache
+            // entry, which a later build that gave another property reused without it
+            task.jvmArgumentProviders.add(new GrailsSystemPropertyArgumentProvider(
+                    project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), task.systemProperties))
 
             task.systemProperty(Metadata.APPLICATION_NAME, project.name)
             task.systemProperty(Metadata.APPLICATION_VERSION, (project.version instanceof Serializable ? project.version : project.version.toString()))
