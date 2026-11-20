@@ -56,6 +56,12 @@ dependencies {
     cliApi project(project.path)
     cliImplementation 'org.apache.groovy:groovy'
     cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    // runs the query-tail command script the way the build of a project does
+    testCliImplementation(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
     // compiles and runs the query-tail command script the way the shell does
     testCliImplementation(project(':grails-shell-cli')) {
         exclude group: 'org.slf4j', module: 'slf4j-simple'

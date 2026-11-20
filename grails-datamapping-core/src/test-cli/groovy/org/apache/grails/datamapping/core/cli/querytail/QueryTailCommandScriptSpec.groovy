@@ -28,6 +28,7 @@ import org.grails.cli.profile.commands.factory.CommandResourceResolver
 import org.grails.cli.profile.commands.factory.GroovyScriptCommandFactory
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 import org.grails.config.CodeGenConfig
+import org.apache.grails.core.cli.script.ScriptCommandRunner
 import org.apache.grails.datamapping.core.querytail.QueryTailRecord
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -88,6 +89,40 @@ class QueryTailCommandScriptSpec extends Specification {
 
         expect:
         !run('query-tail', '--once', '--top=ten', "--file=${capture.path}".toString())
+    }
+
+    void "the script is run by the build of a project as well, where there is no shell: it reads a capture once and says when there is none"() {
+        given: 'a capture in the application directory, and the script found on the class path as a plugin has it'
+        File appDir = new File(tempDir, 'app')
+        File capture = new File(appDir, 'out/capture.log')
+        capture.parentFile.mkdirs()
+        capture.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
+                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        ScriptCommandRunner runner = new ScriptCommandRunner(appDir, getClass().classLoader, new PrintStream(out, true), new PrintStream(err, true))
+
+        when:
+        int read = runner.start('--', 'query-tail', '--once', '--file=out/capture.log')
+
+        then:
+        err.toString() == ''
+        read == 0
+        out.toString().contains('book/show')
+
+        when: 'a number of rows that is none'
+        int refused = runner.start('--', 'query-tail', '--once', '--top=ten', '--file=out/capture.log')
+
+        then:
+        refused == 1
+        err.toString().readLines().last() == 'The script query-tail returned false, which is how a script says that it did not succeed.'
+
+        when: 'no capture'
+        err.reset()
+        int missing = runner.start('--', 'query-tail', '--once', '--file=out/missing.log')
+
+        then:
+        missing == 1
     }
 
     private static boolean run(String... args) {

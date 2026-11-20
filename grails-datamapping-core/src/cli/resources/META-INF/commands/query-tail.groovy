@@ -17,7 +17,6 @@
  *  under the License.
  */
 
-import org.grails.cli.profile.CommandCancellationListener
 import org.apache.grails.datamapping.core.cli.querytail.QueryTailOptions
 import org.apache.grails.datamapping.core.cli.querytail.QueryTailRenderer
 import org.apache.grails.datamapping.core.cli.querytail.QueryTailRunner
@@ -48,7 +47,12 @@ catch (IllegalArgumentException e) {
 options.width = consoleWidth()
 
 QueryTailRunner runner = new QueryTailRunner(options, grailsConsole.out, grailsConsole.ansiEnabled)
-addCancelledListener({ -> runner.stop() } as CommandCancellationListener)
+// The run ends when the command is cancelled. Where the build of the project runs the script, that is the
+// end of its JVM; the Grails shell, which stays, tells a script that asks to be told.
+Runtime.runtime.addShutdownHook(new Thread({ -> runner.stop() } as Runnable, 'query-tail-stop'))
+if (metaClass.respondsTo(this, 'addCancelledListener')) {
+    addCancelledListener({ -> runner.stop() })
+}
 return runner.run() == 0
 
 /**

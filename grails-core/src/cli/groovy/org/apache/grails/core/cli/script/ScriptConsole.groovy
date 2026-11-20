@@ -44,8 +44,22 @@ class ScriptConsole extends GrailsConsole {
     ScriptConsole(PrintStream out, PrintStream err) throws IOException {
         super()
         // without one, where the JVM writes: not System.out as it is now, which writes through the console
-        this.plainOut = out ?: getOut()
-        this.plainErr = err ?: getErr()
+        this.plainOut = out ?: super.getOut()
+        this.plainErr = err ?: super.getErr()
+    }
+
+    /**
+     * @return where the console writes: a script that writes there itself, as {@code query-tail}
+     * does, writes where its messages go
+     */
+    @Override
+    PrintStream getOut() {
+        return plainOut ?: super.getOut()
+    }
+
+    @Override
+    PrintStream getErr() {
+        return plainErr ?: super.getErr()
     }
 
     @Override
