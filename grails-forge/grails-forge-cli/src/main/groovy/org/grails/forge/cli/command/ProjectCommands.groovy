@@ -38,7 +38,8 @@ import org.grails.forge.io.ConsoleOutput
  * commands. Each time the build runs, the files of those directories are recorded, with their times and
  * sizes; the manifest is read as long as they are unchanged, and otherwise the task is run first, so a
  * plugin added to the build brings its commands with it. When the build fails, the commands of the last
- * manifest are kept, and the build is not run for them again until one of those files changes.</p>
+ * manifest are kept, and the build is not run for them again until one of those files changes, or one of
+ * the project's main sources, which are then recorded too, since any of them can have broken the build.</p>
  */
 @CompileStatic
 class ProjectCommands {
@@ -142,8 +143,8 @@ class ProjectCommands {
         // the files are recorded before the build runs, so one changed while it runs counts next time
         Inputs before = inputsOf(manifest)
         List<String> recorded = snapshotOrNull(before, false)
-        // a failed build is recorded with the contents of the files named like a command too, so fixing
-        // a new command that did not compile runs the build again, while nothing else changed does not
+        // a failed build is recorded with every file of the main sources, so fixing the one that did not
+        // compile runs the build again, while nothing changing still does not
         List<String> recordedWhole = snapshotOrNull(before, true)
         console.out('Reading the commands of the project from its build...')
         String problem
@@ -169,7 +170,7 @@ class ProjectCommands {
         save(recordedWhole, problem, console)
         String kept = manifest.isFile() ? 'The commands it listed before are offered' : 'Its commands are not offered'
         console.warning("Could not read the commands of the project: ${problem}. ${kept}, and the build is not run " +
-                'for them again until a build file changes. A project of Grails 9 or later lists them with its ' +
+                'for them again until a build file or a source changes. A project of Grails 9 or later lists them with its ' +
                 "${MANIFEST_TASK} Gradle task; run it to see what went wrong.")
     }
 
@@ -317,7 +318,8 @@ class ProjectCommands {
                 [new File(rootDir, 'gradle'), new File(rootDir, 'buildSrc'),
                  new File(projectDir, 'grails-app/commands'), new File(projectDir, 'src/main/resources/META-INF')],
                 [new File(projectDir, 'src/cli')],
-                [new File(projectDir, 'src/main/groovy'), new File(projectDir, 'src/main/java')], [])
+                [new File(projectDir, 'grails-app'), new File(projectDir, 'src/main/groovy'),
+                 new File(projectDir, 'src/main/java')], [])
     }
 
     private static Object parseOrNull(File file) {
@@ -382,10 +384,11 @@ class ProjectCommands {
      * every file and directory below each source directory, apart from what builds and tools write next
      * to a build script, and below each directory of commands, all of which are sources. Each such file
      * is listed with its time and size, so a deleted, added, replaced or changed file changes the list,
-     * whatever the clock said when it was written. Below each directory of command files, the files
-     * named like a command are listed by name only, or, after a failed build, with their times and sizes.
+     * whatever the clock said when it was written. Below each directory of main sources, only the files
+     * named like a command are listed, by name only; after a failed build, every file there is listed
+     * with its time and size instead, so fixing whatever did not compile counts as a change.
      */
-    private static List<String> snapshot(Inputs inputs, boolean wholeCommandFiles) {
+    private static List<String> snapshot(Inputs inputs, boolean wholeSources) {
         List<String> lines = []
         for (File dir : inputs.buildDirectories) {
             File[] files = dir.listFiles()
@@ -406,9 +409,15 @@ class ProjectCommands {
         for (File dir : inputs.commandDirectories) {
             walk(dir, lines, true)
         }
-        // a new command there registers itself, and names its file after itself; other sources are left out
+        // a new command there registers itself, and names its file after itself; other sources are left
+        // out, unless the build failed, which any of them can have made it do
         for (File dir : inputs.commandFileDirectories) {
-            walkNames(dir, lines, wholeCommandFiles)
+            if (wholeSources) {
+                walk(dir, lines, true)
+            }
+            else {
+                walkNames(dir, lines)
+            }
         }
         for (File file : inputs.sourceFiles) {
             walk(file, lines, true)
@@ -417,9 +426,9 @@ class ProjectCommands {
     }
 
     /** The record of the files, or none when they cannot be read, such as one of a path the system refuses */
-    private static List<String> snapshotOrNull(Inputs inputs, boolean wholeCommandFiles) {
+    private static List<String> snapshotOrNull(Inputs inputs, boolean wholeSources) {
         try {
-            return snapshot(inputs, wholeCommandFiles)
+            return snapshot(inputs, wholeSources)
         }
         catch (RuntimeException ignored) {
             return null
@@ -461,11 +470,8 @@ class ProjectCommands {
         }
     }
 
-    /**
-     * The files below the directory named like a command: by name only, so editing one changes nothing,
-     * or else with their times and sizes
-     */
-    private static void walkNames(File dir, List<String> lines, boolean whole) {
+    /** The files below the directory named like a command, by name only, so editing one changes nothing */
+    private static void walkNames(File dir, List<String> lines) {
         if (Files.isSymbolicLink(dir.toPath())) {
             return
         }
@@ -475,10 +481,10 @@ class ProjectCommands {
         }
         for (File child : children.sort(false) { File it -> it.name }) {
             if (child.isDirectory()) {
-                walkNames(child, lines, whole)
+                walkNames(child, lines)
             }
             else if (COMMAND_FILE_SUFFIXES.any { String suffix -> child.name.endsWith(suffix) }) {
-                lines << (whole ? describe(child) : "named\t${child.absolutePath}".toString())
+                lines << "named\t${child.absolutePath}".toString()
             }
         }
     }

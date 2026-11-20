@@ -279,10 +279,13 @@ $ GRAILS_FORGE_RUN_BUILD=false grails-forge-cli
 When the build fails, as it does while the application does not compile or in a project of a Grails
 release without `generateCommandManifest`, the Forge CLI says so once and keeps offering the commands of
 the file the build last wrote, if any. It does not run the build for them again until one of the files
-above changes, also after `./gradlew clean`. While the build fails, editing a file named like a command
-counts as a change too, so fixing a new command that did not compile runs the build again. Run
-`./gradlew generateCommandManifest` to see what went wrong. A command of the file that the Forge CLI cannot offer, such as one declaring an option named
-`help`, is reported and left out, and the others are offered.
+above changes, also after `./gradlew clean`. While the build fails, editing any file of the main sources
+of the projects, such as a service in `grails-app/services` or a class in `src/main/groovy`, counts as a
+change too, so fixing what did not compile runs the build again. Run `./gradlew generateCommandManifest`
+to see what went wrong; once a failure no source explains is fixed, such as a dependency that could not
+be downloaded, running it also makes the Forge CLI read the commands again. A command of the file that
+the Forge CLI cannot offer, such as one declaring an option named `help`, is reported and left out, and
+the others are offered.
 
 The build runs through the Gradle wrapper of the project, or of the build it belongs to: the wrapper in
 the first directory above it with a `settings.gradle` or `settings.gradle.kts` file. A project whose build has no wrapper has no

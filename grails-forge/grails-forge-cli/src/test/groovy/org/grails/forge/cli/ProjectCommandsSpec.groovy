@@ -457,6 +457,64 @@ class ProjectCommandsSpec extends Specification {
         gradleInvocations() == []
     }
 
+    void 'a source that did not compile in #path, #manifestState, runs the build again once it is fixed'() {
+        given:
+        File service = new File(dir, path)
+        service.parentFile.mkdirs()
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [],
+                      commandFileDirectories: [new File(dir, 'plugins/audit/src/main/groovy').path]]
+        if (namesInputs) {
+            buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT)
+            ForgeCli.createCommandLine(context, false)
+            forgetInvocations()
+        }
+
+        when: 'a source is added that does not compile, with the plugin whose command is then named'
+        service.text = 'class AuditService { broken'
+        new File(dir, 'gradle-exit-code').text = '1'
+        if (namesInputs) {
+            new File(dir, 'build.gradle') << '// depends on the security plugin\n'
+        }
+        int rejected = ForgeCli.execute(context, 's2-quickstart')
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the failed build runs once, not again while nothing changes'
+        rejected != 0
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
+
+        when: 'the source is fixed'
+        forgetInvocations()
+        service.text = 'class AuditService { /* fixed */ }'
+        new File(dir, 'gradle-exit-code').delete()
+        if (namesInputs) {
+            buildWritesWithInputs(inputs, URL_MAPPINGS_REPORT, SECURITY_QUICKSTART)
+        }
+        else {
+            buildWrites(SECURITY_QUICKSTART)
+        }
+        int exitCode = ForgeCli.execute(context, 's2-quickstart')
+
+        then: 'the build runs again, and the command runs'
+        exitCode == 0
+        gradleInvocations()*.get(5) == ['generateCommandManifest', 'runCommand']
+
+        when: 'the source is edited once the build has succeeded'
+        forgetInvocations()
+        service.text = 'class AuditService { /* edited */ }'
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the sources are watched by the names of commands again'
+        gradleInvocations() == []
+
+        where:
+        path                                                         | namesInputs
+        'grails-app/services/com/acme/AuditService.groovy'           | false
+        'src/main/groovy/com/acme/AuditService.groovy'               | false
+        'plugins/audit/src/main/groovy/com/acme/AuditService.groovy' | true
+
+        manifestState = namesInputs ? 'with a manifest naming its directory' : 'with no manifest yet'
+    }
+
     void 'the directories the manifest names are watched, such as those of the other projects of the build'() {
         given: 'a manifest naming a plugin project next to the application'
         File plugin = new File(dir, 'plugins/audit')
@@ -878,7 +936,7 @@ class ProjectCommandsSpec extends Specification {
 
         then:
         output.toString().contains('Could not read the commands of the project: its build failed with exit code 1. ' +
-                'Its commands are not offered, and the build is not run for them again until a build file changes. ' +
+                'Its commands are not offered, and the build is not run for them again until a build file or a source changes. ' +
                 'A project of Grails 9 or later lists them with its generateCommandManifest Gradle task; run it to see what went wrong.')
         commandLine.subcommands.containsKey('create-app')
         !commandLine.subcommands.containsKey('s2-quickstart')
@@ -905,6 +963,27 @@ class ProjectCommandsSpec extends Specification {
         then:
         gradleInvocations().size() == 2
         commandLine.subcommands.containsKey('s2-quickstart')
+        !new File(dir, '.gradle/grails/commands.failed').exists()
+    }
+
+    void 'a failure no source explains is over once the manifest is written with Gradle'() {
+        given: 'a first build that fails, as when a dependency cannot be downloaded'
+        new File(dir, 'gradle-exit-code').text = '1'
+        ForgeCli.createCommandLine(context, false)
+        forgetInvocations()
+
+        when: 'the cause is gone, and ./gradlew generateCommandManifest writes the manifest, naming its inputs'
+        new File(dir, 'gradle-exit-code').delete()
+        Map inputs = [buildDirectories: [dir.path], sourceDirectories: [new File(dir, 'grails-app/commands').path]]
+        buildWritesWithInputs(inputs, SECURITY_QUICKSTART)
+        manifest.parentFile.mkdirs()
+        manifest.text = JsonOutput.toJson([version: 1, commands: [SECURITY_QUICKSTART], inputs: inputs])
+        CommandLine commandLine = ForgeCli.createCommandLine(context, false)
+        ForgeCli.createCommandLine(context, false)
+
+        then: 'the commands are read again, and the build runs once to record what they depend on'
+        commandLine.subcommands.containsKey('s2-quickstart')
+        gradleInvocations() == [prefix() + MANIFEST_TASK]
         !new File(dir, '.gradle/grails/commands.failed').exists()
     }
 
