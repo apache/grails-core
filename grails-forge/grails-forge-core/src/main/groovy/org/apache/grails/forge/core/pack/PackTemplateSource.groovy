@@ -52,7 +52,9 @@ import groovy.transform.CompileStatic
  * escape, two by two: each two of them write one, and one that is left over has what follows written
  * and not read, and is not written itself. So {@code \<%} writes {@code <%}, {@code \\<%} writes a
  * backslash and then has the scriptlet run, and {@code \<g:link>} writes the tag as {@code <g:link>}
- * does, which makes it safe to escape every tag of a view. A backslash anywhere else is a backslash.</p>
+ * does, which makes it safe to escape every tag of a view. A backslash anywhere else is a backslash.
+ * What is written so is all of what the backslash is in front of: <code>\<%{</code> writes
+ * <code>&lt;%{</code>, and its percent sign and brace do not start a scriptlet of their own.</p>
  *
  * <p>Two attributes of an instruction are refused, because a template with them does not do what it
  * says: {@code env}, which would ask for the environment the generator runs in and not for that of
@@ -126,6 +128,11 @@ final class PackTemplateSource {
         if (c == (char) '<' && length - position > 3) {
             if (c1 == (char) '%') {
                 if (isWritten(position, (char) '<')) {
+                    if (charAt(position + 2) == (char) '{') {
+                        // the percent sign that is written with it would start a scriptlet of its own with the brace
+                        write(position + 1, 1, c1)
+                        return position + 2
+                    }
                     return position + 1
                 }
                 if (charAt(position + 2) == (char) '-' && charAt(position + 3) == (char) '-') {

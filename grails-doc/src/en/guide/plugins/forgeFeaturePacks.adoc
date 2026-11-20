@@ -41,6 +41,8 @@ src/main/forge/
 
 When the directory exists, the `org.apache.grails.gradle.grails-plugin` Gradle plugin puts `feature.yml` and `templates` into `META-INF/grails-forge` of the plugin's jar and records the name of the pack in the jar's manifest as `Grails-Forge-Pack`. A pack is published with the plugin; there is nothing else to configure. The build fails when the pack could not be read from the jar: when `src/main/forge` has templates and no `feature.yml`, when a file under `templates` is a symbolic link, and when a file is one Gradle leaves out of every archive, such as `.gitignore` or `.DS_Store`. Give such a file another name in the pack and its real name in `to`; this is for a file in a directory of its own, since the `.gitignore` at the root of the application is written by Grails and a pack cannot write it too.
 
+The pack is read only from a jar in the form the `jar` task writes by default; a jar that is built with `zip64 = true`, or that is given a comment or a launch script afterwards, is <<forgeFeaturePackJar,refused>> by the command that would use the pack.
+
 
 ==== The Descriptor
 
@@ -322,6 +324,9 @@ In a template, the tags of the view need nothing, since they are text; neither d
 |`\%{`
 |`%{`, which starts a scriptlet or a `%{-- --}%` comment of the view, or is text such as the `%{http_code}` of a `curl` command
 
+|`\<%{`
+|`<%{`: the backslash in front of `<%` also takes the `%{` that begins with the same `%`, which starts nothing. For a `<` of the view directly in front of a `%{ }%` scriptlet of the template, write the `<` as an expression: `${'<'}%{ ... }%`.
+
 |`\<g:if`, `\</g:if` and the other nine
 |The instruction tag, for the view to run
 
@@ -363,7 +368,7 @@ token: ${{ secrets.TOKEN }}; curl -w "%{http_code}"
 To turn a view into a template:
 
 . Where the view already has backslashes directly in front of a `${`, a `<%`, a `%{` or a tag, double them.
-. Put a backslash in front of every `${`, `<%` and `%{`, and in front of the start and end tags of the ten instructions, or of every tag.
+. Put a backslash in front of every `${`, `<%` and `%{`, and in front of the start and end tags of the ten instructions, or of every tag. Where a `<%` is directly followed by a `{`, the two share the `%` and the one backslash in front of the `<%` is for both: `\<%{` writes `<%{`.
 . Remove the backslash where the generator is to fill something in.
 
 // example::view[]
@@ -597,6 +602,19 @@ $ grails -t forge create-app com.example.shop \
     --features=com.acme:acme-audit-grails:2.3.0 \
     --feature-pack-sha256=com.acme:acme-audit-grails:2.3.0=5f2c...
 ----
+
+[[forgeFeaturePackJar]]
+The jar has to be a plain jar, as Gradle, Maven and the `jar` tool of the JDK write one, and all of it is checked before the pack in it is read. A file can be made that one program reads as one jar and another program as a different jar, so that the jar you looked at is not the one that is used. Such a file is refused, and the error says what is wrong with it:
+
+* a jar with a comment at its end, or with anything in front of it (such as the launch script of an executable jar), after it or between its entries;
+* a jar in the ZIP64 format, which a jar with more than 65,534 entries or of 4 GiB needs, and which Gradle writes for any jar built with `zip64 = true`;
+* an entry that is encrypted, or compressed with anything but deflate;
+* two entries of one name, or an entry that is a file where another entry has a directory;
+* an entry whose name is not a relative path in UTF-8, or has a backslash or a control character in it;
+* an entry with an extra field other than those tools write for the times and the owner of a file: one kind of extra field is a second name for the entry, which some programs read as its name;
+* an entry whose content does not have the length and the CRC-32 the jar gives for it, or for which the jar gives them twice and differently. This is checked for every entry of the jar, not only for those of the pack.
+
+A jar can have 64 MiB, the names of its entries 4 MiB together, and its entries 256 MiB together when they are not compressed. A signed jar is read as any other, with the entries of its signature.
 
 The signature of a signed jar is not verified. The coordinates, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features, and with them the repository when it is an `https` address. A directory is not written, since its path names your computer.
 

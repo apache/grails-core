@@ -27,10 +27,6 @@ import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
-import java.util.zip.Inflater
-import java.util.zip.InflaterInputStream
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
 import org.apache.grails.forge.core.pack.PackDescriptor.PackFile
 
 /**
@@ -46,6 +42,9 @@ class PackLoader {
 
     /** The most bytes the files of a pack can have together */
     public static final int MAX_PACK_BYTES = 16 * 1024 * 1024
+
+    /** The most bytes a jar can have that a pack is read from */
+    public static final int MAX_JAR_BYTES = 64 * 1024 * 1024
 
     // a character of a descriptor is at most three bytes of UTF-8, or four for the two characters of a pair
     private static final long MAX_DESCRIPTOR_BYTES = PackDescriptorParser.MAX_LENGTH * 3L
@@ -79,10 +78,10 @@ class PackLoader {
     /**
      * Reads the pack a jar holds under {@code META-INF/grails-forge}, which is where the Grails Gradle
      * plugin puts the pack of a plugin: its {@code feature.yml}, and under {@code templates} the files
-     * the descriptor names. Nothing else of the jar is read and nothing of it is loaded as code here.
+     * the descriptor names. Nothing of the jar is loaded as code here.
      *
-     * <p>The limits are those of a pack in a directory, and they are on what is read, not on the sizes
-     * the jar gives for its entries. A jar with two entries of one name for a file of the pack is refused.
+     * <p>The jar is read as {@link #fromJarBytes(byte[], int, String)} reads its bytes, and is taken
+     * only in the form that is taken there. The limits of the pack are those of a pack in a directory.
      * The signature of a signed jar is not checked.</p>
      *
      * @param jar the jar
@@ -106,18 +105,42 @@ class PackLoader {
         if (!Files.isRegularFile(jar)) {
             throw new PackDescriptorException(origin, ['It is not a file'])
         }
-        try (ZipFile zip = new ZipFile(jar.toFile())) {
-            return read(new FileJar(zip), origin)
-        } catch (IOException | InvalidPathException | IllegalArgumentException | UnsupportedOperationException e) {
-            throw new PackDescriptorException(origin, ["It cannot be read as a jar: ${e.class.simpleName}".toString()])
+        byte[] bytes
+        int length
+        try (InputStream input = Files.newInputStream(jar)) {
+            long size = Files.size(jar)
+            if (size > MAX_JAR_BYTES) {
+                throw new PackDescriptorException(origin, [tooLarge()])
+            }
+            // the jar is read once, and what is checked and read of it then is these bytes
+            bytes = new byte[(int) size]
+            length = input.readNBytes(bytes, 0, bytes.length)
+            if (input.read() != -1) {
+                throw new PackDescriptorException(origin, ['It cannot be read as a jar: it changed while it was read'])
+            }
+        } catch (IOException | InvalidPathException | UnsupportedOperationException e) {
+            throw new PackDescriptorException(origin, ["It cannot be read: ${e.class.simpleName}".toString()])
+        } catch (OutOfMemoryError ignored) {
+            throw new PackDescriptorException(origin, ['It cannot be read: it does not fit into the memory there is'])
         }
+        return fromJarBytes(bytes, length, origin)
     }
 
     /**
-     * Reads the pack of a jar as {@link #fromJar(Path)} does, from the bytes of the jar and not from a
-     * file of them: the pack that is read is then one of exactly the bytes whoever calls this has, which
-     * no file between the two can be changed in. The same entries are read under the same limits, and
-     * a jar the other way of reading refuses is refused.
+     * Reads the pack of a jar from the bytes of the jar: the pack that is read is then one of exactly
+     * the bytes whoever calls this has, which no file between the two can be changed in.
+     *
+     * <p>A jar can be made so that two programs find two different jars in the same bytes. The pack has
+     * to be the one every program finds, so the bytes are taken only as a jar in the one form that
+     * leaves no such choice, which is the form the tools that build a jar write: the entries from the
+     * first byte on, one directly after the other, then the directory of exactly these entries in
+     * their order, then the end record, with no comment and nothing in front, between or after; no
+     * ZIP64, no encryption, no way of compressing but deflate; names in UTF-8 that are relative paths,
+     * each once, none a file where another has a directory; the header in front of every entry saying
+     * what the directory says; and every entry, of the pack or not, of the length and the CRC-32 the
+     * directory gives. Anything else is refused with what is wrong. All of a jar that is taken was
+     * checked, and it can have {@link #MAX_JAR_BYTES} bytes, fewer than 65535 entries, 4 MiB of
+     * names and 256 MiB of content that is not compressed.</p>
      *
      * @param jar holds the bytes of the jar from its start
      * @param length how many of them are the jar
@@ -126,13 +149,22 @@ class PackLoader {
      * @throws PackDescriptorException when the bytes hold no pack that can be used
      */
     Pack fromJarBytes(byte[] jar, int length, String origin) {
+        if (length > MAX_JAR_BYTES) {
+            throw new PackDescriptorException(origin, [tooLarge()])
+        }
         try {
-            return read(new MemoryJar(jar, length), origin)
+            return read(new PackJar(jar, length), origin)
+        } catch (PackJar.NotRead e) {
+            throw new PackDescriptorException(origin, ["It cannot be read as a jar: ${e.message}".toString()])
         } catch (PackDescriptorException e) {
             throw e
         } catch (IOException | RuntimeException e) {
             throw new PackDescriptorException(origin, ["It cannot be read as a jar: ${e.class.simpleName}".toString()])
         }
+    }
+
+    private static String tooLarge() {
+        return "It has more than the ${MAX_JAR_BYTES} bytes a jar of a pack can have".toString()
     }
 
     /**
@@ -184,15 +216,10 @@ class PackLoader {
         }
     }
 
-    private Pack read(Jar jar, String origin) {
+    private Pack read(PackJar jar, String origin) {
         String descriptorPath = "${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR}"
         if (!jar.hasFile(descriptorPath)) {
             throw new PackDescriptorException(origin, ["There is no ${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR} in the jar".toString()])
-        }
-        // a jar can hold two entries of one name, and which of them is read is not for the jar to choose
-        Set<String> repeated = jar.repeated(Pack.JAR_DIRECTORY + '/')
-        if (repeated.contains(descriptorPath)) {
-            throw new PackDescriptorException(origin, ["${Pack.JAR_DIRECTORY}/${Pack.DESCRIPTOR} is in the jar more than once".toString()])
         }
         byte[] descriptorBytes = jar.read(descriptorPath, MAX_DESCRIPTOR_BYTES)
         if (descriptorBytes == null) {
@@ -209,10 +236,6 @@ class PackLoader {
                 return
             }
             String path = "${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES}/${file.from}"
-            if (repeated.contains(path)) {
-                problems << "${at} is in the jar more than once".toString()
-                return
-            }
             if (!jar.hasFile(path)) {
                 problems << "${at} is not a file under ${Pack.JAR_DIRECTORY}/${Pack.TEMPLATES} of the jar".toString()
                 return
@@ -233,195 +256,6 @@ class PackLoader {
             throw new PackDescriptorException(origin, problems)
         }
         return new Pack(descriptor, origin, files)
-    }
-
-    /**
-     * What is asked of a jar to read a pack from it, whether the jar is a file or bytes that are held.
-     */
-    private interface Jar {
-
-        /**
-         * @return whether the jar has an entry of exactly this name that is a file
-         */
-        boolean hasFile(String name)
-
-        /**
-         * @return the names that begin so and that more than one entry of the jar has
-         */
-        Set<String> repeated(String prefix)
-
-        /**
-         * @return the bytes of the entry, or {@code null} when it has more than the limit, however
-         * large the jar says it is
-         */
-        byte[] read(String name, long limit) throws IOException
-    }
-
-    private static final class FileJar implements Jar {
-
-        private final ZipFile zip
-
-        FileJar(ZipFile zip) {
-            this.zip = zip
-        }
-
-        @Override
-        boolean hasFile(String name) {
-            ZipEntry entry = zip.getEntry(name)
-            return entry != null && !entry.isDirectory()
-        }
-
-        @Override
-        Set<String> repeated(String prefix) {
-            Set<String> seen = new HashSet<>()
-            Set<String> repeated = new HashSet<>()
-            Enumeration<? extends ZipEntry> entries = zip.entries()
-            while (entries.hasMoreElements()) {
-                String name = entries.nextElement().name
-                if (name.startsWith(prefix) && !seen.add(name)) {
-                    repeated << name
-                }
-            }
-            return repeated
-        }
-
-        @Override
-        byte[] read(String name, long limit) throws IOException {
-            try (InputStream input = zip.getInputStream(zip.getEntry(name))) {
-                byte[] bytes = input.readNBytes((int) limit + 1)
-                return bytes.length > limit ? null : bytes
-            }
-        }
-    }
-
-    /**
-     * A jar that is bytes in memory, read the way a jar in a file is: by the directory at its end, which
-     * names each entry once and says where it is. The JDK reads a jar that way only from a file. What it
-     * would refuse is refused here, and so is what it has other ways for that a jar of a plugin does not
-     * need: more than 65534 entries or 4 GiB (ZIP64), several disks, encryption, and a way of
-     * compressing other than deflate.
-     */
-    private static final class MemoryJar implements Jar {
-
-        private static final long END_SIGNATURE = 0x06054b50L
-        private static final long CENTRAL_SIGNATURE = 0x02014b50L
-        private static final long LOCAL_SIGNATURE = 0x04034b50L
-        private static final int END_LENGTH = 22
-        private static final int CENTRAL_LENGTH = 46
-        private static final int LOCAL_LENGTH = 30
-        private static final int MAX_COMMENT = 0xFFFF
-        private static final long ZIP64 = 0xFFFFFFFFL
-        private static final int ENCRYPTED = 1
-        private static final int STORED = 0
-        private static final int DEFLATED = 8
-
-        private final byte[] bytes
-        private final int length
-        // of each name: the flags, the way it is compressed, its length as it is in the jar, and where it begins
-        private final Map<String, long[]> entries = new HashMap<>()
-        private final Set<String> twice = new HashSet<>()
-        private long shift
-
-        MemoryJar(byte[] bytes, int length) throws IOException {
-            this.bytes = bytes
-            this.length = length
-            int end = -1
-            for (int at = length - END_LENGTH; at >= 0 && at >= length - END_LENGTH - MAX_COMMENT; at--) {
-                // the end of the directory is where what it says of its comment takes it to the end of the jar
-                if (u32(at) == END_SIGNATURE && at + END_LENGTH + u16(at + 20) == length) {
-                    end = at
-                    break
-                }
-            }
-            if (end < 0) {
-                throw new IOException('no directory')
-            }
-            int count = u16(end + 10)
-            long size = u32(end + 12)
-            long start = u32(end + 16)
-            if (u16(end + 4) != 0 || u16(end + 6) != 0 || u16(end + 8) != count || count == MAX_COMMENT || size == ZIP64 || start == ZIP64) {
-                throw new IOException('several disks or ZIP64')
-            }
-            // as the JDK reads it: the directory ends where its end is, and what is before the jar in
-            // the file moves every place the directory names
-            shift = end - size - start
-            if (size > end || shift < 0) {
-                throw new IOException('directory out of the jar')
-            }
-            int at = (int) (end - size)
-            for (int index = 0; index < count; index++) {
-                if (at + CENTRAL_LENGTH > end || u32(at) != CENTRAL_SIGNATURE) {
-                    throw new IOException('directory entry')
-                }
-                int nameLength = u16(at + 28)
-                int next = at + CENTRAL_LENGTH + nameLength + u16(at + 30) + u16(at + 32)
-                if (next > end) {
-                    throw new IOException('directory entry out of the directory')
-                }
-                String name = new String(bytes, at + CENTRAL_LENGTH, nameLength, StandardCharsets.UTF_8)
-                if (entries.put(name, [u16(at + 8), u16(at + 10), u32(at + 20), u32(at + 42)] as long[]) != null) {
-                    twice << name
-                }
-                at = next
-            }
-        }
-
-        @Override
-        boolean hasFile(String name) {
-            return !name.endsWith('/') && entries.containsKey(name)
-        }
-
-        @Override
-        Set<String> repeated(String prefix) {
-            return twice.findAll { String name -> name.startsWith(prefix) } as Set<String>
-        }
-
-        @Override
-        byte[] read(String name, long limit) throws IOException {
-            long[] entry = entries.get(name)
-            if (entry == null) {
-                throw new IOException('no such entry')
-            }
-            long compressed = entry[2]
-            if ((entry[0] & ENCRYPTED) != 0 || compressed == ZIP64 || entry[3] == ZIP64) {
-                throw new IOException('encrypted or ZIP64 entry')
-            }
-            long local = entry[3] + shift
-            if (local + LOCAL_LENGTH > length || u32((int) local) != LOCAL_SIGNATURE) {
-                throw new IOException('entry out of the jar')
-            }
-            long data = local + LOCAL_LENGTH + u16((int) local + 26) + u16((int) local + 28)
-            if (data + compressed > length) {
-                throw new IOException('entry out of the jar')
-            }
-            if (entry[1] == STORED) {
-                return compressed > limit ? null : Arrays.copyOfRange(bytes, (int) data, (int) (data + compressed))
-            }
-            if (entry[1] != DEFLATED) {
-                throw new IOException('way of compressing')
-            }
-            Inflater inflater = new Inflater(true)
-            try (InputStream input = new InflaterInputStream(new ByteArrayInputStream(bytes, (int) data, (int) compressed), inflater)) {
-                byte[] content = input.readNBytes((int) limit + 1)
-                return content.length > limit ? null : content
-            } finally {
-                inflater.end()
-            }
-        }
-
-        private int u16(int at) throws IOException {
-            if (at < 0 || at + 2 > length) {
-                throw new IOException('out of the jar')
-            }
-            return (bytes[at] & 0xFF) | ((bytes[at + 1] & 0xFF) << 8)
-        }
-
-        private long u32(int at) throws IOException {
-            if (at < 0 || at + 4 > length) {
-                throw new IOException('out of the jar')
-            }
-            return (bytes[at] & 0xFFL) | ((bytes[at + 1] & 0xFFL) << 8) | ((bytes[at + 2] & 0xFFL) << 16) | ((bytes[at + 3] & 0xFFL) << 24)
-        }
     }
 
     private Pack read(Path directory, String origin) {

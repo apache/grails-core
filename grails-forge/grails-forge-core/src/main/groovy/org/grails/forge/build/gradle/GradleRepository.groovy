@@ -46,7 +46,8 @@ interface GradleRepository extends Ordered {
      * also where a parser does not see them as such, so it is never repeated as it was given: what is
      * shown is made of the parts of an address that parses as one with a host (the scheme, the host, the
      * port and the path, never a user, a query or a fragment), and of an address that does not parse so,
-     * only its scheme when that is one of a few, and its length.
+     * or that has an at sign anywhere after its host, only its scheme when that is one of a few, and its
+     * length.
      *
      * @param address the address as it was given
      * @return what a message can say of it
@@ -58,8 +59,10 @@ interface GradleRepository extends Ordered {
         try {
             URI uri = new URI(address)
             String path = uri.getRawPath() ?: ''
-            // an at sign after the host is where a password with a slash in it ends
-            if (uri.getScheme() != null && !uri.isOpaque() && uri.getHost() != null && !path.contains('@') && !path.toLowerCase(Locale.ROOT).contains('%40')) {
+            // an at sign after the host is where a password with a slash, a question mark or a hash in it
+            // ends: what was parsed as the host and its port is then the user and the start of the password
+            String afterHost = (path + '?' + (uri.getRawQuery() ?: '') + '#' + (uri.getRawFragment() ?: '')).toLowerCase(Locale.ROOT)
+            if (uri.getScheme() != null && !uri.isOpaque() && uri.getHost() != null && !afterHost.contains('@') && !afterHost.contains('%40')) {
                 return "'" + FeatureSelectionException.shown("${uri.getScheme()}://${uri.getHost()}${uri.getPort() >= 0 ? ':' + uri.getPort() : ''}${path}".toString()) + "'"
             }
         } catch (URISyntaxException ignored) {

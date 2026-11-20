@@ -467,7 +467,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then:
         PackDescriptorException e = thrown()
-        e.problems == ["files[0].from: 'a.txt' is in the jar more than once"]
+        e.problems == ['It cannot be read as a jar: entries 2 and 3 of its directory have one name']
     }
 
     void "a pack that names many files that are not there is told so only so many times"() {
@@ -544,7 +544,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         where:
         problem                                  | jarOf                                                                                        || problems
         'that is not there'                      | { spec -> spec.directory.resolve('none.jar') }                                               || ['It is not a file']
-        'that is no jar'                         | { spec -> Files.writeString(spec.directory.resolve('text.jar'), 'not a jar') }                || ['It cannot be read as a jar: ZipException']
+        'that is no jar'                         | { spec -> Files.writeString(spec.directory.resolve('text.jar'), 'not a jar') }                || ['It cannot be read as a jar: it does not end with the end record of a jar; a jar with a comment or with bytes after it is not read']
         'without a pack'                         | { spec -> spec.jar('a.jar', ['com/acme/Plugin.class': 'x']) }                                 || ['There is no META-INF/grails-forge/feature.yml in the jar']
         'whose descriptor is a directory'        | { spec -> spec.jar('b.jar', ['META-INF/grails-forge/feature.yml/': '']) }                     || ['There is no META-INF/grails-forge/feature.yml in the jar']
         'without a file its descriptor names'    | { spec -> spec.jar('c.jar', ['META-INF/grails-forge/feature.yml': HEADER + "name: acme\nfiles:\n  - from: a.txt\n    to: a.txt\n"]) } || ["files[0].from: 'a.txt' is not a file under META-INF/grails-forge/templates of the jar"]

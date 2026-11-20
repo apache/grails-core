@@ -105,6 +105,23 @@ class PackTemplateViewsSpec extends ApplicationContextSpec {
         view = copies()[name]
     }
 
+    void "views in which the things a template reads share a character are written back as they are"() {
+        given: 'the starts of what is read, of which <% and %{ share the percent sign, next to each other'
+        List<String> views = ['a<%{-- c --}%b', 'a<%{ x }%b', '<%{', 'a%><%{}b', 'a<%{<g:if', 'a<%{<g:link>b', 'a\\<%{ x }%b', 'a\\\\<%{b', '<%{${a}', '<%{%{b}%', '%{<%{<%', '<%%{b',
+                              '$<%{', '<<%{', '<%{-- <%{ --}%', '^p<%{ }%', '<%{}%>', '${<%{'].collect { String view -> view + ' and more' }
+
+        and: 'views made of them, of a backslash and of what ends them'
+        List<String> parts = ['<', '%', '{', '$', '\\', '}', '-', '>', '<%', '%{', '${', '<g:if', '</g:if>', '<x:y>', '@{', '!{', '^p', 'a', ' ']
+        Random random = new Random(16348)
+        60.times {
+            views << 'a' + (1..(1 + random.nextInt(6))).collect { parts[random.nextInt(parts.size())] }.join('') + 'aaaa'
+        }
+
+        expect:
+        writeAll(views.collect { String view -> asTemplate(view) }) == views
+        writeAll(views.collect { String view -> asTemplateWithEveryTagEscaped(view) }) == views
+    }
+
     @Requires(value = { System.getProperty(ALL) == 'true' }, reason = 'takes every view of the sources of Grails and is asked for with -PallRepositoryViews')
     void "every view of the sources of Grails is written back as it is by a template made of it"() {
         given:
@@ -177,6 +194,29 @@ class PackTemplateViewsSpec extends ApplicationContextSpec {
 
         expect:
         write(asTemplate(view)) == view
+    }
+
+    /**
+     * What a pack with these templates writes, each to a file of its own, in one generation.
+     */
+    private List<String> writeAll(List<String> templates) {
+        Path packDirectory = Files.createDirectories(directory.resolve("pack${Files.list(directory).withCloseable { it.count() }}"))
+        Files.createDirectories(packDirectory.resolve('templates'))
+        StringBuilder files = new StringBuilder('files:\n')
+        templates.eachWithIndex { String template, int index ->
+            files.append("  - from: view${index}.gsp\n    to: grails-app/views/acme/view${index}.gsp\n")
+            Files.writeString(packDirectory.resolve("templates/view${index}.gsp"), template)
+        }
+        Files.writeString(packDirectory.resolve('feature.yml'), PackGenerationSpec.HEADER + 'name: acme-views\n' + files)
+        Pack pack = new PackLoader().fromDirectory(packDirectory)
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('example.grails.foo')
+        MapOutputHandler output = new MapOutputHandler()
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                ['acme-views'], ConsoleOutput.NOOP, [pack])
+        generator.generate(ApplicationType.WEB, project, output, context)
+        packDirectory.toFile().deleteDir()
+        return (0..<templates.size()).collect { int index -> output.getProject()["grails-app/views/acme/view${index}.gsp".toString()] }
     }
 
     private String write(String template) {
