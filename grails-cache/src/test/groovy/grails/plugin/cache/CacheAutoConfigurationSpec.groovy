@@ -160,7 +160,7 @@ class CacheAutoConfigurationSpec extends Specification {
         GrailsCacheManager mine = Mock(GrailsCacheManager)
         AnnotationConfigApplicationContext context = buildContext([:], mine, [cacheManager: new ConcurrentMapCacheManager()])
 
-        expect: 'it gets the alias too, so the context starts and caches with it'
+        expect: 'where Spring cannot choose, the cache-aware beans get it, so the context starts and caches with it'
         context.getBean(CacheAware).grailsCacheManager.is(mine)
         context.getBean(GrailsCacheAdminService).grailsCacheManager.is(mine)
 
