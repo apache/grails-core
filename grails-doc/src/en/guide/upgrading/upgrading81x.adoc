@@ -98,3 +98,7 @@ A filter registered at exactly `Ordered.HIGHEST_PRECEDENCE` through a `FilterReg
 ===== Required Actions
 
 For most applications **no changes are required**. Check that packaged stylesheets and scripts with non-ASCII characters are in the charset their responses now declare: UTF-8, or the encoding `grails.filter.encoding` names. When `grails.filter.encoding` is not UTF-8, check that clients sending a PUT, PATCH or DELETE form without a charset encode it in that encoding, as a POST form already had to be. A filter that has to run before the encoding filter can be registered at `Ordered.HIGHEST_PRECEDENCE` through a `FilterRegistrationBean`; a filter that reads request parameters needs a later order than that. Check filters ordered at `GrailsFilters.CHARACTER_ENCODING_FILTER.order + 1`, which now run ahead of `FormContentFilter` and the security headers filter.
+
+==== 6. Criteria Closures of the Static GORM API Type-Check
+
+The closures that `where`, `whereLazy`, `whereAny` and `findAll` take on a domain class are annotated with `@DelegatesTo(DetachedCriteria)`, so `eq`, `gt` and the other criteria methods type-check inside `@CompileStatic` code instead of needing `@CompileDynamic`. No result changes: code that compiled before compiles and runs as it did, and code that needed `@CompileDynamic` for these calls can drop it.
