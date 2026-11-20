@@ -22,12 +22,9 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateJobCommand.NAME, description = 'Creates a new Quartz scheduled job')
@@ -65,25 +62,8 @@ class CreateJobCommand extends CodeGenCommand {
         if (!applies()) {
             throw new IllegalArgumentException('Please first select Grails Quartz Plugin')
         }
-        final Project project = getProject(jobName)
-        final RenderResult result = getTemplateRenderer(project)
-            .render(new StringTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', artefact(ArtefactTemplate.JOB, project)), overwrite)
-        if (result != null) {
-            logRenderResult(result)
-        }
-
-        return 0
-    }
-
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered job to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+        return generate('job', getProject(jobName), [
+                'grails-app/jobs/{packagePath}/{className}Job.groovy': ArtefactTemplate.JOB
+        ])
     }
 }

@@ -18,7 +18,13 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
+import java.util.concurrent.atomic.AtomicInteger
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
+import org.apache.grails.forge.cli.artefact.ArtefactTemplates
+import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.grails.forge.application.ApplicationType
@@ -30,7 +36,9 @@ import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
+import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.Options
+import org.grails.forge.template.Template
 import org.grails.forge.util.NameUtils
 import spock.lang.IgnoreIf
 import spock.lang.Shared
@@ -46,6 +54,24 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     static final String PROFILE_CONTROLLER = '@artifact.package@\nclass @artifact.name@Controller {\n\n    def index() { }\n}\n'
     static final String QUARTZ_JOB = 'package ${packageName}\n\nclass ${className}Job {\n    static triggers = {\n' +
             '      simple repeatInterval: 5000l // execute job once in 5 seconds\n    }\n\n    def execute() {\n        // execute job\n    }\n}\n'
+
+    static final List<String> ALL_COMMANDS = ['create-controller', 'create-service', 'create-domain-class', 'create-taglib', 'create-interceptor', 'create-job',
+                                              'create-unit-test', 'create-integration-test', 'create-functional-test', 'create-restful-controller',
+                                              'create-domain-resource', 'create-command', 'create-script']
+    // the commands that would write a file another command writes are given a name of their own
+    static final Map<String, String> OWN_NAMES = ['create-unit-test': 'Unit', 'create-integration-test': 'Flow', 'create-functional-test': 'Api',
+                                                  'create-restful-controller': 'Rest', 'create-domain-resource': 'Res']
+    // what the templates of the command line import, each a class of the framework, of Groovy, of Spock or of Java
+    static final List<String> KNOWN_CLASSES = [
+            'grails.gorm.transactions.Rollback', 'grails.rest.Resource', 'grails.rest.RestfulController', 'grails.testing.gorm.DomainUnitTest',
+            'grails.testing.mixin.integration.Integration', 'grails.testing.services.ServiceUnitTest', 'grails.testing.web.controllers.ControllerUnitTest',
+            'grails.testing.web.interceptor.InterceptorUnitTest', 'grails.testing.web.taglib.TagLibUnitTest', 'groovy.transform.CompileStatic',
+            'java.net.http.HttpClient', 'java.net.http.HttpRequest', 'java.net.http.HttpResponse', 'org.apache.grails.core.cli.GrailsApplicationCommand',
+            'org.grails.testing.GrailsUnitTest', 'spock.lang.Specification']
+    static final String NO_EXPRESSION = 'between ${ and } there can only be one of the names className, fullName, propertyName, modelName, packageName, packagePath, ' +
+            'simpleName, lowerCaseName; a $ that is to be written is \\$. Templates are not run'
+    // a class whose file has a name of 253 bytes, and whose test has one of 257
+    static final String LONG = 'u.' + (((char) 0x4E66) as String) * 82
 
     @Shared
     Map<String, File> records = [:]
@@ -157,16 +183,32 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "what is written in #set is Groovy"() {
+    void "what is written in #set is Groovy, and imports classes there are"() {
         expect:
         golden(set).findAll { String path, String text -> path.endsWith('.groovy') }.each { String path, String text ->
             CompilationUnit unit = new CompilationUnit()
             unit.addSource(path, text)
             unit.compile(Phases.CONVERSION)
+            // the sources are not compiled against the framework here: a class they import is one the framework is known to have
+            text.readLines().findAll { it.startsWith('import ') }.each { String line ->
+                String imported = line.substring('import '.length())
+                assert imported in KNOWN_CLASSES
+                assert text.replace(line, '').contains(imported.substring(imported.lastIndexOf('.') + 1))
+            }
         }
 
         where:
         set << ['existing', 'web', 'rest-api']
+    }
+
+    void "the templates of the command line are resources on its class path, one of each"() {
+        expect:
+        ArtefactTemplate.values().each { ArtefactTemplate template ->
+            List<URL> found = Collections.list(Thread.currentThread().getContextClassLoader().getResources('META-INF/grails-forge-cli/templates/' + template.location))
+            assert found.size() == 1
+            assert !found[0].toString().contains('/src/main/')
+            assert found[0].getText('UTF-8') == ArtefactTemplates.builtIn(template)
+        }
     }
 
     @Unroll
@@ -250,6 +292,11 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-script'             | 'DataImport'           | 'src/main/scripts/data-import.groovy'                            | 'println'
         'create-script'             | 'data-import'          | 'src/main/scripts/data-import.groovy'                            | 'println'
         'create-script'             | 'dataImport'           | 'src/main/scripts/data-import.groovy'                            | 'println'
+        'create-script'             | 'URLMapper'            | 'src/main/scripts/url-mapper.groovy'                             | 'println'
+        'create-script'             | 'FOOBar'               | 'src/main/scripts/foo-bar.groovy'                                | 'println'
+        'create-script'             | 'x'                    | 'src/main/scripts/x.groovy'                                      | 'println'
+        'create-script'             | 'export-2'             | 'src/main/scripts/export2.groovy'                                | 'println'
+        'create-unit-test'          | (((char) 0xE9) as String) + 'lan' | 'src/test/groovy/example/grails/' + (((char) 0xC9) as String) + 'lanSpec.groovy' | 'Spec extends'
     }
 
     void "a file that is there is kept, and then nothing is written"() {
@@ -332,6 +379,12 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-unit-test'        | 'Bo\u0007ok'                  | 'it has a character that is not shown'
         'create-unit-test'        | 'B' * 201                     | 'it has more than 200 characters'
         'create-unit-test'        | 'Book@|red x|@'               | 'is not a name for a class'
+        'create-unit-test'        | 'Book.groovy'                 | 'it is the name of a file. The name of the class is given, without .groovy'
+        'create-unit-test'        | 'a.Book.JAVA'                 | 'it is the name of a file'
+        'create-unit-test'        | (((char) 0xDF) as String) + 'ook' | 'starts with a letter that has no capital'
+        'create-unit-test'        | 'book--store'                 | 'a hyphen stands between two words of a name'
+        'create-unit-test'        | 'Book-'                       | 'a hyphen stands between two words of a name'
+        'create-unit-test'        | '-Book'                       | ''
         'create-integration-test' | '../Escape'                   | 'is not a name for a class: it is a path'
         'create-functional-test'  | 'a/Book'                      | 'is not a name for a class: it is a path'
         'create-restful-controller' | '../Book'                   | 'is not a name for a class: it is a path'
@@ -343,6 +396,10 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-script'           | 'import.groovy'               | 'its name is given without .groovy'
         'create-script'           | 'a/b'                         | 'is not a name for a class: it is a path'
         'create-script'           | 'nul'                         | 'Nul is the name of a device on Windows'
+        'create-script'           | 'a_b'                         | 'a script is named with the letters a to z and digits'
+        'create-script'           | '$Book'                       | 'a script is named with the letters a to z and digits'
+        'create-script'           | (((char) 0xE9) as String) + 'cole' | 'a script is named with the letters a to z and digits'
+        'create-script'           | 'book--store'                 | 'a script is named with the letters a to z and digits'
     }
 
     void "a class without a package, in a project whose record names none"() {
@@ -405,24 +462,33 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 '// ours\npackage org.shop\n\n// org.shop org/shop\nclass BookStoreThing { def bookStore = "$name ${it} <% %> @other@ \\$" }\n'
     }
 
-    void "the templates that are Groovy are run, with the names the scripts gave them"() {
+    void "the template of a job names what it wants in braces"() {
         given:
         project(ApplicationType.WEB, 'grails-quartz')
-        String source = '<% def twice = className * 2 %>// ${packageName} ${packagePath} ${className} ${propertyName} ${lowerCaseName} ${fullName} ${simpleName} ${modelName} \\$x <%= twice %>\n'
-        template('Job.groovy', source)
-        template('artifacts/Script.groovy', source)
+        template('Job.groovy', '// ${packageName} ${packagePath} ${className} ${propertyName} ${lowerCaseName} ${fullName} ${simpleName} ${modelName} \\$x \\\\ $ 5 $\n')
 
         when:
         Map<String, String> written = writtenBy {
             assert ForgeCli.execute(beanContext, 'create-job', 'org.shop.bookStore') == 0
+        }
+
+        then:
+        written == ['grails-app/jobs/org/shop/BookStoreJob.groovy': '// org.shop org/shop BookStore bookStore book-store org.shop.BookStore BookStore bookStore $x \\ $ 5 $\n']
+    }
+
+    void "the template of a script has the tokens of the other templates, and what a Groovy template would run is text"() {
+        given:
+        project(ApplicationType.WEB)
+        template('artifacts/Script.groovy', '// @artifact.name@ @artifact.propertyName@ ${className} <% new File("' + outside.absolutePath + '/ran").text = "x" %> $y \\$\n')
+
+        when:
+        Map<String, String> written = writtenBy {
             assert ForgeCli.execute(beanContext, 'create-script', 'book-store') == 0
         }
 
         then:
-        written == [
-                'grails-app/jobs/org/shop/BookStoreJob.groovy': '// org.shop org/shop BookStore bookStore book-store org.shop.BookStore BookStore bookStore $x BookStoreBookStore\n',
-                'src/main/scripts/book-store.groovy': '// example.grails example/grails BookStore bookStore book-store example.grails.BookStore BookStore bookStore $x BookStoreBookStore\n'
-        ]
+        written == ['src/main/scripts/book-store.groovy': '// BookStore bookStore ${className} <% new File("' + outside.absolutePath + '/ran").text = "x" %> $y \\$\n']
+        outside.list().length == 0
     }
 
     void "the templates of a profile and of the Quartz plugin are read as they are"() {
@@ -457,10 +523,10 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @Unroll
-    void "a template of the project that cannot be rendered is said with its line: #says"() {
+    void "a template of the project that cannot be rendered is said with its line, and nothing of it is run: #says"() {
         given:
         project(ApplicationType.REST_API, 'grails-quartz')
-        template(location, source)
+        template(location, source.replace('OUTSIDE', outside.absolutePath))
 
         when:
         int exit = 0
@@ -471,19 +537,23 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         then: 'a failure in one line, and no file of the command is written, the one of the other template neither'
         exit == 1
         written == [:]
+        outside.list().length == 0
         out.toString().readLines().findAll { it.contains('Error') } == ["| Error The template src/main/templates/${location} cannot be rendered: ${says}".toString()]
         !out.toString().contains('\tat ')
 
         where:
-        command             | location                    | source                                                                    | says
-        'create-domain-resource' | 'testing/Resource.groovy' | '@artifact.package@\n\nclass @artifact.nme@Spec {\n}\n' | 'line 3: there is no @artifact.nme@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
-        'create-controller'      | 'artifacts/Controller.groovy' | 'class X {\n@artifact.@ @artifact.name@\n}\n'         | 'line 2: there is no @artifact.@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
-        'create-job'             | 'Job.groovy'                | 'package ${packageName}\n\n<% def x = = 2 %>\nclass A {\n}\n' | "line 3: it does not compile: Unexpected input: '='"
-        'create-job'             | 'Job.groovy'                | 'package ${packageName}\n\nclass ${className Job {\n}\n' | 'it does not compile: Unclosed string literal'
-        'create-job'             | 'Job.groovy'                | 'package ${packageName}\n\n\n<% throw new IllegalStateException("no\\n@|red job|@") %>\n' | 'line 4: no @ |red job|@'
-        'create-job'             | 'Job.groovy'                | 'a\nb\n<% %>c<% def x = 1\n %>\n${[].first()}\n'                     | 'line 5: Cannot access first() element from an empty List'
-        'create-job'             | 'Job.groovy'                | 'package ${packageName}\nclass ${classNme}Job {\n}\n'    | "line 2: it has no 'classNme'; a template has className, fullName, propertyName, modelName, packageName, packagePath, simpleName, lowerCaseName"
-        'create-script'          | 'artifacts/Script.groovy'   | 'println "${artifact.name}"\n'                          | "line 1: it has no 'artifact'; a template has className, fullName, propertyName, modelName, packageName, packagePath, simpleName, lowerCaseName"
+        command                  | location                      | source                                                | says
+        'create-domain-resource' | 'testing/Resource.groovy'     | '@artifact.package@\n\nclass @artifact.nme@Spec {\n}\n' | 'line 3: there is no @artifact.nme@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
+        'create-controller'      | 'artifacts/Controller.groovy' | 'class X {\n@artifact.@ @artifact.name@\n}\n'           | 'line 2: there is no @artifact.@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
+        'create-controller'      | 'testing/Controller.groovy'   | 'class X {\n@artifact.@ @artifact.name@\n}\n'           | 'line 2: there is no @artifact.@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
+        'create-job'             | 'Job.groovy'                  | 'a\n<% new File("OUTSIDE/ran").text = "x" %>\n'         | 'line 2: it has code between <% and %>. Templates are not run'
+        'create-job'             | 'Job.groovy'                  | '<%= new File("OUTSIDE/ran").text = "x" %>'             | 'line 1: it has code between <% and %>. Templates are not run'
+        'create-job'             | 'Job.groovy'                  | 'a\n\n${new File("OUTSIDE/ran").text = "x"}\n'          | 'line 3: ' + NO_EXPRESSION
+        'create-job'             | 'Job.groovy'                  | 'class ${className.toLowerCase()}Job {}'                | 'line 1: ' + NO_EXPRESSION
+        'create-job'             | 'Job.groovy'                  | 'class ${ className }Job {}'                            | 'line 1: ' + NO_EXPRESSION
+        'create-job'             | 'Job.groovy'                  | 'a\nclass $className {}'                                | 'line 2: a name is written in braces, as in ${className}, and a $ that is to be written is \\$. Templates are not run'
+        'create-job'             | 'Job.groovy'                  | 'a\\tb'                                                 | 'line 1: a backslash is written \\\\, and stands otherwise only in front of a $ that is to be written. Templates are not run'
+        'create-job'             | 'Job.groovy'                  | 'package ${packageName}\nclass ${classNme}Job {\n}\n'   | "line 2: it has no 'classNme'; a template has className, fullName, propertyName, modelName, packageName, packagePath, simpleName, lowerCaseName"
     }
 
     @Unroll
@@ -507,6 +577,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what          | make                                                                  | says
+        'with a NUL'  | { File f -> f.bytes = [0x63, 0x0A, 0x00, 0x64] as byte[] }            | 'is not used: line 2: it has a NUL character, which no source file has'
         'too large'   | { File f -> f.bytes = new byte[256 * 1024 + 1] }                      | 'is not used: it has more than the 262144 bytes a template can have'
         'no text'     | { File f -> f.bytes = [0x63, 0xC3, 0x28] as byte[] }                  | 'is not used: it is not text in UTF-8'
         'a directory' | { File f -> f.mkdirs() }                                              | 'is not used: it is not a file'
@@ -570,48 +641,60 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'src/test/groovy/example/grails/BookSpec.groovy').text == 'class BookShared {}\n'
     }
 
-    void "install-templates copies the templates of the commands the project has, which then write the same"() {
+    @Unroll
+    void "install-templates copies the templates of the commands a #type project has, and every command then writes what it wrote without them"() {
         given:
-        project(ApplicationType.WEB, 'grails-quartz')
+        project(type, features as String[])
+        Map<String, List<String>> names = ALL_COMMANDS.collectEntries { String command ->
+            [command, command == 'create-script' ? ['fooBar', 'other-thing'] : ['fooBar' + (OWN_NAMES[command] ?: ''), 'other.pkg.Baz' + (OWN_NAMES[command] ?: '')]]
+        }
+        Set<String> has = [] as Set
 
-        when:
+        when: 'every command, with the templates of the command line'
+        Map<String, String> before = writtenBy {
+            names.each { String command, List<String> given ->
+                given.each { String name ->
+                    if (ForgeCli.execute(beanContext, command, name, '-f') == 0) {
+                        has << command
+                    }
+                }
+            }
+        }
+        new File(dir, 'src').deleteDir()
+        new File(dir, 'grails-app').deleteDir()
+        out.reset()
         Map<String, String> installed = writtenBy {
             assert ForgeCli.execute(beanContext, 'install-templates') == 0
         }
 
         then:
-        installed.keySet() == [
-                'Job.groovy', 'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
-                'artifacts/Script.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
-                'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy'
-        ].collect { 'src/main/templates/' + it } as Set
+        has == (ALL_COMMANDS - without) as Set
+        installed.keySet() == templates.collect { 'src/main/templates/' + it } as Set
         out.toString().readLines() == installed.keySet().sort().collect { '| Copied template to ' + it }
         installed['src/main/templates/artifacts/Controller.groovy'] == '@artifact.package@\n\nclass @artifact.name@Controller {\n\n    def index() {\n\n    }\n}'
 
-        when: 'the commands read them from there'
+        when: 'every command again, which now reads the templates of the project'
         out.reset()
-        Map<String, String> written = writtenBy {
-            ['create-controller', 'create-service', 'create-domain-class', 'create-taglib', 'create-interceptor', 'create-job'].each { String command ->
-                assert ForgeCli.execute(beanContext, command, 'fooBar') == 0
-                assert ForgeCli.execute(beanContext, command, 'other.pkg.Baz') == 0
+        Map<String, String> after = writtenBy {
+            names.findAll { it.key in has }.each { String command, List<String> given ->
+                given.each { String name -> assert ForgeCli.execute(beanContext, command, name, '-f') == 0 }
             }
         }
 
-        then:
-        written == golden('existing')
-        out.toString().readLines().count { it.startsWith('| Using the template src/main/templates/') } == 22
+        then: 'byte for byte what was written before, each file from a template of the project'
+        after == before
+        before.size() == files
+        out.toString().readLines().count { it.startsWith('| Using the template src/main/templates/') } == files
 
-        when:
-        out.reset()
-        written = writtenBy {
-            ['create-unit-test', 'create-integration-test', 'create-command', 'create-script'].each { String command ->
-                assert ForgeCli.execute(beanContext, command, 'again') == 0
-            }
-        }
+        where:
+        type                     | features          | without                                                                                     | files
+        ApplicationType.WEB      | ['grails-quartz'] | ['create-functional-test', 'create-restful-controller', 'create-domain-resource']           | 30
+        ApplicationType.REST_API | []                | ['create-job']                                                                              | 36
 
-        then:
-        out.toString().readLines().count { it.startsWith('| Using the template src/main/templates/') } == 4
-        written['src/test/groovy/example/grails/AgainSpec.groovy'] == golden('web')['src/test/groovy/example/grails/FooBarSpec.groovy'].replace('FooBar', 'Again')
+        templates = (type == ApplicationType.WEB ? ['Job.groovy'] : ['artifacts/Resource.groovy', 'artifacts/RestfulController.groovy', 'testing/Functional.groovy', 'testing/Resource.groovy']) + [
+                'artifacts/Command.groovy', 'artifacts/Controller.groovy', 'artifacts/DomainClass.groovy', 'artifacts/Interceptor.groovy',
+                'artifacts/Script.groovy', 'artifacts/Service.groovy', 'artifacts/TagLib.groovy', 'testing/Controller.groovy', 'testing/DomainClass.groovy',
+                'testing/Generic.groovy', 'testing/Integration.groovy', 'testing/Interceptor.groovy', 'testing/Service.groovy', 'testing/TagLib.groovy']
     }
 
     void "install-templates keeps a template the project has, unless it is forced"() {
@@ -650,6 +733,334 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         installed['src/main/templates/artifacts/Resource.groovy'].contains('@Resource(readOnly = false')
         out.toString().readLines().size() == 18
         out.toString().readLines().every { it.startsWith('| Copied template to src/main/templates/') }
+    }
+
+    @Unroll
+    void "#command writes none of its files when one of them is there"() {
+        given:
+        project(ApplicationType.WEB, 'grails-quartz')
+        File there = new File(dir, kept)
+        there.parentFile.mkdirs()
+        there.text = 'mine'
+
+        when:
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, command, 'Book')
+        }
+
+        then:
+        exit == 1
+        written == [:]
+        there.text == 'mine'
+        out.toString().readLines() == ["| Error ${kept} already exists. Run again with -f to overwrite.".toString()]
+
+        when:
+        out.reset()
+        written = writtenBy {
+            exit = ForgeCli.execute(beanContext, command, 'Book', '-f')
+        }
+
+        then:
+        exit == 0
+        written.size() == files
+        there.text != 'mine'
+
+        where:
+        command               | kept                                                            | files
+        'create-controller'   | 'src/test/groovy/example/grails/BookControllerSpec.groovy'      | 2
+        'create-service'      | 'src/test/groovy/example/grails/BookServiceSpec.groovy'         | 2
+        'create-domain-class' | 'src/test/groovy/example/grails/BookSpec.groovy'                | 2
+        'create-taglib'       | 'src/test/groovy/example/grails/BookTagLibSpec.groovy'          | 2
+        'create-interceptor'  | 'src/test/groovy/example/grails/BookInterceptorSpec.groovy'     | 2
+        'create-job'          | 'grails-app/jobs/example/grails/BookJob.groovy'                 | 1
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "#command writes nothing through #link when the project has a link there, wherever the link leads"() {
+        given:
+        project(type, features as String[])
+        File inside = new File(dir, 'elsewhere')
+        inside.mkdirs()
+        File at = new File(dir, link)
+        at.parentFile.mkdirs()
+
+        when: 'the link leads out of the project'
+        Files.createSymbolicLink(at.toPath(), outside.toPath())
+        int exit = ForgeCli.execute(beanContext, (([command] + arguments) as String[]))
+        List<String> said = out.toString().readLines()
+
+        then: 'the command fails, says which step is the link, and nothing is written, there or in the project'
+        exit == 1
+        outside.list().length == 0
+        said.size() >= 1
+        said.every { it.startsWith('| Error Cannot write ') && it.endsWith(": ${link} is a link, and a file of the project is not written through a link") }
+        !said.any { it.contains(dir.name) || it.contains(outside.name) }
+        dir.list().sort() == ([link.split('/')[0], '.grails', 'elsewhere', 'grails-forge-cli.yml'] as Set).sort()
+
+        when: 'the link leads to a directory of the project'
+        out.reset()
+        Files.delete(at.toPath())
+        Files.createSymbolicLink(at.toPath(), inside.toPath())
+        exit = ForgeCli.execute(beanContext, (([command] + arguments) as String[]))
+
+        then:
+        exit == 1
+        inside.list().length == 0
+        out.toString().readLines().every { it.startsWith('| Error Cannot write ') && it.endsWith(": ${link} is a link, and a file of the project is not written through a link") }
+
+        when: 'the link leads nowhere'
+        out.reset()
+        Files.delete(at.toPath())
+        Files.createSymbolicLink(at.toPath(), new File(outside, 'none').toPath())
+        exit = ForgeCli.execute(beanContext, (([command] + arguments) as String[]))
+
+        then:
+        exit == 1
+        outside.list().length == 0
+        out.toString().readLines().every { it.startsWith('| Error Cannot write ') && it.endsWith(": ${link} is a link, and a file of the project is not written through a link") }
+
+        where:
+        command                     | arguments | type                     | features          | link
+        'create-controller'         | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/controllers'
+        'create-service'            | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/services/example'
+        'create-domain-class'       | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/domain'
+        'create-taglib'             | ['Book']  | ApplicationType.WEB      | []                | 'grails-app'
+        'create-interceptor'        | ['Book']  | ApplicationType.WEB      | []                | 'src/test'
+        'create-job'                | ['Book']  | ApplicationType.WEB      | ['grails-quartz'] | 'grails-app/jobs'
+        'create-unit-test'          | ['Book']  | ApplicationType.WEB      | []                | 'src'
+        'create-integration-test'   | ['Book']  | ApplicationType.WEB      | []                | 'src/integration-test/groovy/example/grails'
+        'create-functional-test'    | ['Book']  | ApplicationType.REST_API | []                | 'src/integration-test'
+        'create-restful-controller' | ['Book']  | ApplicationType.REST_API | []                | 'grails-app/controllers'
+        'create-domain-resource'    | ['Book']  | ApplicationType.REST_API | []                | 'src/test/groovy'
+        'create-command'            | ['Book']  | ApplicationType.WEB      | []                | 'grails-app/commands'
+        'create-script'             | ['book']  | ApplicationType.WEB      | []                | 'src/main/scripts'
+        'install-templates'         | []        | ApplicationType.WEB      | []                | 'src/main/templates'
+        'install-templates'         | []        | ApplicationType.WEB      | []                | 'src'
+        'install-templates'         | ['-f']    | ApplicationType.WEB      | []                | 'src/main'
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a repository cannot have a command write its own text outside the project"() {
+        given: 'what a clone brings: a link where the commands are, and a template with the text'
+        project(ApplicationType.WEB)
+        new File(dir, 'grails-app').mkdirs()
+        Files.createSymbolicLink(new File(dir, 'grails-app/commands').toPath(), outside.toPath())
+        template('artifacts/Command.groovy', 'anything at all\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-command', 'Deploy')
+
+        then:
+        exit == 1
+        outside.list().length == 0
+        out.toString().readLines() == ['| Error Cannot write grails-app/commands/example/grails/DeployCommand.groovy: grails-app/commands is a link, ' +
+                'and a file of the project is not written through a link']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a link in place of the file is replaced when the command is forced, and not written through"() {
+        given:
+        project(ApplicationType.WEB)
+        File victim = new File(outside, 'victim.txt')
+        victim.text = 'victim'
+        File file = new File(dir, 'src/test/groovy/example/grails/BookSpec.groovy')
+        file.parentFile.mkdirs()
+        Files.createSymbolicLink(file.toPath(), victim.toPath())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-unit-test', 'Book')
+
+        then:
+        exit == 1
+        Files.isSymbolicLink(file.toPath())
+        out.toString().readLines() == ['| Error src/test/groovy/example/grails/BookSpec.groovy already exists. Run again with -f to overwrite.']
+
+        when:
+        exit = ForgeCli.execute(beanContext, 'create-unit-test', 'Book', '-f')
+
+        then:
+        exit == 0
+        victim.text == 'victim'
+        !Files.isSymbolicLink(file.toPath())
+        file.text.contains('class BookSpec extends')
+
+        when: 'a link that leads nowhere is in the way like any file'
+        Files.delete(file.toPath())
+        Files.createSymbolicLink(file.toPath(), new File(outside, 'new.txt').toPath())
+        exit = ForgeCli.execute(beanContext, 'create-unit-test', 'Book')
+
+        then:
+        exit == 1
+        outside.list() == ['victim.txt'] as String[]
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "a command of two files writes neither when the second cannot be written: #what"() {
+        given:
+        project(ApplicationType.REST_API)
+        prepare(dir)
+
+        when:
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, (['create-domain-resource', name] + options) as String[])
+        }
+
+        then:
+        exit == 1
+        written == [:]
+        !new File(dir, 'grails-app').exists()
+        out.toString().readLines().size() == 1
+        out.toString().readLines()[0].startsWith('| Error Cannot write src/test/groovy/')
+        out.toString().readLines()[0].endsWith(says)
+        !out.toString().contains(dir.name)
+
+        cleanup:
+        new File(dir, 'src/test/groovy/ro').with { if (it.exists()) { Files.setPosixFilePermissions(it.toPath(), PosixFilePermissions.fromString('rwxr-xr-x')) } }
+
+        where:
+        what                                 | name            | options | says
+        'a file where a directory is needed' | 'blocked.Book'  | []      | 'blocked/BookSpec.groovy: src/test/groovy/blocked is a file where a directory is needed'
+        'a directory that is read only'      | 'ro.Book'       | []      | 'ro/BookSpec.groovy: the directory src/test/groovy/ro cannot be written to'
+        'an empty directory in its place'    | 'Book'          | ['-f']  | 'BookSpec.groovy: it is a directory'
+        'an empty directory, not forced'     | 'Book'          | []      | 'BookSpec.groovy: it is a directory'
+        'a directory with files in its place' | 'full.Book'    | ['-f']  | 'full/BookSpec.groovy: it is a directory'
+        'a name too long in bytes'           | LONG            | []      | 'has more than the 255 bytes a file system takes for a name'
+
+        prepare = [
+                'a file where a directory is needed' : { File d -> new File(d, 'src/test/groovy').mkdirs(); new File(d, 'src/test/groovy/blocked').text = 'a file' },
+                'a directory that is read only'      : { File d -> File ro = new File(d, 'src/test/groovy/ro'); ro.mkdirs(); Files.setPosixFilePermissions(ro.toPath(), PosixFilePermissions.fromString('r-xr-xr-x')) },
+                'an empty directory in its place'    : { File d -> new File(d, 'src/test/groovy/example/grails/BookSpec.groovy').mkdirs() },
+                'an empty directory, not forced'     : { File d -> new File(d, 'src/test/groovy/example/grails/BookSpec.groovy').mkdirs() },
+                'a directory with files in its place': { File d -> new File(d, 'src/test/groovy/full/BookSpec.groovy').mkdirs(); new File(d, 'src/test/groovy/full/BookSpec.groovy/keep.txt').text = 'x' },
+                'a name too long in bytes'           : { File d -> }
+        ][what]
+    }
+
+    void "a directory in the place of a file is still there after the command was forced"() {
+        given:
+        project(ApplicationType.WEB)
+        File inPlace = new File(dir, 'src/test/groovy/example/grails/BookSpec.groovy')
+        inPlace.mkdirs()
+
+        expect:
+        ForgeCli.execute(beanContext, 'create-unit-test', 'Book', '-f') == 1
+        inPlace.isDirectory()
+        out.toString().readLines() == ['| Error Cannot write src/test/groovy/example/grails/BookSpec.groovy: it is a directory']
+    }
+
+    void "when a file cannot be written after all, what the command wrote before it is taken back"() {
+        given: 'a class that is there, and a file system that refuses the second file of the command'
+        project(ApplicationType.REST_API)
+        File domain = new File(dir, 'grails-app/domain/example/grails/Book.groovy')
+        domain.parentFile.mkdirs()
+        domain.text = 'mine'
+        ConsoleOutput console = Mock(ConsoleOutput)
+        AtomicInteger writes = new AtomicInteger()
+        OutputHandler writing = new ProjectOutputHandler(dir, console)
+        OutputHandler refusing = new ProjectOutputHandler(dir, console) {
+
+            @Override
+            void write(String path, Template contents) throws IOException {
+                if (path.endsWith('BookSpec.groovy')) {
+                    writes.incrementAndGet()
+                    new File(applicationDirectory, path).parentFile.mkdirs()
+                    throw new AccessDeniedException(new File(applicationDirectory, path).absolutePath)
+                }
+                writing.write(path, contents)
+            }
+        }
+        CreateDomainResourceCommand command = new CreateDomainResourceCommand(CodeGenConfig.load(beanContext, dir, ConsoleOutput.NOOP), { -> refusing }, console)
+        command.resourceName = 'Book'
+        command.overwrite = true
+
+        when:
+        Integer exit = command.call()
+
+        then: 'the class is what it was, and the failure is said by the path in the project'
+        exit == 1
+        writes.get() == 1
+        !new File(dir, 'src').exists()
+        domain.text == 'mine'
+        !new File(dir, 'src/test/groovy/example/grails/BookSpec.groovy').exists()
+        1 * console.err('Cannot write src/test/groovy/example/grails/BookSpec.groovy: it, or the directory it is in, cannot be written to. No file of the command was written')
+        0 * console.out(_)
+    }
+
+    @IgnoreIf({ !ArtefactCommandsSpec.caseInsensitive() })
+    void "where the file system takes one case for another, a name that differs only in case is not written to"() {
+        given:
+        project(ApplicationType.WEB)
+
+        expect:
+        ForgeCli.execute(beanContext, 'create-unit-test', 'Kase') == 0
+
+        when:
+        out.reset()
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, 'create-unit-test', 'EXAMPLE.grails.Other')
+        }
+
+        then:
+        exit == 1
+        written == [:]
+        out.toString().readLines() == ['| Error Cannot write src/test/groovy/EXAMPLE/grails/OtherSpec.groovy: the project has src/test/groovy/EXAMPLE under a name that is written differently, ' +
+                'as in the case of its letters']
+
+        when:
+        out.reset()
+        written = writtenBy {
+            exit = ForgeCli.execute(beanContext, 'create-unit-test', 'KASE', '-f')
+        }
+
+        then:
+        exit == 1
+        written == [:]
+        out.toString().readLines() == ['| Error Cannot write src/test/groovy/example/grails/KASESpec.groovy: the project has a file of that name that is written differently, ' +
+                'as in the case of its letters']
+    }
+
+    void "a template is one under the very name of its location"() {
+        given:
+        project(ApplicationType.WEB)
+        template('TESTING/generic.groovy', 'class @artifact.name@Ours {}\n')
+
+        when:
+        Map<String, String> written = writtenBy {
+            assert ForgeCli.execute(beanContext, 'create-unit-test', 'Book') == 0
+        }
+
+        then: 'on every file system the template of the command line is used'
+        written['src/test/groovy/example/grails/BookSpec.groovy'] == golden('web')['src/test/groovy/example/grails/FooBarSpec.groovy'].replace('FooBar', 'Book')
+        !out.toString().contains('Using the template')
+    }
+
+    void "a byte order mark at the start of a template is not written, and any other is"() {
+        given:
+        project(ApplicationType.WEB)
+        char mark = (char) 0xFEFF
+        template('testing/Generic.groovy', "${mark}${mark}class @artifact.name@Spec {}\n")
+
+        when:
+        Map<String, String> written = writtenBy {
+            assert ForgeCli.execute(beanContext, 'create-unit-test', 'Book') == 0
+        }
+
+        then:
+        written['src/test/groovy/example/grails/BookSpec.groovy'] == "${mark}class BookSpec {}\n".toString()
+    }
+
+    static boolean caseInsensitive() {
+        File probe = File.createTempFile('grailsforgecase', '.tmp')
+        try {
+            return new File(probe.parentFile, probe.name.toUpperCase()).exists()
+        } finally {
+            probe.delete()
+        }
     }
 
     private void project(ApplicationType type, String... features) {

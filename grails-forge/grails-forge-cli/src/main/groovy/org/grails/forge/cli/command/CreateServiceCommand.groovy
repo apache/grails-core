@@ -22,13 +22,9 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
-import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateServiceCommand.NAME, description = 'Creates a Service Class')
@@ -63,27 +59,9 @@ class CreateServiceCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        final Project project = getProject(serviceName)
-        final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new StringTemplate('grails-app/services/{packagePath}/{className}Service.groovy', artefact(ArtefactTemplate.SERVICE, project)), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new StringTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', artefact(ArtefactTemplate.SERVICE_TEST, project)), overwrite)
-        if (renderResult != null && specRenderResult != null) {
-            logRenderResult(renderResult)
-            logRenderResult(specRenderResult)
-        }
-
-        return 0
-    }
-
-    private void logRenderResult(RenderResult result) throws Exception {
-        if (result != null) {
-            if (result.isSuccess()) {
-                out('@|blue ||@ Rendered service class to ' + result.getPath())
-            } else if (result.isSkipped()) {
-                warning('Rendering skipped for ' + result.getPath() + ' because it already exists. Run again with -f to overwrite.')
-            } else if (result.getError() != null) {
-                throw result.getError()
-            }
-        }
+        return generate('service class', getProject(serviceName), [
+                'grails-app/services/{packagePath}/{className}Service.groovy': ArtefactTemplate.SERVICE,
+                'src/test/groovy/{packagePath}/{className}ServiceSpec.groovy': ArtefactTemplate.SERVICE_TEST
+        ])
     }
 }

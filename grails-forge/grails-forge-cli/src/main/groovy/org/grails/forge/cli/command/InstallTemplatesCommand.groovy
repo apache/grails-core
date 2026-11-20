@@ -19,15 +19,14 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import java.util.function.Supplier
 import jakarta.inject.Inject
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.apache.grails.forge.cli.artefact.ArtefactTemplates
+import org.apache.grails.forge.cli.artefact.ProjectFiles
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.StringTemplate
-import org.grails.forge.template.TemplateRenderer
 import org.grails.forge.util.ThrowingSupplier
 import picocli.CommandLine
 
@@ -73,24 +72,30 @@ class InstallTemplatesCommand extends CodeGenCommand {
                 }
             }
         }
-        OutputHandler output = outputHandler()
-        TemplateRenderer renderer = TemplateRenderer.create(output)
-        int kept = 0
+        File project = new File(outputHandler().getOutputLocation())
+        Map<String, Supplier<String>> copies = new LinkedHashMap<>()
+        List<String> kept = []
         for (ArtefactTemplate template : templates) {
             String path = ArtefactTemplates.projectPath(template)
-            if (output.exists(path) && !overwrite) {
-                warning('Kept ' + path + ', which the project has already')
-                kept++
-                continue
+            if (ProjectFiles.isThere(project, path) && !overwrite) {
+                kept.add(path)
+            } else {
+                copies.put(path, { -> ArtefactTemplates.builtIn(template) } as Supplier<String>)
             }
-            RenderResult result = renderer.render(new StringTemplate(path, ArtefactTemplates.builtIn(template)), true)
-            if (result.getError() != null) {
-                throw result.getError()
-            }
-            out('@|blue ||@ Copied template to ' + result.getPath())
         }
-        if (kept > 0) {
-            out('@|blue ||@ Run again with -f to replace the ' + (kept == 1 ? 'template that was kept' : kept + ' templates that were kept'))
+        // what is in the way of a template that is kept is in the way of the command as well
+        Map<String, String> refusals = ProjectFiles.refusals(project, kept)
+        if (refusals) {
+            refusals.values().each { String refusal -> err(refusal) }
+            return 1
+        }
+        Integer exit = write('Copied template to ', copies, true)
+        if (exit != 0) {
+            return exit
+        }
+        kept.each { String path -> warning('Kept ' + path + ', which the project has already') }
+        if (kept) {
+            out('@|blue ||@ Run again with -f to replace the ' + (kept.size() == 1 ? 'template that was kept' : kept.size() + ' templates that were kept'))
         }
         return 0
     }

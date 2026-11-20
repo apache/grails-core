@@ -18,15 +18,12 @@
  */
 package org.apache.grails.forge.cli.artefact
 
-import groovy.text.GStringTemplateEngine
-import groovy.text.Template
 import groovy.transform.CompileStatic
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -38,10 +35,9 @@ import org.grails.forge.util.NameUtils
  * Finds and renders the template a code generation command writes a class from: the template of the
  * project under {@code src/main/templates} when there is one, and the one this program has otherwise.
  *
- * <p>A template of a project is code of the project, as its build file is. One in the
- * {@link ArtefactTemplate.Syntax#GROOVY Groovy syntax} is run by the command, with all that this
- * program can do; one in the {@link ArtefactTemplate.Syntax#TOKENS token syntax} is text and nothing
- * of it is run. Either is read within a bound, as UTF-8, and only from inside the project.</p>
+ * <p>A template is text in which names are replaced, in one of two ways of writing them, see
+ * {@link ArtefactTemplate.Syntax}. Nothing of a template is run. A template of a project is read
+ * within a bound, as UTF-8, and only from inside the project.</p>
  *
  * @since 9.0
  */
@@ -59,10 +55,12 @@ final class ArtefactTemplates {
     private static final String PACKAGE = 'artifact.package'
     // a token, and the end of the line when the token is the last of it
     private static final Pattern TOKEN = Pattern.compile(/@(artifact\.[A-Za-z0-9_.]*)@(\r?\n)?/)
-    // the script a Groovy template is compiled to has one line in front of the template
-    private static final int LINES_BEFORE_TEMPLATE = 1
-    private static final String SCRIPT_PACKAGE = 'groovy.tmp.templates.'
-    private static final Pattern COMPILER = Pattern.compile(/(?s)GStringTemplateScript\d+\.groovy: (\d+): (.+?)\s+@ line \d+, column \d+\./)
+    private static final Pattern PLACEHOLDER = Pattern.compile(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/)
+    // the declaration of the package on a line of its own, which a class without a package has not
+    private static final Pattern PACKAGE_LINE = Pattern.compile(/(?m)^package \$\{packageName\}[ \t]*\r?\n(\r?\n)?/)
+    private static final char BYTE_ORDER_MARK = (char) 0xFEFF
+    private static final char BACKSLASH = (char) 0x5C
+    private static final char DOLLAR = (char) 0x24
 
     private ArtefactTemplates() {
     }
@@ -118,9 +116,15 @@ final class ArtefactTemplates {
      */
     static Source find(File projectDirectory, ArtefactTemplate template) {
         String path = projectPath(template)
-        Path file = projectDirectory.toPath().resolve(DIRECTORY).resolve(template.location)
-        if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS) && !Files.exists(file)) {
-            return new Source(builtIn(template), null)
+        // a template is there when every step to it has the very name that is asked for: a file
+        // system that takes TESTING for testing finds a file under either, and another does not
+        Path file = projectDirectory.toPath()
+        for (String step : path.split('/')) {
+            String[] names = file.toFile().list()
+            if (names == null || !(step in names)) {
+                return new Source(builtIn(template), null)
+            }
+            file = file.resolve(step)
         }
         byte[] content
         try {
@@ -148,19 +152,25 @@ final class ArtefactTemplates {
         if (content.length > MAX_TEMPLATE) {
             throw new ArtefactTemplateException("The template ${path} is not used: it has more than the ${MAX_TEMPLATE} bytes a template can have")
         }
+        String text
         try {
-            String text = StandardCharsets.UTF_8.newDecoder()
+            text = StandardCharsets.UTF_8.newDecoder()
                     .onMalformedInput(CodingErrorAction.REPORT)
                     .onUnmappableCharacter(CodingErrorAction.REPORT)
                     .decode(ByteBuffer.wrap(content)).toString()
-            return new Source(text.startsWith('﻿') ? text.substring(1) : text, path)
         } catch (CharacterCodingException e) {
             throw new ArtefactTemplateException("The template ${path} is not used: it is not text in UTF-8", e)
         }
+        int nul = text.indexOf(0)
+        if (nul >= 0) {
+            throw new ArtefactTemplateException("The template ${path} is not used: line ${line(text, nul)}: it has a NUL character, which no source file has")
+        }
+        // one byte order mark at the start is no text of the template; any other is
+        return new Source(!text.isEmpty() && text.charAt(0) == BYTE_ORDER_MARK ? text.substring(1) : text, path)
     }
 
     /**
-     * Renders a template for a class.
+     * Renders a template for a class. Nothing of a template is run.
      *
      * @param source the source of the template, see {@link #find(File, ArtefactTemplate)}
      * @param template the template it is the source of
@@ -171,7 +181,7 @@ final class ArtefactTemplates {
      */
     static String render(Source source, ArtefactTemplate template, Project names) {
         String name = source.projectPath ?: template.location
-        return template.syntax == ArtefactTemplate.Syntax.TOKENS ? tokens(source.text, name, names) : groovy(source.text, name, names)
+        return template.syntax == ArtefactTemplate.Syntax.TOKENS ? tokens(source.text, name, names) : placeholders(source.text, name, names)
     }
 
     private static String tokens(String text, String name, Project names) {
@@ -197,8 +207,7 @@ final class ArtefactTemplates {
             } else if (values.containsKey(key)) {
                 rendered.append(values.get(key)).append(lineEnd)
             } else {
-                int line = text.substring(0, token.start()).count('\n') + 1
-                throw new ArtefactTemplateException("The template ${name} cannot be rendered: line ${line}: there is no @${shown(key)}@; " +
+                throw new ArtefactTemplateException("The template ${name} cannot be rendered: line ${line(text, token.start())}: there is no @${shown(key)}@; " +
                         "a template has @${PACKAGE}@, @${values.keySet().join('@, @')}@")
             }
             from = token.end()
@@ -207,11 +216,18 @@ final class ArtefactTemplates {
         return rendered.toString()
     }
 
-    private static String groovy(String text, String name, Project names) {
+    /**
+     * Renders a template that names what it wants as {@code ${className}}. The shell handed such a
+     * template to the template engine of Groovy, which runs it; here a name in braces is replaced
+     * and {@code \$} and {@code \\} are a dollar sign and a backslash, and everything the engine
+     * would have had to evaluate is refused, so that no template is rendered differently than it
+     * was, and none is run.
+     */
+    private static String placeholders(String text, String name, Project names) {
         String packageName = names.getPackageName() ?: ''
         String className = names.getClassName()
         // the names the templates of the shell's scripts were given
-        Map<String, Object> model = [
+        Map<String, String> values = [
                 className: className,
                 fullName: packageName ? "${packageName}.${className}".toString() : className,
                 propertyName: names.getPropertyName(),
@@ -220,80 +236,49 @@ final class ArtefactTemplates {
                 packagePath: packageName.replace('.', '/'),
                 simpleName: className,
                 lowerCaseName: NameUtils.getScriptName(className)
-        ] as Map<String, Object>
-        try {
-            Template compiled = new GStringTemplateEngine(ArtefactTemplates.getClassLoader()).createTemplate(text)
-            StringWriter out = new StringWriter()
-            compiled.make(model).writeTo(out)
-            return out.toString()
-        } catch (Throwable e) {
-            if (e instanceof VirtualMachineError) {
-                throw e
-            }
-            throw new ArtefactTemplateException("The template ${name} cannot be rendered: ${problem(e, text, model.keySet())}", e)
-        }
-    }
-
-    /**
-     * What went wrong in a Groovy template, with the line of the template where that can be said.
-     */
-    private static String problem(Throwable e, String text, Set<String> names) {
-        if (e instanceof MissingPropertyException) {
-            String missing = ((MissingPropertyException) e).getProperty()
-            // a name is looked up where the text it is in starts: the line is that of where it is first written
-            Matcher written = missing ==~ /\w+/ ? Pattern.compile('\\b' + missing + '\\b').matcher(text) : null
-            String line = written != null && written.find() ? "line ${text.substring(0, written.start()).count('\n') + 1}: " : ''
-            return "${line}it has no '${shown(missing)}'; a template has ${names.join(', ')}"
-        }
-        String message
-        try {
-            message = e.getMessage() ?: e.getClass().getName()
-        } catch (Throwable ignored) {
-            message = e.getClass().getName()
-        }
-        // the engine says what the compiler said in its own message, and does not hand the error on
-        Matcher compiler = COMPILER.matcher(message)
-        if (compiler.find()) {
-            return "${where(text, Integer.parseInt(compiler.group(1)))}it does not compile: ${shown(compiler.group(2))}"
-        }
-        StackTraceElement frame = e.getStackTrace().find { StackTraceElement each ->
-            each.getLineNumber() > 0 && each.getClassName().startsWith(SCRIPT_PACKAGE)
-        }
-        return (frame == null ? '' : where(text, frame.getLineNumber())) + shown(message)
-    }
-
-    /**
-     * The line of a template for a line of the script the engine compiles it to, to go in front of a
-     * message: {@code line 3: }, or nothing for a line of the script that is none of the template,
-     * as the one an error is on that the compiler finds only where the script ends. The script has
-     * a line in front of the template and one more after each scriptlet.
-     */
-    private static String where(String text, int scriptLine) {
-        int script = 1 + LINES_BEFORE_TEMPLATE
-        int line = 1
+        ]
+        String source = packageName ? text : PACKAGE_LINE.matcher(text).replaceFirst('')
+        StringBuilder rendered = new StringBuilder(source.length() + 256)
         int i = 0
-        while (i < text.length() && script < scriptLine) {
-            if (text.charAt(i) == ('\n' as char)) {
-                line++
-                script++
-                i++
-            } else if (text.startsWith('<%', i) && !text.startsWith('<%=', i)) {
-                int end = text.indexOf('%>', i + 2)
-                if (end < 0) {
-                    break
+        while (i < source.length()) {
+            char c = source.charAt(i)
+            String next = i + 1 < source.length() ? source.substring(i + 1, i + 2) : ''
+            if (c == BACKSLASH) {
+                if (next != '$' && next != '\\') {
+                    throw notRun(name, source, i, 'a backslash is written \\\\, and stands otherwise only in front of a $ that is to be written')
                 }
-                int within = text.substring(i, end).count('\n')
-                if (script + within >= scriptLine) {
-                    return "line ${line + scriptLine - script}: "
+                rendered.append(next)
+                i += 2
+            } else if (c == DOLLAR && next == '{') {
+                Matcher placeholder = PLACEHOLDER.matcher(source).region(i, source.length())
+                if (!placeholder.lookingAt()) {
+                    throw notRun(name, source, i, 'between ${ and } there can only be one of the names ' + values.keySet().join(', ') + '; a $ that is to be written is \\$')
                 }
-                line += within
-                script += within + 1
-                i = end + 2
+                String value = values.get(placeholder.group(1))
+                if (value == null) {
+                    throw new ArtefactTemplateException("The template ${name} cannot be rendered: line ${line(source, i)}: it has no '${shown(placeholder.group(1))}'; " +
+                            "a template has ${values.keySet().join(', ')}")
+                }
+                rendered.append(value)
+                i = placeholder.end()
+            } else if (c == DOLLAR && next && Character.isJavaIdentifierStart(next.charAt(0))) {
+                throw notRun(name, source, i, 'a name is written in braces, as in ${className}, and a $ that is to be written is \\$')
+            } else if (c == ('<' as char) && next == '%') {
+                throw notRun(name, source, i, 'it has code between <% and %>')
             } else {
+                rendered.append(c)
                 i++
             }
         }
-        return script == scriptLine && line <= text.readLines().size() ? "line ${line}: " : ''
+        return rendered.toString()
+    }
+
+    private static ArtefactTemplateException notRun(String name, String text, int at, String why) {
+        return new ArtefactTemplateException("The template ${name} cannot be rendered: line ${line(text, at)}: ${why}. Templates are not run")
+    }
+
+    private static int line(String text, int at) {
+        return text.substring(0, at).count('\n') + 1
     }
 
     // one line, with nothing in it a terminal or the command line acts on, and not all of a long one

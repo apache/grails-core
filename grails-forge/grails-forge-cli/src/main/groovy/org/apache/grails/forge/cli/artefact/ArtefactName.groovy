@@ -39,6 +39,8 @@ final class ArtefactName {
     /** The most characters a name can have, its package included */
     public static final int MAX_NAME = 200
 
+    private static final Set<String> FILE_ENDINGS = ['groovy', 'java'] as Set<String>
+
     private ArtefactName() {
     }
 
@@ -68,13 +70,27 @@ final class ArtefactName {
         int dot = given.lastIndexOf('.')
         String packageName = dot < 0 ? defaultPackage : given.substring(0, dot)
         String simple = dot < 0 ? given : given.substring(dot + 1)
-        if (simple.contains('-')) {
-            simple = NameUtils.getNameFromScript(simple)
-        }
         if (dot == 0 || simple.isEmpty()) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it starts or ends with a dot")
         }
-        String className = simple.substring(0, 1).toUpperCase(Locale.ENGLISH) + simple.substring(1)
+        if (dot > 0 && simple.toLowerCase(Locale.ENGLISH) in FILE_ENDINGS) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it is the name of a file. The name of the class is given, without .${simple}")
+        }
+        // each word that a hyphen sets apart starts with a capital: book-store is BookStore
+        StringBuilder capitals = new StringBuilder()
+        for (String word : simple.split('-', -1)) {
+            if (word.isEmpty()) {
+                throw new IllegalArgumentException("\"${shown}\" is not a name for a class: a hyphen stands between two words of a name")
+            }
+            int first = word.codePointAt(0)
+            // the capital of the one letter, which not every letter has: the capital of a sharp s is two letters
+            int capital = Character.toUpperCase(first)
+            if (Character.isLowerCase(capital)) {
+                throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${FeatureSelectionException.shown(word)} starts with a letter that has no capital")
+            }
+            capitals.appendCodePoint(capital).append(word.substring(Character.charCount(first)))
+        }
+        String className = capitals.toString()
         if (convention && className.length() > convention.length() && className.endsWith(convention)) {
             className = className.substring(0, className.length() - convention.length())
         }

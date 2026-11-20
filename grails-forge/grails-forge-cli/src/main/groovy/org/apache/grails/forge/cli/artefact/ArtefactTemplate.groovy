@@ -40,8 +40,8 @@ enum ArtefactTemplate {
     TAG_LIB_TEST('testing/TagLib.groovy', Syntax.TOKENS),
     INTERCEPTOR('artifacts/Interceptor.groovy', Syntax.TOKENS),
     INTERCEPTOR_TEST('testing/Interceptor.groovy', Syntax.TOKENS),
-    // the template of the Quartz plugin's script, which a script renders as Groovy
-    JOB('Job.groovy', Syntax.GROOVY),
+    // the template of the Quartz plugin's script, which wrote its names as the template engine of Groovy reads them
+    JOB('Job.groovy', Syntax.PLACEHOLDERS),
     UNIT_TEST('testing/Generic.groovy', Syntax.TOKENS),
     INTEGRATION_TEST('testing/Integration.groovy', Syntax.TOKENS),
     FUNCTIONAL_TEST('testing/Functional.groovy', Syntax.TOKENS),
@@ -49,8 +49,7 @@ enum ArtefactTemplate {
     RESOURCE('artifacts/Resource.groovy', Syntax.TOKENS),
     RESOURCE_TEST('testing/Resource.groovy', Syntax.TOKENS),
     COMMAND('artifacts/Command.groovy', Syntax.TOKENS),
-    // create-script was a script itself, and rendered its template as Groovy
-    SCRIPT('artifacts/Script.groovy', Syntax.GROOVY)
+    SCRIPT('artifacts/Script.groovy', Syntax.TOKENS)
 
     /**
      * How a template says where the names of the class go.
@@ -63,9 +62,11 @@ enum ArtefactTemplate {
         TOKENS,
 
         /**
-         * A Groovy template: {@code ${className}} and {@code <% %>} are code, which is run.
+         * Text in which {@code ${className}} and the other names in braces are replaced, and
+         * {@code \$} is a dollar sign. Nothing of it is run: code, and an expression that is more
+         * than a name, is refused.
          */
-        GROOVY
+        PLACEHOLDERS
     }
 
     /** Where the template is, below {@code src/main/templates} of a project and below {@code META-INF/grails-forge-cli/templates} here */

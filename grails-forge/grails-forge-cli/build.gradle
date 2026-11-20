@@ -88,8 +88,6 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
     implementation 'org.apache.groovy:groovy'
-    // a template of a project in the Groovy syntax, for create-job and create-script
-    implementation 'org.apache.groovy:groovy-templates'
     // the document help --json writes
     implementation 'org.apache.groovy:groovy-json'
 

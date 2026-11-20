@@ -74,7 +74,7 @@ For more information, see the section on link:{guidePath}commandLine.html#creati
 
 === Grails Forge CLI
 
-The Grails Forge CLI has this command as well, in every project. It writes `src/main/scripts/<name>.groovy` from the template `artifacts/Script.groovy`, with the name in lower case and with hyphens whichever way it is given: `create-script DataImport` and `create-script data-import` both write `data-import.groovy`. A script has no package, so a name with a dot is refused. The template is a Groovy template, which the command runs when the project has its own.
+The Grails Forge CLI has this command as well, in every project. It writes `src/main/scripts/<name>.groovy` from the template `artifacts/Script.groovy`, with the name in lower case and with hyphens whichever way it is given: `create-script DataImport` and `create-script data-import` both write `data-import.groovy`. A script has no package, so a name with a dot is refused, and its name has only the letters a to z and digits, in words that capitals or hyphens set apart. When the file is there already the command writes nothing and ends with exit code 1, where the command described above warns and succeeds. The template is text with the tokens the other templates have, such as `@artifact.name@`; it is not run as a Groovy template, as the command described above runs it.
 
 [source,shell]
 ----

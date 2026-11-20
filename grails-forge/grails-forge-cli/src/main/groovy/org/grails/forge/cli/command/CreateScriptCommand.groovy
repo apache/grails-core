@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import java.util.regex.Pattern
 import jakarta.inject.Inject
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.application.Project
@@ -41,6 +42,8 @@ import picocli.CommandLine
 class CreateScriptCommand extends CodeGenCommand {
 
     public static final String NAME = 'create-script'
+
+    private static final Pattern SCRIPT_NAME = Pattern.compile(/[A-Za-z][A-Za-z0-9]*(-[A-Za-z0-9]+)*/)
 
     @CommandLine.Parameters(paramLabel = 'SCRIPT-NAME', description = 'The name of the script to create')
     String scriptName
@@ -72,6 +75,12 @@ class CreateScriptCommand extends CodeGenCommand {
             // a script is not in a package, and a name with the ending of a file is not taken for one without
             throw new CommandLine.ParameterException(spec.commandLine(), "\"${FeatureSelectionException.shown(scriptName)}\" is not a name for a script: " +
                     'a script has no package and its name is given without .groovy')
+        }
+        // the name of the file is made from the name, in lower case with a hyphen in front of each word:
+        // that is defined for the letters and digits a file of any file system can be named with
+        if (scriptName != null && !scriptName.contains('/') && !scriptName.contains('\\') && !scriptName.contains(':') && !(scriptName ==~ SCRIPT_NAME)) {
+            throw new CommandLine.ParameterException(spec.commandLine(), "\"${FeatureSelectionException.shown(scriptName)}\" is not a name for a script: " +
+                    'a script is named with the letters a to z and digits, in words that capitals or hyphens set apart, as in data-import or DataImport')
         }
         Project names = newArtefact(scriptName, null)
         String file = "src/main/scripts/${NameUtils.getScriptName(names.getClassName())}.groovy"

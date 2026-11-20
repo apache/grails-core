@@ -1,6 +1,6 @@
-<% if (packageName) { %>package ${packageName}
+package ${packageName}
 
-<% } %>
+
 class ${className}Job {
 
     static triggers = {

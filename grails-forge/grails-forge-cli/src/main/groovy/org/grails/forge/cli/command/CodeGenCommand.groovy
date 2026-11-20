@@ -22,6 +22,8 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.artefact.ArtefactName
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.apache.grails.forge.cli.artefact.ArtefactTemplates
+import org.apache.grails.forge.cli.artefact.ProjectFiles
+import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.util.ThrowingSupplier
 import org.grails.forge.application.Project
@@ -30,12 +32,11 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.DefaultTemplateRenderer
-import org.grails.forge.template.RenderResult
-import org.grails.forge.template.StringTemplate
 import org.grails.forge.template.TemplateRenderer
 import org.grails.forge.util.NameUtils
 import picocli.CommandLine
 import java.util.concurrent.Callable
+import java.util.function.Supplier
 
 @CompileStatic
 abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
@@ -50,7 +51,7 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
 
     CodeGenCommand(CodeGenConfig config) {
         this.config = config
-        this.outputHandlerSupplier = () -> new FileSystemOutputHandler(getProjectDirectory(), this)
+        this.outputHandlerSupplier = () -> new ProjectOutputHandler(getProjectDirectory(), this)
         this.consoleOutput = null
     }
 
@@ -137,37 +138,59 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
     }
 
     /**
-     * Writes the files of a new class, all of them or none: a file that is there already is not
-     * replaced unless the command is forced, and then nothing is written.
+     * Writes the files of a class from their templates, all of them or none.
      *
      * @param what what the class is, for the messages
      * @param names the names of the class
      * @param files the template of each file, by the path of the file, in which {@code {packagePath}},
      * {@code {className}} and the other names of {@link Project#getProperties()} are placeholders
      * @return the exit code of the command
+     * @see #write(String, Map, boolean)
      */
     protected Integer generate(String what, Project names, Map<String, ArtefactTemplate> files) throws IOException {
-        OutputHandler output = outputHandler()
-        Map<String, ArtefactTemplate> templates = new LinkedHashMap<>()
+        Map<String, Supplier<String>> texts = new LinkedHashMap<>()
         files.each { String path, ArtefactTemplate template ->
-            templates.put(DefaultTemplateRenderer.resolvePath(path, names.getProperties()).replace('//', '/'), template)
+            texts.put(DefaultTemplateRenderer.resolvePath(path, names.getProperties()).replace('//', '/'), { -> artefact(template, names) } as Supplier<String>)
         }
-        List<String> there = templates.keySet().findAll { String path -> output.exists(path) }.toList()
-        if (there && !overwrite) {
+        return write('Rendered ' + what + ' to ', texts, overwrite)
+    }
+
+    /**
+     * Writes files into the project, all of them or none. Nothing is written when one of them cannot
+     * be, which is found out before the first is written where it can be: when a directory on the way
+     * to a file is a link or a file, or is there under a name written differently, see
+     * {@link ProjectOutputHandler}; when a file is there already and is not to be replaced; and when
+     * the text of a file cannot be made, as from a template of the project that cannot be rendered.
+     * When a file cannot be written after all, those written before it are taken back. Each failure
+     * is said in one line with the path of the file in the project.
+     *
+     * @param said what is said of each file that was written, in front of its path
+     * @param texts what gives the text of each file, by the path of the file in the project
+     * @param replace whether a file that is there is replaced
+     * @return the exit code of the command
+     */
+    protected Integer write(String said, Map<String, Supplier<String>> texts, boolean replace) throws IOException {
+        OutputHandler output = outputHandler()
+        File project = new File(output.getOutputLocation())
+        Map<String, String> refusals = ProjectFiles.refusals(project, texts.keySet())
+        if (refusals) {
+            refusals.values().each { String refusal -> err(refusal) }
+            return 1
+        }
+        List<String> there = texts.keySet().findAll { String path -> ProjectFiles.isThere(project, path) }.toList()
+        if (there && !replace) {
             there.each { String path -> err(path + ' already exists. Run again with -f to overwrite.') }
             return 1
         }
-        // every file is rendered before one is written, so a template that fails leaves nothing behind
         Map<String, String> rendered = new LinkedHashMap<>()
-        templates.each { String path, ArtefactTemplate template -> rendered.put(path, artefact(template, names)) }
-        TemplateRenderer renderer = TemplateRenderer.create(output)
-        rendered.each { String path, String text ->
-            RenderResult result = renderer.render(new StringTemplate(path, text), true)
-            if (result.getError() != null) {
-                throw result.getError()
-            }
-            out('@|blue ||@ Rendered ' + what + ' to ' + result.getPath())
+        texts.each { String path, Supplier<String> text -> rendered.put(path, text.get()) }
+        try {
+            ProjectFiles.write(project, output, rendered)
+        } catch (ProjectFiles.Failed e) {
+            err(e.getMessage())
+            return 1
         }
+        rendered.keySet().each { String path -> out('@|blue ||@ ' + said + path) }
         return 0
     }
 

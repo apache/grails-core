@@ -380,9 +380,11 @@ $ grails -t forge create-domain-resource org.bookstore.Book
 $ grails -t forge create-command data-import
 ----
 
-The name is the name of a class, with or without its package; without one, the class goes into the default package of the project. Its first letter is made upper case, and a name with hyphens such as `data-import` becomes `DataImport`. `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource`, `create-command` and `create-script` hold the name to what the name of a new class can be, and refuse anything else as a mistake in the command line (exit code 2) before they write a file: the name and each part of the package have to be identifiers of Java, a package is given with dots and never as a path (a name with `/`, `\` or `:` is refused), and a control character, a name of more than 200 characters and a name Windows keeps for a device (see above) are refused too. These commands also take a name that already ends with what they add to it: `create-unit-test BookSpec` writes `BookSpec.groovy`, `create-command ImportCommand` writes `ImportCommand.groovy`, and `create-restful-controller BookController` writes the controller of `Book`. A script has no package: `create-script DataImport` and `create-script data-import` both write `src/main/scripts/data-import.groovy`.
+The name is the name of a class, with or without its package; without one, the class goes into the default package of the project. Its first letter is made upper case, and a name with hyphens such as `data-import` becomes `DataImport`. `create-unit-test`, `create-integration-test`, `create-functional-test`, `create-restful-controller`, `create-domain-resource`, `create-command` and `create-script` hold the name to what the name of a new class can be, and refuse anything else as a mistake in the command line (exit code 2) before they write a file: the name and each part of the package have to be identifiers of Java, a package is given with dots and never as a path (a name with `/`, `\` or `:` is refused), and a control character, a name of more than 200 characters and a name Windows keeps for a device (see above) are refused too. These commands also take a name that already ends with what they add to it: `create-unit-test BookSpec` writes `BookSpec.groovy`, `create-command ImportCommand` writes `ImportCommand.groovy`, and `create-restful-controller BookController` writes the controller of `Book`. A name that ends with `.groovy` or `.java`, as `Book.groovy`, is refused: the name of the class is given, not the name of its file. The first letter has to be one that has a capital, and a hyphen stands between two words. A script has no package and is named with the letters a to z and digits, in words that capitals or hyphens set apart: `create-script DataImport` and `create-script data-import` both write `src/main/scripts/data-import.groovy`.
 
-A file that is there already is not replaced. The seven commands named above then write nothing at all, not the other file of the command either, say which file is in the way and end with exit code 1. The other commands keep the file with a warning and still write the files that are not there. With `-f` or `--force` every command replaces what is there.
+A command writes all of its files or none. A file that is there already is not replaced: the command then writes nothing, not the other file either, says which file is in the way and ends with exit code 1. With `-f` or `--force` it replaces what is there. Before Grails 9 `create-controller`, `create-service`, `create-domain-class`, `create-taglib`, `create-interceptor` and `create-job` of the Grails Forge CLI kept such a file with a warning, wrote the other file and ended with exit code 0.
+
+The files are written into the project and nowhere else. A project can come from a repository someone else made, and such a repository can have a link where a directory of the sources is expected. So a command, `install-templates` included, writes a file only when every directory from the project down to the file is a directory: when one of them is a link, also one that leads to another directory of the same project, or a file, or is there under a name written differently (`Example` where `example` is asked for, on a file system that takes one for the other), the command writes nothing, says which step of the path is in the way and ends with exit code 1. A link in the place of the file itself is replaced by the file when the command is forced, and never written through; a directory in the place of the file is left alone. Every message names a file by its path in the project.
 
 ==== Templates of the Project
 
@@ -414,7 +416,7 @@ Every file these commands write comes from a template, and a project can have it
 
 |`Job.groovy`
 |`create-job`
-|Groovy
+|names in braces
 
 |`testing/Generic.groovy`
 |`create-unit-test`
@@ -442,12 +444,12 @@ Every file these commands write comes from a template, and a project can have it
 
 |`artifacts/Script.groovy`
 |`create-script`
-|Groovy
+|tokens
 |===
 
-The locations and the two syntaxes are those the templates had before Grails 9, in a profile and in the Quartz plugin, so such a template can be put under `src/main/templates` as it is.
+The locations are those the templates had before Grails 9, in a profile and in the Quartz plugin, and so are the two ways of writing a name, so a template that only names what it wants can be put under `src/main/templates` as it is. No template is run: a template is text in which names are replaced. The shell ran `Job.groovy` and `artifacts/Script.groovy` as Groovy templates; a template that relied on that, with code or with an expression that is more than a name, has to be written without.
 
-A template in the token syntax is text. Nothing of it is run; these tokens are replaced, and everything else, a `$` included, is written as it is:
+In a template with tokens these are replaced, and everything else, a `$`, `${...}` and `<% %>` included, is written as it is:
 
 [cols="1,3"]
 |===
@@ -484,7 +486,7 @@ class @artifact.name@Controller {
 }
 ----
 
-A template in the Groovy syntax is a Groovy template: `${...}` is an expression, `<% %>` is code and `<%= %>` writes what an expression gives, with the names `className`, `simpleName`, `propertyName`, `modelName`, `packageName`, `packagePath`, `fullName` and `lowerCaseName`. A `$` that is to be written is written `\$`.
+`Job.groovy` names what it wants in braces, as the template of the Quartz plugin does: `${className}`, `${simpleName}`, `${propertyName}`, `${modelName}`, `${packageName}`, `${packagePath}`, `${fullName}` and `${lowerCaseName}` are replaced. A `$` that is to be written is written `\$`, and a backslash `\\`. A line that is only `package ${packageName}` is left out for a class without a package.
 
 [source,groovy]
 .src/main/templates/Job.groovy
@@ -502,9 +504,9 @@ class ${className}Job {
 }
 ----
 
-WARNING: A template in the Groovy syntax is code, and `create-job` and `create-script` run it, with everything the user running the command is allowed to do. The templates of a project are part of the project, like its build file: run these two commands in a project only when you trust where the project comes from.
+Everything a Groovy template would evaluate is a mistake in this template, and the command fails with the line it is on: code between `<%` and `%>` or `<%=` and `%>`, an expression in braces that is more than one of the names (`${className.toLowerCase()}`), a name without braces (`$className`) and any other use of a backslash. Templates with logic are not supported.
 
-A template is read only from inside the project: one that is a link, or is below a link, that leads out of the project is refused, and so are a template of more than 256 KiB, one that is not text in UTF-8 and one that is no file. A template that cannot be rendered fails the command with one line that names the template and, where it can be said, the line: `The template src/main/templates/Job.groovy cannot be rendered: line 3: ...`. In each of these cases the command ends with exit code 1 and does not fall back to the template of the Grails Forge CLI. The seven commands named above write nothing then; of the commands with two files the other ones may already have written the class when the template of its test fails.
+A template is read only from inside the project, and only under the very names of its location: one that is a link, or is below a link, that leads out of the project is refused, and so are a template of more than 256 KiB, one that is not text in UTF-8 or has a NUL character, and one that is no file. A byte order mark at the start of a template is not written. A template that cannot be rendered fails the command with one line that names the template and the line: `The template src/main/templates/Job.groovy cannot be rendered: line 3: ...`. In each of these cases the command writes nothing, ends with exit code 1 and does not fall back to the template of the Grails Forge CLI.
 
 `install-templates` copies the templates the Grails Forge CLI has for the commands of the project into `src/main/templates`, as a starting point for your own:
 
