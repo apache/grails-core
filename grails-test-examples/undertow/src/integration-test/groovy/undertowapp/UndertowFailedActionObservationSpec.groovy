@@ -101,6 +101,23 @@ class UndertowFailedActionObservationSpec extends Specification implements HttpC
         'an error controller, after an include'                              | '/failing/failsAfterIncludeAnsweredByController'  | '/failing/failsAfterIncludeAnsweredByController'  | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 
+    void 'a failed action is reported once with its own exception and route when its error controller fails with a server error Spring MVC resolves'() {
+        given:
+        def path = '/failing/answeredByControllerFailingWithServerError'
+
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'Spring MVC answered the failure of the error controller'
+        response.assertStatus(503)
+
+        and: 'the observation stopped on the route that failed with what the action threw, and the handlers heard of it once'
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path] == [path, 'IllegalMonitorStateException']
+        }
+        NOTIFIED[path] == ['IllegalMonitorStateException']
+    }
+
     void 'a failure #handler answers inside an include is not the failure of the page that included it'() {
         when:
         def response = http([(REQUEST_HEADER): path], path)

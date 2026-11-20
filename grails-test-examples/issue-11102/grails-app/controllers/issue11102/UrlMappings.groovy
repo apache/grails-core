@@ -41,6 +41,7 @@ class UrlMappings {
         "500"(controller: 'failing', action: 'forwardingErrorHandler', exception: ArithmeticException)
         "500"(controller: 'failing', action: 'includingErrorHandler', exception: NoSuchElementException)
         "500"(controller: 'failing', action: 'failingErrorHandler', exception: IndexOutOfBoundsException)
+        "500"(controller: 'failing', action: 'errorHandlerFailingWithServerError', exception: IllegalMonitorStateException)
         "500"(view:'/error')
         "404"(controller: 'failing', action: 'notFoundHandler')
     }

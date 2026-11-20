@@ -275,6 +275,39 @@ class GrailsExceptionResolverSpec extends Specification {
         'Spring MVC'  | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'error controller failed')
     }
 
+    void 'the exception of an action stays the error of the observation when #handler answers it, and #resolvedBy resolves a later failure'() {
+        given: 'the Grails dispatcher servlet behind the filter, and an error page that includes a handler that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor(mappings, controllerMappings)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/failing': { req, res -> throw original } as Controller,
+                (page)    : { req, res -> includeUnlessIncluded(req, res, '/later') } as Controller,
+                '/later'  : { req, res -> throw later } as Controller],
+                springResolves ? [new ResponseStatusExceptionResolver(order: Ordered.HIGHEST_PRECEDENCE)] : [])
+        def request = new ForwardingRequest(servletContext, '/failing', servlet, ['/failing', page, '/later'] as Set, true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the request failed with what the action threw, not with what failed once the error page answered it'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        handler               | mappings                                               | controllerMappings | page                  | resolvedBy   | springResolves | later
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'              | 'Grails'     | false          | new UnsupportedOperationException('later')
+        'the error view'      | { '500'(view: '/error') }                              | false              | '/error'              | 'Spring MVC' | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'later')
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError' | 'Grails'     | false          | new UnsupportedOperationException('later')
+        'an error controller' | { '500'(controller: 'errors', action: 'serverError') } | true               | '/errors/serverError' | 'Spring MVC' | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'later')
+    }
+
     void 'the handlers hear once of an exception an error controller answers in a forward from an asynchronous dispatch'() {
         given: 'the Grails dispatcher servlet behind the filter, and a handler that forwards to one that fails'
         ServerRequestObservationContext observed = null
@@ -316,11 +349,16 @@ class GrailsExceptionResolverSpec extends Specification {
             resolver.resolveException((HttpServletRequest) req, (HttpServletResponse) res, null, original)
         } as FilterChain)
 
-        and: 'the container reports it or not, the next dispatch fails on the used response, and the processing completes'
+        and: 'the container reports it or not, a later failure follows, and the processing completes'
         if (reportsLeftException) {
             request.asyncContext.listeners.each { it.onError(new AsyncEvent(request.asyncContext, request, response, original)) }
         }
-        request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, new IllegalStateException('response not usable'))
+        if (springResolvesLater) {
+            new DefaultHandlerExceptionResolver().resolveException(request, response, null, new AsyncRequestTimeoutException())
+        }
+        else {
+            request.setAttribute(RequestDispatcher.ERROR_EXCEPTION, new IllegalStateException('response not usable'))
+        }
         request.asyncContext.complete()
 
         then: 'what the action threw, once'
@@ -330,9 +368,11 @@ class GrailsExceptionResolverSpec extends Specification {
         notified.first().is(original)
 
         where:
-        reportsLeftException | container
-        true                 | 'the container reports the exception left on the request, as Tomcat does'
-        false                | 'the container does not, as Jetty does'
+        reportsLeftException | springResolvesLater | container
+        true                 | false               | 'the container reports the exception left on the request, as Tomcat does'
+        false                | false               | 'the container does not, as Jetty does'
+        true                 | true                | 'the container reports it, and Spring MVC resolves a later failure to a server error'
+        false                | true                | 'the container does not, and Spring MVC resolves a later failure to a server error'
     }
 
     void 'a failure that follows the one an error handler answered does not replace it, when #resolvedBy resolves it'() {
@@ -444,6 +484,14 @@ class GrailsExceptionResolverSpec extends Specification {
         request.setAttribute(GrailsWebUtils.ASYNC_REQUEST_URI_ATTRIBUTE, request.requestURI)
         filter.doFilter(request, response, asyncDispatch)
         request.asyncContext.complete()
+    }
+
+    /** Includes a page, unless this is the include of an error page that answers a failure of that page. */
+    private static ModelAndView includeUnlessIncluded(HttpServletRequest request, HttpServletResponse response, String page) {
+        if (request.dispatcherType != DispatcherType.INCLUDE) {
+            request.getRequestDispatcher(page).include(request, response)
+        }
+        null
     }
 
     private static ObservationRegistry registryReporting(Closure stopped, Closure errored) {

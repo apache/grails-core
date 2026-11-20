@@ -143,7 +143,7 @@ class ServerErrorObservationSpec extends Specification {
         'a failure left on the request'           | { req, res -> req.setAttribute(RequestDispatcher.ERROR_EXCEPTION, LATER) }
     }
 
-    void 'the server error left on a request that started asynchronous processing is reported once, when the container reports it'() {
+    void 'the server error left on a request that started asynchronous processing is reported once, when the container reports it and #later follows'() {
         given:
         request.asyncSupported = true
 
@@ -154,12 +154,19 @@ class ServerErrorObservationSpec extends Specification {
             ServerErrorObservation.recordServerError(request, FIRST)
         }
         request.asyncContext.listeners.each { it.onError(new AsyncEvent(request.asyncContext, request, response, FIRST)) }
+        overwrite.call(request, response)
         request.asyncContext.complete()
 
-        then: 'the observation heard of it from the container, and does not read it off the request again'
+        then: 'the observation heard of it from the container, and reads neither it nor what failed after it off the request'
         stoppedWith.is(FIRST)
         notified == [FIRST]
         request.getAttribute(RequestDispatcher.ERROR_EXCEPTION) == null
+
+        where:
+        later                                     | overwrite
+        'nothing'                                 | { req, res -> }
+        'a failure Spring MVC records as handled' | { req, res -> ServerHttpObservationFilter.recordHandledException(req, LATER) }
+        'a failure left on the request'           | { req, res -> req.setAttribute(RequestDispatcher.ERROR_EXCEPTION, LATER) }
     }
 
     private void observe(Closure dispatch) {

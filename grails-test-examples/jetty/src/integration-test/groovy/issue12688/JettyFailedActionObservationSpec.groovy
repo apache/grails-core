@@ -99,6 +99,27 @@ class JettyFailedActionObservationSpec extends Specification implements HttpClie
         'an error controller, after an include'                              | '/failing/failsAfterIncludeAnsweredByController'  | '/failing/failsAfterIncludeAnsweredByController'  | 'Answered by the error controller' || 'UnsupportedOperationException'
     }
 
+    void 'a failed action is reported once with its own exception when its error controller fails with a server error Spring MVC resolves, #when'() {
+        when:
+        def response = http([(REQUEST_HEADER): path], path)
+
+        then: 'Spring MVC answered the failure of the error controller'
+        response.assertStatus(503)
+
+        and: 'the observation stopped with what the action threw, and the handlers heard of it once'
+        // Not its route: the container's error page that answers the 503 of an asynchronous request is dispatched to
+        // before the observation stops, and sets its own (spring-projects/spring-framework#37675)
+        new PollingConditions(timeout: 30).eventually {
+            assert STOPPED[path]?.last() == 'IllegalMonitorStateException'
+        }
+        NOTIFIED[path] == ['IllegalMonitorStateException']
+
+        where:
+        when                             | path
+        'on a request dispatch'          | '/failing/answeredByControllerFailingWithServerError'
+        'after the action started async' | '/failing/answeredByControllerFailingWithServerErrorAfterStartingAsync'
+    }
+
     void 'a failure #handler answers inside an include is not the failure of the page that included it'() {
         when:
         def response = http([(REQUEST_HEADER): path], path)
