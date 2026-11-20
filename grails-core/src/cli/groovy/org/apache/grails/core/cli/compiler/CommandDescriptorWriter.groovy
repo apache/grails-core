@@ -18,22 +18,31 @@
  */
 package org.apache.grails.core.cli.compiler
 
+import java.lang.reflect.Modifier
 import java.nio.charset.StandardCharsets
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.CodeVisitorSupport
+import org.codehaus.groovy.ast.ConstructorNode
+import org.codehaus.groovy.ast.InnerClassNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.BinaryExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
+import org.codehaus.groovy.ast.expr.PropertyExpression
+import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
 import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.stmt.ReturnStatement
 import org.codehaus.groovy.ast.stmt.Statement
+import org.codehaus.groovy.syntax.Types
 import org.codehaus.groovy.transform.trait.Traits
 
 import org.apache.grails.gradle.model.cli.CommandDescriptor
@@ -78,6 +87,11 @@ class CommandDescriptorWriter {
             return false
         }
         File descriptor = new File(compilationTargetDirectory, location)
+        // a class without a name of its own is nothing that can be typed
+        if (classNode instanceof InnerClassNode && ((InnerClassNode) classNode).isAnonymous()) {
+            descriptor.delete()
+            return false
+        }
         Object declaredName = declared(classNode, 'name')
         if (declaredName.is(UNKNOWN)) {
             descriptor.delete()
@@ -87,8 +101,15 @@ class CommandDescriptorWriter {
         Object declaredDescription = declared(classNode, 'description')
         String description = declaredDescription.is(UNKNOWN) ? null :
                 declaredDescription == null ? name : (String) declaredDescription
+        // nothing is written that the reader of a descriptor refuses: a name that is not the name of a
+        // command gets no descriptor, and a description that is not one line that can be shown is left out
+        String json = CommandDescriptor.describe(classNode.name, name, description)
+        if (json == null) {
+            descriptor.delete()
+            return false
+        }
         descriptor.parentFile.mkdirs()
-        descriptor.setBytes(CommandDescriptor.toJson(classNode.name, name, description).getBytes(StandardCharsets.US_ASCII))
+        descriptor.setBytes(json.getBytes(StandardCharsets.US_ASCII))
         true
     }
 
@@ -123,7 +144,9 @@ class CommandDescriptorWriter {
             }
             PropertyNode propertyNode = current.getProperty(property)
             if (propertyNode != null && !propertyNode.isStatic()) {
-                return constant(propertyNode.initialExpression)
+                // a property that can be set is what it starts as unless the class sets it when an instance is made
+                boolean set = !Modifier.isFinal(propertyNode.modifiers) && setsWhenMade(current, property)
+                return set ? UNKNOWN : constant(propertyNode.initialExpression)
             }
             // a method a trait weaves into the class: the default when the trait is the command contract's
             if (declaresMethod) {
@@ -132,6 +155,47 @@ class CommandDescriptorWriter {
             current = current.superClass
         }
         null
+    }
+
+    // whether a constructor or an initializer block of the class assigns to the property
+    private static boolean setsWhenMade(ClassNode classNode, String property) {
+        String setter = 'set' + property.capitalize()
+        boolean[] found = [false] as boolean[]
+        CodeVisitorSupport visitor = new CodeVisitorSupport() {
+
+            @Override
+            void visitBinaryExpression(BinaryExpression expression) {
+                if (Types.ofType(expression.operation.type, Types.ASSIGNMENT_OPERATOR) && names(expression.leftExpression, property)) {
+                    found[0] = true
+                }
+                super.visitBinaryExpression(expression)
+            }
+
+            @Override
+            void visitMethodCallExpression(MethodCallExpression call) {
+                if (call.methodAsString == setter) {
+                    found[0] = true
+                }
+                super.visitMethodCallExpression(call)
+            }
+        }
+        for (ConstructorNode constructor : classNode.declaredConstructors) {
+            constructor.code?.visit(visitor)
+        }
+        for (Statement statement : classNode.objectInitializerStatements) {
+            statement.visit(visitor)
+        }
+        found[0]
+    }
+
+    private static boolean names(Expression target, String property) {
+        if (target instanceof VariableExpression) {
+            return ((VariableExpression) target).name == property
+        }
+        if (target instanceof PropertyExpression) {
+            return ((PropertyExpression) target).propertyAsString == property
+        }
+        false
     }
 
     private static boolean isCommandContractDefault(MethodNode method) {

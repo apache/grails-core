@@ -27,6 +27,7 @@ import groovy.json.JsonOutput
 
 import org.gradle.testkit.runner.GradleRunner
 
+import org.apache.grails.gradle.model.cli.CommandArgumentsFile
 import org.grails.gradle.plugin.core.GradleSpecification
 
 /**
@@ -61,7 +62,13 @@ abstract class CommandProjectSpecification extends GradleSpecification {
 
     /** Writes the part of the build script a feature decides: what the application depends on. */
     protected void commands(String script) {
-        new File(projectDir, 'commands.gradle').text = script
+        // the stand-in for the class that runs a command reads a file of arguments with the code the real one uses
+        File model = new File(CommandArgumentsFile.protectionDomain.codeSource.location.toURI())
+        new File(projectDir, 'commands.gradle').text = """
+            dependencies {
+                implementation files('${model.absolutePath.replace('\\', '/')}')
+            }
+        """ + script
     }
 
     protected static String registrations(String... classNames) {

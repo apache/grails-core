@@ -137,6 +137,9 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
     protected void configureCommandCatalog(Project project) {
         project.pluginManager.withPlugin('java') {
             if (project.tasks.names.contains(GrailsCommandCatalogTask.TASK_NAME)) {
+                project.logger.warn('Project {} already has a task named {}, so the Grails Gradle plugin does not register its own and ' +
+                        'the catalog of the commands of the project is not written. Give the task another name.',
+                        project.path, GrailsCommandCatalogTask.TASK_NAME)
                 return
             }
             project.tasks.register(GrailsCommandCatalogTask.TASK_NAME, GrailsCommandCatalogTask) { GrailsCommandCatalogTask task ->
@@ -469,10 +472,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                         it.doFirst {
-                            // -Pargs split as it always was, or the arguments of --arg or --args-file as they are
-                            List<Object> all = new ArrayList<Object>(it.commandArguments(args))
-                            all << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
-                            it.args(all)
+                            // -Pargs split as it always was, the arguments of --arg as they are, or the file of --args-file
+                            it.args(it.runnerArguments(args, GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)))
                         }
                     }
                 }
@@ -640,10 +641,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        // -Pargs split as it always was, or the arguments of --arg or --args-file as they are
-                        List<Object> all = new ArrayList<Object>(it.commandArguments(args))
-                        all << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
-                        it.args(all)
+                        // -Pargs split as it always was, the arguments of --arg as they are, or the file of --args-file
+                        it.args(it.runnerArguments(args, GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)))
                     }
 
                 }

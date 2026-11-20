@@ -18,15 +18,28 @@
  */
 package grails.ui.command
 
-// Stands in for the class of grails-console that runs a command: it says what it was started with,
-// each argument as the bytes of its UTF-8 form, so that nothing a terminal or a log does to a
-// character can make two arguments look alike.
+import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+
+// Stands in for the class of grails-console that runs a command. It says what its JVM was started
+// with, and what the arguments of the command are once it has done what the real class does first
+// with them (a build can give them in a file), each as the bytes of its UTF-8 form, so that nothing
+// a terminal or a log does to a character can make two arguments look alike.
 class GrailsApplicationContextCommandRunner {
 
     static void main(String[] args) {
-        println "ARGUMENTS=${args.length}"
-        args.eachWithIndex { String argument, int index ->
-            println "ARGUMENT[${index}]=<${argument.getBytes('UTF-8').encodeHex()}>"
+        say('STARTED', args)
+        try {
+            say('ARGUMENT', CommandArgumentsFile.expand(args))
+        } catch (CommandArgumentsFile.Refused refused) {
+            System.err.println("runCommand: The file of arguments ${refused.message}")
+            System.exit(1)
+        }
+    }
+
+    private static void say(String what, String[] values) {
+        println "${what}S=${values.length}"
+        values.eachWithIndex { String value, int index ->
+            println "${what}[${index}]=<${value.getBytes('UTF-8').encodeHex()}>"
         }
     }
 }

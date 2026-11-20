@@ -18,13 +18,6 @@
  */
 package org.grails.gradle.plugin.commands
 
-import java.nio.ByteBuffer
-import java.nio.charset.CharacterCodingException
-import java.nio.charset.CodingErrorAction
-import java.nio.charset.StandardCharsets
-
-import groovy.json.JsonException
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 
 import org.gradle.api.GradleException
@@ -40,6 +33,8 @@ import org.gradle.work.DisableCachingByDefault
 
 import javax.inject.Inject
 
+import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+
 /**
  * Runs a Grails command with the application context.
  *
@@ -49,8 +44,9 @@ import javax.inject.Inject
  *       it is, whatever it contains. Gradle does not take an empty value.</li>
  *   <li>{@code --args-file=<file>}: a UTF-8 file with a JSON array of strings, one for each argument,
  *       for callers that are programs and for what a command line cannot carry, an empty argument
- *       among it. A path that is not absolute is in the project directory. The task reads the file
- *       when it runs and leaves it where it is.</li>
+ *       among it. A path that is not absolute is in the project directory. The file is read when the
+ *       task runs, by the JVM of the command, which is given its path and not what it holds; it is
+ *       left where it is.</li>
  *   <li>the project property {@code args} ({@code -Pargs="..."}), one text that is split at spaces
  *       with single and double quotes read as a shell reads them, as it always was.</li>
  * </ul>
@@ -69,12 +65,10 @@ abstract class ApplicationContextCommandTask extends JavaExec {
     public static final String ARGUMENTS_FILE_OPTION = 'args-file'
 
     /** The most bytes a file of arguments has. */
-    public static final int MAX_ARGUMENTS_FILE_BYTES = 1024 * 1024
+    public static final int MAX_ARGUMENTS_FILE_BYTES = CommandArgumentsFile.MAX_BYTES
 
     /** The most arguments a file of arguments has. */
-    public static final int MAX_ARGUMENTS = 4096
-
-    private static final String NOT_AN_ARRAY = 'is not a JSON array of strings in UTF-8'
+    public static final int MAX_ARGUMENTS = CommandArgumentsFile.MAX_ARGUMENTS
 
     @Inject
     ApplicationContextCommandTask() {
@@ -110,14 +104,19 @@ abstract class ApplicationContextCommandTask extends JavaExec {
     abstract DirectoryProperty getArgumentsFileBase()
 
     /**
-     * Puts together what the command is run with: the arguments of the project property {@code args},
-     * or those of {@code --arg} or {@code --args-file}, each of those the string it was given as.
+     * Puts together what the class that runs the command is started with after what the task was
+     * configured with: the arguments of the project property {@code args} or those of {@code --arg},
+     * then the class of the application, and for {@code --args-file} the argument that names the
+     * file. What the file holds is read by the class that runs the command, in its JVM: it is not on
+     * the command line of that JVM, where a process listing and the log of the build would show it.
+     * The file is read here as well, so that one that cannot be used fails the task with the reason.
      *
      * @param propertyArguments the arguments read from the project property {@code args}; empty when it is not set
-     * @return the arguments of the command
+     * @param applicationClass the class of the application
+     * @return what to start the class that runs the command with
      * @throws GradleException when arguments were given in more than one way, or when the file cannot be used
      */
-    List<String> commandArguments(List<String> propertyArguments) {
+    List<String> runnerArguments(List<String> propertyArguments, String applicationClass) {
         List<String> given = arg.getOrElse([])
         boolean file = argsFile.isPresent()
         int ways = (propertyArguments ? 1 : 0) + (given ? 1 : 0) + (file ? 1 : 0)
@@ -126,45 +125,16 @@ abstract class ApplicationContextCommandTask extends JavaExec {
                     "Use one of --${ARGUMENT_OPTION}, --${ARGUMENTS_FILE_OPTION} and the project property args (-Pargs).")
         }
         if (file) {
-            return readArgumentsFile(argumentsFileBase.file(argsFile.get()).get().asFile)
+            File argumentsFile = argumentsFileBase.file(argsFile.get()).get().asFile
+            try {
+                CommandArgumentsFile.read(argumentsFile)
+            } catch (CommandArgumentsFile.Refused refused) {
+                throw new GradleException("The file given to task '${name}' with --${ARGUMENTS_FILE_OPTION} ${refused.message}")
+            }
+            return [applicationClass, CommandArgumentsFile.ARGUMENT + argumentsFile.absolutePath]
         }
-        given ? new ArrayList<String>(given) : propertyArguments
-    }
-
-    private List<String> readArgumentsFile(File file) {
-        String what = "The file given to task '${name}' with --${ARGUMENTS_FILE_OPTION}"
-        if (!file.isFile()) {
-            throw new GradleException("${what} does not exist or is not a file.")
-        }
-        if (file.length() > MAX_ARGUMENTS_FILE_BYTES) {
-            throw new GradleException("${what} has more than ${MAX_ARGUMENTS_FILE_BYTES} bytes.")
-        }
-        Object parsed
-        try {
-            String text = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(CodingErrorAction.REPORT)
-                    .decode(ByteBuffer.wrap(file.bytes)).toString()
-            parsed = new JsonSlurper().parseText(text)
-        } catch (CharacterCodingException | JsonException | IllegalArgumentException | StackOverflowError ignored) {
-            // what the file holds is not repeated: it is the arguments, and they can be anything
-            throw new GradleException("${what} ${NOT_AN_ARRAY}.")
-        }
-        if (!(parsed instanceof List) || !((List) parsed).every { Object argument -> argument instanceof String }) {
-            throw new GradleException("${what} ${NOT_AN_ARRAY}.")
-        }
-        List<String> arguments = new ArrayList<String>((List<String>) parsed)
-        if (arguments.size() > MAX_ARGUMENTS) {
-            throw new GradleException("${what} has more than ${MAX_ARGUMENTS} arguments.")
-        }
-        // a process cannot be started with an argument that has this character in it
-        if (arguments.any { String argument -> argument.indexOf(0) >= 0 }) {
-            throw new GradleException("${what} has an argument with the character U+0000 in it, which no command can be given.")
-        }
-        // nor with half of a character, which JSON can spell (\ud800) and no encoding can carry
-        if (arguments.any { String argument -> !StandardCharsets.UTF_8.newEncoder().canEncode(argument) }) {
-            throw new GradleException("${what} has an argument that is not text: half of a surrogate pair.")
-        }
-        arguments
+        List<String> all = new ArrayList<String>(given ?: propertyArguments)
+        all << applicationClass
+        all
     }
 }

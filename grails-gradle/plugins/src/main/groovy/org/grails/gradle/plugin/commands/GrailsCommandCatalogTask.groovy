@@ -42,6 +42,8 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 
+import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+
 /**
  * Writes the catalog of the application commands of the project: the commands that
  * {@code runCommand} can run, from the commands of the project itself ({@code grails-app/commands}),
@@ -109,9 +111,9 @@ abstract class GrailsCommandCatalogTask extends DefaultTask {
     @TaskAction
     void write() {
         CommandCatalogBuilder catalog = new CommandCatalogBuilder()
-        for (File directory : applicationOutput.files) {
-            catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, directory)
-        }
+        // one element: the compiler copies a registration written by hand into the classes directory,
+        // and the descriptor written by hand beside it stays in the resources directory
+        catalog.add(CommandCatalogBuilder.ORIGIN_APPLICATION, applicationOutput.files)
         Map<String, String> origins = originsByPath.get()
         for (File file : commandClasspath.files) {
             catalog.add(origins.get(file.absolutePath) ?: "file:${file.name}".toString(), file)

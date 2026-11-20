@@ -246,7 +246,7 @@ A program that runs a command, or a command line that cannot carry an argument (
 ./gradlew runCommand --args-file=build/tmp/greet-args.json
 ----
 
-The file is UTF-8 and holds a JSON array of strings, one for each argument, for example `["greet", "Alice \"Al\" Smith", ""]`. A relative path is in the project directory. The file can be at most 1 MiB and hold at most 4096 arguments, and an argument cannot contain the character U+0000. The task reads the file when it runs and does not delete it. Because the arguments are not on the Gradle command line, a build with the configuration cache reuses its configuration when only the arguments change, which is not so for `--arg` and `-Pargs`.
+The file is UTF-8 and holds a JSON array of strings, one for each argument, for example `["greet", "Alice \"Al\" Smith", ""]`. A relative path is in the project directory. The file can be at most 1 MiB and hold at most 4096 arguments, and an argument cannot contain the character U+0000. The file is read when the task runs and is not deleted. What it holds is not put on a command line: the JVM that runs the command is given the path of the file and reads it, so the arguments appear in no process listing and in no log of the build. Because the arguments are not on the Gradle command line either, a build with the configuration cache reuses its configuration when only the arguments change, which is not so for `--arg` and `-Pargs`.
 
 Use one of the three forms in a build: `--arg`, `--args-file` or `-Pargs`. The task fails when it is given arguments in more than one of them.
 
@@ -484,7 +484,7 @@ When a command is compiled, from `grails-app/commands` of an application or from
 * The description is the string that `getDescription()` returns or that the property `description` is set to. Without one, the description is the name.
 * A `getName()` that works the name out when it is called cannot be described: such a command has no descriptor and is listed by the name its class name gives. A description that is worked out is left out of the descriptor.
 
-Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a command whose descriptor has anything else is left out of the list, with the reason. A command written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
+Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a command whose descriptor has anything else is left out of the list, with the reason. A command whose name or description is not written that way gets a descriptor without the description, or none when it is the name. A command written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
 
 [source,json]
 .src/cli/resources/META-INF/grails-commands/com.example.AuditReportCommand.json
@@ -513,6 +513,8 @@ It lists the commands of the project itself, of the `-cli` companions of its plu
 * `origin` is the coordinates of the artifact the command comes from, or `application` for a command of the project itself.
 * `registration` says how much is known: `descriptor` for a command with a descriptor; `factories` for a command that is registered without one, whose name is the one its class name gives and whose description is empty; `legacy` for a command of a Grails 7 plugin, listed the same way.
 * `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above, a name that two commands have (neither is listed, because the task does not choose between them), or Grails 7 commands in a project without `legacyCommandSupport`. The task prints the same lines as warnings.
+
+The names, descriptions and origins in the file come from the project's dependencies. They are checked to be one line without control characters, and nothing more: a program that shows them must show them as plain text and give no meaning to anything in them.
 
 Every command in the file is run with `./gradlew runCommand --arg=<name>` followed by its arguments. The task loads no class of the project or of its dependencies, and the file has neither a time nor a path of the machine in it, so the same commands give the same file.
 

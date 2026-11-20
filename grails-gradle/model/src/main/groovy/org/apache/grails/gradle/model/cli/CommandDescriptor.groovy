@@ -38,7 +38,7 @@ import grails.util.GrailsNameUtils
  * directory registers.</p>
  *
  * <p>This class holds what the writer of a descriptor (the compiler, in {@code grails-core-cli}) and
- * its reader (the Grails Gradle plugin) have to agree on. It writes; it does not read.</p>
+ * its reader (the catalog of the Grails Gradle plugin) have to agree on, the writing and the reading.</p>
  *
  * @since 9.0
  */
@@ -62,6 +62,9 @@ final class CommandDescriptor {
 
     /** The most bytes a descriptor has. */
     public static final int MAX_BYTES = 16 * 1024
+
+    /** How deep the arrays and objects of a descriptor go at most. */
+    public static final int MAX_DEPTH = 4
 
     /** The most characters the name of a command has. */
     public static final int MAX_NAME_LENGTH = 64
@@ -143,6 +146,100 @@ final class CommandDescriptor {
      */
     static String location(String className) {
         isClassName(className) ? "${DIRECTORY}/${className}${EXTENSION}" as String : null
+    }
+
+    /**
+     * Says why a descriptor cannot be used. The message finishes the sentence "its descriptor ..."
+     * and repeats nothing of the descriptor, unless it is one of a fixed set of words.
+     */
+    static final class Refused extends Exception {
+
+        Refused(String message) {
+            super(message)
+        }
+    }
+
+    /**
+     * What a descriptor says of a command.
+     */
+    static final class Described {
+
+        /** What is typed for the command. */
+        final String name
+
+        /** The description of the command, or {@code null} when the descriptor has none. */
+        final String description
+
+        Described(String name, String description) {
+            this.name = name
+            this.description = description
+        }
+    }
+
+    /**
+     * Reads the descriptor of a class, which is something a dependency wrote: every rule of the
+     * format is checked, and anything else is a {@link Refused}, never another exception.
+     *
+     * @param className the class the descriptor was found for
+     * @param bytes the content of the descriptor
+     * @return what it says
+     * @throws Refused when it is not a descriptor of format 1 for that class that this version can use
+     */
+    static Described read(String className, byte[] bytes) throws Refused {
+        if (bytes.length > MAX_BYTES) {
+            throw new Refused("has more than ${MAX_BYTES} bytes")
+        }
+        Object parsed
+        try {
+            parsed = StrictJson.parse(bytes, MAX_DEPTH)
+        } catch (StrictJson.Refused ignored) {
+            throw new Refused("is not JSON in UTF-8 as the descriptor format has it (strict JSON, nested at most ${MAX_DEPTH} deep)")
+        }
+        if (!(parsed instanceof Map)) {
+            throw new Refused('is not a JSON object')
+        }
+        Map descriptor = (Map) parsed
+        Object format = descriptor.get('format')
+        if (!(format instanceof StrictJson.Numeral) || !((StrictJson.Numeral) format).isInteger(FORMAT)) {
+            throw new Refused("is not of format ${FORMAT}, the one this version of Grails reads")
+        }
+        if (descriptor.get('class') != className) {
+            throw new Refused('is the descriptor of another class')
+        }
+        Object name = descriptor.get('name')
+        if (!(name instanceof String) || !isCommandName((String) name)) {
+            throw new Refused('has a name that cannot be the name of a command (lower case letters and digits, ' +
+                    "in words joined by single hyphens, at most ${MAX_NAME_LENGTH} characters)")
+        }
+        Object description = descriptor.get('description')
+        if (description != null && !(description instanceof String && isDescription((String) description))) {
+            throw new Refused("has a description that is not one line of at most ${MAX_DESCRIPTION_LENGTH} characters that can be shown")
+        }
+        Object target = descriptor.get('target')
+        if (target != null && target != TARGET_APPLICATION) {
+            String why = target instanceof String && TARGETS.contains(target) ?
+                    "is for the execution target ${target}, which this version of Grails cannot run".toString() :
+                    'has an execution target that does not exist'
+            throw new Refused(why)
+        }
+        new Described((String) name, (String) description)
+    }
+
+    /**
+     * Writes the descriptor of a command when {@link #read} would take it, so that nothing is
+     * written that is then refused: no descriptor for a class name or a command name the format
+     * does not have, and no description that is not one line that can be shown.
+     *
+     * @param className the name of the command class
+     * @param name what is typed for the command
+     * @param description the description of the command, or {@code null} when it is not known
+     * @return the JSON document, or {@code null} when the command cannot be described
+     */
+    static String describe(String className, String name, String description) {
+        if (!isClassName(className) || !isCommandName(name)) {
+            return null
+        }
+        toJson(className, name, description != null && isDescription(description) ? description : null)
     }
 
     /**

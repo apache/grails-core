@@ -26,6 +26,7 @@ import org.apache.grails.core.cli.ApplicationContextCommandRegistry
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.core.cli.ApplicationCommandTargetAware
 import grails.ui.support.DevelopmentGrailsApplication
+import org.apache.grails.gradle.model.cli.CommandArgumentsFile
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
 
@@ -157,9 +158,18 @@ class GrailsApplicationContextCommandRunner extends DevelopmentGrailsApplication
     /**
      * Main method to run an existing Application class
      *
-     * @param args The first argument is the Command name, the last argument is the Application class name
+     * @param args The first argument is the Command name, the last argument is the Application class name;
+     * or, after the Application class name, one more argument that names a file with arguments of the command
+     * (see {@link CommandArgumentsFile}), which then come before the Application class name
      */
     static void main(String[] args) {
+        try {
+            // a build gives the arguments of the command in a file when they are not for a command line
+            args = CommandArgumentsFile.expand(args)
+        } catch (CommandArgumentsFile.Refused refused) {
+            System.err.println("runCommand: The file of arguments ${refused.message}")
+            System.exit(1)
+        }
         if (args.size() > 1) {
             Class applicationClass = null
             String className = args.last()

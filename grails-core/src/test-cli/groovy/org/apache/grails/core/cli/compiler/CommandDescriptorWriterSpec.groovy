@@ -25,6 +25,7 @@ import org.codehaus.groovy.control.Phases
 
 import org.apache.grails.core.cli.ApplicationCommand
 import org.apache.grails.core.cli.ConfigReportCommand
+import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
 import org.apache.grails.gradle.model.cli.CommandDescriptor
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -168,17 +169,113 @@ class CommandDescriptorWriterSpec extends Specification {
 
     def "what is not printable ASCII is escaped and read back as it was"() {
         given:
-        String description = 'Sagt "Grüße" \\ 日本   \t end'
+        String description = 'Sagt "Grüße" \\ 日本 😀 @|red x|@ ${y} end'
 
         when:
-        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String description = '''${description.replace('\\', '\\\\')}'''; ${HANDLE} }")
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String description = '''${description.replace('\\', '\\\\').replace('$', '\\$')}'''; ${HANDLE} }")
 
         then:
         descriptorFile('example.GreetCommand').bytes.every { byte b -> b == 0x0a || (b >= 0x20 && b <= 0x7e) }
         descriptor('example.GreetCommand').description == description
+    }
 
-        and: 'whether it can be shown is for the reader to say'
-        !CommandDescriptor.isDescription(description)
+    @Unroll
+    def "a description the reader of a descriptor refuses is not written: #title"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { String description = ${literal}; ${HANDLE} }")
+
+        then: 'the descriptor is one the reader takes, without the description'
+        descriptor('example.GreetCommand') == [format: 1, class: 'example.GreetCommand', name: 'greet', target: 'application']
+
+        where:
+        title                | literal
+        'two lines'          | "'''line one\nline two'''"
+        'a tab'              | "'one\\ttwo'"
+        '600 characters'     | "'${'x' * 600}'"
+        'an escape sequence' | "'red \\u001b[31m'"
+    }
+
+    @Unroll
+    def "a command the reader of a descriptor would refuse gets no descriptor and keeps its registration: #title"() {
+        when:
+        compile(fileName, source)
+
+        then:
+        !descriptorFile(className).exists()
+        registered() == [className]
+
+        where:
+        title                                        | fileName       | className           | source
+        'a class name that gives no name'            | 'Command'      | 'example.Command'   | "class Command implements ${CONTRACT} { ${HANDLE} }"
+        'a name that is not the name of a command'   | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'Say Hello'; ${HANDLE} }"
+        'a name of 65 characters'                    | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = '${'a' * 65}'; ${HANDLE} }"
+        'a class without a name of its own'          | 'Holder'       | 'example.Holder$1'  | "class Holder { def command = new ${CONTRACT}() { ${HANDLE} } }"
+        'a name its constructor can change'          | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; GreetCommand() { name = 'other' }; ${HANDLE} }"
+        'a name an initializer can change'           | 'GreetCommand' | 'example.GreetCommand' | "class GreetCommand implements ${CONTRACT} { String name = 'say-hello'; { name = 'other' }; ${HANDLE} }"
+    }
+
+    def "a final property is what it starts as, whatever else the class has"() {
+        when:
+        compile('GreetCommand', "class GreetCommand implements ${CONTRACT} { final String name = 'say-hello'; GreetCommand() { println 'made' }; ${HANDLE} }")
+
+        then:
+        descriptor('example.GreetCommand').name == 'say-hello'
+    }
+
+    def "an application with a compiled command and one registered and described by hand lists both by their descriptors"() {
+        given: 'the registration and the descriptor of a command the compiler does not describe, in the resources, as the guide says'
+        File resources = new File(tempDir, 'src/main/resources/META-INF')
+        new File(resources, 'grails-commands').mkdirs()
+        new File(resources, 'grails-cli.factories').text = "${CONTRACT}=example.AuditReportJavaCommand\n"
+        new File(resources, 'grails-commands/example.AuditReportJavaCommand.json').text =
+                '{"format": 1, "class": "example.AuditReportJavaCommand", "name": "audit", "description": "Writes the audit report", "target": "application"}\n'
+
+        and: 'a command under grails-app/commands, compiled'
+        File classes = new File(tempDir, 'build/classes/groovy/main')
+        File source = new File(tempDir, 'grails-app/commands/example/GreetCommand.groovy')
+        source.parentFile.mkdirs()
+        source.text = "package example\nclass GreetCommand implements ${CONTRACT} { String description = 'Greets someone'; ${HANDLE} }"
+        CompilationUnit unit = new CompilationUnit(new CompilerConfiguration(targetDirectory: classes, disabledGlobalASTTransformations: [
+                'org.grails.compiler.injection.GlobalGrailsClassInjectorTransformation',
+                'org.grails.compiler.injection.GlobalImportTransformation',
+        ] as Set))
+        unit.addSource(source)
+        unit.compile(Phases.CANONICALIZATION)
+
+        and: 'the resources where a build puts them'
+        File processed = new File(tempDir, 'build/resources/main/META-INF')
+        new File(processed, 'grails-commands').mkdirs()
+        new File(processed, 'grails-cli.factories').bytes = new File(resources, 'grails-cli.factories').bytes
+        new File(processed, 'grails-commands/example.AuditReportJavaCommand.json').bytes = new File(resources, 'grails-commands/example.AuditReportJavaCommand.json').bytes
+
+        and:
+        Properties merged = new Properties()
+        new File(classes, CommandFactoriesTransformation.CLI_FACTORIES_LOCATION).withInputStream { merged.load(it) }
+
+        expect: 'the compiler copied the registration written by hand into the classes directory, without a descriptor for it'
+        merged.getProperty(CONTRACT).tokenize(',').sort() == ['example.AuditReportJavaCommand', 'example.GreetCommand']
+        new File(classes, 'META-INF/grails-commands').list() as List == ['example.GreetCommand.json']
+
+        when: 'the catalog is put together from the output of the project, as one element of the class path'
+        CommandCatalogBuilder together = new CommandCatalogBuilder()
+        together.add(CommandCatalogBuilder.ORIGIN_APPLICATION, [classes, processed.parentFile])
+
+        and: 'and from the two directories as elements of their own, as two jars would be'
+        CommandCatalogBuilder apart = new CommandCatalogBuilder()
+        apart.add(CommandCatalogBuilder.ORIGIN_APPLICATION, classes)
+        apart.add(CommandCatalogBuilder.ORIGIN_APPLICATION, processed.parentFile)
+
+        then:
+        together.build() == [
+                format     : 1,
+                complete   : true,
+                diagnostics: [],
+                commands   : [
+                        [name: 'audit', aliases: [], description: 'Writes the audit report', origin: 'application', target: 'application', registration: 'descriptor'],
+                        [name: 'greet', aliases: [], description: 'Greets someone', origin: 'application', target: 'application', registration: 'descriptor'],
+                ],
+        ]
+        apart.build() == together.build()
     }
 
     def "the descriptor written by hand for the command this module registers by hand says what the command says"() {
@@ -203,6 +300,8 @@ class CommandDescriptorWriterSpec extends Specification {
     }
 
     private Map descriptor(String className) {
+        // whatever the compiler writes, the reader of a descriptor takes
+        CommandDescriptor.read(className, descriptorFile(className).bytes)
         (Map) new JsonSlurper().parse(descriptorFile(className), 'US-ASCII')
     }
 

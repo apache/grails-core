@@ -78,6 +78,12 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         then:
         arguments(result) == given + ['example.Application']
 
+        and: 'the JVM of the command was started with the path of the file and not with what it holds'
+        started(result).size() == 2
+        started(result)[0] == 'example.Application'
+        started(result)[1].startsWith('--grails-args-file=')
+        new File(started(result)[1].substring('--grails-args-file='.length())).canonicalFile == new File(projectDir, file).canonicalFile
+
         and: 'the file is the caller\'s and stays'
         new File(projectDir, file).isFile()
 
@@ -85,6 +91,26 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         file                           | absolute
         'build/tmp/args/arguments.json' | false
         'arguments of a command.json'   | true
+    }
+
+    def "what a file of arguments holds is in no command line and in no line of the log of the build"() {
+        given: 'an argument nobody else is to see, and more arguments than a command line carries'
+        setupCommandProject()
+        List<String> given = ['greet', 'correct-horse-battery-staple'] + ['x' * 250] * 4000
+        projectFile('arguments.json', JsonOutput.toJson(given))
+
+        when: 'the build says everything it does'
+        BuildResult result = executeTask('runCommand', ['--args-file=arguments.json', '--info'])
+
+        then: 'the command has its arguments'
+        arguments(result) == given + ['example.Application']
+
+        and: 'its JVM was started with two'
+        started(result).size() == 2
+
+        and: 'the build wrote the command line of that JVM, without the argument'
+        result.output.contains('--grails-args-file=')
+        !result.output.contains('correct-horse-battery-staple')
     }
 
     def "a command with a task of its own takes its arguments in the same ways"() {
@@ -105,6 +131,7 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         then: 'the name of the command comes first'
         arguments(options) == ['hello-world', 'a b', '--loud', 'example.Application']
         arguments(file) == ['hello-world', 'from a file', '', 'example.Application']
+        started(file)[0..1] == ['hello-world', 'example.Application']
         arguments(property) == ['hello-world', 'a', 'b', 'example.Application']
     }
 
@@ -185,7 +212,7 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
 
         then:
         result.output.contains("The file given to task 'runCommand' with --args-file ${message}")
-        !result.output.contains('ARGUMENTS=')
+        !result.output.contains('STARTEDS=')
         !result.output.contains('SECRET')
 
         where:
@@ -200,7 +227,12 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         'is too large'                   | '["' + 'x' * (1024 * 1024) + '"]'                          | 'has more than 1048576 bytes.'
         'has too many arguments'         | JsonOutput.toJson((0..4096).collect { 'a' })               | 'has more than 4096 arguments.'
         'has the character U+0000'       | '["greet", "SECRET\\u0000"]'                               | 'has an argument with the character U+0000 in it, which no command can be given.'
-        'has half a surrogate pair'      | '["greet", "SECRET\\ud83d"]'                               | 'has an argument that is not text: half of a surrogate pair.'
+        'has half a surrogate pair'      | '["greet", "SECRET\\ud83d"]'                               | 'is not a JSON array of strings in UTF-8.'
+        'ends inside an escape'          | '["greet", "SECRET\\'                                      | 'is not a JSON array of strings in UTF-8.'
+        'has a second array'             | '["greet"]["SECRET"]'                                      | 'is not a JSON array of strings in UTF-8.'
+        'has something after the array'  | '["greet"]SECRET'                                          | 'is not a JSON array of strings in UTF-8.'
+        'has a comma after the array'    | '["greet"],'                                               | 'is not a JSON array of strings in UTF-8.'
+        'has a short escape'             | '["greet", "\\u12"]'                                       | 'is not a JSON array of strings in UTF-8.'
     }
 
     def "Gradle does not take an empty value for --arg, which is what the file is for"() {
@@ -215,14 +247,23 @@ class CommandArgumentsSpec extends CommandProjectSpecification {
         !result.output.contains('ARGUMENTS=')
     }
 
-    // what the stand-in for the command runner was started with
+    // the arguments of the command, with the class of the application after them, as the class that runs a command has them
     private static List<String> arguments(BuildResult result) {
+        said(result, 'ARGUMENT')
+    }
+
+    // what the JVM of the command was started with
+    private static List<String> started(BuildResult result) {
+        said(result, 'STARTED')
+    }
+
+    private static List<String> said(BuildResult result, String what) {
         List<String> lines = result.output.readLines()
-        int count = lines.find { String line -> line.startsWith('ARGUMENTS=') }.substring('ARGUMENTS='.length()) as int
-        List<String> arguments = lines.findAll { String line -> line.startsWith('ARGUMENT[') }.collect { String line ->
+        int count = lines.find { String line -> line.startsWith("${what}S=") }.substring(what.length() + 2) as int
+        List<String> values = lines.findAll { String line -> line.startsWith("${what}[") }.collect { String line ->
             new String(line.substring(line.indexOf('<') + 1, line.lastIndexOf('>')).decodeHex(), 'UTF-8')
         }
-        assert arguments.size() == count
-        arguments
+        assert values.size() == count
+        values
     }
 }
