@@ -127,6 +127,35 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         configureRunCommand(project)
 
         configureCommandCatalog(project)
+
+        configureRunScriptCommand(project)
+    }
+
+    /**
+     * Registers the task that runs a script command of the project or of one of its plugins (see
+     * {@link ScriptCommandTask}). Its class path is what the project depends on at run time and
+     * {@code grailsCliClasspath}, without the output of the project: a script is run without
+     * compiling the application, which it may be about to generate code for.
+     */
+    protected void configureRunScriptCommand(Project project) {
+        project.pluginManager.withPlugin('java') {
+            if (project.tasks.names.contains(ScriptCommandTask.TASK_NAME)) {
+                project.logger.warn('Project {} already has a task named {}, so the Grails Gradle plugin does not register its own and ' +
+                        'the script commands of the project are not run by it. Give the task another name.',
+                        project.path, ScriptCommandTask.TASK_NAME)
+                return
+            }
+            project.tasks.register(ScriptCommandTask.TASK_NAME, ScriptCommandTask) { ScriptCommandTask task ->
+                task.group = GRAILS_COMMAND_GROUP
+                task.description = 'Runs a script command: src/main/scripts/<name>.groovy of the project, or META-INF/commands/<name>.groovy of a plugin'
+                task.classpath = project.files(
+                        project.configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME),
+                        project.configurations.named(GRAILS_CLI_CLASSPATH_CONFIGURATION))
+                // the directory of the project, for a script of a project that is not the one the build was started in
+                task.systemProperty('base.dir', project.layout.projectDirectory.asFile.absolutePath)
+                task.standardInput = System.in
+            }
+        }
     }
 
     /**

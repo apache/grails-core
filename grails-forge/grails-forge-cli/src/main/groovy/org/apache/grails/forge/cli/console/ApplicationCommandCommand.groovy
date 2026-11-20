@@ -32,7 +32,9 @@ import picocli.CommandLine
 /**
  * A command of the application or of one of its plugins, as a command of the CLI: one for each
  * command the build of the project lists, under the name the build gives. The command itself runs in
- * the application, started by the Gradle task {@code runCommand} of the project.
+ * the application, started by the Gradle task {@code runCommand} of the project. A script of the
+ * application is such a command too: it is run by the build as well, by the Gradle task
+ * {@code runScriptCommand}, and never by the CLI.
  *
  * <p>Everything after the name of the command is the command's and is given to it as the list of
  * arguments it is, one for one: the command of the CLI has no options of its own. The arguments are
@@ -52,6 +54,9 @@ class ApplicationCommandCommand extends InProjectCommand {
 
     /** The Gradle task that runs a command in the application. */
     public static final String TASK = 'runCommand'
+
+    /** What is said of every script: scripts are kept for the applications that have them. */
+    public static final String DEPRECATED = 'Script commands are deprecated. Write a new command as a class of the application: create-command'
 
     private static final String DIRECTORY_PREFIX = 'grails-command'
     private static final String FILE = 'arguments.json'
@@ -84,9 +89,14 @@ class ApplicationCommandCommand extends InProjectCommand {
         if (!entry.description.isEmpty()) {
             description.add(shown(entry.description).replace('%', '%%'))
         }
-        String from = "A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, " +
-                "which runs in the application: it is started by the Gradle task ${TASK} of the project."
-        description.add(from)
+        if (entry.isScript()) {
+            description.add(("A script of the application, in ${ScriptCommandFiles.LOCATION}. It is run by the build of the project and not by this program: " +
+                    "it is started by the Gradle task ${ScriptCommandFiles.TASK} of the project.").toString())
+            description.add(DEPRECATED)
+        } else {
+            description.add(("A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, " +
+                    "which runs in the application: it is started by the Gradle task ${TASK} of the project.").toString())
+        }
         description.add('Everything after the name of the command is given to the command as it is, the options too.')
         spec.usageMessage().description(description as String[])
         return spec
@@ -118,7 +128,7 @@ class ApplicationCommandCommand extends InProjectCommand {
         described.put('description', entry.description)
         described.put('project', true)
         described.put('origin', entry.origin)
-        described.put('target', ApplicationCommandFile.APPLICATION)
+        described.put('target', entry.isScript() ? ScriptCommandFiles.TARGET : ApplicationCommandFile.APPLICATION)
         described.put('registration', entry.registration)
         described.put('commands', [])
         return described
@@ -129,6 +139,13 @@ class ApplicationCommandCommand extends InProjectCommand {
         return 'The command was not run'
     }
 
+    /**
+     * @return the Gradle task of the project that runs the command
+     */
+    String task() {
+        return entry.isScript() ? ScriptCommandFiles.TASK : TASK
+    }
+
     @Override
     protected int run(ConsoleProject project) {
         List<String> vector = [entry.name]
@@ -136,7 +153,7 @@ class ApplicationCommandCommand extends InProjectCommand {
         String refused = refusal(vector)
         byte[] bytes = refused == null ? JsonOutput.toJson(vector).getBytes(StandardCharsets.UTF_8) : null
         if (refused == null && bytes.length > MAX_BYTES) {
-            refused = "The arguments of ${entry.name} are more than the ${MAX_BYTES} bytes the Gradle task ${TASK} takes"
+            refused = "The arguments of ${entry.name} are more than the ${MAX_BYTES} bytes the Gradle task ${task()} takes"
         }
         if (refused != null) {
             throw new CommandLine.ParameterException(spec.commandLine(), refused)
@@ -161,7 +178,11 @@ class ApplicationCommandCommand extends InProjectCommand {
                 return 1
             }
             GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
-            return runner.run(project, [TASK, '--args-file=' + file])
+            if (entry.isScript()) {
+                // on the error stream: what the script writes is the output of the command
+                spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
+            }
+            return runner.run(project, [task(), '--args-file=' + file])
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
@@ -177,7 +198,7 @@ class ApplicationCommandCommand extends InProjectCommand {
     // what the Gradle task refuses is refused here, before a build is started for it, and without repeating the argument
     private String refusal(List<String> vector) {
         if (vector.size() > MAX_ARGUMENTS) {
-            return "${entry.name} was given more than the ${MAX_ARGUMENTS - 1} arguments the Gradle task ${TASK} takes"
+            return "${entry.name} was given more than the ${MAX_ARGUMENTS - 1} arguments the Gradle task ${task()} takes"
         }
         for (int i = 1; i < vector.size(); i++) {
             String argument = vector.get(i)

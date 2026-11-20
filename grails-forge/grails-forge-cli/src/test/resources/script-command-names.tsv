@@ -1,0 +1,60 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# The name of the file of a script, a tab, and the name of the command the script is, or - when the file is no command.
+# The Forge CLI lists scripts by this rule and the build finds the script to run by it, each with code of its own:
+# this file is the same in grails-forge/grails-forge-cli/src/test/resources and grails-core/src/test-cli/resources,
+# and a specification on each side holds its code to it and the two files to each other.
+data-import.groovy	data-import
+DataImport.groovy	data-import
+dataImport.groovy	data-import
+data-IMPORT.groovy	data-import
+Data-Import.groovy	data-import
+dataimport.groovy	dataimport
+x.groovy	x
+X.groovy	x
+a1.groovy	a1
+XMLImport.groovy	xmli-mport
+Import2Data.groovy	import2-data
+URLs.groovy	url-s
+ABC.groovy	abc
+AbC9.groovy	ab-c9
+B2B.groovy	b2-b
+report-2.groovy	report-2
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.groovy	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.groovy	-
+AaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaBaB.groovy	-
+_Events.groovy	-
+1st.groovy	-
+-x.groovy	-
+x-.groovy	-
+x--y.groovy	-
+data import.groovy	-
+data_import.groovy	-
+data.import.groovy	-
+.groovy	-
+..groovy	-
+.hidden.groovy	-
+../x.groovy	-
+a/b.groovy	-
+%n.groovy	-
+@|red x|@.groovy	-
+${x}.groovy	-
+data-import.yml	-
+data-import	-
+data-import.groovy.bak	-
+data-import.GROOVY	-

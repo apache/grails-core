@@ -128,3 +128,58 @@ In addition, an `asMap` method is available to turn all of the properties into a
 
 All scripts have access to methods on the link:{api}org/grails/cli/profile/commands/io/FileSystemInteraction.html[FileSystemInteraction] class. It contains helpful methods to copy, delete, and create files.
 
+
+
+==== Scripts and the Grails Forge CLI
+
+
+The Grails Forge CLI has every script `src/main/scripts/<name>.groovy` of a project as a command, by the name of its file:
+
+[source,console]
+----
+$ grails -t forge create-script data-import
+$ grails -t forge help
+...
+Commands of the application and its plugins:
+  data-import  (script of the application)
+$ grails -t forge data-import orders.csv --dry-run
+| Warning Script commands are deprecated. Write a new command as a class of the application: create-command
+----
+
+A script is run by the build of the project, and not by the Grails Forge CLI. The command starts the Gradle task `runScriptCommand` with the Gradle wrapper of the project, and that task compiles and runs the script in a JVM of the build. A script is code of the project, as its build file is: whoever runs the build of a project runs its scripts, and nothing else does. The Grails Forge CLI itself never compiles, evaluates or opens a script:
+
+* To list the scripts it reads the names of the files in `src/main/scripts` and nothing of what they hold. The description of a script is therefore not shown by `help`. `DataImport.groovy` and `data-import.groovy` are both the command `data-import`. A file is a command when it is a plain file, not a link, whose name is made of the letters a to z and digits, in words that capitals or hyphens set apart, and gives a name of at most 64 characters. `help` and `help --json` say how many `.groovy` files are no commands, without naming them. At most 4096 files of the directory are looked at, and at most 256 scripts are commands; a directory that `src`, `src/main` or `src/main/scripts` is a link to is not listed.
+* A script that has the name of a command of the Grails Forge CLI, or of a command the build lists (see xref:commandLine[The Command Line], the section on the commands of the application and its plugins), is not a command. `help` says so, and how the script is still run: `grails -t forge gradle runScriptCommand --arg=<name>`.
+* Everything after the name is given to the script as it is, each argument as the one argument it is, in a file that only you can read and that is deleted afterwards. The exit code is 0 when the script ran and did not return `false`, and 1 otherwise.
+* Below a project that is not your own, where the Grails Forge CLI does not use the project (see xref:commandLine[The Command Line]), its scripts are no commands.
+
+The task can be run without the Grails Forge CLI. The first `--arg` is the name of the script, each further one an argument of it; `--args-file` names a UTF-8 file with a JSON array of strings, the name first, for a caller that is a program:
+
+[source,console]
+----
+$ ./gradlew runScriptCommand --arg=data-import --arg=orders.csv --arg=--dry-run
+$ ./gradlew runScriptCommand --args-file=build/tmp/arguments.json
+----
+
+The JVM of the script has what the project depends on at run time and the `grailsCli` dependencies on its class path. The classes of the application are not on it and the application is not compiled first, so that a script can generate code for an application that does not compile yet. A script that is not found in `src/main/scripts` is looked for as `META-INF/commands/<name>.groovy` on that class path, where the scripts of plugins are; the scripts of plugins are run by the task and are not listed by `help`.
+
+A script that the build runs has `description`, `args`, `argsMap`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files, `console`, `config` and `navigateConfig` (read from `grails-app/conf/application.yml` and `application.groovy`), `ant`, the events (`on`, `before`, `after`, `notify`), and calling another script as a method. It does not have what belonged to the Grails shell:
+
+[cols="1,2", options="header"]
+|===
+| In a script | With the build
+
+| `gradle.compileGroovy()`
+| A script cannot run a build from inside the build. Run the tasks from the command line (`grails -t forge gradle compileGroovy`), or make the work a task of the build that depends on them.
+
+| `testApp()`, `runApp()` and other commands that are no scripts
+| Run them from the command line, one after the other. A method that names another script (`generateController('Book')` for `generate-controller`) runs that script.
+
+| Classes of `org.grails.cli`, such as the completers named in a `description`
+| They are not on the class path: remove the `import`. A script that imports one is not compiled, and the message says so.
+
+| `profile`, `spring`, `isServerAvailable()`, `waitForStartup()`
+| Not there. A script that uses one of them fails with one line that names it.
+|===
+
+Script commands are kept for the applications that have them and are deprecated. A new command is written as a class in `grails-app/commands` (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]), which the Grails Forge CLI lists with its description.

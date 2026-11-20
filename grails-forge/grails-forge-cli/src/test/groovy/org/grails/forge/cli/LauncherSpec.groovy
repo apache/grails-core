@@ -187,6 +187,33 @@ class LauncherSpec extends Specification {
     }
 
     @IgnoreIf({ os.windows })
+    void "the scripts of a project are listed and handed to its build without starting the application that generates"() {
+        given:
+        project()
+        record()
+        new File(dir, 'src/main/scripts').mkdirs()
+        new File(dir, 'src/main/scripts/DataImport.groovy').text = 'println "never evaluated here"\n'
+
+        when:
+        int listed = ForgeCli.execute(broken, 'help')
+
+        then:
+        listed == 0
+        out.toString().contains('data-import')
+        out.toString().contains('(script of the application)')
+
+        when: 'what follows the name is the script\'s, the options of the command line too'
+        out.reset()
+        int ran = ForgeCli.execute(broken, 'data-import', '--plain-output', 'orders.csv')
+
+        then:
+        ran == 0
+        out.toString().contains('the wrapper ran with runScriptCommand --args-file=')
+        started.get() == 0
+        !(out.toString() + err.toString()).contains(BROKEN)
+    }
+
+    @IgnoreIf({ os.windows })
     void "when the application that generates cannot be started, the help, the list of commands and the commands of the build still work"() {
         given:
         project()

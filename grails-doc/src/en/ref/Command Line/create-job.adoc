@@ -51,7 +51,7 @@ grails create-job <<name>>
 
 === Grails Forge CLI
 
-The Grails Forge CLI has this command as well, in a project with the `grails-quartz` feature. It writes `grails-app/jobs/<package>/<Name>Job.groovy` from the template `Job.groovy`, which a project can replace with its own under `src/main/templates/Job.groovy`, the location the template of the Quartz plugin has. The template names what it wants as `${className}` and `${packageName}`; it is text in which those names are replaced and is not run as a Groovy template, so code between `<%` and `%>` and expressions that are more than a name are refused. When the file is there already the command writes nothing and ends with exit code 1, unless `-f` or `--force` is given.
+The Grails Forge CLI has this command as well, in a project with the `grails-quartz` feature. It writes `grails-app/jobs/<package>/<Name>Job.groovy` from the template `Job.groovy`, which a project can replace with its own under `src/main/templates/Job.groovy`, the location the template of the Quartz plugin has. The template names what it wants as `${className}` and `${packageName}`; it is text in which those names are replaced and is not run as a Groovy template, so code between `<%` and `%>` and expressions that are more than a name are refused. When the file is there already the command writes nothing and ends with exit code 1, unless `-f` or `--force` is given. A name that ends with `Job` is taken without it, as the command of the Quartz plugin takes it: `create-job NightlyJob` and `create-job Nightly` both write `NightlyJob.groovy`.
 
 [source,shell]
 ----

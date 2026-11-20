@@ -33,6 +33,10 @@ import picocli.CommandLine
  * without the file, or with one that cannot be used, there are no such commands and one line says
  * which Gradle task writes it.</p>
  *
+ * <p>The scripts of the application ({@link ScriptCommandFiles}) are commands in the same way and by
+ * the same rules, after the commands the build lists: a script does not take the name of one of
+ * those either.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
@@ -46,12 +50,14 @@ final class ApplicationCommands {
     private static final Map<CommandLine, ApplicationCommands> OF = Collections.synchronizedMap(new WeakHashMap<CommandLine, ApplicationCommands>())
 
     private final ApplicationCommandFile file
+    private final ScriptCommandFiles scripts
     // by each name a command of the build would have had: what has the name, and the command that is not there for it
     private final Map<String, String> notAdded = new LinkedHashMap<>()
     private final Map<String, ApplicationCommandFile.Entry> notAddedBy = new LinkedHashMap<>()
 
-    private ApplicationCommands(ApplicationCommandFile file) {
+    private ApplicationCommands(ApplicationCommandFile file, ScriptCommandFiles scripts) {
         this.file = file
+        this.scripts = scripts
     }
 
     /**
@@ -66,7 +72,7 @@ final class ApplicationCommands {
         if (project == null) {
             return
         }
-        ApplicationCommands commands = new ApplicationCommands(ApplicationCommandFile.read(project.getDirectory()))
+        ApplicationCommands commands = new ApplicationCommands(ApplicationCommandFile.read(project.getDirectory()), ScriptCommandFiles.list(project.getDirectory()))
         commands.add(root)
         OF.put(root, commands)
     }
@@ -110,11 +116,11 @@ final class ApplicationCommands {
     /**
      * @return whether every command of the application and its plugins is among the commands, as far
      * as can be told: there is the file of the build, nothing it is made from was changed since, and
-     * the build listed everything. A command that is not there because the CLI has one by its name
-     * is named in the diagnostics, and leaves this as it is
+     * the build listed everything, and every script of the application is listed. A command that is
+     * not there because the CLI has one by its name is named in the diagnostics, and leaves this as it is
      */
     boolean isComplete() {
-        return file.state == ApplicationCommandFile.State.CURRENT && file.complete
+        return file.state == ApplicationCommandFile.State.CURRENT && file.complete && scripts.complete
     }
 
     /**
@@ -130,6 +136,7 @@ final class ApplicationCommands {
         for (String line : file.diagnostics) {
             lines.add("The Gradle task ${ApplicationCommandFile.TASK} says: ${line}".toString())
         }
+        lines.addAll(scripts.diagnostics)
         // once for a command, whichever of its names are taken
         Set<ApplicationCommandFile.Entry> named = Collections.newSetFromMap(new IdentityHashMap<ApplicationCommandFile.Entry, Boolean>())
         for (String name : notAdded.keySet()) {
@@ -156,6 +163,29 @@ final class ApplicationCommands {
                 notAdded.put(name, taken)
                 notAddedBy.put(name, entry)
             }
+        }
+        // a script comes after the commands the build lists, and does not take the name of one
+        Map<String, ApplicationCommandFile.Entry> listed = new HashMap<>()
+        for (ApplicationCommandFile.Entry entry : file.commands) {
+            for (String name : entry.names()) {
+                listed.put(name, entry)
+            }
+        }
+        for (ApplicationCommandFile.Entry script : scripts.commands) {
+            ApplicationCommandFile.Entry other = listed.get(script.name)
+            String taken = takenBy(builtIn, script.name)
+            if (taken == null && other != null) {
+                taken = "${script.name} is ${other.name == script.name ? 'a command' : "another name of ${other.name}, a command"} the build lists (${other.origin})".toString()
+            }
+            if (taken == null) {
+                added.add(script)
+                continue
+            }
+            // Where a command the build lists is not there for the same name, that one is what is said
+            // when the name is typed; the script is said with the others, under a key nothing is typed as.
+            String key = notAdded.containsKey(script.name) ? script.name + ' ' : script.name
+            notAdded.put(key, taken)
+            notAddedBy.put(key, script)
         }
         // only now: a command of the build does not take a name from another one of the build
         for (ApplicationCommandFile.Entry entry : added) {
@@ -186,6 +216,10 @@ final class ApplicationCommands {
         ApplicationCommandFile.Entry entry = notAddedBy.get(name)
         String cli = root.getCommandName()
         // the command that runs a command of the application by its name, where the command line has it
+        if (entry.isScript()) {
+            return "${notAdded.get(name)}, so the script ${entry.name} of ${ScriptCommandFiles.LOCATION} is not a command here. " +
+                    "That one is run with: ${cli} gradle ${ScriptCommandFiles.TASK} --arg=${entry.name}"
+        }
         String how = root.getSubcommands().containsKey(RUN_COMMAND) ? "${cli} ${RUN_COMMAND} ${entry.name}" :
                 "${cli} gradle ${ApplicationCommandCommand.TASK} --arg=${entry.name}"
         return "${notAdded.get(name)}, so the command ${entry.name} of ${entry.origin} is not a command here. That one is run with: ${how}"
@@ -244,7 +278,8 @@ final class ApplicationCommands {
                     new CommandLine.Help.Column(width - (names + 2), 2, CommandLine.Help.Column.Overflow.WRAP))
             for (CommandLine.Help each : commands.values()) {
                 ApplicationCommandFile.Entry entry = ((ApplicationCommandCommand) each.commandSpec().userObject()).getEntry()
-                String description = entry.description.isEmpty() ? "(${entry.origin})" : "${ApplicationCommandCommand.shown(entry.description)} (${entry.origin})"
+                String origin = entry.isScript() ? 'script of the application' : entry.origin
+                String description = entry.description.isEmpty() ? "(${origin})" : "${ApplicationCommandCommand.shown(entry.description)} (${origin})"
                 table.addRowValues(each.commandNamesText(', '), scheme.text(description))
             }
             listed.append(table.toString())

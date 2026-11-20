@@ -286,7 +286,7 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | The options the command line itself takes in front of a command, described like the options of a command: `--plain-output` and `--non-interactive` among them (see the next section).
 
 | `commands`
-| The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the Grails Forge CLI itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of the Grails Forge CLI. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` because the command runs in the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]).
+| The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the Grails Forge CLI itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of the Grails Forge CLI. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` because the command runs in the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]). A script of the application comes after them, with the `origin` `application`, the `target` `standalone`, because the build runs it without the application, the `registration` `script` and an empty `description`.
 
 | `options`
 | The options of the command: all the `names` of an option, the `label` of its value (`null` for an option that takes none), whether it is `required`, and its `arity`. A command of the application or of a plugin has neither `options` nor `parameters`: the build does not know them.
@@ -413,6 +413,10 @@ $ grails -t forge install-templates
 | Warning install-templates is a command of the CLI itself (built-in), so the command install-templates of org.apache.grails:grails-scaffolding:9.0.0 is not a command here. That one is run with: grails-forge-cli gradle runCommand --arg=install-templates
 $ grails -t forge gradle runCommand --arg=install-templates
 ----
+
+==== Scripts of the application
+
+The scripts in `src/main/scripts` of a project are commands in the same way, listed after the commands the build lists and marked `(script of the application)`. A script is run by the build of the project, through the Gradle task `runScriptCommand`, and never by the Grails Forge CLI, which only reads the names of the files. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts] for the rules and for what a script has where the build runs it.
 
 === Commands of Earlier Versions
 

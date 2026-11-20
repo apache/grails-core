@@ -372,6 +372,21 @@ final class ApplicationCommandFile {
         }
 
         /**
+         * @param name what is typed for the command
+         * @return a script of the application as a command: all that is known of one is the name its file gives it
+         */
+        static Entry script(String name) {
+            return new Entry(name, Collections.<String>emptyList(), '', APPLICATION, ScriptCommandFiles.REGISTRATION)
+        }
+
+        /**
+         * @return whether the command is a script of the application, which the build runs without the application
+         */
+        boolean isScript() {
+            return registration == ScriptCommandFiles.REGISTRATION
+        }
+
+        /**
          * @return every name of the command, the name itself first
          */
         List<String> names() {

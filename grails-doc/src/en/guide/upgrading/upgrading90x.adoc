@@ -1514,3 +1514,24 @@ Compiling a command, in `grails-app/commands` of an application or in `src/cli/g
 ===== Required Actions
 
 None for the commands: they run as before with or without the descriptor. To build an archive without the files, exclude them where the archive is put together, for example `tasks.named('bootJar') { exclude 'META-INF/grails-commands/**' }`; the commands are then listed by the names their class names give. A build that has a task of its own named `grailsCommandCatalog` gives it another name, because the Grails Gradle plugin now registers one: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the catalog is not written.
+
+==== 28. The Grails Forge CLI Runs Script Commands Through the Build
+
+The Grails Gradle plugin registers a task `runScriptCommand` in every application and plugin project. It compiles and runs a script command, `src/main/scripts/<name>.groovy` of the project or `META-INF/commands/<name>.groovy` of a plugin, in a JVM of the build. The Grails Forge CLI lists the scripts of a project as commands by the names of their files and runs one through that task; it does not compile or evaluate a script itself. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
+
+The Grails shell (`grails -t shell`) runs scripts as before, and nothing changes there.
+
+===== Required Actions
+
+None for a script that only uses what the guide documents for scripts: `description`, `args`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files, the console, `ant` and calling another script.
+
+Where a script is run with the Grails Forge CLI or with `./gradlew runScriptCommand`:
+
+* `gradle.<task>()` is not available. Run the tasks from the command line before or after the script, or make the work a Gradle task.
+* A method that names a command that is no script, such as `testApp()` or `runApp()`, fails. Run those commands from the command line.
+* A script that imports a class of `org.grails.cli`, such as a completer for its `description`, is not compiled. Remove the import and the `completer` line.
+* `profile`, `spring`, `isServerAvailable()` and `waitForStartup()` are not available.
+* The description of a script is not shown by `help`. A command written as a class in `grails-app/commands` is listed with its description, and script commands are deprecated in its favour.
+* A script is not run with the classes of the application on its class path, as it never was.
+
+A build that has a task of its own named `runScriptCommand` gives it another name: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the scripts are not run by the plugin's task.

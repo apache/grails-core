@@ -481,6 +481,28 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         written == ['grails-app/jobs/org/shop/BookStoreJob.groovy': '// org.shop org/shop BookStore bookStore book-store org.shop.BookStore BookStore bookStore $x \\ $ 5 $\n']
     }
 
+    void "a job whose name is given with Job at its end is the job of the name without it, as the script of the Quartz plugin had it"() {
+        given:
+        project(ApplicationType.WEB, 'grails-quartz')
+
+        when:
+        Map<String, String> written = writtenBy {
+            assert ForgeCli.execute(beanContext, 'create-job', given) == 0
+        }
+
+        then:
+        written.keySet() == [file] as Set
+        written[file].contains('package org.shop\n')
+        written[file].contains("class ${name}Job {")
+
+        where:
+        given                 | file                                           | name
+        'org.shop.NightlyJob' | 'grails-app/jobs/org/shop/NightlyJob.groovy'   | 'Nightly'
+        'org.shop.Nightly'    | 'grails-app/jobs/org/shop/NightlyJob.groovy'   | 'Nightly'
+        'org.shop.JobRunner'  | 'grails-app/jobs/org/shop/JobRunnerJob.groovy' | 'JobRunner'
+        'org.shop.Job'        | 'grails-app/jobs/org/shop/JobJob.groovy'       | 'Job'
+    }
+
     void "the template of a script has the tokens of the other templates, and what a Groovy template would run is text"() {
         given:
         project(ApplicationType.WEB)

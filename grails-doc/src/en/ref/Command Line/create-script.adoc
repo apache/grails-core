@@ -82,3 +82,5 @@ grails -t forge create-script <name>
 ----
 
 See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.
+
+The script is then a command of the Grails Forge CLI by the name of its file, `grails -t forge <name>`. It is run by the build of the project, through the Gradle task `runScriptCommand`, and not by the Grails Forge CLI; the `gradle` property and commands that are no scripts are not available to it there. See "Scripts and the Grails Forge CLI" in link:{guidePath}commandLine.html#creatingCustomScripts[Creating Custom Scripts].

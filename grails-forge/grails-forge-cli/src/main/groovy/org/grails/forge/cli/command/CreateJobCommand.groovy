@@ -62,7 +62,9 @@ class CreateJobCommand extends CodeGenCommand {
         if (!applies()) {
             throw new IllegalArgumentException('Please first select Grails Quartz Plugin')
         }
-        return generate('job', getProject(jobName, 'Job'), [
+        // as the script of the Quartz plugin did: a name that ends with Job is taken without it,
+        // unless Job is all there is of the name of the class
+        return generate('job', newArtefact(jobName, 'Job'), [
                 'grails-app/jobs/{packagePath}/{className}Job.groovy': ArtefactTemplate.JOB
         ])
     }
