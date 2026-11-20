@@ -25,8 +25,11 @@ import org.hibernate.FlushMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.orm.hibernate5.SessionHolder
 import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.web.context.request.ServletWebRequest
 import org.springframework.web.context.request.WebRequest
 import spock.lang.AutoCleanup
 import spock.lang.Shared
@@ -338,6 +341,42 @@ class MultiDataSourceSessionSpec extends Specification {
         cleanup:
         if (defaultSession?.open) {
             defaultSession.close()
+        }
+    }
+
+    def "a request that Grails makes asynchronous closes its sessions when the asynchronous request completes"() {
+        given: 'a servlet request that has opened its sessions'
+        var webRequest = new ServletWebRequest(new MockHttpServletRequest(asyncSupported: true), new MockHttpServletResponse())
+        final interceptor = new GrailsOpenSessionInViewInterceptor(hibernateDatastore: datastore).tap {
+            preHandle(webRequest)
+        }
+        final secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        final defaultSession = boundSession(datastore.sessionFactory)
+        final secondarySession = boundSession(secondarySf)
+
+        when: 'the action returns a promise, so that the request goes asynchronous'
+        final asyncContext = webRequest.request.startAsync()
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: 'the sessions are unbound, and open for the work the request continues with'
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        defaultSession.open
+        secondarySession.open
+
+        when: 'the asynchronous request completes'
+        asyncContext.complete()
+
+        then: 'they are closed'
+        !defaultSession.open
+        !secondarySession.open
+
+        cleanup:
+        [defaultSession, secondarySession].each { session ->
+            if (session?.open) {
+                session.close()
+            }
         }
     }
 
