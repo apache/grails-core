@@ -18,8 +18,6 @@ package grails.init;
 
 import java.lang.reflect.Method;
 import java.net.Authenticator;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.stream.Collectors;
@@ -67,9 +65,13 @@ public class GrailsWrapper {
             System.out.println("Updated wrapper to version: " + updater.getSelectedVersion().toString());
         }
 
-        URLClassLoader child = new URLClassLoader(new URL[]{updater.getExecutedJarFile().toURI().toURL()});
-        Class<?> classToLoad = Class.forName("org.apache.grails.cli.DelegatingShellApplication", true, child);
+        // the downloaded jar names its start class, so a wrapper committed in an application starts
+        // the command line of a later version of Grails that has moved it
+        Class<?> classToLoad = StartClass.load(updater.getExecutedJarFile());
         Method main = classToLoad.getMethod("main", String[].class);
+        // what the command line finds through the context class loader (services, the configuration of
+        // its logging, the generator it starts) is in the downloaded jar and not on the class path of the wrapper
+        Thread.currentThread().setContextClassLoader(classToLoad.getClassLoader());
         main.invoke(null, (Object) adjustedArgs);
     }
 
