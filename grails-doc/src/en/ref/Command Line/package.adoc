@@ -34,3 +34,8 @@ Runs the packaging phase of Grails' runtime. This is mainly useful when used by 
 grails package
 ----
 
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `package` is another name of `assemble` and of `war`: it runs the Gradle task `assemble` for the production environment. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

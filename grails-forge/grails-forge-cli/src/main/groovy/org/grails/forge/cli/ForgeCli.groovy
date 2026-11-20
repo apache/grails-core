@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import java.util.function.BiFunction
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
@@ -171,6 +172,7 @@ final class ForgeCli {
                 }
             }
         }
+        ConsoleCommands.addTo(commandLine, readsProject)
         return commandLine
     }
 

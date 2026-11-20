@@ -44,3 +44,9 @@ Usage:
 ----
 grails bug-report
 ----
+
+
+=== Grails Forge CLI
+
+
+The Grails Forge CLI has the same command. Its ZIP file holds every file under `grails-app` and `src`, and `build.gradle`: the configuration under `grails-app/conf` is in it as it is, so look through the file for passwords before attaching it. Links are not followed, files that are keys by their name (such as `.env`, `*.jks`, `*.p12`, `*.pem`, `*.key`) are left out, an existing ZIP file of the same name is replaced only with `--force`, and nothing is written when the sources are more than 10000 files or more than 256 MiB. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

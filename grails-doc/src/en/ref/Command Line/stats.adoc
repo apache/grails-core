@@ -44,3 +44,9 @@ Displays basic statistics about the current Grails application, including number
 | Totals               |     4 |    77 |
 +----------------------+-------+-------+
 ----
+
+
+=== Grails Forge CLI
+
+
+The Grails Forge CLI has the same command with the same table. It does not follow links and does not read the lines of a file larger than 16 MiB. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

@@ -86,3 +86,9 @@ Continuous mode does not run tests when it starts. It is intended for the Grails
 This is not Gradle's `--continuous` mode. Grails does not pass `--continuous` to Gradle, and `--watch` is not an alias for `-continuous`. Files outside the watched directories, including Java source directories such as `src/main/java`, do not trigger a rerun.
 
 See the link:{guidePath}testing.html[Testing] section for examples on how to combine the different options to target tests.
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `test-app` takes the same test names and the options `--unit`, `--integration`, `--clean`, `--debug-jvm` and `--continuous` (also with one dash), and `--tests NAME` as another way to name a test. The environment is given as `-Dgrails.env=NAME` after the command, and `--continuous` is the continuous build of Gradle, which runs the tests when it starts. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

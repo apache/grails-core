@@ -44,3 +44,9 @@ Usage:
 ----
 grails clean
 ----
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `clean` runs the Gradle task `clean` of the project. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

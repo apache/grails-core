@@ -68,3 +68,9 @@ grails -Dgrails.env=UAT war
 Once the WAR has been created you can deploy it to your container using its standard WAR deployment process.
 
 NOTE: Grails 2.x `war` command allowed you to supply the argument `nojars` - which packaged the WAR with no jar files. In Grails 3.x, this argument is no longer available. Instead, you may use Gradle capabilities to generate a WAR without jar files. One option would be to set your dependencies as `providedCompile` and `providedRuntime`. Those two configurations have the same scope as the respective compile and runtime configurations, except that they are not added to the WAR archive. Check https://docs.gradle.org/current/userguide/war_plugin.html[Gradle WAR Plugin] documentation for more information.
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `war` runs the Gradle task `assemble` for the production environment. Another environment is given as `-Dgrails.env=NAME` after the command (`war -Dgrails.env=staging`); an environment in front of the command is not read. `--clean` runs `clean` first. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

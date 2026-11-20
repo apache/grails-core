@@ -52,3 +52,9 @@ The plugin archive will be built to the `build/libs` directory by default. You c
 ----
 grails install
 ----
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `package-plugin` runs the Gradle task `jar` and is a command in a plugin project only. `install` runs nothing there: a plugin is installed into the local Maven repository with `gradle publishToMavenLocal`. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.
