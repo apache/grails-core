@@ -347,6 +347,44 @@ runs:
         result.output.contains("action 'someorg/someaction' uses 'v1', not a lowercase 40-hex commit SHA")
     }
 
+    def "validateRepositoryConventions pins untagged apache tooling actions to a commit SHA"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflowContent('tooling.yml', """steps:
+  - uses: apache/tooling-actions/upload-to-atr@${SHA}
+  - uses: apache/tooling-actions/release-on-atr@${SHA}
+  - uses: apache/grails-github-actions/pre-release@asf
+  - uses: actions/checkout@v7.0.1
+""")
+
+        when:
+        def result = run('validateRepositoryConventions')
+
+        then:
+        result.task(':validateRepositoryConventions').outcome == TaskOutcome.SUCCESS
+    }
+
+    def "validateRepositoryConventions rejects mutable apache tooling action references"() {
+        given:
+        writeBuild()
+        writeSkill('sample', 'sample')
+        writeAgents('.agents/skills/sample/SKILL.md')
+        writeWorkflowContent('tooling.yml', """steps:
+  - uses: apache/tooling-actions/upload-to-atr@main
+  - uses: apache/grails-github-actions/pre-release@asf
+  - uses: actions/checkout@v7.0.1
+""")
+
+        when:
+        def result = runAndFail('validateRepositoryConventions')
+
+        then:
+        result.output.contains("action 'apache/tooling-actions/upload-to-atr' uses 'main', not a lowercase 40-hex commit SHA")
+        !result.output.contains('grails-github-actions')
+    }
+
     def "validateRepositoryConventions reports malformed YAML with its file"() {
         given:
         writeBuild()

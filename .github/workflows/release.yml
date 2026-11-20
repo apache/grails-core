@@ -452,6 +452,7 @@ jobs:
       - name: "🛠️ Install tools"
         run: sudo apt-get install -y subversion subversion-tools tree gettext-base
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }} folder exists"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           set -e
           if svn ls https://dist.apache.org/repos/dist/dev/${SVN_PROJECT} --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive; then
@@ -463,6 +464,7 @@ jobs:
               -m "Create '${SVN_PROJECT}' dev folder"
           fi
       - name: "👀 Ensure dev/${{ env.SVN_PROJECT }}/${{ env.SVN_FOLDER }} folder exists"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           set -e
           if svn ls https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER} --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive; then
@@ -474,9 +476,11 @@ jobs:
               -m "Create '${SVN_PROJECT}/${SVN_FOLDER}' dev folder"
           fi
       - name: "📥 Checkout dev repo"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           svn checkout --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive "https://dist.apache.org/repos/dist/dev/${SVN_PROJECT}/${SVN_FOLDER}" dev-repo
       - name: "🗑️ Remove existing dev version"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           if [ -d "${VERSION}" ]; then
@@ -486,6 +490,7 @@ jobs:
             echo "No existing dev version ${VERSION} to remove"
           fi
       - name: "📥 Fetch source distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           mkdir -p ${VERSION}/sources          
@@ -496,6 +501,7 @@ jobs:
           echo "Downloaded the following files:"
           ls -l
       - name: "📥 Fetch binary distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           mkdir -p ${VERSION}/distribution          
@@ -512,6 +518,7 @@ jobs:
           echo "Downloaded the following files:"
           ls -l
       - name: "🚀 Upload distributions"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           echo "Adding the following files to SVN:"
@@ -520,10 +527,12 @@ jobs:
           svn commit -m "Upload ${PROJECT_NAME} distribution files for ${VERSION}" --username "${SVN_USERNAME}" --password "${SVN_PASSWORD}" --non-interactive
           pwd
       - name: "💾 Store Distribution SVN revision in a file"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           cd dev-repo
           svn info ${VERSION} > DIST_SVN_REVISION.txt
       - name: "📤 Upload Distribution SVN revision"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ env.TAG }}
@@ -546,11 +555,15 @@ jobs:
           echo "Found sha: $sha"
           echo "SHA=${sha}" >> "$GITHUB_ENV"
       - name: "📧 Print Grails Vote Email"
+        if: ${{ vars.ATR_ENABLED != 'true' }}
         run: |
           export DIST_SVN_REVISION=$(awk '/Last Changed Rev:/ {print $4}' dev-repo/DIST_SVN_REVISION.txt)
           export DOCS_ZIP_SIZE=$(numfmt --to=si --suffix=B "$(stat -c %s "dev-repo/${VERSION}/distribution/${DIST_NAME}-${VERSION}-docs.zip")")
           
           echo "::group::Grails PMC Vote Email"
+          echo "If this candidate will be voted on ATR, discard this dist/dev vote email."
+          echo "Do not send it. ATR starts the sole vote against the ATR candidate after upload."
+          echo "If this candidate is the default dist/dev path, send the generated email below."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -565,6 +578,100 @@ jobs:
           echo "*************************************************"
           cat ${REPO_NAME}/.github/vote_templates/staged.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR vote (experimental)"
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "With ATR_ENABLED=true, this candidate is staged on ATR instead of dist/dev."
+          echo "The atr_upload job then runs automatically. Otherwise, to opt in for this candidate,"
+          echo "run workflow 'Release - ATR Upload (experimental)' with version ${VERSION}."
+          echo "ATR has no GitHub Action for starting a vote. After upload, start it from"
+          echo "the ATR UI (https://releases.apache.org/) or the ATR client."
+          echo "The download path suffix is the project setting core/{{VERSION}}."
+          echo "Select automatic publication to the SVN distribution area when the vote starts."
+          echo "If a dist/dev [VOTE] email was printed above, discard it when voting on ATR;"
+          echo "do not start a second PMC vote against dist/dev."
+          echo "See RELEASE.md section 'Apache Trusted Releases (ATR)'."
+          echo "::endgroup::"
+  atr_upload:
+    name: "Optional - Upload distributions to ATR (experimental)"
+    # Off by default. Set repository variable ATR_ENABLED=true after Trusted
+    # Publishing is configured on ATR. See https://tooling.apache.org/ and
+    # https://github.com/apache/tooling-asf-example/blob/main/.github/workflows/build-and-rsync-to-atr.yaml.
+    if: ${{ vars.ATR_ENABLED == 'true' }}
+    needs: [ publish, source ]
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # required for GitHub OIDC → ATR
+      contents: read
+    env:
+      ATR_HOST: ${{ vars.ATR_HOST != '' && vars.ATR_HOST || 'releases.apache.org' }}
+      ATR_PROJECT: ${{ vars.ATR_PROJECT != '' && vars.ATR_PROJECT || 'grails' }}
+      ATR_SSH_PORT: ${{ vars.ATR_SSH_PORT != '' && vars.ATR_SSH_PORT || '2222' }}
+    steps:
+      - name: "📝 Establish release version"
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+      - name: "📥 Checkout the release tag"
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+          persist-credentials: false
+      - name: "📝 Record the release tag commit"
+        id: source_commit
+        run: echo "value=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: "📥 Download GitHub Release distributions"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p atr-dist/sources atr-dist/distribution
+          download_into() {
+            local dest="$1"
+            shift
+            local asset
+            for asset in "$@"; do
+              echo "Downloading ${asset} -> ${dest}"
+              gh release download "${TAG}" \
+                --repo "${REPO_SLUG}" \
+                --pattern "${asset}" \
+                --dir "${dest}" \
+                --clobber
+            done
+          }
+          download_into atr-dist/sources \
+            "${DIST_NAME}-${VERSION}-src.zip" \
+            "${DIST_NAME}-${VERSION}-src.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-src.zip.asc"
+          download_into atr-dist/distribution \
+            "${DIST_NAME}-${VERSION}-bin.zip" \
+            "${DIST_NAME}-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-bin.zip.asc" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.sha512" \
+            "${DIST_NAME}-wrapper-${VERSION}-bin.zip.asc" \
+            "${DIST_NAME}-${VERSION}-docs.zip" \
+            "${DIST_NAME}-${VERSION}-docs.zip.sha512" \
+            "${DIST_NAME}-${VERSION}-docs.zip.asc"
+          echo "Downloaded the following files:"
+          find atr-dist -type f -print | sort
+      - name: "📤 Upload to ATR"
+        uses: apache/tooling-actions/upload-to-atr@dcba9f4ed2956f7a30113c3067e766eeda37d891 # main @ 2026-10-08
+        with:
+          project: ${{ env.ATR_PROJECT }}
+          version: ${{ env.VERSION }}
+          src: atr-dist
+          atr-host: ${{ env.ATR_HOST }}
+          ssh-port: ${{ env.ATR_SSH_PORT }}
+          source-commit: ${{ steps.source_commit.outputs.value }}
+      - name: "📧 Next step — start the ATR vote"
+        run: |
+          echo "::group::Start the vote on ATR"
+          echo "Compose is complete. Start the vote from the ATR UI or the ATR client:"
+          echo "  https://${ATR_HOST}/"
+          echo "  atr vote start ${ATR_PROJECT} ${VERSION} <REVISION> -m \"<ASF_UID>@apache.org\""
+          echo "The download path suffix is the project setting core/{{VERSION}}."
+          echo "Select automatic publication so Beta ATR commits dist/release/grails/core/${VERSION}."
+          echo "After the vote passes, run workflow 'Release - ATR Resolve Vote (experimental)'."
           echo "::endgroup::"
   release:
     environment: release
@@ -612,15 +719,35 @@ jobs:
           cat .github/vote_templates/vote_succeeded.txt | envsubst
           echo "*************************************************"
           echo "::endgroup::"
+      - name: "📧 Optional ATR resolve (experimental)"
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, resolve the vote instead of sending"
+          echo "the RESULT email by hand:"
+          echo "  Actions -> Release - ATR Resolve Vote (experimental) -> version ${VERSION}"
+          echo "Beta ATR publishes the voted files to dist/release. Do not run releaseDistributions.sh"
+          echo "and do not svn-move dist/atr."
+          echo "Then, before the announcement: promote Nexus staging, record platform=MAVEN,"
+          echo "publish the docs, release to SDKMAN!, and update https://grails.apache.org/download.html."
+          echo "Confirm that page, then announce once. See RELEASE.md section 'Apache Trusted Releases (ATR)'."
+          echo "::endgroup::"
       - name: "🚀 MANUAL - Release JAR files"
         run: |
           echo "::group::Manual Jar Promotion"
-          echo "Run .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Release the staged artifacts in the Nexus UI, or run locally:"
+          echo "  .github/scripts/releaseJarFiles.sh ${REPO_NAME}:${VERSION} <ASF_USER>"
+          echo "Release - Promote Nexus Staging (experimental) remains unverified for the stage-deployer account."
           echo "::endgroup::"
-      - name: "🚀 MANUAL - Release distribution artifacts"
+      - name: "🚀 MANUAL - Promote distribution artifacts"
+        # Beta ATR publishes to svn:dist:release itself: https://releases.apache.org/docs/promoting-to-release
         run: |
           echo "::group::Manual ASF Artifact Promotion"
-          echo "Run .github/scripts/releaseDistributions.sh ${TAG} ${SVN_FOLDER} <ASF_USER>"
+          echo "If this candidate was staged on ATR, Beta ATR commits the voted tree to"
+          echo "  https://dist.apache.org/repos/dist/release/grails/core/${VERSION}"
+          echo "when publication was selected at vote start, or when you press Publish."
+          echo "Do not run releaseDistributions.sh and do not copy dist/dev or dist/atr."
+          echo "If this candidate used dist/dev (the default), run:"
+          echo "  .github/scripts/releaseDistributions.sh ${TAG} ${SVN_FOLDER} <ASF_USER>"
           echo "::endgroup::"
       - name: "✅ MANUAL - Update ASF Reporter"
         run: |
@@ -858,6 +985,9 @@ jobs:
       - name: '📧 Announcement Email'
         run: |
           echo "::group::Announcement Email"
+          echo "If this candidate was staged on ATR, do NOT send this mail to announce@apache.org"
+          echo "(ATR already announced there once). Send only the extra lists. If this candidate did"
+          echo "not use ATR, send to announce@ plus the project lists as shown."
           echo ""
           echo "TO:"
           echo "*************************************************"
@@ -873,4 +1003,17 @@ jobs:
           echo "*************************************************"
           cat .github/vote_templates/announce.txt | envsubst
           echo "*************************************************"
+          echo "::endgroup::"
+      - name: "📧 Optional ATR announce (experimental)"
+        # Beta announce contract: https://releases.apache.org/docs/finish-phase
+        run: |
+          echo "::group::Apache Trusted Releases (opt-in)"
+          echo "If this candidate was staged on ATR, publish docs, SDKMAN!, and"
+          echo "https://grails.apache.org/download.html before announcing. Confirm that page, then:"
+          echo "  Actions -> Release - ATR Announce (experimental) -> version ${VERSION}"
+          echo "One successful announce goes to announce@apache.org and must not be rerun for other lists."
+          echo "If ATR rejects it because the mirrors are not ready, retry that same announce after checking ATR."
+          echo "Then send dev@grails.apache.org, users@grails.apache.org, and dev@groovy.apache.org by hand."
+          echo "Publication to dist/release is done by ATR, not by releaseDistributions.sh."
+          echo "See RELEASE.md section 'Apache Trusted Releases (ATR)'."
           echo "::endgroup::"
