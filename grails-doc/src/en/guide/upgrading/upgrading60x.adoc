@@ -1322,4 +1322,4 @@ These calls on Hibernate 5 returned the wrong rows or failed. Each now does what
 * An empty list given to `inList`, or to `in` in any of its forms, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched no row on PostgreSQL, MySQL and MariaDB (issues https://github.com/apache/grails-core/issues/14653[#14653] and https://github.com/apache/grails-core/issues/14457[#14457]).
 * A default `sort` of a `hasMany` that names a property the associated entity does not have failed with a `NullPointerException` at startup; the error now names the association and the sort.
 
-To keep the earlier result for the sort or the empty list, remove the criterion or the sort from the query.
+To keep the earlier result for a sort, remove the sort from the query. To keep it for an empty list, return an empty list before the query when the input list is empty: removing the criterion returns every row, not none.
