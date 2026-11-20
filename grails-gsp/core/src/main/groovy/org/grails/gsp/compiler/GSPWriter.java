@@ -35,7 +35,6 @@ public class GSPWriter extends PrintWriter {
 
     private int lineNumber = 1;
     private int[] lineNumbers = new int[1000];
-    private boolean afterCarriageReturn;
     //private static final Pattern LINE_BREAK = Pattern.compile("\\r\\n|\\n|\\r");
     private GroovyPageParser parse;
 
@@ -69,18 +68,13 @@ public class GSPWriter extends PrintWriter {
     /**
      * What is printed can have line breaks of its own, an expression or a scriptlet of several lines
      * has: each ends a line of the generated source as {@link #println()} does, and is recorded as one.
+     * A line is what the Groovy compiler counts as one when it names the line of an error or of a
+     * frame, and it counts line feeds and nothing else: a carriage return, alone or in front of a line
+     * feed, ends no line for it, and neither does any other character.
      */
     private void written(char c) {
         if (c == '\n') {
-            if (!afterCarriageReturn) {
-                addLineNumber();
-            }
-            afterCarriageReturn = false;
-        } else if (c == '\r') {
             addLineNumber();
-            afterCarriageReturn = true;
-        } else {
-            afterCarriageReturn = false;
         }
     }
 
@@ -112,7 +106,6 @@ public class GSPWriter extends PrintWriter {
     public void println() {
         // the line separator goes to the target as it is, and not through the methods that count
         addLineNumber();
-        afterCarriageReturn = false;
         super.println();
     }
 

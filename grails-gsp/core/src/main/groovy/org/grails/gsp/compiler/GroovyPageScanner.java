@@ -108,7 +108,16 @@ class GroovyPageScanner implements Tokens {
     }
 
     int getLineNumberForToken() {
-        int position = begin2 + removedBefore(begin2);
+        return getLineNumberAt(begin2);
+    }
+
+    /**
+     * The line of the page a position of the text as it is now is on. The positions are asked for in
+     * the order of the text, by {@link #getLineNumberForToken()} for where a token begins and for where
+     * an expression begins that does not end.
+     */
+    private int getLineNumberAt(int positionNow) {
+        int position = positionNow + removedBefore(positionNow);
         for (int i = lastLineNumberIndex + 1; i < lineNumberPositions.size(); i++) {
             if (lineNumberPositions.get(i) > position) {
                 lastLineNumberIndex = i - 1;
@@ -206,7 +215,7 @@ class GroovyPageScanner implements Tokens {
                         return found(GDIRECT, 2);
                     }
 
-                    if (tokenLength > maxHtmlLength) {
+                    if (tokenLength > maxHtmlLength && !isInEscapedGExpressionStart(c, c1)) {
                         return found(HTML, 0);
                     }
 
@@ -262,7 +271,8 @@ class GroovyPageScanner implements Tokens {
         char terminationChar = '}';
         char nextTerminationChar = 0;
         boolean startInExpression = true;
-        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, end1 - 1, terminationChar, nextTerminationChar, startInExpression);
+        int expressionStart = end1 - 1;
+        GroovyPageExpressionParser expressionParser = new GroovyPageExpressionParser(text, expressionStart, terminationChar, nextTerminationChar, startInExpression);
         int endpos = expressionParser.parse();
         if (endpos != -1) {
             end1 = endpos + 1;
@@ -273,7 +283,8 @@ class GroovyPageScanner implements Tokens {
             return found(expressionEndState, nextTerminationChar == 0 ? 1 : 2);
         }
 
-        throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberForToken());
+        // the expression began two characters before what the parser was given, with its ${
+        throw new GrailsTagException("Unclosed GSP expression", pageName, getLineNumberAt(Math.max(expressionStart - 2, begin2)));
     }
 
     private boolean isClosingTag(char c1) {
@@ -314,6 +325,17 @@ class GroovyPageScanner implements Tokens {
      */
     private boolean isEscapedGExpression() {
         return end1 > 1 && text.charAt(end1 - 2) == '\\';
+    }
+
+    /**
+     * Long text is handed on in pieces, and the backslash of an escaped expression is only taken out of
+     * a piece that has the whole of <code>\${</code>: the text is not cut inside one.
+     */
+    private boolean isInEscapedGExpressionStart(char c, char c1) {
+        if (c == '$' && c1 == '{') {
+            return isEscapedGExpression();
+        }
+        return c == '{' && end1 > 2 && text.charAt(end1 - 2) == '$' && text.charAt(end1 - 3) == '\\';
     }
 
     private boolean skipComment(char c3, char c4) {

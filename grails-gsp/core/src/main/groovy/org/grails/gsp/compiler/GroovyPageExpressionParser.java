@@ -89,7 +89,8 @@ class GroovyPageExpressionParser {
                         break;
                     case '}':
                     case ']':
-                        if (parsingState == ParsingState.EXPRESSION) {
+                        // a bracket that closes nothing is left for the compiler to refuse
+                        if (parsingState == ParsingState.EXPRESSION && parsingStateStack.size() > 1) {
                             parsingStateStack.pop();
                         }
                         break;
