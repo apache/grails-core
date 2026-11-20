@@ -19,12 +19,9 @@ under the License.
 
 [NOTE]
 ====
-The `create-app` and related commands are available in both the Grails Shell CLI and the Grails Forge CLI.
+The `create-app` and related commands are commands of the `grails` command. Since Grails 9 it is the only command line: the `-t`/`--type` option, the `GRAILS_PREFERRED_SHELL` environment variable and the `grails-shell-cli` and `grails-forge-cli` commands are gone.
 
-- To create a project using the default Grails Shell CLI:
 `$ grails create-app myapp`
-- To use Forge-specific options (such as `--java-version`, `--features`, etc.):
-`$ grails -t forge create-app myapp`
 
 ====
 
@@ -36,7 +33,7 @@ The `create-app` and other commands support extended options in Forge, which mus
 
 [source,console]
 ----
-$ ./grails -t forge create-app myapp
+$ ./grails create-app myapp
 ----
 
 After generating a project with Forge, switch to the created directory and use the default Grails shell CLI (`./grails`) to manage, run, test, and deploy your application.
@@ -58,7 +55,7 @@ After generating a project with Forge, switch to the created directory and use t
 |
 [source,console]
 ----
-./grails -t forge create-app \
+./grails create-app \
     --servlet=tomcat \
     --jdk=11 \
     --data=hibernate5 \
@@ -80,7 +77,7 @@ After generating a project with Forge, switch to the created directory and use t
 |
 [source,console]
 ----
-./grails -t forge create-restapi \
+./grails create-restapi \
     --servlet=tomcat \
     --jdk=11 \
     --data=hibernate5 \
@@ -102,7 +99,7 @@ After generating a project with Forge, switch to the created directory and use t
 |
 [source,console]
 ----
-./grails -t forge create-plugin \
+./grails create-plugin \
     --servlet=tomcat \
     --jdk=11 \
     --data=hibernate5 \
@@ -124,7 +121,7 @@ After generating a project with Forge, switch to the created directory and use t
 |
 [source,console]
 ----
-./grails -t forge create-web-plugin \
+./grails create-web-plugin \
     --servlet=tomcat \
     --jdk=11 \
     --data=hibernate5 \
@@ -345,7 +342,7 @@ The difference that the website shows for a feature is of the files of the appli
 [source,console]
 ----
 $ cd shop
-$ ./grailsw -t forge project show
+$ ./grailsw project show
 | How the application shop was generated, from its record in .grails
     type          web
     name          shop
@@ -372,7 +369,7 @@ The command line names the application with its package, each option that is not
 
 [source,console]
 ----
-$ ./grailsw -t forge project regenerate --diff
+$ ./grailsw project regenerate --diff
 changed  build.gradle
 removed  grails-app/conf/logback-spring.xml
 added    src/main/groovy/com/example/Mine.groovy
@@ -388,7 +385,7 @@ Both forms generate the application as `feature add` does before it adds a featu
 [source,console]
 ----
 $ cd myapp
-$ ./grailsw -t forge feature add grails-quartz
+$ ./grailsw feature add grails-quartz
 | Adding the feature grails-quartz
     update   README.md
     update   build.gradle
@@ -457,7 +454,7 @@ With one conflict, nothing is written: no file of the application, and nothing o
 
 [source,console]
 ----
-$ ./grailsw -t forge feature add grails-quartz
+$ ./grailsw feature add grails-quartz
 | Adding the feature grails-quartz
     update   README.md
     conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them
@@ -489,7 +486,7 @@ For a feature that would take something away, `--diff` and `--dry-run` show what
 
 [source,console]
 ----
-$ ./grailsw -t forge feature add postgres --diff
+$ ./grailsw feature add postgres --diff
 | To add the feature postgres
     update   build.gradle
     update   grails-app/conf/application.yml

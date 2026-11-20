@@ -239,16 +239,16 @@ jobs:
             java: 21
             job_name: Ubuntu JDK 21
             cache_writer: true
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            gradle_task: 'build groovydoc'
           - os: ubuntu-22.04
             java: 25
             job_name: Ubuntu JDK 25
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            gradle_task: 'build groovydoc'
           - os: macos-latest
             java: 21
             job_name: macOS JDK 21
             cache_writer: true
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            gradle_task: 'build groovydoc'
             # The macOS runner has ~7 GB of RAM and 3 CPUs, against ~16 GB and 4 CPUs on the
             # Linux and Windows runners, so it has the least room for concurrent JVMs.
             # Capping only maxTestParallel would not help: that is a per-Test-task limit, and
@@ -262,7 +262,7 @@ jobs:
             java: 25
             job_name: Windows JDK 25 shard 0
             cache_writer: true
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            gradle_task: 'build groovydoc'
             shard_arguments: '-PtestShardCount=3 -PtestShardIndex=0'
           - os: windows-latest
             java: 25
@@ -319,7 +319,7 @@ jobs:
           - os: ubuntu-22.04
             java: 21
             job_name: Ubuntu JDK 21 build
-            gradle_task: 'build :grails-shell-cli:installDist groovydoc'
+            gradle_task: 'build groovydoc'
             extra_arguments: '-PskipTests'
           - os: ubuntu-22.04
             java: 21

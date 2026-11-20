@@ -44,9 +44,9 @@ The Grails Forge CLI has a `gradle` command, which runs Gradle in the project th
 
 [source,console]
 ----
-$ grails -t forge gradle build
-$ grails -t forge gradle test --tests "example.BookSpec" -x integrationTest
-$ grails -t forge gradle bootRun "-Pmessage=two words"
+$ grails gradle build
+$ grails gradle test --tests "example.BookSpec" -x integrationTest
+$ grails gradle bootRun "-Pmessage=two words"
 ----
 
 Everything after `gradle` is given to Gradle as it is, each argument as the one argument it was on the command line: an argument that has spaces or quotes is not split or put together again, and an option such as `-x`, `-v`, `--stacktrace` or `--help` is an option of Gradle, not of `grails`. The command has no options of its own for that reason, and it needs at least one argument: without any it says how it is used and ends with exit code 2. One thing is read before Gradle gets it, as on every command line of the Grails Forge CLI: an argument that starts with `@` and names a file is replaced by the arguments in that file. Write `@@` for an `@` that is meant for Gradle.
@@ -116,12 +116,12 @@ The Grails Forge CLI has the commands of the `grails` shell that are a Gradle bu
 
 [source,console]
 ----
-$ grails -t forge test-app --unit example.BookSpec "*ControllerSpec.saves a book"
-$ grails -t forge war -Dgrails.env=staging
-$ grails -t forge compile -- --offline --console=rich
+$ grails test-app --unit example.BookSpec "*ControllerSpec.saves a book"
+$ grails war -Dgrails.env=staging
+$ grails compile -- --offline --console=rich
 ----
 
-Every option of a command becomes arguments of Gradle one for one, so a test filter or a property value with spaces or quotes reaches Gradle as the one argument it was. Whatever follows `--` is not read by the command and is given to Gradle as it is, after the arguments of the command; an option of a Gradle task there, such as `--tests`, belongs to the last task the command names. An option the command does not have is a mistake and is not passed on without the `--`. `--stacktrace` (`-x`) adds `--stacktrace` and `-Dgrails.full.stacktrace=true` to the arguments of Gradle and `--verbose` (`-v`) adds `--info`, which shows what the build does task by task; both mean the same in front of the command (`grails -t forge -v compile`) and after its name. The debug log of Gradle is asked for with `-- --debug`. Use `-- -x TASK` to leave a task out. The spellings of the shell with one dash (`-unit`, `-integration`, `-clean`, `-continuous`, `-debug-jvm`) are accepted too. A system property is written as `-Dname=value`, or `-Dname` for one without a value; `-D name=value` with a space is accepted as well. A `-D` that stands alone and is not followed by `name=value`, as in `test-app -D BookSpec`, and a `-D` without a name, as in `-D=x`, are mistakes: the command runs nothing, shows its usage and ends with exit code 2. On Windows an argument that a batch file does not receive unchanged is refused, as by the `gradle` command.
+Every option of a command becomes arguments of Gradle one for one, so a test filter or a property value with spaces or quotes reaches Gradle as the one argument it was. Whatever follows `--` is not read by the command and is given to Gradle as it is, after the arguments of the command; an option of a Gradle task there, such as `--tests`, belongs to the last task the command names. An option the command does not have is a mistake and is not passed on without the `--`. `--stacktrace` (`-x`) adds `--stacktrace` and `-Dgrails.full.stacktrace=true` to the arguments of Gradle and `--verbose` (`-v`) adds `--info`, which shows what the build does task by task; both mean the same in front of the command (`grails -v compile`) and after its name. The debug log of Gradle is asked for with `-- --debug`. Use `-- -x TASK` to leave a task out. The spellings of the shell with one dash (`-unit`, `-integration`, `-clean`, `-continuous`, `-debug-jvm`) are accepted too. A system property is written as `-Dname=value`, or `-Dname` for one without a value; `-D name=value` with a space is accepted as well. A `-D` that stands alone and is not followed by `name=value`, as in `test-app -D BookSpec`, and a `-D` without a name, as in `-D=x`, are mistakes: the command runs nothing, shows its usage and ends with exit code 2. On Windows an argument that a batch file does not receive unchanged is refused, as by the `gradle` command.
 
 These things differ from the `grails` shell:
 
@@ -186,11 +186,11 @@ The Grails Forge CLI has the commands of the `grails` shell that run the applica
 
 [source,console]
 ----
-$ grails -t forge run-app --port 9090
-$ grails -t forge run-app --detach -Dgrails.env=test -Pgrails.gorm.queryTail.enabled
-$ grails -t forge stop-app
-$ grails -t forge run-command dbm-status --contexts "two words"
-$ grails -t forge run-script src/main/scripts/load.groovy
+$ grails run-app --port 9090
+$ grails run-app --detach -Dgrails.env=test -Pgrails.gorm.queryTail.enabled
+$ grails stop-app
+$ grails run-command dbm-status --contexts "two words"
+$ grails run-script src/main/scripts/load.groovy
 ----
 
 `--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer; the file can be read by you only), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`. The options `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail` are also taken with one dash, as the `grails` shell spells them.

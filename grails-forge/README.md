@@ -25,7 +25,7 @@ project generator and the templates, `grails-forge-web` is the Grails web applic
 generator's HTTP API, and `grails-forge-cli` is a Grails application without a web server that runs the
 same generator from the command line. Both applications consume the framework the way a generated
 application does, by Maven coordinates, so building Forge is also the first use of the Grails that was just
-built. The `grails` launcher (`grails-cli`) assembles the CLI with the Grails shell CLI into one distribution.
+built. The `grails` launcher (`grails-cli`) is the distribution of the CLI: the `grails` command and the jar the Grails wrapper downloads.
 
 The files the generator writes are rendered from GSPs under `grails-app/views/forge` of `grails-forge-core`
 (and, for the CLI's code generation commands, of `grails-forge-cli`). Each page declares the model it is
@@ -47,7 +47,7 @@ The framework it consumes is substituted from the root build (`includeBuild('..'
 framework is visible here without publishing. Specs that build generated applications publish the framework to
 `build/local-maven` first, which is why a first `test` run takes a while. To start the hosted generator locally
 run `./gradlew :grails-forge-web:bootRun`; to run the CLI from this build, `./gradlew :grails-cli:installDist`
-and use `grails-cli/build/install/apache-grails-bin/bin/grails-forge-cli`.
+and use `grails-cli/build/install/apache-grails-bin/bin/grails`.
 
 Use `-PskipForgeTests` to skip Forge tests and their local-Maven publication prerequisites.
 

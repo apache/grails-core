@@ -86,22 +86,26 @@ done
 
 export GRAILS_REPO_URL=https://repository.apache.org/content/groups/staging
 cd "${SRC_DIR}"
-echo "Checking wrapper shell command ..."
-./grailsw -t shell create-app ShellApp
-echo "✅ Generated Shell App"
+echo "Checking that the wrapper downloads and starts the grails command ..."
+./grailsw --version
+./grailsw help > /dev/null
+echo "✅ The wrapper starts the grails command"
 
-echo "Verifying Shell App dependencies resolve ..."
-DEP_OUTPUT=$(cd ShellApp && ./gradlew dependencies 2>&1) || { echo "❌ Shell App dependency resolution failed"; exit 1; }
-if echo "$DEP_OUTPUT" | grep -q 'FAILED'; then
-  echo "❌ Shell App has unresolvable dependencies:"
-  echo "$DEP_OUTPUT" | grep 'FAILED'
-  exit 1
-fi
-echo "✅ Shell App dependencies resolved"
-
-echo "Checking forge command"
-./grailsw -t forge create-app -x -g mongodb -f gradle-settings-file ForgeApp
+echo "Checking that the generated application has this wrapper ..."
+./grailsw create-app -x -g mongodb -f gradle-settings-file ForgeApp
 echo "✅ Generated Forge App"
+
+for WRAPPER_FILE in grailsw grailsw.bat grails-wrapper.jar; do
+  if ! cmp -s "${WRAPPER_FILE}" "ForgeApp/${WRAPPER_FILE}"; then
+    echo "❌ ${WRAPPER_FILE} of the generated application is not the one of this distribution"
+    exit 1
+  fi
+done
+echo "✅ The generated application has the wrapper of this distribution"
+
+echo "Checking the wrapper of the generated application ..."
+(cd ForgeApp && ./grailsw --version)
+echo "✅ The wrapper of the generated application starts the grails command"
 
 echo "Verifying Forge App dependencies resolve ..."
 DEP_OUTPUT=$(cd ForgeApp && ./gradlew dependencies 2>&1) || { echo "❌ Forge App dependency resolution failed"; exit 1; }

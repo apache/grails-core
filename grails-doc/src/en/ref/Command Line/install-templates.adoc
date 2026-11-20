@@ -85,8 +85,8 @@ Copies the templates of the code generation commands of the Grails Forge CLI to 
 
 [source,shell]
 ----
-grails -t forge install-templates
-grails -t forge install-templates --force
+grails install-templates
+grails install-templates --force
 ----
 
 === Description

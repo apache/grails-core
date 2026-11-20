@@ -40,11 +40,10 @@ Note that with ! (bang) commands, you get file path auto completion - ideal for 
 To exit interactive mode enter the `exit` command. Note that if the Grails application has been run with `run-app` normally it will terminate when the interactive mode console exits because the JVM will be terminated. An exception to this would be if the application were running in forked mode which means the application is running in a different JVM. In that case the application will be left running after the interactive mode console terminates. If you want to exit interactive mode and stop an application that is running in forked mode, use the `quit` command. The `quit` command will stop the running application and then close interactive mode.
 
 
-With Grails Forge, when you execute the `grails -t forge` command, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
+When you execute the `grails` command without a command in a Grails project, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
 
 One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. The commands that are completed are those of the current directory as it is after the last command: once a command has made the directory a project, or has added a feature that brings a command, the commands of the project are completed without leaving interactive mode. Here's an example of the available options in interactive mode:
 
-The Grails Shell CLI (`grails`) supports interactive tab-completion and most developer commands. However, advanced configuration flags are only available via the Forge CLI (`grails -t forge`).
 Here's an example of the available options in interactive mode:
 
 [source,shell]

@@ -137,19 +137,19 @@ The Grails Forge CLI has every script `src/main/scripts/<name>.groovy` of a proj
 
 [source,console]
 ----
-$ grails -t forge create-script data-import
-$ grails -t forge help
+$ grails create-script data-import
+$ grails help
 ...
 Commands of the application and its plugins:
   data-import  (script of the application)
-$ grails -t forge data-import orders.csv --dry-run
+$ grails data-import orders.csv --dry-run
 | Warning Script commands are deprecated. Write a new command as a class of the application: create-command
 ----
 
 A script is run by the build of the project, and not by the Grails Forge CLI. The command starts the Gradle task `runScriptCommand` with the Gradle wrapper of the project, and that task compiles and runs the script in a JVM of the build. A script is code of the project, as its build file is: whoever runs the build of a project runs its scripts, and nothing else does. The Grails Forge CLI itself never compiles, evaluates or opens a script:
 
 * To list the scripts it reads the names of the files in `src/main/scripts` and nothing of what they hold. The description of a script is therefore not shown by `help`. `DataImport.groovy` and `data-import.groovy` are both the command `data-import`. A file is a command when it is a plain file, not a link, whose name is made of the letters a to z and digits, in words that capitals or hyphens set apart, and gives a name of at most 64 characters. `help` and `help --json` say how many `.groovy` files are no commands, without naming them. A directory with more than 4096 files has no commands at all, and of more than 256 scripts the first 256 in the order of their names are commands; `help` says so in both cases. A directory that `src`, `src/main` or `src/main/scripts` is a link to is not listed. The build finds the script to run by the same rule: a link is not run as a script of the project, by the Grails Forge CLI or by `./gradlew runScriptCommand`, and where two files give one name the one that is listed is the one that is run.
-* A script that has the name of a command of the Grails Forge CLI, or of a command the build lists (see xref:commandLine[The Command Line], the section on the commands of the application and its plugins), is not a command. `help` says so, and how the script is still run: `grails -t forge gradle runScriptCommand --arg=<name>`.
+* A script that has the name of a command of the Grails Forge CLI, or of a command the build lists (see xref:commandLine[The Command Line], the section on the commands of the application and its plugins), is not a command. `help` says so, and how the script is still run: `grails gradle runScriptCommand --arg=<name>`.
 * Everything after the name is given to the script as it is, each argument as the one argument it is, in a file that only you can read and that is deleted afterwards. The exit code is 0 when the script ran and did not return `false`, and 1 otherwise, with one line that says why: what the script threw, that it returned `false`, or the first mistake and its line when it could not be compiled. The arguments are data: `-Dgrails.env=production` after the name of a script is an argument the script can read (`commandLine.systemProperties`) and does not change the environment the script runs in, which is that of the build, and `--` among them does not end the flags.
 * Below a project that is not your own, where the Grails Forge CLI does not use the project (see xref:commandLine[The Command Line]), its scripts are no commands.
 
@@ -170,7 +170,7 @@ A script that the build runs has `description`, `args`, `argsMap`, `flag`, `mode
 | In a script | With the build
 
 | `gradle.compileGroovy()`
-| A script cannot run a build from inside the build. Run the tasks from the command line (`grails -t forge gradle compileGroovy`), or make the work a task of the build that depends on them.
+| A script cannot run a build from inside the build. Run the tasks from the command line (`grails gradle compileGroovy`), or make the work a task of the build that depends on them.
 
 | `testApp()`, `runApp()` and other commands that are no scripts
 | Run them from the command line, one after the other. A method that names another script (`generateController('Book')` for `generate-controller`) runs that script.

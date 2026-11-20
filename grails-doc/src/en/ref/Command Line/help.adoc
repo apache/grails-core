@@ -129,8 +129,6 @@ to work with Grails commands and ensuring they are used correctly in their proje
 
 Here is an example of using `--help` with the `create-app` command.
 
-NOTE: To access help for Forge-only options such as `--features`, `--jdk`, or `--list-features`, you must run `create-app` through the Forge CLI using `-t forge`.
-
 [source,shell]
 ----
 grails> create-app --help

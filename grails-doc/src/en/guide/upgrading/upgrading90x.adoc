@@ -1578,7 +1578,7 @@ None for the commands: they run as before with or without the descriptor. To bui
 
 The Grails Gradle plugin registers a task `runScriptCommand` in every application and plugin project. It compiles and runs a script command, `src/main/scripts/<name>.groovy` of the project or `META-INF/commands/<name>.groovy` of a plugin, in a JVM of the build. The Grails Forge CLI lists the scripts of a project as commands by the names of their files and runs one through that task; it does not compile or evaluate a script itself. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
 
-The Grails shell (`grails -t shell`) runs scripts as before, and nothing changes there.
+The `grails` command and the Grails wrapper do not start the Grails shell any more: see "The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced" below.
 
 ===== Required Actions
 
@@ -1624,14 +1624,7 @@ Not changed: `grails.codegen.defaultPackage` is still written to `grails-app/con
 None for an application that exists: its build and its `grails-forge-cli.yml` are left as they are, and nothing has to be removed from them for this change.
 
 * A tool or script of your own that reads `grails-forge-cli.yml` of a newly generated application reads `.grails/project.yml` (application type, default package, options) and `.grails/forge.lock.yml` (features) instead. There is no option that writes the old file. To have one for such a tool all the same, write it yourself with the keys the tool reads; the Grails Forge CLI then warns when it does not say the same default package and features as `.grails`, and goes by `.grails`.
-* To run the Grails shell (`grails -t shell`) in a newly generated application with the commands of its profile, add the line back to the `dependencies` block of `build.gradle`, with the profile of the type of the application (`web`, `rest-api`, `plugin` or `web-plugin`):
-+
-[source,groovy]
-----
-profile 'org.apache.grails.profiles:rest-api'
-----
-+
-Without the line the Grails Gradle plugin resolves the `web` profile for an application and the `web-plugin` profile for a plugin when the shell asks for the profile, as it does in any build that declares none.
+* Do not add the `profile` line back to a newly generated application: the `grails` command and the Grails wrapper do not start the Grails shell any more (see "The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced" below), and nothing else reads it.
 * When the files of `.grails` cannot be used, because one was changed by hand or is missing, the `create-*` code generation commands of a newly generated application are not there until the directory is as it was: restore it from version control. An application that has a `grails-forge-cli.yml` goes by that file then, as before.
 * A feature pack of your own that writes a file named `grails-forge-cli.yml` or `grails-cli.yml` to the root of the application is refused when the application is generated, because the command line would read that file as the record of a project. Give the file another name.
 * An application that a snapshot of Grails 9 generated before this change cannot have a feature added with `feature add` by a later build of the same version: the command says that the application cannot be generated again as it was and names `build.gradle`. Add the dependencies and the configuration of the feature by hand, or generate the application again.
@@ -1682,6 +1675,51 @@ Closure doWithSpring() {
 A plugin that needs a web application to work says so with what it needs, such as `@ConditionalOnWebApplication` on its auto-configuration, not with a profile.
 * *The key.* Delete `grails.profile` from `application.yml` (or `application.groovy`) when nothing of your own reads it. A page or an endpoint of your own that shows it, such as the "Profile" row of a welcome page copied from an earlier version, shows nothing for an application without the key: remove the row.
 * *`Settings.PROFILE`.* Code that used the constant to read the key names the key itself, `'grails.profile'`.
+
+==== 37. The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced
+
+Until Grails 9 the `grails` command and the Grails wrapper (`grailsw`) started a class that chose between two command lines: the Grails shell, by default, and Grails Forge, with `-t forge`. In Grails 9 there is one command line, and `grails` starts it.
+
+* *`-t` and `--type` are gone.* `grails -t forge create-app myapp` is `grails create-app myapp`. As the first argument the option is refused with exit code 2 and the line `grails has no option -t since Grails 9: it chose between the Grails shell and Grails Forge, and there is one command line now. Give the command without it.`; nothing is run.
+* *`GRAILS_PREFERRED_SHELL` is not read.* Whatever its value, the same command line starts, and nothing is said about the variable.
+* *The distribution has one command.* The `bin` directory of the binary distribution, and so an installation by SDKMAN, has `grails` and `grails.bat`. `grails-shell-cli` and `grails-forge-cli` are not there.
+* *Nothing starts the Grails shell.* `grails` without a command starts the interactive console in a Grails project and shows the help elsewhere. The commands there are, in a project and outside one, are listed by `grails help`; see xref:commandLine[The Command Line].
+* *The start class moved.* The class `org.apache.grails.cli.DelegatingShellApplication` is removed. The class that starts the command line is `org.apache.grails.cli.GrailsCli`, which the `Main-Class` attribute of the manifest of the `grails-cli` jars names. The artifact `org.apache.grails:grails-cli` no longer depends on `grails-shell-cli`.
+* *The Grails wrapper reads the start class from the jar it downloads.* The wrapper of Grails 7 and 8 has the name `DelegatingShellApplication` compiled into `grails-wrapper.jar`, the file that is committed in the application. The wrapper of Grails 9 takes the name from the manifest of the `grails-cli` jar, so it starts the command line of Grails 7, 8 and 9, and will not have to be replaced when the class moves again.
+
+A wrapper that was committed with Grails 7 or 8 cannot start Grails 9. Once `grailsVersion` in `gradle.properties` names a Grails 9 version, every `./grailsw` command downloads the command line of that version, if it is not there yet, and then ends with exit code 1 and:
+
+[source,console]
+----
+Unable to execute Grails Wrapper: org.apache.grails.cli.DelegatingShellApplication
+java.lang.ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication
+----
+
+`./grailsw update-wrapper` does not repair this. It downloads the `grails-cli` jar again, into `~/.grails/wrapper` (or `GRAILS_WRAPPER_HOME`), and fails in the same way: neither it nor anything else replaces `grailsw`, `grailsw.bat` and `grails-wrapper.jar` in the application. They are replaced by hand.
+
+===== Required Actions
+
+* *Replace the Grails wrapper of the application.* An application has one when the files `grailsw`, `grailsw.bat` and `grails-wrapper.jar` are at its root. This can be done before or after `grailsVersion` is changed, because the wrapper of Grails 9 starts Grails 7 and 8 as well:
+. Get the three files of Grails 9. Either download `apache-grails-wrapper-VERSION-bin.zip`, with the Grails 9 version in place of `VERSION`, from the https://github.com/apache/grails-core/releases[release page] and extract it, or create an application somewhere else with the `grails` command of Grails 9 (`grails create-app scratch`) and take the files from its root.
+. Copy `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the three files at the root of the application. Replace all three: the scripts changed as well.
+. On Linux and macOS make sure the script can still be executed: `chmod +x grailsw`.
+. Run `./grailsw --version` in the application. It prints `Grails Version:` with the version that `grailsVersion` in `gradle.properties` names, after downloading the command line of that version on the first run.
+. Commit the three files together with the change of `grailsVersion`.
++
+[source,console]
+----
+$ unzip apache-grails-wrapper-VERSION-bin.zip
+$ cp apache-grails-wrapper-VERSION-bin/grailsw apache-grails-wrapper-VERSION-bin/grailsw.bat apache-grails-wrapper-VERSION-bin/grails-wrapper.jar /path/to/application/
+$ cd /path/to/application
+$ chmod +x grailsw
+$ ./grailsw --version
+$ git add grailsw grailsw.bat grails-wrapper.jar
+----
+* *Remove `-t forge`, `--type forge`, `-t shell` and `--type shell`* from scripts, continuous integration jobs, documentation of your own and run configurations that call `grails` or `grailsw`. A command that was given with `-t forge` is the same command without it. A command of the Grails shell that was given with `-t shell`, or with no option, is looked up in `grails help`; the section "Commands of Earlier Versions" of xref:commandLine[The Command Line] says what each of them is now.
+* *Replace `grails-forge-cli` with `grails`*, with the same arguments, wherever the command is called. `grails-shell-cli` has no command that takes its place: its commands are those of `grails` where that section has them.
+* *Remove `GRAILS_PREFERRED_SHELL`* from shell profiles and continuous integration settings. It has no effect.
+* *A tool of your own that loads the start class from a `grails-cli` jar* loads `org.apache.grails.cli.GrailsCli` in place of `org.apache.grails.cli.DelegatingShellApplication`, or reads the `Main-Class` attribute of the manifest of the jar, which names the class in Grails 7, 8 and 9. `GrailsCli.main(String[])` ends the JVM with the exit code and `GrailsCli.execute(String...)` returns it.
+* *A build of your own that depends on `org.apache.grails:grails-cli` to get the Grails shell* does not get it any more.
 
 ==== 38. `grails run <file>.groovy` Outside a Project Is Removed, and `GormCompilerAutoConfiguration` With It
 

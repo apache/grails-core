@@ -58,8 +58,8 @@ With the Grails Forge CLI a command is run by its own name, once the Gradle task
 
 [source]
 ----
-grails -t forge gradle grailsCommandCatalog
-grails -t forge my-example
+grails gradle grailsCommandCatalog
+grails my-example
 ----
 
 Commands can also be executed using the *runCommand* gradle task. Note that the gradle task uses camelCase:
@@ -519,4 +519,4 @@ The names, descriptions and origins in the file come from the project's dependen
 
 Every command in the file is run with `./gradlew runCommand --arg=<name>` followed by its arguments. The task loads no class of the project or of its dependencies, and the file has neither a time nor a path of the machine in it, so the same commands give the same file.
 
-The Grails Forge CLI reads this file: in the project, every command in it is a command of the Grails Forge CLI under its name, listed by `help` with its origin and run through `runCommand` with its arguments as they were typed. Nothing runs the task for you, so run it again when the commands of the project have changed. A command whose name is a command of the Grails Forge CLI itself, another name of one or the short form of one, such as `install-templates`, is not added there; `help` says so, and the command is run with `grails -t forge run-command install-templates`.
+The Grails Forge CLI reads this file: in the project, every command in it is a command of the Grails Forge CLI under its name, listed by `help` with its origin and run through `runCommand` with its arguments as they were typed. Nothing runs the task for you, so run it again when the commands of the project have changed. A command whose name is a command of the Grails Forge CLI itself, another name of one or the short form of one, such as `install-templates`, is not added there; `help` says so, and the command is run with `grails run-command install-templates`.

@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, configuration keys below a value that is not a map, JLine 4, and the command lines of application commands"
+description: "Upgrades a Grails application to Grails 9.0 (release 9.0.0-M1). Base version: Grails 8; use it for an application on Grails 8 or on an earlier Grails 9.0 release. An application on Grails 7 or earlier first upgrades to the last Grails 8 release. Covers Groovy 6, Spring Boot 4.2 and Spring Framework 7.1, graphql-java 26, the GPars deprecation in favour of groovy.concurrent, invokedynamic compilation, the separate grails-xml module, the opt-in settings for Spring JSON rendering, Jackson request binding, Spring MVC exception handlers and response bodies, the Jackson-backed JSON converter and domain class rendering, RFC 9457 validation problems, format resolution, web unit tests, generated GORM id and version properties, RxGORM on RxJava 3, the deprecated RxJava 1 and 2 modules, the character encoding filter, configuration keys below a value that is not a map, JLine 4, the command lines of application commands, and the Grails wrapper"
 license: Apache-2.0
 ---
 
@@ -89,7 +89,7 @@ Verify these before touching application code; `gradle.properties`, the Gradle w
 
 ## Migration Workflow
 
-1. Update `grailsVersion` in `gradle.properties` and refresh the Gradle wrapper; let the Grails BOM manage Groovy, Spock, and RxJava versions.
+1. Update `grailsVersion` in `gradle.properties` and refresh the Gradle wrapper; let the Grails BOM manage Groovy, Spock, and RxJava versions. When the application has a Grails wrapper (`grailsw`), replace it in the same step, following [The `grails` Command and the Grails Wrapper](#the-grails-command-and-the-grails-wrapper): the one committed with Grails 8 cannot start Grails 9.
 2. Run `./gradlew clean`, then build without tests (`./gradlew compileGroovy compileTestGroovy`) and fix compilation errors module by module. The clean build matters: classes Grails 8 compiled can keep generated `id` and `version` fields on a plain superclass.
 3. Apply the Spring Boot 4.2 and Spring Framework 7.1 changes, following [Spring Boot 4.2 and Spring Framework 7.1](#spring-boot-42-and-spring-framework-71): run with the Spring Boot properties migrator to find renamed properties, and check forwarded headers, redirects, tests and metrics. For an application using the GraphQL plugin, follow [graphql-java 26 for GraphQL Applications](#graphql-java-26-for-graphql-applications).
 4. Replace GPars with `groovy.concurrent`, following the sections below.
@@ -645,6 +645,36 @@ spring:
 - Delete `grails.profile` from `application.yml` when nothing of the project reads it, and remove a "Profile" row from a welcome page that shows it. Replace `grails.config.Settings.PROFILE`, which is removed, with the literal `'grails.profile'` in code that still reads the key. `GrailsPlugin.PROFILES` is deprecated for removal.
 - Do not add `grails.profile` or a `profile` dependency to make something work: neither has an effect at run time.
 
+## The `grails` Command and the Grails Wrapper
+
+Grails 9 has one command line. The `grails` command no longer chooses between the Grails shell and Grails Forge, and nothing starts the Grails shell. The class it starts moved from `org.apache.grails.cli.DelegatingShellApplication`, which is removed, to `org.apache.grails.cli.GrailsCli`.
+
+The Grails wrapper committed with Grails 7 or 8 (`grailsw`, `grailsw.bat`, `grails-wrapper.jar` at the root of the application) has the old class name compiled into `grails-wrapper.jar`. Once `grailsVersion` names a Grails 9 version, every `./grailsw` command downloads the Grails 9 command line and then ends with exit code 1:
+
+```
+Unable to execute Grails Wrapper: org.apache.grails.cli.DelegatingShellApplication
+java.lang.ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication
+```
+
+`./grailsw update-wrapper` does not repair this: it only downloads the `grails-cli` jar again into `~/.grails/wrapper` (or `GRAILS_WRAPPER_HOME`) and fails the same way. Nothing replaces the three committed files; replace them by hand.
+
+- Check whether the application has a Grails wrapper: `grailsw`, `grailsw.bat` and `grails-wrapper.jar` at its root. Without them there is nothing to replace.
+- Get the three files of the Grails 9 version: extract `apache-grails-wrapper-VERSION-bin.zip` from the release page (https://github.com/apache/grails-core/releases), or create an application elsewhere with the Grails 9 `grails` command (`grails create-app scratch`) and take them from its root. Do not edit `grails-wrapper.jar` and do not copy it from a Grails 7 or 8 application.
+- Copy all three over the ones in the application, then make the script executable and check it:
+
+```bash
+cp apache-grails-wrapper-VERSION-bin/grailsw apache-grails-wrapper-VERSION-bin/grailsw.bat apache-grails-wrapper-VERSION-bin/grails-wrapper.jar .
+chmod +x grailsw
+./grailsw --version   # prints "Grails Version:" with the grailsVersion of gradle.properties
+git add grailsw grailsw.bat grails-wrapper.jar
+```
+
+- The replacement can come before or after the change of `grailsVersion`: the Grails 9 wrapper reads the start class from the manifest (`Main-Class`) of the `grails-cli` jar it downloads, so it also starts Grails 7 and 8, and it does not need replacing when the class moves again.
+- Remove `-t forge`, `--type forge`, `-t shell` and `--type shell` from scripts, CI jobs and run configurations that call `grails` or `grailsw`. As the first argument the option is refused with exit code 2. A command given with `-t forge` is the same command without it; look a Grails shell command up in `grails help` and in the section "Commands of Earlier Versions" of the command line chapter of the guide.
+- Replace calls of `grails-forge-cli` with `grails`, with the same arguments. `grails-shell-cli` and `grails-forge-cli` are not in the distribution or an SDKMAN installation any more.
+- Remove `GRAILS_PREFERRED_SHELL` from environments; it is not read.
+- A tool that loads `org.apache.grails.cli.DelegatingShellApplication` from a `grails-cli` jar loads `org.apache.grails.cli.GrailsCli` (`main(String[])` exits with the exit code, `execute(String...)` returns it) or the `Main-Class` of the jar's manifest. The artifact `org.apache.grails:grails-cli` no longer brings `grails-shell-cli`.
+
 ## `grails run <file>.groovy` Outside a Project Is Removed
 
 Outside a project, `grails run app.groovy` compiled a loose Groovy script and started it as a Spring Boot application. Grails 9 removes it with no replacement, and with it `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` of `grails-data-hibernate5-spring-boot` and `grails-data-hibernate7-spring-boot`, which added GORM to such a script that had an `@Entity` class, and the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it.
@@ -658,6 +688,8 @@ Outside a project, `grails run app.groovy` compiled a loose Groovy script and st
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.7 or later
+- [ ] An application with a Grails wrapper has the `grailsw`, `grailsw.bat` and `grails-wrapper.jar` of Grails 9 committed, and `./grailsw --version` prints the Grails 9 version
+- [ ] No script, CI job or run configuration passes `-t` or `--type` to `grails` or `grailsw`, calls `grails-shell-cli` or `grails-forge-cli`, or sets `GRAILS_PREFERRED_SHELL`
 - [ ] No configuration names a property Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects` or `management.metrics.observations.ignored-meters`
 - [ ] Behind a reverse proxy that sends `Forwarded` or `X-Forwarded-Prefix`, `spring.mvc.forwarded-headers.header-format` or `use-forwarded-prefix` is set, and an application that declares `@EnableWebMvc` registers a `ForwardedHeaderFilter` itself
 - [ ] No client or test expects an absolute `Location` from a `chain`, Spring Security or `redirect:` redirect, or `server.tomcat.servlet.use-relative-redirects: false` is set
@@ -710,6 +742,7 @@ Outside a project, `grails run app.groovy` compiled a loose Groovy script and st
 - Do not compare a blocking result with `null` to detect an empty result; RxJava 3 throws instead.
 - Do not keep a `Subscription` field for an RxGORM subscription; the handle is the `Disposable` passed to `onSubscribe`.
 - Do not pin Groovy, Spock or RxJava versions in the application build; the Grails BOM manages them.
+- Do not run `./grailsw update-wrapper` to fix a wrapper that fails with `ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication`; it replaces the downloaded command line, not the committed `grails-wrapper.jar`. Replace the three wrapper files.
 - Do not add the Groovy concurrency module alongside the GPars one to migrate gradually; only one implementation of each contract is used, and the event bus builder fails when it finds two.
 - Do not set `grails { indy = false }` to avoid porting code; it needs `groovy-callsite` on every source set and rules out a GraalVM native image.
 - Do not leave `grails.converters.json.legacy` unset; the default changes in Grails 10, so an application that has not checked its JSON with `false` will change output without a code change.

@@ -19,12 +19,13 @@
 package org.apache.grails.cli
 
 import java.nio.file.Files
+import java.util.jar.JarFile
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 
 /**
  * The entry point of the {@code grails} command line, on the class path of the artifact a tool
- * resolves for it: the one this module is published with, which has the Grails shell on it too.
+ * resolves for it: the one this module is published with.
  */
 class GrailsCliSpec extends Specification {
 
@@ -106,6 +107,62 @@ class GrailsCliSpec extends Specification {
         ['create-app', '--no-such-option']     | 2        | '--no-such-option'
     }
 
+    void "the option that chose between the Grails shell and Grails Forge is refused with what to do: #args"() {
+        when:
+        int exit = GrailsCli.execute(args as String[])
+
+        then:
+        exit == 2
+        out.toString().isEmpty()
+        err.toString().readLines() == [
+                "grails has no option ${args[0]} since Grails 9: it chose between the Grails shell and Grails Forge, and there is one command line now. Give the command without it.".toString(),
+                "Run 'grails help' for the commands"
+        ]
+        !new File(dir, 'shop').exists()
+
+        where:
+        args << [['-t', 'forge', 'create-app', 'example.shop'], ['--type', 'shell', 'create-app', 'example.shop'], ['-t'], ['--type']]
+    }
+
+    void "an option of a command that is spelled like it is that command's"() {
+        when: 'create-app has an option --type of its own or not: the command line decides, not the launcher'
+        int exit = GrailsCli.execute('create-app', '-t', 'forge')
+
+        then:
+        exit == 2
+        !err.toString().contains('since Grails 9')
+    }
+
+    void "GRAILS_PREFERRED_SHELL is not read, and the artifact has no Grails shell and no class that delegates to one"() {
+        expect: 'whatever the variable says, there is one command line to start'
+        !classThere('org.apache.grails.cli.DelegatingShellApplication')
+        !classThere('org.grails.cli.GrailsCli')
+        !classThere('org.springframework.boot.cli.command.CommandRunner')
+        classThere('org.grails.forge.cli.ForgeCli')
+
+        and: 'the logging of the launcher is bound by this artifact itself'
+        classThere('org.slf4j.simple.SimpleLogger')
+        !classThere('org.slf4j.nop.NOPServiceProvider')
+        GrailsCli.classLoader.getResources('META-INF/services/org.slf4j.spi.SLF4JServiceProvider').toList().size() == 1
+    }
+
+    void "the jar of the artifact names the entry point as its start class, which is what the Grails wrapper starts"() {
+        given:
+        File jar = new File(System.getProperty('grails.cli.jar'))
+
+        expect:
+        new JarFile(jar).withCloseable { it.manifest.mainAttributes.getValue('Main-Class') } == 'org.apache.grails.cli.GrailsCli'
+    }
+
+    private static boolean classThere(String name) {
+        try {
+            Class.forName(name, false, GrailsCli.classLoader)
+            return true
+        } catch (ClassNotFoundException ignored) {
+            return false
+        }
+    }
+
     void "a command line that was run leaves the JVM as it was: its system properties, and no hook for when it ends"() {
         given:
         Properties before = (Properties) System.getProperties().clone()
@@ -119,6 +176,25 @@ class GrailsCliSpec extends Specification {
         listed == 0
         set.findAll { String name -> System.getProperty(name) != before.getProperty(name) } == []
         shutdownHooks() == hooks
+    }
+
+    void "the command line runs in a thread whose context class loader is not that of the command line, and leaves it"() {
+        given: 'a tool that loaded the command line in a class loader of its own, as the Grails wrapper does'
+        ClassLoader previous = Thread.currentThread().contextClassLoader
+        ClassLoader foreign = new URLClassLoader(new URL[0], (ClassLoader) null)
+        Thread.currentThread().contextClassLoader = foreign
+
+        when: 'a command that starts the generator, which finds its configuration through the context class loader'
+        int listed = GrailsCli.execute('create-app', '--list-features')
+
+        then:
+        listed == 0
+        out.toString().contains('gorm-hibernate5')
+        err.toString().isEmpty()
+        Thread.currentThread().contextClassLoader.is(foreign)
+
+        cleanup:
+        Thread.currentThread().contextClassLoader = previous
     }
 
     void "plain output holds while a command runs, and not after it"() {
@@ -168,6 +244,8 @@ class GrailsCliSpec extends Specification {
 
         then:
         created == 0
+        // the generator is closed without a servlet environment on this class path, and says nothing of it
+        err.toString().isEmpty()
         new File(dir, 'shop/grails-app').isDirectory()
         new File(dir, 'shop/.grails/project.yml').isFile()
     }

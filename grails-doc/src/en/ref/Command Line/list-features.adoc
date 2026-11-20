@@ -23,13 +23,13 @@ under the License.
 
 Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, etc.
 
-NOTE: The `--list-features` flag is only supported by the Forge CLI and must be used with `grails -t forge`.
+NOTE: The `--list-features` flag is an option of the commands that create a project.
 
 === Examples
 
 [source,console]
 ----
-$ grails -t forge create-app --list-features
+$ grails create-app --list-features
 ----
 
 === Description
@@ -37,8 +37,8 @@ $ grails -t forge create-app --list-features
 Usage:
 [source,console]
 ----
-$ grails -t forge create-app --list-features
-$ grails -t forge create-plugin --list-features
+$ grails create-app --list-features
+$ grails create-plugin --list-features
 ----
 
 Lists the features that are available. Note: Typical output looks like this:

@@ -40,6 +40,11 @@ import org.grails.forge.cli.ForgeCli
  * there are in the current directory, with their options, as one JSON document on the standard
  * output.</p>
  *
+ * <p><strong>What is gone.</strong> Until Grails 9 the {@code grails} command chose between the
+ * Grails shell and Grails Forge, by the option {@code -t} or {@code --type} as its first argument or
+ * the environment variable {@code GRAILS_PREFERRED_SHELL}. There is one command line: the option is
+ * refused with exit code {@code 2} and a line that says so, and the variable is not read.</p>
+ *
  * <p><strong>The exit code.</strong> {@code 0} when the command did what it was asked to; {@code 2}
  * when the command line was wrong, which is said on the standard error with how the command is used:
  * a command there is not, an option or a value a command does not take, features that cannot be had
@@ -58,6 +63,8 @@ final class GrailsCli {
 
     /** The name of the command line, as its help shows it. */
     public static final String NAME = 'grails'
+
+    private static final List<String> FORMER_TYPE_OPTIONS = ['-t', '--type']
 
     private GrailsCli() {
     }
@@ -86,7 +93,8 @@ final class GrailsCli {
      *
      * <p>When this returns the JVM is as it was. The system properties that starting the project
      * generator sets, the environment of Grails among them, are put back unless the caller changed
-     * them in the meantime; the generator is closed and leaves no shutdown hook; and
+     * them in the meantime; the generator is closed and leaves no shutdown hook; the context class
+     * loader of the thread, which is the class loader of this class while the command runs, is the one it was; and
      * {@code picocli.ansi}, which {@code --plain-output} sets for the run, has the value it had, or
      * the one the caller gave it during the run.</p>
      *
@@ -94,6 +102,21 @@ final class GrailsCli {
      * @return the exit code, as described for the class
      */
     static int execute(String... args) {
-        return ForgeCli.launch(NAME, true, args)
+        if (args && args[0] in FORMER_TYPE_OPTIONS) {
+            // until Grails 9 the first argument could choose between the Grails shell and Grails Forge
+            System.err.println("${NAME} has no option ${args[0]} since Grails 9: it chose between the Grails shell and Grails Forge, and there is one command line now. Give the command without it.")
+            System.err.println("Run '${NAME} help' for the commands")
+            return 2
+        }
+        // a tool may have loaded this class in a class loader of its own: what the command line finds
+        // through the context class loader of the thread, the generator among it, is where this class is
+        Thread thread = Thread.currentThread()
+        ClassLoader previous = thread.contextClassLoader
+        thread.contextClassLoader = GrailsCli.classLoader
+        try {
+            return ForgeCli.launch(NAME, true, args)
+        } finally {
+            thread.contextClassLoader = previous
+        }
     }
 }

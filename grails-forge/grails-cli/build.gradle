@@ -36,9 +36,9 @@ plugins {
 
 ext {
     pomTitle = 'Apache Grails® CLI'
-    pomDescription = 'Facilitates running the grails-shell-cli or grails-forge-cli to interact with a Grails project.'
+    pomDescription = 'The grails command line: creates Grails projects and runs the commands of a Grails project.'
     cliProject = true
-    startMainClass = 'org.apache.grails.cli.DelegatingShellApplication'
+    startMainClass = 'org.apache.grails.cli.GrailsCli'
     sbomProjectType = org.cyclonedx.model.Component.Type.APPLICATION.name()
 }
 
@@ -54,36 +54,24 @@ dependencies {
     implementation platform("org.apache.grails:grails-bom:$projectVersion")
     implementation 'org.apache.groovy:groovy'
 
-    // shell-cli dependencies
-    implementation 'org.apache.grails:grails-shell-cli'
-    implementation('org.springframework.boot:spring-boot-cli') {
-        exclude group: 'jline', module: 'jline'
-    }
-    implementation 'org.apache.groovy:groovy'
-    implementation 'org.apache.groovy:groovy-ant'
-    implementation 'org.apache.groovy:groovy-templates'
-
-    // The commands are pulled from the shellCliDependencies in the shell project, but they are not in the shell jar file,
-    // so they must be added here. To keep the jar file smaller, only a subset is included here
-    implementation 'org.apache.grails:grails-core' // for ApplicationContextCommandFactory to lookup commands
-    implementation 'org.apache.grails:grails-url-mappings' // for UrlMappingsReportCommand
-    // profiles will add additional libraries as needed to surface commands
-
-    // forge dependencies
     implementation project(':grails-forge-cli'), {
-        // exclude the slf4j-nop dependency because the simple slf4j implementation is already included
-        // which will cause a duplicate warning message
+        // the Forge CLI on its own binds slf4j-nop; the launcher binds the simple implementation below,
+        // and two bindings on one class path make SLF4J warn on every start
         exclude group: 'org.slf4j', module: 'slf4j-nop'
     }
+    // the logging of the launcher: warnings and errors on the standard error, as the
+    // simplelogger.properties of grails-forge-cli configures it
+    runtimeOnly 'org.slf4j:slf4j-simple'
 
-    // for the shadow jar, configure forge & shell-cli dependencies to be pulled from a file to ensure the shadow
+    // for the shadow jar, the dependencies are pulled from a file to ensure the shadow
     // transforms are applied to both dependencies and our own projects
     shadowCombined platform("org.apache.grails:grails-bom:$projectVersion")
     shadowCombined 'org.apache.groovy:groovy'
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
 
-    // GrailsCli is compiled against ForgeCli, whose methods name picocli types; at run time picocli comes with grails-forge-cli
+    // GrailsCli is compiled against ForgeCli, whose methods name types of picocli and of Spring; at run time both come with grails-forge-cli
     compileOnly "info.picocli:picocli:$picocliVersion"
+    compileOnly 'org.springframework:spring-context'
 
     // GrailsCliSpec: the entry point on the class path this artifact is published with
     testImplementation 'org.spockframework:spock-core', {
@@ -107,6 +95,14 @@ jarTask.configure { Jar it ->
     }
 }
 
+// GrailsCliSpec reads the start class in the manifest of the jar, which is what the Grails wrapper starts.
+// The content of the jar is the input; its path is given apart from the inputs so that it is in no cache key.
+tasks.named('test', Test).configure { Test it ->
+    it.inputs.files(jarTask).withPropertyName('cliJar').withPathSensitivity(PathSensitivity.NONE)
+    Provider<String> cliJarPath = jarTask.flatMap { Jar jar -> jar.archiveFile }.map { RegularFile file -> file.asFile.absolutePath }
+    it.jvmArgumentProviders.add({ ["-Dgrails.cli.jar=${cliJarPath.get()}".toString()] } as CommandLineArgumentProvider)
+}
+
 TaskProvider<Jar> shadowJarTask = tasks.named('shadowJar', ShadowJar)
 shadowJarTask.configure { ShadowJar it ->
     it.archiveClassifier = 'all'
@@ -114,7 +110,7 @@ shadowJarTask.configure { ShadowJar it ->
     // use a separate configuration path so we can still publish the cli project with a non-shadow jar
     it.configurations = [project.configurations.shadowCombined]
 
-    // services & custom grails.factories have to be merged since commands can be created from both sources
+    // services & custom grails.factories are one file per jar at the same path, so they are merged
     it.mergeServiceFiles()
     it.mergeServiceFiles('META-INF/grails.factories')
     // the Forge CLI starts a Grails application: Spring Boot finds its auto-configurations and
@@ -184,26 +180,6 @@ cliStartScripts.configure { CreateStartScripts t ->
     t.defaultJvmOpts = nativeAccessJvmOpts
 }
 
-TaskProvider<CreateStartScripts> shellCliStartScripts = tasks.register('createShellCliStartScripts', CreateStartScripts)
-shellCliStartScripts.configure { CreateStartScripts t ->
-    t.dependsOn jarTask, shadowJarTask
-    t.outputDir = layout.buildDirectory.dir('generated-shell-cli-scripts').get().asFile
-    t.applicationName = 'grails-shell-cli'
-    t.mainClass = 'org.grails.cli.GrailsCli'
-    t.classpath = files(shadowJarTask)
-    t.defaultJvmOpts = nativeAccessJvmOpts
-}
-
-TaskProvider<CreateStartScripts> forgeCliStartScripts = tasks.register('createForgeCliStartScripts', CreateStartScripts)
-forgeCliStartScripts.configure { CreateStartScripts t ->
-    t.dependsOn jarTask, shadowJarTask
-    t.outputDir = layout.buildDirectory.dir('generated-forge-cli-scripts').get().asFile
-    t.applicationName = 'grails-forge-cli'
-    t.mainClass = 'org.grails.forge.cli.Application'
-    t.classpath = files(shadowJarTask)
-    t.defaultJvmOpts = nativeAccessJvmOpts
-}
-
 project.extensions.getByType(DistributionContainer).configureEach {
     it.distributionBaseName.set('apache-grails')
     it.distributionClassifier.set('bin')
@@ -213,20 +189,6 @@ project.extensions.getByType(DistributionContainer).configureEach {
         }
 
         from(cliStartScripts) {
-            into 'bin'
-            it.filePermissions { permissions ->
-                permissions.unix(0755)
-            }
-        }
-
-        from(shellCliStartScripts) {
-            into 'bin'
-            it.filePermissions { permissions ->
-                permissions.unix(0755)
-            }
-        }
-
-        from(forgeCliStartScripts) {
             into 'bin'
             it.filePermissions { permissions ->
                 permissions.unix(0755)
@@ -248,19 +210,19 @@ project.extensions.getByType(DistributionContainer).configureEach {
 
 def distZipTask = tasks.named('distZip')
 distZipTask.configure {
-    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
+    dependsOn cliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
 }
 tasks.named('build').configure {
     it.dependsOn(distZipTask)
 }
 tasks.named('assemble').configure {
-    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
+    it.dependsOn cliStartScripts, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
 }
 tasks.named('installDist').configure {
-    it.dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts
+    it.dependsOn cliStartScripts
 }
 tasks.named('distTar').configure {
-    dependsOn cliStartScripts, forgeCliStartScripts, shellCliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
+    dependsOn cliStartScripts, jarTask, shadowJarTask, rootProject.project(':grails-forge-cli').tasks.named('buildCompletion')
 }
 
 sdkman {

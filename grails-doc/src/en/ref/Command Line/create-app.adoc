@@ -25,13 +25,7 @@ The `create-app` command serves as the initial step in Grails application develo
 
 [NOTE]
 ====
-In Grails {grailsMajorVersion}, `create-app` is available in both the **Grails Shell CLI** and the **Forge CLI**.
-
-- Most users should use the **Grails Shell CLI** by default (`grails create-app bookstore`). This version supports core development commands and project lifecycle management, and includes basic `create-*` flags like `--inplace`, `--features`, and `--profile`.
-
-- The **Forge CLI** (`grails -t forge create-app bookstore`) is intended solely for **application generation** with extended configuration flags such as `--jdk`, `--data`, and `--servlet`.
-
-Forge-specific flags will result in an error if used with the Shell CLI.
+In Grails {grailsMajorVersion}, `create-app` is a command of the `grails` command, the only command line: the `-t`/`--type` option that chose between the Grails Shell CLI and the Forge CLI is gone, and the options below are those of `grails create-app`.
 ====
 
 === Usage
@@ -48,7 +42,7 @@ This uses the **Forge CLI** to generate an application with extended configurati
 
 [source,console]
 ----
-$ grails -t forge create-app bookstore \
+$ grails create-app bookstore \
     --jdk=17 \
     --data=hibernate5 \
     --servlet=tomcat \
@@ -58,7 +52,7 @@ $ grails -t forge create-app bookstore \
 
 === Options (Forge CLI)
 
-These options are available only when using `grails -t forge`:
+These are the options of `grails create-app`:
 
 - `NAME`: The desired name for the application.
 - `-f, --features=FEATURE[,FEATURE...]`: Enable features like `gorm-hibernate5`, `gorm-hibernate7`, `postgres`, `asciidoctor`, `grails-gsp`, etc.
@@ -99,7 +93,7 @@ $ cd bookstore
 +
 [source,console]
 ----
-$ grails -t forge create-app bookstore \
+$ grails create-app bookstore \
     --jdk=17 \
     --data=hibernate5 \
     --features=asciidoctor,grails-gsp
@@ -116,5 +110,5 @@ $ grails create-app --inplace
 _or_
 [source,console]
 ----
-$ grails -t forge create-app --inplace
+$ grails create-app --inplace
 ----
