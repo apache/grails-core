@@ -225,7 +225,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
                 '             and the feature has there:\n' +
                 '                     implementation "org.apache.grails:grails-quartz"\n' +
                 '             Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place ' +
-                'of the file, at least one unchanged line away (or take them out), add the feature again, and then put them where they belong\n')
+                'of the file, with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong\n')
         out.toString().contains('    merge    README.md (your changes are kept)')
         out.toString().contains('    update   grails-app/conf/application.yml')
         err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed. ' +
@@ -463,7 +463,8 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         refused == 2
         tree(dir) == before
         tree(outside) == beside
-        out.toString().contains(".grails/transactions has ${left}, which no change this command began left there: it was not read and is left alone. It can be removed")
+        out.toString().contains(".grails/transactions has ${left}, which no change that this user began under this home directory and for this path of the project " +
+                'left there: it was not read and is left alone.')
 
         when: 'and a command that adds a feature'
         out.reset()
@@ -471,7 +472,7 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        out.toString().contains(".grails/transactions has ${left}, which no change this command began left there")
+        out.toString().contains(".grails/transactions has ${left}, which no change that this user began")
         tree(outside) == beside
         new File(dir, 'secret.txt').text == 'the user wrote this\n'
         new File(dir, 'gradle/wrapper/gradle-wrapper.properties').bytes == new File(with, 'gradle/wrapper/gradle-wrapper.properties').bytes
@@ -525,6 +526,30 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         err.toString().contains('The lock of the project, .grails/transactions/lock, is not a file; remove it. Nothing of the project was changed')
         !new File(dir, 'build.gradle').text.contains('grails-quartz')
         !new File(home, '.grails/forge/transactions').list()
+    }
+
+    void "without a home directory nothing is added, and what a project has where a relative one would be is not read"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        Map<String, String> before = tree(dir)
+        System.setProperty('user.home', '?')
+
+        when: 'what would be done is still said'
+        int preview = add('grails-quartz', '--dry-run')
+
+        then:
+        preview == 0
+        out.toString().contains('To add the feature grails-quartz')
+
+        when:
+        int exit = add('grails-quartz')
+
+        then:
+        exit == 1
+        err.toString().contains('Adding a feature needs a home directory to keep the record of the change in, and the one the system property user.home names ' +
+                'cannot be used: it is not an absolute path. Nothing of the project was changed')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
     }
 
     void "a change that was interrupted is undone by the next command, which says which files it put back"() {

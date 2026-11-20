@@ -37,6 +37,61 @@ final class ThreeWayMergeCases {
         this.random = new Random(seed)
     }
 
+    /** The seeds of the cases the reference was made of */
+    public static final List<Long> SEEDS = [1L, 2L, 3L, 4L, 5L]
+
+    /** How many cases of each seed the reference has */
+    public static final int CASES = 1500
+
+    /** How many long files the reference has, after the cases of the seeds */
+    public static final int LONG_CASES = 12
+
+    /**
+     * @return the cases of the reference: {@link #CASES} of each of the {@link #SEEDS}, and then
+     * {@link #LONG_CASES} long files
+     */
+    static List<List<String>> ofReference() {
+        List<List<String>> all = []
+        for (long seed : SEEDS) {
+            all.addAll(of(seed, CASES))
+        }
+        all.addAll(ofLongFiles(9L, LONG_CASES))
+        return all
+    }
+
+    /**
+     * Files of 2,600 lines, most of them there once and the others out of a few and empty, of which
+     * each side changed a line near the beginning, a line near the end and a few between, the two
+     * sides not the same ones. Little of a side is like the base at its beginning and end, so nearly
+     * the whole of the files is lined up: more pairs of lines than the merge works out the loose
+     * lines for, which it then takes by how often a line is there.
+     */
+    static List<List<String>> ofLongFiles(long seed, int count) {
+        ThreeWayMergeCases cases = new ThreeWayMergeCases(seed)
+        List<List<String>> all = []
+        for (int index = 0; index < count; index++) {
+            List<String> base = []
+            for (int line = 0; line < 2600; line++) {
+                base << (cases.random.nextInt(10) < 6 ? 'U' + (cases.unique++) : cases.line(30))
+            }
+            for (int line = 0; line < 6; line++) {
+                base.set(line, 'U' + (cases.unique++))
+                base.set(base.size() - 1 - line, 'U' + (cases.unique++))
+            }
+            all << [text(base, true), text(cases.editedNearEnds(base, 'O', 1), true), text(cases.editedNearEnds(base, 'T', 3), true)]
+        }
+        return all
+    }
+
+    private List<String> editedNearEnds(List<String> base, String side, int at) {
+        List<String> lines = new ArrayList<>(base.subList(0, 6))
+        lines.addAll(edited(base.subList(6, base.size() - 6), side, 30, 3))
+        lines.addAll(base.subList(base.size() - 6, base.size()))
+        lines.set(at, side + (unique++))
+        lines.set(lines.size() - 1 - at, side + (unique++))
+        return lines
+    }
+
     /**
      * @return for each case the base, the file of the project and the file of the generator
      */

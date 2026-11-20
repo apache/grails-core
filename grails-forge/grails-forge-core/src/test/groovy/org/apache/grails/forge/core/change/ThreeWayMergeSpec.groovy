@@ -127,19 +127,68 @@ class ThreeWayMergeSpec extends Specification {
     }
 
     @Unroll
-    void "changes with a line between them are merged also when that line is like its neighbours: #what"() {
+    void "a line that is like others keeps no two changes apart: #what are a conflict"() {
         when:
         ThreeWayMerge merge = ThreeWayMerge.of(bytes(base), bytes(current), bytes(proposed))
 
         then:
-        merge.conflicts == 0
-        new String(merge.merged, StandardCharsets.UTF_8) == merged
+        merge.conflicts == 1
+        merge.merged == null
 
         where:
-        what                                        | base                  | current                     | proposed                   || merged
-        'lines on the two sides of an empty line'   | '{\na\n\nb\n\nc\n}\n' | '{\na\n\nb\nmine\n\nc\n}\n' | '{\na\n\nb\n\nnew\nc\n}\n' || '{\na\n\nb\nmine\n\nnew\nc\n}\n'
-        'lines on the two sides of a closing brace' | 'a\n}\n}\n'           | 'a\n}\nmine\n}\n'          | 'a\nnew\n}\n}\n'          || 'a\nnew\n}\nmine\n}\n'
-        'lines between and after two empty lines'   | 'a\n\n\nb\n'          | 'a\n\nmine\n\nb\n'         | 'a\n\n\nnew\nb\n'         || 'a\n\nmine\n\nnew\nb\n'
+        what                                        | base                  | current                     | proposed
+        'lines on the two sides of an empty line'   | '{\na\n\nb\n\nc\n}\n' | '{\na\n\nb\nmine\n\nc\n}\n' | '{\na\n\nb\n\nnew\nc\n}\n'
+        'lines on the two sides of a closing brace' | 'a\n}\n}\n'           | 'a\n}\nmine\n}\n'          | 'a\nnew\n}\n}\n'
+        'lines between and after two empty lines'   | 'a\n\n\nb\n'          | 'a\n\nmine\n\nb\n'         | 'a\n\n\nnew\nb\n'
+    }
+
+    void "the same change made by both in one place is a conflict when the files are not the same altogether, and shown as it is"() {
+        when: 'both added the same line, and each changed another place'
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes('first\n\n\nmiddle\nlast\n'), bytes('mine\nfirst\n\nsame\n\nmiddle\nlast\n'), bytes('first\n\nsame\n\nmiddle\nlast\nnew\n'))
+
+        then:
+        merge.conflicts == 1
+        merge.merged == null
+        merge.conflictingChanges[0].line == 3
+        merge.conflictingChanges[0].current == ['', 'same', '']
+        merge.conflictingChanges[0].proposed == ['', 'same', '']
+
+        when: 'the files are the same but for how their lines end'
+        merge = ThreeWayMerge.of(bytes('first\n\n\nmiddle\nlast\n'), bytes('first\r\n\r\nsame\r\n\r\nmiddle\r\nlast\r\n'), bytes('first\n\nsame\n\nmiddle\nlast\n'))
+
+        then:
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == 'first\r\n\r\nsame\r\n\r\nmiddle\r\nlast\r\n'
+    }
+
+    @Unroll
+    void "of a side that changed #changed lines in one stretch it is #tooLarge that it is not merged"() {
+        given:
+        List<String> generated = (0..<3000).collect { "line ${it}\n".toString() }
+        List<String> mine = (0..<replaced).collect { "mine ${it}\n".toString() } + generated.drop(replaced)
+        String withFeature = generated.take(2999).join('') + 'feature\n'
+
+        expect:
+        ThreeWayMerge.of(bytes(generated.join('')), bytes(mine.join('')), bytes(withFeature)).tooLarge == tooLarge
+
+        where:
+        replaced | changed || tooLarge
+        1000     | 2000    || false
+        1001     | 2002    || true
+    }
+
+    @Timeout(value = 600, unit = TimeUnit.SECONDS)
+    void "a file of 200,000 lines is merged, and one of a line more is not"() {
+        given:
+        String generated = (0..<200).collect { "line ${it}\n" }.join('')
+
+        expect:
+        ThreeWayMerge.of(bytes(generated), bytes('mine\n' * (count - 200) + generated), bytes(generated + 'feature\n')).tooLarge == tooLarge
+
+        where:
+        count   || tooLarge
+        200000  || false
+        200001  || true
     }
 
     void "the lines of a conflict are those of the two sides, without what they have alike, and the line of the file is said"() {

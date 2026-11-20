@@ -45,6 +45,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
+import java.nio.file.attribute.UserPrincipal
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.function.Consumer
@@ -77,12 +78,11 @@ import java.util.regex.Pattern
  * remove a file. A directory under {@code .grails/transactions} that no journal of this user names is
  * never read.</p>
  *
- * <p>When a file cannot be written, and when a change was interrupted and is found by its journal,
- * every file of the change is looked at before anything is done. A file that was written and is now
- * neither what it was nor what was written was changed by somebody else: then nothing is put back,
- * and the files are named. When every file is what the change wrote, the change was complete, and
- * only its journal is removed. Otherwise the files that were written are put back, and a file the
- * change had not come to is left as it is, whatever it is now.</p>
+ * <p>When a file cannot be written, the files the change wrote are put back, and a file it had not
+ * come to is left as it is. A change that was interrupted is found by its journal, and what is done
+ * about it goes by the digests of its files alone, see {@code settle}: complete when every file is
+ * what the change makes it, nothing to undo when every file is what it was, nothing put back when a
+ * file is neither, and the written files put back otherwise.</p>
  *
  * <p>The lock is between the commands that change a project. It does not keep an editor from writing
  * a file while the change is made.</p>
@@ -95,12 +95,12 @@ final class ProjectTransaction {
 
     private static final String LOCK = 'lock'
     private static final String JOURNAL = 'journal'
-    private static final String HEADER = 'grails-forge-transaction 2'
+    private static final String HEADER = 'grails-forge-transaction 3'
     private static final String STAGING = 'staging'
     private static final String END = 'end'
     private static final int MAX_JOURNAL = 16 * 1024 * 1024
     private static final int MAX_NAMED = 10
-    private static final Pattern PROJECT = Pattern.compile(/project (.+)/)
+    private static final Pattern PROJECT = Pattern.compile(/project ([A-Za-z0-9_-]+)/)
     private static final Pattern NAME = Pattern.compile(/id (t[0-9a-f]{24})/)
     private static final Pattern PUT = Pattern.compile(/put (\d{1,6}) (-|[0-9a-f]{64}) ([0-9a-f]{64}) (.+)/)
     private static final Pattern MADE = Pattern.compile(/dir (.+)/)
@@ -132,14 +132,44 @@ final class ProjectTransaction {
     }
 
     /**
-     * @param records the directory of the user the journals are kept in
+     * @param home the home directory of the user, which the journals are kept in
      * @return whether a change of the project was begun by this user and not ended
      */
-    static boolean isInterrupted(Path project, Path records) {
-        try {
-            return Files.exists(journal(project, records), LinkOption.NOFOLLOW_LINKS)
-        } catch (IOException ignored) {
+    static boolean isInterrupted(Path project, Path home) {
+        if (unusable(home) != null) {
+            // nothing is looked for where no record of this user can be: what is found by a home
+            // directory that is none, such as a relative one, could have come with the project
             return false
+        }
+        Path journal = journal(project, home, false)
+        return journal != null && Files.exists(journal, LinkOption.NOFOLLOW_LINKS)
+    }
+
+    /**
+     * @return whether a change of this user was interrupted and left the project half changed. A
+     * record of a change that had not begun to write, or whose every file is what it was before the
+     * change, as in a fresh checkout at the same path, or what the change makes of it, is in the way
+     * of nothing
+     */
+    static boolean isHalfMade(Path project, Path home) {
+        if (!isInterrupted(project, home)) {
+            return false
+        }
+        try {
+            Journal change = read(journal(project, home, false), project)
+            if (change.staging) {
+                return false
+            }
+            boolean asBefore = true
+            boolean asAfter = true
+            for (Put put : change.puts) {
+                String now = digest(target(project, put.path))
+                asBefore = asBefore && now == put.before
+                asAfter = asAfter && now == put.after
+            }
+            return !asBefore && !asAfter
+        } catch (IOException | IllegalArgumentException ignored) {
+            return true
         }
     }
 
@@ -147,15 +177,15 @@ final class ProjectTransaction {
      * @return the names of what is under {@code .grails/transactions} and is not of a change this
      * user began: it came with the project, or is left of a change another user did not end
      */
-    static List<String> strangers(Path project, Path records) {
+    static List<String> strangers(Path project, Path home) {
         Path directory = project.resolve('.grails').resolve('transactions')
         if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
             return []
         }
         String own = null
         try {
-            Path journal = journal(project, records)
-            if (Files.isRegularFile(journal, LinkOption.NOFOLLOW_LINKS)) {
+            Path journal = unusable(home) == null ? journal(project, home, false) : null
+            if (journal != null && Files.isRegularFile(journal, LinkOption.NOFOLLOW_LINKS)) {
                 own = read(journal, project).name
             }
         } catch (IOException | IllegalArgumentException ignored) {
@@ -180,14 +210,15 @@ final class ProjectTransaction {
     /**
      * Writes the files, all of them or none.
      *
-     * @param records the directory of the user the journals are kept in
+     * @param home the home directory of the user, which the journals are kept in
      * @param installed told the path of each file after it was written
      * @throws ProjectChangeException when the files could not be written; it says whether the project
      * is as it was
      */
-    static void run(Path project, Path records, List<Write> writes, Consumer<String> installed) {
+    static void run(Path project, Path home, List<Write> writes, Consumer<String> installed) {
+        usable(home)
         locked(project) {
-            Path journal = own(project, records)
+            Path journal = journal(project, usable(home), true)
             if (Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ProjectChangeException('An earlier change of the project was interrupted; it has to be undone before the project is changed again')
             }
@@ -227,7 +258,7 @@ final class ProjectTransaction {
                 if (failure != null) {
                     ProjectRecovery undone
                     try {
-                        undone = settle(project, journal, change, false) { String path -> }
+                        undone = settle(project, journal, change, index) { String path -> }
                     } catch (ProjectChangeException e) {
                         throw new ProjectChangeException("${failure}, and the files that were written could not be put back: ${e.getMessage()}", cause)
                     }
@@ -238,6 +269,14 @@ final class ProjectTransaction {
                 // does when the program ends here, and is undone by recover
                 installed.accept(write.path)
             }
+            // the names of the new files reach the disk before the journal, by which they could be put back, is removed
+            Set<Path> written = new LinkedHashSet<>()
+            for (Write write : writes) {
+                written.add(target(project, write.path).getParent())
+            }
+            for (Path each : written) {
+                force(each)
+            }
             finish(directory, journal)
             return null
         }
@@ -247,20 +286,21 @@ final class ProjectTransaction {
      * Ends a change that was interrupted: undoes it, or removes its journal when every file of it
      * was written.
      *
-     * @param records the directory of the user the journals are kept in
+     * @param home the home directory of the user, which the journals are kept in
      * @param restored told the path of each file after it was put back
      * @throws ProjectChangeException when the change cannot be undone, in which case nothing was
      * put back
      */
-    static ProjectRecovery recover(Path project, Path records, Consumer<String> restored) {
-        List<String> others = strangers(project, records)
-        if (!isInterrupted(project, records)) {
-            return new ProjectRecovery(false, false, [], [], others)
+    static ProjectRecovery recover(Path project, Path home, Consumer<String> restored) {
+        usable(home)
+        List<String> others = strangers(project, home)
+        if (!isInterrupted(project, home)) {
+            return new ProjectRecovery(false, false, false, [], [], others)
         }
         return locked(project) {
-            Path journal = own(project, records)
-            if (!Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
-                return new ProjectRecovery(false, false, [], [], others)
+            Path journal = journal(project, home, false)
+            if (journal == null || !Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
+                return new ProjectRecovery(false, false, false, [], [], others)
             }
             Journal change
             try {
@@ -272,73 +312,95 @@ final class ProjectTransaction {
                 throw new ProjectChangeException('The record of a change of the project that was interrupted cannot be read; restore the project from version control ' +
                         'and ' + removal(journal), e)
             }
-            ProjectRecovery recovery = settle(project, journal, change, true, restored)
-            return new ProjectRecovery(recovery.undone, recovery.completed, recovery.putBack, recovery.keptAsTheyAre, strangers(project, records))
+            ProjectRecovery recovery = settle(project, journal, change, -1, restored)
+            return new ProjectRecovery(recovery.undone, recovery.completed, recovery.discarded, recovery.putBack, recovery.keptAsTheyAre, strangers(project, home))
         }
     }
 
-    // The end of a change that did not come to its end: see the class. Nothing is put back before
-    // every file of the change was looked at
-    private static ProjectRecovery settle(Path project, Path journal, Journal change, boolean found, Consumer<String> restored) {
+    /**
+     * The end of a change that did not come to its end. Every file of the change is looked at before
+     * anything is done, and what is done goes by what the files are, not by what is left of the
+     * change in its directory:
+     *
+     * <ul>
+     * <li>every file is what the change makes it: the change is complete, by whoever completed it,
+     * and only its journal and its directory are removed;</li>
+     * <li>every file is what it was before the change: nothing is to undo, and the journal and the
+     * directory are removed;</li>
+     * <li>a file is neither: it was changed by somebody else. Nothing is put back, and the files are
+     * named;</li>
+     * <li>otherwise some files are what the change makes them and the others what they were: the
+     * first are put back from their copies, each of which has to be what the file was.</li>
+     * </ul>
+     *
+     * @param reached for a change that fails while it is made, how many of its files it wrote: only
+     * those are looked at and put back, and a file it had not come to is left as it is, whatever it
+     * is now; -1 for a change that is found by its journal
+     */
+    private static ProjectRecovery settle(Path project, Path journal, Journal change, int reached, Consumer<String> restored) {
         Path directory = project.resolve('.grails').resolve('transactions').resolve(change.name)
         if (change.staging) {
             // the change ended before its journal was written: nothing of the project was touched
             abandon(directory, journal)
-            return new ProjectRecovery(false, false, [], [], [])
+            return new ProjectRecovery(false, false, true, [], [], [])
         }
-        boolean there = Files.exists(directory, LinkOption.NOFOLLOW_LINKS)
         for (Path each : [directory, directory.resolve('new'), directory.resolve('backup'), directory.resolve('after')]) {
             if (Files.exists(each, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(each, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ProjectChangeException("${DIRECTORY}/${change.name}, where the change that was interrupted keeps the files it replaced, is not the directory " +
                         'it was; nothing was put back. Restore the project from version control and ' + removal(journal))
             }
         }
-        if (found) {
-            permitted(project, directory, change, journal)
-        }
         List<Put> written = []
-        List<String> edited = []
+        List<String> neither = []
         List<String> kept = []
-        boolean all = true
+        boolean allAfter = true
+        boolean allBefore = true
         try {
             for (Put put : change.puts) {
-                Path target = target(project, put.path)
-                String now = digest(target)
-                boolean staged = there && Files.exists(directory.resolve('new').resolve(String.valueOf(put.index)), LinkOption.NOFOLLOW_LINKS)
-                if (staged) {
-                    // the change had not come to this file
-                    all = false
+                String now = digest(target(project, put.path))
+                // a file of which only the mode changes is what it was and what it becomes at once: its copy says which
+                boolean copied = Files.isRegularFile(directory.resolve('backup').resolve(String.valueOf(put.index)), LinkOption.NOFOLLOW_LINKS)
+                if (reached >= 0 && put.index >= reached) {
                     if (now != put.before) {
                         kept << put.path
                     }
-                } else if (now == put.after) {
+                } else if (now == put.after && (put.before != put.after || copied)) {
                     written << put
+                    allBefore = false
                 } else if (now == put.before) {
-                    all = false
+                    allAfter = allAfter && put.before == put.after
                 } else {
-                    edited << put.path
+                    neither << put.path
                 }
             }
         } catch (IOException e) {
             throw new ProjectChangeException("The files of the change that was interrupted cannot be read (${e.getClass().getSimpleName()}); nothing was put back", e)
         }
-        if (!edited.isEmpty()) {
-            throw new ProjectChangeException("${edited.size() == 1 ? 'A file' : 'Files'} the change wrote ${edited.size() == 1 ? 'was' : 'were'} changed since: " +
-                    "${named(edited)}. Nothing was put back. Put ${edited.size() == 1 ? 'it' : 'each'} back as it was before the change (the files that were replaced " +
-                    "are kept in ${DIRECTORY}/${change.name}/backup, and a file that was new is to be removed), or as the change wrote it, and run the command again; " +
+        if (!neither.isEmpty()) {
+            throw new ProjectChangeException("${neither.size() == 1 ? 'A file' : 'Files'} of a change that was interrupted ${neither.size() == 1 ? 'is' : 'are'} neither what " +
+                    "${neither.size() == 1 ? 'it was' : 'they were'} before the change nor what the change makes of ${neither.size() == 1 ? 'it' : 'them'}: " +
+                    "${named(neither)}. Nothing was put back. Make ${neither.size() == 1 ? 'it' : 'each'} what it was before the change (the files that were replaced " +
+                    "are kept in ${DIRECTORY}/${change.name}/backup, and a file that was new is to be removed), or what the change makes of it, and run the command again; " +
                     'or restore the project from version control and ' + removal(journal))
         }
-        if (all) {
-            // every file is what the change wrote: all that was missing is the end of its journal
+        if (reached < 0 && allAfter) {
+            // every file is what the change makes it: all that was missing is the end of its journal
             finish(directory, journal)
-            return new ProjectRecovery(false, true, [], [], [])
+            return new ProjectRecovery(false, true, false, [], [], [])
+        }
+        if (reached < 0 && allBefore) {
+            // nothing of this tree was changed: the journal is of a change that was undone by other
+            // means, or of another checkout at this path
+            abandon(directory, journal)
+            return new ProjectRecovery(false, false, true, [], [], [])
+        }
+        if (reached < 0) {
+            permitted(project, directory, change, journal)
         }
         try {
             for (Put put : written) {
                 Path backup = directory.resolve('backup').resolve(String.valueOf(put.index))
-                boolean copied = Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)
-                // a file of which only the mode was changed is what it was also once it is put back
-                if (put.before != null && !(put.before == put.after && !copied) && !(copied && digest(backup) == put.before)) {
+                if (put.before != null && !(Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS) && digest(backup) == put.before)) {
                     throw new ProjectChangeException("The copy of ${put.path} that was kept in ${DIRECTORY}/${change.name}/backup is not what the file was; nothing was " +
                             'put back. Restore the project from version control and ' + removal(journal))
                 }
@@ -346,13 +408,10 @@ final class ProjectTransaction {
             List<String> putBack = []
             for (Put put : written.reverse()) {
                 Path target = target(project, put.path)
-                Path backup = directory.resolve('backup').resolve(String.valueOf(put.index))
                 if (put.before == null) {
                     Files.delete(target)
-                } else if (Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)) {
-                    move(backup, target)
                 } else {
-                    continue
+                    move(directory.resolve('backup').resolve(String.valueOf(put.index)), target)
                 }
                 putBack << put.path
                 restored.accept(put.path)
@@ -368,7 +427,7 @@ final class ProjectTransaction {
                 }
             }
             finish(directory, journal)
-            return new ProjectRecovery(true, false, putBack.reverse(), kept, [])
+            return new ProjectRecovery(true, false, false, putBack.reverse(), kept, [])
         } catch (IOException e) {
             throw new ProjectChangeException("A file of the change that was interrupted could not be put back (${e.getClass().getSimpleName()}); run the command again", e)
         }
@@ -505,7 +564,8 @@ final class ProjectTransaction {
     // project is replaced
     private static void record(Path journal, Journal change, boolean complete) throws IOException {
         StringBuilder text = new StringBuilder(HEADER).append('\n')
-        text.append("project ${change.project}\n")
+        // the path of a project can have any character, also one that ends a line
+        text.append("project ${Base64.getUrlEncoder().withoutPadding().encodeToString(change.project.getBytes(StandardCharsets.UTF_8))}\n")
         text.append("id ${change.name}\n")
         if (complete) {
             for (Put put : change.puts) {
@@ -542,10 +602,14 @@ final class ProjectTransaction {
         String last = lines[lines.size() - 2]
         // the journal is found by the path of the project and says it again: a journal that was put
         // where another project's is looked for is not that project's
-        if (!of.matches() || !name.matches() || of.group(1) != project.toRealPath().toString() || !(last in [STAGING, END])) {
+        if (!of.matches() || !name.matches() || !(last in [STAGING, END])) {
             throw new IllegalArgumentException('not a journal')
         }
-        Journal change = new Journal(of.group(1), name.group(1))
+        String path = new String(Base64.getUrlDecoder().decode(of.group(1)), StandardCharsets.UTF_8)
+        if (path != project.toRealPath().toString()) {
+            throw new IllegalArgumentException('not a journal of this project')
+        }
+        Journal change = new Journal(path, name.group(1))
         change.staging = last == STAGING
         Set<Integer> seen = new HashSet<>()
         for (String line : lines.subList(3, lines.size() - 2)) {
@@ -578,50 +642,99 @@ final class ProjectTransaction {
         return sha256(project.getBytes(StandardCharsets.UTF_8))
     }
 
-    // where the journal of a project is, whether or not there is one
-    private static Path journal(Path project, Path records) throws IOException {
-        return records.resolve(key(project.toRealPath().toString())).resolve(JOURNAL)
+    /**
+     * @return why a home directory cannot keep the records of changes, or {@code null} for one that
+     * can: it is an absolute path of a directory that is there and, where the file system says whose
+     * a directory is, that of this user. A home directory that is none, as the {@code ?} a user
+     * without an entry has in a container, would be looked for in the current directory, which is
+     * the project
+     */
+    static String unusable(Path home) {
+        try {
+            if (home == null || !home.isAbsolute()) {
+                return 'it is not an absolute path'
+            }
+            if (!Files.isDirectory(home)) {
+                return 'there is no such directory'
+            }
+            if (home.getFileSystem().supportedFileAttributeViews().contains('posix') && Files.getOwner(home.toRealPath()) != self()) {
+                return 'the directory is not that of the user who runs the command'
+            }
+            return null
+        } catch (IOException e) {
+            return "it cannot be read (${e.getClass().getSimpleName()})"
+        }
+    }
+
+    private static Path usable(Path home) {
+        String reason = unusable(home)
+        if (reason != null) {
+            throw new ProjectChangeException('Adding a feature needs a home directory to keep the record of the change in, and the one the system property user.home ' +
+                    "names cannot be used: ${reason}. Nothing of the project was changed")
+        }
+        return home
+    }
+
+    private static UserPrincipal whoRuns
+
+    // whose the files are that this program makes
+    private static synchronized UserPrincipal self() throws IOException {
+        if (whoRuns == null) {
+            Path probe = Files.createTempFile('grails-forge', '.owner')
+            try {
+                whoRuns = Files.getOwner(probe, LinkOption.NOFOLLOW_LINKS)
+            } finally {
+                Files.delete(probe)
+            }
+        }
+        return whoRuns
     }
 
     /**
-     * The journal of a project, in a directory that is made for it when it is not there. Every
-     * directory on the way has to be one, and where the file system says whose a file is and who may
-     * write it, the directory of the journals has to be the user's own and writable by nobody else.
+     * Where the journal of a project is: {@code .grails/forge/transactions/<digest of the path of the
+     * project>/journal} in the home directory. Every directory on the way that is there has to be a
+     * directory and not a link and, where the file system says so, that of this user and writable by
+     * nobody else; one that is made is made for the user alone.
+     *
+     * @param make whether the directories that are not there are made
+     * @return the journal, or {@code null} when a directory is not there and none is made
+     * @throws ProjectChangeException for a directory that is not what it has to be
      */
-    private static Path own(Path project, Path records) {
+    private static Path journal(Path project, Path home, boolean make) {
         try {
-            boolean posix = records.getFileSystem().supportedFileAttributeViews().contains('posix')
+            boolean posix = home.getFileSystem().supportedFileAttributeViews().contains('posix')
             FileAttribute<?>[] ofDirectory = posix ? [PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------'))] as FileAttribute<?>[] :
                     new FileAttribute<?>[0]
-            Path journal = journal(project, records)
-            if (!Files.exists(records, LinkOption.NOFOLLOW_LINKS)) {
-                Files.createDirectories(records.getParent())
-            }
-            for (Path directory : [records, journal.getParent()]) {
-                try {
-                    Files.createDirectory(directory, ofDirectory)
-                } catch (FileAlreadyExistsException ignored) {
-                    // made before, or by a command that runs beside this one
+            Path directory = home
+            for (String step : ['.grails', 'forge', 'transactions', key(project.toRealPath().toString())]) {
+                directory = directory.resolve(step)
+                if (!Files.exists(directory, LinkOption.NOFOLLOW_LINKS)) {
+                    if (!make) {
+                        return null
+                    }
+                    try {
+                        Files.createDirectory(directory, ofDirectory)
+                    } catch (FileAlreadyExistsException ignored) {
+                        // made by a command that runs beside this one
+                    }
                 }
                 if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
-                    throw new IOException('Not a directory')
+                    throw new IOException("${home.relativize(directory).join('/')} is not a directory")
                 }
                 if (posix) {
-                    // whose the directory is, is seen by a file this user makes in it
-                    Path probe = Files.createTempFile(directory, 'own', null)
                     Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(directory, LinkOption.NOFOLLOW_LINKS)
-                    boolean own = Files.getOwner(directory, LinkOption.NOFOLLOW_LINKS) == Files.getOwner(probe, LinkOption.NOFOLLOW_LINKS)
-                    Files.delete(probe)
-                    if (!own || permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
-                        throw new IOException('Not a directory of the user alone')
+                    if (Files.getOwner(directory, LinkOption.NOFOLLOW_LINKS) != self()) {
+                        throw new IOException("${home.relativize(directory).join('/')} is not a directory of the user who runs the command")
+                    }
+                    if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+                        throw new IOException("${home.relativize(directory).join('/')} can be written by others than the user")
                     }
                 }
             }
-            return journal
+            return directory.resolve(JOURNAL)
         } catch (IOException e) {
-            throw new ProjectChangeException('The directory the records of changes are kept in, .grails/forge/transactions in the home directory of the user, cannot be used ' +
-                    "(${e.getMessage() in ['Not a directory', 'Not a directory of the user alone'] ? e.getMessage() : e.getClass().getSimpleName()}); " +
-                    'nothing of the project was changed', e)
+            throw new ProjectChangeException('The directory the records of changes are kept in, .grails/forge/transactions in the home directory of the user, cannot be used: ' +
+                    "${e.getMessage()?.startsWith('.grails') ? e.getMessage() : e.getClass().getSimpleName()}. Nothing of the project was changed", e)
         }
     }
 

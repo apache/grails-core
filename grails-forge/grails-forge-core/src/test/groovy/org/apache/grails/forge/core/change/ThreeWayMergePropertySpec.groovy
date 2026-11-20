@@ -24,23 +24,27 @@ import spock.lang.Shared
 import spock.lang.Specification
 
 /**
- * What holds of every merge, on a few thousand files made from a seed ({@link ThreeWayMergeCases}),
- * most of them with lines that repeat and with empty lines, where it is least clear which line a
- * change is next to.
+ * What holds of every merge, on files made from seeds ({@link ThreeWayMergeCases}): a few thousand
+ * short ones of several seeds, most of them with lines that repeat and with empty lines, where it is
+ * least clear which line a change is next to, and a few long ones that are lined up whole, for which
+ * the merge takes the lines it goes by in the cheaper way.
  *
  * <p>The reference is what {@code git merge-file -p} (Git 2.x, its default settings) made of the same
  * cases, kept in {@code three-way-merge-reference.txt}: for each case, in order, {@code X} for a
- * conflict or the first 16 digits of the SHA-256 of what it merged. The merge here is to be no bolder
- * than that one: never a result where it has a conflict, and never another result. It may have a
- * conflict where that one merges. The file was written once, with Git; the spec does not need Git.</p>
+ * conflict, {@code S} for a conflict in which the two sides have the same lines in every place and
+ * that is those lines, or the first 16 digits of the SHA-256 of what it merged. The merge here is to
+ * be no bolder than that one: a result only where that one has a result, and the same one, but for
+ * {@code S}: where both sides have the same lines between two lines that can only be lined up one
+ * way, those lines are the result here, also where Git, which lines the two sides up apart, has a
+ * conflict of two equal halves. The merge may have a conflict where that one merges. The file was
+ * written once, with Git; the spec does not need Git.</p>
  */
 class ThreeWayMergePropertySpec extends Specification {
 
-    static final long SEED = 20261120L
-    static final int CASES = 4000
-
     @Shared
-    List<List<byte[]>> cases = ThreeWayMergeCases.of(SEED, CASES).collect { List<String> each -> each.collect { String text -> text.getBytes(StandardCharsets.ISO_8859_1) } }
+    List<List<byte[]>> cases = ThreeWayMergeCases.ofReference().collect { List<String> each -> each.collect { String text -> text.getBytes(StandardCharsets.ISO_8859_1) } }
+
+    static final int CASES = ThreeWayMergeCases.SEEDS.size() * ThreeWayMergeCases.CASES + ThreeWayMergeCases.LONG_CASES
 
     @Shared
     List<String> reference = getClass().getResourceAsStream('/three-way-merge-reference.txt').readLines('UTF-8').findAll { !it.startsWith('#') && !it.isEmpty() }
@@ -71,12 +75,12 @@ class ThreeWayMergePropertySpec extends Specification {
         wrong == []
     }
 
-    void "there is a result or there are conflicts, never both and never neither, and every conflict has the lines of a side"() {
+    void "there is a result or there are conflicts, never both and never neither, and every conflict has its place"() {
         when:
         List<Integer> wrong = (0..<CASES).findAll { int index ->
             ThreeWayMerge merge = ThreeWayMerge.of(cases[index][0], cases[index][1], cases[index][2])
             (merge.merged == null) != (merge.conflicts > 0) || merge.tooLarge || merge.conflictingChanges.size() != merge.conflicts ||
-                    merge.conflictingChanges.any { it.current.isEmpty() && it.proposed.isEmpty() }
+                    merge.conflictingChanges.any { it.current.isEmpty() && it.proposed.isEmpty() && it.line < 1 }
         }
 
         then:
@@ -104,6 +108,7 @@ class ThreeWayMergePropertySpec extends Specification {
         List<Integer> mergedWhereTheReferenceHasAConflict = []
         List<Integer> mergedToSomethingElse = []
         int merged = 0
+        int sameOnBothSides = 0
         int conflictWhereTheReferenceMerges = 0
         (0..<CASES).each { int index ->
             ThreeWayMerge merge = ThreeWayMerge.of(cases[index][0], cases[index][1], cases[index][2])
@@ -111,10 +116,20 @@ class ThreeWayMergePropertySpec extends Specification {
                 merged++
                 if (reference[index] == 'X') {
                     mergedWhereTheReferenceHasAConflict << index
+                } else if (reference[index].startsWith('S')) {
+                    sameOnBothSides++
+                    // but for the line feeds at its end, which the reference adds to a side that has none
+                    int end = merge.merged.length
+                    while (end > 0 && merge.merged[end - 1] == (byte) 10) {
+                        end--
+                    }
+                    if (MessageDigest.getInstance('SHA-256').digest(Arrays.copyOf(merge.merged, end)).encodeHex().toString().substring(0, 16) != reference[index].substring(1)) {
+                        mergedToSomethingElse << index
+                    }
                 } else if (MessageDigest.getInstance('SHA-256').digest(merge.merged).encodeHex().toString().substring(0, 16) != reference[index]) {
                     mergedToSomethingElse << index
                 }
-            } else if (reference[index] != 'X') {
+            } else if (reference[index] != 'X' && !reference[index].startsWith('S')) {
                 conflictWhereTheReferenceMerges++
             }
         }
@@ -126,10 +141,16 @@ class ThreeWayMergePropertySpec extends Specification {
         and: 'most cases are merged, so the comparison is of something: the numbers are those of the day the reference was written'
         merged == MERGED
         conflictWhereTheReferenceMerges == MORE_CAREFUL
+        sameOnBothSides == SAME_ON_BOTH_SIDES
+
+        and: 'the long files among them, which are merged or not as the short ones are'
+        (CASES - ThreeWayMergeCases.LONG_CASES..<CASES).count { ThreeWayMerge.of(cases[it][0], cases[it][1], cases[it][2]).conflicts == 0 } == LONG_MERGED
     }
 
-    static final int MERGED = 2545
-    static final int MORE_CAREFUL = 249
+    static final int MERGED = 4188
+    static final int MORE_CAREFUL = 973
+    static final int SAME_ON_BOTH_SIDES = 0
+    static final int LONG_MERGED = 12
 
     private static boolean clean(ThreeWayMerge merge, byte[] expected) {
         return merge.conflicts == 0 && Arrays.equals(merge.merged, expected)

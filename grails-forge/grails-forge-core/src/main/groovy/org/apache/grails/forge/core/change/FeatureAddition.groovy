@@ -82,25 +82,26 @@ final class FeatureAddition {
     private static final int MAX_QUOTED_LINE = 160
 
     private final ProjectGenerator generator
-    private final Path records
+    private final Path home
 
     /**
      * @param generator the generator of the applications
      */
     FeatureAddition(ProjectGenerator generator) {
-        this(generator, Path.of(System.getProperty('user.home'), '.grails', 'forge', 'transactions'))
+        this(generator, Path.of(System.getProperty('user.home') ?: ''))
     }
 
     /**
      * @param generator the generator of the applications
-     * @param records the directory the record of a change is kept in while the change is made, which
-     * is how a change that was interrupted is found again. It is a directory of whoever runs the
-     * command and not of the project: what a project comes with never says that there is a change to
-     * undo. Without it, it is {@code .grails/forge/transactions} in the home directory of the user
+     * @param home the home directory of whoever runs the command. The journal of a change is kept in
+     * it while the change is made, under {@code .grails/forge/transactions}, which is how a change
+     * that was interrupted is found again: what a project comes with never says that there is a
+     * change to undo. It has to be an absolute path of a directory of the user; with another, nothing
+     * is looked for and nothing is changed
      */
-    FeatureAddition(ProjectGenerator generator, Path records) {
+    FeatureAddition(ProjectGenerator generator, Path home) {
         this.generator = generator
-        this.records = records
+        this.home = home
     }
 
     /**
@@ -124,7 +125,7 @@ final class FeatureAddition {
      * @see #recover(Path)
      */
     ProjectRecovery recover(Path projectDirectory, Consumer<String> putBack) {
-        return ProjectTransaction.recover(projectDirectory, records, putBack)
+        return ProjectTransaction.recover(projectDirectory, home, putBack)
     }
 
     /**
@@ -139,7 +140,7 @@ final class FeatureAddition {
      * @throws ProjectChangeException when features cannot be added to this project, or not these
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console) {
-        if (ProjectTransaction.isInterrupted(projectDirectory, records)) {
+        if (ProjectTransaction.isHalfMade(projectDirectory, home)) {
             throw new ProjectChangeException('An earlier change of the project was interrupted; it is undone when a feature is added without --dry-run and --diff, ' +
                     'and has to be before anything else is done')
         }
@@ -183,7 +184,7 @@ final class FeatureAddition {
             }
         }
         if (toAdd.isEmpty()) {
-            return new ChangePlan(projectDirectory, records, [], alreadyThere.unique(), [], [], [], null, [], [])
+            return new ChangePlan(projectDirectory, home, [], alreadyThere.unique(), [], [], [], null, [], [])
         }
 
         byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
@@ -271,7 +272,7 @@ final class FeatureAddition {
             files << new PlannedFile(path, Action.REMOVE, null, generated.binary, working.content, new byte[0], null, before.content(path), new byte[0], [])
         }
         List<String> had = lock.featureNames
-        return new ChangePlan(projectDirectory, records, toAdd, alreadyThere.unique(), proposed.lock.featureNames.findAll { String name -> !had.contains(name) },
+        return new ChangePlan(projectDirectory, home, toAdd, alreadyThere.unique(), proposed.lock.featureNames.findAll { String name -> !had.contains(name) },
                 files.sort(false) { PlannedFile file -> file.path }, writes, refusal, lostFeatures, changedOptions)
     }
 
@@ -439,6 +440,13 @@ final class FeatureAddition {
     private static List<String> places(ThreeWayMerge merge) {
         List<String> lines = []
         for (ThreeWayMerge.Conflict place : merge.getConflictingChanges().take(MAX_PLACES)) {
+            if (place.current == place.proposed) {
+                // the same change, made by hand in this place and not in every place the feature changes
+                lines << (place.current.isEmpty() ? "before line ${place.line} the project removed the lines the feature removes there too, and has not all of what the feature changes" :
+                        "from line ${place.line} the project has what the feature has there too, and not all of what the feature changes:").toString()
+                lines.addAll(quoted(place.current))
+                continue
+            }
             lines << (place.current.isEmpty() ? "before line ${place.line} the project removed lines, and the feature has there:" :
                     "at line ${place.line} the project has:").toString()
             if (!place.current.isEmpty()) {
@@ -451,7 +459,7 @@ final class FeatureAddition {
             lines << "and ${merge.getConflicts() - MAX_PLACES} more places".toString()
         }
         lines << 'Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, ' +
-                'at least one unchanged line away (or take them out), add the feature again, and then put them where they belong'
+                'with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong'
         return lines
     }
 

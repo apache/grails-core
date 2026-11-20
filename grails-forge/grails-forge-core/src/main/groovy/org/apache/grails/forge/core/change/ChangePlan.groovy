@@ -18,8 +18,12 @@
  */
 package org.apache.grails.forge.core.change
 
-import com.github.difflib.DiffUtils
 import com.github.difflib.UnifiedDiffUtils
+import com.github.difflib.patch.ChangeDelta
+import com.github.difflib.patch.Chunk
+import com.github.difflib.patch.DeleteDelta
+import com.github.difflib.patch.InsertDelta
+import com.github.difflib.patch.Patch
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.apache.grails.forge.core.change.ProjectTransaction.Write
@@ -141,14 +145,14 @@ final class ChangePlan {
     final List<String> changedOptions
 
     private final Path project
-    private final Path records
+    private final Path home
     private final List<Write> state
 
     @PackageScope
-    ChangePlan(Path project, Path records, List<String> requested, List<String> alreadyThere, List<String> added, List<PlannedFile> files, List<Write> state,
+    ChangePlan(Path project, Path home, List<String> requested, List<String> alreadyThere, List<String> added, List<PlannedFile> files, List<Write> state,
                String refusal, List<String> lostFeatures, List<String> changedOptions) {
         this.project = project
-        this.records = records
+        this.home = home
         this.refusal = refusal
         this.lostFeatures = Collections.unmodifiableList(new ArrayList<String>(lostFeatures))
         this.changedOptions = Collections.unmodifiableList(new ArrayList<String>(changedOptions))
@@ -223,14 +227,23 @@ final class ChangePlan {
             lines << "Binary file ${file.path} ${removal ? 'is removed' : from == null ? 'is added' : 'changes'}".toString()
             return lines
         }
-        if (from != null && !ThreeWayMerge.isComparable(from, to)) {
+        List<String> before = from == null ? [] as List<String> : text(from)
+        List<String> after = text(to)
+        // the changes are worked out within the bounds of the merge, whatever the files are
+        List<int[]> changes = before.size() > ThreeWayMerge.MAX_LINES || after.size() > ThreeWayMerge.MAX_LINES ? null : ThreeWayMerge.changes(before, after)
+        if (changes == null) {
             lines << "${file.path}: the file differs in more lines than are shown".toString()
             return lines
         }
-        List<String> before = from == null ? [] as List<String> : text(from)
-        List<String> after = text(to)
+        Patch<String> patch = new Patch<>()
+        for (int[] change : changes) {
+            Chunk<String> removed = new Chunk<>(change[0], new ArrayList<String>(before.subList(change[0], change[1])))
+            Chunk<String> added = new Chunk<>(change[2], new ArrayList<String>(after.subList(change[2], change[3])))
+            patch.addDelta(removed.size() == 0 ? new InsertDelta<String>(removed, added) : added.size() == 0 ? new DeleteDelta<String>(removed, added) :
+                    new ChangeDelta<String>(removed, added))
+        }
         List<String> unified = UnifiedDiffUtils.generateUnifiedDiff(from == null ? '/dev/null' : 'a/' + file.path, removal ? '/dev/null' : 'b/' + file.path,
-                before, DiffUtils.diff(before, after), 3)
+                before, patch, 3)
         if (unified.isEmpty()) {
             lines << "${file.path}: whether the file can be executed changes".toString()
         }
@@ -293,6 +306,6 @@ final class ChangePlan {
             }
         }
         writes.addAll(state)
-        ProjectTransaction.run(project, records, writes, written)
+        ProjectTransaction.run(project, home, writes, written)
     }
 }

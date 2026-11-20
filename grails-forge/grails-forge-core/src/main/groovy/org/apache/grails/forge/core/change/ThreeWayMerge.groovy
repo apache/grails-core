@@ -28,15 +28,15 @@ import java.nio.charset.StandardCharsets
  * current file with the changes the generator made between the base and the proposed file.
  *
  * <p>The files are compared line by line, a line that ends with CR LF being the line that ends with
- * LF. A change of the generator that touches no line the project changed, and no line next to one, is
- * taken; where the two changed the same lines, or lines next to each other, in different ways, there
- * is a conflict and no result. The same change made by both is no conflict.</p>
- *
- * <p>Where lines repeat, two files can be lined up in more than one way, and nothing says which line
- * a change is next to. A change therefore counts as touching every line beside it that is like a line
- * it adds or removes, and every line beside it that not every shortest list of changes keeps; and a
- * line that is removed in one place and added a few lines away counts as one change with the lines
- * between. Two changes are then not merged by the accident of how the lines were lined up.</p>
+ * LF. Where lines repeat, two files can be lined up in more than one way, and nothing says which line
+ * a change is next to. The merge therefore goes by the lines that can only be lined up one way, its
+ * <em>anchors</em>: a line that is there exactly once in each of the three files, that neither side
+ * changed, and that every shortest list of changes between the base and each side keeps. The anchors
+ * cut the files into stretches. A stretch only one side changed is taken as that side has it. A
+ * stretch both changed is a conflict, also when the two have the same lines in it: only two files
+ * that are the same file altogether are merged to that file. Two changes are merged only when an
+ * anchor is between them, never by the accident of how lines that are alike were lined up; an empty
+ * line or a closing brace keeps no two changes apart.</p>
  *
  * <p>The lines of the current file are kept byte for byte, with the line endings they have. The lines
  * the generator adds end as the lines of the current file do when all of those end with CR LF, and as
@@ -161,7 +161,57 @@ final class ThreeWayMerge {
             return false
         }
         Map<String, Integer> numbers = new HashMap<>()
-        return edits(keys(lines(first), numbers), keys(lines(second), numbers)) != null
+        return script(keys(lines(first), numbers), keys(lines(second), numbers)) != null
+    }
+
+    /**
+     * The shortest list of changes that makes one list of lines of another, within the bounds of the
+     * merge.
+     *
+     * @return each change as the lines it replaces of the first list, from and to, and the lines of
+     * the second in their place, from and to; or {@code null} for lists that differ in more than
+     * {@link #MAX_CHANGED} lines in more than one place
+     */
+    static List<int[]> changes(List<String> first, List<String> second) {
+        Map<String, Integer> numbers = new HashMap<>()
+        Script script = script(numbered(first, numbers), numbered(second, numbers))
+        return script == null ? null : script.edits.collect { Edit edit -> [edit.start, edit.end, edit.changedStart, edit.changedEnd] as int[] }
+    }
+
+    private static int[] numbered(List<String> lines, Map<String, Integer> numbers) {
+        int[] keys = new int[lines.size()]
+        for (int index = 0; index < keys.length; index++) {
+            Integer number = numbers.get(lines[index])
+            if (number == null) {
+                number = numbers.size()
+                numbers.put(lines[index], number)
+            }
+            keys[index] = number
+        }
+        return keys
+    }
+
+    // The lines of the base that can only be lined up one way: once in each file, changed by neither
+    // side, and kept by every shortest list of changes of both
+    private static boolean[] anchors(int[] base, int[] current, int[] proposed, int numbers, Script toCurrent, Script toProposed) {
+        int[] inBase = new int[numbers]
+        int[] inCurrent = new int[numbers]
+        int[] inProposed = new int[numbers]
+        for (int line : base) {
+            inBase[line]++
+        }
+        for (int line : current) {
+            inCurrent[line]++
+        }
+        for (int line : proposed) {
+            inProposed[line]++
+        }
+        boolean[] anchors = new boolean[base.length]
+        for (int index = 0; index < base.length; index++) {
+            int line = base[index]
+            anchors[index] = inBase[line] == 1 && inCurrent[line] == 1 && inProposed[line] == 1 && !toCurrent.loose[index] && !toProposed.loose[index]
+        }
+        return anchors
     }
 
     static ThreeWayMerge of(byte[] base, byte[] current, byte[] proposed) {
@@ -175,10 +225,26 @@ final class ThreeWayMerge {
         int[] baseKeys = keys(lines(base), numbers)
         int[] currentKeys = keys(currentLines, numbers)
         int[] proposedKeys = keys(proposedLines, numbers)
-        List<Edit> ofProposed = edits(baseKeys, proposedKeys)
-        List<Edit> ofCurrent = ofProposed == null ? null : edits(baseKeys, currentKeys)
-        if (ofCurrent == null) {
+        if (Arrays.equals(currentKeys, proposedKeys)) {
+            // the project has the file as it is generated now, but perhaps for how its lines end
+            return new ThreeWayMerge(current, [], false)
+        }
+        Script toProposed = script(baseKeys, proposedKeys)
+        Script toCurrent = toProposed == null ? null : script(baseKeys, currentKeys)
+        if (toCurrent == null) {
             return new ThreeWayMerge(null, [], true)
+        }
+        List<Edit> ofProposed = toProposed.edits
+        List<Edit> ofCurrent = toCurrent.edits
+        // a change reaches from the anchor before it to the anchor after it
+        boolean[] anchors = anchors(baseKeys, currentKeys, proposedKeys, numbers.size(), toCurrent, toProposed)
+        for (Edit edit : ofProposed + ofCurrent) {
+            while (edit.from > 0 && !anchors[edit.from - 1]) {
+                edit.from--
+            }
+            while (edit.to < baseKeys.length && !anchors[edit.to]) {
+                edit.to++
+            }
         }
         boolean carriageReturns = currentLines.any { String line -> line.endsWith('\r\n') } &&
                 !currentLines.any { String line -> line.endsWith('\n') && !line.endsWith('\r\n') }
@@ -200,8 +266,7 @@ final class ThreeWayMerge {
             int currentGrowth = 0
             boolean byProposed = false
             boolean byCurrent = false
-            // a change that begins where another ends is taken with it: lines next to each other that
-            // the two changed are not merged without a word
+            // every change that has no anchor between it and this one is of the same stretch
             boolean grew = true
             while (grew) {
                 grew = false
@@ -228,8 +293,6 @@ final class ThreeWayMerge {
                 append(result, currentLines, currentFrom, currentTo, false)
             } else if (!byCurrent) {
                 append(result, proposedLines, proposedFrom, proposedTo, carriageReturns)
-            } else if (same(proposedKeys, proposedFrom, proposedTo, currentKeys, currentFrom, currentTo)) {
-                append(result, currentLines, currentFrom, currentTo, false)
             } else {
                 conflicts << conflict(currentLines, currentKeys, currentFrom, currentTo, proposedLines, proposedKeys, proposedFrom, proposedTo)
             }
@@ -245,6 +308,10 @@ final class ThreeWayMerge {
     // because a change counts as touching the lines next to it
     private static Conflict conflict(List<String> currentLines, int[] currentKeys, int currentFrom, int currentTo,
                                      List<String> proposedLines, int[] proposedKeys, int proposedFrom, int proposedTo) {
+        if (same(proposedKeys, proposedFrom, proposedTo, currentKeys, currentFrom, currentTo)) {
+            // both made the same change here, and not everywhere: the lines are shown as they are
+            return new Conflict(currentFrom + 1, shown(currentLines.subList(currentFrom, currentTo)), shown(proposedLines.subList(proposedFrom, proposedTo)))
+        }
         while (currentFrom < currentTo && proposedFrom < proposedTo && currentKeys[currentFrom] == proposedKeys[proposedFrom]) {
             currentFrom++
             proposedFrom++
@@ -328,11 +395,11 @@ final class ThreeWayMerge {
 
     /**
      * What was changed between the base and a file, as the shortest list of lines to remove and to
-     * add (Myers), each change with the lines it could as well be next to.
+     * add (Myers), with the lines of the base that not every such list keeps.
      *
      * @return the changes in the order of the base, or {@code null} when there are more than are merged
      */
-    private static List<Edit> edits(int[] base, int[] changed) {
+    private static Script script(int[] base, int[] changed) {
         int prefix = 0
         while (prefix < base.length && prefix < changed.length && base[prefix] == changed[prefix]) {
             prefix++
@@ -346,8 +413,9 @@ final class ThreeWayMerge {
         if (n == 0 || m == 0) {
             // lines were only added in one place, or only removed
             List<Edit> one = n + m == 0 ? [] as List<Edit> : [new Edit(prefix, prefix + n, prefix, prefix + m)]
-            widen(one, base, changed, new boolean[base.length])
-            return one
+            boolean[] removedOnly = new boolean[base.length]
+            Arrays.fill(removedOnly, prefix, prefix + n, true)
+            return new Script(one, removedOnly)
         }
         int most = Math.min(n + m, MAX_CHANGED)
         // the furthest line of the base reached on each diagonal with d changes, for every d
@@ -378,7 +446,7 @@ final class ThreeWayMerge {
             reached << Arrays.copyOfRange(furthest, offset - d, offset + d + 1)
         }
         if (found < 0) {
-            return n + m == 0 ? [] as List<Edit> : null
+            return null
         }
         // back from the end: which lines were removed, and which were added
         boolean[] removed = new boolean[n]
@@ -423,8 +491,10 @@ final class ThreeWayMerge {
         boolean[] all = new boolean[base.length]
         boolean[] ofMiddle = loose(base, changed, prefix, n, m)
         System.arraycopy(ofMiddle, 0, all, prefix, n)
-        widen(edits, base, changed, all)
-        return edits
+        for (int index = 0; index < n; index++) {
+            all[prefix + index] = all[prefix + index] || removed[index]
+        }
+        return new Script(edits, all)
     }
 
     /**
@@ -481,66 +551,17 @@ final class ThreeWayMerge {
         return loose
     }
 
-    // A line that was added or removed next to a line like it could as well be said to be that line,
-    // and the change to be a line further up or down. A change counts as touching every line next to
-    // it that is like a line it adds or removes, and the lines next to those, up to the changes
-    // before and after it
-    private static void widen(List<Edit> edits, int[] base, int[] changed, boolean[] loose) {
-        for (int index = 0; index < edits.size(); index++) {
-            Edit edit = edits[index]
-            int lowest = index == 0 ? 0 : edits[index - 1].end
-            int highest = index == edits.size() - 1 ? base.length : edits[index + 1].start
-            Set<Integer> lines = new HashSet<>()
-            for (int line = edit.start; line < edit.end; line++) {
-                lines.add(base[line])
-            }
-            for (int line = edit.changedStart; line < edit.changedEnd; line++) {
-                lines.add(changed[line])
-            }
-            int from = edit.start
-            while (from > lowest && (loose[from - 1] || lines.contains(base[from - 1]))) {
-                from--
-            }
-            int to = edit.end
-            while (to < highest && (loose[to] || lines.contains(base[to]))) {
-                to++
-            }
-            edit.from = from
-            edit.to = to
-        }
-        // A line that is taken out in one place and put in a few lines away was moved, and that can
-        // as well be said of the lines it was moved past: two such changes are one, with the lines
-        // between them
-        for (int index = 0; index + 1 < edits.size(); index++) {
-            Edit edit = edits[index]
-            Edit next = edits[index + 1]
-            if (next.from - edit.to <= edit.size() + next.size() && alike(edit, next, base, changed)) {
-                edit.to = next.start
-                next.from = edit.end
-            }
-        }
-    }
+    @CompileStatic
+    private static final class Script {
 
-    // whether two changes add or remove a line that is the same line
-    private static boolean alike(Edit one, Edit other, int[] base, int[] changed) {
-        Set<Integer> lines = new HashSet<>()
-        for (int index = one.start; index < one.end; index++) {
-            lines.add(base[index])
+        final List<Edit> edits
+        // the lines of the base that are removed, or that another shortest list of changes would remove
+        final boolean[] loose
+
+        Script(List<Edit> edits, boolean[] loose) {
+            this.edits = edits
+            this.loose = loose
         }
-        for (int index = one.changedStart; index < one.changedEnd; index++) {
-            lines.add(changed[index])
-        }
-        for (int index = other.start; index < other.end; index++) {
-            if (lines.contains(base[index])) {
-                return true
-            }
-        }
-        for (int index = other.changedStart; index < other.changedEnd; index++) {
-            if (lines.contains(changed[index])) {
-                return true
-            }
-        }
-        return false
     }
 
     @CompileStatic
@@ -566,9 +587,5 @@ final class ThreeWayMerge {
             this.to = end
         }
 
-        // how many lines the change removes and adds
-        int size() {
-            return (end - start) + (changedEnd - changedStart)
-        }
     }
 }
