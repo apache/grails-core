@@ -127,38 +127,43 @@ class ThreeWayMergeSpec extends Specification {
     }
 
     @Unroll
-    void "a line that is like others keeps no two changes apart: #what are a conflict"() {
+    void "a line that is like others keeps two changes apart when it can only be lined up one way: #what"() {
         when:
         ThreeWayMerge merge = ThreeWayMerge.of(bytes(base), bytes(current), bytes(proposed))
 
         then:
-        merge.conflicts == 1
-        merge.merged == null
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == merged
 
         where:
-        what                                        | base                  | current                     | proposed
-        'lines on the two sides of an empty line'   | '{\na\n\nb\n\nc\n}\n' | '{\na\n\nb\nmine\n\nc\n}\n' | '{\na\n\nb\n\nnew\nc\n}\n'
-        'lines on the two sides of a closing brace' | 'a\n}\n}\n'           | 'a\n}\nmine\n}\n'          | 'a\nnew\n}\n}\n'
-        'lines between and after two empty lines'   | 'a\n\n\nb\n'          | 'a\n\nmine\n\nb\n'         | 'a\n\n\nnew\nb\n'
+        what                                        | base                  | current                     | proposed                   || merged
+        'lines on the two sides of an empty line'   | '{\na\n\nb\n\nc\n}\n' | '{\na\n\nb\nmine\n\nc\n}\n' | '{\na\n\nb\n\nnew\nc\n}\n' || '{\na\n\nb\nmine\n\nnew\nc\n}\n'
+        'lines on the two sides of a closing brace' | 'a\n}\n}\n'           | 'a\n}\nmine\n}\n'          | 'a\nnew\n}\n}\n'          || 'a\nnew\n}\nmine\n}\n'
+        'lines between and after two empty lines'   | 'a\n\n\nb\n'          | 'a\n\nmine\n\nb\n'         | 'a\n\n\nnew\nb\n'         || 'a\n\nmine\n\nnew\nb\n'
     }
 
-    void "the same change made by both in one place is a conflict when the files are not the same altogether, and shown as it is"() {
+    void "the same change made by both in one place is taken, also beside other changes, and is what both have"() {
         when: 'both added the same line, and each changed another place'
         ThreeWayMerge merge = ThreeWayMerge.of(bytes('first\n\n\nmiddle\nlast\n'), bytes('mine\nfirst\n\nsame\n\nmiddle\nlast\n'), bytes('first\n\nsame\n\nmiddle\nlast\nnew\n'))
 
         then:
-        merge.conflicts == 1
-        merge.merged == null
-        merge.conflictingChanges[0].line == 3
-        merge.conflictingChanges[0].current == ['', 'same', '']
-        merge.conflictingChanges[0].proposed == ['', 'same', '']
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == 'mine\nfirst\n\nsame\n\nmiddle\nlast\nnew\n'
 
-        when: 'the files are the same but for how their lines end'
-        merge = ThreeWayMerge.of(bytes('first\n\n\nmiddle\nlast\n'), bytes('first\r\n\r\nsame\r\n\r\nmiddle\r\nlast\r\n'), bytes('first\n\nsame\n\nmiddle\nlast\n'))
+        when: 'the project has a line of the generator already, as when it was added by hand, and its lines end otherwise'
+        merge = ThreeWayMerge.of(bytes('a\nb\nc\nd\n'), bytes('a\r\nnew\r\nb\r\nc\r\nd\r\n'), bytes('a\nnew\nb\nc\nmore\nd\n'))
 
         then:
         merge.conflicts == 0
-        new String(merge.merged, StandardCharsets.UTF_8) == 'first\r\n\r\nsame\r\n\r\nmiddle\r\nlast\r\n'
+        new String(merge.merged, StandardCharsets.UTF_8) == 'a\r\nnew\r\nb\r\nc\r\nmore\r\nd\r\n'
+
+        when: 'nearly the same change is none'
+        merge = ThreeWayMerge.of(bytes('a\nb\nc\nd\n'), bytes('a\nnew\nmine\nb\nc\nd\n'), bytes('a\nnew\nb\nc\nmore\nd\n'))
+
+        then:
+        merge.conflicts == 1
+        merge.conflictingChanges[0].current == ['mine']
+        merge.conflictingChanges[0].proposed == []
     }
 
     @Unroll

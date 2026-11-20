@@ -136,7 +136,7 @@ final class ProjectTransaction {
      * @return whether a change of the project was begun by this user and not ended
      */
     static boolean isInterrupted(Path project, Path home) {
-        if (unusable(home) != null) {
+        if (unusable(home, project) != null) {
             // nothing is looked for where no record of this user can be: what is found by a home
             // directory that is none, such as a relative one, could have come with the project
             return false
@@ -184,7 +184,7 @@ final class ProjectTransaction {
         }
         String own = null
         try {
-            Path journal = unusable(home) == null ? journal(project, home, false) : null
+            Path journal = unusable(home, project) == null ? journal(project, home, false) : null
             if (journal != null && Files.isRegularFile(journal, LinkOption.NOFOLLOW_LINKS)) {
                 own = read(journal, project).name
             }
@@ -216,9 +216,9 @@ final class ProjectTransaction {
      * is as it was
      */
     static void run(Path project, Path home, List<Write> writes, Consumer<String> installed) {
-        usable(home)
+        usable(home, project)
         locked(project) {
-            Path journal = journal(project, usable(home), true)
+            Path journal = journal(project, usable(home, project), true)
             if (Files.exists(journal, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ProjectChangeException('An earlier change of the project was interrupted; it has to be undone before the project is changed again')
             }
@@ -292,7 +292,7 @@ final class ProjectTransaction {
      * put back
      */
     static ProjectRecovery recover(Path project, Path home, Consumer<String> restored) {
-        usable(home)
+        usable(home, project)
         List<String> others = strangers(project, home)
         if (!isInterrupted(project, home)) {
             return new ProjectRecovery(false, false, false, [], [], others)
@@ -355,20 +355,33 @@ final class ProjectTransaction {
         List<String> kept = []
         boolean allAfter = true
         boolean allBefore = true
+        boolean posix = project.getFileSystem().supportedFileAttributeViews().contains('posix')
         try {
             for (Put put : change.puts) {
-                String now = digest(target(project, put.path))
-                // a file of which only the mode changes is what it was and what it becomes at once: its copy says which
-                boolean copied = Files.isRegularFile(directory.resolve('backup').resolve(String.valueOf(put.index)), LinkOption.NOFOLLOW_LINKS)
+                Path target = target(project, put.path)
+                String now = digest(target)
                 if (reached >= 0 && put.index >= reached) {
                     if (now != put.before) {
                         kept << put.path
                     }
-                } else if (now == put.after && (put.before != put.after || copied)) {
+                } else if (put.before == put.after && now == put.after) {
+                    // Only the mode of the file changes, so its digest is what it was and what it
+                    // becomes at once. The copy that was kept has the mode it had: the file was
+                    // written when its mode is another, and without the copy nothing says which
+                    Path backup = directory.resolve('backup').resolve(String.valueOf(put.index))
+                    if (Files.isRegularFile(backup, LinkOption.NOFOLLOW_LINKS)) {
+                        if (posix && Files.getPosixFilePermissions(backup, LinkOption.NOFOLLOW_LINKS) != Files.getPosixFilePermissions(target, LinkOption.NOFOLLOW_LINKS)) {
+                            written << put
+                            allBefore = false
+                        } else {
+                            allAfter = false
+                        }
+                    }
+                } else if (now == put.after) {
                     written << put
                     allBefore = false
                 } else if (now == put.before) {
-                    allAfter = allAfter && put.before == put.after
+                    allAfter = false
                 } else {
                     neither << put.path
                 }
@@ -390,7 +403,9 @@ final class ProjectTransaction {
         }
         if (reached < 0 && allBefore) {
             // nothing of this tree was changed: the journal is of a change that was undone by other
-            // means, or of another checkout at this path
+            // means, or of another checkout at this path. The directories the change made for its
+            // files are removed when nothing is in them
+            removeMade(project, change)
             abandon(directory, journal)
             return new ProjectRecovery(false, false, true, [], [], [])
         }
@@ -416,20 +431,25 @@ final class ProjectTransaction {
                 putBack << put.path
                 restored.accept(put.path)
             }
-            for (String made : change.made.toList().reverse()) {
-                Path path = target(project, made)
-                if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-                    try {
-                        Files.delete(path)
-                    } catch (IOException ignored) {
-                        // a directory that has other files now stays
-                    }
-                }
-            }
+            removeMade(project, change)
             finish(directory, journal)
             return new ProjectRecovery(true, false, false, putBack.reverse(), kept, [])
         } catch (IOException e) {
             throw new ProjectChangeException("A file of the change that was interrupted could not be put back (${e.getClass().getSimpleName()}); run the command again", e)
+        }
+    }
+
+    // the directories a change made for its files, the innermost first, when they are empty
+    private static void removeMade(Path project, Journal change) {
+        for (String made : change.made.toList().reverse()) {
+            try {
+                Path path = target(project, made)
+                if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                    Files.delete(path)
+                }
+            } catch (IOException ignored) {
+                // a directory that has other files now stays
+            }
         }
     }
 
@@ -644,12 +664,12 @@ final class ProjectTransaction {
 
     /**
      * @return why a home directory cannot keep the records of changes, or {@code null} for one that
-     * can: it is an absolute path of a directory that is there and, where the file system says whose
-     * a directory is, that of this user. A home directory that is none, as the {@code ?} a user
+     * can: it is an absolute path of a directory that is there, that is not the project or in it, also
+     * not by way of a link, and, where the file system says whose a directory is, that of this user. A home directory that is none, as the {@code ?} a user
      * without an entry has in a container, would be looked for in the current directory, which is
      * the project
      */
-    static String unusable(Path home) {
+    static String unusable(Path home, Path project) {
         try {
             if (home == null || !home.isAbsolute()) {
                 return 'it is not an absolute path'
@@ -660,14 +680,19 @@ final class ProjectTransaction {
             if (home.getFileSystem().supportedFileAttributeViews().contains('posix') && Files.getOwner(home.toRealPath()) != self()) {
                 return 'the directory is not that of the user who runs the command'
             }
+            // The journal says which files a change replaces and removes. It is believed because a
+            // project cannot bring it along, and that is so only where it is kept outside the project
+            if (home.toRealPath().startsWith(project.toRealPath())) {
+                return 'it is the directory of the project, or a directory in it, or a link to one, and the record of a change must not be where a project could bring one along'
+            }
             return null
         } catch (IOException e) {
             return "it cannot be read (${e.getClass().getSimpleName()})"
         }
     }
 
-    private static Path usable(Path home) {
-        String reason = unusable(home)
+    private static Path usable(Path home, Path project) {
+        String reason = unusable(home, project)
         if (reason != null) {
             throw new ProjectChangeException('Adding a feature needs a home directory to keep the record of the change in, and the one the system property user.home ' +
                     "names cannot be used: ${reason}. Nothing of the project was changed")

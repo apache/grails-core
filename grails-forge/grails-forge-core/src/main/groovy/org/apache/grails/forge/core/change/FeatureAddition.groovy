@@ -440,13 +440,6 @@ final class FeatureAddition {
     private static List<String> places(ThreeWayMerge merge) {
         List<String> lines = []
         for (ThreeWayMerge.Conflict place : merge.getConflictingChanges().take(MAX_PLACES)) {
-            if (place.current == place.proposed) {
-                // the same change, made by hand in this place and not in every place the feature changes
-                lines << (place.current.isEmpty() ? "before line ${place.line} the project removed the lines the feature removes there too, and has not all of what the feature changes" :
-                        "from line ${place.line} the project has what the feature has there too, and not all of what the feature changes:").toString()
-                lines.addAll(quoted(place.current))
-                continue
-            }
             lines << (place.current.isEmpty() ? "before line ${place.line} the project removed lines, and the feature has there:" :
                     "at line ${place.line} the project has:").toString()
             if (!place.current.isEmpty()) {

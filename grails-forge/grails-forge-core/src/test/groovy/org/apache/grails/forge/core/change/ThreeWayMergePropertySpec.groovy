@@ -147,8 +147,8 @@ class ThreeWayMergePropertySpec extends Specification {
         (CASES - ThreeWayMergeCases.LONG_CASES..<CASES).count { ThreeWayMerge.of(cases[it][0], cases[it][1], cases[it][2]).conflicts == 0 } == LONG_MERGED
     }
 
-    static final int MERGED = 4188
-    static final int MORE_CAREFUL = 973
+    static final int MERGED = 4787
+    static final int MORE_CAREFUL = 374
     static final int SAME_ON_BOTH_SIDES = 0
     static final int LONG_MERGED = 12
 
