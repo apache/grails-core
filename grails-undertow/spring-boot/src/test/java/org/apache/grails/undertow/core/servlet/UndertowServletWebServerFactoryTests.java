@@ -33,6 +33,8 @@ import javax.net.ssl.SSLContext;
 import io.undertow.Undertow.Builder;
 import io.undertow.servlet.api.Deployment;
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.Filter;
 import jakarta.servlet.ServletContext;
@@ -60,6 +62,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.grails.undertow.core.UndertowBuilderCustomizer;
 
+import org.springframework.boot.web.error.ErrorPage;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
@@ -317,6 +320,85 @@ class UndertowServletWebServerFactoryTests {
             DispatcherType.REQUEST, DispatcherType.ASYNC));
     }
 
+    @Test
+    void asynchronousProcessingCompletesOnceAnErrorItsRequestDispatchSentIsAnswered() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+    }
+
+    @Test
+    void asynchronousProcessingCompletesOnceTheErrorPageHasAnsweredAnErrorItsRequestDispatchSent() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        factory.addErrorPages(new ErrorPage("/hello"));
+        this.webServer = factory.getWebServer(helloWorldServletRegistration(), sendsErrorAfterStartingAsync(events, false));
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo("Hello World");
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+    }
+
+    @Test
+    void asynchronousProcessingThatADispatchCompletesAfterSendingAnErrorCompletesOnce() throws Exception {
+        List<String> events = new CopyOnWriteArrayList<>();
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(sendsErrorAfterStartingAsync(events, true));
+        this.webServer.start();
+
+        assertThat(getStatus("http://localhost:" + this.webServer.getPort() + "/sendsError")).isEqualTo(503);
+
+        Awaitility.await().untilAsserted(() -> assertThat(events).containsExactly("onComplete"));
+        Thread.sleep(200);
+        assertThat(events).containsExactly("onComplete");
+    }
+
+    private ServletRegistrationBean<HttpServlet> sendsErrorAfterStartingAsync(List<String> events, boolean completes) {
+        ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                request.startAsync().addListener(new AsyncListener() {
+
+                    @Override
+                    public void onComplete(AsyncEvent event) {
+                        events.add("onComplete");
+                    }
+
+                    @Override
+                    public void onTimeout(AsyncEvent event) {
+                        events.add("onTimeout");
+                    }
+
+                    @Override
+                    public void onError(AsyncEvent event) {
+                        events.add("onError");
+                    }
+
+                    @Override
+                    public void onStartAsync(AsyncEvent event) {
+                        events.add("onStartAsync");
+                    }
+
+                });
+                response.sendError(503);
+                if (completes) {
+                    request.getAsyncContext().complete();
+                }
+            }
+
+        }, "/sendsError");
+        registration.setName("sendsError");
+        registration.setAsyncSupported(true);
+        return registration;
+    }
+
     private ServletRegistrationBean<HttpServlet> helloWorldServletRegistration() {
         ServletRegistrationBean<HttpServlet> registration = new ServletRegistrationBean<>(new HelloWorldServlet());
         registration.addUrlMappings("/hello");
@@ -326,6 +408,13 @@ class UndertowServletWebServerFactoryTests {
     private String getResponse(String url) throws IOException {
         try (CloseableHttpClient client = HttpClients.createMinimal()) {
             return readEntity(client, url);
+        }
+    }
+
+    private int getStatus(String url) throws IOException {
+        try (CloseableHttpClient client = HttpClients.createMinimal();
+                CloseableHttpResponse response = client.execute(new HttpGet(url))) {
+            return response.getCode();
         }
     }
 
