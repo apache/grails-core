@@ -220,13 +220,14 @@ class ForgeApiIntegrationSpec extends Specification {
         application.contains('grails-forge-cli.yml')
         entries.findAll { it.startsWith('.grails/') }.toSorted() ==
                 (['.grails/project.yml', '.grails/forge.lock.yml', '.grails/baseline/index.yml', '.grails/.gitattributes', '.grails/.gitignore'] +
-                        (application - 'grails-forge-cli.yml').collect { '.grails/baseline/files/' + (it == '.gitignore' ? '.gitignore.baseline' : it) }).toSorted()
+                        (application - 'grails-forge-cli.yml').collect { '.grails/baseline/files/' + (it in ['.gitignore', '.gitattributes'] ? it + '.baseline' : it) }).toSorted()
         (application - 'grails-forge-cli.yml').every { index.contains("- path: ${it}\n") }
         !index.contains('grails-forge-cli.yml')
         index.contains("- path: build.gradle\n  sha256: ${sha256(zipText(zip, 'forge-state/build.gradle').getBytes('UTF-8'))}\n  kind: text\n  executable: false\n")
         index.contains("- path: gradlew\n  sha256: ${sha256(zipText(zip, 'forge-state/gradlew').getBytes('UTF-8'))}\n  kind: binary\n  executable: true\n")
         zipText(zip, 'forge-state/.grails/baseline/files/build.gradle') == zipText(zip, 'forge-state/build.gradle')
         zipText(zip, 'forge-state/.gitignore').contains('.grails/cache/\n')
+        zipText(zip, 'forge-state/.gitattributes').contains('*.bat text eol=crlf\n')
     }
 
     void "the state of a project does not depend on who asks for it"() {

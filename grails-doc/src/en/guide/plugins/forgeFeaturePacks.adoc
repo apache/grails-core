@@ -132,7 +132,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |A paragraph for the application's `README.md`.
 |===
 
-A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
+A pack only adds. It cannot change what another selected feature gives the application: a setting, a build property or the version of a dependency that is already there with another value is an error, and so is a file another feature writes, such as the `.gitignore` and the `.gitattributes` at the root of an application. A descriptor with an unknown key, or a destination outside the application, is refused with a message that names the key.
 
 
 ==== Templates

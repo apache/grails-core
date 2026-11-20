@@ -865,6 +865,47 @@ class ProjectStateSpec extends ApplicationContextSpec {
         operatingSystem << [OperatingSystem.WINDOWS, OperatingSystem.MACOS_ARCH64, OperatingSystem.MACOS, OperatingSystem.SOLARIS, null]
     }
 
+    @Unroll
+    void "a #type application has a .gitattributes that keeps its files as generated on every clone"() {
+        given:
+        Path project = generate('shop', [], type)
+        ProjectState state = ProjectState.read(project)
+
+        expect: 'the file, and its copy in the baseline under a name Git does not read'
+        project.resolve('.gitattributes').toFile().getText('UTF-8') ==
+                '# Keeps the scripts of the wrappers with the line endings they need, whatever Git is set to do with line endings\n' +
+                '*.bat text eol=crlf\ngradlew text eol=lf\ngrailsw text eol=lf\n*.jar binary\n'
+        project.resolve('.grails/baseline/files/.gitattributes.baseline').toFile().bytes == project.resolve('.gitattributes').toFile().bytes
+        !project.resolve('.grails/baseline/files/.gitattributes').toFile().exists()
+
+        and: 'a rule for every file that is binary to the generator and is text: with it Git gives every clone the bytes that were generated'
+        state.baseline.files.findAll { it.binary && StateYaml.isText(project.resolve(it.path).toFile().bytes) }*.path.every { String path ->
+            String content = new String(project.resolve(path).toFile().bytes, 'ISO-8859-1')
+            // eol=crlf: stored with line feeds and checked out with CR LF, which gives the file back when it has no other line ending
+            path.endsWith('.bat') ? content.replace('\r\n', '\n').replace('\n', '\r\n') == content && !content.replace('\r\n', '').contains('\r') :
+                    // eol=lf: checked out as it is stored
+                    path in ['gradlew', 'grailsw'] && !content.contains('\r')
+        }
+
+        and: 'every other binary file is one Git sees to be binary, and every text file has line feeds only'
+        state.baseline.files.findAll { it.binary && !StateYaml.isText(project.resolve(it.path).toFile().bytes) }*.path.every { String path ->
+            path.endsWith('.jar') || (project.resolve(path).toFile().bytes as List).contains((byte) 0)
+        }
+        state.baseline.files.findAll { !it.binary }.every { !new String(project.resolve(it.path).toFile().bytes, 'ISO-8859-1').contains('\r') }
+
+        when: 'a clone has its text files with the line endings of Windows, which is all Git does to them'
+        state.baseline.files.findAll { !it.binary }.each {
+            File file = project.resolve(it.path).toFile()
+            file.bytes = new String(file.bytes, 'ISO-8859-1').replace('\n', '\r\n').getBytes('ISO-8859-1')
+        }
+
+        then:
+        state.baseline.files.every { state.isAsGenerated(project, it.path) }
+
+        where:
+        type << ApplicationType.values().toList()
+    }
+
     void "a file is as generated whatever its line endings are, unless it is binary"() {
         given:
         Path project = generate('shop', [])

@@ -77,6 +77,8 @@ class Gradle implements BuildFeature {
 
         configureDefaultGradleProps(generatorContext)
         generatorContext.addTemplate('gitignore', new GspTemplate('.gitignore', GspView.of('/forge/feature/build/gitignore.gsp', [:])))
+        // the wrapper scripts are the same bytes on every clone, whatever Git is set to do with line endings
+        generatorContext.addTemplate('gitattributes', new GspTemplate('.gitattributes', GspView.of('/forge/feature/build/gitattributes.gsp', [:])))
         generatorContext.addTemplate('projectProperties', new GspTemplate('gradle.properties', GspView.of('/forge/feature/build/gradle/templates/gradleProperties.gsp', [properties: generatorContext.getBuildProperties().getProperties()])))
 
         generatorContext.addTemplate('gradleWrapperProperties', new GspTemplate(WRAPPER_PROPS, GspView.of('/forge/feature/build/gradle/templates/gradleWrapperProperties.gsp', [project: generatorContext.getProject(), gradleBuild: build, coordinateResolver: coordinateResolver, features: generatorContext.getFeatures()])))

@@ -248,7 +248,19 @@ Beside them are two files for Git. `.grails/.gitattributes` tells it to keep the
 
 The files contain no time of day and nothing of the machine or the operating system they were written on: generating the same application again with the same version gives the same files. One thing of the environment is part of what an application is generated from, and is therefore recorded: the repositories that the `GRAILS_REPO_URL` environment variable puts in place of the default ones. They are written to `build.gradle` as they are given, as before, and the copy of `build.gradle` in the baseline is that file. The lock says that they were given and names the ones that are `https` addresses without a password; of a directory it says only that there was one.
 
-Commit all of them to version control with the rest of the project. The baseline doubles the generated files in the repository, which is intended: with it the tooling can tell a file you changed from a file as it was generated, on any clone of the project. A text file counts as unchanged when only its line endings differ, because Git can check a file out with the line endings of the platform; a binary file is compared byte by byte. The wrapper scripts (`gradlew`, `gradlew.bat`, `grailsw`, `grailsw.bat`) are binary to the generator, so if Git is set to convert line endings when it commits (`core.autocrlf`), the `.bat` files of the project, which have the line endings of Windows, are converted and then count as changed. The generated `.gitignore` excludes only what is of one machine: `.grails/cache/`, `.grails/transactions/`, `.grails/run/` and `.grails/history`.
+Commit all of them to version control with the rest of the project. The baseline doubles the generated files in the repository, which is intended: with it the tooling can tell a file you changed from a file as it was generated, on any clone of the project. A text file counts as unchanged when only its line endings differ, because Git can check a file out with the line endings of the platform (`core.autocrlf`); a binary file is compared byte by byte. The wrapper scripts (`gradlew`, `gradlew.bat`, `grailsw`, `grailsw.bat`) are binary to the generator, and the `.gitattributes` at the root of the project, described below, has Git give every clone the bytes they were generated with. The generated `.gitignore` excludes only what is of one machine: `.grails/cache/`, `.grails/transactions/`, `.grails/run/` and `.grails/history`.
+
+A generated project also has a `.gitattributes` at its root, next to its `.gitignore`:
+
+[source]
+----
+*.bat text eol=crlf
+gradlew text eol=lf
+grailsw text eol=lf
+*.jar binary
+----
+
+It is about the wrappers only. The scripts for Windows keep the line endings of Windows and the scripts for Unix those of Unix on every clone, whatever Git is set to do with line endings, so the scripts run wherever the project is checked out, and the jars of the wrappers are never converted. Everything else is left to your own settings of Git; add rules of your own to the file as the project needs them.
 
 `grails-forge-cli.yml` at the root of the project is the record earlier versions wrote. It is still written, with the same content, for the tools that read it, and it is not part of the baseline. In a project that has a `.grails` directory, the `create-*` code generation commands go by `.grails`: changing `grails-forge-cli.yml` by hand no longer changes what they do, and when the two do not say the same default package or the same features, the commands say so in a warning. A feature that is added to a project by hand, by adding its dependencies to the build, cannot be made known to the record yet; the command that adds a feature to an existing project and records it is not part of this version.
 
