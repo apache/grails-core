@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 
 import jakarta.annotation.Priority
 
+import org.springframework.beans.factory.FactoryBean
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.cache.CacheManager
@@ -179,6 +180,18 @@ class CacheAutoConfigurationSpec extends Specification {
         else if (preferred == 'with a priority only on the object its factory returns') {
             context.registerBean('preferredCacheManager', CacheManager, { -> new HighPriorityCacheManager() } as Supplier<CacheManager>)
         }
+        else if (preferred == 'that a factory bean naming only CacheManager makes, with a priority') {
+            context.registerBean('preferredCacheManager', PriorityProductFactoryBean)
+        }
+        else if (preferred == 'with a priority, which the key generator creates as the cache-aware bean is injected') {
+            BeanDefinitionCustomizer lazy = { BeanDefinition definition -> definition.lazyInit = true } as BeanDefinitionCustomizer
+            context.registerBean('preferredCacheManager', CacheManager,
+                    { -> new HighPriorityCacheManager() } as Supplier<CacheManager>, lazy)
+            context.registerBean('customCacheKeyGenerator', GrailsCacheKeyGenerator, { ->
+                context.getBean('preferredCacheManager')
+                new CustomCacheKeyGenerator()
+            } as Supplier<GrailsCacheKeyGenerator>, lazy)
+        }
         else {
             context.registerBean('preferredCacheManager', ConcurrentMapCacheManager,
                     { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
@@ -201,7 +214,9 @@ class CacheAutoConfigurationSpec extends Specification {
         context.close()
 
         where:
-        preferred << ['with a priority', 'with a priority only on the object its factory returns', 'marked primary']
+        preferred << ['with a priority', 'with a priority only on the object its factory returns',
+                      'that a factory bean naming only CacheManager makes, with a priority',
+                      'with a priority, which the key generator creates as the cache-aware bean is injected', 'marked primary']
     }
 
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
@@ -287,6 +302,20 @@ class CacheAutoConfigurationSpec extends Specification {
     /** A cache manager Spring prefers over others by the priority of its class. */
     @Priority(1)
     static class HighPriorityCacheManager extends ConcurrentMapCacheManager {
+    }
+
+    /** A factory bean that names only CacheManager as its type, and makes a cache manager with a priority. */
+    static class PriorityProductFactoryBean implements FactoryBean<CacheManager> {
+
+        @Override
+        CacheManager getObject() {
+            new HighPriorityCacheManager()
+        }
+
+        @Override
+        Class<?> getObjectType() {
+            CacheManager
+        }
     }
 
     /** A class the cache transformations make cache-aware, as they do a service with a cached method. */
