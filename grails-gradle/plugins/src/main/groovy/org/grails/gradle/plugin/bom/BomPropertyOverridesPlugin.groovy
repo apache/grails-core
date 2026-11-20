@@ -30,6 +30,8 @@ import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.Category
 
+import org.grails.gradle.plugin.core.GrailsGradlePlugin
+
 /**
  * Gradle plugin that enables Maven-style property-based version overrides
  * for {@code platform()} BOMs.
@@ -163,7 +165,8 @@ class BomPropertyOverridesPlugin implements Plugin<Project> {
         // Resolvable/consumable configurations inherit the constraints through the
         // declarable configurations they extend.
         configurations.configureEach {
-            if (it.canBeDeclared) {
+            // not the class path of a tool that runs in a JVM of its own, with the versions it was published with
+            if (it.canBeDeclared && !GrailsGradlePlugin.isToolClasspathOfItsOwn(it.name)) {
                 managedVersions.applyTo(dependencies, it.name)
             }
         }

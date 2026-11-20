@@ -277,7 +277,7 @@ class PackCheckSpec extends Specification {
         err.toString('UTF-8') == ''
     }
 
-    void "nothing is written for a pack that can be used"() {
+    void "a pack that can be used is said to be checked, with how much of it was"() {
         given:
         Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': 'package ${project.packageName}'])
         ByteArrayOutputStream out = new ByteArrayOutputStream()
@@ -288,8 +288,75 @@ class PackCheckSpec extends Specification {
 
         then:
         result == PackCheck.VALID
-        out.toString('UTF-8') == ''
+        out.toString('UTF-8').readLines() == ['feature pack checked: templates=1 applications=4']
         err.toString('UTF-8') == ''
+    }
+
+    void "the Grails Gradle plugin starts this class, and reads what it writes for a pack that can be used"() {
+        given:
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': 'package ${project.packageName}'])
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+
+        when:
+        PackCheck.run([pack.toString()] as String[], new PrintStream(out, true, 'UTF-8'), new PrintStream(new ByteArrayOutputStream(), true, 'UTF-8'))
+
+        then:
+        PackCheck.name == System.getProperty('forge.packCheck.mainClassOfGradlePlugin')
+        out.toString('UTF-8').readLines().size() == 1
+        out.toString('UTF-8').readLines()[0] ==~ System.getProperty('forge.packCheck.checkedLineOfGradlePlugin')
+        [PackCheck.VALID, PackCheck.PROBLEMS, PackCheck.NOT_CHECKED] == [0, 1, 2]
+    }
+
+    void "a descriptor that cannot be used hides what is wrong with the templates, which it names"() {
+        given:
+        Path pack = pack(TEMPLATE + 'colour: red\n', ['Audit.groovy.gsp': '${nope}'])
+
+        when:
+        List<String> problems = PackCheck.check(pack)
+
+        then:
+        problems.size() == 1
+        problems[0].startsWith("the descriptor: has the key 'colour'")
+    }
+
+    void "every version of Java an application can be for is in an application a template is rendered for"() {
+        given:
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': '<% if (options.jdk == ' + jdk + ') { %>${nope}<% } %>'])
+
+        when:
+        List<String> problems = PackCheck.check(pack)
+
+        then:
+        problems.size() == 1
+        problems[0].contains("jdk:${jdk}")
+
+        where:
+        jdk << org.grails.forge.options.JdkVersion.values()*.majorVersion()
+    }
+
+    void "the applications a template is rendered for are the ones the guide lists"() {
+        given:
+        PackDescriptor descriptor = new PackLoader().fromDirectory(pack('', [:])).descriptor
+
+        expect:
+        PackModel.samples(descriptor).keySet().toList() == [
+                'applicationType web, options [data:hibernate5, jdk:21, reloading:devtools, servlet:tomcat]',
+                'applicationType rest-api, options [data:hibernate7, jdk:25, reloading:jrebel, servlet:jetty]',
+                'applicationType web-plugin, options [data:mongodb, jdk:26, reloading:none, servlet:undertow]',
+                'applicationType plugin, options [data:neo4j, jdk:21, reloading:devtools, servlet:none]',
+        ]
+    }
+
+    void "a template that ends the JVM does not make its pack one that was checked"() {
+        given:
+        Path pack = pack(TEMPLATE, ['Audit.groovy.gsp': '<% System.exit(0) %>${nope}'])
+
+        when:
+        Map<String, Object> result = fork(pack.toString())
+
+        then:
+        result.exit == 0
+        result.out == []
     }
 
     @Unroll
@@ -328,7 +395,7 @@ class PackCheckSpec extends Specification {
 
         then: 'what a template says is not taken for a problem'
         ofValid.exit == PackCheck.VALID
-        ofValid.out == []
+        ofValid.out == ['feature pack checked: templates=1 applications=4']
         ofValid.err.contains('said by the template')
 
         and:

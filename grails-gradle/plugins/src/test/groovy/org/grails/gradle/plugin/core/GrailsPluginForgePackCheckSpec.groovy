@@ -49,6 +49,73 @@ class GrailsPluginForgePackCheckSpec extends GradleSpecification {
         String classPath = result.output.readLines().find { it.contains('stand-in class path: ') }.split('stand-in class path: ')[1]
         classPath.endsWith('forge-stub.jar')
         !classPath.contains(File.pathSeparator)
+
+        and: 'and a directory of the task to work in, not the project'
+        result.output.contains("stand-in working directory: ${new File(runner.projectDir.canonicalFile, 'build/tmp/checkForgePack')}")
+    }
+
+    def "the versions the project forces on its own configurations are not forced on the class path of Forge"() {
+        given:
+        setupTestResourceProject('plugin-forge-pack')
+
+        when: 'a property of a BOM is overridden and a Groovy is forced'
+        BuildResult result = executeTask('printRuntimeClasspath',
+                ['printGrailsForgePackTooling', '-PversionsOfTheProject', '-Ptoollib.version=2.0.0', '-Pgroovy.version=2.0.0'])
+
+        then: 'which the project gets'
+        result.output.contains('runtimeClasspath=org.example:toollib:2.0.0')
+        result.output.contains('runtimeClasspath=org.apache.groovy:groovy:2.0.0')
+
+        and: 'and Forge does not'
+        result.output.contains('grailsForgePackTooling=org.example:toollib:1.0.0')
+        result.output.contains('grailsForgePackTooling=org.apache.groovy:groovy:1.0.0')
+        !result.output.contains('grailsForgePackTooling=org.example:toollib:2.0.0')
+        !result.output.contains('grailsForgePackTooling=org.apache.groovy:groovy:2.0.0')
+        !result.output.contains('grailsForgePackTooling=org.example:tool-bom')
+    }
+
+    def "publishing the plugin to a repository checks its feature pack, and installing it locally does not"() {
+        given:
+        setupTestResourceProject('plugin-forge-pack')
+
+        when: 'the tasks that would run are listed'
+        BuildResult publish = executeTask('publish', ['-Ppublished', '--dry-run'])
+        BuildResult install = executeTask('publishToMavenLocal', ['-Ppublished', '--dry-run'])
+
+        then:
+        publish.output.contains(':publishMavenPublicationToMavenRepository SKIPPED')
+        publish.output.contains(':checkForgePack SKIPPED')
+        publish.output.indexOf(':checkForgePack SKIPPED') < publish.output.indexOf(':publishMavenPublicationToMavenRepository SKIPPED')
+
+        and:
+        install.output.contains(':publishMavenPublicationToMavenLocal SKIPPED')
+        !install.output.contains(':checkForgePack')
+    }
+
+    def "a pack with problems is not published"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        new File(runner.projectDir, 'src/main/forge/feature.yml') << 'colour: red\n'
+
+        when:
+        BuildResult result = runner.withArguments('publish', '-Ppublished').buildAndFail()
+
+        then:
+        result.output.contains('The feature pack in src/main/forge cannot be used:')
+        !new File(runner.projectDir, 'build/published').exists()
+    }
+
+    def "a plugin without a feature pack is published without Forge"() {
+        given: 'a build that would take Forge from a repository, and has none'
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        new File(runner.projectDir, 'src/main/forge').deleteDir()
+
+        when:
+        BuildResult result = executeTask('publish', ['-Ppublished', '-PforgeOfGrails'])
+
+        then:
+        result.tasks.find { it.path == ':checkForgePack' }.outcome == TaskOutcome.SKIPPED
+        result.tasks.find { it.path == ':publishMavenPublicationToMavenRepository' }.outcome == TaskOutcome.SUCCESS
     }
 
     def "checking the plugin checks its feature pack, and building its jar does not"() {
@@ -142,8 +209,40 @@ class GrailsPluginForgePackCheckSpec extends GradleSpecification {
         when: 'this build has no repository to take it from'
         BuildResult result = runner.withArguments('checkForgePack', '-PforgeOfGrails').buildAndFail()
 
+        then: 'the build says what was looked for, what for, and how to name another'
+        result.output.contains('The feature pack in src/main/forge could not be checked: Forge, which checks it, was not found in the repositories of the build')
+        result.output.contains("  - org.apache.grails.forge:grails-forge-core:${PROJECT_VERSION}")
+        result.output.contains("dependencies { grailsForgePackTooling 'org.apache.grails.forge:grails-forge-core:<version>' }")
+    }
+
+    def "a Forge that is in none of the repositories the build has is said to be missing, by the task"() {
+        given: 'a build with a repository'
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+
+        when:
+        BuildResult result = runner.withArguments('checkForgePack', '-PforgeOfGrails', '-PwithRepository').buildAndFail()
+
         then:
-        result.output.contains("org.apache.grails.forge:grails-forge-core:${PROJECT_VERSION}")
+        result.output.contains("Execution failed for task ':checkForgePack'")
+        result.output.contains('The feature pack in src/main/forge could not be checked: Forge, which checks it, was not found in the repositories of the build')
+        result.output.contains("  - org.apache.grails.forge:grails-forge-core:${PROJECT_VERSION}: Could not find org.apache.grails.forge:grails-forge-core:${PROJECT_VERSION}.")
+
+        and: 'with where it was looked for'
+        result.output.contains('      Searched in the following locations:')
+        result.output.contains("/maven-repo/org/apache/grails/forge/grails-forge-core/${PROJECT_VERSION}/")
+    }
+
+    def "what is not a Forge that checks feature packs is said to be none"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+
+        when:
+        BuildResult result = runner.withArguments('checkForgePack', '-PnotForge').buildAndFail()
+
+        then:
+        result.output.contains('The feature pack in src/main/forge could not be checked (Forge ended with 1). What the grailsForgePackTooling ' +
+                'configuration resolved has no org.apache.grails.forge.core.pack.PackCheck: it is a Forge older than this version of the ' +
+                'Grails Gradle plugin expects')
     }
 
     def "a pack that is added to a plugin that was built without one is checked"() {
@@ -174,10 +273,34 @@ class GrailsPluginForgePackCheckSpec extends GradleSpecification {
         result.output.contains("The feature pack in src/main/forge could not be checked (Forge ended with ${exit})")
         said == null || result.output.contains(said)
 
+        and: 'and nothing says the pack was checked'
+        !new File(runner.projectDir, 'build/grails/forge-pack-check/checked').exists()
+
         where:
-        failure                             | how      || exit | said
-        'ends as no check does'             | 'crash'  || 3    | '  stand-in crashed'
-        'names no problem and says it has'  | 'silent' || 1    | null
+        failure                                           | how                || exit | said
+        'ends as no check does'                           | 'crash'            || 3    | '  stand-in crashed'
+        'names no problem and says it has'                | 'silent'           || 1    | null
+        'says it could not check'                         | 'unchecked'        || 2    | '  The feature pack could not be checked: stand-in'
+        'is ended before it has checked'                  | 'ended'            || 0    | 'It ended as a check without problems does, without saying that it had checked the pack'
+        'says something else than that it has checked'    | 'says-and-passes'  || 0    | '  a line that is not the one of a pack that was checked'
+        'needs a later Java than the toolchain has'       | 'older-java'       || 1    | "This Forge needs Java 21 or later, and the toolchain of the project runs it with Java ${CURRENT_JDK}"
+    }
+
+    def "what Forge writes is read as UTF-8 where that is not what the platform writes"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        new File(runner.projectDir, 'src/main/forge/feature.yml') << 'stand-in: noisy\n'
+
+        when: 'the build, and with it the JVM of Forge, has a locale without the character'
+        BuildResult result
+        try {
+            result = runner.withEnvironment(System.getenv() + [LC_ALL: 'C', LANG: 'C']).withArguments('checkForgePack').buildAndFail()
+        } finally {
+            runner.withEnvironment(null)
+        }
+
+        then:
+        result.output.contains('  - problem 0  [31mred  caf\u00e9')
     }
 
     def "what Forge writes is shown in bounds, without the control characters it has"() {

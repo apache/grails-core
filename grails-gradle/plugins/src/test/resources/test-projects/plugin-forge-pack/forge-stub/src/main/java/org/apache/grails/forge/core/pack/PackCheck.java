@@ -13,8 +13,10 @@ import java.util.stream.Stream;
 /**
  * Stands in for the class of Forge that checks a feature pack. It is started as Forge is: the directory
  * of the pack is its one argument, its problems go to the standard output, one on a line, and it ends
- * with 0 for none, 1 for some and anything else when it could not check. What it takes for a problem is
- * made up, and enough for a test to tell what of a pack it was shown.
+ * with 0 for none, having written the one line Forge writes for a pack it checked, with 1 for some and
+ * with anything else when it could not check. What it takes for a problem is made up, and enough for a
+ * test to tell what of a pack it was shown; a descriptor can also tell it to end as a Forge that went
+ * wrong does.
  */
 public final class PackCheck {
 
@@ -29,6 +31,7 @@ public final class PackCheck {
         Path directory = Path.of(args[0]);
         System.err.println("stand-in directory: " + directory);
         System.err.println("stand-in class path: " + System.getProperty("java.class.path"));
+        System.err.println("stand-in working directory: " + System.getProperty("user.dir"));
         List<String> problems = new ArrayList<>();
         Path descriptor = directory.resolve("feature.yml");
         if (!Files.isRegularFile(descriptor, LinkOption.NOFOLLOW_LINKS)) {
@@ -40,6 +43,25 @@ public final class PackCheck {
                 System.exit(3);
             }
             if (text.contains("stand-in: silent")) {
+                System.exit(1);
+            }
+            if (text.contains("stand-in: unchecked")) {
+                System.err.println("The feature pack could not be checked: stand-in");
+                System.exit(2);
+            }
+            if (text.contains("stand-in: ended")) {
+                // as a template that ends the JVM does
+                System.exit(0);
+            }
+            if (text.contains("stand-in: says-and-passes")) {
+                System.out.println("a line that is not the one of a pack that was checked");
+                System.exit(0);
+            }
+            if (text.contains("stand-in: older-java")) {
+                System.err.println("Error: LinkageError occurred while loading main class org.apache.grails.forge.core.pack.PackCheck");
+                System.err.println("\tjava.lang.UnsupportedClassVersionError: org/apache/grails/forge/core/pack/PackCheck has been compiled by a "
+                        + "more recent version of the Java Runtime (class file version 65.0), this version of the Java Runtime only "
+                        + "recognizes class file versions up to 61.0");
                 System.exit(1);
             }
             if (text.contains("stand-in: noisy")) {
@@ -71,6 +93,9 @@ public final class PackCheck {
         }
         for (String problem : problems) {
             System.out.println(problem);
+        }
+        if (problems.isEmpty()) {
+            System.out.println("feature pack checked: templates=1 applications=4");
         }
         System.exit(problems.isEmpty() ? 0 : 1);
     }

@@ -10,9 +10,65 @@ grails {
 }
 
 // Forge is in no repository this build has, so the pack is checked by a stand-in that is started and
-// read the way Forge is. A test that wants the Forge the plugin resolves by itself says so.
-if (!providers.gradleProperty('forgeOfGrails').present) {
+// read the way Forge is. A test that wants the Forge the plugin resolves by itself, or something that
+// is not Forge, says so.
+if (providers.gradleProperty('notForge').present) {
+    dependencies {
+        grailsForgePackTooling files('not-forge')
+    }
+} else if (!providers.gradleProperty('forgeOfGrails').present) {
     dependencies {
         grailsForgePackTooling 'org.example.forge:forge-stub'
+    }
+}
+
+// What the Grails plugins do to the versions of a configuration of the project, and must not do to the
+// class path of Forge: the same two modules on both, from a repository of descriptors without jars, with
+// a BOM whose property the build overrides and a Groovy the build forces.
+if (providers.gradleProperty('versionsOfTheProject').present || providers.gradleProperty('withRepository').present) {
+    repositories {
+        maven {
+            url = uri("${projectDir}/maven-repo")
+        }
+    }
+}
+if (providers.gradleProperty('versionsOfTheProject').present) {
+    apply plugin: 'org.apache.grails.gradle.bom-property-overrides'
+
+    dependencies {
+        implementation platform('org.example:tool-bom:1.0.0')
+        implementation 'org.example:toollib'
+        implementation 'org.apache.groovy:groovy:1.0.0'
+        grailsForgePackTooling 'org.example:toollib:1.0.0'
+        grailsForgePackTooling 'org.apache.groovy:groovy:1.0.0'
+    }
+
+    ['runtimeClasspath', 'grailsForgePackTooling'].each { String name ->
+        def root = configurations.named(name).flatMap { it.incoming.resolutionResult.rootComponent }
+        tasks.register("print${name.capitalize()}") {
+            doLast {
+                root.get().dependencies.each { println "${name}=${it.selected.moduleVersion}" }
+            }
+        }
+    }
+}
+
+if (providers.gradleProperty('published').present) {
+    apply plugin: 'maven-publish'
+
+    group = 'org.example'
+    version = '1.0.0'
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+            }
+        }
+        repositories {
+            maven {
+                url = uri(layout.buildDirectory.dir('published'))
+            }
+        }
     }
 }

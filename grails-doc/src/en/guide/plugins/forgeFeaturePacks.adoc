@@ -282,18 +282,57 @@ A plugin with a pack has it checked when the plugin is checked:
 $ ./gradlew check
 ----
 
-`check` runs the task `checkForgePack`, which can also be run by itself. It reads the pack with the generator, the way the pack is read when an application is created, and fails the build with every problem it finds, each with the key of the descriptor it is at:
+`check` runs the task `checkForgePack`, which can also be run by itself. It reads the pack with the generator, the way the pack is read when an application is created, and fails the build with the problems it finds, one on a line, up to 50 of them. A problem of a key of the descriptor starts with that key, such as `files[0].to:`; one of the pack as a whole, such as a missing `feature.yml`, has none. It checks:
 
 * the whole descriptor: unknown keys, missing or malformed values, destinations outside the application;
 * every file the descriptor names: that it is there under `templates`, is a file and not a link, and is not too large;
-* `compatibility`: that the pack is for the version of Grails it is checked with;
+* `compatibility`: that the pack is for the version of Grails, and for the version of the generator, it is checked with;
 * every template: that it compiles, and that it renders without an error. A name the template API does not have, such as a misspelled `project.pakageName`, is an error. The problem names the line of the template, as the message does when an application is created. A tag that is not one of the ten <<forgeFeaturePackTags,instruction tags>> is no problem: it is output, and is not looked up in a tag library.
 
-No application is generated. A template is rendered for applications that are made up: one named `com.example.shop` that has the feature of the pack and the features it `requires`, for each of the `applicationTypes` of the descriptor and each value of `options.data`, `options.servlet` and `options.reloading`. What a template does only for another application, for example inside `if (features.contains('grails-spring-security'))` when the pack does not require that feature, is not run and so is not checked; try the pack out for that, as described below. Rendering a template runs its code, as creating an application does.
+The templates are found through the descriptor, so while the descriptor has a problem only its problems are reported: the templates are checked once it can be read.
 
-A plugin without `src/main/forge` skips the task. The task is up to date when neither the pack nor the generator changed. Building the jar does not run it: `jar` and `assemble` package a pack that was not checked, and `check` and `build` are what fail for a pack that cannot be used.
+No application is generated. A template is compiled once and rendered for a few applications that are made up, and a problem names the one it was found for. All of them are named `com.example.shop` and have the feature of the pack, the features it `requires` and no other feature. With all four `applicationTypes` they are:
 
-The generator runs in a JVM of its own and is not a dependency of the plugin. It is resolved from the repositories of the build as `org.apache.grails.forge:grails-forge-core`, in the version of Grails the plugin is built with (`grailsVersion`). To check the pack with another version, declare it:
+[cols="1,1,1,1,1"]
+|===
+|`applicationType` |`options.jdk` |`options.data` |`options.servlet` |`options.reloading`
+
+|`web`
+|`21`
+|`hibernate5`
+|`tomcat`
+|`devtools`
+
+|`rest-api`
+|`25`
+|`hibernate7`
+|`jetty`
+|`jrebel`
+
+|`web-plugin`
+|`26`
+|`mongodb`
+|`undertow`
+|`none`
+
+|`plugin`
+|`21`
+|`neo4j`
+|`none`
+|`devtools`
+|===
+
+A descriptor with fewer `applicationTypes` has those in the first column, in this order and starting over when they run out. So every value of an option is rendered once, and a typing error in what a template does for one value is found. What a template does only for an application that is not in the table is not rendered, and an error there is found only when such an application is created:
+
+* for a feature the pack does not require, for example inside `if (features.contains('grails-spring-security'))`;
+* for a combination that is not a row of the table, such as `hibernate7` with `undertow`;
+* for another name or package than `com.example.shop`.
+
+Try the pack out for those, as described below. Rendering a template runs its code, as creating an application does. Neither is checked what depends on the other features of an application: that no other feature sets a setting, a build property or the version of a dependency of the pack differently, or writes one of its files.
+
+A plugin without `src/main/forge` skips the task. The task is up to date when neither the pack nor the generator changed. Building the jar does not run it: `jar`, `assemble` and `publishToMavenLocal` package a pack that was not checked. `check` and `build` fail for a pack that cannot be used, and so does publishing the plugin to a repository with the `maven-publish` plugin (`publish` and the `publish...Repository` tasks), which checks the pack first.
+
+The generator runs in a JVM of its own, with the Java of the toolchain of the project, and is not a dependency of the plugin. It is resolved from the repositories of the build as `org.apache.grails.forge:grails-forge-core`, in the version of Grails the plugin is built with (`grailsVersion`), with the versions of its own dependencies it was published with: `groovy.version` and the overrides of BOM properties of the project do not apply to it. When no repository of the build has it the task fails and says so. To check the pack with another version, declare it:
 
 [source,groovy]
 .build.gradle

@@ -484,6 +484,9 @@ ${importStatements}
         String slf4jPreventExclusion = project.findProperty('slf4jPreventExclusion')
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
+                if (isToolClasspathOfItsOwn(configuration.name)) {
+                    return
+                }
                 configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
             }
         }
@@ -801,8 +804,17 @@ ${importStatements}
                 name == 'spotbugs' || name == 'spotbugsPlugins' ||
                 name == 'jacocoAgent' || name == 'jacocoAnt' ||
                 name == 'annotationProcessor' || name.endsWith('AnnotationProcessor') ||
-                // Forge, which brings the platform of the Grails it belongs to
-                name == GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
+                isToolClasspathOfItsOwn(name)
+    }
+
+    /**
+     * Whether the configuration is the class path of a tool this plugin starts in a JVM of its own,
+     * which has the versions the tool was published with and none the project chooses for itself:
+     * Forge, which checks the feature pack of a plugin with the Groovy and the platform of the Grails it
+     * belongs to.
+     */
+    static boolean isToolClasspathOfItsOwn(String name) {
+        name == GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
     }
 
     protected void applySpringBootPlugin(Project project) {
@@ -936,6 +948,9 @@ ${importStatements}
         if (groovyVersion) {
             project.logger.lifecycle('Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version {}.', groovyVersion)
             project.configurations.configureEach { Configuration configuration ->
+                if (isToolClasspathOfItsOwn(configuration.name)) {
+                    return
+                }
                 configuration.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
                     String group = details.requested.group
                     if (group == 'org.apache.groovy') {

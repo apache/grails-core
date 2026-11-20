@@ -35,6 +35,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.dsl.DependencyHandler
@@ -52,6 +53,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.provider.ValueSourceSpec
+import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
@@ -119,7 +121,8 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     /** The task that checks the Forge feature pack of the plugin. */
     public static final String FORGE_PACK_CHECK_TASK = 'checkForgePack'
 
-    private static final String FORGE_PACK_TOOLING = 'org.apache.grails.forge:grails-forge-core'
+    /** Forge, without its version: what checks the feature pack of the plugin unless the build names another. */
+    public static final String FORGE_PACK_TOOLING = 'org.apache.grails.forge:grails-forge-core'
 
     private static final Pattern FORGE_PACK_NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
 
@@ -418,8 +421,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
      * another.</p>
      *
      * <p>The jar is built without the check: {@code jar} and {@code assemble} need no Forge to be
-     * resolved, as they need no test to pass. {@code check}, and so {@code build}, is what fails for a
-     * pack Forge could not use.</p>
+     * resolved, as they need no test to pass, and neither does {@code publishToMavenLocal}.
+     * {@code check}, and so {@code build}, is what fails for a pack Forge could not use, and so does
+     * publishing the plugin to a repository, which does not otherwise depend on {@code check}.</p>
      */
     protected void configureForgePackCheck(Project project) {
         ProjectLayout layout = project.layout
@@ -464,7 +468,11 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 spec.parameters.packDirectory.set(source)
                 spec.parameters.digest.set(true)
             })
-            task.toolingClasspath.from(tooling)
+            // what cannot be resolved is left out here and fails the task, which can say what it is for
+            task.toolingClasspath.from(tooling.map { Configuration configuration ->
+                configuration.incoming.artifactView { ArtifactView.ViewConfiguration view -> view.lenient(true) }.files
+            })
+            task.toolingResolution.set(tooling.flatMap { Configuration configuration -> configuration.incoming.resolutionResult.rootComponent })
             task.javaLauncher.set(launcher)
             task.markerFile.set(layout.buildDirectory.file('grails/forge-pack-check/checked'))
             task.onlyIf("there is a feature pack in ${FORGE_PACK_SOURCE_DIR}") { Task checked ->
@@ -473,6 +481,13 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
         project.tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure { Task check ->
             check.dependsOn(checkForgePack)
+        }
+        // a pack nobody checked is not published for others to find out. Installing into the local
+        // repository of a developer stays without it, as the jar does
+        project.pluginManager.withPlugin('maven-publish') {
+            project.tasks.withType(PublishToMavenRepository).configureEach { PublishToMavenRepository publish ->
+                publish.dependsOn(checkForgePack)
+            }
         }
     }
 

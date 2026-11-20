@@ -156,7 +156,13 @@ TaskProvider<Task> writePackCheckClasspath = tasks.register('writePackCheckClass
 }
 tasks.named('test', Test).configure { Test test ->
     test.dependsOn(writePackCheckClasspath)
+    // what the Grails Gradle plugin, which this build is built with, starts and what it reads: a class
+    // of Forge that is renamed, or says something else, fails a spec here and not the build of a plugin
+    String startedByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.MAIN_CLASS
+    String readByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.CHECKED_LINE
     test.jvmArgumentProviders.add({
-        ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString()]
+        ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString(),
+         "-Dforge.packCheck.mainClassOfGradlePlugin=${startedByGradlePlugin}".toString(),
+         "-Dforge.packCheck.checkedLineOfGradlePlugin=${readByGradlePlugin}".toString()]
     } as CommandLineArgumentProvider)
 }

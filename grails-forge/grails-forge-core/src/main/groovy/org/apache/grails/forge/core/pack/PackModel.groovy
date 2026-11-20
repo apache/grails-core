@@ -104,10 +104,11 @@ final class PackModel {
      * Models of applications that are made up, for checking the templates of a pack where no application
      * is generated: an application {@code com.example.shop} with the feature of the pack and the features
      * it requires, and nothing else. There are as many as it takes for every type of application the
-     * descriptor names and every value of {@code options.data}, {@code options.servlet} and
-     * {@code options.reloading} to be in one of them; they are not every combination, and a combination
-     * can be one no application has. The models have the names {@link #of} gives a template of a pack
-     * that is not of Forge.
+     * descriptor names and every value of {@code options.jdk}, {@code options.data},
+     * {@code options.servlet} and {@code options.reloading} to be in one of them: the first has the first
+     * value of each, the second the second, and one that has run out of values starts over. They are not
+     * every combination, and a combination can be one no application has. The models have the names
+     * {@link #of} gives a template of a pack that is not of Forge.
      *
      * @param descriptor the descriptor of the pack the templates are of
      * @return the models, none of which can be changed, each with what tells it from the others
@@ -120,10 +121,11 @@ final class PackModel {
         GormImpl[] data = GormImpl.values()
         ServletImpl[] servlets = ServletImpl.values()
         DevelopmentReloading[] reloading = DevelopmentReloading.values()
-        int count = [types.size(), data.length, servlets.length, reloading.length].max()
+        JdkVersion[] jdks = JdkVersion.values()
+        int count = [types.size(), data.length, servlets.length, reloading.length, jdks.length].max()
         Map<String, Map<String, Object>> samples = new LinkedHashMap<>()
         for (int index = 0; index < count; index++) {
-            Map<String, Object> model = model(project, features, types[index % types.size()], JdkVersion.DEFAULT_OPTION,
+            Map<String, Object> model = model(project, features, types[index % types.size()], jdks[index % jdks.length],
                     data[index % data.length], servlets[index % servlets.length], reloading[index % reloading.length], descriptor)
             samples.put("applicationType ${model.get('applicationType')}, options ${model.get('options')}".toString(),
                     Collections.unmodifiableMap(model))

@@ -36,7 +36,11 @@ import org.grails.forge.util.VersionInfo
  * application does: this is for a pack whose author runs the check. Nothing is written anywhere.</p>
  *
  * <p>What a template does only for an application the samples are not like, such as one with a feature
- * the pack does not require, is not run and so not checked.</p>
+ * the pack does not require, is not run and so not checked. A descriptor that cannot be read hides what
+ * is wrong with the templates: the files of a pack are the ones its descriptor names, so there are none
+ * to check until it can be read, and the problems of the descriptor are all that is given. Neither are
+ * the checks made that need the application a pack is used for, which {@link PackFeature} makes when
+ * one is generated.</p>
  *
  * @since 9.0
  */
@@ -52,6 +56,12 @@ final class PackCheck {
     /** The result of {@link #run} when the pack could not be checked */
     public static final int NOT_CHECKED = 2
 
+    /**
+     * What {@link #run} writes for a pack nothing is wrong with, before the numbers of templates and of
+     * applications they were rendered for: a check that ended without it did not get to its end.
+     */
+    public static final String CHECKED = 'feature pack checked: '
+
     private static final int MAX_NAME = 120
 
     private PackCheck() {
@@ -63,11 +73,15 @@ final class PackCheck {
      * where it has one; nothing for a pack that can be used
      */
     static List<String> check(Path directory) {
+        return examine(directory).problems
+    }
+
+    private static Examined examine(Path directory) {
         Pack pack
         try {
             pack = new PackLoader().fromDirectory(directory)
         } catch (PackDescriptorException e) {
-            return e.problems.collect { String problem -> line(problem) }
+            return new Examined(e.problems.collect { String problem -> line(problem) }, 0, 0)
         }
         PackDescriptor descriptor = pack.descriptor
         List<String> problems = []
@@ -95,7 +109,20 @@ final class PackCheck {
                 }
             }
         }
-        return problems
+        return new Examined(problems, checked.size(), samples.size())
+    }
+
+    private static final class Examined {
+
+        final List<String> problems
+        final int templates
+        final int applications
+
+        Examined(List<String> problems, int templates, int applications) {
+            this.problems = problems
+            this.templates = templates
+            this.applications = applications
+        }
     }
 
     private static void compatibility(String key, String of, String range, String version, List<String> problems) {
@@ -111,10 +138,13 @@ final class PackCheck {
     }
 
     /**
-     * Checks a pack and says what is wrong with it, a problem on a line.
+     * Checks a pack and says what is wrong with it, a problem on a line. For a pack nothing is wrong
+     * with it writes one line, {@link #CHECKED} and then {@code templates=} and {@code applications=}
+     * with the numbers of templates and of applications each was rendered for, so that a check that was
+     * ended before it was done, by a template for one, is not taken for one that found nothing.
      *
      * @param args the directory of the pack, and nothing else
-     * @param out where the problems go, and nothing but the problems
+     * @param out where the problems go, or the line of a pack without any, and nothing else
      * @param err where it is said why a pack could not be checked
      * @return {@link #VALID}, {@link #PROBLEMS} or {@link #NOT_CHECKED}
      */
@@ -123,9 +153,9 @@ final class PackCheck {
             err.println('Give the directory of the feature pack to check, and nothing else')
             return NOT_CHECKED
         }
-        List<String> problems
+        Examined examined
         try {
-            problems = check(Path.of(args[0]))
+            examined = examine(Path.of(args[0]))
         } catch (InvalidPathException ignored) {
             err.println('The directory of the feature pack is not a path')
             return NOT_CHECKED
@@ -135,15 +165,19 @@ final class PackCheck {
             err.println("The feature pack could not be checked: ${line(e.toString())}")
             return NOT_CHECKED
         }
-        problems.each { String problem -> out.println(problem) }
-        return problems ? PROBLEMS : VALID
+        if (examined.problems) {
+            examined.problems.each { String problem -> out.println(problem) }
+            return PROBLEMS
+        }
+        out.println("${CHECKED}templates=${examined.templates} applications=${examined.applications}")
+        return VALID
     }
 
     /**
-     * Checks the pack of the directory that is the one argument, writes its problems to the standard
-     * output, a problem on a line, and ends the JVM with {@link #VALID}, {@link #PROBLEMS} or
+     * Checks the pack of the directory that is the one argument, writes what {@link #run} writes to the
+     * standard output, and ends the JVM with {@link #VALID}, {@link #PROBLEMS} or
      * {@link #NOT_CHECKED}. What a template writes to the standard output goes to the standard error,
-     * so that the problems are all there is to read.
+     * so that what the check says is all there is to read.
      */
     static void main(String[] args) {
         PrintStream out = System.out
