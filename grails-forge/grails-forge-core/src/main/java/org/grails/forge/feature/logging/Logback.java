@@ -24,6 +24,8 @@ import org.grails.forge.application.generator.GeneratorContext;
 import org.grails.forge.build.dependencies.Dependency;
 import org.grails.forge.feature.DefaultFeature;
 import org.grails.forge.feature.Feature;
+import org.grails.forge.feature.config.ApplicationConfiguration;
+import org.grails.forge.feature.config.ConfigurationFeature;
 import org.grails.forge.options.Options;
 
 import java.util.Set;
@@ -58,15 +60,19 @@ public class Logback implements LoggingFeature, DefaultFeature {
 
     @Override
     public void apply(GeneratorContext generatorContext) {
-        // Only add the logging library. Do not generate grails-app/conf/logback-spring.xml:
+        generatorContext
+            .getConfiguration(ConfigurationFeature.DEV_ENVIRONMENT_KEY,
+                new ApplicationConfiguration(ConfigurationFeature.DEV_ENVIRONMENT_KEY))
+            .put("logging.pattern.dateformat", "HH:mm:ss.SSS");
+        // Add the logging library. Do not generate grails-app/conf/logback-spring.xml:
         // grails-logging brings spring-boot-starter-logging, so Logback and Spring Boot's
         // default configuration apply automatically when the app supplies no config. This
         // matches Spring Boot 4.x's zero-config logging convention. Users add their own
         // logback-spring.xml only when they need to customize.
         generatorContext.addDependency(Dependency.builder()
-                .groupId("org.apache.grails")
-                .artifactId("grails-logging")
-                .implementation());
+            .groupId("org.apache.grails")
+            .artifactId("grails-logging")
+            .implementation());
     }
 
     @Override
