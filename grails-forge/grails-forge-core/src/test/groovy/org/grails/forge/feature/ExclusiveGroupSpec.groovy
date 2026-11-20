@@ -37,7 +37,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
 
         then:
         familyByGroup == [
-                'api-views'           : 'GrailsViews',
+                'api-views'           : 'a pack of Forge',
                 'cache-provider'      : 'a pack of Forge',
                 'configuration'       : 'ConfigurationFeature',
                 'data-nosql'          : 'GormOneOfFeature',
@@ -51,7 +51,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
                 'migration'           : 'a pack of Forge',
                 'reloading'           : 'a pack of Forge',
                 'spring-ai-provider'  : 'a pack of Forge',
-                'spring-security'     : 'PrimarySecurityFeature',
+                'spring-security'     : 'a pack of Forge',
                 'threading'           : 'SpringThreadingFeature',
         ]
     }

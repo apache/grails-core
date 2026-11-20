@@ -22,6 +22,7 @@ package org.grails.forge.feature.security
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.Options
@@ -71,7 +72,7 @@ class GrailsSpringSecurityUiSpec extends ApplicationContextSpec implements Comma
 
     void 'the feature advertises the UI plugin in the Spring Security category'() {
         given:
-        def feature = beanContext.getBean(GrailsSpringSecurityUi)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'grails-spring-security-ui' }
 
         expect:
         feature.name == 'grails-spring-security-ui'

@@ -166,7 +166,7 @@ tasks.named('build').configure {
 }
 
 // A Grails plugin's GSPs are its views, compiled rather than packaged, so the plugin build keeps them out
-// of the resources. The GSPs under src/main/resources/gsp are templates the generator writes into
+// of the resources. The GSPs of the feature packs under src/main/resources are templates the generator writes into
 // generated applications, not views of this plugin, so they stay in.
 tasks.named('processResources', ProcessResources).configure { ProcessResources task ->
     task.excludes = task.excludes.findAll { String pattern -> pattern != '**/*.gsp' }
