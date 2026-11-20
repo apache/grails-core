@@ -80,7 +80,9 @@ class FormerCommandsSpec extends CommandSpec {
         where:
         typed                      | said
         'test'                     | 'test was another name of test-app in the Grails shell. Type: grails-forge-cli test-app'
-        'create-tag-lib'           | 'create-tag-lib was another name of create-taglib in the Grails shell. Type: grails-forge-cli create-taglib'
+        'create-tag-lib'           | 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, so it was no command there either. Type: grails-forge-cli create-taglib'
+        'run'                      | 'run was another name of run-app in a project in the Grails shell; outside a project it ran a Groovy script with Spring Boot, which has no replacement. Type: grails-forge-cli run-app'
+        'stop'                     | 'stop was another name of stop-app in the Grails shell. Type: grails-forge-cli stop-app'
         'quit'                     | 'quit ended the interactive mode of the Grails shell. The interactive mode of grails-forge-cli is ended with exit, and there is none to end outside it'
         'list-profiles'            | 'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features'
         'list-plugins'             | 'list-plugins listed the plugins of the Grails plugin portal in the Grails shell. It has no replacement in grails-forge-cli'
@@ -131,12 +133,13 @@ class FormerCommandsSpec extends CommandSpec {
             commands.findAll { it.key != 'outside' }.values().any { it.contains(each.name) }
         }
 
-        and: 'every command that is not there in every directory is in the table, so that none is refused without a word'
-        (commands.values().flatten() as Set<String>).findAll { String name -> commands.values().any { !it.contains(name) } }.every { names.contains(it) }
+        and: 'every command that is not there in every kind of project is in the table, so that none is refused without a word'
+        Map<String, Set<String>> inProjects = commands.findAll { it.key != 'outside' }
+        (inProjects.values().flatten() as Set<String>).findAll { String name -> inProjects.values().any { !it.contains(name) } }.every { names.contains(it) }
 
         and: 'a command a line tells to type is a command of a web application'
-        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'test-app']
-        ['create-taglib', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test'].every { commands.web.contains(it) }
+        table.collect { (it.hint =~ /Type: \{cli\} ([a-z-]+)$/) }.findAll { it.find() }*.group(1).sort() == ['create-taglib', 'run-app', 'stop-app', 'test-app']
+        ['create-taglib', 'run-app', 'stop-app', 'test-app', 'help', 'gradle', 'feature', 'create-app', 'create-unit-test'].every { commands.web.contains(it) }
         ['create-restful-controller', 'create-functional-test'].every { commands.rest.contains(it) }
 
         and: 'in every directory, each of them is either a command or refused with its line and nothing else of the table'
@@ -170,7 +173,7 @@ class FormerCommandsSpec extends CommandSpec {
         lines[0].startsWith('There is no command create-tag-lib. Did you mean: ')
         lines[0].contains('create-taglib')
         lines[1] == MISSING
-        lines[2] == 'create-tag-lib was another name of create-taglib in the Grails shell. Type: grails-forge-cli create-taglib'
+        lines[2] == 'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, so it was no command there either. Type: grails-forge-cli create-taglib'
         lines[3] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
         lines[4] == "Run 'grails-forge-cli help' for the commands"
         lines.size() == 5
@@ -185,7 +188,8 @@ class FormerCommandsSpec extends CommandSpec {
         exit == 2
         lines[0].startsWith('There is no command create-functional-test')
         lines[1] == MISSING
-        lines[2] == 'create-functional-test is a command in the directory of a REST API application (create-restapi), and the current directory is in none'
+        lines[2] == 'create-functional-test is a command in the directory of a REST API application (create-restapi), and the current directory is in none. ' +
+                'In a web application it was a script of the Geb plugin, which has no replacement here'
 
         when: 'a command of a plugin, which the build of the project may list'
         err.reset()
@@ -362,6 +366,65 @@ class FormerCommandsSpec extends CommandSpec {
         then:
         exit == 1
         (out.toString() + err.toString()).contains('Run: grails-forge-cli gradle publishToMavenLocal')
+    }
+
+    void "every command of the Grails shell and of its profiles, read from their sources, is a command here or is in the table"() {
+        given: 'the names the sources of the shell and of the profiles of this repository give'
+        File repository = new File(previousUsrDir, '../..').canonicalFile
+        Set<String> ofShell = [] as Set
+        // the commands of the shell itself: the classes it registers, by the name each declares
+        File registered = new File(repository, 'grails-shell-cli/src/main/resources/META-INF/services/org.grails.cli.profile.Command')
+        registered.readLines('UTF-8').findAll { it.trim() && !it.startsWith('#') }.each { String className ->
+            String path = "grails-shell-cli/src/main/groovy/${className.trim().replace('.', '/')}"
+            File source = [new File(repository, path + '.groovy'), new File(repository, path + '.java')].find { it.isFile() }
+            def declared = source.getText('UTF-8') =~ /(?m)^\s*(?:public static final String [A-Z_]+|final String name)\s*=\s*['"]([a-z-]+)['"]/
+            assert declared.find(): "${source} names its command"
+            ofShell << declared.group(1)
+        }
+        // what its interactive mode takes besides commands
+        String interactive = new File(repository, 'grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy').getText('UTF-8')
+        ['!', 'exit', 'quit'].each { String word ->
+            assert interactive.contains("case '${word}':")
+            ofShell << word
+        }
+        // the commands of the profiles: one for each file, and the other names a script gives, which the shell reads
+        // from a script and not from where a YAML file has them
+        Map<String, String> ofProfiles = [:]
+        new File(repository, 'grails-profiles').eachDir { File profile ->
+            File commands = new File(profile, 'commands')
+            (commands.listFiles() ?: [] as File[]).findAll { it.name ==~ /[a-z0-9-]+\.(yml|groovy)/ }.each { File file ->
+                ofProfiles[file.name.replaceFirst(/\.(yml|groovy)$/, '')] = profile.name
+                if (file.name.endsWith('.groovy')) {
+                    (file.getText('UTF-8') =~ /(?m)^\s*synonyms\s+(.+)$/).each { List<String> found ->
+                        (found[1] =~ /'([a-z-]+)'/).each { List<String> name -> ofProfiles[name[1]] = profile.name }
+                    }
+                }
+            }
+        }
+
+        and: 'a project of each kind, and the directory above them'
+        PROJECTS.each { String kind, List<String> create -> commandsIn(create) }
+        Closure<Boolean> isCommand = { String kind, String name ->
+            System.setProperty('user.dir', (kind == 'outside' ? top : new File(top, PROJECTS[kind][1].substring('example.'.length()))).absolutePath)
+            out.reset()
+            err.reset()
+            // by its name, another name it has, or as what is short for one command
+            ForgeCli.execute(beanContext, 'help', name) == 0
+        }
+
+        expect: 'the sources were found'
+        ofShell == ['create-app', 'create-plugin', 'create-web-plugin', 'create-profile', 'open', 'help', 'list-profiles', 'profile-info', 'gradle', 'run', '!', 'exit', 'quit'] as Set
+        ofProfiles.keySet().containsAll(['run-app', 'run', 'stop', 'sh', 'war', 'test', 'create-controller', 'generate-all', 'create-feature', 'package-plugin'])
+        ofProfiles.size() > 40
+
+        and: 'none of them is typed without an answer: it is a command somewhere, or the table has a line for it'
+        (ofShell + ofProfiles.keySet()).findAll { String name ->
+            FormerCommands.find(name) == null && !(['outside'] + PROJECTS.keySet()).any { String kind -> isCommand(kind, name) }
+        } == [] as Set
+
+        and: 'sh, which was another name of shell, is what is short for shell'
+        FormerCommands.find('sh') == null
+        isCommand('web', 'sh')
     }
 
     void "the guide lists the commands of earlier versions the table has, each with what became of it"() {

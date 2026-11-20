@@ -18,8 +18,12 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.util.regex.Pattern
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.state.ProjectState
+import org.grails.forge.cli.command.CodeGenCommand
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
 
 /**
@@ -120,33 +124,147 @@ class UsageHelp extends CommandLine.Help {
         }
     }
 
+    /** How many characters of a mistake are said, at most: what was typed can be of any length. */
+    public static final int MAX_MISTAKE = 600
+
+    private static final Pattern NOT_SHOWN = Pattern.compile(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/)
+
     /**
-     * Answers a mistake in the use of a command.
+     * Answers a mistake in the use of a command. What is wrong is said in one line, whatever was
+     * typed: a message of picocli repeats the argument as it was, with its line breaks and its escape
+     * sequences, and is held to one line of bounded length here as the messages of the CLI are.
      *
      * @param mistake the mistake, as picocli or a command found it
      * @param given the command line
-     * @return the exit code of a mistake in the use of a command
+     * @return the exit code of a mistake in the use of a command, or of a command of a project that
+     * was not given what it needs where there is no project: that there is none is said first
      */
     static int answer(CommandLine.ParameterException mistake, String... given) {
         CommandLine command = mistake.getCommandLine()
         CommandLine.Model.CommandSpec spec = command.getCommandSpec()
         PrintWriter err = command.getErr()
         CommandLine.Help.ColorScheme scheme = command.getColorScheme()
-        err.println(scheme.errorText(notAnOption(mistake, spec, given) ?: mistake.getMessage()))
+        if (mistake instanceof CommandLine.MissingParameterException) {
+            String refusal = withoutProject(spec)
+            if (refusal != null) {
+                err.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Error|@ ' + refusal))
+                err.flush()
+                return 1
+            }
+        }
+        if (mistake instanceof Lines) {
+            err.println(scheme.errorText(mistake.getMessage()))
+        } else {
+            err.println(scheme.errorText(line(notAnOption(mistake, spec, given) ?: worded(mistake, spec))))
+        }
         // for an option that is nearly one of the command's, the ones it could have been
         CommandLine.UnmatchedArgumentException.printSuggestions(mistake, err)
         CommandLine.Help help = command.getHelpFactory().create(spec, scheme)
         String[] own = spec.usageMessage().customSynopsis()
         // every option where that is one line, and where it is more only that there are options
         String every = help.synopsis(0).trim()
-        String synopsis = own != null && own.length > 0 ? scheme.text(own[0]).plainString() :
+        // a usage line a command wrote itself is its lines put together: here it is one
+        String synopsis = own != null && own.length > 0 ? own.collect { String each -> scheme.text(each).plainString().trim() }.join(' ') :
                 every.contains('\n') || every.length() > spec.usageMessage().width() ? help.abbreviatedSynopsis().trim() : every
         err.println("Usage: ${synopsis}")
         String root = spec.root().name()
-        String path = spec.qualifiedName(' ').substring(root.length())
-        err.println(spec.parent() == null ? "Run '${root} help' for the commands" : "Run '${root} help${path}' for the options")
+        err.println(spec.parent() == null ? "Run '${root} help' for the commands" : "Run '${root} help ${named(spec)}' for the options")
         err.flush()
         return spec.exitCodeOnInvalidInput()
+    }
+
+    /**
+     * @param text a message that has something in it that was typed
+     * @return the message as one line of bounded length that a terminal and the command line do not act on
+     */
+    static String line(String text) {
+        String all = text ?: ''
+        String start = all.length() > MAX_MISTAKE ? all.substring(0, MAX_MISTAKE) + '...' : all
+        return NOT_SHOWN.matcher(start).replaceAll('?').replace('@|', '@ |')
+    }
+
+    /**
+     * @param spec a command
+     * @return the command as it is named in a message: by its name, after the names of the commands
+     * it is a command of, as {@code feature add}; the command line itself by its own name
+     */
+    static String named(CommandLine.Model.CommandSpec spec) {
+        String root = spec.root().name()
+        return spec.parent() == null ? root : spec.qualifiedName(' ').substring(root.length() + 1)
+    }
+
+    /**
+     * @param spec a command that was run
+     * @return the command as it was typed: by the other name it has when that was typed, as
+     * {@code war} for {@code assemble}
+     */
+    static String typed(CommandLine.Model.CommandSpec spec) {
+        CommandLine.ParseResult parsed = spec.root().commandLine().getParseResult()
+        if (spec.parent() == null || spec.parent().parent() != null || parsed == null) {
+            return named(spec)
+        }
+        List<String> names = [spec.name()]
+        names.addAll(spec.aliases().toList())
+        String typed = parsed.originalArgs().find { String arg -> arg in names }
+        return typed ?: spec.name()
+    }
+
+    /**
+     * @param spec a command
+     * @return for a command of a project where no project is used, the one line every such command
+     * says there, and for a command that needs the record of a project where none was read, that;
+     * {@code null} for any other command, and in a project
+     */
+    static String withoutProject(CommandLine.Model.CommandSpec spec) {
+        if (!(spec.userObject() instanceof ProjectCommand)) {
+            return null
+        }
+        try {
+            ConsoleProject.Search search = ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
+            if (search.project == null) {
+                return search.none(typed(spec))
+            }
+            // a command that writes what the record of a project says, in a project that has none that is read
+            if (spec.userObject() instanceof CodeGenCommand && !((CodeGenCommand) spec.userObject()).hasRecord()) {
+                return "${typed(spec)} is a command of a Grails project whose record is read; the project in ${GradleRunner.line(search.project.directory)} " +
+                        "has no ${ProjectState.MANIFEST} or ${ProjectState.EARLIER_RECORD} that is"
+            }
+            return null
+        } catch (IOException ignored) {
+            return null
+        }
+    }
+
+    // One wording for one mistake: an option a command does not have, and an argument it does not take,
+    // are said as the CLI says them, with the command named as it is typed.
+    private static String worded(CommandLine.ParameterException mistake, CommandLine.Model.CommandSpec spec) {
+        if (mistake instanceof CommandLine.UnmatchedArgumentException) {
+            List<String> unmatched = ((CommandLine.UnmatchedArgumentException) mistake).getUnmatched()
+            if (unmatched != null && !unmatched.isEmpty()) {
+                String first = unmatched.get(0)
+                String more = unmatched.size() > 1 ? ", or the ${unmatched.size() - 1} after it" : ''
+                return first.startsWith('-') && first.length() > 1 ?
+                        "${named(spec)} has no option ${FeatureSelectionException.shown(optionOf(first))}${more}" :
+                        "${named(spec)} takes no argument ${FeatureSelectionException.shown(first)}${more}"
+            }
+        }
+        return mistake.getMessage()
+    }
+
+    private static String optionOf(String argument) {
+        int assigned = argument.indexOf('=')
+        return assigned < 0 ? argument : argument.substring(0, assigned)
+    }
+
+    /**
+     * A mistake whose message is several lines the CLI put together itself, each from text that is
+     * its own or was made safe to show: the lines are said as they are.
+     */
+    static class Lines extends CommandLine.ParameterException {
+
+        Lines(CommandLine commandLine, String message) {
+            super(commandLine, message)
+        }
     }
 
     // picocli says of a command that was given an option it does not have, and not what it needs, only
@@ -176,7 +294,7 @@ class UsageHelp extends CommandLine.Help {
                     (!name.startsWith('--') && (1..<name.length()).every { int at -> spec.findOption('-' + name.charAt(at)) != null }) ||
                     (!name.startsWith('--') && spec.findOption(name.substring(0, 2)) != null)
             if (!known) {
-                return "${spec.name()} has no option ${FeatureSelectionException.shown(name)}"
+                return "${named(spec)} has no option ${FeatureSelectionException.shown(name)}"
             }
         }
         return null

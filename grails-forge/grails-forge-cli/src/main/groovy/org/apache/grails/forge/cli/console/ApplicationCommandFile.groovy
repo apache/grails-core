@@ -56,9 +56,14 @@ final class ApplicationCommandFile {
     public static final String TASK = 'grailsCommandCatalog'
 
     /** How many bytes the file has, at most. */
-    public static final int MAX_BYTES = 256 * 1024
+    // These are the numbers of what writes the file, CommandCatalogBuilder of grails-gradle-model, which
+    // writes no file that is refused here for its size: the two are in two builds, and a specification
+    // holds them to be the same and reads the largest file the writer writes.
 
-    /** How many commands of the file are used, at most: the first of them. */
+    /** How many bytes the file has, at most: as many as the task writes. */
+    public static final int MAX_BYTES = 512 * 1024
+
+    /** How many commands of the file are used, at most: as many as the task writes, the first by name. */
     public static final int MAX_COMMANDS = 512
 
     /** How many lines the file has about what the build could not list: as many as the task writes, with its line that says how many more. */
@@ -317,7 +322,7 @@ final class ApplicationCommandFile {
             return "its description is not one line of at most ${MAX_DESCRIPTION} characters that can be shown"
         }
         if (!isOrigin(command.get('origin'))) {
-            return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign"
+            return "its origin is not at most ${MAX_ORIGIN} characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself"
         }
         Object target = command.get('target')
         if (target != APPLICATION) {
@@ -354,7 +359,8 @@ final class ApplicationCommandFile {
                 return false
             }
         }
-        return true
+        // what the CLI says of its own commands, and of those of the application, is not said by a file in another spelling
+        return !text.equalsIgnoreCase(CommandCatalog.BUILT_IN) && (text == APPLICATION || !text.equalsIgnoreCase(APPLICATION))
     }
 
     private static boolean isDiagnostic(Object line) {

@@ -27,7 +27,7 @@ import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.EarlierGrailsProject
 import org.apache.grails.forge.cli.console.PlainOutput
-import org.apache.grails.forge.cli.console.ProjectOnlyCommand
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.apache.grails.forge.cli.console.UsageHelp
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine
@@ -35,6 +35,7 @@ import org.apache.grails.forge.cli.console.CommandCatalog
 import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
+import org.grails.forge.cli.command.CreateCommand
 import org.grails.forge.cli.command.CreateCommandCommand
 import org.grails.forge.cli.command.CreateControllerCommand
 import org.grails.forge.cli.command.CreateDomainClassCommand
@@ -122,6 +123,8 @@ final class ForgeCli {
     static int launch(String commandName, boolean consoleInProjectOnly, String... args) {
         ForgeContext context = new ForgeContext()
         context.commandName = commandName
+        // started by a program, in a JVM that may be its own: the shell returns where it would end the JVM
+        context.endsJvm = false
         return launch(context, consoleInProjectOnly, args)
     }
 
@@ -149,13 +152,12 @@ final class ForgeCli {
                 PlainOutput.enter()
             }
             try {
-                interactive(context)
+                return interactive(context)
             } finally {
                 if (plain) {
                     PlainOutput.leave()
                 }
             }
-            return 0
         }
         finally {
             context.close()
@@ -192,25 +194,21 @@ final class ForgeCli {
         // that has nothing to do with the project.
         HeldBack held = new HeldBack()
         boolean reads = readsProject(args)
-        CommandLine commandLine = createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, reads)
+        CommandLine commandLine = createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, reads, listsApplication(args))
         if (reads && !noOpConsole) {
-            advise(context, held)
+            held.advice = { advice(context) } as Supplier<String>
         }
         return execute(commandLine, held, args)
     }
 
     // said once for a directory while the context lives, which in the interactive shell is once
-    private static void advise(ForgeContext context, HeldBack held) {
+    private static String advice(ForgeContext context) {
         try {
             Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
-            if (context.advised.add(current.toString())) {
-                String guidance = EarlierGrailsProject.guidance(current)
-                if (guidance != null) {
-                    held.warning(guidance)
-                }
-            }
+            return context.advised.add(current.toString()) ? EarlierGrailsProject.guidance(current) : null
         } catch (IOException ignored) {
             // without a current directory there is no project to say anything of
+            return null
         }
     }
 
@@ -246,19 +244,31 @@ final class ForgeCli {
             expanded = new CommandCatalog(commandLine).expand(args)
         } catch (CommandLine.ParameterException e) {
             held.replay(root)
+            // what was typed may be the name of a command of the application that is not there for it
+            ApplicationCommands.said(commandLine, commandOf(args))
             return commandLine.getParameterExceptionHandler().handleParseException(e, args)
         }
+        CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
+        boolean document = help != null && commandOf(expanded) == HelpCommand.NAME && optionsOf(expanded).contains('--json')
         if (readsProject(expanded)) {
-            CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
-            if (help != null && commandOf(expanded) == HelpCommand.NAME && optionsOf(expanded).contains('--json')) {
+            // A project of an earlier version of Grails is said to be one by the commands that write
+            // into it what this version has, and by the help; a command that runs its build does in
+            // it what it does in any project, and says nothing.
+            CommandLine named = commandOf(expanded) == null ? null : commandLine.getSubcommands().get(commandOf(expanded))
+            if (named == null || named.is(help) || named.getCommand() instanceof CodeGenCommand) {
+                held.advise()
+            }
+            if (document) {
                 // the document is all that is written: it says what was held back
                 HelpCommand command = (HelpCommand) help.getCommand()
                 command.diagnostics = held.messages()
                 command.complete = held.recordUsed
             } else {
                 held.replay(root)
-                ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
             }
+        }
+        if (!document) {
+            ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
         }
         return commandLine.execute(expanded)
     }
@@ -270,17 +280,34 @@ final class ForgeCli {
      * has, because it lists the commands there are in this directory.
      */
     static boolean readsProject(String... args) {
-        String command = commandOf(args)
-        if (command == null) {
+        Class<?> type = declared(args)
+        if (commandOf(args) == null) {
             return !args.any { String arg -> arg == '-V' || arg == '--version' }
         }
+        return type == null || type == HelpCommand
+    }
+
+    /**
+     * Whether the commands of the application and its plugins are looked for, for a command line: for
+     * every one that reads the project, and for {@code gradle} and {@code feature} as well, which
+     * read no record of the project but have names a command of the build may have too, of which
+     * something is then said.
+     */
+    static boolean listsApplication(String... args) {
+        Class<?> type = declared(args)
+        return readsProject(args) || (type != null && !CreateCommand.isAssignableFrom(type))
+    }
+
+    // the command of a command line that is declared with the command line itself; null for any other, and for none
+    private static Class<?> declared(String... args) {
+        String command = commandOf(args)
         for (Class<?> type : ForgeCommand.getAnnotation(CommandLine.Command).subcommands()) {
-            CommandLine.Command create = type.getAnnotation(CommandLine.Command)
-            if (create != null && (create.name() == command || command in create.aliases())) {
-                return type == HelpCommand
+            CommandLine.Command each = type.getAnnotation(CommandLine.Command)
+            if (command != null && each != null && (each.name() == command || command in each.aliases())) {
+                return type
             }
         }
-        return true
+        return null
     }
 
     private static String commandOf(String... args) {
@@ -296,21 +323,23 @@ final class ForgeCli {
     /**
      * Runs the interactive shell on a running context until the user leaves it.
      */
-    static void interactive(ApplicationContext context) {
-        interactive(ForgeContext.of(context))
+    static int interactive(ApplicationContext context) {
+        return interactive(ForgeContext.of(context))
     }
 
     /**
      * Runs the interactive shell until the user leaves it, on a context that is started when a
      * command typed there first needs it.
      */
-    static void interactive(ForgeContext context) {
+    static int interactive(ForgeContext context) {
         CommandLine commandLine = createCommandLine(context, true)
         // in the shell a command that starts an application returns to the prompt
         ConsoleCommands.setInteractive(true)
         try {
-            new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER,
-                    { createCommandLine(context, true) } as Supplier<CommandLine>).start()
+            InteractiveShell shell = new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER,
+                    { createCommandLine(context, true) } as Supplier<CommandLine>)
+            shell.endsJvm = context.endsJvm
+            return shell.start()
         } finally {
             ConsoleCommands.setInteractive(false)
         }
@@ -337,7 +366,7 @@ final class ForgeCli {
      * the code generation commands the project has
      */
     static CommandLine createCommandLine(ForgeContext context, boolean noOpConsole, boolean readsProject) {
-        return createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : null, readsProject)
+        return createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : null, readsProject, readsProject)
     }
 
     /**
@@ -351,7 +380,7 @@ final class ForgeCli {
      * @param console where reading the record of the project says what it has to say, or
      * {@code null} for the output of the command line
      */
-    private static CommandLine createCommandLine(ForgeContext context, ConsoleOutput console, boolean readsProject) {
+    private static CommandLine createCommandLine(ForgeContext context, ConsoleOutput console, boolean readsProject, boolean listsApplication) {
         GrailsPicocliFactory factory = new GrailsPicocliFactory(context)
         ForgeCommand root = factory.create(ForgeCommand)
         CommandLine commandLine = new CommandLine(root, factory)
@@ -366,7 +395,10 @@ final class ForgeCli {
             EXCEPTION_HANDLER.apply(ex, failed)
         } as CommandLine.IExecutionExceptionHandler
         CodeGenConfig codeGenConfig = readsProject ? CodeGenConfig.load(context, console ?: root) : null
-        if (codeGenConfig != null) {
+        if (readsProject) {
+            // Where the record of no project was read, every one of them is there by its name and its
+            // options: it is found by its short form, shows its help, is told of a mistake in its use,
+            // and when it is run says what every command of a project says there.
             for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
                 CodeGenCommand command
                 try {
@@ -375,25 +407,22 @@ final class ForgeCli {
                 catch (ReflectiveOperationException e) {
                     throw new IllegalStateException("Unable to create command ${type.name}", e)
                 }
-                if (command.applies()) {
+                if (codeGenConfig == null) {
+                    // not among the commands the help lists there, which says that a project has more
+                    commandLine.addSubcommand(command)
+                    commandLine.getSubcommands().get(type.getAnnotation(CommandLine.Command).name()).getCommandSpec().usageMessage().hidden(true)
+                } else if (command.applies()) {
                     commandLine.addSubcommand(command)
                 }
             }
-        }
-        if (readsProject && codeGenConfig == null) {
-            // A command that writes into a project is known where the record of none was read as well:
-            // it then says what every command of a project says there, and is not taken for a mistyped name.
-            for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
-                String name = type.getAnnotation(CommandLine.Command).name()
-                commandLine.addSubcommand(name, new CommandLine(ProjectOnlyCommand.specOf(name, factory), factory))
-            }
-            if (!inProject()) {
+            if (codeGenConfig == null && !inProject()) {
                 commandLine.getCommandSpec().usageMessage().footer('', 'A Grails project has more commands: those that create its classes, and those of the application.')
             }
         }
+        commandLine.setExecutionStrategy({ CommandLine.ParseResult parsed -> ForgeCli.runAsRead(root, parsed) } as CommandLine.IExecutionStrategy)
         ConsoleCommands.addTo(commandLine, readsProject)
         // last: a command of the application does not take the name of a command that is there
-        ApplicationCommands.addTo(commandLine, readsProject)
+        ApplicationCommands.addTo(commandLine, listsApplication)
         // everything after gradle is Gradle's, and everything after a command of the application is that command's
         PlainOutput.notForWhatIsPassedOn(commandLine)
         // once every command is there: the width is given to the commands there are when it is set
@@ -404,6 +433,32 @@ final class ForgeCli {
         return commandLine
     }
 
+    // Runs what the command line was read as. A command that writes what the record of a project says
+    // is not run where none was read: it says so, in the words of every command of a project. While
+    // the command runs, what it starts knows whether anything may wait for what a user types.
+    private static int runAsRead(ForgeCommand root, CommandLine.ParseResult parsed) {
+        CommandLine.ParseResult last = parsed
+        boolean help = false
+        while (true) {
+            help = help || last.isUsageHelpRequested() || last.isVersionHelpRequested()
+            if (!last.hasSubcommand()) {
+                break
+            }
+            last = last.subcommand()
+        }
+        Object command = last.commandSpec().userObject()
+        if (!help && command instanceof CodeGenCommand && !((CodeGenCommand) command).hasRecord()) {
+            ((CodeGenCommand) command).err(UsageHelp.withoutProject(last.commandSpec()) ?: "${UsageHelp.typed(last.commandSpec())} is a command of a Grails project")
+            return 1
+        }
+        GradleRunner.setNonInteractive(root.nonInteractive)
+        try {
+            return new CommandLine.RunLast().execute(parsed)
+        } finally {
+            GradleRunner.setNonInteractive(false)
+        }
+    }
+
     /** Keeps what is said until it is known whether it is to be said, and then says it in the order it came. */
     private static final class HeldBack implements ConsoleOutput, CodeGenConfig.RecordListener {
 
@@ -412,6 +467,16 @@ final class ForgeCli {
 
         /** Whether no record of the project was found that could not be used. */
         boolean recordUsed = true
+
+        /** Gives what there is to say of a project of an earlier version of Grails, when a command asks for it. */
+        Supplier<String> advice
+
+        void advise() {
+            String guidance = advice == null ? null : advice.get()
+            if (guidance != null) {
+                warning(guidance)
+            }
+        }
 
         @Override
         void recordNotUsed() {
@@ -432,7 +497,8 @@ final class ForgeCli {
         @Override
         void warning(String message) {
             lines.add(message)
-            said.add { ConsoleOutput to -> to.warning(message) }
+            // what reading the project has to say is no output of the command that is run after it
+            said.add { ConsoleOutput to -> to instanceof BaseCommand ? ((BaseCommand) to).warned(message) : to.warning(message) }
         }
 
         @Override

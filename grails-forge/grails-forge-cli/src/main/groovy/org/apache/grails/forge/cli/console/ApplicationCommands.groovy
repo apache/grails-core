@@ -87,6 +87,18 @@ final class ApplicationCommands {
     }
 
     /**
+     * @param root the command line of the CLI
+     * @param name the name of a command
+     * @return where the build of the project says the command of that name comes from, also for one
+     * that is no command here because the CLI has one of its name; {@code null} when the build lists none
+     */
+    static String originOf(CommandLine root, String name) {
+        ApplicationCommands commands = of(root)
+        ApplicationCommandFile.Entry entry = commands == null ? null : commands.file.commands.find { ApplicationCommandFile.Entry each -> name in each.names() }
+        return entry == null ? null : entry.origin
+    }
+
+    /**
      * What is said when something was typed for a command and is none: without a list of the
      * commands of the application that can be relied on, it may be one of those.
      *

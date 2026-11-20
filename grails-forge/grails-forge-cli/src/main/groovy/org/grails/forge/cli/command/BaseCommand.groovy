@@ -43,6 +43,14 @@ class BaseCommand implements ConsoleOutput {
         spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Error|@ ' + message))
     }
 
+    /**
+     * Says a warning about the project or the command line, as distinct from what a command says of
+     * what it did: on the error stream, where the errors are, and not among what a command writes.
+     */
+    void warned(String message) {
+        spec.commandLine().getErr().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + message))
+    }
+
     void warning(String message) {
         spec.commandLine().getOut().println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + message))
     }

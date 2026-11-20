@@ -45,6 +45,9 @@ class ApplicationCommandCommand extends InProjectCommand {
     /** The Gradle task that runs a command in the application. */
     public static final String TASK = 'runCommand'
 
+    /** The environment a command of the application runs in, which is the one {@code run-command} has unless it is given another. */
+    public static final String ENVIRONMENT = 'development'
+
     /** What is said of every script: scripts are kept for the applications that have them. */
     public static final String DEPRECATED = 'Script commands are deprecated. Write a new command as a class of the application: create-command'
 
@@ -81,7 +84,8 @@ class ApplicationCommandCommand extends InProjectCommand {
                     "it is started by the Gradle task ${ScriptCommandFiles.TASK} of the project.").toString())
             description.add(DEPRECATED)
         } else {
-            description.add(("A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, " +
+            // where a command comes from is the name of a jar or of a project: text, as the description is
+            description.add(("A command of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : shown(entry.origin).replace('%', '%%')}, " +
                     "which runs in the application: it is started by the Gradle task ${TASK} of the project.").toString())
         }
         description.add('Everything after the name of the command is given to the command as it is, the options too.')
@@ -152,13 +156,13 @@ class ApplicationCommandCommand extends InProjectCommand {
             // On the error stream, since what the command writes is the output: what is typed can be
             // the name of a command of a plugin by one letter, and this says what runs before it does.
             PrintWriter said = spec.commandLine().getErr()
-            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${running()}"))
+            said.println(CommandLine.Help.Ansi.AUTO.string("@|bold | Running|@ ${entry.isScript() ? "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}" : running(entry.name, entry.origin)}"))
             if (entry.isScript()) {
                 said.println(CommandLine.Help.Ansi.AUTO.string('@|bold,red | Warning|@ ' + DEPRECATED))
             }
             said.flush()
             GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
-            return runner.run(project, [task(), file.option])
+            return runner.run(project, gradleArguments(file))
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         } finally {
@@ -166,12 +170,32 @@ class ApplicationCommandCommand extends InProjectCommand {
         }
     }
 
-    // what is about to run and where it comes from; every part of it was held to what can be shown
-    private String running() {
-        if (entry.isScript()) {
-            return "the script ${entry.name} of ${ScriptCommandFiles.LOCATION}, with the Gradle task ${task()}"
+    // What Gradle is run with. For a command of the application it is what run-command gives Gradle
+    // for the same command, argument for argument, so that the two are one build to Gradle and to its
+    // configuration cache: the task, the file, the environment run-command has by default, and what
+    // --stacktrace in front of the command stands for.
+    private List<String> gradleArguments(CommandArgumentsFile file) {
+        List<String> all = [task(), file.option]
+        if (!entry.isScript()) {
+            all.add("-Dgrails.env=${ENVIRONMENT}".toString())
         }
-        return "the command ${entry.name} of ${entry.origin == ApplicationCommandFile.APPLICATION ? 'the application' : entry.origin}, with the Gradle task ${task()}"
+        if (showStacktrace()) {
+            all.add('--stacktrace')
+            all.add('-Dgrails.full.stacktrace=true')
+            // SCRIPT HOST: what tells the task that runs a script to show the full stack trace of the script goes here, for entry.isScript()
+        }
+        return all
+    }
+
+    /**
+     * @param name the name of a command of the application, held to what can be shown
+     * @param origin where the build says it comes from, or {@code null} when the build has not listed it
+     * @return what is said to be run, by the name of a command and by {@code run-command} alike
+     */
+    static String running(String name, String origin) {
+        String from = origin == null ? ', which the build of the project has not listed' :
+                " of ${origin == ApplicationCommandFile.APPLICATION ? 'the application' : origin}"
+        return "the command ${name}${from}, with the Gradle task ${TASK}"
     }
 
     /**

@@ -24,6 +24,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.grails.build.parsing.ScriptNameResolver
 import org.grails.forge.cli.ForgeContext
+import org.grails.forge.cli.command.CodeGenCommand
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
@@ -108,7 +109,7 @@ final class CommandCatalog {
         String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent) : null
         // below a project that is not used its commands are not there, which is then why there is none of that name
         String untrusted = parent.getParent() == null ? ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).untrusted : null
-        return new CommandLine.ParameterException(parent, "There is no command ${given}" +
+        return new UsageHelp.Lines(parent, "There is no command ${given}" +
                 (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
                 (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
@@ -304,7 +305,15 @@ final class CommandCatalog {
         if (!SHORT_FORM.matcher(typed).matches()) {
             return Collections.emptyList()
         }
-        List<CommandLine> fits = listed(parent).findAll { CommandLine command ->
+        // with the commands that create the classes of a project where they are not listed, outside one:
+        // they are commands there by their names, and so by their short forms
+        List<CommandLine> known = listed(parent)
+        for (CommandLine command : new LinkedHashSet<CommandLine>(parent.getSubcommands().values())) {
+            if (command.getCommandSpec().usageMessage().hidden() && command.getCommandSpec().userObject() instanceof CodeGenCommand) {
+                known.add(command)
+            }
+        }
+        List<CommandLine> fits = known.findAll { CommandLine command ->
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
             ScriptNameResolver.resolvesTo(typed, spec.name()) || spec.aliases().any { String alias -> ScriptNameResolver.resolvesTo(typed, alias) }
         }

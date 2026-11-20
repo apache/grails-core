@@ -28,6 +28,7 @@ import java.util.function.Predicate
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.apache.grails.gradle.model.cli.CommandCatalogBuilder
+import org.apache.grails.gradle.model.cli.CommandDescriptor
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
@@ -80,6 +81,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         }
 
         println 'requested=' + gradle.startParameter.taskNames.collect { '<' + it.replaceAll(/=.*/, '=') + '>' }.join('')
+        println 'system=' + gradle.startParameter.systemPropertiesArgs.findAll { it.key.startsWith('grails.') }.sort().collect { name, value -> '<' + name + '=' + value + '>' }.join('')
+        println 'stacktrace=' + gradle.startParameter.showStacktrace
         tasks.register('runCommand', RunCommand)
         '''.stripIndent()
 
@@ -410,7 +413,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                                      | content                                                             | reason
-        'more bytes than a file has'              | (' ' * (256 * 1024 + 1)).bytes                                      | 'has more than the 262144 bytes it can have'
+        'more bytes than a file has'              | (' ' * (512 * 1024 + 1)).bytes                                      | 'has more than the 524288 bytes it can have'
         'nothing'                                 | ''                                                                  | 'ends before the JSON document does'
         'no JSON'                                 | 'hostile'                                                           | 'is not JSON'
         'arrays in arrays'                        | '[' * 200_000                                                       | 'is nested deeper than 8'
@@ -441,7 +444,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final String NAME = 'its name is not lower-case letters and digits in words joined by single hyphens, starting with a letter, of at most 64 characters'
     static final String DESCRIPTION = 'its description is not one line of at most 512 characters that can be shown'
-    static final String ORIGIN = 'its origin is not at most 120 characters of printable ASCII without a space, an @ or a dollar sign'
+    static final String ORIGIN = 'its origin is not at most 120 characters of printable ASCII without a space, an @ or a dollar sign, or is a word the command line keeps for itself'
     static final Map FINE = [name: 'fine', description: 'Is fine', origin: 'application', target: 'application', registration: 'descriptor']
 
     @Unroll
@@ -504,6 +507,9 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'an origin that turns the line around'    | HELLO + [name: 'other', origin: 'hostile:\u202ea:1']   | ORIGIN
         'an origin of 121 characters'             | HELLO + [name: 'other', origin: 'h' * 117 + ':a:1']    | ORIGIN
         'an origin that is empty'                 | HELLO + [name: 'other', origin: '']                    | ORIGIN
+        'the origin of the commands of the CLI'   | HELLO + [name: 'other', origin: 'built-in']            | ORIGIN
+        'that origin in other letters'            | HELLO + [name: 'other', origin: 'Built-In']            | ORIGIN
+        'the origin of the application in other letters' | HELLO + [name: 'other', origin: 'APPLICATION']  | ORIGIN
         'no origin'                               | HELLO + [name: 'other'] - [origin: 'org.example:hello-cli:1.2.3'] | ORIGIN
         'a command for Gradle'                    | HELLO + [name: 'other', target: 'gradle']              | 'its target is gradle, which is not run from here'
         'a target there is not'                   | HELLO + [name: 'other', target: 'hostile']             | 'its target is none there is'
@@ -568,12 +574,24 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         out.toString().contains("  seed  (${written})")
 
+        when: 'and in the help of the command, where it is text and nothing the help is laid out by'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', 'seed')
+        List<String> shown = out.toString().readLines()
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        shown[0] == 'Usage: grails-forge-cli seed [ARGS...]'
+        shown.count { it.startsWith('Usage:') } == 1
+        out.toString().replaceAll(/\s+/, '').contains("A command of ${written == 'application' ? 'the application' : written}, which runs in the application".replaceAll(/\s+/, ''))
+
         where:
         origin << ['application', 'org.example:reports:1.0', 'file:reports-1.0.jar', 'file:my plugin.jar', 'file:lib (1).jar', 'file:reports~1.jar', 'file:.hidden.jar',
                    'my app:reports-cli:unspecified', ':reports-cli:unspecified', 'org.example:reports:1.0-SNAPSHOT', 'org.example:reports:[1.0,2.0)', 'file:r\u00e9ports.jar',
                    'org.example:reports:1.0:extra', 'file:' + 'a' * 130 + '.jar', 'org.example:rep@rts:$1', 'org.example:reports:1.0+build.5', 'com.github.User:repo:-SNAPSHOT',
                    'file:plugin#1.jar', 'file:plugin,v2.jar', 'file:plugin%20x.jar', "file:it's.jar", 'file:a\u001b[31mb.jar', 'file:\u202egro.jar', 'file:@|red x|@.jar',
-                   'file:${sys:user.home}.jar', 'x' * 500]
+                   'file:${sys:user.home}.jar', 'x' * 500, '%n%nUsage:%ninjected', 'file:%s%d%1$s.jar', 'file:%', 'built-in:x:1', 'file:application']
     }
 
     @IgnoreIf({ os.windows })
@@ -780,6 +798,8 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         lineOf('requested=') == '<runCommand><--args-file=>'
+        lineOf('system=') == '<grails.env=development>'
+        lineOf('stacktrace=') == 'INTERNAL_EXCEPTIONS'
         lineOf('vector=') == (['hello-world'] + arguments).collect { '<' + it.getBytes('UTF-8').encodeHex() + '>' }.join('')
         lineOf('permissions=') == 'rw------- rwx------'
         errors() == []
@@ -802,6 +822,249 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         lineOf('vector=') == '<' + 'hello-world'.bytes.encodeHex() + '>'
         lineOf('option=') == '.grails/run/command-args-0.json'
         new File(dir, '.grails/run').list().sort() == ['.gitignore']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "the stack trace that is asked for in front of a command is asked of the build, as for the commands that are a build"() {
+        given:
+        plainProject()
+        catalog([HELLO])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, '-x', 'hello-world', '-x')
+
+        then: 'in front of the name it is the option of the command line; after it, an argument of the command'
+        exit == 0
+        lineOf('requested=') == '<runCommand><--args-file=>'
+        lineOf('system=') == '<grails.env=development><grails.full.stacktrace=true>'
+        lineOf('stacktrace=') == 'ALWAYS'
+        lineOf('vector=') == ['hello-world', '-x'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a command is one build to Gradle whether it is run by its name or by run-command, and both say what is run"() {
+        given:
+        plainProject()
+        new File(dir, 'gradle.properties') << 'org.gradle.configuration-cache=true\n'
+        catalog([HELLO])
+        String running = '| Running the command hello-world of org.example:hello-cli:1.2.3, with the Gradle task runCommand'
+
+        when:
+        int byName = ForgeCli.execute(beanContext, 'hello-world', 'one')
+        String first = out.toString()
+        List<String> saidFirst = err.toString().readLines()
+        out.reset()
+        err.reset()
+        int byRunCommand = ForgeCli.execute(beanContext, 'run-command', 'hello-world', 'two')
+
+        then:
+        byName == 0
+        first.contains('Configuration cache entry stored')
+        saidFirst[0] == running
+
+        and: 'the second is the build the first was: nothing of its command line differs but what the file holds'
+        byRunCommand == 0
+        out.toString().contains('Reusing configuration cache')
+        !out.toString().contains('cannot be reused')
+        err.toString().readLines()[0] == running
+        lineOf('vector=') == ['hello-world', 'two'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
+
+        when: 'a command the build has not listed is said to be that'
+        err.reset()
+        ForgeCli.execute(beanContext, 'run-command', 'not-listed\u001b[31m')
+
+        then:
+        err.toString().readLines()[0] == '| Running the command not-listed?[31m, which the build of the project has not listed, with the Gradle task runCommand'
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "with --non-interactive #line gives the build an input that has ended, and tells it so; without it the input is the one of the command line"() {
+        given: 'a wrapper that says what its input is and what it was told'
+        saying()
+        catalog([HELLO])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['--non-interactive'] + line) as String[])
+
+        then:
+        exit == 0
+        out.toString().contains('input=ended told=true')
+
+        when:
+        out.reset()
+        exit = ForgeCli.execute(beanContext, line as String[])
+
+        then:
+        exit == 0
+        out.toString().contains('told=no')
+        !out.toString().contains('told=true')
+
+        where:
+        line << [['hello-world', 'x'], ['run-command', 'hello-world'], ['gradle', 'build'], ['compile'], ['test-app', '--unit'], ['run-script', 'one.groovy']]
+    }
+
+    void "after the name of a command of the application --non-interactive is the command's, and console is refused with it as shell is"() {
+        given:
+        saying()
+        catalog([HELLO])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'hello-world', '--non-interactive')
+
+        then:
+        exit == 0
+        out.toString().contains('told=no')
+        out.toString().contains('["hello-world","--non-interactive"]')
+
+        when:
+        out.reset()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, '--non-interactive', command)
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith("${command} ")
+        err.toString().readLines()[0].contains('which --non-interactive rules out')
+        !out.toString().contains('told=')
+
+        where:
+        command << ['console', 'shell']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "commands that are run at once in a project that has no directory for what they keep all run, each with its own arguments"() {
+        given:
+        saying('sleep 1')
+        catalog([HELLO])
+        int count = 12
+        List<Integer> exits = Collections.synchronizedList([])
+        List<Thread> threads = (1..count).collect { int number ->
+            new Thread({ exits.add(ForgeCli.execute(beanContext, 'hello-world', "t${number}".toString())) })
+        }
+
+        when:
+        threads*.start()
+        threads*.join(120_000)
+
+        then:
+        exits == [0] * count
+        errors() == []
+        (1..count).every { int number -> out.toString().contains("[\"hello-world\",\"t${number}\"]".toString()) }
+        new File(dir, '.grails/run').list().sort() == ['.gitignore']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "the names for the files of arguments are held by the commands that run, and not by files that say so"() {
+        given: 'every name taken by a file that names a process there is not, or no instant, as the files of a clone do'
+        saying()
+        catalog([HELLO])
+        File run = new File(dir, '.grails/run')
+        run.mkdirs()
+        Files.setPosixFilePermissions(run.toPath(), PosixFilePermissions.fromString('rwx------'))
+        (0..15).each { int slot ->
+            new File(run, "command-args-${slot}.json").text = '["left"]'
+            new File(run, "command-args-${slot}.pid").text = slot % 2 == 0 ? '1 0\n' : "${ProcessHandle.current().pid()} 12345\n"
+            [new File(run, "command-args-${slot}.json"), new File(run, "command-args-${slot}.pid")].each { it.setLastModified(System.currentTimeMillis() - 600_000) }
+        }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'hello-world', 'runs')
+
+        then:
+        exit == 0
+        out.toString().contains('["hello-world","runs"]')
+        run.list().sort() == ['.gitignore']
+
+        when: 'every name held by a process that runs, which this one is'
+        ProcessHandle self = ProcessHandle.current()
+        (0..15).each { int slot ->
+            new File(run, "command-args-${slot}.json").text = '["held"]'
+            new File(run, "command-args-${slot}.pid").text = "${self.pid()} ${self.info().startInstant().get().toEpochMilli()}\n"
+        }
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'hello-world', 'waits')
+
+        then:
+        exit == 1
+        errors() == ['| Error The arguments of the command could not be written for Gradle: .grails/run has 16 files of arguments already, one for each command that runs: ' +
+                             'delete the files command-args-* there when no command runs. Gradle was not run']
+        !out.toString().contains('waits')
+    }
+
+    void "typing what is short for a command of the CLI says which command of the build is not there for the name, also where the name is refused"() {
+        given:
+        catalog([[name: 'gradle', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor'],
+                 [name: 'c', origin: 'application', target: 'application', registration: 'factories']])
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'g', 'build')
+
+        then: 'gradle is run, which has no wrapper here, after the line that says so'
+        exit == 1
+        err.toString().readLines()[0] == '| Warning gradle is a command of the CLI itself (built-in), so the command gradle of org.example:helper:1 is not a command here. ' +
+                'That one is run with: grails-forge-cli run-command gradle'
+
+        when:
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'c')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == '| Warning c is short for more than one command of the CLI itself (built-in), so the command c of application is not a command here. ' +
+                'That one is run with: grails-forge-cli run-command c'
+        err.toString().readLines()[1].startsWith('c is short for more than one command: ')
+    }
+
+    void "the reader and the writer of the file have one set of limits, and the largest file the writer writes is read: #what"() {
+        given: 'more commands than a file lists, each with the longest description, registered by several elements of a class path'
+        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        (0..<3).each { int part ->
+            File element = new File(dir, "element${part}")
+            new File(element, 'META-INF').mkdirs()
+            List<String> classes = (0..<200).collect { int number -> "demo.p${part}.C${number}Command".toString() }
+            new File(element, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=' + classes.join(',') + '\n'
+            classes.eachWithIndex { String className, int number ->
+                File descriptor = new File(element, CommandDescriptor.location(className))
+                descriptor.parentFile.mkdirs()
+                descriptor.text = CommandDescriptor.describe(className, "c-${part}-${number}".toString(), letter * CommandDescriptor.MAX_DESCRIPTION_LENGTH)
+            }
+            builder.add('o' * 200 + part, element)
+        }
+        String json = builder.toJson()
+        Map written = (Map) new JsonSlurper().parseText(json)
+        write(json)
+        (0..<3).each { int part -> new File(dir, "element${part}").deleteDir() }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then: 'the numbers are the same in the two builds'
+        ApplicationCommandFile.MAX_BYTES == CommandCatalogBuilder.MAX_BYTES
+        ApplicationCommandFile.MAX_COMMANDS == CommandCatalogBuilder.MAX_COMMANDS
+        ApplicationCommandFile.MAX_ORIGIN == CommandCatalogBuilder.MAX_ORIGIN_LENGTH
+        ApplicationCommandFile.MAX_DESCRIPTION == CommandDescriptor.MAX_DESCRIPTION_LENGTH
+        ApplicationCommandFile.MAX_NAME == CommandDescriptor.MAX_NAME_LENGTH
+        ApplicationCommandFile.MAX_DIAGNOSTICS == CommandCatalogBuilder.MAX_DIAGNOSTICS + 1
+        ApplicationCommandFile.MAX_DIAGNOSTIC >= CommandCatalogBuilder.MAX_DIAGNOSTIC_LENGTH
+
+        and: 'the writer wrote no more than is read, and said what it left out'
+        json.length() <= ApplicationCommandFile.MAX_BYTES
+        ((List) written.commands).size() <= ApplicationCommandFile.MAX_COMMANDS
+        ((List) written.commands).size() >= atLeast
+        ((List<String>) written.diagnostics).size() == 1
+        ((List<String>) written.diagnostics)[0] == "There are 600 commands, more than a catalog lists${how}: the last ${600 - ((List) written.commands).size()} by name are not listed."
+
+        and: 'all of it is read: the file is not refused, and every command it has is a command'
+        exit == 0
+        described.diagnostics == ['The Gradle task grailsCommandCatalog says: ' + ((List<String>) written.diagnostics)[0]]
+        ((List<Map>) described.commands).findAll { it.origin != 'built-in' }*.name == ((List<Map>) written.commands)*.name
+
+        where:
+        what                                        | letter   | atLeast | how
+        'descriptions that are written as they are' | 'd'      | 512     | ' (512)'
+        'descriptions that are written as escapes'  | '\u00e9' | 120     | ' in 524288 bytes'
     }
 
     @IgnoreIf({ os.windows })
@@ -974,6 +1237,21 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         !out.toString().contains('command-catalog')
+    }
+
+    // a wrapper that is no Gradle: it says what its input is, what it was told, and what the file of the arguments holds
+    private void saying(String then = '') {
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = '''\
+            #!/bin/sh
+            if [ /dev/stdin -ef /dev/null ]; then input=ended; else input=other; fi
+            echo "input=$input told=${GRAILS_NON_INTERACTIVE:-no}"
+            for each in "$@"; do
+                case "$each" in --args-file=*) cat "${each#--args-file=}"; echo;; esac
+            done
+            '''.stripIndent() + then + '\n'
+        wrapper.setExecutable(true, false)
+        new File(dir, 'one.groovy').text = ''
     }
 
     private String permissions(String path) {

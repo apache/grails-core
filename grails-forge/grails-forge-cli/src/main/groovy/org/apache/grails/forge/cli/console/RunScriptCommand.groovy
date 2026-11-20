@@ -42,7 +42,8 @@ import picocli.CommandLine
                 'The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
-        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]'],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
+                '        [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]'],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
 class RunScriptCommand extends GradleEnvironmentCommand {

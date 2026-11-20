@@ -94,20 +94,34 @@ final class RunDirectory {
         if (run == null) {
             Path state = project.directory.resolve(STATE)
             run = project.directory.resolve(LOCATION)
+            // Another command of the project may create them at the same moment: a directory that is
+            // there by now is not a failure, and is held to what an existing one is held to below.
             try {
-                if (!Files.exists(state, LinkOption.NOFOLLOW_LINKS)) {
+                try {
                     Files.createDirectory(state)
+                } catch (FileAlreadyExistsException ignored) {
+                    // made since it was looked for
                 }
-                Files.createDirectory(run, ownerOnly(run, OWNER_DIRECTORY))
+                try {
+                    Files.createDirectory(run, ownerOnly(run, OWNER_DIRECTORY))
+                } catch (FileAlreadyExistsException ignored) {
+                    // made since it was looked for
+                }
             } catch (IOException e) {
-                throw new IOException("${LOCATION} cannot be created: ${GradleRunner.line(e.getMessage())}")
+                throw new IOException("${LOCATION} cannot be created (${e.getClass().getSimpleName()}: ${GradleRunner.line(e.getMessage())})")
+            }
+            if (existing(project) == null) {
+                throw new IOException("${LOCATION} cannot be created: it is not there after it was made")
             }
         }
         Path ignore = run.resolve(IGNORE)
         if (!Files.exists(ignore, LinkOption.NOFOLLOW_LINKS)) {
             try {
-                // for its owner alone, as everything else in the directory
-                Files.writeString(create(run, IGNORE), '*\n')
+                // for its owner alone, as everything else in the directory; another command may have written it by now
+                Path created = createNew(run, IGNORE)
+                if (created != null) {
+                    Files.writeString(created, '*\n')
+                }
             } catch (IOException ignored) {
                 // the directory is used all the same: the file only keeps it out of a commit
             }

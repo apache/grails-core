@@ -61,10 +61,17 @@ final class PlainOutput {
      */
     static boolean given(CommandLine commandLine, String... args) {
         boolean inCommand = false
+        boolean namesAnother = false
+        boolean value = false
         for (String arg : args) {
             if (arg == PASSED_ON) {
                 return false
             }
+            // after the name of the command that run-command runs, everything is that command's
+            if (namesAnother && arg != null && !arg.startsWith('-') && !value) {
+                return false
+            }
+            value = namesAnother && arg == '-D'
             if (arg == OPTION) {
                 return true
             }
@@ -79,6 +86,7 @@ final class PlainOutput {
                 if (command != null && command.getCommandSpec().findOption(OPTION) == null) {
                     return false
                 }
+                namesAnother = command != null && command.getCommandSpec().userObject() instanceof RunCommandCommand
             }
         }
         return false
@@ -113,7 +121,8 @@ final class PlainOutput {
     }
 
     static synchronized void leave() {
-        if (entered > 0 && --entered == 0) {
+        // only when it still is what was set here: a value that was set during the run is its setter's
+        if (entered > 0 && --entered == 0 && System.getProperty(PICOCLI_ANSI) == 'false') {
             if (before == null) {
                 System.clearProperty(PICOCLI_ANSI)
             } else {

@@ -31,9 +31,12 @@ import org.grails.forge.cli.ForgeCli
  * Without a command the interactive console is started in a Grails project and the help is shown
  * elsewhere. {@code --plain-output} asks for output without colour, terminal markup or the progress
  * display of Gradle; {@code --non-interactive} for a run that never waits for what a user types: the
- * help is then shown where the console would be started, and a command that reads what is typed is
- * refused. Both are accepted in front of the command and after the name of every command but
- * {@code gradle}, which gives all that follows it to Gradle. {@code help --json} writes the commands
+ * help is then shown where the console would be started, {@code shell} and {@code console} are
+ * refused, and every build the command line starts is given an input that has ended and the
+ * environment variable {@code GRAILS_NON_INTERACTIVE=true}, which a command or a script of an
+ * application can read. Both are accepted in front of the command and after the name of every
+ * command that does not give all that follows its name to something else, as {@code gradle}, a
+ * command of the application and the command {@code run-command} runs do. {@code help --json} writes the commands
  * there are in the current directory, with their options, as one JSON document on the standard
  * output.</p>
  *
@@ -75,6 +78,17 @@ final class GrailsCli {
      * current directory of the JVM and writes to {@link System#out} and {@link System#err} as they
      * are when it is called. One command line is run at a time: what {@code --plain-output} asks for
      * holds for the JVM while the command runs.
+     *
+     * <p>A caller that is not a user at a terminal passes {@code --non-interactive}: without it a
+     * command line that names no command starts the interactive console in this JVM, in a Grails
+     * project. The console then does not end the JVM on the interrupt of the terminal: it ends when
+     * the command that runs has ended, and this returns 130.</p>
+     *
+     * <p>When this returns the JVM is as it was. The system properties that starting the project
+     * generator sets, the environment of Grails among them, are put back unless the caller changed
+     * them in the meantime; the generator is closed and leaves no shutdown hook; and
+     * {@code picocli.ansi}, which {@code --plain-output} sets for the run, has the value it had, or
+     * the one the caller gave it during the run.</p>
      *
      * @param args the command line
      * @return the exit code, as described for the class

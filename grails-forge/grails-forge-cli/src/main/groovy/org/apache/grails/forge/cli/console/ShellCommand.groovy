@@ -34,7 +34,8 @@ import picocli.CommandLine
                 'What is typed goes to the shell until it is left. The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
-        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
+                '        [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
 class ShellCommand extends GradleEnvironmentCommand {

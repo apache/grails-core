@@ -512,6 +512,7 @@ It lists the commands of the project itself, of the `-cli` companions of its plu
 
 * `origin` is the coordinates of the artifact the command comes from, or `application` for a command of the project itself.
 * `registration` says how much is known: `descriptor` for a command with a descriptor; `factories` for a command that is registered without one, whose name is the one its class name gives and whose description is empty; `legacy` for a command of a Grails 7 plugin, listed the same way.
+* The file lists at most 512 commands in at most 512 KiB, which is what the Grails Forge CLI reads: when a project has more, the first by name are listed and a line of `diagnostics` says how many are not.
 * `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above, a name that two commands have (neither is listed, because the task does not choose between them), a descriptor in a jar for a class of the application (the command keeps what the application says of it, and the other descriptor is not used), or Grails 7 commands in a project without `legacyCommandSupport`. The task prints the same lines as warnings.
 
 The names, descriptions and origins in the file come from the project's dependencies. They are checked to be one line without control characters, and nothing more: a program that shows them must show them as plain text and give no meaning to anything in them.

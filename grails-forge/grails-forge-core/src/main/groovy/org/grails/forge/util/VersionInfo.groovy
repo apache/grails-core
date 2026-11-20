@@ -71,9 +71,11 @@ class VersionInfo {
     }
 
     static String getGrailsVersion() {
-        Object grailsVersion = VERSIONS.get('grails.version')
+        // by the lookup that gives a text: making a text of an object goes through the formatting of
+        // Groovy, which loads and scans far more than this is worth, on every start of a command line
+        String grailsVersion = VERSIONS.getProperty('grails.version')
         if (grailsVersion != null) {
-            return grailsVersion.toString()
+            return grailsVersion
         }
         return '6.0.0-M4'
     }

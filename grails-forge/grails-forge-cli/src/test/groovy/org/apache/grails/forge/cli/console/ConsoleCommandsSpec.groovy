@@ -296,15 +296,13 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 1
         errors().size() == 1
-        errors()[0] == "| Error ${command} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it"
+        errors()[0] == "| Error ${typed} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it"
         !out.toString().contains('Usage:')
         !new File(dir, '.gradle').exists()
         !new File(dir, 'build').exists()
 
         where:
         typed << ['compile', 'clean', 'assemble', 'war', 'package', 'dependency-report', 'test-app', 'stats', 'bug-report', 'package-plugin', 'publish-plugin']
-        // a command says its name, whichever of its names was typed
-        command = typed in ['war', 'package'] ? 'assemble' : typed
     }
 
     void "a project without a Gradle wrapper is not built with another Gradle"() {
@@ -352,13 +350,14 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
         where:
         line                              | said
-        ['compile', 'classes']            | "Unmatched argument at index 1: 'classes'"
-        ['clean', '--offline']            | "Unknown option: '--offline'"
-        ['test-app', '--rerun']           | "Unknown option: '--rerun'"
+        ['compile', 'classes']            | 'compile takes no argument classes'
+        ['clean', '--offline']            | 'clean has no option --offline'
+        ['test-app', '--rerun']           | 'test-app has no option --rerun'
         ['test-app', '--tests']           | "Missing required parameter for option '--tests'"
-        ['dependency-report', 'a', 'b']   | "Unmatched argument at index 2: 'b'"
-        ['stats', 'now']                  | "Unmatched argument at index 1: 'now'"
-        ['bug-report', '--overwrite']     | "Unknown option: '--overwrite'"
+        ['dependency-report', 'a', 'b']   | 'dependency-report takes no argument b'
+        ['stats', 'now']                  | 'stats takes no argument now'
+        ['bug-report', '--overwrite']     | 'bug-report has no option --overwrite'
+        ['war', '--rerun', '--other']     | 'assemble has no option --rerun, or the 1 after it'
         ['test-app', '-D', 'BookSpec']    | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D BookSpec names none'
         ['test-app', '-D=x']              | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D=x names none'
         ['test-app', '-D', '=x']          | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D =x names none'

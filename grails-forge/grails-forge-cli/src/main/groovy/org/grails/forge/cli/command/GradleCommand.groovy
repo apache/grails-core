@@ -65,15 +65,15 @@ class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCom
 
     @Override
     Integer call() throws Exception {
-        if (arguments.isEmpty()) {
-            throw new CommandLine.ParameterException(spec.commandLine(), 'Say what Gradle is to do: the tasks to run or an option of Gradle, as in gradle build')
-        }
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
         ConsoleProject.Search search = ConsoleProject.search(current)
         ConsoleProject project = search.project
         if (project == null) {
             err(search.none(NAME))
             return 1
+        }
+        if (arguments.isEmpty()) {
+            throw new CommandLine.ParameterException(spec.commandLine(), 'Say what Gradle is to do: the tasks to run or an option of Gradle, as in gradle build')
         }
         GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         try {

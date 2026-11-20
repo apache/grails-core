@@ -37,6 +37,7 @@ import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.InteractiveShell
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
+import org.jline.terminal.impl.DumbTerminal
 import org.opentest4j.TestAbortedException
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
@@ -613,6 +614,71 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         new PollingConditions(timeout: 30, delay: 0.2).eventually {
             assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
         }
+    }
+
+    void "the shell asks under the name the command line was started under, takes exit with spaces around it, and ends its last line when the input ends"() {
+        given:
+        ByteArrayOutputStream written = new ByteArrayOutputStream()
+        List<List<String>> lines = [].asSynchronized()
+        Closure<Integer> shell = { String typed ->
+            // a terminal that reads the stream itself: one with a pty behind it is closed when the stream ends, before a line of it was read
+            Terminal terminal = new DumbTerminal(new ByteArrayInputStream(typed.getBytes('UTF-8')), written)
+            try {
+                InteractiveShell started = new InteractiveShell(ForgeCli.createCommandLine(beanContext, true),
+                        { String[] args -> lines.add(args.toList()) } as Consumer<String[]>, null)
+                assert started.prompt == '@|blue grails-forge-cli>|@ '
+                return started.start(terminal)
+            } finally {
+                terminal.close()
+            }
+        }
+
+        when: 'a command, and then exit as it is typed with spaces'
+        int exit = shell.call('stats\n  exit  \nnever\n')
+
+        then:
+        exit == 0
+        lines == [['stats']]
+
+        when: 'the input ends at the prompt'
+        written.reset()
+        lines.clear()
+        exit = shell.call('stats\n')
+
+        then: 'what follows the shell starts on a line of its own'
+        exit == 0
+        lines == [['stats']]
+        written.toString().endsWith('\n')
+    }
+
+    void "in a JVM that is not the shell's own the interrupt of the terminal ends the shell after the command, with the exit code of an interrupt, and not the JVM"() {
+        given:
+        Terminal terminal = new DumbTerminal(new ByteArrayInputStream('stats\nnever\n'.getBytes('UTF-8')), new ByteArrayOutputStream())
+        List<List<String>> lines = [].asSynchronized()
+        InteractiveShell shell = new InteractiveShell(ForgeCli.createCommandLine(beanContext, true), { String[] args ->
+            lines.add(args.toList())
+            // Ctrl-C while a command runs that does not wait for Gradle
+            terminal.raise(Terminal.Signal.INT)
+        } as Consumer<String[]>, null) {
+
+            @Override
+            protected void interruptedOutsideGradle() {
+                throw new IllegalStateException('the JVM would have been ended')
+            }
+        }
+        shell.endsJvm = false
+
+        when:
+        int exit = shell.start(terminal)
+
+        then:
+        exit == 130
+        lines == [['stats']]
+        // the interrupt was for the command, and is not left on the thread
+        !Thread.interrupted()
+
+        cleanup:
+        terminal?.close()
     }
 
     @IgnoreIf({ os.windows })

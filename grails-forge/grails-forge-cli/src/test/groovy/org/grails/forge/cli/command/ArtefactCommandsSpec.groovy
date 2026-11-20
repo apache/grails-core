@@ -298,7 +298,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
     void "in a directory without the record of a project the commands write nothing, and say that they are commands of a project"() {
         expect:
-        ForgeCli.execute(beanContext, command, 'Book') == 1
+        ForgeCli.execute(beanContext, (command == 'install-templates' ? [command] : [command, 'Book']) as String[]) == 1
         out.toString().readLines() == ["| Error ${command} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
         dir.list().length == 0
 

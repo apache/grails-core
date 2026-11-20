@@ -43,6 +43,7 @@ final class EarlierGrailsProject {
     private static final int MAX_PROPERTIES = 64 * 1024
     private static final String PROPERTIES = 'gradle.properties'
     private static final Pattern VERSION = Pattern.compile(/(?m)^[ \t]*grailsVersion[ \t]*[=:][ \t]*(\d{1,4})\.(\d{1,4})([A-Za-z0-9.\-]{0,40})[ \t]*$/)
+    private static final List<String> SETTINGS = ['settings.gradle', 'settings.gradle.kts']
     private static final Pattern MAJOR = Pattern.compile(/^(\d{1,4})\..*/)
 
     private EarlierGrailsProject() {
@@ -67,14 +68,20 @@ final class EarlierGrailsProject {
         if (project == null || !own.matches() || ProjectState.exists(project.directory)) {
             return null
         }
-        Path file = project.directory.resolve(PROPERTIES)
         try {
-            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > MAX_PROPERTIES || !ConsoleProject.isOwnedByUser(file, project)) {
-                return null
+            // The version is in the gradle.properties of the project, or for a project of a build of
+            // several in that of the build: the directories above are looked at up to the one that has
+            // the settings of a build, and not beyond the repository.
+            Matcher found = null
+            Path each = project.directory
+            for (int level = 0; each != null && found == null && level <= ConsoleProject.MAX_LEVELS; level++) {
+                found = versionIn(each.resolve(PROPERTIES), project)
+                if (SETTINGS.any { String settings -> Files.isRegularFile(each.resolve(settings)) } || Files.exists(each.resolve('.git'), LinkOption.NOFOLLOW_LINKS)) {
+                    break
+                }
+                each = each.getParent()
             }
-            byte[] read = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS).withCloseable { InputStream stream -> stream.readNBytes(MAX_PROPERTIES + 1) }
-            Matcher found = VERSION.matcher(new String(read, StandardCharsets.ISO_8859_1))
-            if (read.length > MAX_PROPERTIES || !found.find()) {
+            if (found == null) {
                 return null
             }
             int major = Integer.parseInt(found.group(1))
@@ -89,5 +96,26 @@ final class EarlierGrailsProject {
         } catch (IOException ignored) {
             return null
         }
+    }
+
+    // the version a file of properties gives, as Gradle reads it: the last of several; null when it gives none that is read
+    private static Matcher versionIn(Path file, ConsoleProject project) throws IOException {
+        if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > MAX_PROPERTIES || !ConsoleProject.isOwnedByUser(file, project)) {
+            return null
+        }
+        byte[] read = Files.newInputStream(file, LinkOption.NOFOLLOW_LINKS).withCloseable { InputStream stream -> stream.readNBytes(MAX_PROPERTIES + 1) }
+        if (read.length > MAX_PROPERTIES) {
+            return null
+        }
+        String text = new String(read, StandardCharsets.ISO_8859_1)
+        Matcher last = null
+        Matcher each = VERSION.matcher(text)
+        int from = 0
+        while (each.find(from)) {
+            last = VERSION.matcher(text)
+            last.find(each.start())
+            from = each.end()
+        }
+        return last
     }
 }

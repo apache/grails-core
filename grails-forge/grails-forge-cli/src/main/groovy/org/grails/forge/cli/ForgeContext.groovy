@@ -39,8 +39,14 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
     private final Supplier<? extends ApplicationContext> starter
     private final boolean owned
     private ApplicationContext context
+    // the system properties as they were before the application was started, which sets some, and right after
+    private Properties before
+    private Properties started
     private NotStartedException failure
     private int notListing
+
+    /** Whether the JVM is the command line's own, which the interactive shell may end; not so where a program runs the command line in its own JVM. */
+    boolean endsJvm = true
 
     /** The name the command line is started under, which its help shows; {@code null} for the name it has by itself. */
     String commandName
@@ -89,7 +95,9 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
         }
         if (context == null) {
             try {
+                before = (Properties) System.getProperties().clone()
                 context = starter.get()
+                started = (Properties) System.getProperties().clone()
             } catch (RuntimeException | LinkageError e) {
                 String reason = (e.getMessage() ?: '').readLines().find { String line -> !line.trim().isEmpty() }
                 failure = new NotStartedException('The project generator of the command line could not be started' +
@@ -135,7 +143,8 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
     }
 
     /**
-     * Closes the application when it was started here; one that was given running is left running.
+     * Closes the application when it was started here, and takes away the system properties its start
+     * added; one that was given running is left running.
      */
     @Override
     synchronized void close() {
@@ -144,6 +153,32 @@ final class ForgeContext implements Supplier<ApplicationContext>, Closeable {
         }
         if (owned) {
             context = null
+            restoreProperties()
+        }
+    }
+
+    // Starting the application sets system properties, the environment of Grails among them, and a
+    // JVM that runs more than this command line is left as it was: what the start set or changed is
+    // put back, unless something else has changed it again since. A start that
+    // failed is not looked at: what it set before it failed is not known to be its own.
+    private void restoreProperties() {
+        if (before == null) {
+            return
+        }
+        Properties was = before
+        Properties set = started ?: new Properties()
+        before = null
+        started = null
+        for (String name : set.stringPropertyNames()) {
+            String earlier = was.getProperty(name)
+            String byStart = set.getProperty(name)
+            if (earlier != byStart && System.getProperty(name) == byStart) {
+                if (earlier == null) {
+                    System.clearProperty(name)
+                } else {
+                    System.setProperty(name, earlier)
+                }
+            }
         }
     }
 

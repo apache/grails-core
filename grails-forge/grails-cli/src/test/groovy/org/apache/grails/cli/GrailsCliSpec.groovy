@@ -106,6 +106,55 @@ class GrailsCliSpec extends Specification {
         ['create-app', '--no-such-option']     | 2        | '--no-such-option'
     }
 
+    void "a command line that was run leaves the JVM as it was: its system properties, and no hook for when it ends"() {
+        given:
+        Properties before = (Properties) System.getProperties().clone()
+        int hooks = shutdownHooks()
+
+        when: 'a command that starts the application that generates'
+        int listed = GrailsCli.execute('create-app', '--list-features')
+        List<String> set = ['grails.env', 'grails.env.initializing', 'org.grails.MAIN_CLASS_NAME', 'java.awt.headless', 'PID', 'FILE_LOG_CHARSET', 'CONSOLE_LOG_CHARSET']
+
+        then: 'what starting the application sets is as it was before'
+        listed == 0
+        set.findAll { String name -> System.getProperty(name) != before.getProperty(name) } == []
+        shutdownHooks() == hooks
+    }
+
+    void "plain output holds while a command runs, and not after it"() {
+        given:
+        String before = System.getProperty('picocli.ansi')
+
+        when:
+        GrailsCli.execute('--plain-output', 'help')
+
+        then:
+        System.getProperty('picocli.ansi') == before
+    }
+
+    void "Spring does not report a generator that cannot be started: the command says it in one line"() {
+        given: 'what the logging of this class path is configured with'
+        Properties logging = new Properties()
+        GrailsCli.getResourceAsStream('/simplelogger.properties').withCloseable { InputStream stream -> logging.load(stream) }
+
+        expect:
+        logging.getProperty('org.slf4j.simpleLogger.log.org.springframework.boot.diagnostics.LoggingFailureAnalysisReporter') == 'off'
+        logging.getProperty('org.slf4j.simpleLogger.log.org.springframework.boot.SpringApplication') == 'off'
+    }
+
+    // the hooks of the JVM, which has no way to ask for them
+    private static int shutdownHooks() {
+        Class<?> hooks = Class.forName('java.lang.ApplicationShutdownHooks')
+        def field = hooks.getDeclaredField('hooks')
+        try {
+            field.setAccessible(true)
+        } catch (RuntimeException ignored) {
+            // the JVM does not open its classes: the number is not known, and is taken for unchanged
+            return -1
+        }
+        return ((Map) field.get(null)).size()
+    }
+
     void "a command that generates does, on this class path"() {
         when:
         int listed = GrailsCli.execute('create-app', '--list-features')

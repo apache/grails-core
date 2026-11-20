@@ -151,9 +151,18 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
                 ['GIVEN[cA]', 'GIVEN[f]', 'GIVEN[a]', 'GIVEN[h]', 'GIVEN[--help]', 'GIVEN[--]', 'GIVEN[create-a]', 'GIVEN[help]']
     }
 
-    void "gradle is found by its short form and still wants to be told what to do"() {
-        when:
+    void "gradle is found by its short form and still wants to be told what to do, in a project"() {
+        when: 'outside a project it says first what every command of a project says there'
         int exit = ForgeCli.execute(beanContext, 'g')
+
+        then:
+        exit == 1
+        err.toString().readLines() == ["| Error gradle is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
+
+        when:
+        new File(dir, 'grails-app').mkdirs()
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'g')
 
         then:
         exit == 2
@@ -293,6 +302,59 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
                                        "Run 'grails-forge-cli help feature' for the options"]
     }
 
+    @Unroll
+    void "what is wrong with a command line is said in one line of bounded length, whatever was typed: #what"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+        List<String> lines = err.toString().readLines()
+
+        then: 'the mistake, the one line of usage and where the help is, and nothing that was typed as a line of its own'
+        exit == 2
+        lines[0].startsWith(said)
+        lines[0].length() <= 700
+        lines.findAll { it.startsWith('Usage:') }.size() == 1
+        lines.find { it.startsWith('Usage:') }.startsWith('Usage: grails-forge-cli ')
+        lines.last().startsWith("Run 'grails-forge-cli help")
+        lines.size() <= 6
+        !err.toString().contains('\u001b')
+        out.toString().isEmpty()
+
+        where:
+        what                                  | line                                               | said
+        'an option with line breaks'          | ['compile', '--bo\ngus\nUsage: fake']              | 'compile has no option --bo?gus?Usage: fake'
+        'an option with an escape sequence'   | ['compile', '--bo\u001b[31mgus']                   | 'compile has no option --bo?[31mgus'
+        'an option with markup'               | ['clean', '--@|red x|@']                           | 'clean has no option --@ |red x|@'
+        'an option of 5000 characters'        | ['compile', '--' + 'x' * 5000]                     | 'compile has no option --' + 'x' * 78 + '...'
+        'an argument with line breaks'        | ['stats', 'a\nUsage: fake']                        | 'stats takes no argument a?Usage: fake'
+        'an option of a command of a command' | ['feature', 'add', '--bogus', 'x']                 | 'feature add has no option --bogus'
+        'an option of the command line'       | ['--bogus', 'compile']                             | 'grails-forge-cli has no option --bogus'
+        'a value that is none'                | ['run-app', '--port', '9\nUsage: fake\u001b[1m']   | "Invalid value for option '--port': '9?Usage: fake?[1m'"
+        'a value of 5000 characters'          | ['run-app', '--ready-timeout', 'y' * 5000]         | ("Invalid value for option '--ready-timeout': '" + 'y' * 5000).substring(0, 600)
+    }
+
+    @Unroll
+    void "outside a project #line says first that it is a command of a project, also when it was not given what it needs"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, line as String[])
+
+        then:
+        exit == 1
+        err.toString().readLines() == ["| Error ${named} is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
+        out.toString().isEmpty()
+
+        where:
+        line                 | named
+        ['run-command']      | 'run-command'
+        ['run-script']       | 'run-script'
+        ['gradle']           | 'gradle'
+        ['feature', 'add']   | 'feature add'
+        ['war']              | 'war'
+        ['package']          | 'package'
+        ['assemble']         | 'assemble'
+        ['create-job']       | 'create-job'
+        ['add-property']     | 'add-property'
+    }
+
     void "outside a project the help says that a project has more commands, and such a command is known by its name"() {
         when:
         int exit = ForgeCli.execute(beanContext, 'help')
@@ -309,15 +371,43 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         err.toString().isEmpty()
-        out.toString().readLines()[0] == 'Usage: grails-forge-cli create-controller'
-        out.toString().contains('create-controller is a command of a Grails project')
+        out.toString().readLines()[0].startsWith('Usage: grails-forge-cli create-controller [-fhvVx] ')
+        out.toString().contains('Creates a Grails Controller')
 
-        when: 'its short form is none there, as of every command that is not listed'
-        exit = ForgeCli.execute(beanContext, 'cCont', 'Book')
+        when: 'it is the command it is in a project for everything but what it does: its help, its version, a mistake in its use'
+        out.reset()
+        int help = ForgeCli.execute(beanContext, 'create-controller', '--help')
+        String shown = out.toString()
+        int version = ForgeCli.execute(beanContext, 'create-controller', '-V')
+        int mistake = ForgeCli.execute(beanContext, 'create-controller', '--bogus', 'Book')
+
+        then:
+        help == 0 && version == 0
+        shown.readLines()[0].startsWith('Usage: grails-forge-cli create-controller [-fhvVx] ')
+        mistake == 2
+        err.toString().readLines() == ['create-controller has no option --bogus',
+                                       'Usage: grails-forge-cli create-controller [-fhvVx] [--non-interactive] [--plain-output] CONTROLLER-NAME',
+                                       "Run 'grails-forge-cli help create-controller' for the options"]
+
+        when: 'and when it is run it says what every command of a project says outside one, by its short form too, with and without what it needs'
+        err.reset()
+        int named = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+        int shortened = ForgeCli.execute(beanContext, 'cCont', 'Book')
+        int without = ForgeCli.execute(beanContext, 'create-controller')
+        String line = "| Error create-controller is a command of a Grails project; there is none in ${dir.canonicalPath} or above it"
+
+        then:
+        named == 1 && shortened == 1 && without == 1
+        err.toString().readLines() == [line, line, line]
+        dir.list().length == 0
+
+        when: 'a short form that fits two of them is refused as in a project'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'cC', 'Book')
 
         then:
         exit == 2
-        err.toString().readLines()[0].startsWith('There is no command cCont')
+        err.toString().readLines()[0] == 'cC is short for more than one command: create-controller, create-command. Type more of the name of the one that is meant'
 
         when: 'a tool is not told of it'
         out.reset()
@@ -556,9 +646,10 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         out.reset()
         int help = ForgeCli.execute(beanContext, 'help')
 
-        then:
+        then: 'on the error stream, where it is not among what the help writes'
         help == 0
-        out.toString().readLines().findAll { it.contains('Warning') }.size() == 1
+        err.toString().readLines().findAll { it.contains('Warning') }.size() == 1
+        !out.toString().contains('Warning')
     }
 
     void "a warning about a record that is used is a diagnostic of a document that is complete"() {
@@ -595,8 +686,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        err.toString().readLines()[0] == 'There is no command --json'
-        out.toString().readLines().findAll { it.contains('Warning') }.size() == 1
+        err.toString().readLines()[0].startsWith('| Warning grails-forge-cli.yml: applicationType is not a type of application')
+        err.toString().readLines()[1] == 'There is no command --json'
+        !out.toString().contains('Warning')
         !out.toString().contains('"format"')
     }
 

@@ -71,7 +71,6 @@ final class FormerCommands {
         }
     }
 
-    private static final String IN_A_PROJECT = 'is a command in the directory of a Grails project whose record is read, and the current directory is in none'
     private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'
     private static final String REST_API = 'is a command in the directory of a REST API application (create-restapi), and the current directory is in none'
     private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
@@ -127,8 +126,14 @@ final class FormerCommands {
 
         add('test', 'base profile, another name of test-app', Status.REPLACED,
                 'test was another name of test-app in the Grails shell. Type: {cli} test-app')
-        add('create-tag-lib', 'web profile, another name of create-taglib', Status.REPLACED,
-                'create-tag-lib was another name of create-taglib in the Grails shell. Type: {cli} create-taglib')
+        add('create-tag-lib', 'web profile, written as another name of create-taglib where the shell did not read it', Status.REPLACED,
+                'create-tag-lib is written in the web profile of the Grails shell as another name of create-taglib, in a place the shell did not read, ' +
+                        'so it was no command there either. Type: {cli} create-taglib')
+        add('run', 'base profile, another name of run-app', Status.REPLACED,
+                'run was another name of run-app in a project in the Grails shell; outside a project it ran a Groovy script with Spring Boot, which has no replacement. ' +
+                        'Type: {cli} run-app')
+        add('stop', 'base profile, another name of stop-app', Status.REPLACED,
+                'stop was another name of stop-app in the Grails shell. Type: {cli} stop-app')
         add('quit', 'shell, interactive mode', Status.REPLACED,
                 'quit ended the interactive mode of the Grails shell. The interactive mode of {cli} is ended with exit, and there is none to end outside it')
         add('exit', 'shell, interactive mode', Status.REPLACED,
@@ -172,17 +177,14 @@ final class FormerCommands {
         add('create-feature', 'profile profile', Status.REMOVED, 'create-feature wrote a feature of a profile for the Grails shell. ' + PROFILES_GONE)
         add('create-template', 'profile profile', Status.REMOVED, 'create-template wrote a template of a profile for the Grails shell. ' + PROFILES_GONE)
 
-        for (String name : ['add-property', 'create-command', 'create-controller', 'create-domain-class', 'create-interceptor', 'create-script',
-                            'create-service', 'create-taglib', 'create-unit-test', 'install-templates']) {
-            add(name, name == 'install-templates' ? 'scaffolding plugin' : 'base, web and rest-api profiles', Status.ELSEWHERE, "${name} ${IN_A_PROJECT}".toString())
-        }
         add('create-integration-test', 'web and rest-api profiles', Status.ELSEWHERE,
                 'create-integration-test is a command in the directory of a Grails application or web plugin whose record is read, not of a plain plugin, and the current directory is in none')
         add('create-job', 'Quartz plugin', Status.ELSEWHERE,
                 'create-job is a command in the directory of a Grails project that has the grails-quartz feature, which {cli} feature add grails-quartz adds, ' +
                 'and the current directory is in none')
         add('create-domain-resource', 'rest-api profile', Status.ELSEWHERE, 'create-domain-resource ' + REST_API)
-        add('create-functional-test', 'rest-api profile', Status.ELSEWHERE, 'create-functional-test ' + REST_API)
+        add('create-functional-test', 'rest-api profile, and in a web application a script of the Geb plugin', Status.ELSEWHERE,
+                'create-functional-test ' + REST_API + '. In a web application it was a script of the Geb plugin, which has no replacement here')
         add('create-restful-controller', 'rest-api profile', Status.ELSEWHERE, 'create-restful-controller ' + REST_API)
         add('package-plugin', 'plugin profile', Status.ELSEWHERE, 'package-plugin ' + PLUGIN_PROJECT)
         add('publish-plugin', 'plugin profile', Status.ELSEWHERE, 'publish-plugin ' + PLUGIN_PROJECT)

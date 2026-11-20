@@ -60,6 +60,10 @@ final class GradleRunner {
     private static final AtomicInteger RUNNING = new AtomicInteger()
     private static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
 
+    /** What a command of the application or a script reads to know that nothing may wait for what a user types. */
+    public static final String NON_INTERACTIVE = 'GRAILS_NON_INTERACTIVE'
+
+    private static volatile boolean nonInteractive
     private static volatile PrintStream processOut
     private static volatile PrintStream processErr
 
@@ -73,6 +77,17 @@ final class GradleRunner {
     GradleRunner(Consumer<String> failure, boolean windows) {
         this.failure = failure
         this.windows = windows
+    }
+
+    /**
+     * Says whether nothing may wait for what a user types, as {@code --non-interactive} asks: Gradle
+     * is then not given the input of the CLI but an input that has ended, and what it runs is told
+     * through the environment variable {@link #NON_INTERACTIVE}.
+     *
+     * @param asked whether the command line asked for it
+     */
+    static void setNonInteractive(boolean asked) {
+        nonInteractive = asked
     }
 
     /**
@@ -284,6 +299,11 @@ final class GradleRunner {
             builder.inheritIO()
         } else {
             builder.redirectInput(ProcessBuilder.Redirect.INHERIT)
+        }
+        if (nonInteractive) {
+            // Gradle and what it starts read the end of their input at once, and are told why
+            builder.redirectInput(ProcessBuilder.Redirect.from(new File(windows ? 'NUL' : '/dev/null')))
+            builder.environment().put(NON_INTERACTIVE, 'true')
         }
         Process process
         try {

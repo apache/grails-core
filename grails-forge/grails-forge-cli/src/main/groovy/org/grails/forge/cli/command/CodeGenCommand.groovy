@@ -65,6 +65,14 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
     abstract boolean applies()
 
     /**
+     * @return whether the record of a project was read for the command: without one it is the command
+     * by its name and its options, and says that it is a command of a project
+     */
+    boolean hasRecord() {
+        return config != null
+    }
+
+    /**
      * @return the directory of the project the command writes in: the one its record was read in,
      * which is the current directory or one above it
      */

@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import groovy.transform.CompileStatic
+import org.grails.forge.feature.FeatureSelectionException
 import picocli.CommandLine
 
 /**
@@ -38,7 +39,8 @@ import picocli.CommandLine
                 'Everything after NAME is given to that command as it is, also what looks like an option of this one.',
                 'The environment is development unless -Dgrails.env names another one, before NAME.'
         ],
-        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [-DNAME=VALUE]... NAME [ARG...]'],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
+                '        [-DNAME=VALUE]... NAME [ARG...]'],
         preprocessor = Arguments)
 @CompileStatic
 class RunCommandCommand extends GradleEnvironmentCommand {
@@ -77,6 +79,11 @@ class RunCommandCommand extends GradleEnvironmentCommand {
         }
         try {
             argumentsOption = file.option
+            // as when the command is run by its name: what runs and where it comes from, before Gradle is started
+            PrintWriter said = spec.commandLine().getErr()
+            said.println(CommandLine.Help.Ansi.AUTO.string('@|bold | Running|@ ' +
+                    ApplicationCommandCommand.running(FeatureSelectionException.shown(name), ApplicationCommands.originOf(spec.root().commandLine(), name))))
+            said.flush()
             return super.run(project)
         } finally {
             file.close()

@@ -382,6 +382,33 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     @IgnoreIf({ os.windows })
+    void "the stack trace that is asked for in front of a script is asked of the build that runs it"() {
+        given:
+        plainProject()
+        catalog([])
+        script('report.groovy')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, '-x', 'report', '-x')
+
+        then: 'as for a command that is a build; after the name, -x is an argument of the script'
+        exit == 0
+        lineOf('requested=') == '<runScriptCommand><--args-file=>'
+        lineOf('system=') == '<grails.full.stacktrace=true>'
+        lineOf('stacktrace=') == 'ALWAYS'
+        lineOf('vector=') == ['report', '-x'].collect { '<' + it.bytes.encodeHex() + '>' }.join('')
+
+        when: 'without it'
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'report')
+
+        then: 'a script is not given the environment a command of the application runs in'
+        exit == 0
+        lineOf('system=') == ''
+        lineOf('stacktrace=') == 'INTERNAL_EXCEPTIONS'
+    }
+
+    @IgnoreIf({ os.windows })
     void "a script that fails is a failure of the command of the CLI, with one line after what Gradle says"() {
         given:
         plainProject()

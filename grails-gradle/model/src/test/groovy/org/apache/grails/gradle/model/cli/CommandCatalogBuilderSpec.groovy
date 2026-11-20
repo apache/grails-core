@@ -84,6 +84,47 @@ class CommandCatalogBuilderSpec extends Specification {
         catalog.diagnostics == ['The command class demo.ReportCommand is not listed: it has descriptors that differ, in org.example:one:1.0, org.example:two:1.0.']
     }
 
+    @Unroll
+    def "a catalog lists no more commands than are read from it, the first by name, and says how many it left out: #title"() {
+        given: 'more commands than a catalog lists, registered in an order that is not the order of their names'
+        CommandCatalogBuilder builder = new CommandCatalogBuilder()
+        (0..<3).each { int part ->
+            File part0 = new File(dir, "part${part}")
+            new File(part0, 'META-INF').mkdirs()
+            List<String> classes = (0..<200).collect { int number -> "demo.p${part}.C${199 - number}Command".toString() }
+            new File(part0, 'META-INF/grails-cli.factories').text = 'org.apache.grails.core.cli.ApplicationCommand=' + classes.join(',') + '\n'
+            classes.each { String className ->
+                File file = new File(part0, CommandDescriptor.location(className))
+                file.parentFile.mkdirs()
+                file.text = CommandDescriptor.describe(className, "c${2 - part}-${className.replaceAll(/\D/, '')}".toString(), letter * CommandDescriptor.MAX_DESCRIPTION_LENGTH)
+            }
+            builder.add("org.example:part${part}:1.0", part0)
+        }
+
+        when:
+        String json = builder.toJson()
+        Map<String, Object> catalog = (Map<String, Object>) StrictJson.parse(json.trim(), 8)
+        List<String> names = ((List<Map>) catalog.commands)*.name
+
+        then: 'within the bytes and the number a reader takes'
+        json.length() <= CommandCatalogBuilder.MAX_BYTES
+        names.size() <= CommandCatalogBuilder.MAX_COMMANDS
+        names.size() >= atLeast
+
+        and: 'the first by name, whatever element they came from'
+        names == names.sort(false)
+        names == (0..<3).collectMany { int part -> (0..<200).collect { int number -> "c${2 - part}-${part}${number}".toString() } }.sort().take(names.size())
+
+        and: 'and what is left out is said, in one line'
+        catalog.complete == false
+        catalog.diagnostics == ["There are 600 commands, more than a catalog lists${how}: the last ${600 - names.size()} by name are not listed.".toString()]
+
+        where:
+        title                                     | letter   | atLeast | how
+        'more than the number'                    | 'd'      | 512     | ' (512)'
+        'more than the bytes, written as escapes' | '\u00e9' | 120     | ' in 524288 bytes'
+    }
+
     // a directory that registers the class, with the descriptor when there is one
     private File element(String name, String descriptor) {
         File element = new File(dir, name)

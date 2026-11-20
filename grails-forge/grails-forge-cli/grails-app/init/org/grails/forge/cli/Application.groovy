@@ -72,6 +72,8 @@ class Application extends GrailsAutoConfiguration {
                 .bannerMode(Banner.Mode.OFF)
                 .logStartupInfo(false)
                 .addCommandLineProperties(false)
+                // whoever starts the application closes it: a JVM that runs more than this is left no hook
+                .registerShutdownHook(false)
                 .properties('spring.config.location': 'classpath:/')
                 .addBootstrapRegistryInitializer(Application::declarePlugins)
     }

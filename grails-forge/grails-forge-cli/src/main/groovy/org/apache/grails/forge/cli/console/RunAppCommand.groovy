@@ -56,9 +56,9 @@ import picocli.CommandLine
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
         customSynopsis = [
-                '${COMMAND-FULL-NAME} [-hvVx] [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail]',
-                '        [--detach | --foreground] [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]...',
-                '        [-- GRADLE-ARGUMENT...]'
+                '${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
+                '        [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]',
+                '        [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]'
         ],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
@@ -84,9 +84,11 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final String ADDRESS_VARIABLE = 'SERVER_ADDRESS'
     // a system property of the build that the Grails Gradle plugin does not hand to the application
     private static final String BUILD_PORT_PROPERTY = 'server.port'
-    private static final String LOG = "${RunDirectory.LOCATION}/${RunningApplication.LOG}"
+    private static final String LOG = RunDirectory.LOCATION + '/' + RunningApplication.LOG
     private static final Map<String, String> ENVIRONMENTS = [dev: 'development', prod: 'production']
-    private static final Function<String, String> ENVIRONMENT = { String name -> System.getenv(name) } as Function<String, String>
+    // a lambda, and no closure made into a function when the class is loaded: that goes through what Groovy
+    // makes a text of any object with, which costs every start of the command line some 70 ms
+    private static final Function<String, String> ENVIRONMENT = (String name) -> System.getenv(name)
 
     private static final List<ProcessHandle> STARTED_IN_SHELL = new CopyOnWriteArrayList<ProcessHandle>()
     private static volatile boolean stopsWithShell

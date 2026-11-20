@@ -43,6 +43,7 @@ import static picocli.CommandLine.Help.Ansi.AUTO
 class InteractiveShell {
 
     private static final String DEFAULT_PROMPT = '@|blue grails>|@ '
+    private static final int INTERRUPTED = 130
 
     private final CommandLine commandLine
     private final Consumer<String[]> executor
@@ -50,6 +51,10 @@ class InteractiveShell {
     private final String prompt
     private final Supplier<CommandLine> commands
     private volatile CommandLine completed
+    // set when the interrupt of the terminal came during a command that cannot be cancelled, in a JVM that is not the shell's to end
+    private volatile int ended
+    /** Whether the JVM is the shell's own, which the interrupt of the terminal ends when nothing else can be done for it. */
+    boolean endsJvm = true
 
     InteractiveShell(CommandLine commandLine,
                             Consumer<String[]> executor,
@@ -84,9 +89,17 @@ class InteractiveShell {
         this.commandLine = commandLine
         this.executor = executor
         this.onError = onError
-        this.prompt = prompt
+        // the prompt is the name the command line was started under
+        this.prompt = prompt.is(DEFAULT_PROMPT) ? "@|blue ${commandLine.getCommandName()}>|@ ".toString() : prompt
         this.commands = commands
         this.completed = commandLine
+    }
+
+    /**
+     * @return what the shell asks with, before it is styled for the terminal: the name the command line was started under
+     */
+    String getPrompt() {
+        return prompt
     }
 
     /**
@@ -123,8 +136,12 @@ class InteractiveShell {
         Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal ->
             if (GradleRunner.isRunning()) {
                 running.interrupt()
-            } else {
+            } else if (endsJvm) {
                 interruptedOutsideGradle()
+            } else {
+                // the JVM is someone else's: the shell ends when the command has, with the exit code of an interrupt
+                ended = INTERRUPTED
+                running.interrupt()
             }
         } as Terminal.SignalHandler)
         try {
@@ -142,12 +159,32 @@ class InteractiveShell {
      * for it.
      */
     protected void interruptedOutsideGradle() {
-        System.exit(130)
+        System.exit(INTERRUPTED)
     }
 
-    void start() {
+    /**
+     * Runs the shell until it is left.
+     *
+     * @return 0, or the exit code of an interrupt when the interrupt of the terminal ended it in a
+     * JVM that is not the shell's own
+     */
+    int start() {
         try {
-            Terminal terminal = TerminalBuilder.terminal()
+            return start(TerminalBuilder.terminal())
+        } catch (Throwable t) {
+            onError.apply(t, commandLine)
+        }
+        return 0
+    }
+
+    /**
+     * Runs the shell on a terminal until it is left.
+     *
+     * @param terminal the terminal the lines are read from and the prompt is written to
+     * @return as {@link #start()}
+     */
+    int start(Terminal terminal) {
+        try {
             LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
                     .completer(completer())
@@ -171,20 +208,29 @@ class InteractiveShell {
                     if (line.matches('^\\s*#.*')) {
                         continue
                     }
-                    if (line.equals('exit')) {
-                        return
+                    if (line.trim() == 'exit') {
+                        return 0
                     }
                     ParsedLine pl = reader.getParser().parse(line, 0)
                     String[] arguments = pl.words().toArray(new String[0])
                     execute(terminal, arguments)
+                    if (ended != 0) {
+                        return ended
+                    }
                     refresh()
-                } catch (UserInterruptException | EndOfFileException e) {
-                    return
+                } catch (UserInterruptException e) {
+                    return 0
+                } catch (EndOfFileException e) {
+                    // the prompt was written and nothing was typed after it: what follows starts on a line of its own
+                    terminal.writer().println()
+                    terminal.writer().flush()
+                    return 0
                 }
             }
         } catch (Throwable t) {
             onError.apply(t, commandLine)
         }
+        return 0
     }
 
     /**

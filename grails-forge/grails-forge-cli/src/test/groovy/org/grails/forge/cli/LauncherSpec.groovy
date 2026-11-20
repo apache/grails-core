@@ -98,6 +98,85 @@ class LauncherSpec extends Specification {
         new File(dir, 'grails-forge-cli.yml').text = 'applicationType: web\ndefaultPackage: example\nfeatures: [gorm-hibernate5]\n'
     }
 
+    void "what the start of the application sets in the JVM is put back when it is closed, and what was set since is left"() {
+        given: 'an application whose start sets properties, as that of Spring does'
+        System.clearProperty('launcher.spec.added')
+        System.setProperty('launcher.spec.changed', 'before')
+        System.setProperty('launcher.spec.changed.again', 'before')
+        ForgeContext context = new ForgeContext({
+            System.setProperty('launcher.spec.added', 'by the start')
+            System.setProperty('launcher.spec.changed', 'by the start')
+            System.setProperty('launcher.spec.changed.again', 'by the start')
+            throw new IllegalStateException(BROKEN)
+        } as Supplier<ApplicationContext>)
+        ForgeContext started = new ForgeContext({
+            System.setProperty('launcher.spec.added', 'by the start')
+            System.setProperty('launcher.spec.changed', 'by the start')
+            System.setProperty('launcher.spec.changed.again', 'by the start')
+            return new org.springframework.context.support.GenericApplicationContext()
+        } as Supplier<ApplicationContext>)
+
+        when:
+        started.get()
+        System.setProperty('launcher.spec.changed.again', 'by the program')
+        System.setProperty('launcher.spec.other', 'by the program')
+        started.close()
+
+        then:
+        System.getProperty('launcher.spec.added') == null
+        System.getProperty('launcher.spec.changed') == 'before'
+        System.getProperty('launcher.spec.changed.again') == 'by the program'
+        System.getProperty('launcher.spec.other') == 'by the program'
+
+        cleanup:
+        ['launcher.spec.added', 'launcher.spec.changed', 'launcher.spec.changed.again', 'launcher.spec.other'].each { System.clearProperty(it) }
+        context.close()
+    }
+
+    void "plain output is taken back when the run ends, unless the program has set its own value in the meantime"() {
+        when:
+        System.clearProperty('picocli.ansi')
+        PlainOutput.enter()
+        boolean during = System.getProperty('picocli.ansi') == 'false'
+        PlainOutput.leave()
+
+        then:
+        during
+        System.getProperty('picocli.ansi') == null
+
+        when:
+        PlainOutput.enter()
+        System.setProperty('picocli.ansi', 'true')
+        PlainOutput.leave()
+
+        then:
+        System.getProperty('picocli.ansi') == 'true'
+        !PlainOutput.isOn()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "after the name of the command run-command runs, --plain-output is that command's and not the command line's"() {
+        given:
+        project('echo "the wrapper ran with $*"\ncat .grails/run/command-args-0.json\n')
+
+        when:
+        int exit = ForgeCli.execute(another(), 'run-command', 'report', '--plain-output')
+
+        then: 'it is given to the command, and Gradle is not asked for its plain console'
+        exit == 0
+        out.toString().contains('["report","--plain-output"]')
+        !out.toString().contains('--console=plain')
+
+        when: 'in front of the name it is the command line\'s'
+        out.reset()
+        exit = ForgeCli.execute(another(), 'run-command', '--plain-output', 'report')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with --console=plain runCommand')
+        out.toString().contains('["report"]')
+    }
+
     @Unroll
     void "outside a project #args does not start the application that generates"() {
         when:
@@ -129,7 +208,7 @@ class LauncherSpec extends Specification {
         ['create-app', '--no-such-option']    | 2
         ['create-app']                        | 2
         ['feature']                           | 2
-        ['feature', 'add']                    | 2
+        ['feature', 'add']                    | 1
         ['feature', 'add', 'grails-quartz']   | 1
         ['compile']                           | 1
         ['clean']                             | 1
@@ -306,8 +385,8 @@ class LauncherSpec extends Specification {
         then:
         exit == 0
         started.get() == 1
-        out.toString().readLines()[0].startsWith('| Warning grails-forge-cli.yml cannot be used: The project generator of the command line could not be started')
-        out.toString().contains('Usage: grails-forge-cli')
+        err.toString().readLines()[0].startsWith('| Warning grails-forge-cli.yml cannot be used: The project generator of the command line could not be started')
+        out.toString().readLines()[0].startsWith('Usage: grails-forge-cli')
         !out.toString().contains('create-controller')
     }
 
@@ -566,43 +645,104 @@ class LauncherSpec extends Specification {
     }
 
     @IgnoreIf({ os.windows })
-    void "in a project of an earlier Grails the command line says which it is for, once and before the command"() {
+    void "in a project of an earlier Grails the commands that write into it, and the help, say which the command line is for, once, on the error stream"() {
         given:
         project()
         new File(dir, 'gradle.properties').text = 'org.gradle.caching=true\ngrailsVersion=8.1.2\n'
 
-        when:
-        int exit = ForgeCli.execute(broken, 'compile')
+        when: 'a command that creates a class, which is one of this version'
+        int exit = ForgeCli.execute(broken, 'create-controller', 'Book')
+
+        then: 'the warning comes first, and is not among what a command writes'
+        exit == 1
+        err.toString().readLines()[0] == '| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: ' +
+                'what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, ' +
+                'as the upgrade notes of the Grails guide describe'
+        !out.toString().contains('This project is on Grails')
+
+        when: 'the same context, as in the interactive shell'
+        err.reset()
+        ForgeCli.execute(broken, 'create-controller', 'Book')
+
+        then:
+        !err.toString().contains('This project is on Grails')
+
+        when: 'the help'
+        err.reset()
+        exit = ForgeCli.execute(another(), 'help')
 
         then:
         exit == 0
-        out.toString().readLines()[0] == '| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: ' +
+        err.toString().readLines()[0] == '| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: ' +
                 'what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, ' +
                 'as the upgrade notes of the Grails guide describe'
-        out.toString().contains('the wrapper ran with classes')
-
-        when: 'the same context, as in the interactive shell'
-        out.reset()
-        ForgeCli.execute(broken, 'compile')
-
-        then:
-        !out.toString().contains('This project is on Grails')
+        out.toString().readLines()[0].startsWith('Usage: ')
 
         when: 'the document for a tool is nothing but the document, and says it there'
         out.reset()
+        err.reset()
         ForgeCli.execute(another(), 'help', '--json')
         Map document = new JsonSlurper().parseText(out.toString()) as Map
 
         then:
         document.diagnostics.any { String line -> line.startsWith('This project is on Grails 8.1.2 (gradle.properties)') }
         err.toString().isEmpty()
+    }
 
-        when: 'a command that has nothing to do with the project of the directory'
-        out.reset()
-        ForgeCli.execute(another(), '--version')
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "#line does in a project of an earlier Grails what it does in any project, and says nothing of the version"() {
+        given:
+        project()
+        new File(dir, 'gradle.properties').text = 'grailsVersion=8.1.2\n'
+
+        when:
+        int exit = ForgeCli.execute(another(), line as String[])
 
         then:
-        !out.toString().contains('This project is on Grails')
+        exit == 0
+        !(out.toString() + err.toString()).contains('This project is on Grails')
+        said == null || out.toString().contains(said)
+
+        where:
+        line                  | said
+        ['compile']           | 'the wrapper ran with classes'
+        ['gradle', 'build']   | 'the wrapper ran with build'
+        ['test-app', '--unit'] | 'the wrapper ran with test'
+        ['stats']             | null
+        ['--version']         | null
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "the version of Grails of a project is the one Gradle reads: #what"() {
+        given: 'a build of several projects, of which the one the command is run in is one'
+        new File(dir, 'settings.gradle').text = "include 'app'\n"
+        File app = new File(dir, 'app')
+        new File(app, 'grails-app').mkdirs()
+        if (ofBuild != null) {
+            new File(dir, 'gradle.properties').text = ofBuild
+        }
+        if (ofProject != null) {
+            new File(app, 'gradle.properties').text = ofProject
+        }
+        System.setProperty('user.dir', app.path)
+
+        when:
+        ForgeCli.execute(another(), 'help')
+        List<String> warnings = err.toString().readLines().findAll { it.contains('This project is on Grails') }
+
+        then:
+        warnings*.replaceFirst(/.*This project is on Grails (\S+) .*/, '$1') == (version == null ? [] : [version])
+
+        where:
+        what                                               | ofBuild                                      | ofProject                  | version
+        'in the properties of the build above the project' | 'grailsVersion=8.1.2\n'                      | null                       | '8.1.2'
+        'in those of the project before those of the build' | 'grailsVersion=9.0.0\n'                     | 'grailsVersion=7.0.4\n'    | '7.0.4'
+        'the project of this version, whatever the build says' | 'grailsVersion=7.0.4\n'                  | 'grailsVersion=9.0.0\n'    | null
+        'the last of two in one file'                      | 'grailsVersion=7.0.0\ngrailsVersion=9.0.0\n' | null                       | null
+        'the last of two, which is the earlier one'        | 'grailsVersion=9.0.0\ngrailsVersion=7.0.0\n' | null                       | '7.0.0'
+        'none anywhere'                                    | 'org.gradle.caching=true\n'                  | null                       | null
     }
 
     @IgnoreIf({ os.windows })
@@ -619,11 +759,12 @@ class LauncherSpec extends Specification {
         }
 
         when:
-        ForgeCli.execute(broken, 'compile')
+        int exit = ForgeCli.execute(broken, 'help')
 
         then:
+        exit == 0
         !(out.toString() + err.toString()).contains('This project is on Grails')
-        out.toString().contains('the wrapper ran with classes')
+        out.toString().readLines()[0].startsWith('Usage: ')
 
         where:
         what                                       | properties                          | state

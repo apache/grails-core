@@ -119,7 +119,8 @@ final class CommandArgumentsFile implements Closeable {
             }
             try {
                 ProcessHandle self = ProcessHandle.current()
-                long began = self.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
+                // where the system does not say when the process began, an instant that is none but is not nothing
+                long began = self.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(1L)
                 Files.write(RunDirectory.create(run, ownerName(i)), "${self.pid()} ${began}\n".toString().getBytes(StandardCharsets.US_ASCII))
                 Files.write(created, json(arguments))
             } catch (IOException e) {
@@ -197,9 +198,15 @@ final class CommandArgumentsFile implements Closeable {
         if (!process.isPresent() || !process.get().isAlive()) {
             return false
         }
+        // A file is its writer's while the process of that number that began at that instant runs, as the
+        // user who runs the command: a file that names no instant, or a process of someone else, as
+        // the files of a clone do, holds no name.
+        if (began == 0L || !ProcessUser.isOfThisUser(process.get())) {
+            return false
+        }
         Optional<Instant> instant = process.get().info().startInstant()
         // where the system does not say when a process began, one of that number is taken for the writer
-        return !instant.isPresent() || began == 0L || instant.get().toEpochMilli() == began
+        return !instant.isPresent() || instant.get().toEpochMilli() == began
     }
 
     private static String name(int index) {

@@ -72,7 +72,21 @@ class CommandCatalogBuilder {
     public static final int MAX_COMMANDS_PER_ORIGIN = 256
 
     /** The most commands a catalog has, and the most classes that are looked at. */
-    public static final int MAX_COMMANDS = 2048
+    public static final int MAX_COMMANDS = 512
+
+    /** The most classes that are looked at for commands. */
+    public static final int MAX_CLASSES = 2048
+
+    /**
+     * The most bytes a catalog has. What reads a catalog reads no more, so none is written that has
+     * more: with the most commands, each with the longest name, description and origin in ASCII, a
+     * catalog is under this, and one whose descriptions are written as escapes lists as many
+     * commands as fit.
+     */
+    public static final int MAX_BYTES = 512 * 1024
+
+    /** The most characters where a command comes from is written with. */
+    public static final int MAX_ORIGIN_LENGTH = 120
 
     /** The most diagnostics a catalog has; one more line says how many were left out. */
     public static final int MAX_DIAGNOSTICS = 64
@@ -88,7 +102,6 @@ class CommandCatalogBuilder {
     private static final String PROVIDER_KEY = 'org.apache.grails.core.cli.ApplicationCommandProvider'
     private static final String LEGACY_PROVIDER = 'org.apache.grails.core.cli.compat.LegacyApplicationCommandProvider'
     private static final String LEGACY_PROVIDER_CLASS = 'org/apache/grails/core/cli/compat/LegacyApplicationCommandProvider.class'
-    private static final int MAX_ORIGIN_LENGTH = 120
     private static final List<String> ARCHIVES = ['.jar', '.zip'].asImmutable()
 
     // class name -> where it is registered, in the order of the class path
@@ -147,6 +160,11 @@ class CommandCatalogBuilder {
      * the same whenever the same elements were added in the same order
      */
     Map<String, Object> build() {
+        document(MAX_COMMANDS)
+    }
+
+    // the document with no more than a number of commands: the first by name, and a line for the others
+    private Map<String, Object> document(int most) {
         Set<String> said = new TreeSet<String>(diagnostics)
         List<Entry> entries = []
         for (Map.Entry<String, List<Candidate>> registration : registered) {
@@ -195,6 +213,13 @@ class CommandCatalogBuilder {
             command.registration = entry.registration
             commands << command
         }
+        if (commands.size() > most) {
+            // by name, so that the same commands are left out whatever the order of the class path is
+            said << line("There are ${commands.size()} commands, more than a catalog lists" +
+                    (most < MAX_COMMANDS ? " in ${MAX_BYTES} bytes" : " (${MAX_COMMANDS})") +
+                    ": the last ${commands.size() - most} by name are not listed.")
+            commands = new ArrayList<Map<String, Object>>(commands.subList(0, most))
+        }
         List<String> lines = new ArrayList<String>(said)
         if (lines.size() > MAX_DIAGNOSTICS) {
             int more = lines.size() - MAX_DIAGNOSTICS
@@ -213,7 +238,15 @@ class CommandCatalogBuilder {
      * @return the document as one line of JSON in ASCII, with a line end
      */
     String toJson() {
-        StrictJson.write(build()) + '\n'
+        // what reads the catalog reads a bounded number of bytes: fewer commands are listed until it is within them
+        int most = MAX_COMMANDS
+        String json = StrictJson.write(document(most)) + '\n'
+        while (json.length() > MAX_BYTES && most > 0) {
+            most = Math.min(most, ((List) document(most).commands).size())
+            most -= Math.max(1, most.intdiv(8))
+            json = StrictJson.write(document(most)) + '\n'
+        }
+        json
     }
 
     private Entry resolve(String className, List<Candidate> candidates, Set<String> said) {
@@ -288,8 +321,8 @@ class CommandCatalogBuilder {
         for (String className : taken(origin, commandClasses)) {
             List<Candidate> candidates = registered.get(className)
             if (candidates == null) {
-                if (registered.size() + legacy.size() >= MAX_COMMANDS) {
-                    say("There are more than ${MAX_COMMANDS} commands; the rest are not listed.")
+                if (registered.size() + legacy.size() >= MAX_CLASSES) {
+                    say("More than ${MAX_CLASSES} classes are registered as commands; the rest are not looked at.")
                     break
                 }
                 candidates = new ArrayList<Candidate>()
@@ -312,8 +345,8 @@ class CommandCatalogBuilder {
         }
         for (String className : taken(origin, legacyClasses)) {
             if (!legacy.containsKey(className)) {
-                if (registered.size() + legacy.size() >= MAX_COMMANDS) {
-                    say("There are more than ${MAX_COMMANDS} commands; the rest are not listed.")
+                if (registered.size() + legacy.size() >= MAX_CLASSES) {
+                    say("More than ${MAX_CLASSES} classes are registered as commands; the rest are not looked at.")
                     break
                 }
                 legacy.put(className, origin)

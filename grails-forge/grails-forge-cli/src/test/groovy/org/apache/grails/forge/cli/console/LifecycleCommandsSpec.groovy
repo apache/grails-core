@@ -1049,8 +1049,10 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exits.values().every { int each -> each == 0 }
-        runApp.contains(' run-app [-hvVx] [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail]')
-        runApp.contains('[--detach | --foreground] [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]...')
+        runApp.readLines()[0] == 'Usage: grails-forge-cli run-app [-hvVx] [--non-interactive] [--plain-output]'
+        runApp.contains('[--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail] [--detach | --foreground]')
+        runApp.contains('[--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
+        runApp.readLines().take(3).every { String line -> line.length() <= 100 }
         !runApp.readLines().take(3).join(' ').contains('-D=') && !runApp.contains('-debug-jvm,') && !runApp.contains('-port,') && !runApp.contains(' -https')
         stopApp.contains(' stop-app [-hvVx]')
 
@@ -1058,14 +1060,16 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         Map<String, String> usage = ['console', 'shell', 'run-script', 'run-command'].collectEntries { String name ->
             out.reset()
             ForgeCli.execute(beanContext, name, '--help')
-            [(name): out.toString().readLines()[0]]
+            // the usage is two lines, each within the width of the help: the options of the command line, and those of the command
+            assert out.toString().readLines().take(2).every { String line -> line.length() <= 100 }
+            [(name): out.toString().readLines().take(2)*.trim().join(' ')]
         }
 
         then:
-        usage['console'].endsWith(' console [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
-        usage['shell'].endsWith(' shell [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
-        usage['run-script'].endsWith(' run-script [-hvVx] [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]')
-        usage['run-command'].endsWith(' run-command [-hvVx] [-DNAME=VALUE]... NAME [ARG...]')
+        usage['console'].endsWith(' console [-hvVx] [--non-interactive] [--plain-output] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
+        usage['shell'].endsWith(' shell [-hvVx] [--non-interactive] [--plain-output] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
+        usage['run-script'].endsWith(' run-script [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]')
+        usage['run-command'].endsWith(' run-command [-hvVx] [--non-interactive] [--plain-output] [-DNAME=VALUE]... NAME [ARG...]')
 
         when: 'the short forms that fit one of these commands and another one'
         Map<String, String> ambiguous = ['s', 'co', 'c', 'r', 'st'].collectEntries { String form ->

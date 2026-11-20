@@ -33,7 +33,8 @@ import picocli.CommandLine
                 'Stays with the console until it is closed. The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
-        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--non-interactive] [--plain-output]',
+                '        [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
 class ConsoleCommand extends GradleEnvironmentCommand {
@@ -44,6 +45,15 @@ class ConsoleCommand extends GradleEnvironmentCommand {
     // the option as the shell spells it, with one dash: taken, and not shown
     @CommandLine.Option(names = ['-debug-jvm'], hidden = true)
     boolean debugJvmOfShell
+
+    @Override
+    Integer call() throws Exception {
+        if (nonInteractive()) {
+            throw new CommandLine.ParameterException(spec.commandLine(), 'console opens a window and stays with it until it is closed, which --non-interactive rules out: ' +
+                    'run it without the option, or use run-script for a script')
+        }
+        return super.call()
+    }
 
     @Override
     protected String defaultEnvironment() {

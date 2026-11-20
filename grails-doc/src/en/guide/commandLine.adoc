@@ -314,12 +314,14 @@ $ grails -t forge test-app --plain-output
 | Everything is written as plain text, line by line: no colour and no other markup of a terminal, in the help, in the messages (`\| Error`, `\| Warning`) and in what a command reports. Gradle is run with `--console=plain`, so it shows no progress display and writes every line once; when the command line names a console itself, as in `gradle build --console=rich`, that one is used.
 
 | `--non-interactive`
-| Nothing waits for what a user types. Without a command the help is shown and the interactive console is not started, and `shell`, which reads what is typed until it is left, is refused with exit code 2.
+| Nothing waits for what a user types. Without a command the help is shown and the interactive console is not started. `shell`, which reads what is typed until it is left, and `console`, which opens a window and stays with it, are refused with exit code 2. Every build the command line starts is given an input that has ended in place of the input of the command line, so a build, a test, a script or a command of the application that reads its input reads its end at once and does not wait; and it is told through the environment variable `GRAILS_NON_INTERACTIVE`, which is `true` for it and for what it starts, so that a command or a script of your own can ask nothing where it would ask.
 |===
 
 Without `--plain-output` the output is plain as well wherever it is not a terminal, such as a file or a pipe, and when the environment variable `NO_COLOR` is set. The option is for the cases in which that cannot be relied on: a program that reads the output through a terminal of its own.
 
-The options are not taken after `gradle`, after the name of a command of the application or of a plugin, or after `--`: everything there is given to Gradle or to the command as it was typed. `grails -t forge --plain-output gradle build` is the form for those.
+The options are not taken after `gradle`, after the name of a command of the application or of a plugin, after the name of the command that `run-command` runs, or after `--`: everything there is given to Gradle or to the command as it was typed. `grails -t forge --plain-output gradle build` and `grails -t forge run-command --plain-output NAME` are the forms for those.
+
+In front of the name of a command only the options of the command line itself are taken: these two, `-h`, `-V`, `-x` (`--stacktrace`) and `-v` (`--verbose`). An option of a command, such as `-Dname=value`, belongs after the name of that command and is a mistake in front of it. `-x` in front of a command of the application or of a script asks the build for the full stack trace, as it does for the commands that are a build; `-v` in front of one of those, or of `gradle`, changes nothing, because what follows their names is all they pass on: give Gradle its own options after `gradle`.
 
 ==== What a Command Starts
 
@@ -349,6 +351,8 @@ int exitCode = org.apache.grails.cli.GrailsCli.execute('--plain-output', 'create
 
 Started this way the command line is called `grails` in its help, and takes the commands of this chapter that are given with `grails -t forge` here. Without a command it starts the interactive console in a Grails project and shows the help elsewhere, and always the help with `--non-interactive`. `execute` runs one command line at a time, in the current directory of the JVM, and writes to the standard output and the standard error of the JVM.
 
+A program that calls `execute` in a JVM of its own passes `--non-interactive`: without it, a command line that names no command starts the interactive console in the JVM of the caller, on its terminal. Where that happens all the same, the interrupt of the terminal does not end the JVM as it does for the `grails` program: the console ends when the command that runs has ended, and `execute` returns 130. When `execute` returns, the JVM is as it was: the system properties that starting the project generator sets (`grails.env` among them) are put back unless the program has changed them in the meantime, no shutdown hook is left, and `picocli.ansi`, which `--plain-output` sets for the run, has the value it had, or the one the program gave it during the run.
+
 The exit code says what happened:
 
 [cols="1,4"]
@@ -367,14 +371,16 @@ The exit code says what happened:
 
 ==== In a Project of an Earlier Version of Grails
 
-The commands write what Grails 9 has. In a project whose `gradle.properties` names an earlier major version as `grailsVersion`, and which has no `.grails` directory of this generator, every command that reads the project first warns of it:
+The commands write what Grails 9 has. In a project whose `gradle.properties` names an earlier major version as `grailsVersion`, and which has no `.grails` directory of this generator, the commands that write into the project what this version has (`create-controller` and the other commands that create classes, `add-property`, `install-templates`) and `help` first warn of it, on the standard error:
 
 [source,console]
 ----
 | Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe
 ----
 
-The command is then run all the same; the commands that only run the build of the project, such as `gradle` and `compile`, do in such a project what they do in any other. In the interactive console the warning is given once. `help --json` has it in `diagnostics`.
+The command is then run all the same. The commands that run the build of the project or only look at it, such as `gradle`, `compile`, `test-app`, `run-app` and `stats`, do in such a project what they do in any other and do not warn. In the interactive console the warning is given once. `help --json` has it in `diagnostics`. The version is read as Gradle reads it: from the `gradle.properties` of the project, or for a project of a build of several from that of the build above it (the directory with `settings.gradle`), and where a file names it twice, the last one.
+
+This warning, and what there is to say about the record of a project (`grails-forge-cli.yml`, `.grails`), is written to the standard error, so that it is never among what a command writes to the standard output.
 
 === Commands of the Application and its Plugins
 
@@ -395,14 +401,14 @@ $ grails -t forge help greet
 The commands are the ones the Gradle task `grailsCommandCatalog` of the project has written to `build/grails/command-catalog.json`. The Grails Forge CLI reads that file and runs nothing to have it, so that asking for help or mistyping a command never starts a build: run the task once, and again when the commands of the project have changed.
 
 * `help` lists the commands after those of the Grails Forge CLI, each with where it comes from, `help NAME` shows one of them, and `help --json` describes them. They have short forms too, after the commands of the Grails Forge CLI: a short form is first looked for among the commands of the Grails Forge CLI itself, and is one of the commands of the application and its plugins only when it fits none of those. So what a plugin calls a command never changes what `cA` or `comp` means, and never makes it fit two commands.
-* Before the command is started, one line on the standard error says which command is run, where it comes from and by which Gradle task: `| Running the command greet of the application, with the Gradle task runCommand`. A name that was mistyped into the name of a command of a plugin is seen there before anything runs.
+* Before the command is started, one line on the standard error says which command is run, where it comes from and by which Gradle task: `| Running the command greet of the application, with the Gradle task runCommand`. A name that was mistyped into the name of a command of a plugin is seen there before anything runs. `run-command greet` says the same line, and is the same build to Gradle as `greet`: both give Gradle the same arguments (the task, the file of the arguments, `-Dgrails.env=development`), so a build with the configuration cache configures once for the two.
 * Everything after the name of the command is given to the command as it is, each argument as the one argument it is: spaces, quotes, a leading dash and line breaks are kept, and no option of the Grails Forge CLI is read from it, so `--help`, `-x` and `--stacktrace` after the name are the command's. Not given are the character U+0000, more than 4095 arguments, or more than 1 MiB of them; the command line refuses those with exit code 2.
 * The command runs in the application, started by the Gradle task `runCommand` of the project, with the Gradle wrapper of the project and everything that holds for the `gradle` command. The arguments are handed to Gradle in a file that only you can read, `.grails/run/command-args-0.json` in the project, which is deleted when the command ends, fails or is cancelled; `.grails/run` holds a `.gitignore` that keeps it out of a commit. The file has the same name every time, so a build with the configuration cache configures once for a command and reuses that whatever the arguments are the next time. When two commands run at once the second takes the next number, up to sixteen, and a file that a command left behind because it was killed is removed by the next one. The exit code is 0 when the command succeeded and 1, after one line, when it failed or Gradle did.
 * `create-command` writes a command into `grails-app/commands` and says in one line that the task has to list the commands again before it is a command here.
 * While there is no `build/grails/command-catalog.json`, the project has no such commands. `help` and `help --json` say so and name the task, and what is typed for a command and is none is refused with the same line added, since it may be a command of the application.
 * A file that is older than `build.gradle`, `build.gradle.kts`, `settings.gradle`, `settings.gradle.kts` or `gradle.properties`, than a `.groovy` file or a directory anywhere below `grails-app/commands` (a command is written into the directory of its package), or than what the compiler writes of the commands under `build/classes/groovy/main/META-INF/grails-commands`, is still used, and `help` and `help --json` say that the commands may have changed. `gradle grailsCommandCatalog --rerun` writes the file again also when Gradle finds the task up to date. A change that none of these files shows, such as a new version of a plugin from a version catalog or a changed description, is not noticed.
-* The file is read as something that anything in the build may have written. A file that is a link, is behind a link, is not a plain file, has more than 256 KiB, or is not the JSON document of format `1` the task writes is not used at all: the project then has no such commands, and one line says what is wrong with the file without repeating anything of it.
-* One command in the file that is not as the task writes one (a name that is not lower case with single hyphens, a description of more than one line, a name another command has) is left out alone, and the others are used. `help` and `help --json` say which, by its place in the file, and `complete` is `false`. Where a command comes from can be any name a jar or a project has: it is only shown. The first 512 commands of a file are used.
+* The file is read as something that anything in the build may have written. A file that is a link, is behind a link, is not a plain file, has more than 512 KiB, or is not the JSON document of format `1` the task writes is not used at all: the project then has no such commands, and one line says what is wrong with the file without repeating anything of it.
+* One command in the file that is not as the task writes one (a name that is not lower case with single hyphens, a description of more than one line, a name another command has) is left out alone, and the others are used. `help` and `help --json` say which, by its place in the file, and `complete` is `false`. Where a command comes from can be any name a jar or a project has: it is only shown, as text, in the help of the command as in the list; a file cannot give `built-in` or, in other letters, `application` as where a command comes from. The task writes no file that is not read: at most 512 commands, the first by name, in at most 512 KiB, and it says in its diagnostics how many it left out.
 
 ==== When a command has the name of a command of the Grails Forge CLI
 
@@ -428,11 +434,15 @@ The Grails shell and its profiles had commands that the Grails Forge CLI does no
 $ grails -t forge list-profiles
 There is no command list-profiles
 list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features
+Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+Run 'grails-forge-cli help' for the commands
 ----
+
+In a project the first line may name the commands that are most like what was typed, and a line about the commands of the application may stand before the line of this table.
 
 The same line is added for a command that the Grails Forge CLI has in projects of some kinds only, when it is typed in a project of another kind: `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it.
 
-Outside a project these commands are not mistakes: `create-controller`, `install-templates` and the others that write into a project, and `package-plugin` and `publish-plugin`, are known by their names everywhere and end with exit code 1 and the line every command of a project has there, `create-controller is a command of a Grails project; there is none in /home/me or above it`. The ones that write into a project are not in the list of `help` outside a project, which says in its last line that a project has more commands.
+Outside a project these commands are not mistakes: `create-controller`, `install-templates` and the others that write into a project, and `package-plugin` and `publish-plugin`, are known by their names everywhere and end with exit code 1 and the line every command of a project has there, `create-controller is a command of a Grails project; there is none in /home/me or above it`. The ones that write into a project are not in the list of `help` outside a project, which says in its last line that a project has more commands; they are found by their short forms there as in a project, show their help with `--help`, and answer a mistake in their use with exit code 2 like every command. A command of a project that is not given what it needs, such as `run-command` without a name, says outside a project that it is a command of a project, with exit code 1, before anything is said of what is missing. A command says so by the name that was typed: `war` for `assemble`.
 
 [cols="2,2,5"]
 |===
@@ -463,8 +473,8 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |removed: As `create-creator-command`.
 
 |`create-tag-lib`
-|the web profile, another name of `create-taglib`
-|replaced: `create-taglib`
+|the web profile, where it is written as another name of `create-taglib` in a place the shell did not read
+|replaced: `create-taglib`. The name never was a command of the shell either.
 
 |`create-template`
 |the profile for writing profiles
@@ -530,13 +540,21 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |the shell, in interactive mode
 |replaced: `exit`
 
+|`run`
+|the base profile, another name of `run-app`
+|replaced: `run-app`. Outside a project the shell ran a Groovy script with Spring Boot under this name, which has no replacement.
+
+|`stop`
+|the base profile, another name of `stop-app`
+|replaced: `stop-app`
+
 |`test`
 |the base profile, another name of `test-app`
 |replaced: `test-app`
 
 |===
 
-Every other command of the shell and of the profiles is a command of the Grails Forge CLI under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `gradle` and `help`. `run`, which compiled and ran a Groovy script in the shell outside a project, is now another name of `run-app`.
+Every other command of the shell and of the profiles is a command of the Grails Forge CLI under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `gradle` and `help`. `sh`, another name of `shell` in the shell, is what is short for `shell` here.
 
 === Grails Default Package Configuration
 
