@@ -86,7 +86,7 @@ final class ApplicationCommandManifestWriter {
 
     // Class#getAnnotationsByType would read both forms at once, but the static compiler links it with an
     // Object[] return type, which the JDK method does not have, so the call fails with NoSuchMethodError.
-    // getAnnotation returns a single annotation and links correctly.
+    // getAnnotation returns a single annotation and links correctly (GROOVY-12793).
     private static List<CommandParameter> declaredArguments(Class<?> type) {
         CommandParameter single = type.getAnnotation(CommandParameter)
         single ? [single] : (type.getAnnotation(CommandParameters)?.value()?.toList() ?: [])
