@@ -17,43 +17,34 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == test-app
-
-
 
 === Purpose
 
-
 Runs all Grails unit and integration tests and generates reports. The command returns appropriate response codes for embedding with continuous integration servers.
-
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
 grails test-app
 grails test-app Foo
 grails test-app Foo Bar
+grails test-app --unit
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails <<environment>>* test-app <<names>>* [-unit] [-integration] [-continuous]
+grails test-app [--unit] [--integration] [--clean] [--continuous] [--debug-jvm] [--tests=<<name>>]... [-Dname=value]... [<<names>>...] [-- <<gradle arguments>>]
 ----
 
-Fired Events:
+Executes the Grails unit and integration tests located in the `src/test/groovy` and `src/integration-test/groovy` directories: the Gradle task `test` and, where the project has a `src/integration-test` directory, `integrationTest`, for the test environment unless `-Dgrails.env=NAME` after the command names another one. By default all tests are executed, but you can specify the names of the tests as arguments, as class names or as patterns:
 
-
-Executes the Grails unit and integration tests located in the `src/test/groovy` and `src/integration-test/groovy` directories. By default all tests are executed, but you can specify the names of the tests (without the "Tests" or other test type suffix) as argument to the command:
-
-[source,groovy]
+[source,console]
 ----
 grails test-app *Foo*
 grails test-app *Foo* *Bar*
@@ -63,32 +54,18 @@ The first example will execute a test called `FooSpec.groovy` whilst the second 
 
 The task of finding tests that match the pattern you provide is passed to Gradle. Take a look at the section in their docs titled link:https://docs.gradle.org/current/userguide/java_plugin.html#test_filtering[Test filtering] for more information.
 
-You can also choose to only run the unit or integration tests:
+Options:
 
-[source,groovy]
-----
-grails test-app -unit
-grails test-app -integration
-----
+* `--unit` - Run the unit tests: the task `test`.
+* `--integration` - Run the integration tests: the task `integrationTest`.
+* `--clean` - Run every test again, also where nothing changed: `cleanTest` and `cleanIntegrationTest` come first.
+* `--continuous` - Run the tests again whenever a file they depend on changes: the continuous build of Gradle, which runs the tests when it starts.
+* `--debug-jvm` - Start the JVM of the tests suspended, waiting for a debugger on port 5005.
+* `--tests=NAME` - Another way to name a test; can be given more than once.
+* `-Dname=value` - A system property for the build. Can be given more than once.
 
-=== Continuous Testing
+`--unit`, `--integration`, `--clean`, `--continuous` and `--debug-jvm` are also taken with one dash, as the command of earlier versions took them.
 
-[source,groovy]
-----
-grails
-grails> test-app -continuous
-----
-
-The `-continuous` option starts Grails' `DirectoryWatcher`. It watches `.groovy` and `.java` files in `grails-app`, `src/main/groovy`, `src/test/groovy`, and `src/integration-test/groovy`. Creating or changing a watched file reruns the tests selected by the command options and test name patterns.
-
-Continuous mode does not run tests when it starts. It is intended for the Grails interactive CLI, where the watcher remains active until you exit the CLI. A one-off `grails test-app -continuous` command exits immediately because `DirectoryWatcher` runs on a daemon thread. Stop interactive continuous testing by exiting the CLI or pressing Ctrl+C.
-
-This is not Gradle's `--continuous` mode. Grails does not pass `--continuous` to Gradle, and `--watch` is not an alias for `-continuous`. Files outside the watched directories, including Java source directories such as `src/main/java`, do not trigger a rerun.
+What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
 
 See the link:{guidePath}testing.html[Testing] section for examples on how to combine the different options to target tests.
-
-
-=== Grails Forge CLI
-
-
-In the Grails Forge CLI, `test-app` takes the same test names and the options `--unit`, `--integration`, `--clean`, `--debug-jvm` and `--continuous` (also with one dash), and `--tests NAME` as another way to name a test. The environment is given as `-Dgrails.env=NAME` after the command, and `--continuous` is the continuous build of Gradle, which runs the tests when it starts. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

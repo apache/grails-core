@@ -280,75 +280,25 @@ include::commandLine/creatingCustomScripts.adoc[]
 
 include::commandLine/creatingCustomCommands.adoc[]
 
-[[profiles]]
-== Application Profiles
+[[applicationTypes]]
+== Application Types, Features and Feature Packs
 
-include::profiles.adoc[]
+include::applicationTypes.adoc[]
 
-[[standardProfiles]]
-=== Standard Grails Profiles
+[[applicationFeatures]]
+=== The Features of an Application
 
-include::profiles/standardProfiles.adoc[]
+include::applicationTypes/applicationFeatures.adoc[]
 
-[[webProfile]]
-==== Web Profile
+[[customizingGeneration]]
+=== Customizing What a New Application Gets
 
-include::profiles/webProfile.adoc[]
+include::applicationTypes/customizingGeneration.adoc[]
 
-[[restAPIProfile]]
-==== REST API Profile
+[[profilesReplaced]]
+=== What Became of Profiles
 
-include::profiles/restAPIProfile.adoc[]
-
-[[pluginProfile]]
-==== Plugin Profile
-
-include::profiles/pluginProfile.adoc[]
-
-[[webPluginProfile]]
-==== Web Plugin Profile
-
-include::profiles/webPluginProfile.adoc[]
-
-[[restAPIPluginProfile]]
-==== REST API Plugin Profile
-
-include::profiles/restAPIPluginProfile.adoc[]
-
-[[profileProfile]]
-==== Profile Profile
-
-include::profiles/profileProfile.adoc[]
-
-[[creatingProfiles]]
-=== Creating Profiles
-
-include::profiles/creatingProfiles.adoc[]
-
-[[profileInheritance]]
-=== Profile Inheritance
-
-include::profiles/profileInheritance.adoc[]
-
-[[publishingProfiles]]
-=== Publishing Profiles
-
-include::profiles/publishingProfiles.adoc[]
-
-[[profileStructure]]
-=== Understanding Profiles
-
-include::profiles/profileStructure.adoc[]
-
-[[profileCommands]]
-=== Creating Profile Commands
-
-include::profiles/profileCommands.adoc[]
-
-[[profileFeatures]]
-=== Creating Profile Features
-
-include::profiles/profileFeatures.adoc[]
+include::applicationTypes/profilesReplaced.adoc[]
 
 [[GORM]]
 == Object Relational Mapping (GORM)
@@ -735,10 +685,10 @@ include::webServices/REST/restfulControllers/restControllersStepByStep.adoc[]
 
 include::webServices/REST/restfulControllers/generatingRestControllers.adoc[]
 
-[[restProfile]]
-==== The REST Profile
+[[restApiApplication]]
+==== The REST API Application Type
 
-include::webServices/REST/restProfile.adoc[]
+include::webServices/REST/restApiApplication.adoc[]
 
 [[jsonViews]]
 ==== JSON Views
@@ -1421,11 +1371,6 @@ include::ref/Command Line/create-domain-class.adoc[]
 
 include::ref/Command Line/create-functional-test.adoc[]
 
-[[ref-command-line-create-hibernate-cfg-xml]]
-==== create-hibernate-cfg-xml
-
-include::ref/Command Line/create-hibernate-cfg-xml.adoc[]
-
 [[ref-command-line-create-integration-test]]
 ==== create-integration-test
 
@@ -1445,11 +1390,6 @@ include::ref/Command Line/create-job.adoc[]
 ==== create-plugin
 
 include::ref/Command Line/create-plugin.adoc[]
-
-[[ref-command-line-create-profile]]
-==== create-profile
-
-include::ref/Command Line/create-profile.adoc[]
 
 [[ref-command-line-create-script]]
 ==== create-script
@@ -1506,16 +1446,6 @@ include::ref/Command Line/help.adoc[]
 
 include::ref/Command Line/install-templates.adoc[]
 
-[[ref-command-line-list-plugins]]
-==== list-plugins
-
-include::ref/Command Line/list-plugins.adoc[]
-
-[[ref-command-line-list-profiles]]
-==== list-profiles
-
-include::ref/Command Line/list-profiles.adoc[]
-
 [[ref-command-line-package-plugin]]
 ==== package-plugin
 
@@ -1526,15 +1456,25 @@ include::ref/Command Line/package-plugin.adoc[]
 
 include::ref/Command Line/package.adoc[]
 
-[[ref-command-line-plugin-info]]
-==== plugin-info
+[[ref-command-line-feature-add]]
+==== feature add
 
-include::ref/Command Line/plugin-info.adoc[]
+include::ref/Command Line/feature-add.adoc[]
 
-[[ref-command-line-profile-info]]
-==== profile-info
+[[ref-command-line-gradle]]
+==== gradle
 
-include::ref/Command Line/profile-info.adoc[]
+include::ref/Command Line/gradle.adoc[]
+
+[[ref-command-line-project-regenerate]]
+==== project regenerate
+
+include::ref/Command Line/project-regenerate.adoc[]
+
+[[ref-command-line-project-show]]
+==== project show
+
+include::ref/Command Line/project-show.adoc[]
 
 [[ref-command-line-run-app]]
 ==== run-app

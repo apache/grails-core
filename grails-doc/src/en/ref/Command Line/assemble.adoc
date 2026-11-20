@@ -17,57 +17,49 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
 == assemble
-
-
 
 === Purpose
 
-
-The `assemble` command creates a Web Application Archive (WAR) file which can be deployed on any Java EE compliant application server.
-
+The `assemble` command creates the archive of the project for deployment: a Web Application Archive (WAR) file which can be deployed on a Jakarta EE compliant application server, or a JAR file, as the build of the project says. link:war.html[war] and link:package.html[package] are other names of the command.
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-./gradlew assemble
-./gradlew test assemble
-./gradlew -Dgrails.env=staging assemble
+grails assemble
+grails assemble --clean
+grails assemble -Dgrails.env=staging
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
-----
-./gradlew <<environment>>* assemble <<arguments>>*
-----
 
-
-By default the `assemble` command creates a web application archive (WAR) file using the application name and version number. The `assemble` command is different from most commands since it runs in the production environment by default instead of development, but like any script the environment can be specified using the standard convention:
-
-[source,groovy]
+[source,console]
 ----
-./gradlew test assemble
-./gradlew dev assemble
-./gradlew prod assemble
+grails assemble [--clean] [-Dname=value]... [-- <<gradle arguments>>]
 ----
 
-Additionally, it is highlighted that upon execution, two files will be generated in the build/libs directory. One file with a 'plain' suffix is designed for be deployed on any Java EE compliant application server, while the other file is a WAR file that houses an embedded server, which can be run with the command java -jar <filename>.war.
+`assemble` runs the Gradle task `assemble` of the project. The command is different from most commands since it runs in the production environment by default instead of development. Another environment is given as `-Dgrails.env=NAME` after the command:
 
-
-You can also specify a custom environment:
-
-[source,groovy]
+[source,console]
 ----
-./gradlew -Dgrails.env=UAT assemble
+grails assemble -Dgrails.env=test
+grails assemble -Dgrails.env=UAT
 ----
+
+An environment in front of the command, as in `grails test war` of earlier versions, is refused: what follows `grails` is the name of a command.
+
+Options:
+
+* `--clean` (also `-clean`) - Run the Gradle task `clean` before the archive is created.
+* `-Dname=value` - A system property for the build. Can be given more than once.
+
+What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Building with Gradle] for the details.
+
+For a WAR, two files are generated in the `build/libs` directory. One file with a 'plain' suffix is designed to be deployed on any Jakarta EE compliant application server, while the other file is a WAR file that houses an embedded server, which can be run with the command `java -jar <filename>.war`.
 
 Once the WAR has been created you can deploy it to your container using its standard WAR deployment process.
 
-NOTE: Grails 2.x `war` command allowed you to supply the argument `nojars` - which packaged the WAR with no jar files. In Grails 3.x, this argument is no longer available. Instead, you may use Gradle capabilities to generate a WAR without jar files. One option would be to set your dependencies as `providedCompile` and `providedRuntime`. Those two configurations have the same scope as the respective compile and runtime configurations, except that they are not added to the WAR archive. Check https://docs.gradle.org/current/userguide/war_plugin.html[Gradle WAR Plugin] documentation for more information.
+NOTE: Grails 2.x `war` command allowed you to supply the argument `nojars` - which packaged the WAR with no jar files. This argument is no longer available. Instead, you may use Gradle capabilities to generate a WAR without jar files. One option would be to set your dependencies as `providedCompile` and `providedRuntime`. Those two configurations have the same scope as the respective compile and runtime configurations, except that they are not added to the WAR archive. Check https://docs.gradle.org/current/userguide/war_plugin.html[Gradle WAR Plugin] documentation for more information.

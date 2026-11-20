@@ -1,0 +1,56 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+== feature add
+
+=== Purpose
+
+Adds features to the application in the current directory: its files and its record become those of an application that was created with them.
+
+=== Examples
+
+[source,console]
+----
+grails feature add grails-quartz
+grails feature add grails-quartz,views-json
+grails feature add postgres --diff
+grails feature add grails-quartz --dry-run
+----
+
+=== Description
+
+Usage:
+
+[source,console]
+----
+grails feature add [--dry-run] [--diff] <<feature>>[,<<feature>>...]...
+----
+
+Arguments:
+
+* `feature` - The names of the features to add, as the `create-` commands list them with link:list-features.html[--list-features]. Several are separated by commas or spaces.
+
+Options:
+
+* `--dry-run` - Say which files would be added and changed, and which conflicts there are, and change nothing.
+* `--diff` - Show the changes that would be made to the files, as a diff, and change nothing.
+
+`feature add` is the `add` command of the `feature` command. It works from the record of the project in its `.grails` directory, so it is a command of a project that Grails 9 generated. The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, nothing is written and the files are named. A feature the application already has is left as it is. A feature that would take the place of another, such as a database driver, is refused, and so is the feature of a feature pack that is not part of Grails.
+
+See "Adding a feature to a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for what is merged, what is a conflict and what is refused.

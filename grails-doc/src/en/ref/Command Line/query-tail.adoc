@@ -32,13 +32,13 @@ link:{guidePath}conf.html#queryTail[Finding Query-Heavy Pages with query-tail].
 
 [source,groovy]
 ----
-grails run-app --query-tail         // in one terminal: run the application with capture on
+grails run-app --query-tail                                                 // in one terminal: run the application with capture on
 
-grails query-tail                   // in another: the pages, refreshing as requests are served
-grails query-tail --statements      // the statements themselves, the most run first
-grails query-tail --page=book/show  // the statements of one page
-grails query-tail --stream          // every statement as it runs, grouped by request
-grails query-tail --all --once      // a report of everything captured so far, then exit
+grails gradle runScriptCommand --arg=query-tail                             // in another: the pages, as requests are served
+grails gradle runScriptCommand --arg=query-tail --arg=--statements          // the statements themselves, the most run first
+grails gradle runScriptCommand --arg=query-tail --arg=--page=book/show      // the statements of one page
+grails gradle runScriptCommand --arg=query-tail --arg=--stream              // every statement as it runs, grouped by request
+grails gradle runScriptCommand --arg=query-tail --arg=--all --arg=--once    // a report of everything captured so far, then exit
 ----
 
 === Description
@@ -47,8 +47,10 @@ Usage:
 
 [source,groovy]
 ----
-grails query-tail [--statements | --stream] [--page=<controller/action>] [--top=<n>] [--all] [--once] [--file=<path>]
+grails gradle runScriptCommand --arg=query-tail [--arg=<option>]...
 ----
+
+`query-tail` is a script command of Grails Data, which the build of a project runs with the Gradle task `runScriptCommand`: `grails query-tail` is no command. `./gradlew runScriptCommand --arg=query-tail` is the same without the `grails` command. Each option below is given as an `--arg` of its own, with its two dashes: `--statements`, `--stream`, `--page=<controller/action>`, `--top=<n>`, `--all`, `--once` and `--file=<path>`. Run this way the summary is written as plain text again each time it changes and is not redrawn in place, so `--once` and `--stream` read best.
 
 Without options the command follows the capture and shows the pages, the ones running the most
 statements per request first: for each page how many requests were seen, the average and the

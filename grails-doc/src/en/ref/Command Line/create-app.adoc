@@ -19,69 +19,41 @@ under the License.
 
 == create-app
 
-=== Description
+=== Purpose
 
-The `create-app` command serves as the initial step in Grails application development. When invoked, this command generates a Grails application with a user-specified name. Subsequently, it creates a subdirectory based on the provided application name within the directory where the command is executed.
-
-[NOTE]
-====
-In Grails {grailsMajorVersion}, `create-app` is a command of the `grails` command, the only command line: the `-t`/`--type` option that chose between the Grails Shell CLI and the Forge CLI is gone, and the options below are those of `grails create-app`.
-====
+The `create-app` command serves as the initial step in Grails application development. It creates a Grails web application with the name that is given. `create-webapp` is another name of the command.
 
 === Usage
 
-This uses the **Shell CLI** to create a standard Grails application in a new `bookstore` folder.
-
 [source,console]
 ----
-$ grails create-app bookstore
-$ cd bookstore
+$ grails create-app [OPTIONS] NAME
 ----
 
-This uses the **Forge CLI** to generate an application with extended configuration options.
+The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory.
 
-[source,console]
-----
-$ grails create-app bookstore \
-    --jdk=17 \
-    --data=hibernate5 \
-    --servlet=tomcat \
-    --test=spock \
-    --features=asciidoctor,github-workflow-java-ci
-----
-
-=== Options (Forge CLI)
+=== Options
 
 These are the options of `grails create-app`:
 
-- `NAME`: The desired name for the application.
-- `-f, --features=FEATURE[,FEATURE...]`: Enable features like `gorm-hibernate5`, `gorm-hibernate7`, `postgres`, `asciidoctor`, `grails-gsp`, etc.
-- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): Choose the Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`.
-- `--jdk=<javaVersion>`: Target JDK version (e.g., 11 or 17).
-- `-s, --servlet=Servlet Implementation`: Choose embedded servlet: `tomcat`, `jetty`, `undertow`, `none`.
-- `-t, --test=TEST`: Select test framework: `spock`, `junit`.
-- `-i, --inplace`: Create app in current directory.
+- `NAME`: The name of the project, with or without a package: `com.example.bookstore` creates `bookstore` with the default package `com.example`.
+- `-f, --features=FEATURE[,FEATURE...]`: The features to use in addition to the default ones. `--list-features` lists them.
+- `--exclude-features=FEATURE[,FEATURE...]`: The features to leave out of those the project would have by default.
+- `-d, --data=Grails Data Implementation` (`-g`, `--gorm` are legacy aliases): The Grails Data implementation: `hibernate5`, `hibernate7`, `mongodb`, `neo4j`.
+- `-s, --servlet=Servlet Implementation`: The embedded servlet container: `tomcat`, `jetty`, `undertow`, `none`.
+- `-r, --reloading=RELOADING`: The development reloading option: `devtools`, `jrebel`, `none`.
+- `--jdk, --java-version=<javaVersion>`: The JDK version the project should target.
+- `-i, --inplace`: Create the project in the current directory.
+- `--subproject`: Create the project as a project of the Gradle build the directory is in, with the files of the application only.
+- `--list-features`: Output the available features and their descriptions. See link:list-features.html[--list-features].
+- `--feature-pack-dir=DIRECTORY`, `--feature-pack-repository=URL`, `--feature-pack-sha256=COORDINATES=SHA256`, `--feature-catalog=URL`, `--list-catalog-features`, `--refresh`, `--offline`: For the feature of a plugin that has a feature pack.
+- `-h, --help`: Show the help of the command and exit.
 
-=== Shell CLI Support
-
-The following minimal flags are supported with the Shell CLI (`grails`):
-
-[source,shell]
-----
-$ grails create-app bookstore
-$ grails create-app --inplace
-----
-
-Available flags:
-- `--inplace`
-- `--features` _(limited support depending on profile)_
-- `--profile`
-
-Forge-only options such as `--jdk`, `--data`, or `--servlet` are **not supported** in the Shell CLI.
+Each option is described in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project], and what the types of application and their features are in link:{guidePath}applicationTypes.html[Application Types, Features and Feature Packs].
 
 === Examples
 
-1. **Create an app using the Shell CLI**:
+1. Create a web application in a new `bookstore` directory:
 +
 [source,console]
 ----
@@ -89,17 +61,18 @@ $ grails create-app bookstore
 $ cd bookstore
 ----
 
-2. **Create an app using the Forge CLI with advanced options**:
+2. Create a web application with options and features:
 +
 [source,console]
 ----
-$ grails create-app bookstore \
-    --jdk=17 \
-    --data=hibernate5 \
-    --features=asciidoctor,grails-gsp
+$ grails create-app com.example.bookstore \
+    --jdk=21 \
+    --data=hibernate7 \
+    --servlet=jetty \
+    --features=asciidoctor,github-workflow-java-ci
 ----
 
-3. **Create an app in the current directory (both CLIs)**:
+3. Create a web application in the current directory:
 +
 [source,console]
 ----
@@ -107,8 +80,10 @@ $ mkdir bookstore
 $ cd bookstore
 $ grails create-app --inplace
 ----
-_or_
+
+4. List the features that can be selected:
++
 [source,console]
 ----
-$ grails create-app --inplace
+$ grails create-app --list-features
 ----

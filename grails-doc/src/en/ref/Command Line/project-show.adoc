@@ -17,48 +17,33 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-
-== plugin-info
-
-
+== project show
 
 === Purpose
 
-
-Displays detailed info about a plugin
-
+Says how the application in the current directory was generated: its type, name and package, its options, the features that were asked for and left out, and every feature it has.
 
 === Examples
 
-
-[source,groovy]
+[source,console]
 ----
-grails plugin-info shiro
+grails project show
+grails project show --json
 ----
-
 
 === Description
 
-
 Usage:
-[source,groovy]
+
+[source,console]
 ----
-grails plugin-info <<name>>
+grails project show [--json]
 ----
 
-This command will display more detailed info about a given plugin such as the author, location of documentation and so on. An example of the output of the geb plugin can be seen below:
+Options:
 
-[source,groovy]
-----
-| Plugin Info: geb
-| Latest Version: 1.0.1-SNAPSHOT
-| All Versions: 1.0-SNAPSHOT,1.0.0.M1,1.0.0.M2,1.0.0.M3,1.0.0.M4,1.0.0,1.0.0.BUILD-SNAPSHOT,1.0.1-SNAPSHOT
-| Title: Geb Plugin
+* `--json` - Write the record and the command as one JSON document for a tool to read.
 
-Plugin that adds Geb functional testing code generation features.
+`project show` is the `show` command of the `project` command. It reads the record of the project in its `.grails` directory. Its last line is the `create-` command that creates the application again, with the version of the command line that generated it.
 
-* License: APACHE
-* Documentation: https://github.com/apache/grails-core/tree/HEAD/grails-geb#readme
-* Issue Tracker: https://github.com/apache/grails-core/issues
-* Source: https://github.com/apache/grails-core
-----
+See "How a project was generated, and generating it again" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for the output and the JSON document.

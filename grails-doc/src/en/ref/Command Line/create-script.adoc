@@ -21,13 +21,13 @@ under the License.
 
 === Purpose
 
-The `create-script` command creates a new Grails code generation script that can be run with the `grails` command from a terminal window.
+The `create-script` command creates a Grails code generation script, which is then a command of the project by the name of its file.
+
+NOTE: Script commands are deprecated. Write a new command as a class of the application with link:create-command.html[create-command].
 
 === Examples
 
-The command:
-
-[source,groovy]
+[source,console]
 ----
 grails create-script my-script
 ----
@@ -41,46 +41,22 @@ description "Example description", "grails example-usage"
 println "Example Script"
 ----
 
-The command can then be run with:
+The script can then be run with:
 
-[source,groovy]
+[source,console]
 ----
 grails my-script
 ----
 
 === Description
 
-Each script extends from the super class link:{apiFromRef}org/grails/cli/profile/commands/script/GroovyScriptCommand.html[GroovyScriptCommand] which provides an API for achieving a number of different tasks.
+Usage:
 
-=== Invoking Gradle
-
-You can invoke Gradle using the `gradle` property:
-
-[source,groovy]
+[source,console]
 ----
-gradle.assemble()
+grails create-script [-f] <<name>>
 ----
 
-You can run any other Grails scripts by simply invoking the method:
+Writes `src/main/scripts/<name>.groovy` from the template `artifacts/Script.groovy`, with the name in lower case and with hyphens whichever way it is given: `create-script DataImport` and `create-script data-import` both write `data-import.groovy`. A script has no package, so a name with a dot is refused, and its name has only the letters a to z and digits, in words that capitals or hyphens set apart. When the file is there already the command writes nothing and ends with exit code 1, unless `-f` or `--force` is given. The template is text with the tokens the other templates have, such as `@artifact.name@`; it is not run as a Groovy template.
 
-[source,groovy]
-----
-testApp()
-----
-
-Code generation can be performed using the link:{apiFromRef}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer API]
-
-For more information, see the section on link:{guidePath}commandLine.html#creatingCustomScripts[creating custom scripts].
-
-=== Grails Forge CLI
-
-The Grails Forge CLI has this command as well, in every project. It writes `src/main/scripts/<name>.groovy` from the template `artifacts/Script.groovy`, with the name in lower case and with hyphens whichever way it is given: `create-script DataImport` and `create-script data-import` both write `data-import.groovy`. A script has no package, so a name with a dot is refused, and its name has only the letters a to z and digits, in words that capitals or hyphens set apart. When the file is there already the command writes nothing and ends with exit code 1, where the command described above warns and succeeds. The template is text with the tokens the other templates have, such as `@artifact.name@`; it is not run as a Groovy template, as the command described above runs it.
-
-[source,shell]
-----
-grails create-script <name>
-----
-
-See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.
-
-The script is then a command of the Grails Forge CLI by the name of its file, `grails <name>`. It is run by the build of the project, through the Gradle task `runScriptCommand`, and not by the Grails Forge CLI; the `gradle` property and commands that are no scripts are not available to it there. See "Scripts and the Grails Forge CLI" in link:{guidePath}commandLine.html#creatingCustomScripts[Creating Custom Scripts].
+The script is run by the build of the project, through the Gradle task `runScriptCommand`, and not by the `grails` command itself. It has methods for generating code from templates and for working with files, and can call another script as a method; it cannot run Gradle tasks (the `gradle` property) or commands that are no scripts, such as `testApp()`. See link:{guidePath}commandLine.html#creatingCustomScripts[Creating Custom Scripts] for what a script has, and "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names the command takes and how a project replaces the template.
