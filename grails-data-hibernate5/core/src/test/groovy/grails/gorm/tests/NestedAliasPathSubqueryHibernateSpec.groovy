@@ -64,4 +64,57 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         then:
         teams*.name == ['Arsenal First Team']
     }
+
+    void "a subquery that aliases its own root compares it with a nested path of the enclosing alias"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id == t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then: 'the comparison is kept, so only the teams of the club the subquery names are returned'
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery that aliases its own root compares it with the association of the enclosing alias"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id == t.club && name == 'Arsenal' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name == ['Arsenal First Team']
+    }
+
+    void "the order of the two sides of the comparison does not matter for a subquery that aliases its own root"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id == c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a comparison with a nested path of the enclosing alias is kept next to other criteria of the subquery"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id == t.club.id && name != 'Arsenal' }.property('name'))
+        }.list()
+
+        then: 'the comparison and the second criterion both apply'
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "an alias declared in one method does not turn a local variable of a later method into an alias"() {
+        when: 'a Map named t, while an earlier method of this class declared t as an alias'
+        Map t = [club: [name: 'Arsenal']]
+        def clubs = Club.where { name == t.club.name }.list()
+
+        then:
+        clubs*.name == ['Arsenal']
+    }
 }

@@ -180,6 +180,8 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         } finally {
             currentClassNode = null;
             detachedCriteriaVariables.clear();
+            aliases.clear();
+            aliasExpressions.clear();
         }
     }
 
@@ -189,6 +191,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             super.visitMethod(node);
         } finally {
             detachedCriteriaVariables.clear();
+            // an alias belongs to the method that declares it: a later method may use the same name for a local variable
+            aliases.clear();
+            aliasExpressions.clear();
         }
     }
 
@@ -889,6 +894,27 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         }
     }
 
+    /** The operators of a comparison, with the operator the same comparison has when its two sides change places. */
+    private static final Map<String, String> SWAPPED_COMPARISON_OPERATORS = Map.of(
+            "==", "==", "!=", "!=", "<", ">", ">", "<", "<=", ">=", ">=", "<=");
+
+    /** Whether the expression is a path of more than one name from an alias, such as {@code t.club.id}. */
+    private boolean isNestedAliasPath(Expression expression) {
+        if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof PropertyExpression)) {
+            return false;
+        }
+        String root = aliasRootName(expression);
+        return root != null && aliases.containsKey(root);
+    }
+
+    /** Whether the expression is one property of an alias, such as {@code c.id}. */
+    private boolean isAliasProperty(Expression expression) {
+        if (!(expression instanceof PropertyExpression) || !(((PropertyExpression) expression).getObjectExpression() instanceof VariableExpression)) {
+            return false;
+        }
+        return aliases.containsKey(((VariableExpression) ((PropertyExpression) expression).getObjectExpression()).getName());
+    }
+
     private void addBinaryExpressionToNewBody(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
         Token operation = be.getOperation();
 
@@ -896,6 +922,15 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
 
         Expression leftExpression = be.getLeftExpression();
         Expression rightExpression = be.getRightExpression();
+        String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
+        if (swappedOperator != null && isNestedAliasPath(leftExpression) && isAliasProperty(rightExpression)) {
+            // t.club.id == c.id: a nested path of an alias is handled on the right of the comparison, so the sides change
+            // places, and the operator with them
+            BinaryExpression swapped = new BinaryExpression(rightExpression, Token.newSymbol(swappedOperator, operation.getStartLine(), operation.getStartColumn()), leftExpression);
+            swapped.setSourcePosition(be);
+            addBinaryExpressionToNewBody(propertyNames, newCode, swapped, addAll, variableScope);
+            return;
+        }
         if (leftExpression instanceof VariableExpression) {
             VariableExpression leftVariable = (VariableExpression) leftExpression;
             String propertyName = leftVariable.getText();
@@ -1165,8 +1200,9 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
             } else if ((aliased instanceof ClassNode) && (oppositeSide instanceof PropertyExpression)) {
                 String rootReference = pe.getText();
                 PropertyExpression oppositeProperty = (PropertyExpression) oppositeSide;
-                String targetObject = oppositeProperty.getObjectExpression().getText();
-                if (aliases.containsKey(targetObject)) {
+                // the alias is the root of the chain: t for t.id and for t.club.id alike
+                String targetObject = aliasRootName(oppositeProperty);
+                if (targetObject != null && aliases.containsKey(targetObject)) {
                     String methodToCall = PROPERTY_COMPARISON_OPERATOR_TO_CRITERIA_METHOD_MAP.get(operator);
                     ArgumentListExpression args = new ArgumentListExpression();
                     args.addExpression(new ConstantExpression(rootReference));

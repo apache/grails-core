@@ -134,6 +134,79 @@ class AliasAssocPropAuthor {
         eqPropertyCalls.any { constantArg(it, 0) == 'assocProp' && constantArg(it, 1) == 't.nested.whatever' }
     }
 
+    void "comparing an alias of the query's own root against a nested alias path produces an eqProperty call, in either order"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasOwnRootBook {
+    String otherProperty
+
+    static findOwnRootFirst() {
+        AliasOwnRootBook.where {
+            def t = AliasOwnRootBook
+            def c = AliasOwnRootBook
+            c.id == t.nested.whatever
+        }
+    }
+
+    static findOwnRootSecond() {
+        AliasOwnRootBook.where {
+            def t = AliasOwnRootBook
+            def c = AliasOwnRootBook
+            t.nested.whatever == c.id
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasOwnRootBook')
+
+        then: 'both write the comparison of c.id with the nested path of t'
+        methodCallsNamed(classNode, 'eqProperty', 'findOwnRootFirst').any { constantArg(it, 0) == 'c.id' && constantArg(it, 1) == 't.nested.whatever' }
+        methodCallsNamed(classNode, 'eqProperty', 'findOwnRootSecond').any { constantArg(it, 0) == 'c.id' && constantArg(it, 1) == 't.nested.whatever' }
+    }
+
+    void "an alias declared in one method is not an alias in the next method of the class"() {
+        given:
+        String source = '''
+import grails.gorm.annotation.Entity
+import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
+
+@ApplyDetachedCriteriaTransform
+@Entity
+class AliasLeakBook {
+    String otherProperty
+
+    static declaresTheAlias() {
+        AliasLeakBook.where {
+            def t = AliasLeakBook
+            otherProperty == t.nested.whatever
+        }
+    }
+
+    static usesTAsAMap() {
+        Map t = [nested: [whatever: 'x']]
+        AliasLeakBook.where {
+            otherProperty == t.nested.whatever
+        }
+    }
+}
+'''
+
+        when:
+        ClassNode classNode = compileToClassNode(source, 'AliasLeakBook')
+
+        then: 'the first method compares properties, the second compares with the value of its local variable'
+        methodCallsNamed(classNode, 'eqProperty', 'declaresTheAlias').any { constantArg(it, 1) == 't.nested.whatever' }
+        methodCallsNamed(classNode, 'eqProperty', 'usesTAsAMap').isEmpty()
+        methodCallsNamed(classNode, 'eq', 'usesTAsAMap').any { constantArg(it, 0) == 'otherProperty' }
+    }
+
     void "comparing a property against a property chain not rooted at a variable produces an eq call"() {
         given:
         String source = '''
