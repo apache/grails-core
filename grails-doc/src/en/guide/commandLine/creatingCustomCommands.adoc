@@ -214,6 +214,36 @@ Now you can run the `greet` command with arguments and options:
 
 This allows you to create more versatile and interactive custom commands for your Grails application.
 
+**Arguments With Spaces, Quotes and Other Special Characters**
+
+`-Pargs` is one text. Gradle hands it to the build, which splits it at spaces and reads single and double quotes the way a shell does, so `-Pargs="greet 'Alice Smith'"` is the command `greet` with the one argument `Alice Smith`. What `-Pargs` holds is therefore quoted twice, once for your shell and once for this split, and a program that puts the text together from arguments has to quote each of them for the split.
+
+The command tasks, `runCommand` and the task of each command, also take the arguments one at a time, each exactly as it is given:
+
+[source,shell]
+----
+# three arguments: the command, a name with a space in it, and an option
+./gradlew runCommand --arg=greet --arg="Alice Smith" --arg=--loud
+
+# the task of a command takes the arguments of the command only
+./gradlew dbmGenerateChangelog --arg="my changelog.groovy"
+----
+
+Each `--arg` is one argument, in the order given; for `runCommand` the first is the name of the command. Nothing is split, trimmed or unquoted after your shell has read the line, so a value can contain spaces, quotes, `$`, `*`, backslashes, a leading dash or a line break. Gradle does not accept an empty value (`--arg=`).
+
+A program that runs a command, or a command line that cannot carry an argument (an empty one, or one your shell cannot quote), gives the arguments in a file instead:
+
+[source,shell]
+----
+./gradlew runCommand --args-file=build/tmp/greet-args.json
+----
+
+The file is UTF-8 and holds a JSON array of strings, one for each argument, for example `["greet", "Alice \"Al\" Smith", ""]`. A relative path is in the project directory. The file can be at most 1 MiB and hold at most 4096 arguments, and an argument cannot contain the character U+0000. The task reads the file when it runs and does not delete it. Because the arguments are not on the Gradle command line, a build with the configuration cache reuses its configuration when only the arguments change, which is not so for `--arg` and `-Pargs`.
+
+Use one of the three forms in a build: `--arg`, `--args-file` or `-Pargs`. The task fails when it is given arguments in more than one of them.
+
+In the command, `executionContext.commandLine.rawArguments` is the arguments as they were given, the name of the command first. `args` and the options of `executionContext.commandLine` are what Grails reads from them, as before: an argument that starts with a dash is an option, which takes the argument after it as its value unless it has one of its own (`--name=value`), surrounding white space and surrounding double quotes are removed, and an empty argument is left out.
+
 In summary, creating custom commands in Grails using the `GrailsApplicationCommand` trait is a powerful way to extend your application's functionality beyond the web interface. You can define the command's name, description, and logic, and then execute it from the command line, optionally passing arguments and options as needed.
 
 **Using the `executionContext` in the Grails Custom Commands**
@@ -437,3 +467,43 @@ WARNING: Capability requests are a build-internal addressing scheme. Never decla
 `requireCapability` on an *external* (binary) Grails dependency — published metadata cannot
 satisfy it and resolution fails with a capability conflict. External consumers always depend on
 the plain `-cli` coordinate, e.g. `grailsCli 'com.example:my-plugin-cli:1.0.0'`.
+
+**Listing Commands Without Running Them**
+
+When a command is compiled, from `grails-app/commands` of an application or from `src/cli/groovy` of a plugin, the compiler writes a descriptor of it beside its registration: `META-INF/grails-commands/<class name>.json`, with the name and the description of the command. Tools read it to list the command without loading its class or starting the application. The descriptor holds what the source says as a constant:
+
+* The name is the one the class name gives (`AuditReportCommand` is `audit-report`), or the string that `getName()` returns or that the property `name` is set to.
+* The description is the string that `getDescription()` returns or that the property `description` is set to. Without one, the description is the name.
+* A `getName()` that works the name out when it is called cannot be described: such a command has no descriptor and is listed by the name its class name gives. A description that is worked out is left out of the descriptor.
+
+Write the name in lower case letters and digits, in words joined by single hyphens, with at most 64 characters, and the description on one line of at most 512 characters; a command whose descriptor has anything else is left out of the list, with the reason. A command written in Java, or registered by hand in `META-INF/grails-cli.factories`, has no generated descriptor. Add the file to the resources next to the registration:
+
+[source,json]
+.src/cli/resources/META-INF/grails-commands/com.example.AuditReportCommand.json
+----
+{"format": 1, "class": "com.example.AuditReportCommand", "name": "audit-report", "description": "Writes the audit report", "target": "application"}
+----
+
+The `grailsCommandCatalog` task of an application or plugin project writes the list of the commands the project can run with `runCommand` to `build/grails/command-catalog.json`:
+
+[source,shell]
+----
+./gradlew grailsCommandCatalog
+----
+
+It lists the commands of the project itself, of the `-cli` companions of its plugins, of plugin jars that register commands, and, when `grails { legacyCommandSupport = true }` is set, the commands of Grails 7 plugins. The file is one JSON document:
+
+[source,json]
+----
+{"format": 1, "complete": true, "diagnostics": [],
+ "commands": [
+   {"name": "audit-report", "aliases": [], "description": "Writes the audit report",
+    "origin": "com.example:my-plugin-cli:1.0.0", "target": "application", "registration": "descriptor"}
+ ]}
+----
+
+* `origin` is the coordinates of the artifact the command comes from, or `application` for a command of the project itself.
+* `registration` says how much is known: `descriptor` for a command with a descriptor; `factories` for a command that is registered without one, whose name is the one its class name gives and whose description is empty; `legacy` for a command of a Grails 7 plugin, listed the same way.
+* `complete` is `false` when something could not be listed, and `diagnostics` then says what and why, one line each: a descriptor that is not as described above, a name that two commands have (neither is listed, because the task does not choose between them), or Grails 7 commands in a project without `legacyCommandSupport`. The task prints the same lines as warnings.
+
+Every command in the file is run with `./gradlew runCommand --arg=<name>` followed by its arguments. The task loads no class of the project or of its dependencies, and the file has neither a time nor a path of the machine in it, so the same commands give the same file.

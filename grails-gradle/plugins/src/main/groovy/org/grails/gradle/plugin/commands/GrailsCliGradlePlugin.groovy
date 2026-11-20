@@ -28,6 +28,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ArtifactCollection
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ConfigurationContainer
 import org.gradle.api.artifacts.Dependency
@@ -37,11 +38,13 @@ import org.gradle.api.artifacts.component.ProjectComponentIdentifier
 import org.gradle.api.artifacts.result.ResolvedArtifactResult
 import org.gradle.api.artifacts.result.ResolvedComponentResult
 import org.gradle.api.file.FileCollection
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.util.PatternFilterable
 
 import grails.util.BuildSettings
 import grails.util.Environment
@@ -122,6 +125,41 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
         configureRunScript(project)
 
         configureRunCommand(project)
+
+        configureCommandCatalog(project)
+    }
+
+    /**
+     * Registers the task that writes the catalog of the application commands of the project (see
+     * {@link GrailsCommandCatalogTask}). It reads the class path {@code runCommand} runs a command
+     * with: the output of the project, {@code runtimeClasspath} and {@code grailsCliClasspath}.
+     */
+    protected void configureCommandCatalog(Project project) {
+        project.pluginManager.withPlugin('java') {
+            if (project.tasks.names.contains(GrailsCommandCatalogTask.TASK_NAME)) {
+                return
+            }
+            project.tasks.register(GrailsCommandCatalogTask.TASK_NAME, GrailsCommandCatalogTask) { GrailsCommandCatalogTask task ->
+                task.group = GRAILS_COMMAND_GROUP
+                task.description = 'Writes the catalog of the application commands of the project, without loading or running them'
+                SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
+                // where the compiler and the resources of the project put registrations and descriptors: not the
+                // whole output of the source set, which would have the catalog wait for compiled views as well
+                FileCollection ownOutput = project.files(mainSourceSet.output.classesDirs,
+                        project.tasks.named(mainSourceSet.processResourcesTaskName))
+                task.applicationOutput.from(ownOutput)
+                task.applicationRegistrations.from(ownOutput.asFileTree.matching { PatternFilterable patterns ->
+                    patterns.include(GrailsCommandCatalogTask.REGISTRATION_PATTERNS)
+                })
+                for (String configurationName : [JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME, GRAILS_CLI_CLASSPATH_CONFIGURATION]) {
+                    ArtifactCollection artifacts = project.configurations.getByName(configurationName).incoming.artifacts
+                    task.commandClasspath.from(artifacts.artifactFiles)
+                    task.originsByPath.putAll(artifacts.resolvedArtifacts.map(new GrailsCommandCatalogTask.OriginsByPath()))
+                }
+                task.origins.set(task.originsByPath.map(new GrailsCommandCatalogTask.Origins()))
+                task.catalogFile.convention(project.layout.buildDirectory.file(GrailsCommandCatalogTask.CATALOG_LOCATION))
+            }
+        }
     }
 
     /**
@@ -422,7 +460,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         it.classpath = fileCollection
                         it.command = commandName
                         it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-                        List<Object> args = []
+                        List<String> args = []
                         def otherArgs = project.findProperty('args')
                         if (otherArgs) {
                             args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
@@ -431,8 +469,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                         def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                         it.doFirst {
-                            args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
-                            it.args(args)
+                            // -Pargs split as it always was, or the arguments of --arg or --args-file as they are
+                            List<Object> all = new ArrayList<Object>(it.commandArguments(args))
+                            all << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
+                            it.args(all)
                         }
                     }
                 }
@@ -591,7 +631,7 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     // with Grails' plugin management and bean wiring when running CLI commands via Gradle
                     it.systemProperty('spring.devtools.restart.enabled', 'false')
 
-                    List<Object> args = []
+                    List<String> args = []
                     def otherArgs = project.findProperty('args')
                     if (otherArgs) {
                         args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
@@ -600,8 +640,10 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
                     def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
 
                     it.doFirst {
-                        args << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
-                        it.args(args)
+                        // -Pargs split as it always was, or the arguments of --arg or --args-file as they are
+                        List<Object> all = new ArrayList<Object>(it.commandArguments(args))
+                        all << GrailsCliGradlePlugin.requireMainClass(appClassProvider, it.name)
+                        it.args(all)
                     }
 
                 }

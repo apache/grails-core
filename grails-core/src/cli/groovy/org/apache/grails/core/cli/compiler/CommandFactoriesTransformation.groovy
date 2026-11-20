@@ -47,6 +47,9 @@ import org.grails.io.support.UrlResource
  * command can compile — a class implementing the contract only resolves when the cli artifact is
  * on the compile classpath. Command registrations never touch {@code META-INF/grails.factories}.
  *
+ * Beside the registration it writes the descriptor of each command it registers,
+ * {@code META-INF/grails-commands/<class name>.json} (see {@link CommandDescriptorWriter}).
+ *
  * @since 8.0
  */
 @GroovyASTTransformation(phase = CompilePhase.CANONICALIZATION)
@@ -96,13 +99,20 @@ class CommandFactoriesTransformation implements ASTTransformation, TransformWith
         File compilationTargetDirectory = GlobalGrailsClassInjectorTransformation.resolveCompilationTargetDirectory(source)
 
         for (ClassNode classNode : classes) {
+            boolean registered = false
             if (shouldRegisterCommand(classNode)) {
-                FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
+                registered = FactoriesFileWriter.updateFactoriesWithType(classNode, APPLICATION_COMMAND_CLASS,
                         compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
             } else {
                 // an adapter is never a command of its own, including one that used to be a command
                 FactoriesFileWriter.removeFromFactories(classNode.name, APPLICATION_COMMAND_CLASS,
                         compilationTargetDirectory, CLI_FACTORIES_LOCATION, SOURCE_CLI_FACTORIES_LOCATIONS)
+            }
+            // the descriptor goes with the registration this compilation made: a build lists the command from it
+            if (registered) {
+                CommandDescriptorWriter.write(classNode, compilationTargetDirectory)
+            } else {
+                CommandDescriptorWriter.remove(classNode.name, compilationTargetDirectory)
             }
         }
     }

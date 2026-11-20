@@ -1504,3 +1504,13 @@ The exception: an escaped expression, `\${`, that came 63,998 or 63,999 characte
 ===== Required Actions
 
 None for an application. A test that asserts the line of a GSP error asserts the line of the page instead; there is no setting that brings the earlier numbers back. Not changed: scanning a page with very many comments is still slow, since each comment that is taken out copies the page.
+
+==== 27. Compiled Commands Carry a Descriptor, and Command Tasks Take Arguments One at a Time
+
+Compiling a command, in `grails-app/commands` of an application or in `src/cli/groovy` of a plugin, now also writes the file `META-INF/grails-commands/<class name>.json` into the compiled classes, beside `META-INF/grails-cli.factories`. It holds the name and the description of the command, and it goes wherever the compiled classes go, as the registration already does: into the jar of a plugin's `-cli` companion, and for commands under `grails-app/commands` into the archive of the application or plugin. The new `grailsCommandCatalog` task lists the commands of a project from these files, into `build/grails/command-catalog.json`, without loading a class. See xref:commandLine#creatingCustomCommands[Creating Custom Commands].
+
+`runCommand` and the task of each command take the new options `--arg=<argument>`, once for each argument, and `--args-file=<file>`. `-Pargs="..."` works as it did, including how it is split at spaces and quotes.
+
+===== Required Actions
+
+None for the commands: they run as before with or without the descriptor. To build an archive without the files, exclude them where the archive is put together, for example `tasks.named('bootJar') { exclude 'META-INF/grails-commands/**' }`; the commands are then listed by the names their class names give. A build script that registers a task of its own named `grailsCommandCatalog` has to give it another name, because the Grails Gradle plugin now registers one.

@@ -40,6 +40,15 @@ grails run-command hello-world
 
 The above scripts will expect `grails-app/commands/HelloWorldCommand.groovy` to exist in the application or in a plugin your application depends on.
 
+`-Pargs` is split at spaces, with quotes read as a shell reads them. To give each argument exactly as it is, repeat `--arg`, the name of the command first:
+
+[source,shell]
+----
+./gradlew runCommand --arg=hello-world --arg="an argument with spaces" --arg=--force
+----
+
+`--args-file=<file>` reads the arguments from a UTF-8 file that holds a JSON array of strings. See xref:commandLine#creatingCustomCommands[Creating Custom Commands] for both.
+
 
 ===== Description
 
