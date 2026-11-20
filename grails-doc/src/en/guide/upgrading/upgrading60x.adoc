@@ -1240,6 +1240,15 @@ With Hibernate 5, some queries were put in the query cache against the `cache` a
 |a criteria list with `lock: true` and `sort: 'author.name'`
 |cached
 |not cached
+
+|`createCriteria().list(max: 2, cache: true) { cache(false) }`
+|cached
+|not cached
+
+|`createCriteria().list(max: 2, cache: false) { cache(true) }`
+|not cached
+|cached
+
 |===
 
 To keep the old result for one query, pass `cache: true`, or call `cache(true)` in the criteria. A query that nothing asked to cache, whose entity does not cache, is no longer cached because of the entity it sorts through.

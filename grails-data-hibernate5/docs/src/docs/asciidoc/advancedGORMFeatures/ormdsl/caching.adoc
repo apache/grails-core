@@ -165,7 +165,7 @@ def people = Person.createCriteria().list(max: 10) {
 }
 ----
 
-When both the argument and the call are given, the argument wins: `list(max: 2, cache: true) { cache(false) }` is cached. The query that counts the rows of a paged list, which `totalCount` runs, is not put in the query cache, also when the list is.
+When both the argument and the call are given, the call wins, because the closure runs last and says it for this query alone: `list(max: 2, cache: true) { cache(false) }` is not cached, and `list(max: 2, cache: false) { cache(true) }` is. Calling `setCacheable` on the criteria is the same as `cache`. The query that counts the rows of a paged list, which `totalCount` runs, is not put in the query cache, also when the list is.
 
 
 ===== Cache usages

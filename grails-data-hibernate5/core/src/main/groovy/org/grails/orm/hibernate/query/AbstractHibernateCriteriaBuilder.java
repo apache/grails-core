@@ -365,9 +365,13 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @param shouldCache True if the query should be cached
      */
     public BuildableCriteria cache(boolean shouldCache) {
+        cacheAsked = true;
         criteria.setCacheable(shouldCache);
         return this;
     }
+
+    /** Whether the closure of the query asked for a cache setting, with {@code cache(boolean)} or {@code setCacheable}. */
+    protected boolean cacheAsked;
 
     /**
      * Whether to check for changes on the objects loaded
@@ -1680,6 +1684,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     @Override
     public Object invokeMethod(String name, Object obj) {
         Object[] args = obj.getClass().isArray() ? (Object[]) obj : new Object[]{obj};
+
+        if ("setCacheable".equals(name)) {
+            cacheAsked = true;
+        }
 
         if (paginationEnabledList && SET_RESULT_TRANSFORMER_CALL.equals(name) && args.length == 1 &&
                 args[0] instanceof ResultTransformer) {

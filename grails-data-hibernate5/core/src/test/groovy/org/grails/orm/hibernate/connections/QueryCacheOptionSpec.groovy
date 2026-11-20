@@ -123,8 +123,8 @@ class QueryCacheOptionSpec extends Specification {
         'find by example sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.find(new QcNote(title: 'b1'), [sort: 'author.name']) } || false
         'findAll by example sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.findAll(new QcNote(title: 'b1'), [sort: 'author.name']) } || false
         'a criteria list sorted through a cached association with lock: true' | 'a cached mapping' | datastore | QcBook | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name', lock: true) { } } || false
-        'a criteria list with cache: true and cache(false) in the closure' | 'a cached mapping' | datastore | QcCached | { Class t -> t.createCriteria().list([cache: true]) { cache(false) } } || true
-        'a criteria list with cache: false and cache(true) in the closure' | 'an uncached mapping' | datastore | QcPlain | { Class t -> t.createCriteria().list([cache: false]) { cache(true) } } || false
+        'a criteria list with cache: true and cache(false) in the closure' | 'a cached mapping' | datastore | QcCached | { Class t -> t.createCriteria().list([cache: true]) { cache(false) } } || false
+        'a criteria list with cache: false and cache(true) in the closure' | 'an uncached mapping' | datastore | QcPlain | { Class t -> t.createCriteria().list([cache: false]) { cache(true) } } || true
         'a criteria list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { } } || false
         'a static list sorted through a cached association' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.list(max: 2, sort: 'author.name') } || false
         'a criteria list sorted through a cached association with cache(true)' | 'an uncached mapping' | datastore | QcNote | { Class t -> t.createCriteria().list(max: 2, sort: 'author.name') { cache(true) } } || true
@@ -135,6 +135,36 @@ class QueryCacheOptionSpec extends Specification {
         'a static list with cache: false, with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.list(cache: false) }                    || false
         'a dynamic finder with cache: false, with every query cached' | 'a cached mapping' | cachingEverything | QcgCached | { Class t -> t.findAllByName('n1', [cache: false]) } || false
         outcome = cached ? 'put in the query cache' : 'not put in the query cache'
+    }
+
+    private static Closure closureFor(String call) {
+        switch (call) {
+            case 'cache(true)': return { cache(true) }
+            case 'cache(false)': return { cache(false) }
+            case 'setCacheable(true)': return { setCacheable(true) }
+            case 'setCacheable(false)': return { setCacheable(false) }
+            default: return { }
+        }
+    }
+
+    @Unroll
+    void "a criteria list on #mapping with the argument #argument and #call in the closure is #outcome"() {
+        given: 'the closure decides when it says anything, then the argument, then the mapping'
+        boolean cached = call == 'cache(true)' || call == 'setCacheable(true)' ? true :
+                call == 'cache(false)' || call == 'setCacheable(false)' ? false :
+                argument != null ? argument : mapping == 'a cached mapping'
+        Map args = argument == null ? [max: 2] : [max: 2, cache: argument]
+
+        expect:
+        putsDuring(datastore) { type.withNewSession { type.createCriteria().list(args, closureFor(call)) } } == (cached ? 1 : 0)
+
+        where:
+        [mapping, type, argument, call] << [
+                [['a cached mapping', QcCached], ['an uncached mapping', QcPlain]],
+                [null, true, false],
+                ['nothing', 'cache(true)', 'cache(false)', 'setCacheable(true)', 'setCacheable(false)']
+        ].combinations().collect { List row -> [row[0][0], row[0][1], row[1], row[2]] }
+        outcome = 'put in the query cache or not, as the closure, the argument and the mapping decide'
     }
 
     @Unroll
