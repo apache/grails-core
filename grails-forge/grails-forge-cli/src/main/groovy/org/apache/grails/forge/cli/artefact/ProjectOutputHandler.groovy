@@ -23,9 +23,12 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.text.Normalizer
+import java.time.Instant
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
+import org.grails.forge.io.OutputUtils
 import org.grails.forge.template.Writable
 
 /**
@@ -43,17 +46,28 @@ class ProjectOutputHandler extends FileSystemOutputHandler {
     /** The most bytes a file system takes for the name of a file or a directory */
     public static final int MAX_NAME_BYTES = 255
 
+    private final Instant modified
+
     ProjectOutputHandler(File directory, ConsoleOutput console) throws IOException {
         super(directory, console)
+        modified = OutputUtils.createLastModified(null)
     }
 
+    /**
+     * Writes a file of the project, see {@link ProjectPlace}: not through a link, in the place of the
+     * file or on the way to it, also when the link is made after the path was looked at.
+     */
     @Override
     File write(String path, Writable contents) throws IOException {
-        String refusal = refusal(applicationDirectory, path)
-        if (refusal != null) {
-            throw new Refused(refusal)
+        ByteArrayOutputStream content = new ByteArrayOutputStream()
+        contents.write(content)
+        ProjectPlace place = ProjectPlace.open(applicationDirectory, path)
+        try {
+            place.put(content.toByteArray(), modified)
+        } finally {
+            place.close()
         }
-        return super.write(path, contents)
+        return new File(applicationDirectory, path)
     }
 
     /**
@@ -128,10 +142,21 @@ class ProjectOutputHandler extends FileSystemOutputHandler {
         return "the directory ${below == 0 ? 'of the project' : FeatureSelectionException.shown(steps.subList(0, below).join('/'))} cannot be written to"
     }
 
-    // whether the directory has an entry of exactly this name: a file system that takes one name for
-    // another, in another case or another way of writing a letter, finds an entry under either
-    private static boolean named(Path directory, String name) {
+    /**
+     * Whether a directory has an entry of this name and no other: a file system that takes one name
+     * for another finds an entry under either, and lists it as it was made. A name in another case
+     * is another name. A name whose letters are written in another form of Unicode is the same
+     * name, since some file systems list every name in a form of their own.
+     *
+     * @param directory a directory
+     * @param name the name of an entry there is, as it is asked for
+     */
+    static boolean named(Path directory, String name) {
         String[] names = directory.toFile().list()
-        return names == null || name in names
+        if (names == null) {
+            return true
+        }
+        String composed = Normalizer.normalize(name, Normalizer.Form.NFC)
+        return names.any { String each -> each == name || Normalizer.normalize(each, Normalizer.Form.NFC) == composed }
     }
 }

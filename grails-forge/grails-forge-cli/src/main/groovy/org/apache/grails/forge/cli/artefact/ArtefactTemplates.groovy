@@ -54,13 +54,16 @@ final class ArtefactTemplates {
     private static final int MAX_REASON = 300
     private static final String PACKAGE = 'artifact.package'
     // a token, and the end of the line when the token is the last of it
-    private static final Pattern TOKEN = Pattern.compile(/@(artifact\.[A-Za-z0-9_.]*)@(\r?\n)?/)
+    private static final Pattern TOKEN = Pattern.compile(/@(artifact\.[A-Za-z0-9_.]*)@(\r\n|\r|\n)?/)
     private static final Pattern PLACEHOLDER = Pattern.compile(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/)
     // the declaration of the package on a line of its own, which a class without a package has not
-    private static final Pattern PACKAGE_LINE = Pattern.compile(/(?m)^package \$\{packageName\}[ \t]*\r?\n(\r?\n)?/)
+    private static final Pattern PACKAGE_LINE = Pattern.compile(/package \$\{packageName\}[ \t]*;?[ \t]*(?:\r\n|\r|\n|\z)(?:\r\n|\r|\n)?/)
+    private static final Pattern LINE_END = Pattern.compile(/\r\n|\r|\n/)
     private static final char BYTE_ORDER_MARK = (char) 0xFEFF
     private static final char BACKSLASH = (char) 0x5C
     private static final char DOLLAR = (char) 0x24
+    private static final char LINE_FEED = (char) 0x0A
+    private static final char CARRIAGE_RETURN = (char) 0x0D
 
     private ArtefactTemplates() {
     }
@@ -120,8 +123,7 @@ final class ArtefactTemplates {
         // system that takes TESTING for testing finds a file under either, and another does not
         Path file = projectDirectory.toPath()
         for (String step : path.split('/')) {
-            String[] names = file.toFile().list()
-            if (names == null || !(step in names)) {
+            if (!Files.isDirectory(file) || !ProjectOutputHandler.named(file, step)) {
                 return new Source(builtIn(template), null)
             }
             file = file.resolve(step)
@@ -237,11 +239,22 @@ final class ArtefactTemplates {
                 simpleName: className,
                 lowerCaseName: NameUtils.getScriptName(className)
         ]
-        String source = packageName ? text : PACKAGE_LINE.matcher(text).replaceFirst('')
+        // the text is not changed before it is read, so that a line is counted as the template has it
+        String source = text
+        boolean declared = !packageName.isEmpty()
         StringBuilder rendered = new StringBuilder(source.length() + 256)
         int i = 0
         while (i < source.length()) {
             char c = source.charAt(i)
+            if (!declared && c == ('p' as char) && (i == 0 || source.charAt(i - 1) == LINE_FEED || source.charAt(i - 1) == CARRIAGE_RETURN)) {
+                // the declaration of a package there is not, with the line it is and the empty line after it
+                Matcher declaration = PACKAGE_LINE.matcher(source).region(i, source.length())
+                if (declaration.lookingAt()) {
+                    declared = true
+                    i = declaration.end()
+                    continue
+                }
+            }
             String next = i + 1 < source.length() ? source.substring(i + 1, i + 2) : ''
             if (c == BACKSLASH) {
                 if (next != '$' && next != '\\') {
@@ -277,8 +290,14 @@ final class ArtefactTemplates {
         return new ArtefactTemplateException("The template ${name} cannot be rendered: line ${line(text, at)}: ${why}. Templates are not run")
     }
 
+    // a line ends with a line feed, with a carriage return, or with both
     private static int line(String text, int at) {
-        return text.substring(0, at).count('\n') + 1
+        Matcher end = LINE_END.matcher(text).region(0, at)
+        int line = 1
+        while (end.find()) {
+            line++
+        }
+        return line
     }
 
     // one line, with nothing in it a terminal or the command line acts on, and not all of a long one

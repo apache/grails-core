@@ -33,7 +33,6 @@ import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.DefaultTemplateRenderer
 import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.util.NameUtils
 import picocli.CommandLine
 import java.util.concurrent.Callable
 import java.util.function.Supplier
@@ -74,15 +73,14 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
         return directory == null ? FileSystemOutputHandler.getDefaultBaseDirectory() : directory
     }
 
+    /**
+     * The names of a class from a name given on the command line, for the commands that add to the
+     * name what their kind of class is called whatever the name ends with.
+     *
+     * @see #newArtefact(String, String)
+     */
     protected Project getProject(String name) {
-        if (name.indexOf('-') > -1) {
-            name = NameUtils.getNameFromScript(name)
-        }
-        if (config != null && config.getDefaultPackage() != null && name.indexOf('.') == -1) {
-            return NameUtils.parse(config.getDefaultPackage() + '.' + name, false)
-        } else {
-            return NameUtils.parse(name, false)
-        }
+        return newArtefact(name, null)
     }
 
     protected TemplateRenderer getTemplateRenderer(Project project) throws IOException {

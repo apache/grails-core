@@ -18,11 +18,11 @@
  */
 package org.grails.forge.cli.command
 
-import java.nio.file.AccessDeniedException
 import java.nio.file.Files
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermissions
-import java.util.concurrent.atomic.AtomicInteger
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
+import org.apache.grails.forge.cli.artefact.ArtefactTemplateException
 import org.apache.grails.forge.cli.artefact.ArtefactTemplates
 import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
 import org.codehaus.groovy.control.CompilationUnit
@@ -548,6 +548,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-controller'      | 'testing/Controller.groovy'   | 'class X {\n@artifact.@ @artifact.name@\n}\n'           | 'line 2: there is no @artifact.@; a template has @artifact.package@, @artifact.package.name@, @artifact.package.path@, @artifact.name@, @artifact.propertyName@'
         'create-job'             | 'Job.groovy'                  | 'a\n<% new File("OUTSIDE/ran").text = "x" %>\n'         | 'line 2: it has code between <% and %>. Templates are not run'
         'create-job'             | 'Job.groovy'                  | '<%= new File("OUTSIDE/ran").text = "x" %>'             | 'line 1: it has code between <% and %>. Templates are not run'
+        'create-job'             | 'Job.groovy'                  | 'a\rb\r<% x %>'                                         | 'line 3: it has code between <% and %>. Templates are not run'
         'create-job'             | 'Job.groovy'                  | 'a\n\n${new File("OUTSIDE/ran").text = "x"}\n'          | 'line 3: ' + NO_EXPRESSION
         'create-job'             | 'Job.groovy'                  | 'class ${className.toLowerCase()}Job {}'                | 'line 1: ' + NO_EXPRESSION
         'create-job'             | 'Job.groovy'                  | 'class ${ className }Job {}'                            | 'line 1: ' + NO_EXPRESSION
@@ -952,42 +953,242 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         out.toString().readLines() == ['| Error Cannot write src/test/groovy/example/grails/BookSpec.groovy: it is a directory']
     }
 
-    void "when a file cannot be written after all, what the command wrote before it is taken back"() {
-        given: 'a class that is there, and a file system that refuses the second file of the command'
+    @IgnoreIf({ os.windows })
+    void "when the second file fails halfway, the project is what it was, byte for byte and mode for mode"() {
+        given: 'a class that is there, executable and with a second name, and a handler whose second file fails after half of it'
         project(ApplicationType.REST_API)
         File domain = new File(dir, 'grails-app/domain/example/grails/Book.groovy')
         domain.parentFile.mkdirs()
-        domain.text = 'mine'
+        domain.bytes = new byte[17 * 1024 * 1024]
+        Files.setPosixFilePermissions(domain.toPath(), PosixFilePermissions.fromString('rwxr-xr-x'))
+        File otherName = new File(dir, 'kept-under-another-name')
+        Files.createLink(otherName.toPath(), domain.toPath())
         ConsoleOutput console = Mock(ConsoleOutput)
-        AtomicInteger writes = new AtomicInteger()
+        List<String> seen = []
         OutputHandler writing = new ProjectOutputHandler(dir, console)
-        OutputHandler refusing = new ProjectOutputHandler(dir, console) {
+        OutputHandler failing = new ProjectOutputHandler(dir, console) {
 
             @Override
             void write(String path, Template contents) throws IOException {
                 if (path.endsWith('BookSpec.groovy')) {
-                    writes.incrementAndGet()
-                    new File(applicationDirectory, path).parentFile.mkdirs()
-                    throw new AccessDeniedException(new File(applicationDirectory, path).absolutePath)
+                    // what the command wrote before is there now, and half of this file gets written
+                    seen << new File(applicationDirectory, 'grails-app/domain/example/grails/Book.groovy').text
+                    File half = new File(applicationDirectory, path)
+                    half.text = 'package exam'
+                    throw new IOException('No space left on device: ' + half.absolutePath)
                 }
                 writing.write(path, contents)
             }
         }
-        CreateDomainResourceCommand command = new CreateDomainResourceCommand(CodeGenConfig.load(beanContext, dir, ConsoleOutput.NOOP), { -> refusing }, console)
+        CreateDomainResourceCommand command = new CreateDomainResourceCommand(CodeGenConfig.load(beanContext, dir, ConsoleOutput.NOOP), { -> failing }, console)
         command.resourceName = 'Book'
+        command.overwrite = true
+        Map<String, List> before = tree()
+
+        when:
+        Integer exit = command.call()
+
+        then: 'the first file had been written when the second failed'
+        exit == 1
+        seen.size() == 1
+        seen[0].contains('@Resource(readOnly = false')
+
+        and: 'and nothing of either is left: no file, no directory, and the class with its size, its mode and its other name'
+        tree() == before
+        Files.readAttributes(domain.toPath(), BasicFileAttributes).fileKey() == Files.readAttributes(otherName.toPath(), BasicFileAttributes).fileKey()
+        1 * console.err('Cannot write src/test/groovy/example/grails/BookSpec.groovy: the file system refused it (IOException). The project is as it was before the command')
+        0 * console.out(_)
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a directory that is made a link after the command looked is not written through"() {
+        given: 'a handler that has the directory become a link to elsewhere right before the file is written'
+        project(ApplicationType.WEB)
+        File victim = new File(outside, 'BookSpec.groovy')
+        victim.text = 'victim'
+        File grails = new File(dir, 'src/test/groovy/example/grails')
+        grails.mkdirs()
+        ConsoleOutput console = Mock(ConsoleOutput)
+        OutputHandler swapped = new ProjectOutputHandler(dir, console) {
+
+            @Override
+            void write(String path, Template contents) throws IOException {
+                Files.delete(new File(applicationDirectory, 'src/test/groovy/example/grails').toPath())
+                Files.createSymbolicLink(new File(applicationDirectory, 'src/test/groovy/example/grails').toPath(), new File(victim.parent).toPath())
+                super.write(path, contents)
+            }
+        }
+        CreateUnitTestCommand command = new CreateUnitTestCommand(CodeGenConfig.load(beanContext, dir, ConsoleOutput.NOOP), { -> swapped }, console)
+        command.testName = 'Book'
         command.overwrite = true
 
         when:
         Integer exit = command.call()
 
-        then: 'the class is what it was, and the failure is said by the path in the project'
+        then:
         exit == 1
-        writes.get() == 1
-        !new File(dir, 'src').exists()
-        domain.text == 'mine'
-        !new File(dir, 'src/test/groovy/example/grails/BookSpec.groovy').exists()
-        1 * console.err('Cannot write src/test/groovy/example/grails/BookSpec.groovy: it, or the directory it is in, cannot be written to. No file of the command was written')
-        0 * console.out(_)
+        victim.text == 'victim'
+        outside.list() == ['BookSpec.groovy'] as String[]
+        1 * console.err({ String message -> message.startsWith('Cannot write src/test/groovy/example/grails/BookSpec.groovy: ') && !message.contains(outside.name) })
+    }
+
+    @Unroll
+    void "#command holds the name #name to the name of a class, as the newer commands do"() {
+        given:
+        project(ApplicationType.WEB, 'grails-quartz')
+
+        when:
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, command, name)
+        }
+        String first = out.toString().readLines().first()
+
+        then:
+        exit == 2
+        written == [:]
+        outside.list().length == 0
+        first.contains(says)
+        !out.toString().contains(((char) 0x1B) as String)
+        !out.toString().contains('\u0007')
+        !out.toString().contains('@|red')
+
+        where:
+        [command, row] << [['create-controller', 'create-service', 'create-domain-class', 'create-taglib', 'create-interceptor', 'create-job'], [
+                ['a/b', 'it is a path'],
+                ['../Escape', 'it is a path'],
+                ['C:x', 'it is a path'],
+                ['my class', 'is not an identifier of Java'],
+                ['con', 'Con is the name of a device on Windows'],
+                ['a.B.groovy', 'it is the name of a file'],
+                ['my-pkg.Book', 'my-pkg is not a package of Java'],
+                ['Book-', 'a hyphen stands between two words of a name'],
+                ['1Book', '1Book is not an identifier of Java'],
+                ['Bo' + (((char) 0x1B) as String) + '[31mok', 'it has a character that is not shown'],
+                ['Book@|red x|@', 'is not an identifier of Java'],
+                ['B' * 201, 'it has more than 200 characters']
+        ]].combinations()
+        name = row[0]
+        says = row[1]
+    }
+
+    @Unroll
+    void "#command #given still is #file"() {
+        given:
+        project(ApplicationType.WEB, 'grails-quartz')
+
+        when:
+        Map<String, String> written = writtenBy {
+            assert ForgeCli.execute(beanContext, command, given) == 0
+        }
+
+        then:
+        file in written.keySet()
+
+        where:
+        command               | given                | file
+        'create-controller'   | 'book'               | 'grails-app/controllers/example/grails/BookController.groovy'
+        'create-controller'   | 'book-store'         | 'grails-app/controllers/example/grails/BookStoreController.groovy'
+        'create-controller'   | 'BookController'     | 'grails-app/controllers/example/grails/BookControllerController.groovy'
+        'create-service'      | 'org.shop.bookStore' | 'grails-app/services/org/shop/BookStoreService.groovy'
+        'create-domain-class' | 'a.b.book-store'     | 'grails-app/domain/a/b/BookStore.groovy'
+        'create-taglib'       | 'micronaut'          | 'grails-app/taglib/example/grails/MicronautTagLib.groovy'
+        'create-interceptor'  | 'URLCheck'           | 'grails-app/controllers/example/grails/URLCheckInterceptor.groovy'
+        'create-job'          | 'cleanup'            | 'grails-app/jobs/example/grails/CleanupJob.groovy'
+    }
+
+    void "a name whose letters are not written in the composed form is refused, and a directory that is listed in another form is the same directory"() {
+        given: 'a package that is there under a name with a letter and a mark, as some file systems list every name'
+        project(ApplicationType.WEB)
+        String composed = 'caf' + (((char) 0xE9) as String)
+        String decomposed = 'cafe' + (((char) 0x301) as String)
+        new File(dir, "src/test/groovy/${decomposed}").mkdirs()
+
+        when:
+        int refused = ForgeCli.execute(beanContext, 'create-unit-test', "${decomposed}.One")
+
+        then:
+        refused == 2
+        out.toString().readLines().first().contains('Write the letter as one character (the form NFC of Unicode)')
+        new File(dir, "src/test/groovy/${decomposed}").list().length == 0
+
+        when: 'the name in the composed form, several times over'
+        out.reset()
+        List<Integer> exits = [
+                ForgeCli.execute(beanContext, 'create-unit-test', "${composed}.One"),
+                ForgeCli.execute(beanContext, 'create-unit-test', "${composed}.Two"),
+                ForgeCli.execute(beanContext, 'create-unit-test', "${composed}.One"),
+                ForgeCli.execute(beanContext, 'create-unit-test', "${composed}.One", '-f')
+        ]
+
+        then: 'every command finds the package, and a file that is there is in the way and replaced as anywhere else'
+        exits == [0, 0, 1, 0]
+        new File(dir, "src/test/groovy/${composed}/OneSpec.groovy").text.contains("package ${composed}\n")
+        new File(dir, "src/test/groovy/${composed}").list().sort() == ['OneSpec.groovy', 'TwoSpec.groovy'] as String[]
+        !out.toString().contains('written differently')
+    }
+
+    @IgnoreIf({ ArtefactCommandsSpec.caseInsensitive() })
+    void "where the file system tells one case from another, a name in another case is another name"() {
+        given:
+        project(ApplicationType.WEB)
+
+        expect:
+        ForgeCli.execute(beanContext, 'create-unit-test', 'Kase') == 0
+        ForgeCli.execute(beanContext, 'create-unit-test', 'EXAMPLE.grails.Other') == 0
+        ForgeCli.execute(beanContext, 'create-unit-test', 'KASE') == 0
+        new File(dir, 'src/test/groovy').list().sort() == ['EXAMPLE', 'example'] as String[]
+        new File(dir, 'src/test/groovy/example/grails').list().sort() == ['KASESpec.groovy', 'KaseSpec.groovy'] as String[]
+    }
+
+    @Unroll
+    void "the template of a job for a class without a package: #what"() {
+        given:
+        ConsoleOutput console = Mock(ConsoleOutput)
+        CodeGenConfig config = new CodeGenConfig()
+        config.features = ['grails-quartz']
+        CreateJobCommand command = new CreateJobCommand(config, getOutputHandler(console), console)
+        command.jobName = 'Cleanup'
+        template('Job.groovy', source)
+
+        when:
+        Integer exit = command.call()
+
+        then:
+        exit == 0
+        new File(dir, 'grails-app/jobs/CleanupJob.groovy').text == written
+
+        where:
+        what                           | source                                                          | written
+        'the declaration is left out'  | 'package ${packageName}\n\nclass ${className}Job {}\n'          | 'class CleanupJob {}\n'
+        'with a semicolon'             | 'package ${packageName};\n\nclass ${className}Job {}\n'         | 'class CleanupJob {}\n'
+        'lines that end with a return' | 'package ${packageName}\r\rclass ${className}Job {}\r'          | 'class CleanupJob {}\r'
+        'lines of Windows'             | '// a\r\npackage ${packageName}\r\n\r\nclass ${className}Job {}' | '// a\r\nclass CleanupJob {}'
+        'no declaration of its own'    | 'class ${className}Job { String p = "package ${packageName}" }' | 'class CleanupJob { String p = "package " }'
+    }
+
+    void "the line of a mistake in the template of a job is the line the template has it on"() {
+        given:
+        ConsoleOutput console = Mock(ConsoleOutput)
+        CodeGenConfig config = new CodeGenConfig()
+        config.features = ['grails-quartz']
+        CreateJobCommand command = new CreateJobCommand(config, getOutputHandler(console), console)
+        command.jobName = 'Cleanup'
+        template('Job.groovy', source)
+
+        when:
+        command.call()
+
+        then:
+        ArtefactTemplateException e = thrown()
+        e.message == "The template src/main/templates/Job.groovy cannot be rendered: line ${line}: it has code between <% and %>. Templates are not run"
+        !new File(dir, 'grails-app').exists()
+
+        where:
+        source                                                           | line
+        'package ${packageName}\n\nclass ${className}Job {\n<% x %>\n}'  | 4
+        'package ${packageName}\r\rclass ${className}Job {\r<% x %>\r}'  | 4
+        '// a\r\n// b\r\n<% x %>'                                        | 3
     }
 
     @IgnoreIf({ !ArtefactCommandsSpec.caseInsensitive() })
@@ -1107,7 +1308,23 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
     private Map<String, String> writtenBy(Closure<?> run) {
         Map<String, String> before = files()
         run.call()
-        return files().findAll { String path, String text -> before[path] != text }
+        Map<String, String> after = files()
+        Map<String, String> changed = new TreeMap<>(after.findAll { String path, String text -> before[path] != text })
+        // a file that is gone is a change as well
+        before.keySet().findAll { String path -> !after.containsKey(path) }.each { String path -> changed[path] = null }
+        return changed
+    }
+
+    // everything the directory holds, the record of the project too: what each entry is, its mode, its size and its content
+    private Map<String, List> tree() {
+        Map<String, List> tree = new TreeMap<>()
+        dir.eachFileRecurse { File each ->
+            String path = dir.toPath().relativize(each.toPath()).toString().replace(File.separator, '/')
+            tree[path] = [each.directory ? 'directory' : Files.isSymbolicLink(each.toPath()) ? 'link' : 'file',
+                          PosixFilePermissions.toString(Files.getPosixFilePermissions(each.toPath())),
+                          each.directory ? 0L : each.length(), each.directory ? 0 : Arrays.hashCode(each.bytes)]
+        }
+        return tree
     }
 
     private Map<String, String> golden(String set) {

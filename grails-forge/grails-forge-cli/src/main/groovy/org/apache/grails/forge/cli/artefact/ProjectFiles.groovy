@@ -21,7 +21,6 @@ package org.apache.grails.forge.cli.artefact
 import groovy.transform.CompileStatic
 import java.nio.file.Files
 import java.nio.file.LinkOption
-import java.nio.file.Path
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.OutputFailedException
 import org.grails.forge.io.OutputHandler
@@ -35,9 +34,6 @@ import org.grails.forge.template.StringTemplate
  */
 @CompileStatic
 final class ProjectFiles {
-
-    // a file the command replaces is kept to be put back, unless it is larger than a source file is
-    private static final int MAX_KEPT = 16 * 1024 * 1024
 
     private ProjectFiles() {
     }
@@ -79,88 +75,45 @@ final class ProjectFiles {
     }
 
     /**
-     * Writes files, replacing what is there under their paths.
+     * Writes files, replacing what is there under their paths. What is there is moved aside under
+     * another name first, and has its name again when a file cannot be written, so it is what it
+     * was, whatever its size, its mode and its other names.
      *
      * @param project the directory of the project
      * @param output what writes a file of the project
      * @param texts the text of each file, by its path in the project
-     * @throws Failed when a file cannot be written; none of the files is written then
+     * @throws Failed when a file cannot be written. What was written before is taken back, and the
+     * message says what of it could not be
      */
     static void write(File project, OutputHandler output, Map<String, String> texts) {
         Map<String, String> refused = refusals(project, texts.keySet())
         if (refused) {
             throw new Failed(refused.values().first(), null)
         }
-        List<Before> written = []
-        for (Map.Entry<String, String> each : texts.entrySet()) {
-            Before before = new Before(project.toPath(), each.key)
-            written.add(before)
-            try {
-                output.write(each.key, new StringTemplate(each.key, each.value))
-            } catch (Exception e) {
-                written.reverse().each { Before made -> made.putBack() }
-                // what the file system says has the path of the file on this computer in it, and is not repeated
-                String reason = e instanceof ProjectOutputHandler.Refused ? e.getMessage() :
-                        e instanceof IOException ? OutputFailedException.reason((IOException) e) : "it failed (${e.getClass().getSimpleName()})".toString()
-                throw new Failed(said(each.key, reason) + (texts.size() > 1 ? '. No file of the command was written' : ''), e)
+        List<ProjectPlace> places = []
+        try {
+            for (Map.Entry<String, String> each : texts.entrySet()) {
+                try {
+                    ProjectPlace place = ProjectPlace.open(project, each.key)
+                    places.add(place)
+                    place.moveAside()
+                    output.write(each.key, new StringTemplate(each.key, each.value))
+                } catch (Exception e) {
+                    List<String> left = places.reverse().collect { ProjectPlace made -> made.restore() }.findAll { String sentence -> sentence != null }
+                    // what the file system says has the path of the file on this computer in it, and is not repeated
+                    String reason = e instanceof ProjectOutputHandler.Refused ? e.getMessage() :
+                            e instanceof IOException ? OutputFailedException.reason((IOException) e) : "it failed (${e.getClass().getSimpleName()})".toString()
+                    String after = left ? ". Not everything the command did could be taken back: ${left.join('; ')}" : '. The project is as it was before the command'
+                    throw new Failed(said(each.key, reason) + after, e)
+                }
             }
+            places.each { ProjectPlace place -> place.keep() }
+        } finally {
+            places.each { ProjectPlace place -> place.close() }
         }
     }
 
     private static String said(String path, String reason) {
         return "Cannot write ${FeatureSelectionException.shown(path)}: ${reason}"
-    }
-
-    /**
-     * What there was where a file is written, to put it back.
-     */
-    private static final class Before {
-
-        private final Path file
-        private final Path link
-        private final byte[] content
-        private final boolean absent
-        private final List<Path> missing = []
-
-        Before(Path project, String path) {
-            file = project.resolve(path)
-            Path target = null
-            byte[] bytes = null
-            try {
-                if (Files.isSymbolicLink(file)) {
-                    target = Files.readSymbolicLink(file)
-                } else if (Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) && Files.size(file) <= MAX_KEPT) {
-                    bytes = Files.readAllBytes(file)
-                }
-            } catch (IOException ignored) {
-                // what cannot be read cannot be put back, and is most likely not replaced either
-            }
-            link = target
-            content = bytes
-            absent = !Files.exists(file, LinkOption.NOFOLLOW_LINKS)
-            for (Path directory = file.getParent(); directory != null && directory.startsWith(project) && directory != project &&
-                    !Files.exists(directory, LinkOption.NOFOLLOW_LINKS); directory = directory.getParent()) {
-                missing.add(directory)
-            }
-        }
-
-        void putBack() {
-            try {
-                if (link != null) {
-                    Files.deleteIfExists(file)
-                    Files.createSymbolicLink(file, link)
-                } else if (content != null) {
-                    Files.write(file, content)
-                } else if (absent) {
-                    Files.deleteIfExists(file)
-                }
-                // the deepest first, and only those that are empty again
-                for (Path directory : missing) {
-                    Files.deleteIfExists(directory)
-                }
-            } catch (IOException ignored) {
-                // what cannot be taken back stays; the failure that is reported is the one of the write
-            }
-        }
     }
 }

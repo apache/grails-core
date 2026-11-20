@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.artefact
 
 import groovy.transform.CompileStatic
+import java.text.Normalizer
 import javax.lang.model.SourceVersion
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.Project
@@ -63,6 +64,12 @@ final class ArtefactName {
         }
         if (PackDescriptorParser.hasUnsafeCharacter(given)) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it has a character that is not shown, such as a control character")
+        }
+        // source files are written in the composed form, and a file system that lists a name in another
+        // form than it was given would have the class and its file differ
+        if (!Normalizer.isNormalized(given, Normalizer.Form.NFC)) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: a letter of it is written as a letter and a mark that follows it. " +
+                    'Write the letter as one character (the form NFC of Unicode)')
         }
         if (given.contains('/') || given.contains('\\') || given.contains(':')) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it is a path. A package is given with dots, as in org.example.Book")
