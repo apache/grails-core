@@ -202,6 +202,36 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         'an already encoded' | '<g:sortableColumn property="title" title="Title" class="${value.encodeAsHTML()}" action="list"/>'
     }
 
+    void 'g:sortableColumn writes #description title encoded once as the text of its link'() {
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains('">' + ENCODED + '</a></th>')
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        description          | template
+        'a plain'            | '<g:sortableColumn property="title" title="${value}" action="list"/>'
+        'an already encoded' | '<g:sortableColumn property="title" title="${value.encodeAsHTML()}" action="list"/>'
+        'a plain fallback'   | '<g:sortableColumn property="title" titleKey="no.such.code" title="${value}" action="list"/>'
+    }
+
+    void 'g:sortableColumn writes a title marked raw, or from the message source, as given'() {
+        given:
+        messageSource.addMessage('book.title', request.locale, '<i class="icon"></i> Title')
+
+        expect:
+        applyTemplate(template, [value: '<i class="icon"></i> Title']).contains('"><i class="icon"></i> Title</a></th>')
+
+        where:
+        template << [
+            '<g:sortableColumn property="title" title="${raw(value)}" action="list"/>',
+            '<g:sortableColumn property="title" titleKey="book.title" action="list"/>',
+        ]
+    }
+
     void 'g:sortableColumn encodes the sort order of the request'() {
         given:
         params.sort = 'title'

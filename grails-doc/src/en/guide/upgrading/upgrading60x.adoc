@@ -1223,6 +1223,7 @@ These tags now HTML-encode the values they write into attributes, as `<g:link>` 
 * `<g:withTag>`: the values of `attrs` that are not closures.
 * `<g:external>`: `uri`, and `<g:javascript>`: `src`.
 * `<g:paginate>`: `class`, on the current step.
+* `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it. Mark a `title` that holds markup with `raw()`.
 * `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
 
 The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.

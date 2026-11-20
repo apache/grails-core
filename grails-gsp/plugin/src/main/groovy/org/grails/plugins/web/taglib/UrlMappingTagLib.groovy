@@ -342,15 +342,17 @@ class UrlMappingTagLib implements TagLibrary {
             linkParams.order = defaultOrder
         }
 
-        // determine column title
-        String title = attrs.remove('title') as String
+        // determine column title: the title attribute is encoded, as the attributes of the tag are, and a text from
+        // the message source is written as the message source returns it
+        Object titleAttribute = attrs.remove('title')
         String titleKey = attrs.remove('titleKey') as String
         Object mapping = attrs.remove('mapping')
+        Object title = titleAttribute != null ? htmlEncoder.encode(titleAttribute) : null
         if (titleKey) {
-            if (!title) title = titleKey
             def messageSource = grailsAttributes.messageSource
             def locale = RequestContextUtils.getLocale(request)
-            title = messageSource.getMessage(titleKey, null, title, locale)
+            String message = messageSource.getMessage(titleKey, null, null, locale)
+            title = message != null ? message : (title ?: htmlEncoder.encode(titleKey))
         }
 
         writer << '<th '
