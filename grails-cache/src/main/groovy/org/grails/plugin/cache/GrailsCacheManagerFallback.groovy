@@ -31,6 +31,8 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.DependencyDescriptor
 import org.springframework.beans.factory.support.AutowireCandidateResolver
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
+import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor
+import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.cache.CacheManager
 import org.springframework.core.ResolvableType
 
@@ -52,7 +54,8 @@ import org.springframework.core.ResolvableType
  * at that moment, leaving out the bean being injected. The bean is registered as depending on the cache
  * managers the resolution took, as the injection registers it, and the cache manager taken is remembered
  * for the next injection of that bean, as the injection remembers it, so that a prototype bean resolves
- * the field once. Any other injection of a cache manager is left alone.</p>
+ * the field once, until the bean's definition is registered again or removed, when the injection forgets
+ * it too. Any other injection of a cache manager is left alone.</p>
  *
  * @since 8.0.1
  */
@@ -69,7 +72,10 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         if (beanFactory instanceof DefaultListableBeanFactory) {
             DefaultListableBeanFactory listable = (DefaultListableBeanFactory) beanFactory
             if (!(listable.autowireCandidateResolver instanceof CandidateResolver)) {
-                listable.autowireCandidateResolver = new CandidateResolver(listable.autowireCandidateResolver)
+                CandidateResolver resolver = new CandidateResolver(listable.autowireCandidateResolver)
+                listable.autowireCandidateResolver = resolver
+                // told when a bean definition is registered again or removed, as the injection is
+                listable.addBeanPostProcessor(resolver)
             }
         }
     }
@@ -85,7 +91,7 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
      * {@code grailsCacheManager}.
      */
     @CompileStatic
-    static class CandidateResolver implements AutowireCandidateResolver, BeanFactoryAware {
+    static class CandidateResolver implements AutowireCandidateResolver, BeanFactoryAware, MergedBeanDefinitionPostProcessor {
 
         private final AutowireCandidateResolver delegate
 
@@ -143,6 +149,16 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                 }
             }
             return value
+        }
+
+        @Override
+        void postProcessMergedBeanDefinition(RootBeanDefinition beanDefinition, Class<?> beanType, String beanName) {
+        }
+
+        /** Forgets what the bean's fields were given, as the injection forgets its own record of them. */
+        @Override
+        void resetBeanDefinition(String beanName) {
+            remembered.keySet().removeIf { List<Object> injectionPoint -> injectionPoint[0] == beanName }
         }
 
         @Override

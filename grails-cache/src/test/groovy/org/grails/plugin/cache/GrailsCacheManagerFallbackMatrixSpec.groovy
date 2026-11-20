@@ -179,6 +179,54 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         ((List<String>) now.createdByPrototypes).count('factory') == 1
     }
 
+    void 'a prototype bean registered again resolves its cache manager afresh, as in 8.0.0, where #arrangement'() {
+        when: 'a prototype is injected, a cache manager marked primary is added, and the prototype is registered again'
+        List<String> was = reloaded(row, false)
+        List<String> now = reloaded(row, true)
+
+        then: 'the choice is kept until the prototype is registered again, and then made afresh'
+        now == expected
+
+        and: 'as in 8.0.0, which kept its choice the same way; where it could not choose, it kept nothing to keep'
+        was == (row.first == 'plain' ? ['failed', 'preferred', 'preferred'] : expected)
+
+        where:
+        arrangement                                 | row
+        'Spring chooses grailsCacheManager'         | [(NAMED): 'plain']
+        'it is grailsCacheManager by the fallback'  | [(NAMED): 'plain', first: 'plain']
+        expected = [NAMED, NAMED, 'preferred']
+    }
+
+    /** What a prototype gets: at first, after a primary cache manager is added, and after it is registered again. */
+    private List<String> reloaded(Map<String, String> row, boolean withFallback) {
+        Map<String, CacheManager> instances = [:]
+        GenericApplicationContext context = context(row, instances, [], withFallback)
+        Closure<String> inject = { ->
+            try {
+                nameOf(((CacheAware) context.getBean('prototype')).grailsCacheManager, instances)
+            }
+            catch (BeansException ignored) {
+                'failed'
+            }
+        }
+        try {
+            List<String> got = [inject()]
+            context.registerBean('preferred', CacheManager, { ->
+                CacheManager instance = new ConcurrentMapCacheManager()
+                instances.preferred = instance
+                instance
+            } as Supplier<CacheManager>, { BeanDefinition definition -> definition.primary = true } as BeanDefinitionCustomizer)
+            got << inject()
+            context.registerBean('prototype', CacheAware,
+                    { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
+            got << inject()
+            return got
+        }
+        finally {
+            context.close()
+        }
+    }
+
     void 'a cache manager injected anywhere else is left as Spring resolves it'() {
         given: 'two cache managers Spring cannot choose between, and a bean of the application\'s own that injects one'
         GenericApplicationContext context = context([(NAMED): 'plain', first: 'plain'], [:], [], true) { GenericApplicationContext it ->
