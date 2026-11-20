@@ -17,11 +17,10 @@
  *  under the License.
  */
 
-import org.grails.cli.interactive.completers.DomainClassCompleter
 
 description( "Generates an asynchronous controller that performs CRUD operations" ) {
   usage "grails generate-async-controller [DOMAIN CLASS]"
-  completer DomainClassCompleter
+  completer org.grails.cli.interactive.completers.DomainClassCompleter
   flag name:'force', description:"Whether to overwrite existing files"
 }
 
