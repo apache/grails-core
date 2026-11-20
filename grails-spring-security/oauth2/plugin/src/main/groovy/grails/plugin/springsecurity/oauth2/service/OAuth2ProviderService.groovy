@@ -86,10 +86,11 @@ interface OAuth2ProviderService {
 
     /**
      * Get the authorization URL
+     * @param state State bound to the initiating HTTP session
      * @param params Additional params for the url call
      * @return
      */
-    String getAuthUrl(Map<String, String> params)
+    String getAuthUrl(String state, Map<String, String> params)
 
     /**
      * Create the scribe service to make oAuthCalls with

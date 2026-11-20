@@ -18,15 +18,22 @@
  */
 package grails.plugin.springsecurity.oauth2
 
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.SecureRandom
+
 import groovy.util.logging.Slf4j
+
+import jakarta.servlet.http.HttpSession
 
 import com.github.scribejava.core.model.OAuth2AccessToken
 import org.apache.commons.lang3.StringUtils
-import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.commons.validator.routines.UrlValidator
 
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.ModelAndView
+
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 import grails.plugin.springsecurity.SpringSecurityService
 import grails.plugin.springsecurity.SpringSecurityUtils
@@ -46,6 +53,9 @@ import grails.plugin.springsecurity.userdetails.GrailsUser
 class SpringSecurityOAuth2Controller {
 
     public static final String SPRING_SECURITY_OAUTH_TOKEN = 'springSecurityOAuthToken'
+    private static final String STATE_LOCK = 'OAuth2:state-lock'
+
+    static allowedMethods = [linkCurrentAccount: 'POST', linkAccount: 'POST', createAccount: 'POST']
 
     SpringSecurityOauth2BaseService springSecurityOauth2BaseService
     SpringSecurityService springSecurityService
@@ -59,11 +69,18 @@ class SpringSecurityOAuth2Controller {
             throw new OAuth2Exception('No provider defined')
         }
         log.debug "authenticate ${providerName}"
-        String url = springSecurityOauth2BaseService.getAuthorizationUrl(providerName)
-        log.debug "redirect url from s2oauthservice=${url}"
+        byte[] stateBytes = new byte[32]
+        new SecureRandom().nextBytes(stateBytes)
+        String state = Base64.urlEncoder.withoutPadding().encodeToString(stateBytes)
+        String url = springSecurityOauth2BaseService.getAuthorizationUrl(providerName, state)
         if (!UrlValidator.instance.isValid(url)) {
             flash.message = "Authorization url for provider '${providerName}' is invalid."
             redirect(controller: 'login', action: 'index')
+            return
+        }
+        HttpSession nativeSession = getNativeSession()
+        synchronized (getStateLock(nativeSession)) {
+            nativeSession.setAttribute(springSecurityOauth2BaseService.sessionKeyForState(providerName), state)
         }
         redirect(url: url)
     }
@@ -75,9 +92,21 @@ class SpringSecurityOAuth2Controller {
         String providerName = params.provider
         log.debug('Callback for ' + providerName)
 
+        String state = params.state
+        String stateKey = springSecurityOauth2BaseService.sessionKeyForState(providerName)
+        HttpSession nativeSession = getNativeSession()
+        synchronized (getStateLock(nativeSession)) {
+            String expectedState = nativeSession.getAttribute(stateKey)
+            if (StringUtils.isBlank(state) || StringUtils.isBlank(expectedState) ||
+                    !MessageDigest.isEqual(expectedState.getBytes(StandardCharsets.UTF_8), state.getBytes(StandardCharsets.UTF_8))) {
+                redirect(uri: springSecurityOauth2BaseService.getFailureUrl(providerName))
+                return
+            }
+            nativeSession.removeAttribute(stateKey)
+        }
+
         // Check if we got an AuthCode from the server query
         String authCode = params.code
-        log.debug('AuthCode: ' + authCode)
         if (!authCode || authCode.isEmpty()) {
             throw new OAuth2Exception("No AuthCode in callback for provider '${providerName}'")
         }
@@ -87,8 +116,7 @@ class SpringSecurityOAuth2Controller {
         try {
             accessToken = providerService.getAccessToken(authCode)
         } catch (Exception exception) {
-            log.error('Could not authenticate with oAuth2. ' + ExceptionUtils.getMessage(exception), exception)
-            log.debug(ExceptionUtils.getStackTrace(exception))
+            log.error('Could not authenticate with OAuth2')
             redirect(uri: springSecurityOauth2BaseService.getFailureUrl(providerName))
             return
         }
@@ -99,7 +127,32 @@ class SpringSecurityOAuth2Controller {
     def onFailure(String provider) {
         flash.error = "Error authenticating with ${provider}"
         log.warn("Error authentication with OAuth2Provider ${provider}")
-        authenticateAndRedirect(null, getDefaultTargetUrl())
+        session.removeAttribute(SPRING_SECURITY_OAUTH_TOKEN)
+        redirect(getDefaultTargetUrl())
+    }
+
+    private HttpSession getNativeSession() {
+        def servletRequest = request
+        if (servletRequest instanceof GrailsWebRequest) {
+            servletRequest = servletRequest.currentRequest
+        }
+        servletRequest.getSession(true)
+    }
+
+    private Object getStateLock(HttpSession nativeSession) {
+        synchronized (nativeSession) {
+            Object stateLock = nativeSession.getAttribute(STATE_LOCK)
+            if (stateLock == null) {
+                stateLock = new StateMutex()
+                nativeSession.setAttribute(STATE_LOCK, stateLock)
+            }
+            return stateLock
+        }
+    }
+
+    // The serialized form preserves the session; same-JVM requests share the live instance.
+    private static class StateMutex implements Serializable {
+        private static final long serialVersionUID = 1L
     }
 
     def onSuccess(String provider) {
@@ -134,30 +187,38 @@ class SpringSecurityOAuth2Controller {
     }
 
     def ask() {
-        if (springSecurityService.isLoggedIn()) {
+        if (!session[SPRING_SECURITY_OAUTH_TOKEN]) {
+            log.warn('ask: OAuthToken not found in session')
+            throw new OAuth2Exception('Authentication error')
+        }
+        return new ModelAndView('/springSecurityOAuth2/ask', [linkCurrentAccount: springSecurityService.isLoggedIn()])
+    }
+
+    def linkCurrentAccount() {
+        if (!springSecurityService.isLoggedIn()) {
+            render status: 403
+            return
+        }
+        OAuth2SpringToken oAuth2SpringToken = session[SPRING_SECURITY_OAUTH_TOKEN] as OAuth2SpringToken
+        if (!oAuth2SpringToken) {
+            throw new OAuth2Exception('Authentication error')
+        }
+        withForm {
             def currentUser = springSecurityService.currentUser
-            OAuth2SpringToken oAuth2SpringToken = session[SPRING_SECURITY_OAUTH_TOKEN] as OAuth2SpringToken
-            // Check for token in session
-            if (!oAuth2SpringToken) {
-                log.warn('ask: OAuthToken not found in session')
-                throw new OAuth2Exception('Authentication error')
-            }
-            // Try to add the token to the OAuthID's
             currentUser.addTooAuthIDs(
                     provider: oAuth2SpringToken.providerName,
                     accessToken: oAuth2SpringToken.socialId,
                     user: currentUser
             )
             if (currentUser.validate() && currentUser.save()) {
-                // Could assign the token to the OAuthIDs. Login and redirect
                 oAuth2SpringToken = springSecurityOauth2BaseService.updateOAuthToken(oAuth2SpringToken, currentUser)
                 authenticateAndRedirect(oAuth2SpringToken, getDefaultTargetUrl())
-                return
+            } else {
+                render view: 'ask', model: [linkCurrentAccount: true]
             }
+        }.invalidToken {
+            render status: 403
         }
-        // There seems to be a new one in the town aka 'There is no one logged in'
-        // Ask to create a new account or link an existing user to it
-        return new ModelAndView('/springSecurityOAuth2/ask', [:])
     }
 
     /**

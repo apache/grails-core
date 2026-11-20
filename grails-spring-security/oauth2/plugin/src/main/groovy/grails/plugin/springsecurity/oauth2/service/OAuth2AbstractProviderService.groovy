@@ -97,14 +97,17 @@ abstract class OAuth2AbstractProviderService implements OAuth2ProviderService {
 
     /**
      * Get the authorization URL
+     * @param state State bound to the initiating HTTP session
      * @param params Additional params for the url call
      * @return
      */
-    String getAuthUrl(Map<String, String> params) {
-        final String secretState = getProviderID() + '-secret-' + new Random().nextInt(999_999)
+    String getAuthUrl(String state, Map<String, String> params) {
+        if (!state?.trim()) {
+            throw new IllegalArgumentException('OAuth2 state is required')
+        }
         return authService.createAuthorizationUrlBuilder()
-                .state(secretState)
                 .additionalParams(params)
+                .state(state)
                 .build()
     }
 
