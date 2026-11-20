@@ -29,6 +29,7 @@ import org.hibernate.SessionFactory
 import org.hibernate.engine.internal.ForeignKeys
 import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
+import org.hibernate.persister.entity.EntityPersister
 
 import org.springframework.beans.BeanWrapperImpl
 import org.springframework.beans.InvalidPropertyException
@@ -278,12 +279,20 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
             // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
             // type it has and whatever changes it tracks.
-            boolean transientBefore = ForeignKeys.isTransient(target.getClass().name, target, null, (SessionImplementor) session)
+            boolean transientBefore = ForeignKeys.isTransient(target.getClass().name, target, Boolean.FALSE, (SessionImplementor) session)
+            // another instance with the id of one the session already manages, whose insert may still be pending:
+            // merge copies the newer values onto the managed one, and those values are written like the changes of
+            // a detached instance, not dropped as the state of a new insert
+            SessionImplementor implementor = (SessionImplementor) session
+            EntityPersister persister = implementor.getEntityPersister(target.getClass().name, target)
+            Serializable targetId = persister.getIdentifier(target, implementor)
+            boolean alreadyManaged = !transientBefore && targetId != null &&
+                    implementor.persistenceContext.getEntity(implementor.generateEntityKey(targetId, persister)) != null
             Object merged = session.merge(target)
             // an interceptor that says the instance is not transient sends merge down the detached path, which finds
             // no row and inserts one: the entry of the merged instance says that it does not exist in the database yet
             EntityEntry mergedEntry = ((SessionImplementor) session).persistenceContext.getEntry(merged)
-            boolean inserted = transientBefore || (mergedEntry != null && !mergedEntry.existsInDatabase)
+            boolean inserted = !alreadyManaged && (transientBefore || (mergedEntry != null && !mergedEntry.existsInDatabase))
             if (!inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
                 if (changedWithoutNames) {
                     ((DirtyCheckable) merged).markDirty()

@@ -25,6 +25,7 @@ import org.grails.orm.hibernate.cfg.Settings
 import org.hibernate.EmptyInterceptor
 import org.hibernate.resource.jdbc.spi.StatementInspector
 import spock.lang.AutoCleanup
+import spock.lang.IgnoreIf
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -36,6 +37,8 @@ import spock.lang.Unroll
  */
 @Issue('https://github.com/apache/grails-core/issues/14354')
 class MergeStatementMatrixSpec extends Specification {
+
+    @Shared boolean neverTransient = false
 
     @Shared List<String> kinds = ['generated', 'assigned']
 
@@ -117,6 +120,36 @@ class MergeStatementMatrixSpec extends Specification {
         changeText = change ? 'writes one update' : 'writes nothing'
     }
 
+    @IgnoreIf({ instance.neverTransient })
+    @Unroll
+    void "a second merge of a new #kind instance before the first insert runs stores the newer values (#form)"() {
+        given:
+        String key = "twice-${kind}-${form}"
+
+        when:
+        statements.clear()
+        MxGenerated.withNewTransaction {
+            Object first = fresh(kind, key)
+            first.merge()
+            if (form == 'same instance') {
+                first.title = 'newer'
+                first.merge(flush: true)
+            } else {
+                Object second = fresh(kind, key)
+                second.title = 'newer'
+                second.merge(flush: true)
+            }
+        }
+        List<String> titles = MxGenerated.withNewTransaction { entityClass(kind).list()*.title }
+
+        then:
+        titles.contains('newer')
+        !titles.contains(key)
+
+        where:
+        [kind, form] << [kinds - 'generated', ['same instance', 'another instance with the same id']].combinations()
+    }
+
     @Unroll
     void "merge of a managed #kind instance writes its change once"() {
         given:
@@ -186,6 +219,7 @@ class MergeStatementMatrixNeverTransientSpec extends MergeStatementMatrixSpec {
 
     void setupSpec() {
         kinds = ['assigned']
+        neverTransient = true
     }
 
     @Override
