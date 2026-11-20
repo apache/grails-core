@@ -22,6 +22,7 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
+import spock.lang.Unroll
 
 @Issue('https://github.com/apache/grails-core/issues/14343')
 class FetchJoinToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
@@ -66,6 +67,21 @@ class FetchJoinToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         then: 'the join-mapped association costs no extra statement per row'
         listStatements <= 2
         statements() - before <= 2
+    }
+
+    @Unroll
+    void "a call that asks to fetch #association with a join loads it with the flights"() {
+        when:
+        long before = statements()
+        List<String> cities = FjFlight.list(fetch: [(association): 'join'])*."$association"*.city
+        long used = statements() - before
+
+        then: 'one statement, whether or not the mapping already says to fetch it with a join'
+        cities.size() == 3
+        used <= 2
+
+        where:
+        association << ['destination', 'origin']
     }
 
     void "the total count of a paged list does not fetch the join-mapped association"() {

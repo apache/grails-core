@@ -190,7 +190,15 @@ public class GrailsHibernateQueryUtils {
 
                 final FetchMode fetchMode = getFetchMode(fetch.get(associationName));
                 if (fetchMode == FetchMode.JOIN) {
-                    queryRoot.join(associationName);
+                    // a call that asks to fetch a to-one association gets it with the rows, as the mapping's fetch join does;
+                    // any other association is joined, as before
+                    PersistentProperty fetched = entity.getPropertyByName(associationName);
+                    if (fetched instanceof ToOne && !(fetched instanceof Embedded)) {
+                        queryRoot.fetch(associationName);
+                    }
+                    else {
+                        queryRoot.join(associationName);
+                    }
                 }
             }
         }
