@@ -53,7 +53,7 @@ abstract class GradleTaskCommand extends InProjectCommand {
             arguments.add('-Dgrails.full.stacktrace=true')
         }
         if (verbose()) {
-            arguments.add('--debug')
+            arguments.addAll(verboseArguments())
         }
         arguments.addAll(passedOn)
         GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
@@ -75,6 +75,13 @@ abstract class GradleTaskCommand extends InProjectCommand {
      * command cannot be run in this project, which the command has then said
      */
     protected abstract List<String> gradleArguments(ConsoleProject project)
+
+    /**
+     * @return what {@code --verbose} of the command is for Gradle
+     */
+    protected List<String> verboseArguments() {
+        return ['--debug']
+    }
 
     /**
      * Called when Gradle ended with success, for what the command says then.

@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.cli.console
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ExecutionException
@@ -47,6 +48,11 @@ final class GradleRunner {
     private static final String NOT_FOR_A_BATCH_FILE = '"%&|<>^'
     private static final int STOP_SECONDS = 10
     private static final int OUTPUT_SECONDS = 10
+    private static final int FORCED_SECONDS = 5
+    // $1 is the file the output is added to, the rest the command. A signal that is ignored stays ignored
+    // in what is started; with job control the command is in a process group of its own, and a shell
+    // that has none without a terminal starts it with the interrupt ignored instead.
+    private static final String IN_THE_BACKGROUND = 'log=$1; shift; trap "" HUP; set -m 2>/dev/null; "$@" </dev/null >>"$log" 2>&1 & echo $!'
     private static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
 
     private static volatile PrintStream processOut
@@ -85,10 +91,118 @@ final class GradleRunner {
      * @throws RefusedArgumentException on Windows, for an argument a batch file does not receive unchanged; nothing was run
      */
     int run(ConsoleProject project, List<String> arguments) throws RefusedArgumentException {
+        return run(project, arguments, null)
+    }
+
+    /**
+     * Runs Gradle in the directory of the project and waits for it.
+     *
+     * @param project the project
+     * @param arguments the arguments of Gradle, each given to it as the one argument it is
+     * @param started given the process that was started, as soon as it is; can be {@code null}
+     * @return 0 when Gradle ended with 0, and 1 otherwise, after the line that says why
+     * @throws RefusedArgumentException on Windows, for an argument a batch file does not receive unchanged; nothing was run
+     */
+    int run(ConsoleProject project, List<String> arguments, Consumer<ProcessHandle> started) throws RefusedArgumentException {
+        Path wrapper = wrapperFor(project, arguments)
+        return wrapper == null ? 1 : run(command(wrapper, arguments), wrapper, project.directory, started)
+    }
+
+    /**
+     * Starts Gradle in the directory of the project and does not wait for it: the build goes on when
+     * the command has ended, and when the CLI has. It reads nothing, and what it writes is added to a
+     * file. Where the system has process groups it is in one of its own, so that the interrupt of
+     * the terminal the CLI runs in is not an interrupt of the build, and it is not ended with the
+     * terminal.
+     *
+     * @param project the project
+     * @param arguments the arguments of Gradle, each given to it as the one argument it is
+     * @param log the file the output of the build is added to
+     * @return the process that was started, or {@code null} after the line that says why there is none
+     * @throws RefusedArgumentException on Windows, for an argument a batch file does not receive unchanged; nothing was run
+     */
+    ProcessHandle start(ConsoleProject project, List<String> arguments, Path log) throws RefusedArgumentException {
+        Path wrapper = wrapperFor(project, arguments)
+        if (wrapper == null) {
+            return null
+        }
+        List<String> command = command(wrapper, arguments)
+        ProcessBuilder builder
+        if (windows) {
+            builder = new ProcessBuilder(command)
+                    .redirectInput(ProcessBuilder.Redirect.from(new File('NUL')))
+                    .redirectErrorStream(true)
+                    .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
+        } else {
+            builder = new ProcessBuilder(['/bin/sh', '-c', IN_THE_BACKGROUND, 'grails', log.toString()] + command)
+                    .redirectInput(ProcessBuilder.Redirect.from(new File('/dev/null')))
+                    .redirectError(ProcessBuilder.Redirect.appendTo(log.toFile()))
+        }
+        builder.directory(project.directory.toFile())
+        try {
+            Process process = builder.start()
+            if (windows) {
+                return process.toHandle()
+            }
+            // the shell says which process the build is and ends; the build is not its to wait for
+            String said = new String(process.getInputStream().readNBytes(64), StandardCharsets.US_ASCII).trim()
+            process.waitFor()
+            Optional<ProcessHandle> build = said ==~ /[0-9]{1,10}/ ? ProcessHandle.of(Long.parseLong(said)) : Optional.<ProcessHandle>empty()
+            if (build.isPresent()) {
+                return build.get()
+            }
+            failed("The Gradle wrapper ${line(wrapper)} ended as soon as it was started")
+            return null
+        } catch (IOException | IllegalArgumentException e) {
+            failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
+            return null
+        } catch (InterruptedException ignored) {
+            Thread.currentThread().interrupt()
+            failed(STOPPED)
+            return null
+        }
+    }
+
+    /**
+     * Ends a process with every process it started in turn: first the processes below it, then the
+     * process, and after a while by force whatever of them is left.
+     *
+     * @param process the process
+     * @param seconds how long the processes are given to end by themselves
+     * @return whether all of them have ended
+     */
+    static boolean stop(ProcessHandle process, int seconds) {
+        List<ProcessHandle> started = new ArrayList<ProcessHandle>(process.descendants().toList())
+        Collections.reverse(started)
+        started.add(process)
+        started.each { ProcessHandle each -> each.destroy() }
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds)
+        try {
+            for (ProcessHandle each : started) {
+                each.onExit().get(Math.max(0L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
+            }
+        } catch (TimeoutException | InterruptedException | ExecutionException ignored) {
+            // what is left is ended below
+        }
+        started.addAll(process.descendants().toList())
+        List<ProcessHandle> left = started.findAll { ProcessHandle each -> each.isAlive() }
+        left.each { ProcessHandle each -> each.destroyForcibly() }
+        try {
+            for (ProcessHandle each : left) {
+                each.onExit().get(FORCED_SECONDS, TimeUnit.SECONDS)
+            }
+        } catch (TimeoutException | InterruptedException | ExecutionException ignored) {
+            // said by what is returned
+        }
+        return !started.any { ProcessHandle each -> each.isAlive() }
+    }
+
+    // null when Gradle cannot be run for the project, which was then said
+    private Path wrapperFor(ConsoleProject project, List<String> arguments) throws RefusedArgumentException {
         ConsoleProject.Wrapper found = project.gradleWrapper(windows)
         if (found.file == null) {
             failed("${found.refusal}. Gradle was not run, since the command runs the Gradle of the project and no other")
-            return 1
+            return null
         }
         Path wrapper = found.file
         if (windows) {
@@ -102,10 +216,10 @@ final class GradleRunner {
             if (named != null) {
                 failed("Gradle cannot be run from here for ${line(named)}: the Gradle wrapper of Windows is a batch file, and a path with one of ${NOT_FOR_A_BATCH_FILE} " +
                         'or a control character is not read as it is where the batch file is started. Gradle was not run; run gradlew.bat yourself, or move the project')
-                return 1
+                return null
             }
         }
-        return run(command(wrapper, arguments), wrapper, project.directory)
+        return wrapper
     }
 
     /**
@@ -153,7 +267,7 @@ final class GradleRunner {
         return command
     }
 
-    private int run(List<String> command, Path wrapper, Path directory) {
+    private int run(List<String> command, Path wrapper, Path directory, Consumer<ProcessHandle> started) {
         PrintStream out = System.out
         PrintStream err = System.err
         boolean inherited = out.is(processOut) && err.is(processErr)
@@ -172,6 +286,9 @@ final class GradleRunner {
             // the second is what the JVM of Windows says to a command line it will not hand to a batch file
             failed("The Gradle wrapper ${line(wrapper)} could not be started: ${line(e.getMessage())}")
             return 1
+        }
+        if (started != null) {
+            started.accept(process.toHandle())
         }
         AtomicBoolean stopped = new AtomicBoolean()
         // when this JVM is ended while Gradle runs, Gradle is not left running without it
@@ -211,25 +328,11 @@ final class GradleRunner {
     }
 
     // Ends what was started, with every process it started in turn: the wrapper is a script and need not
-    // become the Gradle client, and on Windows it never does. First the processes below it, then the
-    // wrapper, and after a while by force whatever is left. A Gradle daemon that was running before is
+    // become the Gradle client, and on Windows it never does. A Gradle daemon that was running before is
     // none of them: it serves other builds too, and cancels this one when its client is gone.
     private static void stop(Process process, AtomicBoolean stopped) {
         stopped.set(true)
-        List<ProcessHandle> started = new ArrayList<ProcessHandle>(process.descendants().toList())
-        Collections.reverse(started)
-        started.add(process.toHandle())
-        started.each { ProcessHandle each -> each.destroy() }
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(STOP_SECONDS)
-        try {
-            for (ProcessHandle each : started) {
-                each.onExit().get(Math.max(0L, deadline - System.nanoTime()), TimeUnit.NANOSECONDS)
-            }
-        } catch (TimeoutException | InterruptedException | ExecutionException ignored) {
-            // what is left is ended below
-        }
-        started.addAll(process.descendants().toList())
-        started.findAll { ProcessHandle each -> each.isAlive() }.each { ProcessHandle each -> each.destroyForcibly() }
+        stop(process.toHandle(), STOP_SECONDS)
     }
 
     // what Gradle writes is written as it comes, not when a line or the build is complete, and as the bytes it is

@@ -66,3 +66,9 @@ Variables:
 The `ctx` variable is injected into all scripts and is an instance of the `ApplicationContext`
 
 NOTE: Scripts are executed in the context of a persistent session. The default package is imported by default (`grails.codegen.defaultPackage`)
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `run-script FILE...` runs the Gradle task `runScript` of the project with the files, for the development environment or for the one `-Dgrails.env=NAME` names. A file is named by its path in the project or by its full path, and a name with spaces or quotes is the one file it is. A file that is not there is reported before Gradle is started. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

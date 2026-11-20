@@ -45,7 +45,24 @@ final class ConsoleCommands {
     private static final String PLUGIN_SOURCES = 'src/main/groovy'
     private static final String PLUGIN_CLASS_ENDING = 'GrailsPlugin.groovy'
 
+    private static volatile boolean interactive
+
     private ConsoleCommands() {
+    }
+
+    /**
+     * @return whether the commands run in the interactive shell, where a command that starts something
+     * returns to the prompt and does not stay with it
+     */
+    static boolean isInteractive() {
+        return interactive
+    }
+
+    /**
+     * Says whether the commands run in the interactive shell. The shell says so while it runs.
+     */
+    static void setInteractive(boolean inShell) {
+        interactive = inShell
     }
 
     /**
@@ -64,7 +81,13 @@ final class ConsoleCommands {
                 new TestAppCommand(),
                 new StatsCommand(),
                 new BugReportCommand(),
-                new InstallCommand()
+                new InstallCommand(),
+                new RunAppCommand(),
+                new StopAppCommand(),
+                new ConsoleCommand(),
+                new ShellCommand(),
+                new RunScriptCommand(),
+                new RunCommandCommand()
         ] as List<Object>
         if (readsProject) {
             ConsoleProject project = ConsoleProject.find(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())

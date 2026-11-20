@@ -56,3 +56,9 @@ Use `stop-app` to stop the application for the current project after it has been
 On Linux and macOS the application is shut down gracefully, so JVM shutdown hooks and Spring's orderly shutdown run. On Windows the application is terminated on a best-effort basis and a graceful shutdown is not guaranteed.
 
 If no application started by `run-app` is running for the project, `stop-app` reports that the application is not running.
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `stop-app` (or `stop`) ends the application that `run-app` of the Grails Forge CLI started for the project, with the Gradle that ran it, and nothing else: it goes by the record `run-app` wrote to `.grails/run/app.json` and ends a process only when it is the recorded one, by its number, the instant it began, its user and its command line. It does not stop an application that the `grails` shell or `gradlew bootRun` started. Without a running application it says so and ends with exit code 1. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

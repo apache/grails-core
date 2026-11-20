@@ -195,8 +195,14 @@ final class ForgeCli {
      */
     static void interactive(ApplicationContext context) {
         CommandLine commandLine = createCommandLine(context, true)
-        new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER,
-                { createCommandLine(context, true) } as Supplier<CommandLine>).start()
+        // in the shell a command that starts an application returns to the prompt
+        ConsoleCommands.setInteractive(true)
+        try {
+            new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER,
+                    { createCommandLine(context, true) } as Supplier<CommandLine>).start()
+        } finally {
+            ConsoleCommands.setInteractive(false)
+        }
     }
 
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole) {

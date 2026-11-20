@@ -62,3 +62,9 @@ grails <<env>>* run-command <<command>>
 Arguments:
 
 * `command` - Which command to run
+
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `run-command NAME [ARG...]` runs the Gradle task `runCommand` of the project, for the development environment or for the one a `-Dgrails.env=NAME` before `NAME` names. Everything after `NAME` is given to the command as it is, each argument as the one it was, also one that is empty, has spaces or quotes, or looks like an option. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

@@ -46,3 +46,8 @@ Usage:
 grails <<environment>>* console
 ----
 
+
+=== Grails Forge CLI
+
+
+In the Grails Forge CLI, `console` runs the Gradle task `console` of the project for the development environment, or for the one `-Dgrails.env=NAME` names, and stays with the console until its window is closed. `--debug-jvm` is the option of Gradle of the same name. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.
