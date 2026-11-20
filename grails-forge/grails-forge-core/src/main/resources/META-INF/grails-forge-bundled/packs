@@ -14,7 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+app-name
 asciidoctor
+asset-pipeline-grails
 cache
 cache-ehcache
 database-migration
@@ -27,7 +29,9 @@ gorm-hibernate5
 gorm-hibernate7
 gorm-mongodb
 gorm-neo4j
+grails-compile-static
 grails-gorm-testing-support
+grails-gradle-plugin
 grails-layout
 grails-quartz
 grails-spring-ai
@@ -53,15 +57,19 @@ openapi
 postgres
 scaffolding
 shade
+sitemesh3
 spock
 spring-ai-anthropic
 spring-ai-ollama
 spring-ai-openai
+spring-boot-autoconfigure
 spring-boot-devtools
+spring-boot-starter
 spring-boot-starter-jetty
 spring-boot-starter-security
 spring-boot-starter-tomcat
 spring-boot-virtual-threads
+spring-resources
 sqlserver
 testcontainers
 views-json

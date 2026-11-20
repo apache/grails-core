@@ -1,0 +1,71 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: null
+default: always
+order: -200
+
+# web
+title: app-name
+description: app-name
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/application.yml
++ info:
++   app:
++     name: '@info.app.name@'
++     version: '@info.app.version@'
++     grailsVersion: '@info.app.grailsVersion@'
+
+# rest_api
+title: app-name
+description: app-name
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/application.yml
++ info:
++   app:
++     name: '@info.app.name@'
++     version: '@info.app.version@'
++     grailsVersion: '@info.app.grailsVersion@'
+
+# web_plugin
+title: app-name
+description: app-name
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/application.yml
++ info:
++   app:
++     name: '@info.app.name@'
++     version: '@info.app.version@'
++     grailsVersion: '@info.app.grailsVersion@'
+
+# plugin
+title: app-name
+description: app-name
+category: Other
+documentation: null
+thirdPartyDocumentation: null
+visible: false
+dependentFeatures: []
+in an application without being named: the default options
+== grails-app/conf/application.yml
++ info:
++   app:
++     name: '@info.app.name@'
++     version: '@info.app.version@'
++     grailsVersion: '@info.app.grailsVersion@'
+

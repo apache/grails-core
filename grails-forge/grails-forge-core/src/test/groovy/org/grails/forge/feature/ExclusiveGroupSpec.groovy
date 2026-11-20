@@ -46,7 +46,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
                 'geb'                 : 'a pack of Forge',
                 'gradle-build-src'    : 'GradleBuildSrcFeature',
                 'gradle-settings-file': 'GradleSettingsFileFeature',
-                'gsp-layout'          : 'GspLayout',
+                'gsp-layout'          : 'a pack of Forge',
                 'logging'             : 'a pack of Forge',
                 'migration'           : 'a pack of Forge',
                 'reloading'           : 'a pack of Forge',
@@ -190,9 +190,9 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
         then:
         noExceptionThrown()
 
-        and: 'the layouts are such a group: a compiled default and a pack'
+        and: 'the layouts are a group of packs only: the default and the one that replaces it'
         beanContext.getBean(FeatureRegistry).all().findAll { it instanceof OneOfFeature && ((OneOfFeature) it).group == 'gsp-layout' }
-                .collectEntries { [it.name, ((OneOfFeature) it).featureClass?.simpleName] } == ['grails-layout': null, 'sitemesh3': 'GspLayout']
+                .collectEntries { [it.name, ((OneOfFeature) it).featureClass?.simpleName] } == ['grails-layout': null, 'sitemesh3': null]
     }
 
     static class GroupedFeature implements OneOfFeature {
