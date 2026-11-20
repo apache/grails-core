@@ -241,15 +241,17 @@ class SpringSecurityRestGrailsPlugin extends Plugin {
             }
 
             if (conf.rest.token.storage.jwt.useEncryptedJwt) {
+                final jweAlgorithmValue = JWEAlgorithm.parse(conf.rest.token.generation.jwt.jweAlgorithm)
                 jwtService(JwtService) {
                     keyProvider = ref('keyProvider')
+                    jweAlgorithm = jweAlgorithmValue
                 }
                 tokenGenerator(EncryptedJwtTokenGenerator) {
                     jwtTokenStorageService = ref('tokenStorageService')
                     keyProvider = ref('keyProvider')
                     defaultExpiration = conf.rest.token.storage.jwt.expiration
                     defaultRefreshExpiration = conf.rest.token.storage.jwt.refreshExpiration
-                    jweAlgorithm = JWEAlgorithm.parse(conf.rest.token.generation.jwt.jweAlgorithm)
+                    jweAlgorithm = jweAlgorithmValue
                     encryptionMethod = EncryptionMethod.parse(conf.rest.token.generation.jwt.encryptionMethod)
                 }
 

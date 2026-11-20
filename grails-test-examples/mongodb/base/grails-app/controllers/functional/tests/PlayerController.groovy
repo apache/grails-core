@@ -31,6 +31,14 @@ class PlayerController {
         render text: Player.list().size().toString()
     }
 
+    def includeSave() {
+    }
+
+    def saveFromView() {
+        new Player(name: 'From View', team: Team.findByName('Rovers')).save()
+        render text: 'saved'
+    }
+
     def save(String name, String teamId) {
         render text: new Player(name: name, team: Team.get(teamId)).save().id.toString()
     }
