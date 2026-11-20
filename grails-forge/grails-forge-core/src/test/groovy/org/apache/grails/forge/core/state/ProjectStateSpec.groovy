@@ -101,7 +101,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
         state.lock.featureNames == appliedFeatures(ApplicationType.WEB, ['grails-web-console', 'gradle-settings-file'])
         state.lock.featureNames.containsAll(['gradle-settings-file', 'grails-web-console', 'spock', 'gorm-hibernate5'])
         state.lock.features.find { it.name == 'grails-web-console' }.source == LockedFeature.BUNDLED_PACK
-        state.lock.features.find { it.name == 'spock' }.source == LockedFeature.FRAMEWORK
+        state.lock.features.find { it.name == 'gradle' }.source == LockedFeature.FRAMEWORK
         state.lock.features.every { it.origin == null && it.coordinates == null && it.version == null && it.sha256 == null }
 
         and: 'the lock names the manifest and the index of the baseline it was written with'

@@ -21,6 +21,7 @@ package org.grails.forge.feature.logging
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.*
 import spock.lang.Unroll
@@ -55,7 +56,7 @@ class LogbackSpec extends ApplicationContextSpec implements CommandOutputFixture
 
     void "test logback-config feature is visible so it can be searched and selected"() {
         when:
-        def feature = beanContext.getBean(LogbackConfig)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'logback-config' }
 
         then:
         feature.name == "logback-config"

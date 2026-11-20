@@ -18,10 +18,14 @@ asciidoctor
 cache
 cache-ehcache
 database-migration
+geb-with-local-browsers
+geb-with-testcontainers
+github-workflow-java-ci
 gorm-async
 gorm-graphql
 gorm-hibernate5
 gorm-hibernate7
+grails-gorm-testing-support
 grails-layout
 grails-quartz
 grails-spring-ai
@@ -35,11 +39,15 @@ grails-web-testing-support
 gsp
 h2
 hibernate-validator
+logback
+logback-config
+mockito
 mysql
 openapi
 postgres
 scaffolding
 shade
+spock
 spring-ai-anthropic
 spring-ai-ollama
 spring-ai-openai
@@ -49,4 +57,5 @@ spring-boot-starter-security
 spring-boot-starter-tomcat
 sqlserver
 views-json
+views-json-testing-support
 views-markup

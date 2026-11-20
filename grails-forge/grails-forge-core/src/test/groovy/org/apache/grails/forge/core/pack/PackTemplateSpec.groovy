@@ -115,8 +115,8 @@ class PackTemplateSpec extends ApplicationContextSpec {
         when:
         List<Map<String, String>> outputs = (1..4).collect { generate(generator, ['asciidoctor'], [], ApplicationType.WEB, 'example.grails.foo') }
 
-        then: 'the pack has two templates and the URL mappings, which every web application has, are a third: each is compiled once'
-        bundled.compiledTemplates == 3
+        then: 'the pack has two templates, and the URL mappings and the functional test, which every web application has, are two more: each is compiled once'
+        bundled.compiledTemplates == 4
         outputs[0]['src/docs/asciidoc/index.adoc'].startsWith('= Your Project\n')
         outputs[0]['gradle/asciidoc.gradle'] =~ /version '\d[^']*'/
         outputs.every { it['src/docs/asciidoc/index.adoc'] == outputs[0]['src/docs/asciidoc/index.adoc'] && it['gradle/asciidoc.gradle'] == outputs[0]['gradle/asciidoc.gradle'] }
