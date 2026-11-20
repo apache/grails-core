@@ -18,9 +18,11 @@
  */
 package org.grails.orm.hibernate.query;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -481,7 +483,20 @@ public class HibernateQuery extends Query {
 
     public List list(Session session) {
         var creator = createJpaCriteriaQueryCreator();
-        return getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        List results = getHibernateQueryExecutor().list(session, creator.createQuery(), creator.getParameterValues());
+        if (!creator.isDistinctInMemory()) {
+            return results;
+        }
+        // the query could not select distinct entities for the order it has, so an entity that a join of a
+        // collection repeats is listed where it comes first, as a distinct list was with Hibernate 5
+        Set<Object> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        List distinct = new ArrayList<>(results.size());
+        for (Object result : results) {
+            if (seen.add(result)) {
+                distinct.add(result);
+            }
+        }
+        return distinct;
     }
 
     private HibernateQueryExecutor getHibernateQueryExecutor() {

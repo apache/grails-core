@@ -25,6 +25,7 @@ import groovy.lang.MetaClass
 import groovy.lang.MetaMethod
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria
 import org.grails.datastore.mapping.query.Query
+import org.grails.orm.hibernate.query.AssociationOrder
 import org.grails.orm.hibernate.query.HibernateQuery
 
 import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
@@ -162,7 +163,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         _ * builder.getTargetClass() >> InvokerAccount
         1 * builder.getSessionFactory() >> Mock(SessionFactory) {
             getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
-                entity(InvokerAccount) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                managedType(InvokerAccount) >> Mock(jakarta.persistence.metamodel.ManagedType) {
                     getAttribute("transactions") >> Mock(jakarta.persistence.metamodel.Attribute) {
                         isAssociation() >> true
                     }
@@ -192,6 +193,78 @@ class CriteriaMethodInvokerSpec extends Specification {
         1 * builder.and(closure)
         1 * builder.or(closure)
         1 * builder.not(closure)
+    }
+
+    void "the closure of a junction is evaluated by the builder"() {
+        given:
+        def seen = []
+        def callable = { seen << delegate << resolveStrategy }
+
+        when: 'the criteria that open the junction evaluate the closure they are given themselves'
+        Closure junction = invoker.evaluatedByBuilder(callable)
+        junction.delegate = new DetachedCriteria(Object)
+        junction.resolveStrategy = Closure.DELEGATE_FIRST
+        junction.call()
+
+        then: 'which hands the closure of the junction to the builder, as any other closure of the criteria'
+        seen.size() == 2
+        seen[0].is(builder)
+        seen[1] == Closure.DELEGATE_FIRST
+    }
+
+    void "the orders of an association block move to the enclosing criteria when the block ends"() {
+        given:
+        DetachedAssociationCriteria block = null
+        def closure = { block.order('amount') }
+        def persistentEntity = Mock(GrailsHibernatePersistentEntity)
+        Query.Order moved = null
+
+        when:
+        invoker.invokeMethod("transactions", [closure] as Object[])
+
+        then:
+        _ * builder.getTargetClass() >> InvokerAccount
+        1 * builder.getSessionFactory() >> Mock(SessionFactory) {
+            getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
+                managedType(InvokerAccount) >> Mock(jakarta.persistence.metamodel.ManagedType) {
+                    getAttribute("transactions") >> Mock(jakarta.persistence.metamodel.Attribute) {
+                        isAssociation() >> true
+                    }
+                }
+            }
+        }
+        1 * builder.getClassForAssociationType(_) >> InvokerTransaction
+        1 * mappingContext.getPersistentEntity(InvokerAccount.name) >> persistentEntity
+        1 * persistentEntity.getPropertyByName("transactions") >> associationTo('transactions', ['amount'])
+        1 * query.getDetachedCriteria() >> Mock(DetachedCriteria)
+        1 * query.setDetachedCriteria(_ as DetachedAssociationCriteria) >> { DetachedAssociationCriteria criteria ->
+            block = criteria
+        }
+
+        then: 'the order is an order of the enclosing criteria before the block is added to them'
+        1 * query.order(_) >> { Query.Order order ->
+            moved = order
+            query
+        }
+
+        then:
+        1 * query.add(_ as DetachedAssociationCriteria)
+        moved instanceof AssociationOrder
+        moved.property == 'transactions.amount'
+        moved.association.is(block)
+        moved.associationProperty == 'amount'
+        block.orders.empty
+    }
+
+    private org.grails.datastore.mapping.model.types.Association associationTo(String name, List<String> properties) {
+        def entity = Mock(org.grails.datastore.mapping.model.PersistentEntity)
+        properties.each { String property ->
+            entity.getPropertyByName(property) >> Mock(org.grails.datastore.mapping.model.PersistentProperty)
+        }
+        def association = Mock(org.grails.datastore.mapping.model.types.Association)
+        association.getName() >> name
+        association.getAssociatedEntity() >> entity
+        association
     }
 
     void "test invokeMethod throws MissingMethodException"() {
@@ -633,7 +706,7 @@ class CriteriaMethodInvokerSpec extends Specification {
         _ * builder.getTargetClass() >> CBEmployee
         1 * builder.getSessionFactory() >> Mock(SessionFactory) {
             getMetamodel() >> Mock(jakarta.persistence.metamodel.Metamodel) {
-                entity(CBEmployee) >> Mock(jakarta.persistence.metamodel.EntityType) {
+                managedType(CBEmployee) >> Mock(jakarta.persistence.metamodel.ManagedType) {
                     getAttribute("parent") >> Mock(jakarta.persistence.metamodel.Attribute) {
                         isAssociation() >> true
                     }
