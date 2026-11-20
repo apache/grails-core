@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate;
 
+import java.sql.Connection;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -31,6 +32,8 @@ import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.resource.jdbc.spi.LogicalConnectionImplementor;
 
 import org.springframework.jdbc.datasource.ConnectionHolder;
+import org.springframework.jdbc.datasource.ConnectionProxy;
+import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -115,8 +118,33 @@ abstract class AbstractOuterSessionLifecycleStrategy implements OuterSessionLife
      */
     protected void disconnectBeforeInnerTransactionCompletes() {
         if (!wasPhysicallyConnectedAtPrepare && getLogicalConnection() != null) {
-            PENDING_DISCONNECTS.get().addLast(this::disconnectIfConnected);
+            PENDING_DISCONNECTS.get().addLast(this::disconnectIfHoldingTransactionConnection);
             disconnectPending = true;
+        }
+    }
+
+    /**
+     * Disconnects the outer session only when it holds the connection of the transaction that is completing. A session
+     * that fetched its connection inside the scope got the one that the transaction bound under the data source, and the
+     * transaction closes it. A session that holds any other connection, such as one of a transaction of its own, or that
+     * runs while the transaction is suspended and has no holder bound, keeps it: handing it back to the pool would end
+     * that transaction, or leave the connection in the pool with uncommitted work on it. The holder is looked at first, so
+     * no connection is fetched when no transaction has one.
+     */
+    protected void disconnectIfHoldingTransactionConnection() {
+        LogicalConnectionImplementor logicalConnection = getLogicalConnection();
+        if (dataSource == null || logicalConnection == null || !logicalConnection.isOpen() || !logicalConnection.isPhysicallyConnected()) {
+            return;
+        }
+        if (TransactionSynchronizationManager.getResource(dataSource) == null) {
+            return;
+        }
+        Connection connection = logicalConnection.getPhysicalConnection();
+        if (connection instanceof ConnectionProxy proxy) {
+            connection = proxy.getTargetConnection();
+        }
+        if (DataSourceUtils.isConnectionTransactional(connection, dataSource)) {
+            logicalConnection.manualDisconnect();
         }
     }
 
