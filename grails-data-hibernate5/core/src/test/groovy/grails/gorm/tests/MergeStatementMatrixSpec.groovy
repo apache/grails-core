@@ -46,7 +46,7 @@ class MergeStatementMatrixSpec extends Specification {
 
     @Shared @AutoCleanup HibernateDatastore datastore = new HibernateDatastore(
             DatastoreUtils.createPropertyResolver(settings()),
-            MxGenerated, MxAssignedNoVersion
+            MxGenerated, MxAssignedNoVersion, MxAssignedVersioned
     )
 
     protected Map<String, Object> settings() {
@@ -58,6 +58,7 @@ class MergeStatementMatrixSpec extends Specification {
         switch (kind) {
             case 'generated': return new MxGenerated(title: key)
             case 'assigned': return new MxAssignedNoVersion(id: key, title: key)
+            case 'versioned': return new MxAssignedVersioned(id: key, title: key)
             default: throw new IllegalArgumentException(kind)
         }
     }
@@ -72,11 +73,11 @@ class MergeStatementMatrixSpec extends Specification {
     }
 
     static String table(String kind) {
-        [generated: 'mx_generated', assigned: 'mx_assigned_no_version'][kind]
+        [generated: 'mx_generated', assigned: 'mx_assigned_no_version', versioned: 'mx_assigned_versioned'][kind]
     }
 
     static Class entityClass(String kind) {
-        [generated: MxGenerated, assigned: MxAssignedNoVersion][kind]
+        [generated: MxGenerated, assigned: MxAssignedNoVersion, versioned: MxAssignedVersioned][kind]
     }
 
     @Unroll
@@ -150,6 +151,71 @@ class MergeStatementMatrixSpec extends Specification {
         [kind, form] << [kinds - 'generated', ['same instance', 'another instance with the same id']].combinations()
     }
 
+    @IgnoreIf({ instance.neverTransient })
+    @Unroll
+    void "a #kind instance merged and then changed and merged as #form, flushed first: #flushFirst, ends as one row with the newer title"() {
+        given:
+        String key = "again-${kind}-${form}-${flushFirst}"
+
+        when:
+        MxGenerated.withNewTransaction {
+            Object first = fresh(kind, key)
+            Object merged = first.merge(flush: flushFirst)
+            switch (form) {
+                case 'the same instance':
+                    first.title = key + '-newer'
+                    first.merge(flush: true)
+                    break
+                case 'the instance merge returned':
+                    merged.title = key + '-newer'
+                    merged.merge(flush: true)
+                    break
+                case 'a second instance with the same id':
+                    Object second = fresh(kind, key)
+                    second.title = key + '-newer'
+                    second.merge(flush: true)
+                    break
+                default:
+                    first.title = key + '-newer'
+                    first.merge(flush: false)
+                    first.title = key + '-newest'
+                    first.merge(flush: true)
+            }
+        }
+        List<String> titles = MxGenerated.withNewTransaction { entityClass(kind).list()*.title.findAll { it.startsWith(key) } }
+
+        then:
+        titles == [key + (form == 'the same instance, changed twice' ? '-newest' : '-newer')]
+
+        where:
+        [kind, flushFirst, form] << [
+                ['assigned', 'versioned'],
+                [false, true],
+                ['the same instance', 'the instance merge returned', 'a second instance with the same id', 'the same instance, changed twice']
+        ].combinations()
+    }
+
+    @IgnoreIf({ instance.neverTransient })
+    @Unroll
+    void "a generated instance merged and then its merged copy changed and merged again, flushed first: #flushFirst, ends as one row"() {
+        given:
+        String key = "again-generated-${flushFirst}"
+
+        when:
+        MxGenerated.withNewTransaction {
+            MxGenerated merged = new MxGenerated(title: key).merge(flush: flushFirst)
+            merged.title = key + '-newer'
+            merged.merge(flush: true)
+        }
+        List<String> titles = MxGenerated.withNewTransaction { MxGenerated.list()*.title.findAll { it.startsWith(key) } }
+
+        then:
+        titles == [key + '-newer']
+
+        where:
+        flushFirst << [false, true]
+    }
+
     @Unroll
     void "merge of a managed #kind instance writes its change once"() {
         given:
@@ -198,6 +264,17 @@ class MxGenerated {
     Long id
     Long version
     String title
+}
+
+@Entity
+class MxAssignedVersioned {
+    String id
+    Long version
+    String title
+
+    static mapping = {
+        id generator: 'assigned'
+    }
 }
 
 @Entity

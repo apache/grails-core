@@ -276,18 +276,23 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
         boolean changedWithoutNames = changed.isEmpty() && target instanceof DirtyCheckable &&
                 ((DirtyCheckable) target).hasChanged()
         hibernateTemplate.execute { Session session ->
-            // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
-            // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
-            // type it has and whatever changes it tracks.
-            boolean transientBefore = ForeignKeys.isTransient(target.getClass().name, target, Boolean.FALSE, (SessionImplementor) session)
-            // another instance with the id of one the session already manages, whose insert may still be pending:
-            // merge copies the newer values onto the managed one, and those values are written like the changes of
-            // a detached instance, not dropped as the state of a new insert
             SessionImplementor implementor = (SessionImplementor) session
             EntityPersister persister = implementor.getEntityPersister(target.getClass().name, target)
             Serializable targetId = persister.getIdentifier(target, implementor)
-            boolean alreadyManaged = !transientBefore && targetId != null &&
-                    implementor.persistenceContext.getEntity(implementor.generateEntityKey(targetId, persister)) != null
+            // another instance with the id of one the session already manages, whose insert may still be pending: merge
+            // copies the newer values onto the managed one, and those values are written like the changes of a detached
+            // instance, not dropped as the state of a new insert
+            Object managedTwin = targetId == null ? null : implementor.persistenceContext.getEntity(implementor.generateEntityKey(targetId, persister))
+            boolean alreadyManaged = managedTwin != null
+            if (alreadyManaged && !managedTwin.is(target) && persister.isVersioned() && persister.getVersion(target) == null) {
+                // an instance that has not seen the insert has no version, and Hibernate would take it for a new one and make a
+                // second copy with the same id: with the version of the managed one it is a detached instance of that row
+                persister.setPropertyValue(target, persister.getVersionProperty(), persister.getVersion(managedTwin))
+            }
+            // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
+            // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
+            // type it has and whatever changes it tracks.
+            boolean transientBefore = !alreadyManaged && ForeignKeys.isTransient(target.getClass().name, target, Boolean.FALSE, implementor)
             Object merged = session.merge(target)
             // an interceptor that says the instance is not transient sends merge down the detached path, which finds
             // no row and inserts one: the entry of the merged instance says that it does not exist in the database yet
