@@ -94,7 +94,7 @@ public class CompositeUserTypeBinder {
                 new ColumnBinder(metadataBuildingContext, namingStrategy, jdbcEnvironment.getDialect()),
                 new CreateKeyForProps(new ColumnNameForPropertyAndPathFetcher(
                         namingStrategy, new DefaultColumnNameFetcher(namingStrategy), new BackticksRemover(),
-                        metadataBuildingContext)),
+                        metadataBuildingContext), metadataBuildingContext.getMetadataCollector()),
                 new CompositeUserTypeColumns(namingStrategy, new BackticksRemover(), metadataBuildingContext));
     }
 
