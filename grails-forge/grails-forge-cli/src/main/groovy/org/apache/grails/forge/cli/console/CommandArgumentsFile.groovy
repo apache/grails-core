@@ -22,41 +22,50 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.time.Instant
 import java.util.concurrent.TimeUnit
-import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 
 /**
  * The arguments of an application command, as the file the Gradle task {@code runCommand} reads with
- * {@code --args-file}: a JSON array of strings, the name of the command first. Nothing of the
- * arguments is then on a command line, where a batch file of Windows would not get all of them, where
- * its length is limited and where other users of the computer read it.
+ * {@code --args-file}: a JSON array of strings in UTF-8, the name of the command first. Nothing of
+ * the arguments is then on a command line, where a batch file of Windows would not get all of them,
+ * where its length is limited and where other users of the computer read it.
  *
  * <p>The file is in {@code .grails/run} of the project, read and written by its owner only, and is
- * deleted when it is closed. Its name is the first of a few that is free, so it is the same from one
- * run to the next unless two commands run at once: the path is an option of the task, and Gradle
- * keeps what it configured for a command line it has seen.</p>
+ * deleted when it is closed, and when the CLI is ended while Gradle runs. Its name is the first of a
+ * few that is free, so it is the same from one run to the next unless two commands run at once: the
+ * path is an option of the task, and Gradle keeps what it configured for a command line it has seen.
+ * Beside it is a file that names the process that wrote it. A file whose process is no longer
+ * there, as after a CLI that was killed, is deleted by the next command that writes one.</p>
  *
  * @since 9.0
  */
 @CompileStatic
 final class CommandArgumentsFile implements Closeable {
 
-    /** What the task reads at most, in bytes of UTF-8. */
+    /** What the task reads at most, in bytes of the file. */
     public static final int MAX_BYTES = 1024 * 1024
 
     /** How many arguments the task reads at most. */
     public static final int MAX_ARGUMENTS = 4096
 
     private static final int NAMES = 16
-    private static final long LEFT_BEHIND_MILLIS = TimeUnit.DAYS.toMillis(1)
+    private static final int MAX_OWNER = 64
+    // how long a file can be without the name of its process: it is written right after the file is created
+    private static final long UNNAMED_MILLIS = TimeUnit.MINUTES.toMillis(1)
+    private static final char[] HEX = '0123456789abcdef'.toCharArray()
 
     private final Path file
+    private final Path owner
     private final String name
+    private final Thread whenEnded
 
-    private CommandArgumentsFile(Path file, String name) {
+    private CommandArgumentsFile(Path file, Path owner, String name) {
         this.file = file
+        this.owner = owner
         this.name = name
+        this.whenEnded = new Thread({ delete() } as Runnable, 'grails-command-arguments')
     }
 
     /**
@@ -79,7 +88,7 @@ final class CommandArgumentsFile implements Closeable {
             }
         }
         if (json(arguments).length > MAX_BYTES) {
-            return "the arguments are more than ${MAX_BYTES} bytes, and the task that runs a command reads no more"
+            return "the arguments are more than ${MAX_BYTES} bytes in UTF-8, and the task that runs a command reads no more"
         }
         return null
     }
@@ -94,24 +103,33 @@ final class CommandArgumentsFile implements Closeable {
      */
     static CommandArgumentsFile write(ConsoleProject project, List<String> arguments) throws IOException {
         Path run = RunDirectory.of(project)
+        sweep(run)
         for (int i = 0; i < NAMES; i++) {
-            String name = "command-args-${i}.json".toString()
+            String name = name(i)
             Path created = RunDirectory.createNew(run, name)
-            if (created == null && leftBehind(run.resolve(name))) {
-                created = RunDirectory.create(run, name)
+            if (created == null) {
+                continue
             }
-            if (created != null) {
-                try {
-                    Files.write(created, json(arguments))
-                } catch (IOException e) {
-                    Files.deleteIfExists(created)
-                    throw new IOException("${RunDirectory.LOCATION}/${name} cannot be written: ${GradleRunner.line(e.getMessage())}")
-                }
-                return new CommandArgumentsFile(created, name)
+            CommandArgumentsFile written = new CommandArgumentsFile(created, run.resolve(ownerName(i)), name)
+            try {
+                Runtime.getRuntime().addShutdownHook(written.whenEnded)
+            } catch (IllegalStateException ignored) {
+                written.delete()
+                throw new IOException("${RunDirectory.LOCATION}/${name} was not written: the command is being ended")
             }
+            try {
+                ProcessHandle self = ProcessHandle.current()
+                long began = self.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
+                Files.write(RunDirectory.create(run, ownerName(i)), "${self.pid()} ${began}\n".toString().getBytes(StandardCharsets.US_ASCII))
+                Files.write(created, json(arguments))
+            } catch (IOException e) {
+                written.close()
+                throw new IOException("${RunDirectory.LOCATION}/${name} cannot be written: ${GradleRunner.line(e.getMessage())}")
+            }
+            return written
         }
         throw new IOException("${RunDirectory.LOCATION} has ${NAMES} files of arguments already, one for each command that runs: " +
-                'delete the files command-args-*.json there when no command runs')
+                'delete the files command-args-* there when no command runs')
     }
 
     /**
@@ -123,26 +141,99 @@ final class CommandArgumentsFile implements Closeable {
 
     @Override
     void close() {
+        delete()
+        try {
+            Runtime.getRuntime().removeShutdownHook(whenEnded)
+        } catch (IllegalStateException ignored) {
+            // the JVM is shutting down, and the hook runs
+        }
+    }
+
+    private void delete() {
         try {
             Files.deleteIfExists(file)
+            Files.deleteIfExists(owner)
         } catch (IOException ignored) {
-            // it is replaced by a later command when it is a day old
+            // the next command that writes one deletes it, since its process is gone then
         }
     }
 
-    private static byte[] json(List<String> arguments) {
-        // every character that is not ASCII is written as an escape, so the bytes are the same in every encoding
-        return JsonOutput.toJson(arguments).getBytes(StandardCharsets.US_ASCII)
+    // Deletes the files of commands that are no longer there: of a CLI that was killed, which deletes nothing.
+    private static void sweep(Path run) {
+        for (int i = 0; i < NAMES; i++) {
+            Path file = run.resolve(name(i))
+            Path owner = run.resolve(ownerName(i))
+            try {
+                boolean there = Files.exists(file, LinkOption.NOFOLLOW_LINKS)
+                if (!there && !Files.exists(owner, LinkOption.NOFOLLOW_LINKS)) {
+                    continue
+                }
+                if (Files.isDirectory(file, LinkOption.NOFOLLOW_LINKS) || Files.isDirectory(owner, LinkOption.NOFOLLOW_LINKS) || writerIsThere(file, owner)) {
+                    continue
+                }
+                Files.deleteIfExists(file)
+                Files.deleteIfExists(owner)
+            } catch (IOException ignored) {
+                // the name stays taken
+            }
+        }
     }
 
-    // a file of a command that was ended before it could delete it
-    private static boolean leftBehind(Path file) {
-        try {
-            return Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) &&
-                    Files.getLastModifiedTime(file, LinkOption.NOFOLLOW_LINKS).toMillis() < System.currentTimeMillis() - LEFT_BEHIND_MILLIS
-        } catch (IOException ignored) {
+    // whether the process that wrote a file of arguments still runs: the one of that number that began at that instant
+    private static boolean writerIsThere(Path file, Path owner) throws IOException {
+        String named = null
+        if (Files.isRegularFile(owner, LinkOption.NOFOLLOW_LINKS) && Files.size(owner) <= MAX_OWNER) {
+            named = new String(Files.readAllBytes(owner), StandardCharsets.US_ASCII).trim()
+        }
+        if (named == null || !(named ==~ /[0-9]{1,10} [0-9]{1,18}/)) {
+            // being written just now, or of no process that can be asked for
+            Path newest = Files.exists(file, LinkOption.NOFOLLOW_LINKS) ? file : owner
+            return Files.getLastModifiedTime(newest, LinkOption.NOFOLLOW_LINKS).toMillis() > System.currentTimeMillis() - UNNAMED_MILLIS
+        }
+        String[] parts = named.split(' ')
+        long pid = Long.parseLong(parts[0])
+        long began = Long.parseLong(parts[1])
+        Optional<ProcessHandle> process = pid > 0L && pid <= Integer.MAX_VALUE ? ProcessHandle.of(pid) : Optional.<ProcessHandle>empty()
+        if (!process.isPresent() || !process.get().isAlive()) {
             return false
         }
+        Optional<Instant> instant = process.get().info().startInstant()
+        // where the system does not say when a process began, one of that number is taken for the writer
+        return !instant.isPresent() || began == 0L || instant.get().toEpochMilli() == began
+    }
+
+    private static String name(int index) {
+        return "command-args-${index}.json".toString()
+    }
+
+    private static String ownerName(int index) {
+        return "command-args-${index}.pid".toString()
+    }
+
+    // What the task reads strictly: a quote, a backslash and a control character as escapes, and every
+    // other character as it is, so that the size of the file is the size of the arguments in UTF-8.
+    private static byte[] json(List<String> arguments) {
+        StringBuilder json = new StringBuilder('[')
+        for (int i = 0; i < arguments.size(); i++) {
+            if (i > 0) {
+                json.append(',')
+            }
+            json.append('"')
+            String argument = arguments.get(i)
+            for (int at = 0; at < argument.length(); at++) {
+                char each = argument.charAt(at)
+                if (each == ('"' as char) || each == ('\\' as char)) {
+                    json.append('\\').append(each)
+                } else if (each < (' ' as char)) {
+                    int code = (int) each
+                    json.append('\\u00').append(HEX[(code >> 4) & 0xf]).append(HEX[code & 0xf])
+                } else {
+                    json.append(each)
+                }
+            }
+            json.append('"')
+        }
+        return json.append(']').toString().getBytes(StandardCharsets.UTF_8)
     }
 
     private static boolean halfOfAPair(String text) {

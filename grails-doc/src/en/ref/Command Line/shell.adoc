@@ -67,4 +67,4 @@ groovy:000>
 === Grails Forge CLI
 
 
-In the Grails Forge CLI, `shell` (or `sh`) runs the Gradle task `shell` of the project for the development environment, or for the one `-Dgrails.env=NAME` names, with the terminal the command was given in: what is typed goes to the shell until it is left. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.
+In the Grails Forge CLI, `shell` runs the Gradle task `shell` of the project for the development environment, or for the one `-Dgrails.env=NAME` names, with the terminal the command was given in: what is typed goes to the shell until it is left. What follows `--` is given to Gradle as it is. See the user guide section on link:{guidePath}commandLine.html#gradleBuild[Gradle] for the details.

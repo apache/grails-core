@@ -31,11 +31,13 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'stop-app', aliases = ['stop'],
+@CommandLine.Command(name = 'stop-app',
         description = [
                 'Stops the Grails application that run-app started for this project.',
-                'Ends the Gradle that run-app started and every process it started in turn, the application among them, and nothing else:',
-                'a process is ended only when it is the one run-app recorded in .grails/run.'
+                'Ends the Gradle that run-app started, and with it every process below it. The application ends with them:',
+                'it is one of them, or it is ended by the Gradle daemon that runs the build, when the Gradle it worked for is gone.',
+                'The command then waits until nothing answers on the port of the application any more.',
+                'Nothing else is ended: a process is ended only when it is the one run-app recorded in .grails/run.'
         ])
 @CompileStatic
 class StopAppCommand extends InProjectCommand {
@@ -84,7 +86,7 @@ class StopAppCommand extends InProjectCommand {
             try {
                 Path directory = RunDirectory.existing(project)
                 if (directory != null) {
-                    RunDirectory.create(directory, RunningApplication.STOPPING)
+                    running.askToStop(directory)
                 }
             } catch (IOException ignored) {
                 // then that run-app says that Gradle did not succeed
@@ -95,7 +97,9 @@ class StopAppCommand extends InProjectCommand {
             return 1
         }
         running.forget()
-        // a Gradle daemon that was there before run-app ends the application when its client is gone
+        // A Gradle daemon that was there before run-app is not below what was ended: it cancels the build
+        // when the Gradle it worked for is gone, and ends the application then. That it did is seen at
+        // the port, and only there.
         if (running.port > 0 && !closed(running.port)) {
             err("Gradle was stopped, but something answers on port ${running.port} still after ${PORT_SECONDS} seconds: the application may take longer to end, or it is another one. " +
                     'Nothing else was stopped')

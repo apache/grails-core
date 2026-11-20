@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
 import groovy.json.JsonOutput
@@ -29,6 +30,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.ForkedCli
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
@@ -47,6 +49,7 @@ import spock.util.concurrent.PollingConditions
 class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
     static final String SERVER = '''\
+        import java.io.FileInputStream;
         import java.io.IOException;
         import java.io.InputStream;
         import java.net.InetAddress;
@@ -56,10 +59,29 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         import java.nio.file.Files;
         import java.nio.file.Path;
         import java.nio.file.attribute.PosixFilePermissions;
+        import java.security.KeyStore;
+        import javax.net.ssl.KeyManagerFactory;
+        import javax.net.ssl.SSLContext;
 
         public class Server {
 
+            static ServerSocket listen(String keyStore, int port) throws Exception {
+                if (keyStore == null) {
+                    return new ServerSocket(port, 50, InetAddress.getLoopbackAddress());
+                }
+                KeyStore keys = KeyStore.getInstance(KeyStore.getDefaultType());
+                try (FileInputStream file = new FileInputStream(keyStore)) {
+                    keys.load(file, "123456".toCharArray());
+                }
+                KeyManagerFactory factory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                factory.init(keys, "123456".toCharArray());
+                SSLContext context = SSLContext.getInstance("TLS");
+                context.init(factory.getKeyManagers(), null, null);
+                return context.getServerSocketFactory().createServerSocket(port, 50, InetAddress.getLoopbackAddress());
+            }
+
             public static void main(String[] args) throws Exception {
+                String keyStore = null;
                 Path home = Path.of("").toAbsolutePath();
                 StringBuilder invoked = new StringBuilder();
                 String port = Files.exists(home.resolve("port.txt")) ? Files.readString(home.resolve("port.txt")).trim() : "0";
@@ -67,6 +89,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     invoked.append('<').append(arg).append('>');
                     if (arg.startsWith("-Dgrails.server.port=")) {
                         port = arg.substring(21);
+                    }
+                    if (arg.startsWith("-Dgrails.server.ssl.key-store=")) {
+                        keyStore = arg.substring(30);
                     }
                     if (arg.startsWith("--args-file=")) {
                         Path file = home.resolve(arg.substring(12));
@@ -94,7 +119,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                     Thread.sleep(300000);
                     return;
                 }
-                try (ServerSocket server = new ServerSocket(Integer.parseInt(port), 50, InetAddress.getLoopbackAddress())) {
+                try (ServerSocket server = listen(keyStore, Integer.parseInt(port))) {
                     Files.writeString(home.resolve("server.pid"), ProcessHandle.current().pid() + "\\n");
                     System.out.println("listening on " + port);
                     while (true) {
@@ -113,7 +138,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                                     last = next;
                                 }
                             }
-                            if (asked) {
+                            if (asked && !mode.equals("mute")) {
                                 boolean starting = mode.equals("starting") && !Files.exists(home.resolve("ready"));
                                 String answer = "HTTP/1.0 200 OK\\r\\n" + (starting ? "Grails-Startup-Phase: STARTING\\r\\n" : "") + "\\r\\n";
                                 socket.getOutputStream().write(answer.getBytes(StandardCharsets.ISO_8859_1));
@@ -150,7 +175,17 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
                 marker.text = ProcessHandle.current().pid() + '\\n'
                 while (true) {
                     def socket = server.accept()
-                    socket.outputStream.write('HTTP/1.0 200 OK\\r\\n\\r\\n'.bytes)
+                    socket.soTimeout = 2000
+                    try {
+                        def request = new BufferedReader(new InputStreamReader(socket.inputStream, 'ISO-8859-1'))
+                        def asked = request.readLine()
+                        while (asked != null && request.readLine()) { }
+                        if (asked != null) {
+                            socket.outputStream.write('HTTP/1.0 200 OK\\r\\n\\r\\n'.bytes)
+                            socket.outputStream.flush()
+                        }
+                    } catch (IOException ignored) {
+                    }
                     socket.close()
                 }
             }
@@ -175,6 +210,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ConsoleProject.setOwnedByUser(null)
         ConsoleProject.setSafeDirectories(null)
         ConsoleCommands.setInteractive(false)
+        RunAppCommand.setEnvironmentVariables(null)
         RunAppCommand.stopWhatTheShellStarted()
         // whatever a feature started and did not see end is ended here, and the feature has then failed
         ['server.pid', 'child.pid'].each { String name -> noteStarted(new File(dir, name)) }
@@ -207,7 +243,6 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         where:
         line                                                                                       | invoked
         ['run-app']                                                                                | '<bootRun><--quiet><-Dgrails.env=development>'
-        ['run']                                                                                    | '<bootRun><--quiet><-Dgrails.env=development>'
         ['run-app', '--port', '9090', '--host', '127.0.0.1', '--debug-jvm', '--verbose']           | '<bootRun><--debug-jvm><-Dgrails.env=development><-Dgrails.server.port=9090><-Dgrails.server.address=127.0.0.1>'
         ['run-app', '-port=9091', '-host=::1', '-debug-jvm', '-query-tail']                        | '<bootRun><--debug-jvm><--quiet><-Dgrails.env=development><-Dgrails.server.port=9091><-Dgrails.server.address=::1><-Pgrails.gorm.queryTail.enabled>'
         ['run-app', '-Dgrails.env=test', '-Da=b  "c"', '-Pone=two words', '-Pflag', '--query-tail'] | '<bootRun><--quiet><-Dgrails.env=test><-Da=b  "c"><-Pgrails.gorm.queryTail.enabled><-Pone=two words><-Pflag=>'
@@ -215,7 +250,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         ['console']                                                                                | '<console><--quiet><-Dgrails.env=development>'
         ['console', '--debug-jvm', '-v', '-Dgrails.env=test', '--', '--offline']                   | '<console><--debug-jvm><-Dgrails.env=test><--offline>'
         ['shell']                                                                                  | '<shell><--quiet><-Dgrails.env=development>'
-        ['sh', '-debug-jvm', '-Dother=1', '--stacktrace']                                          | '<shell><--debug-jvm><--quiet><-Dgrails.env=development><-Dother=1><--stacktrace><-Dgrails.full.stacktrace=true>'
+        ['shell', '-debug-jvm', '-Dother=1', '--stacktrace']                                        | '<shell><--debug-jvm><--quiet><-Dgrails.env=development><-Dother=1><--stacktrace><-Dgrails.full.stacktrace=true>'
         ['run-script', 'scripts/one.groovy']                                                       | '<runScript><-Pargs=scripts/one.groovy><-Dgrails.env=development>'
         ['run-script', 'scripts/one.groovy', 'scripts/two words/it\'s "2".groovy', '-Dgrails.env=test', '--', '-q'] | '<runScript><-Pargs=scripts/one.groovy "scripts/two words/it\'s "\'"\'"2"\'"\'".groovy"><-Dgrails.env=test><-q>'
         ['run-command', 'hello-world']                                                             | '<runCommand><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>'
@@ -268,8 +303,9 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'args-file-permissions.txt').text == 'rw-------'
         new File(dir, 'invoked.txt').text == '<runCommand><--args-file=.grails/run/command-args-0.json><-Dgrails.env=development>\n'
 
-        and: 'the file is ASCII, and it is deleted'
-        new File(dir, 'args-file.txt').text.every { String character -> character >= ' ' && character <= '~' }
+        and: 'the file is UTF-8, with what is not ASCII as it is, and it is deleted with the file that names its process'
+        new File(dir, 'args-file.txt').getText('UTF-8').contains('caf\u00e9 \ud83d\ude00')
+        new File(dir, 'args-file.txt').getText('UTF-8').contains('"line\\u000abreak"')
         new File(dir, '.grails/run').list().toList() == ['.gitignore']
         new File(dir, '.grails/run/.gitignore').text == '*\n'
         PosixFilePermissions.toString(Files.getPosixFilePermissions(new File(dir, '.grails/run').toPath())) == 'rwx------'
@@ -341,6 +377,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         errors() == []
         keyStore.isFile()
+        permissions('build/ssl/keystore') == 'rw-------'
+        permissions('build/ssl') == 'rwx------'
         out.toString().contains('| Created a self-signed certificate for localhost in build/ssl/keystore')
         new File(dir, 'invoked.txt').text == "<bootRun><--quiet><-Dgrails.env=development><-Dgrails.server.port=8443><-Dgrails.server.ssl.key-store=${dir.canonicalPath}/build/ssl/keystore>" +
                 '<-Dgrails.server.ssl.key-store-password=123456><-Dgrails.server.ssl.key-password=123456>\n'
@@ -372,7 +410,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         int port = freePort()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '-Dpassword=hunter2')
         long server = pid('server.pid')
         long child = pid('child.pid')
         Map record = record()
@@ -386,7 +424,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         and: 'the record is of the process that was started, and is the user\'s alone'
         record.format == 1 && record.port == port && record.detached == true
-        record.command == ['bootRun', '--quiet', '-Dgrails.env=development', "-Dgrails.server.port=${port}".toString()]
+        record.keySet() == ['format', 'pid', 'started', 'port', 'detached'] as Set
+        !new File(dir, '.grails/run/app.json').text.contains('hunter2')
         ProcessHandle.of(record.pid as long).get().info().startInstant().get().toEpochMilli() == record.started
         permissions('.grails/run') == 'rwx------'
         permissions('.grails/run/app.json') == 'rw-------'
@@ -423,7 +462,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         when: 'there is nothing to stop any more'
         out.reset()
-        int twice = ForgeCli.execute(beanContext, 'stop')
+        int twice = ForgeCli.execute(beanContext, 'stop-app')
 
         then:
         twice == 1
@@ -514,7 +553,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 1
-        errors() == ["| Error The application did not answer on port ${port} within 5 seconds, and was stopped. Give it longer with --ready-timeout".toString()]
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 5 seconds. The build was still running, and was stopped. ".toString() +
+                'If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
         out.toString().contains('  the fixture ran bootRun')
         !alive(server)
         !new File(dir, '.grails/run/app.json').exists()
@@ -606,7 +646,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 1
         errors().size() == 1
-        errors()[0].startsWith('| Error The application is bound to 192.0.2.1 by its configuration or a system property')
+        errors()[0].startsWith('| Error The application is bound to 192.0.2.1 by its configuration, a system property or the environment')
         !new File(dir, 'invoked.txt').exists()
 
         cleanup:
@@ -980,10 +1020,10 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        listed.any { String line -> line =~ /^  run-app, run +Runs the Grails application: the Gradle task bootRun\./ }
-        listed.any { String line -> line =~ /^  stop-app, stop +Stops the Grails application that run-app started for this project\./ }
+        listed.any { String line -> line =~ /^  run-app +Runs the Grails application: the Gradle task bootRun\./ }
+        listed.any { String line -> line =~ /^  stop-app +Stops the Grails application that run-app started for this project\./ }
         listed.any { String line -> line =~ /^  console +Runs the Swing console of the Grails application: the Gradle task console\./ }
-        listed.any { String line -> line =~ /^  shell, sh +Runs the Groovy shell of the Grails application: the Gradle task shell\./ }
+        listed.any { String line -> line =~ /^  shell +Runs the Groovy shell of the Grails application: the Gradle task shell\./ }
         listed.any { String line -> line =~ /^  run-script +Runs Groovy scripts in the Grails application: the Gradle task runScript\.$/ }
         listed.any { String line -> line =~ /^  run-command +Runs a command of the Grails application: the Gradle task runCommand\.$/ }
 
@@ -996,9 +1036,8 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         ['run-app', 'stop-app', 'console', 'shell', 'run-script', 'run-command'].every { String name -> commands[name].project == true && commands[name].origin == 'built-in' }
-        commands['run-app'].aliases == ['run']
-        commands['stop-app'].aliases == ['stop']
-        commands['shell'].aliases == ['sh']
+        ['run-app', 'stop-app', 'shell'].every { String name -> commands[name].aliases == [] }
+        !(commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.any { String name -> name in ['-port', '-host', '-https', '-debug-jvm', '-query-tail'] }
         (commands['run-app'].options as List<Map>).collectMany { Map option -> option.names as List<String> }.containsAll(
                 ['--port', '--host', '--https', '--debug-jvm', '--query-tail', '-P', '-D', '--detach', '--foreground', '--ready-timeout'])
         (commands['run-command'].parameters as List<Map>)*.label == ['NAME', 'ARG']
@@ -1018,23 +1057,429 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exits.values().every { int each -> each == 0 }
-        runApp.contains(' run-app [-hvVx]')
+        runApp.contains(' run-app [-hvVx] [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail]')
+        runApp.contains('[--detach | --foreground] [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]...')
+        !runApp.readLines().take(3).join(' ').contains('-D=') && !runApp.contains('-debug-jvm,') && !runApp.contains('-port,') && !runApp.contains(' -https')
         stopApp.contains(' stop-app [-hvVx]')
 
+        when: 'how the other commands are used'
+        Map<String, String> usage = ['console', 'shell', 'run-script', 'run-command'].collectEntries { String name ->
+            out.reset()
+            ForgeCli.execute(beanContext, name, '--help')
+            [(name): out.toString().readLines()[0]]
+        }
+
+        then:
+        usage['console'].endsWith(' console [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
+        usage['shell'].endsWith(' shell [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]')
+        usage['run-script'].endsWith(' run-script [-hvVx] [-DNAME=VALUE]... FILE... [-- GRADLE-ARGUMENT...]')
+        usage['run-command'].endsWith(' run-command [-hvVx] [-DNAME=VALUE]... NAME [ARG...]')
+
         when: 'the short forms that fit one of these commands and another one'
-        Map<String, String> ambiguous = ['s', 'st', 'co', 'c'].collectEntries { String form ->
+        Map<String, String> ambiguous = ['s', 'co', 'c', 'r', 'st'].collectEntries { String form ->
             out.reset()
             int code = ForgeCli.execute(beanContext, form, '--help')
             [(form): "${code} ${out.toString().readLines()[0]}".toString()]
         }
 
-        then: 'before these commands s and st were stats, and co was compile'
-        ambiguous == [
-                s : '2 s is short for more than one command: stats, stop-app, shell. Type more of the name of the one that is meant',
-                st: '2 st is short for more than one command: stats, stop-app. Type more of the name of the one that is meant',
-                co: '2 co is short for more than one command: compile, console. Type more of the name of the one that is meant',
-                c : '2 c is short for more than one command: compile, clean, console. Type more of the name of the one that is meant'
-        ]
+        then: 'before these commands s was stats and co was compile; r is no command, so it starts nothing, and st is stats still'
+        ambiguous.s == '2 s is short for more than one command: stats, shell. Type more of the name of the one that is meant'
+        ambiguous.co == '2 co is short for more than one command: compile, console. Type more of the name of the one that is meant'
+        ambiguous.c == '2 c is short for more than one command: compile, clean, console. Type more of the name of the one that is meant'
+        ambiguous.r.startsWith('2 ')
+        ambiguous.st.startsWith('0 ') && ambiguous.st.contains(' stats ')
+    }
+
+    void "a run-app that stayed with its application leaves the record and the stop request of another one alone"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+        AtomicInteger exit = new AtomicInteger(-1)
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'run-app', '--port', port as String)) })
+        Process other = new ProcessBuilder('sleep', '300').start()
+        started.add(other.pid())
+        long otherBegan = other.info().startInstant().get().toEpochMilli()
+
+        when:
+        command.start()
+        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+            assert ApplicationPort.isOpen(port) && new File(dir, '.grails/run/app.json').isFile()
+        }
+        long server = pid('server.pid')
+        Map mine = record()
+
+        and: 'before it sees its Gradle end, stop-app has asked another application to stop, and another run-app has recorded its own'
+        String asked = JsonOutput.toJson([pid: other.pid(), started: otherBegan])
+        String theirs = JsonOutput.toJson([format: 1, pid: other.pid(), started: otherBegan, port: 0, detached: true])
+        new File(dir, '.grails/run/app.stopping').text = asked
+        new File(dir, '.grails/run/app.json').text = theirs
+        GradleRunner.stop(ProcessHandle.of(mine.pid as long).get(), 10)
+        command.join(60_000)
+
+        then: 'its own end was not asked for, and what is the other one\'s is as it was'
+        !command.alive
+        exit.get() == 1
+        errors() == ['| Error Gradle did not succeed: it ended with exit code 143']
+        !alive(server)
+        new File(dir, '.grails/run/app.json').text == theirs
+        new File(dir, '.grails/run/app.stopping').text == asked
+
+        cleanup:
+        other?.destroyForcibly()
+        other?.waitFor()
+    }
+
+    void "stop-app and a run-app right after it: the first run-app ends as asked, and the second is recorded"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+        int next = freePort()
+        AtomicInteger first = new AtomicInteger(-1)
+        Thread command = new Thread({ first.set(ForgeCli.execute(beanContext, 'run-app', '--port', port as String)) })
+
+        when:
+        command.start()
+        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+            assert ApplicationPort.isOpen(port) && new File(dir, '.grails/run/app.json').isFile()
+        }
+        long server = pid('server.pid')
+        new File(dir, 'server.pid').delete()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+        int second = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', next as String)
+        command.join(60_000)
+        Map record = record()
+
+        then:
+        stopped == 0
+        second == 0
+        !command.alive
+        first.get() == 0
+        errors() == []
+        !alive(server)
+
+        and: 'the record is the one of the second, which runs'
+        record.port == next && record.detached == true
+        alive(record.pid as long)
+        ApplicationPort.isOpen(next)
+        !new File(dir, '.grails/run/app.stopping').exists()
+
+        cleanup:
+        ForgeCli.execute(beanContext, 'stop-app')
+    }
+
+    @IgnoreIf({ os.windows || !ForkedCli.available() })
+    void "when the CLI is ended while run-app --detach waits, what it started is ended, the record is removed, and it says so"() {
+        given:
+        scriptedProject('silent')
+        File said = new File(dir, 'cli.out')
+
+        when: 'the CLI as a program, ended by a signal, which interrupts no thread'
+        Process program = ForkedCli.builder(dir, [], 'run-app', '--detach', '--port', freePort() as String).redirectErrorStream(true).redirectOutput(said).start()
+        new PollingConditions(timeout: 300, delay: 0.2).eventually {
+            assert new File(dir, 'server.pid').isFile() && new File(dir, 'server.pid').text.endsWith('\n') && new File(dir, '.grails/run/app.json').isFile()
+        }
+        long server = pid('server.pid')
+        Map record = record()
+        program.destroy()
+        boolean ended = program.waitFor(120, TimeUnit.SECONDS)
+
+        then:
+        ended
+        program.exitValue() == 143
+        said.text.readLines().findAll { String line -> line.contains('| Error') } == ['| Error The application was stopped before it answered, because the command was ended']
+        !alive(server) && !alive(record.pid as long)
+        !new File(dir, '.grails/run/app.json').exists()
+
+        cleanup:
+        program?.destroyForcibly()
+    }
+
+    @Unroll
+    void "run-app --detach starts nothing when #what, since the port cannot be determined"() {
+        given:
+        scriptedProject('serve')
+        new File(dir, 'grails-app/conf').mkdirs()
+        if (configuration != null) {
+            new File(dir, 'grails-app/conf/application.yml').text = configuration
+        }
+        RunAppCommand.setEnvironmentVariables({ String name -> variables[name] } as java.util.function.Function<String, String>)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--ready-timeout', '30'] + options) as String[])
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].startsWith('| Error The port and the address the application answers on could not be determined: ')
+        errors()[0].contains(said)
+        errors()[0].endsWith('Nothing was started; give the port with --port, or stay with the application with --foreground')
+        !new File(dir, 'invoked.txt').exists()
+
+        and: 'nothing of the file is on the terminal'
+        !out.toString().contains('\u001b') && !out.toString().contains('RED') && out.toString().readLines().size() == 1
+
+        when: 'the port is given'
+        out.reset()
+        int port = freePort()
+        new File(dir, 'port.txt').text = "${port}\n"
+        exit = ForgeCli.execute(beanContext, (['run-app', '--detach', '--port', port as String, '--host', '127.0.0.1'] + options.findAll { String option -> !option.startsWith('-Dgrails.server.port') }) as String[])
+
+        then:
+        exit == 0
+        record().port == port
+
+        cleanup:
+        ForgeCli.execute(beanContext, 'stop-app')
+
+        where:
+        what                                             | configuration                                                    | options                        | variables            | said
+        'the configuration has a placeholder'            | 'server:\n  port: ${PORT:18194}\n'                               | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number with a fraction' | 'server:\n  port: 18196.0\n'                                     | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number of another base' | 'server:\n  port: 0o17\n'                                        | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a number that starts with a zero' | 'server:\n  port: "018195"\n'                            | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has a port that is a list'    | 'server:\n  port: [1, 2]\n'                                      | []                             | [:]                  | 'server.port of grails-app/conf/application.yml is not plainly a port'
+        'the configuration has an address to work out'   | 'server:\n  address: "${HOST}"\n'                                | []                             | [:]                  | 'server.address of grails-app/conf/application.yml is not plainly an address'
+        'the configuration has a key twice'              | '"k\\e[31mRED\\nFAKE | Error @|red x|@": 1\n"k\\e[31mRED\\nFAKE | Error @|red x|@": 2\n' | [] | [:]          | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
+        'the configuration is nested without end'        | 'x: ' + '[' * 5000 + ']' * 5000 + '\nserver:\n  port: 18199\n'   | []                             | [:]                  | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
+        'the configuration is not YAML'                  | 'server: [\u0000'                                                | []                             | [:]                  | 'grails-app/conf/application.yml could not be read as the YAML the command reads'
+        'the system property is no port'                 | null                                                             | ['-Dgrails.server.port=abc']   | [:]                  | '-Dgrails.server.port is given, and its value is not a port'
+        'the environment names no port'                  | 'server:\n  port: 18200\n'                                       | []                             | [SERVER_PORT: 'abc'] | 'the environment variable SERVER_PORT is set, and its value is not a port'
+    }
+
+    void "run-app takes -Dserver.port for what it is, a property the application is not given"() {
+        given:
+        scriptedProject('record')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '-Dserver.port=18082')
+
+        then:
+        exit == 2
+        out.toString().contains('-Dserver.port is a system property of the build, which the Grails Gradle plugin does not give to the application')
+        out.toString().contains('give --port PORT or -Dgrails.server.port=PORT')
+        !new File(dir, 'invoked.txt').exists()
+
+        when: 'the command stays with the application, and has no port to wait on'
+        out.reset()
+        new File(dir, 'grails-app/conf').mkdirs()
+        new File(dir, 'grails-app/conf/application.yml').text = 'server:\n  port: ${PORT:18194}\n'
+        exit = ForgeCli.execute(beanContext, 'run-app', '-Dserver.port=18082')
+
+        then:
+        exit == 0
+        errors() == []
+        new File(dir, 'invoked.txt').text == '<bootRun><--quiet><-Dgrails.env=development><-Dserver.port=18082>\n'
+    }
+
+    void "a port that takes connections and answers nothing is not an application that answers"() {
+        given:
+        scriptedProject('mute')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String, '--ready-timeout', '5')
+        long server = pid('server.pid')
+
+        then:
+        exit == 1
+        errors() == ["| Error The application did not answer on port ${port} of this computer within 5 seconds: the port takes connections, and no answer to an HTTP request came from it. ".toString() +
+                'The build was still running, and was stopped. If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout']
+        !alive(server)
+        !new File(dir, '.grails/run/app.json').exists()
+    }
+
+    void "run-app --detach --https waits for an answer over TLS, with the certificate it created"() {
+        given:
+        scriptedProject('serve')
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--https', '--port', port as String)
+
+        then:
+        exit == 0
+        errors() == []
+        out.toString().contains("| Application answers on port ${port}: https://localhost:${port}.")
+        ApplicationPort.isReady(port)
+
+        cleanup:
+        ForgeCli.execute(beanContext, 'stop-app')
+    }
+
+    void "stop-app waits until an application that is not below Gradle has ended, as with a daemon that was there before"() {
+        given:
+        daemonProject()
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)
+        long server = pid('server.pid')
+        Map record = record()
+
+        then: 'the application is no process below the one that was recorded'
+        exit == 0
+        alive(server)
+        !ProcessHandle.of(record.pid as long).get().descendants().anyMatch { ProcessHandle each -> each.pid() == server }
+
+        when:
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then: 'and has ended when stop-app says so'
+        stopped == 0
+        errors() == []
+        !ApplicationPort.isOpen(port)
+        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+            assert !alive(server)
+        }
+    }
+
+    void "stop-app says so when the application has not ended with Gradle"() {
+        given:
+        daemonProject()
+        new File(dir, 'keep').text = ''
+        int port = freePort()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-app', '--detach', '--port', port as String)
+        long server = pid('server.pid')
+        Map record = record()
+        out.reset()
+        int stopped = ForgeCli.execute(beanContext, 'stop-app')
+
+        then:
+        exit == 0
+        stopped == 1
+        errors() == ["| Error Gradle was stopped, but something answers on port ${port} still after 30 seconds: the application may take longer to end, or it is another one. Nothing else was stopped".toString()]
+        !alive(record.pid as long)
+        alive(server)
+
+        cleanup:
+        ProcessHandle.of(server).ifPresent { ProcessHandle handle -> handle.destroyForcibly() }
+        new PollingConditions(timeout: 30, delay: 0.1).eventually {
+            assert !alive(server)
+        }
+    }
+
+    @Unroll
+    void "a process the record names by number and instant is #taken for the Gradle of the project when its command line has #what"() {
+        given:
+        scriptedProject('serve')
+        File sibling = new File(dir.canonicalPath + '-other')
+        sibling.mkdirs()
+        new File(sibling, 'gradlew').text = ''
+        new File(dir, 'gradle/wrapper').mkdirs()
+        new File(dir, 'gradle/wrapper/gradle-wrapper.jar').text = ''
+        new File(dir, 'src').mkdirs()
+        // a shell that waits for a line that does not come, and so stays the process with these words
+        List<String> line = ['sh', '-c', 'read line', 'decoy'] + words.collect { String word -> word.replace('DIR', dir.canonicalPath) }
+        Process other = new ProcessBuilder(line).start()
+        started.add(other.pid())
+        writeRecord(pid: other.pid(), started: other.info().startInstant().get().toEpochMilli())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'stop-app')
+
+        then:
+        exit == (stopped ? 0 : 1)
+        other.alive == !stopped
+        new File(dir, '.grails/run/app.json').exists() == !stopped
+        stopped || (errors().size() == 1 && errors()[0].contains('its command line is not that of the Gradle wrapper of this project running bootRun'))
+
+        cleanup:
+        other?.destroyForcibly()
+        other?.waitFor()
+        sibling?.deleteDir()
+
+        where:
+        what                                                          | words                                                                                         | stopped
+        'the task and a path in the project'                          | ['bootRun', 'DIR/src']                                                                        | false
+        'the wrapper of a directory whose name starts like this one'  | ['DIR-other/gradlew', 'bootRun']                                                              | false
+        'the wrapper after the task'                                  | ['bootRun', 'DIR/gradlew']                                                                    | false
+        'the wrapper and another task'                                | ['DIR/gradlew', 'xbootRun']                                                                   | false
+        'the wrapper jar without the option of Java before it'        | ['DIR/gradle/wrapper/gradle-wrapper.jar', 'bootRun']                                          | false
+        'the wrapper jar as a class path and another main class'      | ['-classpath', 'DIR/gradle/wrapper/gradle-wrapper.jar', 'Other', 'bootRun']                   | false
+        'the wrapper and the task'                                    | ['DIR/gradlew', '--quiet', 'bootRun']                                                         | true
+        'the wrapper jar as the jar of Java, and the task'            | ['-Xmx64m', '-jar', 'DIR/gradle/wrapper/gradle-wrapper.jar', 'bootRun']                       | true
+        'the wrapper jar as a class path, its main class and the task' | ['-classpath', 'DIR/gradle/wrapper/gradle-wrapper.jar', 'org.gradle.wrapper.GradleWrapperMain', 'bootRun'] | true
+        taken = stopped ? 'taken' : 'not taken'
+    }
+
+    void "a .grails/run that others can write to is not used"() {
+        given:
+        scriptedProject('record')
+        Process other = new ProcessBuilder('sleep', '300').start()
+        started.add(other.pid())
+        writeRecord(pid: other.pid(), started: other.info().startInstant().get().toEpochMilli())
+        Files.setPosixFilePermissions(new File(dir, '.grails/run').toPath(), PosixFilePermissions.fromString(mode))
+
+        when:
+        int stop = ForgeCli.execute(beanContext, 'stop-app')
+        int run = ForgeCli.execute(beanContext, 'run-app')
+        int command = ForgeCli.execute(beanContext, 'run-command', 'name')
+
+        then:
+        stop == 1 && run == 1 && command == 1
+        errors().size() == 3
+        errors().every { String line -> line.contains('.grails/run can be written to by others than its owner') }
+        other.alive
+        !new File(dir, 'invoked.txt').exists()
+        new File(dir, '.grails/run').list().toList() == ['app.json']
+
+        cleanup:
+        other?.destroyForcibly()
+        other?.waitFor()
+
+        where:
+        mode << ['rwxrwx---', 'rwx---rwx', 'rwx-w----']
+    }
+
+    void "run-command deletes the file of a command that is no longer there, and keeps the file of one that is"() {
+        given:
+        scriptedProject('record')
+        new File(dir, '.grails/run').mkdirs()
+        Process ended = new ProcessBuilder('true').start()
+        ended.waitFor()
+        ProcessHandle self = ProcessHandle.current()
+        new File(dir, '.grails/run/command-args-0.json').text = '["of a CLI that runs","secret"]'
+        new File(dir, '.grails/run/command-args-0.pid').text = "${self.pid()} ${self.info().startInstant().get().toEpochMilli()}\n"
+        new File(dir, '.grails/run/command-args-1.json').text = '["of a CLI that was killed","secret"]'
+        new File(dir, '.grails/run/command-args-1.pid').text = "${ended.pid()} 5\n"
+        new File(dir, '.grails/run/command-args-2.json').text = '["of a number another process has now","secret"]'
+        new File(dir, '.grails/run/command-args-2.pid').text = "${self.pid()} 5\n"
+        new File(dir, '.grails/run/command-args-3.pid').text = 'not a process\n'
+        new File(dir, '.grails/run/command-args-3.pid').setLastModified(System.currentTimeMillis() - 5 * 60 * 1000L)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'run-command', 'my-command')
+
+        then: 'the first name that is free again is used'
+        exit == 0
+        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-1.json>')
+        new File(dir, '.grails/run').list().toList().sort() == ['.gitignore', 'command-args-0.json', 'command-args-0.pid']
+        new File(dir, '.grails/run/command-args-0.json').text == '["of a CLI that runs","secret"]'
+    }
+
+    void "the arguments of run-command are held to their size in UTF-8, which is what the task reads"() {
+        given:
+        scriptedProject('record')
+
+        when: 'six hundred thousand bytes that would be more than a million as escapes'
+        int exit = ForgeCli.execute(beanContext, 'run-command', 'name', '\u4e2d' * 200_000)
+
+        then:
+        exit == 0
+        new File(dir, 'args-file.txt').length() == 600_000 + '["name",""]'.length()
+
+        when:
+        new File(dir, 'invoked.txt').delete()
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'run-command', 'name', '\u4e2d' * 349_524)
+
+        then: 'three bytes each, and the brackets, quotes and name around them: more than 1048576'
+        exit == 2
+        out.toString().contains('The command cannot be given these arguments: the arguments are more than 1048576 bytes in UTF-8')
+        !new File(dir, 'invoked.txt').exists()
     }
 
     void "run-app and stop-app work with the Gradle wrapper of a project, and run-command gives Gradle the file of the arguments"() {
@@ -1077,8 +1522,25 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'Server.java').text = SERVER
         new File(dir, 'mode.txt').text = mode + '\n'
         File wrapper = new File(dir, 'gradlew')
-        wrapper.text = "#!/bin/sh\nexec \"${System.getProperty('java.home')}/bin/java\" \"${dir.canonicalPath}/Server.java\" \"\$@\"\n"
+        wrapper.text = "#!/bin/sh\n\"${System.getProperty('java.home')}/bin/java\" \"${dir.canonicalPath}/Server.java\" \"\$@\"\n"
         wrapper.setExecutable(true, false)
+    }
+
+    // A wrapper whose application is not a process below it, as with a Gradle daemon that was there
+    // before: the application ends when the wrapper is gone, unless the file keep is there.
+    private void daemonProject() {
+        scriptedProject('serve')
+        File wrapper = new File(dir, 'gradlew')
+        wrapper.text = """\
+            #!/bin/sh
+            me=\$\$
+            ( ( "${System.getProperty('java.home')}/bin/java" "${dir.canonicalPath}/Server.java" "\$@" &
+                app=\$!
+                while kill -0 \$me 2>/dev/null; do sleep 0.2; done
+                [ -f "${dir.canonicalPath}/keep" ] || kill \$app ) & )
+            sleep 300 &
+            wait
+            """.stripIndent()
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails

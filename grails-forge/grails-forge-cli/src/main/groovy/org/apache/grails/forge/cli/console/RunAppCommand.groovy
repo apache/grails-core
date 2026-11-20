@@ -21,9 +21,13 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
+import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
+import java.util.function.Function
 import groovy.transform.CompileStatic
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.feature.FeatureSelectionException
@@ -42,7 +46,7 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'run-app', aliases = ['run'],
+@CommandLine.Command(name = 'run-app',
         description = [
                 'Runs the Grails application: the Gradle task bootRun.',
                 'Stays with the application until it ends or the command is cancelled.',
@@ -50,6 +54,11 @@ import picocli.CommandLine
                 'and leaves it running until stop-app.',
                 'The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
+        ],
+        customSynopsis = [
+                '${COMMAND-FULL-NAME} [-hvVx] [--port=PORT] [--host=HOST] [--https] [--debug-jvm] [--query-tail]',
+                '        [--detach | --foreground] [--ready-timeout=SECONDS] [-DNAME=VALUE]... [-PNAME=VALUE]...',
+                '        [-- GRADLE-ARGUMENT...]'
         ],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
@@ -62,6 +71,8 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final int TAIL_LINES = 20
     private static final int KEYTOOL_SECONDS = 60
     private static final int MAX_CONFIGURATION = 1024 * 1024
+    private static final int MAX_NESTING = 32
+    private static final int MAX_ALIASES = 20
     private static final String CONFIGURATION = 'grails-app/conf/application.yml'
     private static final String KEY_STORE = 'build/ssl/keystore'
     private static final String KEY_STORE_PROPERTY = 'grails.server.ssl.key-store'
@@ -69,26 +80,48 @@ class RunAppCommand extends GradleEnvironmentCommand {
     private static final String KEY_STORE_PASSWORD = '123456'
     private static final String PORT_PROPERTY = 'grails.server.port'
     private static final String ADDRESS_PROPERTY = 'grails.server.address'
+    private static final String PORT_VARIABLE = 'SERVER_PORT'
+    private static final String ADDRESS_VARIABLE = 'SERVER_ADDRESS'
+    // a system property of the build that the Grails Gradle plugin does not hand to the application
+    private static final String BUILD_PORT_PROPERTY = 'server.port'
     private static final String LOG = "${RunDirectory.LOCATION}/${RunningApplication.LOG}"
     private static final Map<String, String> ENVIRONMENTS = [dev: 'development', prod: 'production']
+    private static final Function<String, String> ENVIRONMENT = { String name -> System.getenv(name) } as Function<String, String>
 
     private static final List<ProcessHandle> STARTED_IN_SHELL = new CopyOnWriteArrayList<ProcessHandle>()
     private static volatile boolean stopsWithShell
+    private static volatile Function<String, String> environmentVariables = ENVIRONMENT
 
-    @CommandLine.Option(names = ['--port', '-port'], paramLabel = 'PORT', description = 'The port the application answers on. Without it, the server.port of grails-app/conf/application.yml, or 8080.')
+    @CommandLine.Option(names = ['--port'], paramLabel = 'PORT', description = 'The port the application answers on. Without it, the port its configuration names, or 8080.')
     Integer port
 
-    @CommandLine.Option(names = ['--host', '-host'], paramLabel = 'HOST', description = 'The address the application binds to.')
+    @CommandLine.Option(names = ['--host'], paramLabel = 'HOST', description = 'The address the application binds to.')
     String host
 
-    @CommandLine.Option(names = ['--https', '-https'], description = 'Serve HTTPS, on port 8443 unless a port is given or configured, with a self-signed certificate that is created in build/ssl when there is none.')
+    @CommandLine.Option(names = ['--https'], description = 'Serve HTTPS, on port 8443 unless a port is given or configured, with a self-signed certificate that is created in build/ssl when there is none.')
     boolean https
 
-    @CommandLine.Option(names = ['--debug-jvm', '-debug-jvm'], description = 'Start the JVM of the application suspended, waiting for a debugger on port 5005.')
+    @CommandLine.Option(names = ['--debug-jvm'], description = 'Start the JVM of the application suspended, waiting for a debugger on port 5005.')
     boolean debugJvm
 
-    @CommandLine.Option(names = ['--query-tail', '-query-tail'], description = 'Capture every statement GORM runs, for the query-tail command.')
+    @CommandLine.Option(names = ['--query-tail'], description = 'Capture every statement GORM runs, for the query-tail command.')
     boolean queryTail
+
+    // the options as the shell spells them, with one dash: taken, and not shown
+    @CommandLine.Option(names = ['-port'], hidden = true)
+    Integer portOfShell
+
+    @CommandLine.Option(names = ['-host'], hidden = true)
+    String hostOfShell
+
+    @CommandLine.Option(names = ['-https'], hidden = true)
+    boolean httpsOfShell
+
+    @CommandLine.Option(names = ['-debug-jvm'], hidden = true)
+    boolean debugJvmOfShell
+
+    @CommandLine.Option(names = ['-query-tail'], hidden = true)
+    boolean queryTailOfShell
 
     @CommandLine.Option(names = ['-P'], paramLabel = 'NAME=VALUE', mapFallbackValue = '', description = 'A project property for the build; can be given more than once.')
     Map<String, String> projectProperties = new LinkedHashMap<>()
@@ -111,6 +144,16 @@ class RunAppCommand extends GradleEnvironmentCommand {
         List<ProcessHandle> started = new ArrayList<ProcessHandle>(STARTED_IN_SHELL)
         STARTED_IN_SHELL.clear()
         started.findAll { ProcessHandle each -> each.isAlive() }.each { ProcessHandle each -> GradleRunner.stop(each, STOP_SECONDS) }
+    }
+
+    /**
+     * Replaces the environment the command reads the port and the address of the application from,
+     * for a specification, which cannot change the environment it runs in.
+     *
+     * @param variables gives the value of a variable, or {@code null}; {@code null} for the environment of the process
+     */
+    static void setEnvironmentVariables(Function<String, String> variables) {
+        environmentVariables = variables == null ? ENVIRONMENT : variables
     }
 
     @Override
@@ -153,6 +196,11 @@ class RunAppCommand extends GradleEnvironmentCommand {
     protected int run(ConsoleProject project) {
         boolean windows = getOperatingSystem() == OperatingSystem.WINDOWS
         boolean detached = detach || (ConsoleCommands.isInteractive() && !foreground)
+        port = port != null ? port : portOfShell
+        host = host != null ? host : hostOfShell
+        https = https || httpsOfShell
+        debugJvm = debugJvm || debugJvmOfShell
+        queryTail = queryTail || queryTailOfShell
         check(detached)
         RunningApplication running = RunningApplication.find(project, windows)
         if (running.state == RunningApplication.State.RUNNING) {
@@ -172,20 +220,25 @@ class RunAppCommand extends GradleEnvironmentCommand {
             err("The application was not started, because it could not be recorded for stop-app: ${GradleRunner.line(e.getMessage())}")
             return 1
         }
-        // of a stop-app that found nothing to say it to
-        RunningApplication.remove(directory, RunningApplication.STOPPING)
-
-        Map<String, Object> configured = configured(project)
-        int answersOn = port != null ? port : portOf(systemProperties.get(PORT_PROPERTY)) ?: (configured.port as Integer) ?: 0
+        Configured configured = configured(project)
+        int answersOn = configured.port
+        if (detached) {
+            String unknown = configured.portUnknown ?: configured.addressUnknown
+            if (unknown != null) {
+                err("The port and the address the application answers on could not be determined: ${unknown}. " +
+                        'Nothing was started; give the port with --port, or stay with the application with --foreground')
+                return 1
+            }
+        }
         List<String> arguments = new ArrayList<String>(gradleArguments(project))
         if (https) {
-            if (answersOn == 0) {
+            if (answersOn == 0 && configured.portUnknown == null) {
                 answersOn = DEFAULT_HTTPS_PORT
                 arguments.add("-D${PORT_PROPERTY}=${DEFAULT_HTTPS_PORT}".toString())
             }
             arguments.addAll(certificateArguments(project))
         }
-        if (answersOn == 0) {
+        if (answersOn == 0 && configured.portUnknown == null) {
             answersOn = DEFAULT_PORT
         }
         if (showStacktrace()) {
@@ -194,11 +247,8 @@ class RunAppCommand extends GradleEnvironmentCommand {
         }
         arguments.addAll(passedOn)
         try {
-            if (!detached) {
-                return stayWith(project, windows, directory, arguments, answersOn)
-            }
-            String address = host != null ? host : systemProperties.get(ADDRESS_PROPERTY) ?: (configured.address as String)
-            return startAndReturn(project, windows, directory, arguments, answersOn, address)
+            return detached ? startAndReturn(project, windows, directory, arguments, answersOn, configured.address) :
+                    stayWith(project, windows, directory, arguments, answersOn)
         } catch (GradleRunner.RefusedArgumentException e) {
             throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
         }
@@ -222,23 +272,35 @@ class RunAppCommand extends GradleEnvironmentCommand {
                     "The command waits for the application on the loopback address of this computer, where one that is bound to ${FeatureSelectionException.shown(host)} does not answer: " +
                             'give --foreground to stay with the application instead')
         }
+        if (detached && port == null && !systemProperties.containsKey(PORT_PROPERTY) && systemProperties.containsKey(BUILD_PORT_PROPERTY)) {
+            throw new CommandLine.ParameterException(spec.commandLine(),
+                    "-D${BUILD_PORT_PROPERTY} is a system property of the build, which the Grails Gradle plugin does not give to the application, so the command cannot tell " +
+                            "which port the application answers on: give --port PORT or -D${PORT_PROPERTY}=PORT, which the application is given")
+        }
     }
 
     // The command stays with Gradle, which stays with the application. The record lets stop-app, from
-    // another terminal, end them; what Gradle then ends with is the end that was asked for.
+    // another terminal, end them; what Gradle then ends with is the end that was asked for. The record
+    // and what stop-app said are this run's only while they name the process this run started: by the
+    // time Gradle has ended, another run-app can have started and recorded another one.
     private int stayWith(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn) throws GradleRunner.RefusedArgumentException {
         List<String> failures = []
+        long[] recorded = [0L, 0L] as long[]
         GradleRunner runner = new GradleRunner({ String message -> failures.add(message) } as Consumer<String>, windows)
         out('| Running application...')
         int exit = runner.run(project, arguments, { ProcessHandle started ->
             try {
-                RunningApplication.record(directory, started, answersOn, false, arguments)
+                RunningApplication.record(directory, started, answersOn, false)
+                recorded[0] = started.pid()
+                recorded[1] = started.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
             } catch (IOException e) {
                 warning("${GradleRunner.line(e.getMessage())}. The application runs, and stop-app will not find it: end this command to stop it")
             }
         } as Consumer<ProcessHandle>)
-        boolean asked = RunningApplication.remove(directory, RunningApplication.STOPPING)
-        RunningApplication.remove(directory, RunningApplication.RECORD)
+        boolean asked = recorded[0] != 0L && RunningApplication.wasAskedToStop(directory, recorded[0], recorded[1])
+        if (recorded[0] != 0L) {
+            RunningApplication.forget(directory, recorded[0], recorded[1])
+        }
         if (asked) {
             out('| Application stopped')
             return 0
@@ -249,8 +311,8 @@ class RunAppCommand extends GradleEnvironmentCommand {
 
     private int startAndReturn(ConsoleProject project, boolean windows, Path directory, List<String> arguments, int answersOn, String address) throws GradleRunner.RefusedArgumentException {
         if (!ApplicationPort.isReachedOnLoopback(address)) {
-            err("The application is bound to ${FeatureSelectionException.shown(address)} by its configuration or a system property, and the command waits for it on the loopback address " +
-                    'of this computer, where it would not answer. Nothing was started; give --foreground to stay with the application instead')
+            err("The application is bound to ${FeatureSelectionException.shown(address)} by its configuration, a system property or the environment, and the command waits for it " +
+                    'on the loopback address of this computer, where it would not answer. Nothing was started; give --foreground to stay with the application instead')
             return 1
         }
         if (ApplicationPort.isOpen(answersOn)) {
@@ -266,42 +328,86 @@ class RunAppCommand extends GradleEnvironmentCommand {
             return 1
         }
         GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, windows)
-        ProcessHandle started = runner.start(project, arguments, log)
-        if (started == null) {
-            said(log)
+        // From here to the answer the build is this command's to end: also when the CLI is ended by a
+        // signal, which interrupts no thread. The hook is there before the build is, and is told of it.
+        AtomicBoolean ending = new AtomicBoolean()
+        ProcessHandle[] build = new ProcessHandle[1]
+        long[] recorded = [0L, 0L] as long[]
+        Thread whenEnded = new Thread({
+            ending.set(true)
+            ProcessHandle left = build[0]
+            if (left != null) {
+                err('The application was stopped before it answered, because the command was ended')
+                GradleRunner.stop(left, STOP_SECONDS)
+                RunningApplication.forget(directory, recorded[0], recorded[1])
+            }
+        } as Runnable, 'grails-run-app-wait')
+        try {
+            Runtime.getRuntime().addShutdownHook(whenEnded)
+        } catch (IllegalStateException ignored) {
+            err('The application was not started: the command is being ended')
             return 1
         }
         try {
-            RunningApplication.record(directory, started, answersOn, true, arguments)
-        } catch (IOException e) {
-            GradleRunner.stop(started, STOP_SECONDS)
-            err("The application was stopped again, because it could not be recorded for stop-app: ${GradleRunner.line(e.getMessage())}")
-            return 1
+            ProcessHandle started = runner.start(project, arguments, log)
+            build[0] = started
+            if (started == null) {
+                said(log)
+                return 1
+            }
+            if (ending.get()) {
+                // the hook ran before it was told of the build
+                err('The application was stopped before it answered, because the command was ended')
+                GradleRunner.stop(started, STOP_SECONDS)
+                return 1
+            }
+            try {
+                RunningApplication.record(directory, started, answersOn, true)
+                recorded[0] = started.pid()
+                recorded[1] = started.info().startInstant().map { Instant instant -> instant.toEpochMilli() }.orElse(0L)
+            } catch (IOException e) {
+                GradleRunner.stop(started, STOP_SECONDS)
+                err("The application was stopped again, because it could not be recorded for stop-app: ${GradleRunner.line(e.getMessage())}")
+                return 1
+            }
+            out("| Running application... Its output is in ${LOG}")
+            String ended = waitFor(started, answersOn, ending)
+            if (ending.get()) {
+                // the hook says it, ends the build and removes the record
+                return 1
+            }
+            if (ended != null) {
+                RunningApplication.forget(directory, recorded[0], recorded[1])
+                err(ended)
+                said(log)
+                return 1
+            }
+            boolean withShell = ConsoleCommands.isInteractive() && !detach
+            if (withShell) {
+                stopWithShell(started)
+            }
+            out("| Application answers on port ${answersOn}: ${https ? 'https' : 'http'}://localhost:${answersOn}. " +
+                    "It runs until stop-app${withShell ? ', or until the shell ends' : ''}")
+            return 0
+        } finally {
+            // once it answers, or has been ended, the build is no longer the hook's
+            build[0] = null
+            try {
+                Runtime.getRuntime().removeShutdownHook(whenEnded)
+            } catch (IllegalStateException ignored) {
+                // the JVM is shutting down, and the hook runs
+            }
         }
-        out("| Running application... Its output is in ${LOG}")
-        String ended = waitFor(started, answersOn)
-        if (ended != null) {
-            RunningApplication.remove(directory, RunningApplication.RECORD)
-            err(ended)
-            said(log)
-            return 1
-        }
-        boolean withShell = ConsoleCommands.isInteractive() && !detach
-        if (withShell) {
-            stopWithShell(started)
-        }
-        out("| Application answers on port ${answersOn}: ${https ? 'https' : 'http'}://localhost:${answersOn}. " +
-                "It runs until stop-app${withShell ? ', or until the shell ends' : ''}")
-        return 0
     }
 
     // null when the application answers; otherwise why it does not, after what was started has ended
-    private String waitFor(ProcessHandle started, int answersOn) {
+    private String waitFor(ProcessHandle started, int answersOn, AtomicBoolean ending) {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(readyTimeout)
-        while (true) {
+        while (!ending.get()) {
             if (!started.isAlive()) {
                 return "Gradle ended before the application answered on port ${answersOn}"
             }
+            // an answer counts while what was started is still there: a port that another program took is not the application's
             if (ApplicationPort.isReady(answersOn)) {
                 if (started.isAlive()) {
                     return null
@@ -309,8 +415,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 continue
             }
             if (System.nanoTime() > deadline) {
+                boolean accepts = ApplicationPort.isOpen(answersOn)
                 GradleRunner.stop(started, STOP_SECONDS)
-                return "The application did not answer on port ${answersOn} within ${readyTimeout} seconds, and was stopped. Give it longer with --ready-timeout"
+                return "The application did not answer on port ${answersOn} of this computer within ${readyTimeout} seconds" +
+                        (accepts ? ': the port takes connections, and no answer to an HTTP request came from it' : '') +
+                        '. The build was still running, and was stopped. ' +
+                        'If the application answers on another port, give that with --port; if it needs longer, give it longer with --ready-timeout'
             }
             try {
                 Thread.sleep(POLL_MILLIS)
@@ -320,6 +430,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
                 return 'The application was stopped before it answered, because the command was cancelled'
             }
         }
+        return null
     }
 
     private void said(Path log) {
@@ -360,6 +471,7 @@ class RunAppCommand extends GradleEnvironmentCommand {
             }
             out("| Created a self-signed certificate for localhost in ${KEY_STORE}")
         }
+        ownerOnly(keyStore, 'rw-------')
         return ["-D${KEY_STORE_PROPERTY}=${keyStore}".toString(),
                 "-Dgrails.server.ssl.key-store-password=${KEY_STORE_PASSWORD}".toString(),
                 "-Dgrails.server.ssl.key-password=${KEY_STORE_PASSWORD}".toString()]
@@ -372,7 +484,12 @@ class RunAppCommand extends GradleEnvironmentCommand {
             return 'there is no keytool in the Java installation the command runs with'
         }
         try {
+            boolean created = !Files.exists(keyStore.getParent(), LinkOption.NOFOLLOW_LINKS)
             Files.createDirectories(keyStore.getParent())
+            if (created) {
+                // the private key is in it: before there is a file, the directory is the owner's alone
+                ownerOnly(keyStore.getParent(), 'rwx------')
+            }
             Process process = new ProcessBuilder(keytool.toString(), '-genkeypair', '-alias', 'localhost', '-dname', 'CN=localhost,OU=Test,O=Test,C=US',
                     '-keyalg', 'RSA', '-validity', '365', '-keystore', keyStore.toString(), '-storepass', KEY_STORE_PASSWORD, '-keypass', KEY_STORE_PASSWORD)
                     .redirectErrorStream(true)
@@ -391,33 +508,120 @@ class RunAppCommand extends GradleEnvironmentCommand {
         }
     }
 
-    // The port and the address the configuration of the application names, as far as they are plain
-    // values of application.yml, for all environments or for the one the application is run for. What
-    // the application works out when it starts is not known here: --port says it then.
-    private Map<String, Object> configured(ConsoleProject project) {
+    private static void ownerOnly(Path path, String permissions) {
+        try {
+            if (path.getFileSystem().supportedFileAttributeViews().contains('posix')) {
+                Files.setPosixFilePermissions(path, PosixFilePermissions.fromString(permissions))
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // a file of another owner stays as its owner has it
+        }
+    }
+
+    /** The port and the address the application will answer on, as far as the command can know them. */
+    private static final class Configured {
+
+        /** The port, or 0 when nothing names one. */
+        int port
+
+        /** Why the port is not known although something names one; {@code null} when it is known or nothing names one. */
+        String portUnknown
+
+        /** The address, or {@code null} when nothing names one. */
+        String address
+
+        /** Why the address is not known although something names one. */
+        String addressUnknown
+    }
+
+    // What the application is told, in the order it listens to it: the system properties the build
+    // hands it (--port and --host are given as these, and -Dgrails.server.port is handed on as
+    // server.port), then the environment the build runs it in, then its application.yml, where what is
+    // said for the environment it runs for comes before what is said for all. What names a port and is
+    // not plainly one, as a placeholder that the application resolves when it starts, is not guessed at.
+    private Configured configured(ConsoleProject project) {
+        Configured found = new Configured()
+        Map<String, Object> inFile = null
+        String given = port != null ? port.toString() : systemProperties.get(PORT_PROPERTY)
+        String variable = environmentVariables.apply(PORT_VARIABLE)
+        if (given != null) {
+            found.port = portOf(given) ?: 0
+            found.portUnknown = found.port == 0 ? "-D${PORT_PROPERTY} is given, and its value is not a port, a number from 1 to 65535" : null
+        } else if (variable != null && !variable.isEmpty()) {
+            found.port = portOf(variable) ?: 0
+            found.portUnknown = found.port == 0 ? "the environment variable ${PORT_VARIABLE} is set, and its value is not a port, a number from 1 to 65535" : null
+        } else {
+            inFile = ofFile(project)
+            found.port = (inFile.port ?: 0) as int
+            found.portUnknown = inFile.portUnknown as String ?: inFile.unknown as String
+        }
+        String address = host != null ? host : systemProperties.get(ADDRESS_PROPERTY) ?: environmentVariables.apply(ADDRESS_VARIABLE)
+        if (address != null && !address.isEmpty()) {
+            found.address = address
+        } else {
+            inFile = inFile != null ? inFile : ofFile(project)
+            found.address = inFile.address as String
+            found.addressUnknown = inFile.addressUnknown as String ?: inFile.unknown as String
+        }
+        return found
+    }
+
+    // port, address: what application.yml names plainly; portUnknown, addressUnknown: why one that is named
+    // is not known; unknown: why nothing of the file is. Every reason is the command's own words: nothing
+    // of the file, and nothing a parser says of it, is repeated.
+    private Map<String, Object> ofFile(ConsoleProject project) {
         Map<String, Object> found = [:]
         Path file = project.directory.resolve(CONFIGURATION)
+        if (!Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+            return found
+        }
         try {
-            if (project.isLinked(CONFIGURATION) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > MAX_CONFIGURATION) {
+            if (project.isLinked(CONFIGURATION) || !Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS)) {
+                found.unknown = "${CONFIGURATION} is not a file of the project, or is reached through a link, and is not read".toString()
+                return found
+            }
+            if (Files.size(file) > MAX_CONFIGURATION) {
+                found.unknown = "${CONFIGURATION} is larger than ${MAX_CONFIGURATION} bytes, and is not read".toString()
                 return found
             }
             String environment = ENVIRONMENTS.get(environment()) ?: environment()
             LoaderOptions options = new LoaderOptions()
+            options.setAllowDuplicateKeys(false)
+            options.setMaxAliasesForCollections(MAX_ALIASES)
+            options.setNestingDepthLimit(MAX_NESTING)
+            options.setCodePointLimit(MAX_CONFIGURATION)
+            options.setProcessComments(false)
+            Object[] ports = new Object[2]
+            Object[] addresses = new Object[2]
             for (Object document : new Yaml(new SafeConstructor(options)).loadAll(Files.readString(file))) {
-                for (Object settings : [document, value(document, ['environments', environment])]) {
+                List<Object> levels = [document, value(document, ['environments', environment])]
+                for (int level = 0; level < 2; level++) {
                     // a key can be written in one piece or as a map in a map
-                    Integer configuredPort = portOf(value(settings, ['server.port'])) ?: portOf(value(settings, ['server', 'port']))
-                    if (configuredPort != null) {
-                        found.port = configuredPort
-                    }
-                    Object address = value(settings, ['server.address']) ?: value(settings, ['server', 'address'])
-                    if (address instanceof String && !address.isEmpty()) {
-                        found.address = address
-                    }
+                    Object settings = levels.get(level)
+                    Object namedPort = value(settings, ['server.port']) != null ? value(settings, ['server.port']) : value(settings, ['server', 'port'])
+                    Object namedAddress = value(settings, ['server.address']) != null ? value(settings, ['server.address']) : value(settings, ['server', 'address'])
+                    ports[level] = namedPort != null ? namedPort : ports[level]
+                    addresses[level] = namedAddress != null ? namedAddress : addresses[level]
                 }
             }
-        } catch (IOException | RuntimeException ignored) {
-            // a configuration that cannot be read here is the application's to complain about
+            Object namedPort = ports[1] != null ? ports[1] : ports[0]
+            if (namedPort != null) {
+                Integer plain = namedPort instanceof Integer || namedPort instanceof String ? portOf(namedPort.toString()) : null
+                found.port = plain
+                found.portUnknown = plain != null ? null :
+                        "server.port of ${CONFIGURATION} is not plainly a port, a number from 1 to 65535, but something the application works out when it starts".toString()
+            }
+            Object namedAddress = addresses[1] != null ? addresses[1] : addresses[0]
+            if (namedAddress != null) {
+                boolean plain = namedAddress instanceof String && namedAddress ==~ /[A-Za-z0-9.:\[\]-]{1,255}/
+                found.address = plain ? namedAddress : null
+                found.addressUnknown = plain ? null :
+                        "server.address of ${CONFIGURATION} is not plainly an address, but something the application works out when it starts".toString()
+            }
+        } catch (IOException | RuntimeException | StackOverflowError ignored) {
+            found.clear()
+            found.unknown = "${CONFIGURATION} could not be read as the YAML the command reads: at most ${MAX_CONFIGURATION} bytes, no key twice in one map, ".toString() +
+                    "nothing nested deeper than ${MAX_NESTING}".toString()
         }
         return found
     }
@@ -430,12 +634,11 @@ class RunAppCommand extends GradleEnvironmentCommand {
         return each
     }
 
-    private static Integer portOf(Object value) {
-        String text = value == null ? '' : value.toString()
-        if (!(text ==~ /[0-9]{1,5}/)) {
+    private static Integer portOf(String text) {
+        if (text == null || !(text ==~ /[1-9][0-9]{0,4}/)) {
             return null
         }
         int number = Integer.parseInt(text)
-        return number >= 1 && number <= 65535 ? Integer.valueOf(number) : null
+        return number <= 65535 ? Integer.valueOf(number) : null
     }
 }

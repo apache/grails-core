@@ -19,6 +19,12 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
+import java.security.GeneralSecurityException
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 import groovy.transform.CompileStatic
 
 /**
@@ -34,6 +40,22 @@ final class ApplicationPort {
     private static final int ANSWER_MILLIS = 2000
     private static final int MAX_ANSWER = 8192
     private static final String PHASE = 'grails-startup-phase'
+    // asked of the loopback address only, where the certificate is the one of development
+    private static final X509TrustManager ANY_CERTIFICATE = new X509TrustManager() {
+
+        @Override
+        void checkClientTrusted(X509Certificate[] chain, String type) {
+        }
+
+        @Override
+        void checkServerTrusted(X509Certificate[] chain, String type) {
+        }
+
+        @Override
+        X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0]
+        }
+    }
     private static final List<byte[]> LOOPBACK = [[127, 0, 0, 1] as byte[], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1] as byte[]]
 
     private ApplicationPort() {
@@ -80,40 +102,63 @@ final class ApplicationPort {
     }
 
     /**
-     * Whether the application answers on the port. An application that shows a page while it starts
-     * answers before it is ready and marks each answer with the {@code Grails-Startup-Phase} header:
-     * such an answer is none yet. A port that accepts the connection and does not answer plain HTTP,
-     * as one with TLS does, counts as ready, since that it accepts connections is all there is to go on.
+     * Whether the application answers on the port: it accepts a connection and answers a request
+     * with a response of HTTP, whatever the status. A port that only accepts connections is not an
+     * application that answers. When the answer to plain HTTP is none, the request is made again
+     * over TLS, with any certificate taken, as the self-signed one of development is: the address is
+     * this computer's, and nothing is sent but the request line.
+     *
+     * <p>An application that shows a page while it starts answers before it is ready and marks each
+     * answer with the {@code Grails-Startup-Phase} header: such an answer is none yet.</p>
      *
      * @param port the port
      * @return whether the application is ready
      */
     static boolean isReady(int port) {
         for (byte[] address : LOOPBACK) {
-            Socket socket = new Socket()
-            try {
-                socket.connect(new InetSocketAddress(InetAddress.getByAddress(address), port), CONNECT_MILLIS)
-            } catch (IOException ignored) {
-                close(socket)
+            InetSocketAddress loopback = new InetSocketAddress(InetAddress.getByAddress(address), port)
+            Answer plain = ask(loopback, false)
+            if (plain == null) {
                 continue
             }
-            try {
-                socket.setSoTimeout(ANSWER_MILLIS)
-                socket.getOutputStream().write("HEAD / HTTP/1.0\r\nHost: localhost:${port}\r\n\r\n".toString().getBytes(StandardCharsets.ISO_8859_1))
-                socket.getOutputStream().flush()
-                String phase = phaseOf(socket.getInputStream())
-                return phase == null || phase.equalsIgnoreCase('READY')
-            } catch (IOException ignored) {
-                return true
-            } finally {
-                close(socket)
-            }
+            return plain == Answer.READY || (plain == Answer.NONE && ask(loopback, true) == Answer.READY)
         }
         return false
     }
 
-    // the value of the header in the first lines of an answer, of which only so much is read
-    private static String phaseOf(InputStream answer) throws IOException {
+    private enum Answer {
+        NONE, STARTING, READY
+    }
+
+    // null when nothing accepts a connection
+    private static Answer ask(InetSocketAddress loopback, boolean tls) {
+        Socket socket = new Socket()
+        try {
+            socket.connect(loopback, CONNECT_MILLIS)
+        } catch (IOException ignored) {
+            close(socket)
+            return null
+        }
+        try {
+            socket.setSoTimeout(ANSWER_MILLIS)
+            if (tls) {
+                SSLContext context = SSLContext.getInstance('TLS')
+                context.init(null, [ANY_CERTIFICATE] as TrustManager[], null)
+                socket = context.getSocketFactory().createSocket(socket, 'localhost', loopback.getPort(), true)
+                ((SSLSocket) socket).startHandshake()
+            }
+            socket.getOutputStream().write("HEAD / HTTP/1.0\r\nHost: localhost:${loopback.getPort()}\r\n\r\n".toString().getBytes(StandardCharsets.ISO_8859_1))
+            socket.getOutputStream().flush()
+            return answerOf(socket.getInputStream())
+        } catch (IOException | GeneralSecurityException | RuntimeException ignored) {
+            return Answer.NONE
+        } finally {
+            close(socket)
+        }
+    }
+
+    // what the first lines of an answer say, of which only so much is read
+    private static Answer answerOf(InputStream answer) throws IOException {
         StringBuilder line = new StringBuilder()
         boolean first = true
         for (int read = 0; read < MAX_ANSWER; read++) {
@@ -124,19 +169,19 @@ final class ApplicationPort {
             }
             String header = line.toString().trim()
             line.setLength(0)
-            if (first && !header.startsWith('HTTP/')) {
-                return null
+            if (first && !(header ==~ /HTTP\/[0-9.]{1,5} [0-9]{3}( .*)?/)) {
+                return Answer.NONE
             }
             first = false
             int colon = header.indexOf(':')
             if (colon > 0 && header.substring(0, colon).trim().equalsIgnoreCase(PHASE)) {
-                return header.substring(colon + 1).trim()
+                return header.substring(colon + 1).trim().equalsIgnoreCase('READY') ? Answer.READY : Answer.STARTING
             }
             if (next == -1 || header.isEmpty()) {
-                return null
+                return Answer.READY
             }
         }
-        return null
+        return Answer.READY
     }
 
     private static void close(Socket socket) {

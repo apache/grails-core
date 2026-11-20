@@ -157,11 +157,11 @@ The Grails Forge CLI has the commands of the `grails` shell that run the applica
 |===
 |Command |Runs |Options
 
-|`run-app`, `run`
+|`run-app`
 |`gradlew bootRun --quiet -Dgrails.env=development`
 |`--port PORT`, `--host HOST`, `--https`, `--debug-jvm`, `--query-tail`, `-Dname=value`, `-Pname=value`, `--detach`, `--foreground`, `--ready-timeout SECONDS`; `--verbose` leaves `--quiet` out.
 
-|`stop-app`, `stop`
+|`stop-app`
 |Nothing: it ends what `run-app` started.
 |
 
@@ -169,7 +169,7 @@ The Grails Forge CLI has the commands of the `grails` shell that run the applica
 |`gradlew console --quiet -Dgrails.env=development`
 |`--debug-jvm`, `-Dname=value`
 
-|`shell`, `sh`
+|`shell`
 |`gradlew shell --quiet -Dgrails.env=development`
 |`--debug-jvm`, `-Dname=value`
 
@@ -191,7 +191,7 @@ $ grails -t forge run-command dbm-status --contexts "two words"
 $ grails -t forge run-script src/main/scripts/load.groovy
 ----
 
-`--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`.
+`--port` and `--host` are given to the application as `-Dgrails.server.port` and `-Dgrails.server.address`. `--https` gives it a self-signed certificate for `localhost`, which is created in `build/ssl/keystore` when there is none (with the `keytool` of the Java installation the command runs with, and the password `123456`: it is for development on your own computer; the file can be read by you only), and the port 8443 unless a port is given or configured; give `-Dgrails.server.ssl.key-store=FILE` to use a key store of your own. As for the commands above, what follows `--` is given to Gradle as it is, except for `run-command`. The options `--port`, `--host`, `--https`, `--debug-jvm` and `--query-tail` are also taken with one dash, as the `grails` shell spells them.
 
 ==== The two ways run-app runs
 
@@ -201,20 +201,23 @@ With `--detach`, `run-app` starts the application, waits until it answers on its
 
 When the command does not stay with the application:
 
-* The port it waits on is `--port`, or `-Dgrails.server.port`, or the `server.port` of `grails-app/conf/application.yml` (for all environments or for the one the application is run for), or 8080. A port the application works out in another way is not known to the command: give `--port`.
+* The port it waits on is the one the application is told, in the order the application listens: `--port`, or `-Dgrails.server.port` (which the Grails Gradle plugin gives the application as `server.port`); then the environment variable `SERVER_PORT`; then the `server.port` of `grails-app/conf/application.yml`, where what is said for the environment the application is run for comes before what is said for all; and 8080 when nothing names one. The address is found in the same way (`--host`, `-Dgrails.server.address`, `SERVER_ADDRESS`, `server.address`).
+* The command does not guess. When what names the port is not plainly a port, as a placeholder such as `${PORT:8080}` that the application works out when it starts, a number with a fraction, or an `application.yml` that the command cannot read (it reads at most 1 MiB, refuses a key that is twice in one map, and follows no link), nothing is started: the command says that the port could not be determined, repeats nothing of the file, and ends with exit code 1. Give `--port` then. A port that is set in another place (`application.groovy`, a properties file, a document for a Spring profile) is not seen by the command: give `--port` for it too.
+* `-Dserver.port=PORT` is a system property of the build, and the Grails Gradle plugin does not give it to the application. With `--detach` it is refused with exit code 2 unless `--port` or `-Dgrails.server.port` is given as well.
 * It asks the loopback address of your computer only (`127.0.0.1` and `::1`), and looks up no name. An application that is bound to another address would not answer there, so `--detach` is refused with such a `--host` or configured `server.address`; use `--foreground`.
-* Nothing is started when something answers on the port already, since the command could not tell the application from it.
+* Nothing is started when something takes connections on the port already, since the command could not tell the application from it.
+* The application answers when it answers an HTTP request with an HTTP response, whatever its status. A port that only takes connections is not an answer. When plain HTTP gets none, the request is made over TLS, with any certificate taken, since the address is your own computer's. An answer counts only while the Gradle the command started is still running.
 * An application that shows a page while it starts (the `Grails-Startup-Phase` header) does not count as answering until it is ready.
-* The application is given 300 seconds to answer, or `--ready-timeout SECONDS`. When it has not answered by then, when the build ends first, or when the command is cancelled while it waits, everything that was started is ended, the command shows the last lines of `.grails/run/app.log` and ends with exit code 1.
+* The application is given 300 seconds to answer, or `--ready-timeout SECONDS`. When it has not answered by then, when the build ends first, or when the command is cancelled while it waits, everything that was started is ended, the record is removed, and the command says which of these it was, shows the last lines of `.grails/run/app.log` and ends with exit code 1. When the time is over the message names the port that was asked: an application that answers on another port was stopped for that reason, and `--port` names the right one. When `grails` itself is ended while it waits, by Ctrl-C or by a signal, it ends what it started and removes the record in the same way before it ends, says so in one line, and its exit code is the one of the signal (130 for Ctrl-C).
 * On Linux and macOS the build runs in a process group of its own and ignores the hang-up of the terminal, so Ctrl-C in the terminal does not reach it.
 
 ==== What stop-app stops
 
-`run-app`, in either way, records the process it started in `.grails/run/app.json` of the project: its number, the instant it began, the port and the arguments Gradle was given. `stop-app` ends that process and every process it started in turn, the application among them, first by asking and after 30 seconds by force, waits until nothing answers on the port any more, and removes the record. A Gradle daemon that was running before `run-app` is not ended: it ends the application when the Gradle that `run-app` started is gone. A `run-app` that stays with the application in another terminal then says `Application stopped` and ends with exit code 0.
+`run-app`, in either way, records the process it started in `.grails/run/app.json` of the project: its number, the instant it began and the port. Nothing of the command line is recorded, so no value of a `-D` option is kept on disk. `stop-app` ends that process, which is the Gradle that `run-app` started, and every process below it, first by asking and after 30 seconds by force. The application ends with them: either it is one of those processes, or, when the build runs in a Gradle daemon that was there before `run-app`, the daemon is not below what is ended and is not ended; it cancels the build when the Gradle it worked for is gone, and ends the application then. `stop-app` therefore waits, for up to 30 seconds, until nothing takes connections on the recorded port any more, and only then says `Application stopped` and ends with exit code 0; when the port still answers after that time it says so and ends with exit code 1. A `run-app` that stays with the application in another terminal says `Application stopped` and ends with exit code 0 when it was its application that `stop-app` ended.
 
-`stop-app` stops only that. The record is a file in the project, and a project can come from anywhere, so the record alone is not believed. A process is ended only when it has the recorded number and began at the recorded instant (the number of a process that has ended is given to another one sooner or later), is a process of the user who runs the command, is not the command itself or a process that started it, and, where the system shows the command line of a process, was started from the directory of the Gradle wrapper of this project to run `bootRun`. Otherwise nothing is ended, and the command says why and ends with exit code 1; a record of a process that has ended, or one that cannot be read, is removed. `stop-app` never looks for whatever listens on a port, and it has no `--port` or `--host` option. When there is no record it says that no application is running and ends with exit code 1, as the shell does. A second `run-app` while the recorded application runs starts nothing and ends with exit code 1.
+`stop-app` stops only that. The record is a file in the project, and a project can come from anywhere, so the record alone is not believed. A process is ended only when it has the recorded number and began at the recorded instant (the number of a process that has ended is given to another one sooner or later), is a process of the user who runs the command, is not the command itself or a process that started it, and, where the system shows the command line of a process, is the Gradle wrapper of this project running `bootRun`: the wrapper script itself, or Java with the `gradle/wrapper/gradle-wrapper.jar` of this project, compared as the files they are and not as text that contains their path. Otherwise nothing is ended, and the command says why and ends with exit code 1; a record of a process that has ended, or one that cannot be read, is removed. When the process is the recorded one by number, instant and user but its command line is another, it is not ended and the record is kept: end it yourself if it is the application. `stop-app` never looks for whatever listens on a port, and it has no `--port` or `--host` option. When there is no record it says that no application is running and ends with exit code 1, as the shell does. A second `run-app` while the recorded application runs starts nothing and ends with exit code 1.
 
-The directory `.grails/run`, and the files in it, can be read and written by you only, and the directory has a `.gitignore` that keeps all of it out of version control. It is used only when it and `.grails` are directories and not links.
+The directory `.grails/run`, and the files in it, can be read and written by you only, and the directory has a `.gitignore` that keeps all of it out of version control. It is used only when it and `.grails` are directories and not links, when it is owned by the user who runs the command, and when no one else can write to it: a directory that its group or everyone can write to is refused, and the command says how to take that permission away. In a project that `GRAILS_SAFE_DIRECTORY` names (see above), the directory and the record are used whoever owns them, as the rest of the project is; that others cannot write to the directory is asked there too.
 
 ==== console, shell, run-script and run-command
 
@@ -222,7 +225,7 @@ The directory `.grails/run`, and the files in it, can be read and written by you
 
 `run-script` runs each file with the application started around it, in the order given. A file is named by its path in the project, or by its full path; a name with spaces or quotes reaches the task as the one file it is. A file that is not there is reported before Gradle is started.
 
-`run-command` runs a command of the application (`grails-app/commands`) or of one of its plugins by its name. Everything after the name is given to that command as it is, each argument as the one it was, also an argument that is empty, has spaces, quotes or line breaks, looks like an option of `run-command`, or is `--`: options of `run-command` itself therefore come before the name. The name and the arguments are not on the command line of Gradle. They are written to a file in `.grails/run` that only you can read, which the task reads and which is deleted when the command has ended. An argument with the character U+0000 or with half of a character of two code units, more than 4096 arguments, and arguments of more than 1 MiB are refused with exit code 2.
+`run-command` runs a command of the application (`grails-app/commands`) or of one of its plugins by its name. Everything after the name is given to that command as it is, each argument as the one it was, also an argument that is empty, has spaces, quotes or line breaks, looks like an option of `run-command`, or is `--`: options of `run-command` itself therefore come before the name. The name and the arguments are not on the command line of Gradle. They are written to a file in `.grails/run` that only you can read, which the task reads and which is deleted when the command has ended, also when `grails` is ended while Gradle runs. A file that is left all the same, as after `grails` was killed, is deleted by the next `run-command`, which sees that the process that wrote it is gone. An argument with the character U+0000 or with half of a character of two code units, more than 4096 arguments, and arguments of more than 1 MiB in UTF-8 are refused with exit code 2.
 
 These things differ from the `grails` shell:
 
@@ -232,4 +235,5 @@ These things differ from the `grails` shell:
 * `stop-app` ends the Gradle that `run-app` started with everything below it, and goes by the record in `.grails/run`; the shell ends the process whose number the application wrote to `build/run-app.pid`. An application that was started by the shell or by `gradlew bootRun` is not stopped by the `stop-app` of the Grails Forge CLI, and the other way round.
 * `shell` runs the shell. In the `grails` shell the command only says to run `gradle shell -q`.
 * `run-script` and `run-command` keep each argument as it was. The shell joins the arguments with spaces, the task splits them again, and arguments that start with a dash do not reach the command.
-* `s`, `st` and `co` are no short forms of one command any more: `s` and `st` fit `stats`, `stop-app` and `shell`, and `co` fits `compile` and `console`.
+* `run-app`, `stop-app` and `shell` do not have the other names `run`, `stop` and `sh` of the shell: with `run`, the short form `r` would start the application.
+* `s` and `co` are no short forms of one command any more: `s` fits `stats` and `shell`, and `co` fits `compile` and `console`.

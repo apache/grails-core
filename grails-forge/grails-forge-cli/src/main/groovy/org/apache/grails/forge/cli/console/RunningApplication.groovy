@@ -20,12 +20,11 @@ package org.apache.grails.forge.cli.console
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Instant
-import groovy.json.JsonOutput
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 
 /**
@@ -36,9 +35,12 @@ import groovy.transform.CompileStatic
  * what it says is not believed: a process is the one {@code run-app} started only when it has the
  * recorded number <em>and</em> began at the recorded instant, is a process of the user who runs the
  * command, is not the command itself or a process above it, and, where the system shows the command
- * line of a process, was started from the directory of the Gradle wrapper of this project to run
- * {@code bootRun}. A number alone is never enough: the system gives the number of a process that has
- * ended to another one.</p>
+ * line of a process, is the Gradle wrapper of this project, or the Java program that wrapper becomes,
+ * running {@code bootRun}. A number alone is never enough: the system gives the number of a process
+ * that has ended to another one.</p>
+ *
+ * <p>The record holds the number, the instant and the port, and nothing of the command line the
+ * process was started with: that can have a password in it, and nothing reads it.</p>
  *
  * @since 9.0
  */
@@ -51,14 +53,20 @@ final class RunningApplication {
     /** What the build and the application write when {@code run-app} does not stay with them, in {@code .grails/run}. */
     public static final String LOG = 'app.log'
 
-    /** Says that {@code stop-app} ends the application, to the {@code run-app} that waits for it; in {@code .grails/run}. */
+    /**
+     * Says that {@code stop-app} ends the application, to the {@code run-app} that stays with it; in
+     * {@code .grails/run}. It names the process it is for, and is for no other.
+     */
     public static final String STOPPING = 'app.stopping'
 
     private static final int FORMAT = 1
     private static final int MAX_RECORD = 64 * 1024
     private static final int MAX_TAIL = 8 * 1024
-    private static final long MAX_PID = 0xFFFFFFFFL
+    private static final long MAX_PID = Integer.MAX_VALUE
     private static final String TASK = 'bootRun'
+    private static final String WRAPPER_JAR = 'gradle/wrapper/gradle-wrapper.jar'
+    private static final String WRAPPER_MAIN = 'org.gradle.wrapper.GradleWrapperMain'
+    private static final List<String> CLASS_PATH_OPTIONS = ['-classpath', '-cp', '--class-path']
 
     /** What is known of the application of a project. */
     enum State {
@@ -87,6 +95,9 @@ final class RunningApplication {
     /** The recorded process number, where the record has one. */
     final long pid
 
+    /** The recorded instant the process began, in milliseconds, where the record has one. */
+    final long started
+
     /** The port the application was started for, or 0. */
     final int port
 
@@ -95,12 +106,13 @@ final class RunningApplication {
 
     private final Path record
 
-    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, int port, boolean detached) {
+    private RunningApplication(State state, String reason, Path record, ProcessHandle process, long pid, long started, int port, boolean detached) {
         this.state = state
         this.reason = reason
         this.record = record
         this.process = process
         this.pid = pid
+        this.started = started
         this.port = port
         this.detached = detached
     }
@@ -115,43 +127,43 @@ final class RunningApplication {
         try {
             run = RunDirectory.existing(project)
         } catch (IOException e) {
-            return new RunningApplication(State.REFUSED, e.getMessage(), null, null, 0L, 0, false)
+            return new RunningApplication(State.REFUSED, e.getMessage(), null, null, 0L, 0L, 0, false)
         }
         Path record = run?.resolve(RECORD)
         if (record == null || !Files.exists(record, LinkOption.NOFOLLOW_LINKS)) {
-            return new RunningApplication(State.NONE, null, null, null, 0L, 0, false)
+            return new RunningApplication(State.NONE, null, null, null, 0L, 0L, 0, false)
         }
-        Map<String, Object> said
+        Map<String, Long> said
         try {
             said = read(record, project)
         } catch (IOException e) {
-            return new RunningApplication(State.UNREADABLE, e.getMessage(), record, null, 0L, 0, false)
+            return new RunningApplication(State.UNREADABLE, e.getMessage(), record, null, 0L, 0L, 0, false)
         }
-        long pid = (said.pid as Number).longValue()
-        long started = (said.started as Number).longValue()
-        int port = (said.port as Number).intValue()
-        boolean detached = said.detached as boolean
+        long pid = said.pid
+        long started = said.started
+        int port = (int) said.port.longValue()
+        boolean detached = said.detached == 1L
+        Closure<RunningApplication> not = { State state, String why ->
+            new RunningApplication(state, why, record, null, pid, started, port, detached)
+        }
         Optional<ProcessHandle> found = ProcessHandle.of(pid)
         if (!found.isPresent() || !found.get().isAlive()) {
-            return new RunningApplication(State.ENDED, "process ${pid}, which was started for it, has ended", record, null, pid, port, detached)
+            return not(State.ENDED, "process ${pid}, which was started for it, has ended".toString())
         }
         ProcessHandle process = found.get()
-        ProcessHandle.Info info = process.info()
-        Optional<Instant> began = info.startInstant()
-        if (!began.isPresent() || began.get().toEpochMilli() != started) {
-            return new RunningApplication(State.ENDED, "process ${pid} is not the one that was started for it: it did not begin when the record says", record, null, pid, port, detached)
+        if (!began(process, started)) {
+            return not(State.ENDED, "process ${pid} is not the one that was started for it: it did not begin when the record says".toString())
         }
         if (isThisCommand(process)) {
-            return new RunningApplication(State.ENDED, "process ${pid} is this command or one that started it", record, null, pid, port, detached)
+            return not(State.ENDED, "process ${pid} is this command or one that started it".toString())
         }
         if (!ProcessUser.isOfThisUser(process)) {
-            return new RunningApplication(State.ENDED, "process ${pid} is not a process of the user who runs the command", record, null, pid, port, detached)
+            return not(State.ENDED, "process ${pid} is not a process of the user who runs the command".toString())
         }
-        if (!isGradleOf(project, windows, info)) {
-            return new RunningApplication(State.UNCONFIRMED, "process ${pid} began when the record says, but its command line is not that of the Gradle wrapper of this project running ${TASK}",
-                    record, null, pid, port, detached)
+        if (!isGradleOf(project, windows, process.info())) {
+            return not(State.UNCONFIRMED, "process ${pid} began when the record says, but its command line is not that of the Gradle wrapper of this project running ${TASK}".toString())
         }
-        return new RunningApplication(State.RUNNING, null, record, process, pid, port, detached)
+        return new RunningApplication(State.RUNNING, null, record, process, pid, started, port, detached)
     }
 
     /**
@@ -161,25 +173,18 @@ final class RunningApplication {
      * @param process the process
      * @param port the port the application was started for, or 0
      * @param detached whether {@code run-app} does not stay with the application
-     * @param command the arguments Gradle was given
      * @throws IOException with one line, when the record cannot be written
      */
-    static void record(Path run, ProcessHandle process, int port, boolean detached, List<String> command) throws IOException {
+    static void record(Path run, ProcessHandle process, int port, boolean detached) throws IOException {
         Optional<Instant> began = process.info().startInstant()
         if (!began.isPresent()) {
             throw new IOException("${RunDirectory.LOCATION}/${RECORD} cannot be written: the system does not say when process ${process.pid()} began, and without that it cannot be told from another one later")
         }
-        Map<String, Object> said = new LinkedHashMap<String, Object>()
-        said.put('format', FORMAT)
-        said.put('pid', process.pid())
-        said.put('started', began.get().toEpochMilli())
-        said.put('port', port)
-        said.put('detached', detached)
-        said.put('command', command)
+        String said = "{\"format\":${FORMAT},\"pid\":${process.pid()},\"started\":${began.get().toEpochMilli()},\"port\":${port},\"detached\":${detached}}\n"
         // written beside the record and moved, so that whoever reads the record reads all of it
         Path written = RunDirectory.create(run, RECORD + '.new')
         try {
-            Files.write(written, (JsonOutput.toJson(said) + '\n').getBytes(StandardCharsets.US_ASCII))
+            Files.write(written, said.getBytes(StandardCharsets.US_ASCII))
             Path record = run.resolve(RECORD)
             if (Files.isDirectory(record, LinkOption.NOFOLLOW_LINKS)) {
                 throw new IOException('it is a directory')
@@ -192,22 +197,56 @@ final class RunningApplication {
     }
 
     /**
-     * Removes the record, when there is one that is a file or a link.
+     * Removes the record that was found, when it is a file or a link. A record that named a process
+     * is removed only while it still names that one: another {@code run-app} can have written its
+     * own since it was read.
      *
-     * @return whether there is no record now
+     * @return whether the record that was found is not there any more
      */
     boolean forget() {
-        return record == null || remove(record)
+        if (record == null) {
+            return true
+        }
+        if (state != State.UNREADABLE && !names(record, pid, started)) {
+            return !Files.exists(record, LinkOption.NOFOLLOW_LINKS)
+        }
+        return remove(record)
+    }
+
+    /**
+     * Removes the record when it is the one of a process, and no other: the record there is can be
+     * the one of an application that was started since.
+     *
+     * @param run the directory {@code .grails/run} of the project
+     * @param pid the number of the process that was recorded
+     * @param started the instant it began, in milliseconds
+     */
+    static void forget(Path run, long pid, long started) {
+        if (names(run.resolve(RECORD), pid, started)) {
+            remove(run.resolve(RECORD))
+        }
+    }
+
+    /**
+     * Says to the {@code run-app} that stays with this application that its end is asked for.
+     *
+     * @param run the directory {@code .grails/run} of the project
+     * @throws IOException when it cannot be said
+     */
+    void askToStop(Path run) throws IOException {
+        Files.write(RunDirectory.create(run, STOPPING), "{\"pid\":${pid},\"started\":${started}}\n".toString().getBytes(StandardCharsets.US_ASCII))
     }
 
     /**
      * @param run the directory {@code .grails/run} of the project
-     * @param name the name of a file in it
-     * @return whether a file or a link of that name was there and was removed
+     * @param pid the number of a process that {@code run-app} stayed with
+     * @param started the instant it began, in milliseconds
+     * @return whether {@code stop-app} asked for the end of that process, which is then taken as said;
+     * what was said to another process is left for it
      */
-    static boolean remove(Path run, String name) {
-        Path file = run.resolve(name)
-        return Files.exists(file, LinkOption.NOFOLLOW_LINKS) && remove(file)
+    static boolean wasAskedToStop(Path run, long pid, long started) {
+        Path asked = run.resolve(STOPPING)
+        return names(asked, pid, started) && remove(asked)
     }
 
     /**
@@ -246,7 +285,42 @@ final class RunningApplication {
         }
     }
 
-    private static Map<String, Object> read(Path record, ConsoleProject project) throws IOException {
+    // whether a file of the directory names a process by its number and the instant it began
+    private static boolean names(Path file, long pid, long started) {
+        try {
+            if (!Files.isRegularFile(file, LinkOption.NOFOLLOW_LINKS) || Files.size(file) > MAX_RECORD) {
+                return false
+            }
+            Object parsed = BoundedJson.parse(new String(Files.readAllBytes(file), StandardCharsets.UTF_8), 2, 16, 64)
+            if (!(parsed instanceof Map)) {
+                return false
+            }
+            Long named = whole(((Map) parsed).get('pid'))
+            Long began = whole(((Map) parsed).get('started'))
+            return named != null && began != null && named.longValue() == pid && began.longValue() == started
+        } catch (IOException | BoundedJson.Refused ignored) {
+            return false
+        }
+    }
+
+    private static boolean began(ProcessHandle process, long started) {
+        Optional<Instant> began = process.info().startInstant()
+        return began.isPresent() && began.get().toEpochMilli() == started
+    }
+
+    private static Long whole(Object value) {
+        if (!(value instanceof BigDecimal)) {
+            return null
+        }
+        BigDecimal number = (BigDecimal) value
+        if (number.scale() != 0 || number.precision() > 18) {
+            return null
+        }
+        return Long.valueOf(number.longValueExact())
+    }
+
+    // the numbers of a record; whether run-app left the application is 1 or 0
+    private static Map<String, Long> read(Path record, ConsoleProject project) throws IOException {
         if (!Files.isRegularFile(record, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException('it is not a file')
         }
@@ -258,30 +332,28 @@ final class RunningApplication {
         }
         Object parsed
         try {
-            parsed = new JsonSlurper().parse(Files.readAllBytes(record), StandardCharsets.UTF_8.name())
+            parsed = BoundedJson.parse(new String(Files.readAllBytes(record), StandardCharsets.UTF_8), 2, 16, 64)
         } catch (IOException e) {
             throw new IOException("it cannot be read: ${GradleRunner.line(e.getMessage())}")
-        } catch (RuntimeException ignored) {
+        } catch (BoundedJson.Refused ignored) {
             throw new IOException('it is not a record of an application')
         }
         if (!(parsed instanceof Map)) {
             throw new IOException('it is not a record of an application')
         }
-        Map<String, Object> said = (Map<String, Object>) parsed
-        if (said.format != FORMAT) {
+        Map said = (Map) parsed
+        Long format = whole(said.get('format'))
+        if (format == null || format.longValue() != FORMAT) {
             throw new IOException("it is not of format ${FORMAT}, the one this command reads")
         }
-        // a number that is too large for a process is read as a type that is neither
-        boolean whole = [said.pid, said.started, said.port].every { Object value -> value instanceof Integer || value instanceof Long }
-        if (!whole || !(said.detached instanceof Boolean)) {
+        Long pid = whole(said.get('pid'))
+        Long started = whole(said.get('started'))
+        Long port = whole(said.get('port'))
+        if (pid == null || started == null || port == null || !(said.get('detached') instanceof Boolean) ||
+                pid < 2L || pid > MAX_PID || started < 1L || port < 0L || port > 65535L) {
             throw new IOException('it does not name a process, an instant and a port')
         }
-        long pid = (said.pid as Number).longValue()
-        long port = (said.port as Number).longValue()
-        if (pid < 2L || pid > MAX_PID || (said.started as Number).longValue() < 1L || port < 0L || port > 65535L) {
-            throw new IOException('it does not name a process, an instant and a port')
-        }
-        return said
+        return [pid: pid, started: started, port: port, detached: said.get('detached') ? 1L : 0L] as Map<String, Long>
     }
 
     private static boolean isThisCommand(ProcessHandle process) {
@@ -295,27 +367,45 @@ final class RunningApplication {
         return false
     }
 
+    // Whether a command line is that of the Gradle wrapper of the project running bootRun: the wrapper
+    // script itself as an argument, with the task after it, as while a shell runs the script; or the
+    // program the script becomes, Java with the wrapper jar of the project as its class path or its jar
+    // and the task after that. Paths are compared as the files they are, never as text that has another.
     // Where the system does not show the arguments of a process there is nothing to compare, and the
     // number, the instant and the user decide.
     private static boolean isGradleOf(ConsoleProject project, boolean windows, ProcessHandle.Info info) {
-        Optional<String[]> arguments = info.arguments()
-        if (!arguments.isPresent()) {
+        Optional<String[]> shown = info.arguments()
+        if (!shown.isPresent()) {
             return true
         }
         Path wrapper = project.gradleWrapper(windows).file
-        if (wrapper == null || !(TASK in arguments.get().toList())) {
+        if (wrapper == null) {
             return false
         }
-        Set<String> homes = [wrapper.getParent().toString()] as Set<String>
+        List<String> arguments = shown.get().toList()
+        Path jar = wrapper.getParent().resolve(WRAPPER_JAR)
+        for (int i = 0; i < arguments.size(); i++) {
+            List<String> after = arguments.subList(i + 1, arguments.size())
+            if (!(TASK in after)) {
+                return false
+            }
+            if (same(arguments.get(i), wrapper)) {
+                return true
+            }
+            if (i > 0 && same(arguments.get(i), jar) &&
+                    (arguments.get(i - 1) == '-jar' || (arguments.get(i - 1) in CLASS_PATH_OPTIONS && WRAPPER_MAIN in after && after.indexOf(WRAPPER_MAIN) < after.lastIndexOf(TASK)))) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static boolean same(String argument, Path file) {
         try {
-            homes.add(wrapper.getParent().toRealPath().toString())
-        } catch (IOException ignored) {
-            // the path as it was found is the one there is
+            Path named = Path.of(argument)
+            return named.isAbsolute() && Files.exists(named) && Files.isSameFile(named, file)
+        } catch (InvalidPathException | IOException ignored) {
+            return false
         }
-        List<String> line = arguments.get().toList()
-        if (info.command().isPresent()) {
-            line.add(info.command().get())
-        }
-        return line.any { String argument -> homes.any { String home -> argument.contains(home + File.separator) } }
     }
 }

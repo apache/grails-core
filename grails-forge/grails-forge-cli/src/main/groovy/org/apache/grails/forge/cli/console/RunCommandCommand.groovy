@@ -38,6 +38,7 @@ import picocli.CommandLine
                 'Everything after NAME is given to that command as it is, also what looks like an option of this one.',
                 'The environment is development unless -Dgrails.env names another one, before NAME.'
         ],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [-DNAME=VALUE]... NAME [ARG...]'],
         preprocessor = Arguments)
 @CompileStatic
 class RunCommandCommand extends GradleEnvironmentCommand {

@@ -33,12 +33,17 @@ import picocli.CommandLine
                 'Stays with the console until it is closed. The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
 class ConsoleCommand extends GradleEnvironmentCommand {
 
-    @CommandLine.Option(names = ['--debug-jvm', '-debug-jvm'], description = 'Start the JVM of the console suspended, waiting for a debugger on port 5005.')
+    @CommandLine.Option(names = ['--debug-jvm'], description = 'Start the JVM of the console suspended, waiting for a debugger on port 5005.')
     boolean debugJvm
+
+    // the option as the shell spells it, with one dash: taken, and not shown
+    @CommandLine.Option(names = ['-debug-jvm'], hidden = true)
+    boolean debugJvmOfShell
 
     @Override
     protected String defaultEnvironment() {
@@ -54,7 +59,7 @@ class ConsoleCommand extends GradleEnvironmentCommand {
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
         List<String> arguments = ['console']
-        if (debugJvm) {
+        if (debugJvm || debugJvmOfShell) {
             arguments.add('--debug-jvm')
         }
         if (!verbose()) {

@@ -73,6 +73,14 @@ final class RunDirectory {
         if (!ConsoleProject.isOwnedByUser(run, project)) {
             throw new IOException("${LOCATION} is not owned by the user who runs the command")
         }
+        // the command creates it for its owner alone: where others can write, what is in it is not the command's
+        if (run.getFileSystem().supportedFileAttributeViews().contains('posix')) {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(run, LinkOption.NOFOLLOW_LINKS)
+            if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+                throw new IOException("${LOCATION} can be written to by others than its owner. The command creates it for its owner alone: " +
+                        "see what is in it, and delete it or take the permission away (chmod go-w ${LOCATION})")
+            }
+        }
         return run
     }
 

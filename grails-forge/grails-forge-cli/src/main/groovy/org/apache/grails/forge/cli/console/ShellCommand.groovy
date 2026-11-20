@@ -28,18 +28,23 @@ import picocli.CommandLine
  *
  * @since 9.0
  */
-@CommandLine.Command(name = 'shell', aliases = ['sh'],
+@CommandLine.Command(name = 'shell',
         description = [
                 'Runs the Groovy shell of the Grails application: the Gradle task shell.',
                 'What is typed goes to the shell until it is left. The environment is development unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
+        customSynopsis = ['${COMMAND-FULL-NAME} [-hvVx] [--debug-jvm] [-DNAME=VALUE]... [-- GRADLE-ARGUMENT...]'],
         preprocessor = GradleTaskCommand.PassedOn)
 @CompileStatic
 class ShellCommand extends GradleEnvironmentCommand {
 
-    @CommandLine.Option(names = ['--debug-jvm', '-debug-jvm'], description = 'Start the JVM of the shell suspended, waiting for a debugger on port 5005.')
+    @CommandLine.Option(names = ['--debug-jvm'], description = 'Start the JVM of the shell suspended, waiting for a debugger on port 5005.')
     boolean debugJvm
+
+    // the option as the shell spells it, with one dash: taken, and not shown
+    @CommandLine.Option(names = ['-debug-jvm'], hidden = true)
+    boolean debugJvmOfShell
 
     @Override
     protected String defaultEnvironment() {
@@ -55,7 +60,7 @@ class ShellCommand extends GradleEnvironmentCommand {
     @Override
     protected List<String> gradleArguments(ConsoleProject project) {
         List<String> arguments = ['shell']
-        if (debugJvm) {
+        if (debugJvm || debugJvmOfShell) {
             arguments.add('--debug-jvm')
         }
         if (!verbose()) {
