@@ -422,6 +422,7 @@ class CommandLineParserSpec extends Specification {
             cl.commandName == 'greet'
             cl.remainingArgs == ['a b', 'padded', 'quoted', "it's", 'line one\nline two']
             cl.optionValue('name') == 'Alice Smith'
+    }
 
     void "An option value keeps every equals sign after the first, for #arguments"() {
         when:
