@@ -1597,3 +1597,15 @@ Where a script is run with the Grails Forge CLI or with `./gradlew runScriptComm
 * A script that is a link, or that is below a `src`, `src/main` or `src/main/scripts` that is a link, is not run as a script of the project.
 
 A build that has a task of its own named `runScriptCommand` gives it another name: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the scripts are not run by the plugin's task.
+
+==== 29. Two Database Migration Commands Are Application Commands, and Script Commands of Plugins
+
+`dbm-create-changelog` and `dbm-changelog-to-groovy` of the Database Migration plugins (Hibernate 5 and Hibernate 7) were script commands, the only two `dbm-*` commands that were. They are now application commands like the others, with the same names, arguments and options. They run with the application context, as `dbm-update` does: `./gradlew runCommand --arg=dbm-create-changelog --arg=changelog.groovy`, their own Gradle tasks `dbmCreateChangelog` and `dbmChangelogToGroovy`, or by name with the Grails Forge CLI once `grailsCommandCatalog` has listed the commands of the project.
+
+`dbm-changelog-to-groovy` now writes to the file it is given (it wrote to the standard output, because of how Groovy 5 reads a file that does not exist yet) and converts YAML and JSON changelogs, which failed.
+
+The script commands of the other plugins (`s2-quickstart` and the other Spring Security scripts, `create-job` of Quartz, `create-functional-test` of Geb, the scaffolding scripts, `query-tail`) run where the build of a project runs scripts: `./gradlew runScriptCommand --arg=s2-quickstart --arg=com.example --arg=User --arg=Role`. The Grails Forge CLI does not list the scripts of plugins. `query-tail` run this way writes its summary as plain text again and again and does not redraw it in place; `--once` and `--stream` read best.
+
+===== Required Actions
+
+None for the commands. Code that used the classes `DbmCreateChangelog`, `DbmChangelogToGroovy` or the trait `ScriptDatabaseMigrationCommand` of a database migration `-cli` artifact uses `DbmCreateChangelogCommand` and `DbmChangelogToGroovyCommand`; those artifacts no longer depend on `grails-shell-cli`. A plugin of your own whose script names a completer of the Grails shell in its `description` removes the `import` and names the class in full inside the closure, or removes the line: the build does not evaluate a description.
