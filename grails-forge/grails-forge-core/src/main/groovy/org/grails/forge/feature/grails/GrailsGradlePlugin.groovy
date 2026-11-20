@@ -27,8 +27,6 @@ import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.gradle.GradlePlugin
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.view.GrailsGsp
-import org.grails.forge.feature.web.GrailsWeb
 import org.grails.forge.options.Options
 
 @Component
@@ -71,11 +69,11 @@ class GrailsGradlePlugin implements DefaultFeature {
 
         if (applicationType == ApplicationType.PLUGIN || applicationType == ApplicationType.WEB_PLUGIN) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('org.apache.grails.gradle.grails-plugin').useApplyPlugin(true).build())
-        } else if (generatorContext.getFeature(GrailsWeb).isPresent()) {
+        } else if (generatorContext.getFeatures().contains('grails-web')) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('org.apache.grails.gradle.grails-web').useApplyPlugin(true).build())
         }
 
-        if (generatorContext.getFeature(GrailsGsp).isPresent()) {
+        if (generatorContext.getFeatures().contains('gsp')) {
             generatorContext.addBuildPlugin(GradlePlugin.builder().id('org.apache.grails.gradle.grails-gsp').useApplyPlugin(true).build())
         }
     }

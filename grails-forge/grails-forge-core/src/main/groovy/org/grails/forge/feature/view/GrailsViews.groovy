@@ -45,6 +45,12 @@ abstract class GrailsViews implements OneOfFeature {
         return 'api-views'
     }
 
+    // the JSON views, a feature pack, are of this group too
+    @Override
+    boolean isFoundByGroup() {
+        return true
+    }
+
     @Override
     boolean supports(ApplicationType applicationType) {
         return true

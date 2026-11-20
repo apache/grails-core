@@ -148,8 +148,9 @@ class DefaultProjectGenerator implements ProjectGenerator {
      * Before anything is written: of two templates for one file only the first is written, and nothing
      * says so, and a file where another template needs a directory fails half way. The paths are
      * compared as they are written, with their placeholders replaced, and as a file system that ignores
-     * the case and the composed form of letters sees them. The file of a feature pack is also held to
-     * the paths a pack can write, now that its placeholders have the values of this project.
+     * the case and the composed form of letters sees them. The file of a feature pack that is not one of
+     * Forge is also held to the paths a pack can write, now that its placeholders have the values of this
+     * project.
      */
     private static void checkPaths(Project project, Collection<Template> templates) {
         Map<String, String> replacements = project.getProperties()
@@ -160,7 +161,7 @@ class DefaultProjectGenerator implements ProjectGenerator {
             if (!OutputUtils.isRelativePath(path)) {
                 throw new IllegalArgumentException("The features write the file ${path}, which is not a path inside the application")
             }
-            if (template instanceof PackContent && !PackDescriptorParser.isPathBelowRoot(path)) {
+            if (template instanceof PackContent && ((PackContent) template).isHeld() && !PackDescriptorParser.isPathBelowRoot(path)) {
                 throw new IllegalArgumentException("A feature pack would write the file ${template.getPath()} to ${path}, " +
                         'which is not a path a feature pack can write for this application')
             }

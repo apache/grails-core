@@ -25,8 +25,6 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.database.GrailsDataHibernate7
-import org.grails.forge.feature.micronaut.GrailsMicronaut
 import org.grails.forge.options.Options
 import org.grails.forge.template.URLTemplate
 
@@ -74,8 +72,8 @@ class GrailsBase implements DefaultFeature {
         // enforcedPlatform so the Micronaut platform cannot override the Grails BOM. The
         // Hibernate 7 BOM variants pin the Hibernate 7 dependency versions (e.g. jandex) that
         // conflict with the default (Hibernate 5) grails-bom - see grails-core issue #15942.
-        boolean useMicronautBom = generatorContext.isFeaturePresent(GrailsMicronaut)
-        boolean useHibernate7Bom = generatorContext.isFeaturePresent(GrailsDataHibernate7)
+        boolean useMicronautBom = generatorContext.getFeatures().contains('grails-micronaut')
+        boolean useHibernate7Bom = generatorContext.getFeatures().contains('gorm-hibernate7')
         String bomArtifactId = bomArtifactId(useMicronautBom, useHibernate7Bom)
 
         generatorContext.addDependency(Dependency.builder()

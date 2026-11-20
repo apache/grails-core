@@ -30,10 +30,13 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.build.gradle.GradlePlugin
+import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.OneOfFeature
+import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.Configuration
+import org.grails.forge.options.Options
 import org.grails.forge.template.DefaultTemplateRenderer
 import org.grails.forge.template.Writable
 
@@ -49,13 +52,23 @@ import org.grails.forge.template.Writable
  * is refused, whichever of the two is applied first: what the pack added is looked at again once every
  * feature is applied.</p>
  *
+ * <p>The feature of a pack Forge has in itself also takes part in the selection as the descriptor says
+ * ({@link PackOfForge}): it can be a default, be hidden, have a place among the features, add other
+ * features, and give some of what it gives only beside other features. It is a feature of the
+ * framework like one written as a class, and like that one it is not held to what the other features
+ * set: the pack that is given to a generation is, and is the one a refusal names.</p>
+ *
  * @since 9.0
  */
 @CompileStatic
 class PackFeature implements Feature {
 
+    /** The exclusive group of the database drivers, whose settings a Grails Data implementation can take */
+    public static final String DATABASE_DRIVERS = 'database-driver'
+
     private static final String TASKS = 'tasks.'
     private static final String ENVIRONMENTS = 'environments.'
+    private static final String TEST_ENVIRONMENT = 'test'
 
     private final Pack pack
     private final Function<String, Optional<Feature>> features
@@ -77,9 +90,14 @@ class PackFeature implements Feature {
      * @param features finds a feature the application can have by its name
      * @param pages renders the templates of the pack
      * @return the feature of the pack, which belongs to an exclusive group when the descriptor names one
+     * and is a default when the descriptor says when
      */
     static PackFeature of(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
-        return pack.descriptor.oneOf == null ? new PackFeature(pack, features, pages) : new Exclusive(pack, features, pages)
+        boolean byDefault = pack.descriptor.ofForge.byDefault != null
+        if (pack.descriptor.oneOf == null) {
+            return byDefault ? new ByDefault(pack, features, pages) : new PackFeature(pack, features, pages)
+        }
+        return byDefault ? new ExclusiveByDefault(pack, features, pages) : new Exclusive(pack, features, pages)
     }
 
     Pack getPack() {
@@ -117,6 +135,16 @@ class PackFeature implements Feature {
     }
 
     @Override
+    int getOrder() {
+        return pack.descriptor.ofForge.order
+    }
+
+    @Override
+    boolean isVisible() {
+        return pack.descriptor.ofForge.visible
+    }
+
+    @Override
     boolean supports(ApplicationType applicationType) {
         return pack.descriptor.applicationTypes.contains(applicationType)
     }
@@ -131,7 +159,23 @@ class PackFeature implements Feature {
     }
 
     @Override
+    List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        PackCondition.Facts facts = PackCondition.of(applicationType, (Options) null, Collections.<Feature>emptyList())
+        return pack.descriptor.ofForge.reliesOn.findAll { PackOfForge.Addition each -> each.when.test(facts) }
+                .collect { PackOfForge.Addition each -> each.feature }
+    }
+
+    protected boolean isDefaultFor(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+        PackCondition byDefault = pack.descriptor.ofForge.byDefault
+        return byDefault != null && byDefault.test(PackCondition.of(applicationType, options, selectedFeatures))
+    }
+
+    @Override
     void processSelectedFeatures(FeatureContext featureContext) {
+        Integer jdk = pack.descriptor.ofForge.requiresJdk
+        if (jdk != null && featureContext.getJavaVersion().majorVersion() < jdk) {
+            throw new IllegalArgumentException("${name} requires JDK ${jdk} or later (selected: JDK ${featureContext.getJavaVersion().majorVersion()}).")
+        }
         // the requirements are selected when the features are; this is for a context made another way
         for (String required : pack.descriptor.requires) {
             if (!featureContext.isPresent(required)) {
@@ -143,40 +187,69 @@ class PackFeature implements Feature {
                 featureContext.addFeature(feature)
             }
         }
+        PackCondition.Facts facts = PackCondition.of(featureContext)
+        for (PackOfForge.Addition addition : pack.descriptor.ofForge.adds) {
+            // asked one after the other: what one addition brings in, the next one sees
+            if (!featureContext.isPresent(addition.feature) && addition.when.test(facts)) {
+                // whatever types of application the feature is offered for, as a feature written as a class adds another
+                featureContext.addFeature(features.apply(addition.feature).orElseThrow {
+                    new IllegalStateException("The feature ${name} adds the feature ${addition.feature}, which Forge has not")
+                })
+            }
+        }
     }
 
     @Override
     void apply(GeneratorContext generatorContext) {
         PackDescriptor descriptor = pack.descriptor
+        PackOfForge ofForge = descriptor.ofForge
+        PackCondition.Facts facts = PackCondition.of(generatorContext)
         for (String conflict : descriptor.conflicts) {
             if (generatorContext.getFeatures().contains(conflict)) {
                 throw new IllegalArgumentException("The feature ${name} cannot be used with the feature ${conflict}")
             }
         }
-        List<PackDependency> declared = descriptor.dependencies + descriptor.platforms
+        // a pack of Forge is a feature of the framework: what it sets is not compared with what another feature sets
+        boolean held = !pack.isBundled()
+        List<PackDependency> declared = held ? descriptor.dependencies + descriptor.platforms : Collections.<PackDependency>emptyList()
         declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
         for (PackDependency dependency : descriptor.dependencies) {
-            generatorContext.addDependency(toDependency(generatorContext, dependency, false))
+            if (!dependency.when.test(facts)) {
+                continue
+            }
+            if (dependency.scope == PackDescriptorParser.BUILDSCRIPT) {
+                generatorContext.addBuildscriptDependency(toDependency(generatorContext, dependency, false))
+            } else {
+                generatorContext.addDependency(toDependency(generatorContext, dependency, false))
+            }
         }
         for (PackDependency platform : descriptor.platforms) {
             generatorContext.addDependency(toDependency(generatorContext, platform, true))
         }
         for (PackBuildPlugin plugin : descriptor.buildPlugins) {
+            if (!plugin.when.test(facts)) {
+                continue
+            }
+            GradlePlugin.Builder builder = GradlePlugin.builder().id(plugin.id)
             // with an artifact, as a compiled feature of the framework looks the version of its plugin up
-            generatorContext.addBuildPlugin(plugin.artifactOfForge == null ?
-                    GradlePlugin.builder().id(plugin.id).version(plugin.version).build() :
-                    GradlePlugin.builder().id(plugin.id).lookupArtifactId(plugin.artifactOfForge).build())
+            builder = plugin.artifactOfForge == null ? builder.version(plugin.version) : builder.lookupArtifactId(plugin.artifactOfForge)
+            generatorContext.addBuildPlugin(plugin.apply ? builder.useApplyPlugin(true).build() : builder.build())
+        }
+        for (String comment : ofForge.propertyComments) {
+            generatorContext.getBuildProperties().addComment(comment)
         }
         descriptor.buildProperties.each { String property, String value ->
-            checkProperty(generatorContext, property, value)
+            if (held) {
+                checkProperty(generatorContext, property, value)
+            }
             generatorContext.getBuildProperties().put(property, value)
         }
-        descriptor.buildExtensions.each { String extension, String body ->
-            // tasks.bootRun configures the task bootRun; a longer name, such as tasks.withType, is a block of its own
-            if (extension.startsWith(TASKS) && extension.indexOf('.', TASKS.length()) < 0) {
-                generatorContext.getBuildContributions().task(extension.substring(TASKS.length()), body)
-            } else {
-                generatorContext.getBuildContributions().extension(extension, body)
+        descriptor.buildExtensions.each { String extension, String body -> addExtension(generatorContext, extension, body) }
+        ofForge.buildExtensionParts.each { String extension, List<PackOfForge.Part> parts ->
+            for (PackOfForge.Part part : parts) {
+                if (part.when.test(facts)) {
+                    addExtension(generatorContext, extension, part.text)
+                }
             }
         }
         descriptor.buildBlocks.each { String anchor, String text ->
@@ -186,17 +259,36 @@ class PackFeature implements Feature {
             generatorContext.addHelpLink(link.label, link.href)
         }
         Map<String, Object> settings = new LinkedHashMap<>()
+        if (ofForge.dataSourceOfDriver) {
+            flatten(dataSourceOfDriver(generatorContext), '', settings)
+        }
         flatten(descriptor.configuration, '', settings)
+        for (PackOfForge.Settings each : ofForge.settings) {
+            if (each.environmentFile == null && each.when.test(facts)) {
+                flatten(each.values, '', settings)
+            }
+        }
         settings.each { String setting, Object value ->
-            checkSetting(generatorContext, setting, value)
+            if (held) {
+                checkSetting(generatorContext, setting, value)
+            }
             generatorContext.getConfiguration().put(setting, value)
         }
-        // every destination before the first template: a pack that cannot write one of its files runs none
-        for (PackFile file : descriptor.files) {
+        for (PackOfForge.Settings each : ofForge.settings) {
+            if (each.environmentFile != null && each.when.test(facts)) {
+                Map<String, Object> ofEnvironment = new LinkedHashMap<>()
+                flatten(each.values, '', ofEnvironment)
+                configurationOf(generatorContext, each.environmentFile).putAll(ofEnvironment)
+            }
+        }
+        List<PackFile> files = descriptor.files.findAll { PackFile file -> file.when.test(facts) }
+        // every destination before the first template: a pack that cannot write one of its files runs none. Where a
+        // pack of Forge writes is checked by the generator, as it is for every file of the framework
+        for (PackFile file : held ? files : Collections.<PackFile>emptyList()) {
             checkDestination(generatorContext, file)
         }
         long written = 0
-        for (PackFile file : descriptor.files) {
+        for (PackFile file : files) {
             written += addFile(generatorContext, file)
             if (written > PackLoader.MAX_PACK_BYTES) {
                 throw new IllegalArgumentException("The feature ${name} writes more than the ${PackLoader.MAX_PACK_BYTES} bytes " +
@@ -208,12 +300,47 @@ class PackFeature implements Feature {
             String readme = descriptor.readme.stripTrailing() + '\n\n'
             generatorContext.addHelpTemplate({ OutputStream out -> out.write(readme.getBytes(StandardCharsets.UTF_8)) } as Writable)
         }
-        // a feature applied after this one could have replaced what it added, without a word
-        generatorContext.afterFeaturesApplied {
-            declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
-            descriptor.buildProperties.each { String property, String value -> checkProperty(generatorContext, property, value) }
-            settings.each { String setting, Object value -> checkSetting(generatorContext, setting, value) }
+        if (held) {
+            // a feature applied after this one could have replaced what it added, without a word
+            generatorContext.afterFeaturesApplied {
+                declared.each { PackDependency dependency -> checkVersion(generatorContext, dependency) }
+                descriptor.buildProperties.each { String property, String value -> checkProperty(generatorContext, property, value) }
+                settings.each { String setting, Object value -> checkSetting(generatorContext, setting, value) }
+            }
         }
+    }
+
+    // tasks.bootRun configures the task bootRun; a longer name, such as tasks.withType, is a block of its own
+    private static void addExtension(GeneratorContext generatorContext, String extension, String body) {
+        if (extension.startsWith(TASKS) && extension.indexOf('.', TASKS.length()) < 0 && extension.indexOf('(') < 0) {
+            generatorContext.getBuildContributions().task(extension.substring(TASKS.length()), body)
+        } else {
+            generatorContext.getBuildContributions().extension(extension, body)
+        }
+    }
+
+    /**
+     * The settings the database driver of the application gives the Grails Data implementation that
+     * connects through it.
+     */
+    private Map<String, Object> dataSourceOfDriver(GeneratorContext generatorContext) {
+        for (Feature feature : generatorContext.getFeatures().getFeatures()) {
+            if (feature instanceof PackFeature && ((PackFeature) feature).pack.descriptor.oneOf == DATABASE_DRIVERS) {
+                Map<String, Object> dataSource = ((PackFeature) feature).pack.descriptor.ofForge.dataSource
+                if (dataSource == null) {
+                    throw new IllegalStateException("The feature ${name} takes the data source of the database driver, and the feature " +
+                            "${feature.getName()} names none")
+                }
+                return dataSource
+            }
+        }
+        throw new IllegalStateException("The feature ${name} takes the data source of the database driver, and the application has no database driver")
+    }
+
+    // the file of the test environment is a resource of the tests, as the framework has it
+    private static Configuration configurationOf(GeneratorContext generatorContext, String environment) {
+        return generatorContext.getConfiguration(environment, environment == TEST_ENVIRONMENT ?
+                ApplicationConfiguration.testConfig() : new ApplicationConfiguration(environment))
     }
 
     private Dependency.Builder toDependency(GeneratorContext generatorContext, PackDependency declared, boolean platform) {
@@ -230,7 +357,7 @@ class PackFeature implements Feature {
         } else {
             dependency.groupId(declared.groupId).artifactId(declared.artifactId).version(declared.version)
         }
-        dependency.scope(PackDescriptorParser.SCOPES.get(platform ? 'implementation' : declared.scope))
+        dependency.scope(PackDescriptorParser.SCOPES_OF_FORGE.get(platform ? 'implementation' : declared.scope))
                 .pom(platform)
         for (String exclusion : declared.excludes) {
             int colon = exclusion.indexOf(':')
@@ -328,14 +455,14 @@ class PackFeature implements Feature {
      */
     private int addFile(GeneratorContext generatorContext, PackFile file) {
         byte[] content = pack.content(file.from)
-        if (Pack.isTemplate(file.from)) {
+        if (file.isTemplate()) {
             // rendered here and not when the file is written: every feature is chosen by now, and a
             // template that fails does so before anything of the application is written
             String from = file.from.length() > 120 ? file.from.substring(0, 120) + '...' : file.from
             content = pages.get().render(name, new String(content, StandardCharsets.UTF_8), "${from} of the feature ${name}".toString(),
                     pack.descriptor.templateApi, PackModel.of(generatorContext, pack.descriptor), PackLoader.MAX_FILE_BYTES)
         }
-        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content))
+        generatorContext.addTemplate("pack:${name}:${file.to}".toString(), new PackContent(file.to, content, file.executable, !pack.isBundled()))
         return content.length
     }
 
@@ -359,6 +486,37 @@ class PackFeature implements Feature {
         @Override
         Class<?> getFeatureClass() {
             return null
+        }
+    }
+
+    /**
+     * The feature of a pack of Forge whose descriptor says when it is selected without being named.
+     */
+    static class ByDefault extends PackFeature implements DefaultFeature {
+
+        protected ByDefault(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
+            super(pack, features, pages)
+        }
+
+        @Override
+        boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+            return isDefaultFor(applicationType, options, selectedFeatures)
+        }
+    }
+
+    /**
+     * The feature of a pack of Forge that is the default of the exclusive group its descriptor names,
+     * when its descriptor says.
+     */
+    static class ExclusiveByDefault extends Exclusive implements DefaultFeature {
+
+        protected ExclusiveByDefault(Pack pack, Function<String, Optional<Feature>> features, Supplier<PackPages> pages) {
+            super(pack, features, pages)
+        }
+
+        @Override
+        boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
+            return isDefaultFor(applicationType, options, selectedFeatures)
         }
     }
 }

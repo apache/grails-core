@@ -30,14 +30,25 @@ import groovy.transform.CompileStatic
 @CompileStatic
 enum OptionName {
 
-    DATA('Grails Data implementation'),
-    SERVLET('servlet container'),
-    RELOADING('development reloading')
+    DATA('Grails Data implementation', null),
+    SERVLET('servlet container', 'embedded-servlet'),
+    RELOADING('development reloading', 'reloading')
 
     private final String label
 
-    OptionName(String label) {
+    private final String group
+
+    OptionName(String label, String group) {
         this.label = label
+        this.group = group
+    }
+
+    /**
+     * @return the exclusive group of the features the option chooses among, or {@code null} for an option
+     * whose features are in no one group
+     */
+    String getGroup() {
+        return group
     }
 
     /**

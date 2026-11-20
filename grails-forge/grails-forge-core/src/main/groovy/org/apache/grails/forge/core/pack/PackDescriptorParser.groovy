@@ -31,6 +31,7 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.build.gradle.BuildFileAnchor
 import org.grails.forge.feature.Category
+import org.grails.forge.feature.FeaturePhase
 import org.grails.forge.util.VersionInfo
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
@@ -86,6 +87,21 @@ class PackDescriptorParser {
             testRuntimeOnly: Scope.TEST_RUNTIME_ONLY,
     ] as Map<String, Scope>)
 
+    /** The scope of a dependency of the build itself, which only a pack Forge has in itself can declare */
+    public static final String BUILDSCRIPT = 'buildscript'
+
+    /** The scopes a pack Forge has in itself can declare a dependency in: those of any pack and those only the framework uses */
+    public static final Map<String, Scope> SCOPES_OF_FORGE = Collections.unmodifiableMap(SCOPES + ([
+            testAndDevelopmentOnly: Scope.TEST_AND_DEVELOPMENT_ONLY,
+            integrationTestImplementationTestFixtures: Scope.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES,
+            (BUILDSCRIPT): Scope.BUILD,
+    ] as Map<String, Scope>))
+
+    /** The places among the features a pack Forge has in itself can take, by their names in a descriptor */
+    public static final Map<String, Integer> ORDERS = Collections.unmodifiableMap(FeaturePhase.values().collectEntries { FeaturePhase phase ->
+        [phase.name().toLowerCase(Locale.ROOT), phase.getOrder()]
+    } as Map<String, Integer>)
+
     /** The placeholders the destination of a file can use */
     public static final Set<String> DESTINATION_TOKENS = Collections.unmodifiableSet(
             ['packageName', 'packagePath', 'className', 'naturalName', 'propertyName', 'name'] as Set<String>)
@@ -107,9 +123,19 @@ class PackDescriptorParser {
                                              'description', 'category', 'documentation', 'applicationTypes', 'requires',
                                              'conflicts', 'oneOf', 'dependencies', 'platforms', 'buildPlugins', 'build',
                                              'configuration', 'files', 'readme', 'instructions', 'thirdPartyDocumentation'] as Set<String>
-    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks', 'guideOfGrails']
+    private static final List<String> KEYS_OF_FORGE = ['versionsOfForge', 'readmeLinks', 'guideOfGrails', 'default', 'adds', 'order', 'visible',
+                                                       'reliesOn', 'requiresJdk', 'dataSource', 'dataSourceOfDriver']
     private static final String GRAILS_DOCUMENTATION = 'https://grails.apache.org/docs/'
-    private static final Pattern GUIDE_PAGE = Pattern.compile(/guide\/[A-Za-z0-9]+\.html(#[A-Za-z0-9\-_.]+)?/)
+    private static final String PAGE_STEP = /[A-Za-z0-9][A-Za-z0-9\-_.]*/
+    private static final Pattern GUIDE_PAGE = Pattern.compile(PAGE_STEP + '(/' + PAGE_STEP + ')*/?(#[A-Za-z0-9\\-_.]+)?')
+    private static final List<String> CONDITION_KEYS = [PackCondition.FEATURE, PackCondition.GROUP, PackCondition.ANY_OF, PackCondition.ALL_OF,
+                                                        PackCondition.NOT, PackCondition.APPLICATION_TYPE, PackCondition.OPTION,
+                                                        PackCondition.JDK_AT_LEAST]
+    private static final int MAX_CONDITIONS = 50
+    private static final int MAX_CONDITION_DEPTH = 5
+    private static final int MIN_JDK = 8
+    private static final int MAX_JDK = 99
+    private static final String WHEN = 'when'
     private static final int MAX_ENTRIES_OF_FORGE = 20
     private static final String FEATURE_KIND = 'feature'
     private static final String MARKUP = '@|'
@@ -137,6 +163,8 @@ class PackDescriptorParser {
     private static final Pattern PROPERTY_NAME = Pattern.compile(/[A-Za-z0-9_.\-]+/)
     private static final Pattern PROPERTY_VALUE = Pattern.compile(/([\x21-\x5B\x5D-\x7E]([\x20-\x5B\x5D-\x7E]*[\x21-\x5B\x5D-\x7E])?)?/)
     private static final Pattern IDENTIFIER = Pattern.compile(/[A-Za-z_]\w*/)
+    private static final Pattern IDENTIFIER_OR_CALL = Pattern.compile(/[A-Za-z_]\w*(\([A-Za-z_]\w*\))?/)
+    private static final Pattern COMMENT = Pattern.compile(/[\x20-\x7E]+/)
     private static final Pattern ENVIRONMENT = Pattern.compile(/[A-Za-z][A-Za-z0-9_\-]{0,49}/)
     // without square brackets: an address is written into a link in Markdown, and with them it could
     // end the text of the link and start another address
@@ -180,7 +208,16 @@ class PackDescriptorParser {
      * <li>{@code build.blocks} maps {@code afterPlugins}, {@code afterDependencies} and {@code end} to
      * text that is added to the build file at that place as it is;</li>
      * <li>{@code readmeLinks} is a list of {@code label} and {@code href}: links the readme of the
-     * application gets, each as an entry of a list.</li>
+     * application gets, each as an entry of a list;</li>
+     * <li>how the feature takes part in the selection: {@code default} (when it is selected without being
+     * named), {@code adds} (the features it adds), {@code order}, {@code visible}, {@code reliesOn} and
+     * {@code requiresJdk};</li>
+     * <li>{@code when}, a condition ({@link PackCondition}), on a dependency, a build plugin or a file, and
+     * on the entries of a {@code configuration} or the parts of a build extension written as a list;</li>
+     * <li>{@code dataSource}, the settings of a database driver, and {@code dataSourceOfDriver} for the
+     * feature that takes them; {@code environmentFile} on an entry of the configuration;
+     * {@code apply} on a build plugin; {@code template: false} and {@code executable: true} on a file;
+     * {@code build.propertyComments}; and the scopes of {@link #SCOPES_OF_FORGE}.</li>
      * </ul>
      *
      * @param yaml the text of the descriptor
@@ -225,7 +262,11 @@ class PackDescriptorParser {
             problems << "conflicts: ${describe(both)} is also required".toString()
         }
         Map<String, Object> build = map(root, 'build', '', problems)
-        unknownKeys(build, ofForge ? ['properties', 'extensions', 'blocks'] : ['properties', 'extensions'], 'build.', problems)
+        unknownKeys(build, ofForge ? ['properties', 'extensions', 'blocks', 'propertyComments'] : ['properties', 'extensions'], 'build.', problems)
+        String oneOf = matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
+                "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems)
+        Map<String, List<PackOfForge.Part>> extensionParts = new LinkedHashMap<>()
+        List<PackOfForge.Settings> settings = []
 
         PackDescriptor descriptor = new PackDescriptor(
                 name,
@@ -238,15 +279,14 @@ class PackDescriptorParser {
                 applicationTypes(root, problems),
                 requires,
                 conflicts,
-                matching(text(root, 'oneOf', '', MAX_LINE, problems), GROUP_ID, 'oneOf',
-                        "must be the identifier of a group, such as 'database-driver' or 'com.acme:audit'", problems),
+                oneOf,
                 dependencies(root, 'dependencies', true, ofForge, problems),
                 dependencies(root, 'platforms', false, false, problems),
                 buildPlugins(root, ofForge, problems),
                 buildProperties(build, problems),
-                buildExtensions(build, problems),
-                configuration(root, problems),
-                files(root, problems),
+                buildExtensions(build, ofForge, extensionParts, problems),
+                configuration(root, ofForge, settings, problems),
+                files(root, ofForge, problems),
                 document(root.get('readme'), 'readme', problems),
                 document(root.get('instructions'), 'instructions', problems),
                 matching(text(root, 'thirdPartyDocumentation', '', MAX_PARAGRAPH, problems), URL, 'thirdPartyDocumentation',
@@ -254,7 +294,8 @@ class PackDescriptorParser {
                 ofForge ? versionsOfForge(root, problems) : [:] as Map<String, String>,
                 ofForge ? buildBlocks(build, problems) : [:] as Map<String, String>,
                 ofForge ? readmeLinks(root, problems) : [] as List<PackLink>,
-                templateApi)
+                templateApi,
+                ofForge ? readOfForge(root, build, name, oneOf, extensionParts, settings, problems) : PackOfForge.NONE)
         failOn(problems, source)
         return descriptor
     }
@@ -292,7 +333,7 @@ class PackDescriptorParser {
             return link
         }
         String page = matching(text(root, 'guideOfGrails', '', MAX_LINE, problems), GUIDE_PAGE, 'guideOfGrails',
-                "must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi'", problems)
+                "must be a page of the documentation of Grails, such as 'guide/cache.html' or 'guide/REST.html#openApi'", problems)
         if (root.get('documentation') != null) {
             problems << 'guideOfGrails: is in place of documentation, and both are given'
         }
@@ -488,15 +529,16 @@ class PackDescriptorParser {
         maps(root, key, problems).each { int index, Map<String, Object> entry ->
             String at = "${key}[${index}]."
             List<String> keys = scoped ? ['scope', 'coordinates', 'version', 'excludes'] : ['coordinates', 'version']
-            unknownKeys(entry, ofForge ? keys + ['versionOfForge'] : keys, at, problems)
+            unknownKeys(entry, ofForge ? keys + ['versionOfForge', WHEN] : keys, at, problems)
+            Map<String, Scope> scopes = ofForge ? SCOPES_OF_FORGE : SCOPES
             boolean versionOfForge = ofForge && entry.containsKey('versionOfForge')
             if (versionOfForge && (entry.get('versionOfForge') != Boolean.TRUE || entry.get('version') != null)) {
                 problems << "${at}versionOfForge: must be true, and then there is no version".toString()
             }
             String scope = scoped ? requiredText(entry, 'scope', at, MAX_LINE, problems) : null
-            boolean scopeKnown = !scoped || SCOPES.containsKey(scope)
+            boolean scopeKnown = !scoped || scopes.containsKey(scope)
             if (scope != null && !scopeKnown) {
-                problems << "${at}scope: must be one of ${SCOPES.keySet().toList()}, but is ${describe(scope)}".toString()
+                problems << "${at}scope: must be one of ${scopes.keySet().toList()}, but is ${describe(scope)}".toString()
                 scope = null
             }
             String coordinates = matching(requiredText(entry, 'coordinates', at, MAX_LINE, problems), COORDINATES, at + 'coordinates',
@@ -513,7 +555,8 @@ class PackDescriptorParser {
                     }
                 }
             }
-            dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes, versionOfForge)
+            dependencies << new PackDependency(scope, parts[0], parts[1], version(entry, at, problems), excludes, versionOfForge,
+                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
         }
         return dependencies
     }
@@ -523,7 +566,7 @@ class PackDescriptorParser {
         Set<String> declared = new HashSet<>()
         maps(root, 'buildPlugins', problems).each { int index, Map<String, Object> entry ->
             String at = "buildPlugins[${index}]."
-            unknownKeys(entry, ofForge ? ['id', 'version', 'artifactOfForge'] : ['id', 'version'], at, problems)
+            unknownKeys(entry, ofForge ? ['id', 'version', 'artifactOfForge', 'apply', WHEN] : ['id', 'version'], at, problems)
             String id = matching(requiredText(entry, 'id', at, MAX_LINE, problems), PLUGIN_ID, at + 'id',
                     "must be the id of a Gradle plugin, such as 'com.acme.audit'", problems)
             if (id != null && !declared.add(id)) {
@@ -537,7 +580,8 @@ class PackDescriptorParser {
             if (artifact != null && entry.get('version') != null) {
                 problems << "${at}artifactOfForge: has the version Forge knows, and then there is no version".toString()
             }
-            plugins << new PackBuildPlugin(id, version(entry, at, problems), artifact)
+            plugins << new PackBuildPlugin(id, version(entry, at, problems), artifact, ofForge && flag(entry, 'apply', true, at, problems),
+                    ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
         }
         return plugins
     }
@@ -645,11 +689,22 @@ class PackDescriptorParser {
         return properties
     }
 
-    private static Map<String, String> buildExtensions(Map<String, Object> build, List<String> problems) {
+    /**
+     * The build extensions. For a pack Forge has in itself the name can have a call in it, as
+     * {@code tasks.withType(Test).configureEach} has, and the body can be a list of parts, each with a
+     * condition: those go to {@code parts}.
+     */
+    private static Map<String, String> buildExtensions(Map<String, Object> build, boolean ofForge, Map<String, List<PackOfForge.Part>> parts,
+                                                       List<String> problems) {
         Map<String, String> extensions = new LinkedHashMap<>()
+        Pattern step = ofForge ? IDENTIFIER_OR_CALL : IDENTIFIER
         map(build, 'extensions', 'build.', problems).each { String name, Object value ->
-            if (!name.split(/\./, -1).every { String part -> IDENTIFIER.matcher(part).matches() }) {
+            if (!name.split(/\./, -1).every { String part -> step.matcher(part).matches() }) {
                 problems << "build.extensions: the name of an extension is one or more identifiers joined by '.', but one is ${describe(name)}".toString()
+                return
+            }
+            if (ofForge && value instanceof List) {
+                parts.put(name, extensionParts((List<Object>) value, "build.extensions.${brief(name)}", problems))
                 return
             }
             String body = document(value, "build.extensions.${brief(name)}", problems)
@@ -662,7 +717,7 @@ class PackDescriptorParser {
         return extensions
     }
 
-    private static List<PackFile> files(Map<String, Object> root, List<String> problems) {
+    private static List<PackFile> files(Map<String, Object> root, boolean ofForge, List<String> problems) {
         List<PackFile> files = []
         // destinations and the directories above them, as a file system that ignores the case and the
         // composed form of letters sees them, each with the destination that was written
@@ -670,7 +725,7 @@ class PackDescriptorParser {
         Map<String, String> directories = new HashMap<>()
         maps(root, 'files', problems).each { int index, Map<String, Object> entry ->
             String at = "files[${index}]."
-            unknownKeys(entry, ['from', 'to'], at, problems)
+            unknownKeys(entry, ofForge ? ['from', 'to', 'template', 'executable', WHEN] : ['from', 'to'], at, problems)
             String from = path(entry, 'from', at, false, problems)
             String to = path(entry, 'to', at, true, problems)
             if (to != null) {
@@ -691,7 +746,8 @@ class PackDescriptorParser {
                     }
                 }
             }
-            files << new PackFile(from, to)
+            files << new PackFile(from, to, !(ofForge && flag(entry, 'template', false, at, problems)),
+                    ofForge && flag(entry, 'executable', true, at, problems), ofForge ? when(entry, at, problems) : PackCondition.ALWAYS)
         }
         return files
     }
@@ -757,24 +813,314 @@ class PackDescriptorParser {
      * The configuration, of which the settings under {@code environments} are those of one environment
      * each. The name of an environment becomes part of the name of a file, so it is held to a name.
      */
-    private static Map<String, Object> configuration(Map<String, Object> root, List<String> problems) {
-        Map<String, Object> configuration = map(root, 'configuration', '', problems)
+    private static Map<String, Object> configuration(Map<String, Object> root, boolean ofForge, List<PackOfForge.Settings> conditional,
+                                                     List<String> problems) {
+        if (ofForge && root.get('configuration') instanceof List) {
+            // of a pack of Forge: entries that are there when a condition holds, or go to the file of one environment
+            maps(root, 'configuration', problems).each { int index, Map<String, Object> entry ->
+                String at = "configuration[${index}]."
+                unknownKeys(entry, [WHEN, 'environmentFile', 'values'], at, problems)
+                String environment = matching(text(entry, 'environmentFile', at, MAX_LINE, problems), ENVIRONMENT, at + 'environmentFile',
+                        "must be the name of an environment: letters, digits, '-' and '_', starting with a letter", problems)
+                if (entry.get('values') == null) {
+                    problems << "${at}values: is required".toString()
+                }
+                conditional << new PackOfForge.Settings(when(entry, at, problems), environment, settings(entry, 'values', at, problems))
+            }
+            return [:]
+        }
+        return settings(root, 'configuration', '', problems)
+    }
+
+    /**
+     * A mapping of settings, of which those under {@code environments} are of one environment each.
+     */
+    private static Map<String, Object> settings(Map<String, Object> from, String key, String at, List<String> problems) {
+        Map<String, Object> configuration = map(from, key, at, problems)
         if (!configuration.containsKey(ENVIRONMENTS)) {
             return configuration
         }
         Object environments = configuration.get(ENVIRONMENTS)
         if (!(environments instanceof Map)) {
-            problems << "configuration.${ENVIRONMENTS}: must be a mapping of the names of environments to their settings, but is ${describe(environments)}".toString()
+            problems << "${at}${key}.${ENVIRONMENTS}: must be a mapping of the names of environments to their settings, but is ${describe(environments)}".toString()
             return configuration
         }
         ((Map<String, Object>) environments).each { String environment, Object settings ->
             if (!ENVIRONMENT.matcher(environment).matches()) {
-                problems << "configuration.${ENVIRONMENTS}: the name of an environment is letters, digits, '-' and '_', starting with a letter, but one is ${describe(environment)}".toString()
+                problems << "${at}${key}.${ENVIRONMENTS}: the name of an environment is letters, digits, '-' and '_', starting with a letter, but one is ${describe(environment)}".toString()
             } else if (!(settings instanceof Map)) {
-                problems << "configuration.${ENVIRONMENTS}.${environment}: must be a mapping of settings, but is ${describe(settings)}".toString()
+                problems << "${at}${key}.${ENVIRONMENTS}.${environment}: must be a mapping of settings, but is ${describe(settings)}".toString()
             }
         }
         return configuration
+    }
+
+    /**
+     * What only a pack Forge has in itself says of how its feature is selected and of what it gives
+     * beside other features.
+     */
+    @SuppressWarnings('ParameterCount')
+    private static PackOfForge readOfForge(Map<String, Object> root, Map<String, Object> build, String name, String oneOf,
+                                           Map<String, List<PackOfForge.Part>> extensionParts, List<PackOfForge.Settings> conditional,
+                                           List<String> problems) {
+        PackCondition byDefault = null
+        if (root.get('default') == Boolean.TRUE) {
+            byDefault = PackCondition.ALWAYS
+        } else if (root.get('default') instanceof Map) {
+            byDefault = condition(root.get('default'), 'default', problems)
+        } else if (root.containsKey('default')) {
+            problems << "default: must be true, for a feature every application has, or the condition the feature is selected on, but is ${describe(root.get('default'))}".toString()
+        }
+        int order = FeaturePhase.DEFAULT.getOrder()
+        String phase = text(root, 'order', '', MAX_LINE, problems)
+        if (phase != null && !ORDERS.containsKey(phase)) {
+            problems << "order: must be one of ${ORDERS.keySet().toList()}, but is ${describe(phase)}".toString()
+        } else if (phase != null) {
+            order = ORDERS.get(phase)
+        }
+        boolean visible = true
+        if (root.get('visible') instanceof Boolean) {
+            visible = (Boolean) root.get('visible')
+        } else if (root.containsKey('visible')) {
+            problems << "visible: must be true or false, but is ${describe(root.get('visible'))}".toString()
+        }
+        Integer requiresJdk = jdk(root.get('requiresJdk'))
+        if (requiresJdk == null && root.containsKey('requiresJdk')) {
+            problems << "requiresJdk: must be the number of a JDK, such as 25, but is ${describe(root.get('requiresJdk'))}".toString()
+        }
+        Map<String, Object> dataSource = null
+        if (root.containsKey('dataSource')) {
+            dataSource = settings(root, 'dataSource', '', problems)
+            if (dataSource.isEmpty() && (root.get('dataSource') == null || root.get('dataSource') instanceof Map)) {
+                problems << 'dataSource: must be the settings of the data source, as a configuration is written'
+            }
+            if (oneOf != PackFeature.DATABASE_DRIVERS) {
+                problems << "dataSource: is for a feature of the group ${PackFeature.DATABASE_DRIVERS}, which oneOf does not name".toString()
+            }
+        }
+        List<PackOfForge.Addition> reliesOn = additions(root, 'reliesOn', name, problems)
+        reliesOn.eachWithIndex { PackOfForge.Addition each, int index ->
+            if (!each.when.isOfApplicationType()) {
+                problems << "reliesOn[${index}].when: can ask for the type of the application only".toString()
+            }
+        }
+        List<String> comments = []
+        texts(build, 'propertyComments', 'build.', problems).each { int index, String comment ->
+            if (matching(comment, COMMENT, "build.propertyComments[${index}]", 'must be one line of printable ASCII characters', problems) != null) {
+                comments << comment
+            }
+        }
+        if (comments.size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "build.propertyComments: can have ${MAX_ENTRIES_OF_FORGE} lines, but has ${comments.size()}".toString()
+        }
+        return new PackOfForge(byDefault, additions(root, 'adds', name, problems), order, visible, reliesOn, requiresJdk, dataSource,
+                flag(root, 'dataSourceOfDriver', true, '', problems), comments, extensionParts, conditional)
+    }
+
+    /**
+     * The features a descriptor names with a condition each: an entry is the name of a feature, or a
+     * mapping of {@code feature} and {@code when}.
+     */
+    private static List<PackOfForge.Addition> additions(Map<String, Object> root, String key, String name, List<String> problems) {
+        List<PackOfForge.Addition> additions = []
+        Object value = root.get(key)
+        if (value == null) {
+            return additions
+        }
+        if (!(value instanceof List)) {
+            problems << "${key}: must be a list, but is ${describe(value)}".toString()
+            return additions
+        }
+        if (((List) value).size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "${key}: can name ${MAX_ENTRIES_OF_FORGE} features, but names ${((List) value).size()}".toString()
+            return additions
+        }
+        Set<String> seen = new HashSet<>()
+        ((List<Object>) value).eachWithIndex { Object each, int index ->
+            String at = "${key}[${index}]"
+            String feature = null
+            PackCondition holds = PackCondition.ALWAYS
+            if (each instanceof Map) {
+                Map<String, Object> entry = (Map<String, Object>) each
+                unknownKeys(entry, [PackCondition.FEATURE, WHEN], at + '.', problems)
+                feature = requiredText(entry, PackCondition.FEATURE, at + '.', MAX_LINE, problems)
+                holds = when(entry, at + '.', problems)
+            } else {
+                feature = line(each, at, MAX_LINE, problems)
+            }
+            feature = matching(feature, NAME, at, 'must name a feature of Forge', problems)
+            if (feature == name) {
+                problems << "${at}: must not name the feature itself, ${describe(name)}".toString()
+            } else if (feature != null && !seen.add(feature)) {
+                problems << "${at}: ${describe(feature)} is listed earlier too".toString()
+            } else if (feature != null) {
+                additions << new PackOfForge.Addition(feature, holds)
+            }
+        }
+        return additions
+    }
+
+    private static List<PackOfForge.Part> extensionParts(List<Object> value, String at, List<String> problems) {
+        List<PackOfForge.Part> parts = []
+        if (value.isEmpty() || value.size() > MAX_ENTRIES_OF_FORGE) {
+            problems << "${at}: must have 1 to ${MAX_ENTRIES_OF_FORGE} parts, but has ${value.size()}".toString()
+            return parts
+        }
+        value.eachWithIndex { Object each, int index ->
+            String place = "${at}[${index}]"
+            if (!(each instanceof Map)) {
+                problems << "${place}: must be a mapping of text and when, but is ${describe(each)}".toString()
+                return
+            }
+            Map<String, Object> entry = (Map<String, Object>) each
+            unknownKeys(entry, ['text', WHEN], place + '.', problems)
+            String text = document(entry.get('text'), place + '.text', problems)
+            if (entry.get('text') == null) {
+                problems << "${place}.text: is required".toString()
+            }
+            PackCondition holds = when(entry, place + '.', problems)
+            if (text != null) {
+                parts << new PackOfForge.Part(text, holds)
+            }
+        }
+        return parts
+    }
+
+    /**
+     * A key that says one thing by being there: it can only have the one value.
+     */
+    private static boolean flag(Map<String, Object> entry, String key, boolean only, String at, List<String> problems) {
+        if (!entry.containsKey(key)) {
+            return false
+        }
+        if (!Objects.equals(entry.get(key), only)) {
+            problems << "${at}${key}: must be ${only} or be left out, but is ${describe(entry.get(key))}".toString()
+            return false
+        }
+        return true
+    }
+
+    /**
+     * The condition of an entry, which always holds when the entry has none.
+     */
+    private static PackCondition when(Map<String, Object> entry, String at, List<String> problems) {
+        if (!entry.containsKey(WHEN)) {
+            return PackCondition.ALWAYS
+        }
+        return condition(entry.get(WHEN), at + WHEN, problems) ?: PackCondition.ALWAYS
+    }
+
+    /**
+     * Reads a condition, see {@link PackCondition}. It has at most {@link #MAX_CONDITIONS} conditions in
+     * all, nested at most {@link #MAX_CONDITION_DEPTH} deep.
+     *
+     * @return the condition, or {@code null} when it cannot be used, which is then a problem
+     */
+    private static PackCondition condition(Object value, String at, List<String> problems) {
+        int[] left = [MAX_CONDITIONS] as int[]
+        PackCondition condition = condition(value, at, 1, left, problems)
+        if (left[0] < 0) {
+            problems << "${at}: has more than ${MAX_CONDITIONS} conditions".toString()
+            return null
+        }
+        return condition
+    }
+
+    @SuppressWarnings(['CyclomaticComplexity', 'MethodSize'])
+    private static PackCondition condition(Object value, String at, int depth, int[] left, List<String> problems) {
+        if (--left[0] < 0) {
+            return null
+        }
+        if (!(value instanceof Map) || ((Map) value).size() != 1) {
+            problems << "${at}: must be a condition, a mapping with one of the keys ${CONDITION_KEYS}, but is ${describe(value)}".toString()
+            return null
+        }
+        if (depth > MAX_CONDITION_DEPTH) {
+            problems << "${at}: has conditions more than ${MAX_CONDITION_DEPTH} deep".toString()
+            return null
+        }
+        String key = (String) ((Map) value).keySet().first()
+        Object asked = ((Map) value).get(key)
+        String place = "${at}.${brief(key)}"
+        switch (key) {
+            case PackCondition.FEATURE:
+                String feature = matching(line(asked, place, MAX_LINE, problems), NAME, place, 'must name a feature of Forge', problems)
+                return feature == null ? null : PackCondition.feature(feature)
+            case PackCondition.GROUP:
+                String group = matching(line(asked, place, MAX_LINE, problems), GROUP_ID, place, 'must be the identifier of an exclusive group', problems)
+                return group == null ? null : new PackCondition(PackCondition.GROUP, null, [group], [])
+            case PackCondition.NOT:
+                PackCondition negated = operand(asked, place, depth, left, problems)
+                return negated == null ? null : new PackCondition(PackCondition.NOT, null, [], [negated])
+            case PackCondition.ANY_OF:
+            case PackCondition.ALL_OF:
+                if (!(asked instanceof List) || ((List) asked).isEmpty()) {
+                    problems << "${place}: must be a list of conditions and names of features, but is ${describe(asked)}".toString()
+                    return null
+                }
+                List<PackCondition> conditions = []
+                boolean usable = true
+                ((List<Object>) asked).eachWithIndex { Object each, int index ->
+                    PackCondition operand = left[0] < 0 ? null : operand(each, "${place}[${index}]", depth, left, problems)
+                    usable = usable && operand != null
+                    if (operand != null) {
+                        conditions << operand
+                    }
+                }
+                return usable ? new PackCondition(key, null, [], conditions) : null
+            case PackCondition.APPLICATION_TYPE:
+                List<String> known = ApplicationType.values().collect { ApplicationType type -> PackCondition.typeName(type) }
+                List<String> types = oneOrMore(asked, place, known, problems)
+                return types == null ? null : new PackCondition(key, null, types, [])
+            case PackCondition.OPTION:
+                if (!(asked instanceof Map) || ((Map) asked).size() != 1 || !PackCondition.OPTIONS.containsKey(((Map) asked).keySet().first())) {
+                    problems << "${place}: must be one of the options ${PackCondition.OPTIONS.keySet().toList()} with a value or a list of values, but is ${describe(asked)}".toString()
+                    return null
+                }
+                String option = (String) ((Map) asked).keySet().first()
+                List<String> values = oneOrMore(((Map) asked).get(option), "${place}.${option}", PackCondition.OPTIONS.get(option), problems)
+                return values == null ? null : new PackCondition(key, option, values, [])
+            case PackCondition.JDK_AT_LEAST:
+                Integer jdk = jdk(asked)
+                if (jdk == null) {
+                    problems << "${place}: must be the number of a JDK, such as 25, but is ${describe(asked)}".toString()
+                    return null
+                }
+                return new PackCondition(key, null, [jdk.toString()], [])
+            default:
+                problems << "${at}: has the key ${describe(key)}, and a condition has one of the keys ${CONDITION_KEYS}".toString()
+                return null
+        }
+    }
+
+    private static Integer jdk(Object value) {
+        if (value instanceof Integer) {
+            int number = (Integer) value
+            return number >= MIN_JDK && number <= MAX_JDK ? (Integer) number : null
+        }
+        return null
+    }
+
+    // what anyOf, allOf and not are said of: the name of a feature, or a condition
+    private static PackCondition operand(Object value, String at, int depth, int[] left, List<String> problems) {
+        if (value instanceof String) {
+            if (--left[0] < 0) {
+                return null
+            }
+            String feature = matching(line(value, at, MAX_LINE, problems), NAME, at, 'must name a feature of Forge', problems)
+            return feature == null ? null : PackCondition.feature(feature)
+        }
+        return condition(value, at, depth + 1, left, problems)
+    }
+
+    // one value or a list of values, each of the known ones
+    private static List<String> oneOrMore(Object value, String at, List<String> known, List<String> problems) {
+        List<Object> given = value instanceof List ? (List<Object>) value : [value]
+        if (given.isEmpty() || given.size() > known.size() || !given.every { Object each -> each instanceof String && known.contains(each) }) {
+            problems << "${at}: must be one of ${known}, or a list of them, but is ${describe(value)}".toString()
+            return null
+        }
+        return given.collect { Object each -> (String) each }
     }
 
     private static String version(Map<String, Object> entry, String at, List<String> problems) {

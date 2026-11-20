@@ -21,7 +21,7 @@ package org.grails.forge.feature
 import groovy.transform.CompileStatic
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.lang.LanguageFeature
-import org.grails.forge.feature.reloading.ReloadingFeature
+import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
@@ -39,7 +39,7 @@ class Features extends ArrayList<String> {
     private final GeneratorContext context
     private ApplicationFeature applicationFeature
     private LanguageFeature languageFeature
-    private ReloadingFeature reloadingFeature
+    private Feature reloadingFeature
     private final JdkVersion javaVersion
 
     Features(GeneratorContext context, Set<Feature> featureList, Options options) {
@@ -53,8 +53,8 @@ class Features extends ArrayList<String> {
             if (languageFeature == null && feature instanceof LanguageFeature) {
                 languageFeature = (LanguageFeature) feature
             }
-            if (reloadingFeature == null && feature instanceof ReloadingFeature) {
-                reloadingFeature = (ReloadingFeature) feature
+            if (reloadingFeature == null && DevelopmentReloading.ofFeature(feature.getName()) != null) {
+                reloadingFeature = feature
             }
         }
         this.javaVersion = options.getJavaVersion()
@@ -74,7 +74,11 @@ class Features extends ArrayList<String> {
         return languageFeature
     }
 
-    ReloadingFeature reloading() {
+    /**
+     * @return the feature that reloads the application in development, or {@code null}: see
+     * {@link DevelopmentReloading#ofFeature(String)} for which way of reloading it is
+     */
+    Feature reloading() {
         return reloadingFeature
     }
 

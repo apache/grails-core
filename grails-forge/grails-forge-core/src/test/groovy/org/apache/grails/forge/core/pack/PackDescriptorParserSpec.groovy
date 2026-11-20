@@ -175,7 +175,7 @@ class PackDescriptorParserSpec extends Specification {
         first.hashCode() == second.hashCode()
         first != parser.parse(text.replace('com.acme:a', 'com.acme:b'), 'three.yml')
         first.toString().contains('name:acme-audit')
-        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[], versionOfForge:false)'
+        first.dependencies.first().toString() == 'PackDescriptor$PackDependency(scope:implementation, groupId:com.acme, artifactId:a, version:null, excludes:[], versionOfForge:false, when:always)'
     }
 
     @Unroll
@@ -1139,7 +1139,7 @@ build:
         descriptor.buildPlugins.collect { [it.id, it.version, it.artifactOfForge] } ==
                 [['com.gradleup.shadow', null, 'shadow-gradle-plugin'], ['com.acme.audit', '1.2.0', null]]
         descriptor.buildBlocks == [afterPlugins: 'apply from: "gradle/asciidoc.gradle"', end: "tasks.register('audit')\n"]
-        descriptor.buildPlugins.first().toString() == 'PackDescriptor$PackBuildPlugin(id:com.gradleup.shadow, version:null, artifactOfForge:shadow-gradle-plugin)'
+        descriptor.buildPlugins.first().toString() == 'PackDescriptor$PackBuildPlugin(id:com.gradleup.shadow, version:null, artifactOfForge:shadow-gradle-plugin, apply:false, when:always)'
 
         and: 'what it says is part of what it is'
         descriptor == parser.parseOfForge(text, 'again.yml')

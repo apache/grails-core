@@ -109,13 +109,13 @@ class TestContainersSpec extends ApplicationContextSpec {
     void "test there is a dependency for every non embedded driver feature"() {
         when:
         String gradleTemplate = new BuildBuilder(beanContext)
-                .features(['testcontainers', driverFeature.getName()])
+                .features(['testcontainers', driverFeature])
                 .render()
 
         then:
         gradleTemplate.contains("org.testcontainers")
 
         where:
-        driverFeature << beanContext.getBeansOfType(DatabaseDriverFeature).values().findAll { !it.embedded() }
+        driverFeature << ['mysql', 'postgres', 'sqlserver']
     }
 }

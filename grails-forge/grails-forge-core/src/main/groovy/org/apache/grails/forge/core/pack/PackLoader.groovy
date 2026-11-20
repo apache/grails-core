@@ -193,7 +193,7 @@ class PackLoader {
             byte[] content = resource(loader, "${base}${Pack.TEMPLATES}/${file.from}", MAX_FILE_BYTES)
             if (content == null) {
                 problems << "files[${index}].from: '${file.from}' is not a resource under ${base}${Pack.TEMPLATES}, or is larger than a file can be".toString()
-            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+            } else if (file.isTemplate() && !isText(content)) {
                 problems << "files[${index}].from: '${file.from}' is a template and is not text in UTF-8".toString()
             } else {
                 files.put(file.from, content)
@@ -246,7 +246,7 @@ class PackLoader {
                 problems << "${at} has more than the ${MAX_FILE_BYTES} bytes a file of a pack can have".toString()
             } else if (total > MAX_PACK_BYTES) {
                 problems << "${at} takes the files of the pack over the ${MAX_PACK_BYTES} bytes they can have together".toString()
-            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+            } else if (file.isTemplate() && !isText(content)) {
                 problems << "${at} is a template and is not text in UTF-8".toString()
             } else {
                 files.put(file.from, content)
@@ -294,7 +294,7 @@ class PackLoader {
                 problems << "${at} has more than the ${MAX_FILE_BYTES} bytes a file of a pack can have".toString()
             } else if (total > MAX_PACK_BYTES) {
                 problems << "${at} takes the files of the pack over the ${MAX_PACK_BYTES} bytes they can have together".toString()
-            } else if (Pack.isTemplate(file.from) && !isText(content)) {
+            } else if (file.isTemplate() && !isText(content)) {
                 problems << "${at} is a template and is not text in UTF-8".toString()
             } else {
                 files.put(file.from, content)

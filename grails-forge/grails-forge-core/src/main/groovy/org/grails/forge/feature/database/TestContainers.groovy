@@ -27,9 +27,9 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.build.dependencies.Dependency
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.Features
 import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.Configuration
-import org.grails.forge.feature.test.Spock
 import org.grails.forge.template.StringTemplate
 
 @Component
@@ -37,6 +37,11 @@ import org.grails.forge.template.StringTemplate
 class TestContainers implements Feature {
 
     private static final String TESTCONTAINERS_GROUP_ID = 'org.testcontainers'
+    // the database drivers Testcontainers has a database for, by the names of their features, which are feature packs
+    private static final Map<String, String> ARTIFACTS = [mysql: 'testcontainers-mysql', postgres: 'testcontainers-postgresql',
+                                                          sqlserver: 'testcontainers-mssqlserver']
+    private static final Map<String, String> URLS = [mysql: 'jdbc:tc:mysql:8:///db', postgres: 'jdbc:tc:postgresql:12:///postgres',
+                                                     sqlserver: 'jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb']
 
     @Nonnull
     @Override
@@ -62,23 +67,20 @@ class TestContainers implements Feature {
     @Override
     void apply(GeneratorContext generatorContext) {
         generatorContext.addDependency(testContainerTestDependency('testcontainers'))
-        generatorContext.getFeature(DatabaseDriverFeature).ifPresent(driverFeature -> {
-            generatorContext.getFeature(DatabaseDriverConfigurationFeature).ifPresent(driverConfiguration -> {
-                String driver = 'org.testcontainers.jdbc.ContainerDatabaseDriver'
-                if (driverFeature instanceof SQLServer) {
-                    generatorContext.addTemplate('sqlserverEula', new StringTemplate('src/test/resources/container-license-acceptance.txt', 'mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04'))
-                }
-                urlForDatabaseDriverFeature(driverFeature).ifPresent(url -> {
-                    Configuration testConfig = generatorContext.getConfiguration('test', ApplicationConfiguration.testConfig())
-                    testConfig.put(driverConfiguration.getUrlKey(), url)
-                    testConfig.put(driverConfiguration.getDriverKey(), driver)
-                })
-                artifactIdForDriverFeature(driverFeature).ifPresent(dependencyArtifactId ->
-                    generatorContext.addDependency(testContainerTestDependency(dependencyArtifactId)))
-            })
-        })
+        Features features = generatorContext.getFeatures()
+        String driverFeature = ARTIFACTS.keySet().find { String name -> features.contains(name) }
+        // for a Grails Data implementation that connects through the driver
+        if (driverFeature != null && (features.contains('gorm-hibernate5') || features.contains('gorm-hibernate7'))) {
+            if (driverFeature == 'sqlserver') {
+                generatorContext.addTemplate('sqlserverEula', new StringTemplate('src/test/resources/container-license-acceptance.txt', 'mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04'))
+            }
+            Configuration testConfig = generatorContext.getConfiguration('test', ApplicationConfiguration.testConfig())
+            testConfig.put('dataSource.url', URLS.get(driverFeature))
+            testConfig.put('dataSource.driverClassName', 'org.testcontainers.jdbc.ContainerDatabaseDriver')
+            generatorContext.addDependency(testContainerTestDependency(ARTIFACTS.get(driverFeature)))
+        }
 
-        if (generatorContext.isFeaturePresent(Spock)) {
+        if (features.contains('spock')) {
             generatorContext.addDependency(testContainerTestDependency('testcontainers-spock'))
         }
 
@@ -93,32 +95,6 @@ class TestContainers implements Feature {
             .groupId(TESTCONTAINERS_GROUP_ID)
             .artifactId(artifactId)
             .testImplementation()
-    }
-
-    @Nonnull
-    private static Optional<String> artifactIdForDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
-        if (driverFeature instanceof MySQL) {
-            return Optional.of('testcontainers-mysql')
-        } else if (driverFeature instanceof PostgreSQL) {
-            return Optional.of('testcontainers-postgresql')
-        } else if (driverFeature instanceof SQLServer) {
-            return Optional.of('testcontainers-mssqlserver')
-        }
-        return Optional.empty()
-    }
-
-    @Nonnull
-    private static Optional<String> urlForDatabaseDriverFeature(@Nonnull DatabaseDriverFeature driverFeature) {
-        if (driverFeature instanceof MySQL) {
-            return Optional.of('jdbc:tc:mysql:8:///db')
-
-        } else if (driverFeature instanceof PostgreSQL) {
-            return Optional.of('jdbc:tc:postgresql:12:///postgres')
-
-        } else if (driverFeature instanceof SQLServer) {
-            return Optional.of('jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb')
-        }
-        return Optional.empty()
     }
 
     @Override

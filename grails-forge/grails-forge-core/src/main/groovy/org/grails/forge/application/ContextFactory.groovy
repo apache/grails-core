@@ -29,8 +29,6 @@ import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.feature.OneOfFeature
-import org.grails.forge.feature.reloading.ReloadingFeature
-import org.grails.forge.feature.spring.SpringBootEmbeddedServlet
 import org.grails.forge.feature.validation.ConflictingFeatureValidator
 import org.grails.forge.feature.validation.FeatureValidator
 import org.grails.forge.io.ConsoleOutput
@@ -229,13 +227,17 @@ class ContextFactory {
      * <p>The defaults that are no choice of an option look for a feature of their group themselves.</p>
      */
     private static boolean standsAside(DefaultFeature feature, Options options, Set<Feature> features) {
-        OptionName option = feature instanceof SpringBootEmbeddedServlet ? OptionName.SERVLET :
-                feature instanceof ReloadingFeature ? OptionName.RELOADING : null
+        OptionName option = isOf(feature, OptionName.SERVLET) ? OptionName.SERVLET :
+                isOf(feature, OptionName.RELOADING) ? OptionName.RELOADING : null
         if (option == null || options.getGiven().contains(option)) {
             return false
         }
-        String group = ((OneOfFeature) feature).getGroup()
-        return features.any { Feature other -> other instanceof OneOfFeature && ((OneOfFeature) other).getGroup() == group }
+        return features.any { Feature other -> isOf(other, option) }
+    }
+
+    // the servlet containers and the reloaders are the features of the exclusive group of their option
+    private static boolean isOf(Feature feature, OptionName option) {
+        return feature instanceof OneOfFeature && ((OneOfFeature) feature).getGroup() == option.getGroup()
     }
 
     /**
@@ -275,13 +277,13 @@ class ContextFactory {
             applicable.add(OptionName.DATA)
         }
         ServletImpl servlet = options.getServletImpl()
-        if (servlet == ServletImpl.NONE ? availableFeatures.getAllFeatures().anyMatch { Feature feature -> feature instanceof SpringBootEmbeddedServlet } :
+        if (servlet == ServletImpl.NONE ? availableFeatures.getAllFeatures().anyMatch { Feature feature -> isOf(feature, OptionName.SERVLET) } :
                 availableFeatures.findFeature(servlet.getName(), true).isPresent()) {
             applicable.add(OptionName.SERVLET)
         }
         DevelopmentReloading reloading = options.getDevelopmentReloading()
         if (availableFeatures.getAllFeatures().anyMatch { Feature feature ->
-            feature instanceof ReloadingFeature && (reloading == DevelopmentReloading.NONE || ((ReloadingFeature) feature).getReloading() == reloading)
+            isOf(feature, OptionName.RELOADING) && (reloading == DevelopmentReloading.NONE || DevelopmentReloading.ofFeature(feature.getName()) == reloading)
         }) {
             applicable.add(OptionName.RELOADING)
         }
@@ -407,7 +409,7 @@ class ContextFactory {
         }
         if (given.contains(OptionName.SERVLET)) {
             ServletImpl servlet = options.getServletImpl()
-            List<String> servlets = features.findAll { Feature feature -> feature instanceof SpringBootEmbeddedServlet }*.getName()
+            List<String> servlets = features.findAll { Feature feature -> isOf(feature, OptionName.SERVLET) }*.getName()
             if (servlet == ServletImpl.NONE && !servlets.isEmpty()) {
                 throw disagreement(OptionName.SERVLET, 'none', null, "the feature ${servlets[0]}${requiredThrough(featureContext, servlets[0])}")
             }
@@ -417,11 +419,11 @@ class ContextFactory {
         }
         if (given.contains(OptionName.RELOADING)) {
             DevelopmentReloading reloading = options.getDevelopmentReloading()
-            List<ReloadingFeature> present = features.findAll { Feature feature -> feature instanceof ReloadingFeature }.collect { Feature feature -> (ReloadingFeature) feature }
+            List<Feature> present = features.findAll { Feature feature -> isOf(feature, OptionName.RELOADING) }.toList()
             if (reloading == DevelopmentReloading.NONE && !present.isEmpty()) {
                 throw disagreement(OptionName.RELOADING, reloading.getName(), null, "the feature ${present[0].getName()}${requiredThrough(featureContext, present[0].getName())}")
             }
-            if (reloading != DevelopmentReloading.NONE && !present.any { ReloadingFeature feature -> feature.getReloading() == reloading }) {
+            if (reloading != DevelopmentReloading.NONE && !present.any { Feature feature -> DevelopmentReloading.ofFeature(feature.getName()) == reloading }) {
                 throw disagreement(OptionName.RELOADING, reloading.getName(), reloading.getLabel(), null)
             }
         }

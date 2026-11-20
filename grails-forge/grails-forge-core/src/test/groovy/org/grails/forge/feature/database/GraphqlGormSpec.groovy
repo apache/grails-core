@@ -26,6 +26,7 @@ import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.FeatureRegistry
+import org.grails.forge.feature.FeatureRegistry
 import org.grails.forge.feature.Features
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -89,7 +90,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
 
     void "test gorm-graphql category is API"() {
         when:
-        def feature = beanContext.getBean(GraphqlGorm)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'gorm-graphql' }
 
         then:
         feature.category == Category.API
@@ -97,7 +98,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
 
     void "test gorm-graphql supports WEB and REST_API but not plugins"() {
         when:
-        def feature = beanContext.getBean(GraphqlGorm)
+        def feature = beanContext.getBean(FeatureRegistry).all().find { it.name == 'gorm-graphql' }
 
         then:
         feature.supports(ApplicationType.WEB)
@@ -159,7 +160,7 @@ class GraphqlGormSpec extends ApplicationContextSpec implements CommandOutputFix
         readme.contains('[https://graphql.org](https://graphql.org)')
     }
 
-    void "test GraphqlGorm.apply does not write GraphQL-specific configuration"() {
+    void "test gorm-graphql does not write GraphQL-specific configuration"() {
         when: 'no extra config keys should be required - the plugin auto-configures itself'
         GeneratorContext ctx = buildGeneratorContext(['gorm-graphql'])
 

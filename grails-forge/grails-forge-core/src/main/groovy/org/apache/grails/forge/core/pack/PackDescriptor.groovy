@@ -77,6 +77,8 @@ final class PackDescriptor {
     final Map<String, String> buildBlocks
     /** For a pack Forge has in itself: the links it adds to the readme, each a line of its own */
     final List<PackLink> readmeLinks
+    /** For a pack Forge has in itself: how the feature is selected and what it gives beside other features; otherwise {@link PackOfForge#NONE} */
+    final PackOfForge ofForge
 
     @SuppressWarnings('ParameterCount')
     PackDescriptor(String name, String title, String description, String category, String documentation,
@@ -123,6 +125,20 @@ final class PackDescriptor {
                    Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
                    String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
                    Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi) {
+        this(name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes, requires,
+                conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions, configuration, files, readme,
+                instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks, templateApi, PackOfForge.NONE)
+    }
+
+    @SuppressWarnings('ParameterCount')
+    PackDescriptor(String name, String title, String description, String category, String documentation,
+                   String grailsCompatibility, String forgeCompatibility, Set<ApplicationType> applicationTypes,
+                   List<String> requires, List<String> conflicts, String oneOf, List<PackDependency> dependencies,
+                   List<PackDependency> platforms, List<PackBuildPlugin> buildPlugins, Map<String, String> buildProperties,
+                   Map<String, String> buildExtensions, Map<String, Object> configuration, List<PackFile> files,
+                   String readme, String instructions, String thirdPartyDocumentation, Map<String, String> versionsOfForge,
+                   Map<String, String> buildBlocks, List<PackLink> readmeLinks, int templateApi, PackOfForge ofForge) {
+        this.ofForge = ofForge
         this.templateApi = templateApi
         this.versionsOfForge = Collections.unmodifiableMap(new LinkedHashMap<String, String>(versionsOfForge))
         this.buildBlocks = Collections.unmodifiableMap(new LinkedHashMap<String, String>(buildBlocks))
@@ -154,7 +170,7 @@ final class PackDescriptor {
         return [name, title, description, category, documentation, grailsCompatibility, forgeCompatibility, applicationTypes,
                 requires, conflicts, oneOf, dependencies, platforms, buildPlugins, buildProperties, buildExtensions,
                 configuration, files, readme, instructions, thirdPartyDocumentation, versionsOfForge, buildBlocks, readmeLinks,
-                templateApi] as List<Object>
+                templateApi, ofForge] as List<Object>
     }
 
     /**
@@ -176,7 +192,7 @@ final class PackDescriptor {
      * A copy of a tree of maps, lists and single values in which no map or list can be changed. The
      * parser only lets immutable single values into the tree.
      */
-    private static Object frozen(Object value) {
+    static Object frozen(Object value) {
         if (value instanceof Map) {
             Map<String, Object> copy = new LinkedHashMap<>()
             ((Map<String, Object>) value).each { String key, Object each -> copy.put(key, frozen(each)) }
@@ -211,12 +227,20 @@ final class PackDescriptor {
          * in itself can say so: a feature of the framework names its versions in one place.
          */
         final boolean versionOfForge
+        /** For a pack Forge has in itself: what has to hold of the application for the dependency to be there */
+        final PackCondition when
 
         PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes) {
             this(scope, groupId, artifactId, version, excludes, false)
         }
 
         PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes, boolean versionOfForge) {
+            this(scope, groupId, artifactId, version, excludes, versionOfForge, PackCondition.ALWAYS)
+        }
+
+        PackDependency(String scope, String groupId, String artifactId, String version, List<String> excludes, boolean versionOfForge,
+                       PackCondition when) {
+            this.when = when
             this.versionOfForge = versionOfForge
             this.scope = scope
             this.groupId = groupId
@@ -241,12 +265,22 @@ final class PackDescriptor {
          * {@code null}. Only a pack Forge has in itself can name one.
          */
         final String artifactOfForge
+        /** For a pack Forge has in itself: whether the plugin is applied with {@code apply plugin:}, as the plugins of Grails are */
+        final boolean apply
+        /** For a pack Forge has in itself: what has to hold of the application for the plugin to be applied */
+        final PackCondition when
 
         PackBuildPlugin(String id, String version) {
             this(id, version, null)
         }
 
         PackBuildPlugin(String id, String version, String artifactOfForge) {
+            this(id, version, artifactOfForge, false, PackCondition.ALWAYS)
+        }
+
+        PackBuildPlugin(String id, String version, String artifactOfForge, boolean apply, PackCondition when) {
+            this.apply = apply
+            this.when = when
             this.id = id
             this.version = version
             this.artifactOfForge = artifactOfForge
@@ -282,10 +316,30 @@ final class PackDescriptor {
         final String from
         /** The path of the file in the application, with {@code /} between its steps */
         final String to
+        /** Whether a file whose name ends with {@code .gsp} is a template; a pack Forge has in itself can say it is not */
+        final boolean asTemplate
+        /** For a pack Forge has in itself: whether the file is one that is run */
+        final boolean executable
+        /** For a pack Forge has in itself: what has to hold of the application for the file to be written */
+        final PackCondition when
 
         PackFile(String from, String to) {
+            this(from, to, true, false, PackCondition.ALWAYS)
+        }
+
+        PackFile(String from, String to, boolean template, boolean executable, PackCondition when) {
             this.from = from
             this.to = to
+            this.asTemplate = template
+            this.executable = executable
+            this.when = when
+        }
+
+        /**
+         * @return whether the file is rendered, and not written as it is
+         */
+        boolean isTemplate() {
+            return asTemplate && Pack.isTemplate(from)
         }
     }
 }

@@ -38,6 +38,12 @@ interface ReloadingFeature extends OneOfFeature, DefaultFeature {
         return 'reloading'
     }
 
+    // the developer tools of Spring Boot, a feature pack, are of this group too
+    @Override
+    default boolean isFoundByGroup() {
+        return true
+    }
+
     @Override
     default boolean supports(ApplicationType applicationType) {
         return true

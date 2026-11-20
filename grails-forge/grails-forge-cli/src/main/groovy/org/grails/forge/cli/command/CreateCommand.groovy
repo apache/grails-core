@@ -38,9 +38,7 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureSelectionException
-import org.grails.forge.feature.database.GrailsDataHibernate7
 import org.grails.forge.feature.grails.GrailsBase
-import org.grails.forge.feature.micronaut.GrailsMicronaut
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.DevelopmentReloading
@@ -752,7 +750,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
      * command says so and creates nothing.
      */
     private void heldToItsBom(GeneratorContext context) {
-        String actual = GrailsBase.bomArtifactId(context.isFeaturePresent(GrailsMicronaut), context.isFeaturePresent(GrailsDataHibernate7))
+        String actual = GrailsBase.bomArtifactId(context.getFeatures().contains('grails-micronaut'), context.getFeatures().contains('gorm-hibernate7'))
         if (bomOfCatalogPacks != null && bomOfCatalogPacks != actual) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), 'The features that were found by their names in a feature catalog were chosen for an ' +
                     "application with ${BomVersions.GROUP}:${bomOfCatalogPacks}, and with all its features the application gets ${BomVersions.GROUP}:${actual}, " +

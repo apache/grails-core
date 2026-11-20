@@ -24,6 +24,7 @@ import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureRegistry
+import org.grails.forge.feature.OneOfFeature
 import spock.lang.TempDir
 
 class BundledPackFeaturesSpec extends ApplicationContextSpec {
@@ -98,16 +99,62 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
                 'asciidoctor',
                 'cache',
                 'cache-ehcache',
+                'database-migration',
+                'gorm-async',
+                'gorm-graphql',
+                'gorm-hibernate5',
+                'gorm-hibernate7',
                 'grails-layout',
                 'grails-quartz',
                 'grails-spring-ai',
+                'grails-undertow',
+                'grails-url-mappings',
                 'grails-web-console',
+                'grails-web-testing-support',
+                'h2',
                 'hibernate-validator',
+                'mysql',
                 'openapi',
+                'postgres',
                 'shade',
                 'spring-ai-anthropic',
                 'spring-ai-ollama',
-                'spring-ai-openai']
+                'spring-ai-openai',
+                'spring-boot-devtools',
+                'spring-boot-starter-jetty',
+                'spring-boot-starter-tomcat',
+                'sqlserver',
+                'views-json']
+    }
+
+    void "every feature and exclusive group a pack of Forge names is one Forge has"() {
+        given:
+        FeatureRegistry registry = beanContext.getBean(FeatureRegistry)
+        Set<String> features = registry.all()*.name as Set<String>
+        Set<String> groups = registry.all().findAll { it instanceof OneOfFeature }.collect { ((OneOfFeature) it).group } as Set<String>
+        List<String> unknown = []
+
+        when:
+        BundledPackFeatures.names(getClass().classLoader).each { String name ->
+            PackDescriptor descriptor = new PackLoader().fromClasspath(getClass().classLoader, name).descriptor
+            PackOfForge ofForge = descriptor.ofForge
+            List<PackCondition> conditions = [ofForge.byDefault] + ofForge.adds*.when + ofForge.reliesOn*.when + descriptor.dependencies*.when +
+                    descriptor.buildPlugins*.when + descriptor.files*.when + ofForge.settings*.when +
+                    (ofForge.buildExtensionParts.values().flatten() as List<PackOfForge.Part>)*.when
+            Set<String> named = (descriptor.requires + descriptor.conflicts + ofForge.adds*.feature + ofForge.reliesOn*.feature) as Set<String>
+            conditions.findAll { it != null }.each { PackCondition condition ->
+                named.addAll(condition.features)
+                unknown.addAll(groupsOf(condition).findAll { !groups.contains(it) }.collect { "${name}: the group ${it}".toString() })
+            }
+            unknown.addAll(named.findAll { !features.contains(it) }.collect { "${name}: the feature ${it}".toString() })
+        }
+
+        then:
+        unknown == []
+    }
+
+    private static List<String> groupsOf(PackCondition condition) {
+        return (condition.kind == PackCondition.GROUP ? [condition.values[0]] : []) + condition.conditions.collectMany { groupsOf(it) }
     }
 
     void "a pack of Forge can name a page of the guide of this Grails in place of a link"() {
@@ -137,8 +184,8 @@ class BundledPackFeaturesSpec extends ApplicationContextSpec {
 
         where:
         page                          | more                                    || problem
-        'https://evil.example/x.html' | ''                                      || "guideOfGrails: must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'https://evil.example/x.html'"
-        'guide/../../x.html'          | ''                                      || "guideOfGrails: must be a page of the guide, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'guide/../../x.html'"
+        'https://evil.example/x.html' | ''                                      || "guideOfGrails: must be a page of the documentation of Grails, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'https://evil.example/x.html'"
+        'guide/../../x.html'          | ''                                      || "guideOfGrails: must be a page of the documentation of Grails, such as 'guide/cache.html' or 'guide/REST.html#openApi', but is 'guide/../../x.html'"
         'guide/cache.html'            | "documentation: 'https://a.example/'\n" || 'guideOfGrails: is in place of documentation, and both are given'
     }
 }

@@ -38,7 +38,6 @@ import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
-import org.grails.forge.feature.reloading.ReloadingFeature
 import org.grails.forge.feature.build.gradle.GradleBuildSrc
 import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.BootstrapConfiguration
@@ -279,6 +278,15 @@ class GeneratorContext implements DependencyContext {
     }
 
     /**
+     * @return the options the application was asked for with, as they were given or defaulted: what the
+     * features are applied with. See {@link #getApplicationOptions()} for what the application has
+     * @since 9.0
+     */
+    @Nonnull Options getOptions() {
+        return options
+    }
+
+    /**
      * The options as the application has them. An option that was not given is a default, which gives
      * way to the features: an application that was asked for with the feature of Hibernate 7 and no
      * option has Hibernate 7 and not the default. This is what is recorded with the application and
@@ -304,11 +312,11 @@ class GeneratorContext implements DependencyContext {
             ServletImpl present = ServletImpl.values().find { ServletImpl each -> each != ServletImpl.NONE && names.contains(each.getName()) }
             applied = applied.withServletImpl(present ?: ServletImpl.NONE)
         }
-        ReloadingFeature reloading = features.reloading()
+        Feature reloading = features.reloading()
         if (reloading == null) {
             applied = applied.withDevelopmentReloading(DevelopmentReloading.NONE)
-        } else if (!features.getFeatures().any { Feature each -> each instanceof ReloadingFeature && ((ReloadingFeature) each).getReloading() == options.getDevelopmentReloading() }) {
-            applied = applied.withDevelopmentReloading(reloading.getReloading())
+        } else if (!features.getFeatures().any { Feature each -> DevelopmentReloading.ofFeature(each.getName()) == options.getDevelopmentReloading() }) {
+            applied = applied.withDevelopmentReloading(DevelopmentReloading.ofFeature(reloading.getName()))
         }
         return applied
     }

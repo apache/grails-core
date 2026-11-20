@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
-import org.grails.forge.feature.reloading.ReloadingFeature
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
@@ -68,9 +67,8 @@ class FeatureContext {
         this.selectedFeatures = selectedFeatures
         if (options.getDevelopmentReloading() == null) {
             DevelopmentReloading reloading = selectedFeatures.stream()
-                .filter { it instanceof ReloadingFeature }
-                .map { (ReloadingFeature) it }
-                .map(ReloadingFeature::getReloading)
+                .map { Feature feature -> DevelopmentReloading.ofFeature(feature.getName()) }
+                .filter { it != null }
                 .findFirst()
                 .orElse(DevelopmentReloading.DEFAULT_OPTION)
             options = options.withDevelopmentReloading(reloading)

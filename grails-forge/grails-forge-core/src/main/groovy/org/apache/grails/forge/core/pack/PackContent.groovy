@@ -32,14 +32,50 @@ final class PackContent implements Template {
 
     private final String path
     private final byte[] content
+    private final boolean executable
+    private final boolean held
 
     /**
      * @param path the destination of the file, with its placeholders
      * @param content the content of the file
      */
     PackContent(String path, byte[] content) {
+        this(path, content, false)
+    }
+
+    /**
+     * @param path the destination of the file, with its placeholders
+     * @param content the content of the file
+     * @param executable whether the file is one that is run
+     */
+    PackContent(String path, byte[] content, boolean executable) {
+        this(path, content, executable, true)
+    }
+
+    /**
+     * @param path the destination of the file, with its placeholders
+     * @param content the content of the file
+     * @param executable whether the file is one that is run
+     * @param held whether the destination is held to the paths a pack can write; that of a pack Forge has
+     * in itself is not, it is a file of the framework
+     */
+    PackContent(String path, byte[] content, boolean executable, boolean held) {
         this.path = path
         this.content = content.clone()
+        this.executable = executable
+        this.held = held
+    }
+
+    /**
+     * @return whether the destination is held to the paths a pack can write
+     */
+    boolean isHeld() {
+        return held
+    }
+
+    @Override
+    boolean isExecutable() {
+        return executable
     }
 
     @Override

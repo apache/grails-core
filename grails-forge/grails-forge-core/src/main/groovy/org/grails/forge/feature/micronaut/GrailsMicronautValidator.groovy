@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
-import org.grails.forge.feature.reloading.SpringBootDevTools
 import org.grails.forge.feature.validation.FeatureValidator
 import org.grails.forge.options.Options
 
@@ -33,7 +32,7 @@ class GrailsMicronautValidator implements FeatureValidator {
     @Override
     void validatePreProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
         if (features.stream().anyMatch(f -> f instanceof GrailsMicronaut)) {
-            if (features.stream().anyMatch(f -> (f instanceof SpringBootDevTools))) {
+            if (features.stream().anyMatch(f -> f.getName() == 'spring-boot-devtools')) {
                 // See: https://github.com/micronaut-projects/micronaut-spring/issues/769
                 throw new IllegalArgumentException('Spring Boot DevTools are not supported with Grails Micronaut')
             }
