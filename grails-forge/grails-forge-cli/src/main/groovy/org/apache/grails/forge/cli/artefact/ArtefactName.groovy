@@ -1,0 +1,100 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.forge.cli.artefact
+
+import groovy.transform.CompileStatic
+import javax.lang.model.SourceVersion
+import org.apache.grails.forge.core.pack.PackDescriptorParser
+import org.grails.forge.application.Project
+import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.util.NameUtils
+
+/**
+ * The name of a class a command is asked to create, held to what the name of a new class has to be.
+ * The name is given on the command line and becomes directories and the name of a file, so it is a
+ * name of Java and nothing else: no path, no character that is not shown, and no step a file system
+ * could not have.
+ *
+ * @since 9.0
+ */
+@CompileStatic
+final class ArtefactName {
+
+    /** The most characters a name can have, its package included */
+    public static final int MAX_NAME = 200
+
+    private ArtefactName() {
+    }
+
+    /**
+     * @param given the name as it was given: {@code Book}, {@code book}, {@code book-store} or
+     * {@code org.example.Book}
+     * @param defaultPackage the package of a name that has none, which can be missing
+     * @param convention what the kind of class adds to the name, such as {@code Controller}, which a
+     * name that ends with it already is given without; or null
+     * @return the names of the class: {@code className} is the name without the convention
+     * @throws IllegalArgumentException when the name cannot be the name of a class, with a message of one line
+     */
+    static Project parse(String given, String defaultPackage, String convention) {
+        if (given == null || given.isEmpty()) {
+            throw new IllegalArgumentException('A name is needed')
+        }
+        String shown = FeatureSelectionException.shown(given)
+        if (given.length() > MAX_NAME) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it has more than ${MAX_NAME} characters")
+        }
+        if (PackDescriptorParser.hasUnsafeCharacter(given)) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it has a character that is not shown, such as a control character")
+        }
+        if (given.contains('/') || given.contains('\\') || given.contains(':')) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it is a path. A package is given with dots, as in org.example.Book")
+        }
+        int dot = given.lastIndexOf('.')
+        String packageName = dot < 0 ? defaultPackage : given.substring(0, dot)
+        String simple = dot < 0 ? given : given.substring(dot + 1)
+        if (simple.contains('-')) {
+            simple = NameUtils.getNameFromScript(simple)
+        }
+        if (dot == 0 || simple.isEmpty()) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it starts or ends with a dot")
+        }
+        String className = simple.substring(0, 1).toUpperCase(Locale.ENGLISH) + simple.substring(1)
+        if (convention && className.length() > convention.length() && className.endsWith(convention)) {
+            className = className.substring(0, className.length() - convention.length())
+        }
+        if (!SourceVersion.isIdentifier(className) || SourceVersion.isKeyword(className)) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${FeatureSelectionException.shown(className)} is not an identifier of Java")
+        }
+        if (packageName && !SourceVersion.isName(packageName)) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${FeatureSelectionException.shown(packageName)} is not a package of Java")
+        }
+        // the package is directories and the name is a file: neither is one Windows could not have
+        List<String> steps = (packageName ? packageName.split('\\.').toList() : []) + [className + (convention ?: '')]
+        String device = steps.find { String step -> PackDescriptorParser.isDeviceName(step) }
+        if (device != null) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${device} is the name of a device on Windows, " +
+                    'so the file could not be checked out there')
+        }
+        if (!PackDescriptorParser.isPathBelowRoot(steps.join('/'))) {
+            throw new IllegalArgumentException("\"${shown}\" is not a name for a class: not every file system takes it as the name of a file")
+        }
+        return new Project(packageName ?: null, packageName ? packageName.replace('.', '/') : '', className,
+                NameUtils.getNaturalName(className), NameUtils.getPropertyName(className), className)
+    }
+}

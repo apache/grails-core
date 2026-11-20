@@ -92,3 +92,14 @@ dependencies {
 In order to separate the code generation and build layer, in Grails 3.x scripts created with `create-script` do not have access to the running application instance.
 
 Instead, Grails 3.x features a new concept called an link:{apiFromRef}org/apache/grails/core/cli/ApplicationCommand.html[ApplicationCommand] that is invoked via Gradle to perform tasks such as interact with classes in the runtime.
+
+=== Grails Forge CLI
+
+The Grails Forge CLI has this command as well, in every project. It writes `grails-app/commands/<package>/<Name>Command.groovy`, a class that implements `GrailsApplicationCommand`, from the template `artifacts/Command.groovy`. The name can be given with hyphens (`data-import` becomes `DataImportCommand`), and a name that ends with `Command` already is taken without it.
+
+[source,shell]
+----
+grails -t forge create-command <name>
+----
+
+See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.

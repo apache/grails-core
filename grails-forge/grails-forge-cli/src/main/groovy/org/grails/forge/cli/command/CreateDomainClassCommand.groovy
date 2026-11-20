@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
@@ -27,8 +28,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
 import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
+import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateDomainClassCommand.NAME, description = 'Creates a Domain Class')
@@ -57,11 +57,16 @@ class CreateDomainClassCommand extends CodeGenCommand {
     }
 
     @Override
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.DOMAIN_CLASS, ArtefactTemplate.DOMAIN_CLASS_TEST]
+    }
+
+    @Override
     Integer call() throws Exception {
         final Project project = getProject(domainClassName)
         final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult domainRenderResult = templateRenderer.render(new GspTemplate('grails-app/domain/{packagePath}/{className}.groovy', GspView.of('/forge/cli/command/templates/domain.gsp', [project: project])), overwrite)
-        final RenderResult domainSpecRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}Spec.groovy', GspView.of('/forge/cli/command/templates/domainSpec.gsp', [project: project])), overwrite)
+        final RenderResult domainRenderResult = templateRenderer.render(new StringTemplate('grails-app/domain/{packagePath}/{className}.groovy', artefact(ArtefactTemplate.DOMAIN_CLASS, project)), overwrite)
+        final RenderResult domainSpecRenderResult = templateRenderer.render(new StringTemplate('src/test/groovy/{packagePath}/{className}Spec.groovy', artefact(ArtefactTemplate.DOMAIN_CLASS_TEST, project)), overwrite)
         if (domainRenderResult != null && domainSpecRenderResult != null) {
             logRenderResult(domainRenderResult)
             logRenderResult(domainSpecRenderResult)

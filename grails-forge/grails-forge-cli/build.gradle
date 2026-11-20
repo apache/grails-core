@@ -25,8 +25,6 @@ plugins {
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.gradle.grails-app'
     id 'java-test-fixtures' // CliRunner, which the specs here and in test-core run one command bean with
-    // the pages of the code generation commands, under grails-app/views/forge/cli
-    id 'org.apache.grails.gradle.grails-gsp'
     id 'org.apache.grails.buildsrc.compile'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
@@ -90,13 +88,9 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
     implementation 'org.apache.groovy:groovy'
+    // a template of a project in the Groovy syntax, for create-job and create-script
+    implementation 'org.apache.groovy:groovy-templates'
 
-    // renders the compiled pages, without a web request
-    implementation 'org.apache.grails.views:grails-gsp-core'
-    // the page compiler compileGroovyPages forks, which lives in the web GSP module; needed to build
-    // the pages only
-    compileOnly 'org.apache.grails.views:grails-web-gsp'
-    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"
     implementation 'jakarta.inject:jakarta.inject-api'
@@ -122,10 +116,7 @@ dependencies {
     testRuntimeOnly 'org.objenesis:objenesis'
 }
 
-// The specs render the pages as the application ships them, compiled. The GSP plugin leaves the
-// compiled pages off a Grails build's test class path, where an application renders its views from source.
 tasks.named('test', Test).configure { Test test ->
-    test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
     // a spec that asks for a feature there is not would otherwise look for it in the plugin index, on the network
     test.environment('GRAILS_FORGE_CATALOG', 'none')
     // and a spec that would ask another computer for anything fails with the address, and asks nothing

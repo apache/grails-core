@@ -19,12 +19,18 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactName
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
+import org.apache.grails.forge.cli.artefact.ArtefactTemplates
 import org.grails.forge.util.ThrowingSupplier
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
+import org.grails.forge.template.DefaultTemplateRenderer
+import org.grails.forge.template.RenderResult
+import org.grails.forge.template.StringTemplate
 import org.grails.forge.template.TemplateRenderer
 import org.grails.forge.util.NameUtils
 import picocli.CommandLine
@@ -74,6 +80,85 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
 
     protected TemplateRenderer getTemplateRenderer() throws IOException {
         return TemplateRenderer.create(outputHandlerSupplier.get())
+    }
+
+    /**
+     * What the command writes the files of the project through.
+     */
+    protected OutputHandler outputHandler() throws IOException {
+        return outputHandlerSupplier.get()
+    }
+
+    /**
+     * The templates this command writes classes from. A project can have its own of each under
+     * {@code src/main/templates}, and {@code install-templates} copies them there.
+     */
+    List<ArtefactTemplate> getTemplates() {
+        return Collections.emptyList()
+    }
+
+    /**
+     * The text of a class: rendered from the template of the project when it has one under
+     * {@code src/main/templates}, which is then said, and from the template of this program otherwise.
+     *
+     * @param names the names of the class
+     */
+    protected String artefact(ArtefactTemplate template, Project names) throws IOException {
+        ArtefactTemplates.Source source = ArtefactTemplates.find(new File(outputHandler().getOutputLocation()), template)
+        if (source.projectPath != null) {
+            out('@|blue ||@ Using the template ' + source.projectPath + ' of the project')
+        }
+        return ArtefactTemplates.render(source, template, names)
+    }
+
+    /**
+     * The names of a class that is to be created, from a name given on the command line, which is
+     * held to what the name of a new class can be.
+     *
+     * @param convention what the kind of class adds to its name, or null
+     * @throws CommandLine.ParameterException when the name cannot be the name of a class
+     */
+    protected Project newArtefact(String name, String convention) {
+        try {
+            return ArtefactName.parse(name, config?.getDefaultPackage(), convention)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
+        }
+    }
+
+    /**
+     * Writes the files of a new class, all of them or none: a file that is there already is not
+     * replaced unless the command is forced, and then nothing is written.
+     *
+     * @param what what the class is, for the messages
+     * @param names the names of the class
+     * @param files the template of each file, by the path of the file, in which {@code {packagePath}},
+     * {@code {className}} and the other names of {@link Project#getProperties()} are placeholders
+     * @return the exit code of the command
+     */
+    protected Integer generate(String what, Project names, Map<String, ArtefactTemplate> files) throws IOException {
+        OutputHandler output = outputHandler()
+        Map<String, ArtefactTemplate> templates = new LinkedHashMap<>()
+        files.each { String path, ArtefactTemplate template ->
+            templates.put(DefaultTemplateRenderer.resolvePath(path, names.getProperties()).replace('//', '/'), template)
+        }
+        List<String> there = templates.keySet().findAll { String path -> output.exists(path) }.toList()
+        if (there && !overwrite) {
+            there.each { String path -> err(path + ' already exists. Run again with -f to overwrite.') }
+            return 1
+        }
+        // every file is rendered before one is written, so a template that fails leaves nothing behind
+        Map<String, String> rendered = new LinkedHashMap<>()
+        templates.each { String path, ArtefactTemplate template -> rendered.put(path, artefact(template, names)) }
+        TemplateRenderer renderer = TemplateRenderer.create(output)
+        rendered.each { String path, String text ->
+            RenderResult result = renderer.render(new StringTemplate(path, text), true)
+            if (result.getError() != null) {
+                throw result.getError()
+            }
+            out('@|blue ||@ Rendered ' + what + ' to ' + result.getPath())
+        }
+        return 0
     }
 
     protected <T extends CodeGenCommand> T getCommand(Class<T> clazz) {

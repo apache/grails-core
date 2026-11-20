@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
@@ -27,8 +28,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
 import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
+import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateInterceptorCommand.NAME, description = 'Creates a Interceptor Class')
@@ -57,11 +57,16 @@ class CreateInterceptorCommand extends CodeGenCommand {
     }
 
     @Override
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.INTERCEPTOR, ArtefactTemplate.INTERCEPTOR_TEST]
+    }
+
+    @Override
     Integer call() throws Exception {
         final Project project = getProject(interceptorName)
         final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new GspTemplate('grails-app/controllers/{packagePath}/{className}Interceptor.groovy', GspView.of('/forge/cli/command/templates/interceptor.gsp', [project: project])), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}InterceptorSpec.groovy', GspView.of('/forge/cli/command/templates/interceptorSpec.gsp', [project: project])), overwrite)
+        final RenderResult renderResult = templateRenderer.render(new StringTemplate('grails-app/controllers/{packagePath}/{className}Interceptor.groovy', artefact(ArtefactTemplate.INTERCEPTOR, project)), overwrite)
+        final RenderResult specRenderResult = templateRenderer.render(new StringTemplate('src/test/groovy/{packagePath}/{className}InterceptorSpec.groovy', artefact(ArtefactTemplate.INTERCEPTOR_TEST, project)), overwrite)
         if (renderResult != null && specRenderResult != null) {
             logRenderResult(renderResult)
             logRenderResult(specRenderResult)

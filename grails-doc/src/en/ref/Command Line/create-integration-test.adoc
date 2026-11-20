@@ -50,4 +50,13 @@ Usage:
 grails create-integration-test <<name>>
 ----
 
+=== Grails Forge CLI
 
+The Grails Forge CLI has this command as well, in web applications, REST API applications and web plugins. It writes `src/integration-test/groovy/<package>/<Name>Spec.groovy` from the template `testing/Integration.groovy`. A name is needed: the command does not ask for one. A name that ends with `Spec` already is taken without it.
+
+[source,shell]
+----
+grails -t forge create-integration-test <name>
+----
+
+See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.

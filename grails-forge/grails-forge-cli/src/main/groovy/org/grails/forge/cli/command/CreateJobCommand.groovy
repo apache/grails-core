@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
@@ -26,8 +27,7 @@ import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
+import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateJobCommand.NAME, description = 'Creates a new Quartz scheduled job')
@@ -56,13 +56,18 @@ class CreateJobCommand extends CodeGenCommand {
     }
 
     @Override
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.JOB]
+    }
+
+    @Override
     Integer call() throws Exception {
         if (!applies()) {
             throw new IllegalArgumentException('Please first select Grails Quartz Plugin')
         }
         final Project project = getProject(jobName)
         final RenderResult result = getTemplateRenderer(project)
-            .render(new GspTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', GspView.of('/forge/cli/command/templates/job.gsp', [project: project])), overwrite)
+            .render(new StringTemplate('grails-app/jobs/{packagePath}/{className}Job.groovy', artefact(ArtefactTemplate.JOB, project)), overwrite)
         if (result != null) {
             logRenderResult(result)
         }

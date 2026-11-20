@@ -50,3 +50,13 @@ Usage:
 grails create-functional-test <<name>>
 ----
 
+=== Grails Forge CLI
+
+The Grails Forge CLI has this command as well, in REST API applications. It writes `src/integration-test/groovy/<package>/<Name>Spec.groovy` from the template `testing/Functional.groovy`: a test that requests the home page of the running application with the HTTP client of the JDK, which needs no further dependency. It does not write a Geb test. A name is needed, and a name that ends with `Spec` already is taken without it.
+
+[source,shell]
+----
+grails -t forge create-functional-test <name>
+----
+
+See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.

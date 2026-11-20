@@ -19,6 +19,7 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.application.Project
@@ -27,8 +28,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.RenderResult
 import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
+import org.grails.forge.template.StringTemplate
 import picocli.CommandLine
 
 @CommandLine.Command(name = CreateServiceCommand.NAME, description = 'Creates a Service Class')
@@ -57,11 +57,16 @@ class CreateServiceCommand extends CodeGenCommand {
     }
 
     @Override
+    List<ArtefactTemplate> getTemplates() {
+        return [ArtefactTemplate.SERVICE, ArtefactTemplate.SERVICE_TEST]
+    }
+
+    @Override
     Integer call() throws Exception {
         final Project project = getProject(serviceName)
         final TemplateRenderer templateRenderer = getTemplateRenderer(project)
-        final RenderResult renderResult = templateRenderer.render(new GspTemplate('grails-app/services/{packagePath}/{className}Service.groovy', GspView.of('/forge/cli/command/templates/service.gsp', [project: project])), overwrite)
-        final RenderResult specRenderResult = templateRenderer.render(new GspTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', GspView.of('/forge/cli/command/templates/serviceSpec.gsp', [project: project])), overwrite)
+        final RenderResult renderResult = templateRenderer.render(new StringTemplate('grails-app/services/{packagePath}/{className}Service.groovy', artefact(ArtefactTemplate.SERVICE, project)), overwrite)
+        final RenderResult specRenderResult = templateRenderer.render(new StringTemplate('src/test/groovy/{packagePath}/{className}ServiceSpec.groovy', artefact(ArtefactTemplate.SERVICE_TEST, project)), overwrite)
         if (renderResult != null && specRenderResult != null) {
             logRenderResult(renderResult)
             logRenderResult(specRenderResult)

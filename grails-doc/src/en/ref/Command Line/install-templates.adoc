@@ -74,3 +74,25 @@ $ ./gradlew runCommand -Pargs="install-templates"
 ----
 
 The `install-templates` command will copy the templates Grails uses for all code generation activities to the application's `src/main/templates/scaffolding` directory.
+
+== Grails Forge CLI install-templates
+
+=== Purpose
+
+Copies the templates of the code generation commands of the Grails Forge CLI to your project directory
+
+=== Examples
+
+[source,shell]
+----
+grails -t forge install-templates
+grails -t forge install-templates --force
+----
+
+=== Description
+
+The `install-templates` command of the Grails Forge CLI copies the templates of the commands the project has, such as `create-controller`, `create-service` and `create-unit-test`, to `src/main/templates/artifacts` and `src/main/templates/testing` of the project (and `src/main/templates/Job.groovy` in a project with the Quartz plugin). Those commands then write their files from the templates of the project. It lists each file it writes; a template the project has already is kept and named unless `-f` or `--force` is given.
+
+It does not write the scaffolding templates under `src/main/templates/scaffolding`, which the command of the scaffolding plugin described above copies.
+
+See "Templates of the Project" in link:{guidePath}commandLine.html[The Command Line] for the templates and their syntax.

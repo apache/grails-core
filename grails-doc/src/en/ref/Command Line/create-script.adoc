@@ -71,3 +71,14 @@ testApp()
 Code generation can be performed using the link:{apiFromRef}org/grails/cli/profile/commands/templates/TemplateRenderer.html[TemplateRenderer API]
 
 For more information, see the section on link:{guidePath}commandLine.html#creatingCustomScripts[creating custom scripts].
+
+=== Grails Forge CLI
+
+The Grails Forge CLI has this command as well, in every project. It writes `src/main/scripts/<name>.groovy` from the template `artifacts/Script.groovy`, with the name in lower case and with hyphens whichever way it is given: `create-script DataImport` and `create-script data-import` both write `data-import.groovy`. A script has no package, so a name with a dot is refused. The template is a Groovy template, which the command runs when the project has its own.
+
+[source,shell]
+----
+grails -t forge create-script <name>
+----
+
+See "Creating Classes with the Grails Forge CLI" in link:{guidePath}commandLine.html[The Command Line] for the names it takes, what it does when the file is there already, and how a project replaces the template.

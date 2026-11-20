@@ -26,12 +26,20 @@ import picocli.CommandLine
 import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
+import org.grails.forge.cli.command.CreateCommandCommand
 import org.grails.forge.cli.command.CreateControllerCommand
 import org.grails.forge.cli.command.CreateDomainClassCommand
+import org.grails.forge.cli.command.CreateDomainResourceCommand
+import org.grails.forge.cli.command.CreateFunctionalTestCommand
+import org.grails.forge.cli.command.CreateIntegrationTestCommand
 import org.grails.forge.cli.command.CreateInterceptorCommand
 import org.grails.forge.cli.command.CreateJobCommand
+import org.grails.forge.cli.command.CreateRestfulControllerCommand
+import org.grails.forge.cli.command.CreateScriptCommand
 import org.grails.forge.cli.command.CreateServiceCommand
 import org.grails.forge.cli.command.CreateTagLibCommand
+import org.grails.forge.cli.command.CreateUnitTestCommand
+import org.grails.forge.cli.command.InstallTemplatesCommand
 import org.grails.forge.io.ConsoleOutput
 
 /**
@@ -53,7 +61,15 @@ final class ForgeCli {
             CreateTagLibCommand,
             CreateInterceptorCommand,
             CreateJobCommand,
-            AddPropertyCommand
+            AddPropertyCommand,
+            CreateUnitTestCommand,
+            CreateIntegrationTestCommand,
+            CreateFunctionalTestCommand,
+            CreateRestfulControllerCommand,
+            CreateDomainResourceCommand,
+            CreateCommandCommand,
+            CreateScriptCommand,
+            InstallTemplatesCommand
     ] as List<Class<? extends CodeGenCommand>>
 
     private static final BiFunction<Throwable, CommandLine, Integer> EXCEPTION_HANDLER = { Throwable e, CommandLine commandLine ->
