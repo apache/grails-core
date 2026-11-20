@@ -1484,7 +1484,66 @@ With GORM for MongoDB, a class that is not multi-tenant and was saved inside a t
 
 Data services choose their transaction manager in code generated at compile time, so a data service compiled against an earlier release keeps following the tenant until it is compiled again.
 
-==== 26. A GSP Error Names the Line of the Page It Is On
+==== 26. Unit Tests Run Domain Class Events for Every Data Source and Tenant
+
+In a unit test that implements `DataTest` or `DomainUnitTest`, a save through a data source other than the default one, as `book.secondary.save()` makes, and a save for a tenant with a database or a schema of its own, now run the domain class's events, such as `beforeInsert`, and set its `dateCreated` and `lastUpdated` properties, as they do in the application. In Grails 8 they ran neither. Unit tests still do not set the `@CreatedBy` and `@LastModifiedBy` properties, on any data source, even when the test defines an `AuditorAware` bean, as in Grails 8: the in-memory datastore is not given the application context, so note 28 does not apply to them.
+
+===== Required Actions
+
+* A test that expected such a save to keep the `dateCreated` and `lastUpdated` it was given saves inside a `withoutTimestamps { }` block of that data source's listener, such as `Book.secondary.autoTimestampEventListener`.
+* A test that expected a domain class event not to run on such a save expects what the event does.
+* The in-memory datastore of unit tests now follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations` on every data source, the default one included, as the application does. In an application whose configuration sets `autoTimestampInsertOverwrite: false`, a unit test that expected a save to overwrite the `dateCreated` or `lastUpdated` it was given expects them kept.
+
+==== 27. A Domain Class Has an `autoTimestampEventListener` Property
+
+Every domain class now has a static `autoTimestampEventListener` property, the listener that sets its timestamp and auditor properties (see the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide). A domain class that declares a property of that name of another type no longer compiles: the compiler reports that the return type of its `getAutoTimestampEventListener()` is incompatible with the one in `GormEntity`. A property of that name typed `AutoTimestampEventListener`, such as an injected bean, compiles but hides the static property, so `Book.autoTimestampEventListener` throws `MissingPropertyException`.
+
+===== Required Actions
+
+* Rename a property of a domain class named `autoTimestampEventListener`. Code that used an injected `autoTimestampEventListener` bean in a domain class reads `Book.autoTimestampEventListener` instead, which is the listener of the data source the class's saves go to.
+
+==== 28. Every Data Source Sets the Auditor Properties and Follows the Auto-Timestamp Settings
+
+In an application with several data sources, or with a database or a schema per tenant, a save through a data source other than the default one:
+
+* sets the `@CreatedBy` and `@LastModifiedBy` properties from the application's `AuditorAware`. In Grails 8 only a save through the default data source set them.
+* follows `grails.gorm.events.autoTimestampInsertOverwrite` and `grails.gorm.autoTimestampCacheAnnotations`. In Grails 8 it overwrote a `dateCreated` or `lastUpdated` that an instance was saved with, whatever `autoTimestampInsertOverwrite` said.
+* with GORM for Neo4j, runs the domain class's events, such as `beforeInsert`, and sets `dateCreated` and `lastUpdated`. In Grails 8 a save through another Neo4j connection ran neither.
+
+===== Required Actions
+
+For most applications **no changes are required**. Check the domain classes saved through a data source other than the default one whose auditor properties, given timestamps or, with Neo4j, events were expected to be left alone.
+
+==== 29. JLine 4
+
+Grails 9 manages JLine 4 (`org.jline:jline`), the line Groovy 6's `groovysh` is built on, in place of JLine 3. The link:{versionsRef}Grails%20BOM.html[Grails BOM dependency table] has the exact version. JLine is the terminal library behind the interactive prompts of the `grails` command line tools and of `grails shell`, and behind `GrailsConsole`, which application and plugin commands write to. The line reader, terminal and completer APIs keep their `org.jline` packages.
+
+===== Required Actions
+
+* Recompile code of your own that uses JLine, such as an `org.jline.reader.Completer` for a command, against JLine 4. JLine 4 removed APIs that JLine 3 had deprecated, so code that uses them no longer compiles. For example, use `org.jline.builtins.Completers.FileNameCompleter` in place of `org.jline.reader.impl.completer.FileNameCompleter`, and `Terminal.inputEncoding()` and `outputEncoding()` in place of `stdinEncoding()`, `stdoutEncoding()` and `stderrEncoding()`. `TerminalBuilder.codepage(int)` and the `TerminalBuilder.PROP_JNA` and `PROP_JANSI` constants are gone too.
+* JLine 4 has no JNA or Jansi terminal provider. Remove a dependency on `org.jline:jline-terminal-jna` or `org.jline:jline-terminal-jansi`: neither has a JLine 4 version, and JLine finds the terminal through its remaining providers.
+
+picocli's `info.picocli:picocli-shell-jline3` runs on JLine 4, but picocli has no JLine 4 version of it, and its `PicocliCommands` implements `org.jline.console.CommandRegistry`, which JLine 4 deprecates. JLine's own picocli bridge, `org.jline:jline-picocli`, is built for JLine 4. To move to it, use it at the JLine version the Grails BOM manages.
+
+==== 30. Command Lines of Application Commands
+
+The command line parser of the `grails` command line tool and of `runCommand`, which reads the command line of an application or plugin command, reads two kinds of input differently:
+
+* An empty argument after an option without a value is that option's value, an empty one. `--name "" value` used to give the option `name` the value `value`; now `name` is empty, and `value` is an argument.
+* The text inside a pair of double quotes is trimmed, as an argument without quotes always was. `" a "` used to reach the command as ` a `, and now reaches it as `a`.
+
+It also reads three kinds of input it used to fail on or cut short:
+
+* `--name=`, an option with an empty value, threw an `ArrayIndexOutOfBoundsException`, and is now the option `name` with an empty value.
+* An argument that is a single `"` threw a `StringIndexOutOfBoundsException`, and is now passed on as it is.
+* The value of an option is everything after the first `=`: `--filter=status=active` used to give `status`, and now gives `status=active`.
+
+===== Required Actions
+
+* Check commands that read an option followed by an empty argument, or arguments with spaces inside quotes, and expect the values above.
+* Remove workarounds for the three failures, such as passing `--filter=status%3Dactive` and decoding it in the command.
+
+==== 31. A GSP Error Names the Line of the Page It Is On
 
 The line an error in a GSP names was wrong for many pages, and is now the line of the page:
 
@@ -1505,7 +1564,7 @@ The exception: an escaped expression, `\${`, that came 63,998 or 63,999 characte
 
 None for an application. A test that asserts the line of a GSP error asserts the line of the page instead; there is no setting that brings the earlier numbers back. Not changed: scanning a page with very many comments is still slow, since each comment that is taken out copies the page.
 
-==== 27. Compiled Commands Carry a Descriptor, and Command Tasks Take Arguments One at a Time
+==== 32. Compiled Commands Carry a Descriptor, and Command Tasks Take Arguments One at a Time
 
 Compiling a command, in `grails-app/commands` of an application or in `src/cli/groovy` of a plugin, now also writes the file `META-INF/grails-commands/<class name>.json` into the compiled classes, beside `META-INF/grails-cli.factories`. It holds the name and the description of the command, and it goes wherever the compiled classes go, as the registration already does: into the jar of a plugin's `-cli` companion, and for commands under `grails-app/commands` into the archive of the application or plugin. The new `grailsCommandCatalog` task lists the commands of a project from these files, into `build/grails/command-catalog.json`, without loading a class. See xref:commandLine#creatingCustomCommands[Creating Custom Commands].
 
@@ -1515,7 +1574,7 @@ Compiling a command, in `grails-app/commands` of an application or in `src/cli/g
 
 None for the commands: they run as before with or without the descriptor. To build an archive without the files, exclude them where the archive is put together, for example `tasks.named('bootJar') { exclude 'META-INF/grails-commands/**' }`; the commands are then listed by the names their class names give. A build that has a task of its own named `grailsCommandCatalog` gives it another name, because the Grails Gradle plugin now registers one: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the catalog is not written.
 
-==== 28. The Grails Forge CLI Runs Script Commands Through the Build
+==== 33. The Grails Forge CLI Runs Script Commands Through the Build
 
 The Grails Gradle plugin registers a task `runScriptCommand` in every application and plugin project. It compiles and runs a script command, `src/main/scripts/<name>.groovy` of the project or `META-INF/commands/<name>.groovy` of a plugin, in a JVM of the build. The Grails Forge CLI lists the scripts of a project as commands by the names of their files and runs one through that task; it does not compile or evaluate a script itself. See xref:commandLine#creatingCustomScripts[Creating Custom Scripts].
 

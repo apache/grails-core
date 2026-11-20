@@ -33,7 +33,6 @@ import org.jline.reader.impl.DefaultParser
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
 import picocli.CommandLine
-import picocli.shell.jline3.PicocliJLineCompleter
 import java.util.function.BiFunction
 import java.util.function.Consumer
 import java.util.function.Supplier
@@ -96,7 +95,7 @@ class InteractiveShell {
      */
     Completer completer() {
         return { LineReader reader, ParsedLine line, List<Candidate> candidates ->
-            new PicocliJLineCompleter(completed.getCommandSpec()).complete(reader, line, candidates)
+            new CommandLineCompleter(completed.getCommandSpec()).complete(reader, line, candidates)
         } as Completer
     }
 
