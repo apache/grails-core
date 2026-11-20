@@ -37,3 +37,22 @@ You can invoke Gradle directly using the `gradle` command and use your own local
 $ gradle assemble
 ----
 
+
+=== Running Gradle with the Grails Forge CLI
+
+The Grails Forge CLI has a `gradle` command, which runs Gradle in the project the current directory is in, with the Gradle wrapper of that project (`gradlew`, or `gradlew.bat` on Windows):
+
+[source,console]
+----
+$ grails -t forge gradle build
+$ grails -t forge gradle test --tests "example.BookSpec" -x integrationTest
+$ grails -t forge gradle bootRun "-Pmessage=two words"
+----
+
+Everything after `gradle` is given to Gradle as it is, each argument as the one argument it was on the command line: an argument that has spaces or quotes is not split or put together again, and an option such as `-x`, `-v`, `--stacktrace` or `--help` is an option of Gradle, not of `grails`. The command has no options of its own for that reason, and it needs at least one argument: without any it says how it is used and ends with exit code 2. One thing is read before Gradle gets it, as on every command line of the Grails Forge CLI: an argument that starts with `@` and names a file is replaced by the arguments in that file. Write `@@` for an `@` that is meant for Gradle.
+
+The project is the nearest directory, from the current one upwards, that has a `grails-app` directory, a `.grails/project.yml` or a `grails-forge-cli.yml`, and Gradle runs in that directory, also when the command is given in a directory below it. In a build of several projects the wrapper is the nearest one above the project, and because Gradle runs in the directory of the project, a task that is named without a path is the task of that project and not of the ones beside it. The search does not go above the root of the Git repository the directory is in. Outside a project, and in a project that has no Gradle wrapper, the command runs nothing, says so and ends with exit code 1: it does not fall back to another Gradle installation.
+
+What Gradle writes is shown as it is written. Gradle is not connected to the terminal directly, so it writes its plain output; add `--console=rich` to the arguments for the colored one. When the build succeeds the command ends with exit code 0. When Gradle ends with any other exit code, the command says which one after the report of Gradle and ends with exit code 1. When `grails` is ended while Gradle runs, the Gradle it started is ended with it, and a Gradle daemon then cancels the build.
+
+On Windows the wrapper is a batch file, and a batch file does not receive an argument as it is when the argument contains one of `"`, `%`, `&`, `|`, `<`, `>`, `^` or a control character. The command refuses such an argument with exit code 2 before anything is run; run `gradlew.bat` directly for it.

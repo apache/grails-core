@@ -25,6 +25,7 @@ import org.grails.forge.cli.command.CreatePluginCommand
 import org.grails.forge.cli.command.CreateRestApiCommand
 import org.grails.forge.cli.command.CreateWebPluginCommand
 import org.grails.forge.cli.command.CreateWebappCommand
+import org.grails.forge.cli.command.GradleCommand
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
@@ -32,8 +33,8 @@ import java.util.concurrent.Callable
 
 /**
  * The root command of the Forge CLI: {@code grails-forge-cli}, whose subcommands create applications
- * and plugins. The code generation commands that apply inside a generated project are added by
- * {@link ForgeCli} when the current directory holds one.
+ * and plugins, or run Gradle in a project. The code generation commands that apply inside a generated
+ * project are added by {@link ForgeCli} when the current directory holds one.
  */
 @CommandLine.Command(name = 'grails-forge-cli', description = [
         'Grails Forge CLI command line interface for generating projects and services.',
@@ -53,7 +54,8 @@ import java.util.concurrent.Callable
                 CreateWebappCommand,
                 CreatePluginCommand,
                 CreateWebPluginCommand,
-                CreateRestApiCommand
+                CreateRestApiCommand,
+                GradleCommand
         ])
 @Component
 @Scope('prototype')
