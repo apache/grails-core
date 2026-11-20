@@ -26,6 +26,7 @@ import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForgeCli
 import org.grails.forge.cli.GeneratedBuild
 import org.grails.forge.cli.GrailsPicocliFactory
 import org.grails.forge.io.ConsoleOutput
@@ -83,7 +84,8 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         state.manifest.options.reloading == DevelopmentReloading.NONE
         state.manifest.requestedFeatures*.name == ['grails-quartz', 'properties']
         state.lock.featureNames.containsAll(['grails-quartz', 'properties', 'spock', 'spring-boot-starter-jetty'])
-        state.baseline.files*.path.containsAll(['build.gradle', 'gradlew', 'grails-forge-cli.yml', 'grails-app/conf/application.properties'])
+        state.baseline.files*.path.containsAll(['build.gradle', 'gradlew', 'grails-app/conf/application.properties'])
+        !state.baseline.files*.path.contains('grails-forge-cli.yml')
         !state.baseline.files*.path.any { it.startsWith('.grails') }
 
         when: 'the old record of the project is gone'
@@ -101,7 +103,8 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
     void "an application is created in a directory that has files, and not over the state of another"() {
         given:
         ByteArrayOutputStream err = new ByteArrayOutputStream()
-        System.setOut(new PrintStream(new ByteArrayOutputStream()))
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
         System.setErr(new PrintStream(err))
         new File(dir, 'build.gradle').setText('// mine\n', 'UTF-8')
 
@@ -115,14 +118,108 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'build.gradle').getText('UTF-8') == '// mine\n'
         new File(dir, '.grails/baseline/files/build.gradle').getText('UTF-8').contains('dependencies {')
 
+        and: 'which the command says'
+        out.toString().contains('1 file that the directory already had was kept and is not as generated: build.gradle')
+        out.toString().contains('The record of the project in .grails has them as they would have been generated, so they count as changed since then')
+        out.toString().contains('Application created')
+
         when:
         byte[] lock = new File(dir, '.grails/forge.lock.yml').bytes
         int again = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--inplace', '--features', 'grails-quartz')
 
-        then:
-        again != 0
-        err.toString().contains('Cannot create the project because the directory already has the state of a generated project in .grails')
+        then: 'which is no mistake in the command line: the message, and no usage and no stack trace'
+        again == 1
+        !err.toString().contains('Usage:')
+        !err.toString().contains('Exception')
+        err.toString().contains('Cannot create the project because the directory already has the state of a generated project (.grails/project.yml); ' +
+                'to generate the project anew, remove the directory .grails first')
         new File(dir, '.grails/forge.lock.yml').bytes == lock
+
+        when: 'the first generation did not come to its end: its manifest, which is written last, is not there'
+        assert new File(dir, '.grails/project.yml').delete()
+        int completed = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--inplace', '--features', 'grails-quartz')
+
+        then:
+        completed == 0
+        ProjectState.read(dir.toPath()).lock.featureNames.contains('grails-quartz')
+    }
+
+    void "a directory whose .grails is not a directory is left as it is, and that is no mistake in the command line"() {
+        given:
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(new ByteArrayOutputStream()))
+        System.setErr(new PrintStream(err))
+        new File(dir, '.grails').setText('x', 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--inplace')
+
+        then:
+        exit == 1
+        err.toString().contains('Cannot create the project because .grails in the directory is a file or a link and not a directory; remove it and create the project again')
+        !err.toString().contains('Usage:')
+        !err.toString().contains(dir.absolutePath)
+        dir.list() as List == ['.grails']
+    }
+
+    void "a package that could not be checked out on Windows is a mistake in the command line: #name"() {
+        given:
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(new ByteArrayOutputStream()))
+        System.setErr(new PrintStream(err))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, name)
+
+        then:
+        exit == 2
+        err.toString().contains(message)
+        !err.toString().contains('Exception')
+        dir.list().length == 0
+
+        where:
+        name            | message
+        'com.aux.shop'  | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
+        'con.acme.shop' | 'The package con.acme has the part con, which is the name of a device on Windows, so the project could not be checked out there'
+        'com.Lpt1.shop' | 'The package com.Lpt1 has the part Lpt1, which is the name of a device on Windows, so the project could not be checked out there'
+        'com.acme.nul'  | 'The name nul is the name of a device on Windows, so a directory of that name could not be made there'
+        'prn'           | 'The package prn has the part prn, which is the name of a device on Windows, so the project could not be checked out there'
+    }
+
+    void "a command that creates an application, and the version, do not read the record of the directory they are run in"() {
+        given: 'a directory whose record is not one Forge wrote'
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+        System.setErr(new PrintStream(out))
+        new File(dir, '.grails/baseline').mkdirs()
+        new File(dir, '.grails/project.yml').setText('format: 7\n', 'UTF-8')
+        new File(dir, '.grails/forge.lock.yml').setText('format: 7\n', 'UTF-8')
+        new File(dir, '.grails/baseline/index.yml').setText('format: 7\n', 'UTF-8')
+
+        expect:
+        !ForgeCli.readsProject('create-app', 'com.example.shop')
+        !ForgeCli.readsProject('-x', 'create-plugin', 'shop')
+        !ForgeCli.readsProject('--version')
+        !ForgeCli.readsProject('-V')
+        ForgeCli.readsProject('create-controller', 'Book')
+        ForgeCli.readsProject('--help')
+        ForgeCli.readsProject()
+
+        when:
+        int version = ForgeCli.execute(beanContext, '--version')
+        int created = ForgeCli.execute(beanContext, 'create-app', 'com.example.shop')
+
+        then:
+        version == 0
+        created == 0
+        !out.toString().contains('.grails/project.yml')
+        new File(dir, 'shop/.grails/project.yml').file
+
+        when: 'help lists the commands there are in this directory, and says why the code generation commands are not among them'
+        ForgeCli.execute(beanContext, '--help')
+
+        then:
+        out.toString().contains('.grails/project.yml: format is 7, and this version of Grails reads the format 1')
     }
 
     @RestoreSystemProperties

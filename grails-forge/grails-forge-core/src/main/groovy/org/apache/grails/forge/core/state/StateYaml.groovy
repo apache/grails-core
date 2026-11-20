@@ -20,6 +20,7 @@ package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
@@ -38,25 +39,22 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.util.regex.Pattern
 
 /**
  * How the files of the state of a project are written and read. They are written the same way every
  * time: block style, the keys in the order they are given, lines that end with a line feed, UTF-8.
- * They are read as what the clone of a project is, text nobody has checked: without aliases, anchors
- * or tags, to a bounded depth, and every single value as text, which the reader of each file then
- * holds to what it has to be.
+ * They are read as what the clone of a project is, text nobody has checked: the lines of a file are
+ * counted and measured before any of it is parsed, its mappings, lists and values are counted while
+ * it is scanned and before anything is built of them, and it is read without aliases, anchors or
+ * tags, to a bounded depth, with every single value as text, which the reader of each file then holds
+ * to what it has to be.
  */
 @CompileStatic
 @PackageScope
 final class StateYaml {
 
-    static final int MAX_DEPTH = 6
-
     /** The most characters a message repeats of what a file says */
     static final int MAX_ECHO = 80
-
-    private static final Pattern UNSAFE = Pattern.compile(/[\p{Cc}\p{Cs}\p{Co}\p{Zl}\p{Zp}\x{202A}-\x{202E}\x{2066}-\x{2069}]/)
 
     private StateYaml() {
     }
@@ -73,9 +71,10 @@ final class StateYaml {
     /**
      * @param bytes the content of a file of the state
      * @param file the name of the file, for messages
+     * @param lines the most lines the file can have
      * @return the mapping the file holds, every single value of it text
      */
-    static Map<String, Object> load(byte[] bytes, String file) {
+    static Map<String, Object> load(byte[] bytes, String file, int lines) {
         String text
         try {
             text = StandardCharsets.UTF_8.newDecoder()
@@ -88,17 +87,21 @@ final class StateYaml {
         if (text.isBlank()) {
             throw new ProjectStateException("${file} is empty")
         }
+        String refused = refusedAsText(text, lines)
+        if (refused != null) {
+            throw new ProjectStateException("${file} ${refused}")
+        }
         Object loaded
         try {
             LoaderOptions options = new LoaderOptions()
             options.setAllowDuplicateKeys(false)
             options.setMaxAliasesForCollections(0)
             options.setAllowRecursiveKeys(false)
-            options.setNestingDepthLimit(MAX_DEPTH + 1)
+            options.setNestingDepthLimit(StateLimits.MAX_DEPTH + 1)
             options.setCodePointLimit(text.length() + 1)
             DumperOptions dumperOptions = new DumperOptions()
             Yaml reader = new Yaml(new SafeConstructor(options), new Representer(dumperOptions), dumperOptions, options, new TextResolver())
-            String refused = refusedByScan(reader, text)
+            refused = refusedByScan(reader, text, 4 * lines + 64)
             if (refused != null) {
                 throw new ProjectStateException("${file} ${refused}")
             }
@@ -116,12 +119,37 @@ final class StateYaml {
         return (Map<String, Object>) loaded
     }
 
+    // The scanner of the YAML library looks ahead in a line without taking what it has seen, and what
+    // that costs grows with the square of the length of the line; and every line can open a mapping.
+    // Forge writes short lines and a known number of them, so a file with more of either is not one
+    // Forge wrote, and it is refused before the library sees it.
+    private static String refusedAsText(String text, int lines) {
+        int count = 1
+        int start = 0
+        for (int index = 0; index < text.length(); index++) {
+            char each = text.charAt(index)
+            if (each == ('\n' as char) || each == ('\r' as char)) {
+                start = index + 1
+                if (++count > lines) {
+                    return "has more than ${lines} lines".toString()
+                }
+            } else if (index - start >= StateLimits.MAX_LINE) {
+                return "has a line of more than ${StateLimits.MAX_LINE} characters".toString()
+            }
+        }
+        return null
+    }
+
     // the files are written without any of these, so one that has them was not written by Forge
-    private static String refusedByScan(Yaml reader, String text) {
+    private static String refusedByScan(Yaml reader, String text, int events) {
         // for each mapping or list that is open: whether it is a mapping whose next entry is a key
         // (TRUE), a mapping whose next entry is a value (FALSE), or a list (empty)
         Deque<Optional<Boolean>> open = new ArrayDeque<>()
+        int count = 0
         for (Event event : reader.parse(new StringReader(text))) {
+            if (++count > events) {
+                return 'has more mappings, lists and values than the state of a project has'
+            }
             if (event instanceof AliasEvent) {
                 return 'repeats a value with an alias (*), which the state of a project does not use'
             }
@@ -132,6 +160,9 @@ final class StateYaml {
                     event instanceof CollectionStartEvent ? ((CollectionStartEvent) event).getTag() : null
             if (tag != null) {
                 return "gives a value the tag '${shown(tag, MAX_ECHO)}', and the state of a project does not use tags".toString()
+            }
+            if (event instanceof ScalarEvent && ((ScalarEvent) event).getValue().length() > StateLimits.MAX_LINE) {
+                return "has a value of more than ${StateLimits.MAX_LINE} characters".toString()
             }
             if (event instanceof CollectionEndEvent) {
                 open.pop()
@@ -148,8 +179,8 @@ final class StateYaml {
                 if (key) {
                     return 'has a mapping or a list as a key, and a key is text'
                 }
-                if (open.size() >= MAX_DEPTH) {
-                    return "has mappings and lists more than ${MAX_DEPTH} deep".toString()
+                if (open.size() >= StateLimits.MAX_DEPTH) {
+                    return "has mappings and lists more than ${StateLimits.MAX_DEPTH} deep".toString()
                 }
                 open.push(event instanceof MappingStartEvent ? Optional.of(Boolean.TRUE) : Optional.<Boolean>empty())
             }
@@ -183,10 +214,11 @@ final class StateYaml {
 
     /**
      * @return whether a text is one line that a message can repeat and a file of the state can hold:
-     * not empty, without control characters and without the start of the markup of the command line
+     * not empty, without a character that is not shown or that a terminal acts on, and without the
+     * start of the markup of the command line. What is not safe is what it is for a feature pack.
      */
     static boolean isLine(String text, int limit) {
-        return text != null && !text.isBlank() && text.length() <= limit && !UNSAFE.matcher(text).find() && !text.contains('@|')
+        return text != null && !text.isBlank() && text.length() <= limit && !PackDescriptorParser.hasUnsafeCharacter(text) && !text.contains('@|')
     }
 
     /**
@@ -194,13 +226,7 @@ final class StateYaml {
      * command line would act on
      */
     static String shown(String text, int limit) {
-        String start = text.length() > limit * 2 ? text.substring(0, limit * 2) : text
-        String safe = UNSAFE.matcher(start).replaceAll('?').replace('@|', '@ |')
-        int count = safe.codePointCount(0, safe.length())
-        if (start.length() == text.length() && count <= limit) {
-            return safe
-        }
-        return safe.substring(0, safe.offsetByCodePoints(0, Math.min(limit, count))) + '...'
+        return PackDescriptorParser.shown(text, limit).replace('@|', '@ |')
     }
 
     /** Reads every single value as text: what a value has to be is for the reader of the file to say. */

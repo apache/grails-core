@@ -23,11 +23,13 @@ import groovy.transform.PackageScope
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.io.OutputUtils
 import java.text.Normalizer
+import java.util.regex.Pattern
 
 /**
  * The index of the baseline of a project, {@code .grails/baseline/index.yml}: every file the generator
  * wrote, in the order of the paths, with the digest of its content, whether it is text or binary and
- * whether it can be executed. The content itself is kept under {@code .grails/baseline/files}.
+ * whether it can be executed. The content itself is kept under {@code .grails/baseline/files}, each
+ * file under {@link #copyPath(String) the path of its copy}.
  *
  * @since 9.0
  */
@@ -37,13 +39,24 @@ final class BaselineIndex {
     /** The format of the index this version of Grails writes and reads */
     public static final int FORMAT = 1
 
-    /** The most files a baseline can have */
-    public static final int MAX_FILES = 20000
+    // a file of one of these names is read by Git wherever it is, also in the baseline, where the
+    // patterns of the application would decide which of the copies are committed and how
+    private static final Pattern READ_BY_GIT = Pattern.compile(/(?i)\.git(ignore|attributes)(\.baseline)*/)
+
+    private static final String COPY_SUFFIX = '.baseline'
 
     final List<BaselineFile> files
 
     BaselineIndex(List<BaselineFile> files) {
         this.files = Collections.unmodifiableList(new ArrayList<BaselineFile>(files))
+    }
+
+    /**
+     * @param path the path of a file of the application
+     * @return the file as the index has it, or {@code null} when the generator did not write it
+     */
+    BaselineFile find(String path) {
+        return files.find { BaselineFile each -> each.path == path }
     }
 
     @PackageScope
@@ -56,9 +69,9 @@ final class BaselineIndex {
 
     @PackageScope
     static BaselineIndex read(byte[] bytes) {
-        StateSection root = new StateSection(ProjectState.BASELINE_INDEX, '', StateYaml.load(bytes, ProjectState.BASELINE_INDEX))
+        StateSection root = new StateSection(ProjectState.BASELINE_INDEX, '', StateYaml.load(bytes, ProjectState.BASELINE_INDEX, StateLimits.INDEX_LINES))
         ProjectManifest.format(root, FORMAT)
-        List<BaselineFile> files = root.sections('files', MAX_FILES).collect { StateSection each -> BaselineFile.read(each) }
+        List<BaselineFile> files = root.sections('files', StateLimits.MAX_FILES).collect { StateSection each -> BaselineFile.read(each) }
         root.end()
         // one file for a file system that ignores the case or the composed form of letters is one file
         Set<String> seen = new HashSet<>()
@@ -77,6 +90,20 @@ final class BaselineIndex {
      */
     static boolean isBaselinePath(String path) {
         return OutputUtils.isRelativePath(path) && PackDescriptorParser.isPathBelowRoot(path) && !ProjectState.isStatePath(path)
+    }
+
+    /**
+     * Where the copy of a file is under {@code .grails/baseline/files}: under its own path, but for a
+     * step that is {@code .gitignore} or {@code .gitattributes}, which is written with
+     * {@code .baseline} after it, as is a step that is one of the two with {@code .baseline} after it
+     * already, so that no two files have one copy. The baseline then has no file Git reads, and the
+     * {@code .gitignore} of the application does not decide which of the copies are committed.
+     *
+     * @param path the path of a file of the application
+     * @return the path of its copy, from {@code .grails/baseline/files}
+     */
+    static String copyPath(String path) {
+        return path.split('/').collect { String step -> READ_BY_GIT.matcher(step).matches() ? step + COPY_SUFFIX : step }.join('/')
     }
 
     @PackageScope

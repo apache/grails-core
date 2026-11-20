@@ -21,13 +21,16 @@ package org.apache.grails.forge.core.state
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.grails.forge.application.ApplicationType
-import org.grails.forge.application.OperatingSystem
+import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 /**
  * The lock of a project, {@code .grails/forge.lock.yml}: what the {@link ProjectManifest} came to when
- * the application was generated. It names the manifest and the baseline it was written with by their
- * digests, so that a change to one of the three files without the others is seen.
+ * the application was generated. It names the manifest and the index of the baseline it was written
+ * with by their digests, and ends with the digest of everything of itself that comes before, its seal.
+ * A change to one of the three files that is made without the others is therefore seen, whichever
+ * file it is made to. The digests are no signature: whoever changes all three and writes the digests
+ * again has a record that reads.
  *
  * @since 9.0
  */
@@ -46,6 +49,8 @@ final class ProjectLock {
     @PackageScope
     static final Pattern SHA256 = Pattern.compile(/[0-9a-f]{64}/)
 
+    private static final String SEAL = 'seal:\n  sha256: '
+
     final String manifestSha256
     final String generatorName
     final String generatorVersion
@@ -53,14 +58,14 @@ final class ProjectLock {
     final int templateApi
     final ApplicationType applicationType
     final GenerationOptions options
-    final OperatingSystem operatingSystem
     final String lineEndings
+    final List<LockedRepository> repositories
     final List<LockedFeature> features
     final Map<String, String> parameters
     final String baselineIndexSha256
 
     ProjectLock(String manifestSha256, String generatorName, String generatorVersion, String grailsVersion, int templateApi,
-                ApplicationType applicationType, GenerationOptions options, OperatingSystem operatingSystem, String lineEndings,
+                ApplicationType applicationType, GenerationOptions options, String lineEndings, List<LockedRepository> repositories,
                 List<LockedFeature> features, Map<String, String> parameters, String baselineIndexSha256) {
         this.manifestSha256 = manifestSha256
         this.generatorName = generatorName
@@ -69,8 +74,8 @@ final class ProjectLock {
         this.templateApi = templateApi
         this.applicationType = applicationType
         this.options = options
-        this.operatingSystem = operatingSystem
         this.lineEndings = lineEndings
+        this.repositories = Collections.unmodifiableList(new ArrayList<LockedRepository>(repositories))
         this.features = Collections.unmodifiableList(new ArrayList<LockedFeature>(features))
         this.parameters = Collections.unmodifiableMap(new LinkedHashMap<String, String>(parameters))
         this.baselineIndexSha256 = baselineIndexSha256
@@ -93,19 +98,23 @@ final class ProjectLock {
         map.put('templateApi', templateApi)
         map.put('applicationType', GenerationOptions.written(applicationType))
         map.put('options', options.toMap())
-        if (operatingSystem != null) {
-            map.put('operatingSystem', GenerationOptions.written(operatingSystem))
-        }
         map.put('lineEndings', lineEndings)
+        if (repositories) {
+            map.put('repositories', repositories.collect { LockedRepository each -> each.toMap() })
+        }
         map.put('features', features.collect { LockedFeature each -> each.toMap() })
         map.put('parameters', new LinkedHashMap<String, Object>(parameters))
         map.put('baselineIndex', [sha256: baselineIndexSha256] as Map<String, Object>)
-        return StateYaml.dump(map)
+        byte[] sealed = StateYaml.dump(map)
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream()
+        bytes.write(sealed)
+        bytes.write("${SEAL}${StateYaml.sha256(sealed)}\n".toString().getBytes(StandardCharsets.UTF_8))
+        return bytes.toByteArray()
     }
 
     @PackageScope
     static ProjectLock read(byte[] bytes) {
-        StateSection root = new StateSection(ProjectState.LOCK, '', StateYaml.load(bytes, ProjectState.LOCK))
+        StateSection root = new StateSection(ProjectState.LOCK, '', StateYaml.load(bytes, ProjectState.LOCK, StateLimits.LOCK_LINES))
         ProjectManifest.format(root, FORMAT)
         StateSection manifest = root.section('manifest')
         String manifestSha256 = manifest.matching('sha256', SHA256, 'a SHA-256 digest in hexadecimal')
@@ -118,34 +127,109 @@ final class ProjectLock {
         int templateApi = root.number('templateApi', 1, 9999)
         ApplicationType applicationType = ProjectManifest.applicationType(root)
         GenerationOptions options = GenerationOptions.read(root.section('options'))
-        OperatingSystem operatingSystem = null
-        if (root.has('operatingSystem')) {
-            List<OperatingSystem> systems = OperatingSystem.values() as List<OperatingSystem>
-            String written = root.oneOf('operatingSystem', systems.collect { OperatingSystem each -> GenerationOptions.written(each) })
-            operatingSystem = systems.find { OperatingSystem each -> GenerationOptions.written(each) == written }
-        }
         String lineEndings = root.oneOf('lineEndings', [LINE_ENDINGS_OF_TEMPLATES])
-        List<LockedFeature> features = root.sections('features', ProjectManifest.MAX_FEATURES).collect { StateSection each -> LockedFeature.read(each) }
+        List<LockedRepository> repositories = !root.has('repositories') ? [] as List<LockedRepository> :
+                root.sections('repositories', StateLimits.MAX_REPOSITORIES).collect { StateSection each -> LockedRepository.read(each) }
+        List<LockedFeature> features = root.sections('features', StateLimits.MAX_FEATURES).collect { StateSection each -> LockedFeature.read(each) }
         Set<String> names = new HashSet<>()
         for (LockedFeature feature : features) {
             if (!names.add(feature.name)) {
                 throw root.problem('features', "has the feature ${feature.name} more than once")
             }
         }
-        Map<String, String> parameters = root.texts('parameters', ProjectManifest.MAX_PARAMETERS)
+        Map<String, String> parameters = root.texts('parameters', StateLimits.MAX_PARAMETERS)
         StateSection baseline = root.section('baselineIndex')
         String baselineIndexSha256 = baseline.matching('sha256', SHA256, 'a SHA-256 digest in hexadecimal')
         baseline.end()
+        StateSection seal = root.section('seal')
+        String sealed = seal.matching('sha256', SHA256, 'a SHA-256 digest in hexadecimal')
+        seal.end()
         root.end()
+        // the seal is the end of the file and is of the bytes before it, as they are
+        byte[] end = "${SEAL}${sealed}\n".toString().getBytes(StandardCharsets.UTF_8)
+        int before = bytes.length - end.length
+        if (before < 0 || !Arrays.equals(Arrays.copyOfRange(bytes, before, bytes.length), end) ||
+                StateYaml.sha256(Arrays.copyOfRange(bytes, 0, before)) != sealed) {
+            throw new ProjectStateException("${ProjectState.LOCK} was changed after it was written: it does not have the digest it ends with")
+        }
         return new ProjectLock(manifestSha256, generatorName, generatorVersion, grailsVersion, templateApi, applicationType, options,
-                operatingSystem, lineEndings, features, parameters, baselineIndexSha256)
+                lineEndings, repositories, features, parameters, baselineIndexSha256)
+    }
+
+    /**
+     * A repository the build of the application was generated with in place of the ones Grails gives
+     * it, which is done with {@code GRAILS_REPO_URL}. What is of the machine the application was
+     * generated on, a directory or the address of a repository with a name and a password in it, is
+     * not said: only that there was one.
+     */
+    @CompileStatic
+    static final class LockedRepository {
+
+        /** A repository at an address */
+        public static final String REMOTE = 'remote'
+
+        /** A directory of the machine the application was generated on */
+        public static final String LOCAL = 'local'
+
+        /** The local Maven repository of whoever builds the application */
+        public static final String MAVEN_LOCAL = 'maven-local'
+
+        /** Maven Central, placed among the others */
+        public static final String MAVEN_CENTRAL = 'maven-central'
+
+        final String kind
+        final String url
+
+        LockedRepository(String kind, String url = null) {
+            this.kind = kind
+            this.url = url
+        }
+
+        @PackageScope
+        Map<String, Object> toMap() {
+            Map<String, Object> map = new LinkedHashMap<>()
+            map.put('kind', kind)
+            if (url != null) {
+                map.put('url', url)
+            }
+            return map
+        }
+
+        @PackageScope
+        static LockedRepository read(StateSection section) {
+            String kind = section.oneOf('kind', [REMOTE, LOCAL, MAVEN_LOCAL, MAVEN_CENTRAL])
+            String url = section.has('url') ? section.text('url', StateLimits.MAX_ADDRESS) : null
+            if (url != null && (kind != REMOTE || !isPublicAddress(url))) {
+                throw section.problem('url', 'must be the https address of a repository, without a name or a password, and only a remote repository has one')
+            }
+            section.end()
+            return new LockedRepository(kind, url)
+        }
+    }
+
+    /**
+     * @param address the address of a repository
+     * @return whether the address can be committed with a project: it is an {@code https} address,
+     * in whatever case that is written, of a length the state can hold and without a name or a
+     * password in it. A directory and a {@code file:} address are of one machine and are not.
+     */
+    static boolean isPublicAddress(String address) {
+        if (address == null || !StateYaml.isLine(address, StateLimits.MAX_ADDRESS)) {
+            return false
+        }
+        try {
+            URI uri = new URI(address)
+            return 'https'.equalsIgnoreCase(uri.getScheme()) && uri.getRawAuthority() != null && uri.getRawUserInfo() == null
+        } catch (URISyntaxException ignored) {
+            return false
+        }
     }
 
     /**
      * A feature of the application and where it came from. A feature of the framework has only its
-     * name. A feature of a feature pack that is not part of Forge has, as far as they are known, where
-     * the pack was read from, the coordinates and the version of the artifact it is in, and the digest
-     * of that artifact.
+     * name. A feature of a feature pack that is not part of Forge has, as far as they are known, the
+     * address of the repository the pack was taken from, the coordinates and the version of the
+     * artifact it is in, and the digest of that artifact.
      */
     @CompileStatic
     static final class LockedFeature {
@@ -202,12 +286,15 @@ final class ProjectLock {
             LockedFeature feature = new LockedFeature(
                     name,
                     source,
-                    section.optionalText('origin'),
-                    section.optionalMatching('coordinates', ProjectManifest.COORDINATES, 'a group and an artifact, group:artifact'),
+                    section.has('origin') ? section.text('origin', StateLimits.MAX_ADDRESS) : null,
+                    section.optionalMatching('coordinates', ProjectManifest.COORDINATES, 'a group and an artifact, group:artifact', StateLimits.MAX_COORDINATES),
                     section.optionalMatching('version', ProjectManifest.VERSION, 'a version'),
                     section.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal'))
             if (source != PACK && (feature.origin != null || feature.coordinates != null || feature.version != null || feature.sha256 != null)) {
                 throw section.problem('source', "is ${source}, and only a feature of a feature pack that is not part of Forge has an origin, coordinates, a version or a digest")
+            }
+            if (feature.origin != null && !isPublicAddress(feature.origin)) {
+                throw section.problem('origin', 'must be the https address of a repository, without a name or a password')
             }
             section.end()
             return feature

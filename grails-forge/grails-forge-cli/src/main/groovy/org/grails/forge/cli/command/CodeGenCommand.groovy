@@ -62,9 +62,9 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
             name = NameUtils.getNameFromScript(name)
         }
         if (config != null && config.getDefaultPackage() != null && name.indexOf('.') == -1) {
-            return NameUtils.parse(config.getDefaultPackage() + '.' + name)
+            return NameUtils.parse(config.getDefaultPackage() + '.' + name, false)
         } else {
-            return NameUtils.parse(name)
+            return NameUtils.parse(name, false)
         }
     }
 

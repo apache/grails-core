@@ -994,9 +994,30 @@ class PackDescriptorParser {
     }
 
     /**
+     * @param text a text that is read from a file nobody has checked
+     * @return whether it has a character that a name, a key or an address cannot have: a control
+     * character, a format character, which is not shown, half of a pair, a character of private use
+     * or a line or paragraph separator
+     * @since 9.0
+     */
+    static boolean hasUnsafeCharacter(String text) {
+        return UNSAFE_CHARACTER.matcher(text).find()
+    }
+
+    /**
+     * @param step one step of a path
+     * @return whether a file or a directory of that name cannot be made on Windows, whatever comes
+     * after its first dot: the name of a device, such as {@code aux} or {@code com1}
+     * @since 9.0
+     */
+    static boolean isDeviceName(String step) {
+        return !step.equalsIgnoreCase('.git') && RESERVED_STEP.matcher(step).matches()
+    }
+
+    /**
      * At most {@code limit} characters of a text, with the characters that are not safe to show replaced.
      */
-    private static String shown(String text, int limit) {
+    static String shown(String text, int limit) {
         // a text is cut before it is searched, so a long one costs no more than a short one
         String start = text.length() > limit * 2 ? text.substring(0, limit * 2) : text
         String safe = UNSAFE_CHARACTER.matcher(start).replaceAll('?')

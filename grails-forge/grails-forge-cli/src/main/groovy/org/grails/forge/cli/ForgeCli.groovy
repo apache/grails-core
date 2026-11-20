@@ -94,7 +94,27 @@ final class ForgeCli {
      */
     static int execute(ApplicationContext context, String... args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
-        return createCommandLine(context, noOpConsole).execute(args)
+        return createCommandLine(context, noOpConsole, readsProject(args)).execute(args)
+    }
+
+    /**
+     * Whether a command line has to do with the project of the current directory, whose record is
+     * then read for the code generation commands it has. A command that creates an application has
+     * not, and neither has asking for the version: they do not read what the directory holds. Help
+     * has, because it lists the commands there are in this directory.
+     */
+    static boolean readsProject(String... args) {
+        String command = args.find { String arg -> !arg.startsWith('-') }
+        if (command == null) {
+            return !args.any { String arg -> arg == '-V' || arg == '--version' }
+        }
+        for (Class<?> type : ForgeCommand.getAnnotation(CommandLine.Command).subcommands()) {
+            CommandLine.Command create = type.getAnnotation(CommandLine.Command)
+            if (create != null && (create.name() == command || command in create.aliases())) {
+                return false
+            }
+        }
+        return true
     }
 
     /**
@@ -106,13 +126,21 @@ final class ForgeCli {
     }
 
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole) {
+        return createCommandLine(context, noOpConsole, true)
+    }
+
+    /**
+     * @param readsProject whether the record of the project of the current directory is read, for
+     * the code generation commands the project has
+     */
+    static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole, boolean readsProject) {
         ForgeCommand root = context.getBean(ForgeCommand)
         CommandLine commandLine = new CommandLine(root, new GrailsPicocliFactory(context))
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
             EXCEPTION_HANDLER.apply(ex, failed)
         } as CommandLine.IExecutionExceptionHandler
         commandLine.usageHelpWidth = 100
-        CodeGenConfig codeGenConfig = CodeGenConfig.load(context, noOpConsole ? ConsoleOutput.NOOP : root)
+        CodeGenConfig codeGenConfig = readsProject ? CodeGenConfig.load(context, noOpConsole ? ConsoleOutput.NOOP : root) : null
         if (codeGenConfig != null) {
             for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
                 CodeGenCommand command

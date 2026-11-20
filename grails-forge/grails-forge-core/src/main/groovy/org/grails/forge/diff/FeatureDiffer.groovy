@@ -99,8 +99,10 @@ class FeatureDiffer {
                 outputHandler,
                 ConsoleOutput.NOOP
         )
-        // the baseline under .grails repeats every file of the application: its difference is theirs
-        Map<String, String> oldProject = withoutBaseline(outputHandler.getProject())
+        // The state under .grails is left out: its baseline repeats every file of the application, and
+        // its manifest and lock name each other and the baseline by digest, so that a difference of
+        // them, applied to a project by hand, would leave a state that does not read
+        Map<String, String> oldProject = withoutState(outputHandler.getProject())
 
         outputHandler = new MapOutputHandler()
         projectGenerator.generate(
@@ -109,7 +111,7 @@ class FeatureDiffer {
                 outputHandler,
                 generatorContext
         )
-        Map<String, String> newProject = withoutBaseline(outputHandler.getProject())
+        Map<String, String> newProject = withoutState(outputHandler.getProject())
 
         for (Map.Entry<String, String> entry: newProject.entrySet()) {
             String oldFile = oldProject.remove(entry.getKey())
@@ -165,10 +167,10 @@ class FeatureDiffer {
         }
     }
 
-    private static Map<String, String> withoutBaseline(Map<String, String> project) {
+    private static Map<String, String> withoutState(Map<String, String> project) {
         Map<String, String> files = new LinkedHashMap<>()
         for (Map.Entry<String, String> entry : project.entrySet()) {
-            if (!ProjectState.isBaselinePath(entry.getKey())) {
+            if (!ProjectState.isStatePath(entry.getKey())) {
                 files.put(entry.getKey(), entry.getValue())
             }
         }

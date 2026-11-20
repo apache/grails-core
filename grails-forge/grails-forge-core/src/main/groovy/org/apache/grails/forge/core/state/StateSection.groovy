@@ -31,8 +31,6 @@ import java.util.regex.Pattern
 @PackageScope
 final class StateSection {
 
-    static final int MAX_LINE = 255
-
     private final String file
     private final String at
     private final Map<String, Object> values
@@ -59,11 +57,15 @@ final class StateSection {
     }
 
     String text(String key) {
+        return text(key, StateLimits.MAX_TEXT)
+    }
+
+    String text(String key, int limit) {
         read << key
         Object value = values.get(key)
-        if (!(value instanceof String) || !StateYaml.isLine((String) value, MAX_LINE)) {
+        if (!(value instanceof String) || !StateYaml.isLine((String) value, limit)) {
             throw problem(key, value == null ? 'is missing' :
-                    "must be one line of at most ${MAX_LINE} characters, none of them a control character")
+                    "must be one line of at most ${limit} characters, none of them a control character or one that is not shown")
         }
         return (String) value
     }
@@ -73,7 +75,11 @@ final class StateSection {
     }
 
     String matching(String key, Pattern pattern, String rule) {
-        String value = text(key)
+        return matching(key, pattern, rule, StateLimits.MAX_TEXT)
+    }
+
+    String matching(String key, Pattern pattern, String rule, int limit) {
+        String value = text(key, limit)
         if (!pattern.matcher(value).matches()) {
             throw problem(key, "must be ${rule}, but is '${StateYaml.shown(value, StateYaml.MAX_ECHO)}'")
         }
@@ -81,7 +87,11 @@ final class StateSection {
     }
 
     String optionalMatching(String key, Pattern pattern, String rule) {
-        return has(key) ? matching(key, pattern, rule) : null
+        return optionalMatching(key, pattern, rule, StateLimits.MAX_TEXT)
+    }
+
+    String optionalMatching(String key, Pattern pattern, String rule, int limit) {
+        return has(key) ? matching(key, pattern, rule, limit) : null
     }
 
     String oneOf(String key, Collection<String> allowed) {
@@ -140,7 +150,7 @@ final class StateSection {
         }
         Map<String, String> texts = new LinkedHashMap<>()
         for (Object name : section.values.keySet()) {
-            if (!(name instanceof String) || !StateYaml.isLine((String) name, MAX_LINE)) {
+            if (!(name instanceof String) || !StateYaml.isLine((String) name, StateLimits.MAX_TEXT)) {
                 throw problem(key, 'has a key that is not one line of text')
             }
             texts.put((String) name, section.text((String) name))

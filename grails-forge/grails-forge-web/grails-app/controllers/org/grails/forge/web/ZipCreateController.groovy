@@ -105,23 +105,31 @@ class ZipCreateController {
             badRequest(e.message)
             return
         }
-        String filename = generatorContext.project.name + '.zip'
-        response.status = 201
-        response.contentType = 'application/zip'
-        response.setHeader('Content-Disposition', "attachment; filename=${filename}")
+        // The archive is made before the response is begun: an application that cannot be generated
+        // as it was asked for, which the generator says with an IllegalArgumentException, is the
+        // mistake of whoever asked, and is answered as one and not as a failure of the server
+        ByteArrayOutputStream archive = new ByteArrayOutputStream()
         try {
             createProjectService.projectGenerator.generate(
                     type,
                     generatorContext.project,
-                    new ZipOutputHandler(generatorContext.project.name, response.outputStream),
+                    new ZipOutputHandler(generatorContext.project.name, archive),
                     generatorContext
             )
-            response.outputStream.flush()
+        } catch (IllegalArgumentException e) {
+            badRequest(e.message)
+            return
         } catch (Exception e) {
-            // the response is committed: the failure can be told to the operator, not to the client
             log.error("Error generating application ${generatorContext.project.name}: ${e.message}", e)
             throw e
         }
+        String filename = generatorContext.project.name + '.zip'
+        response.status = 201
+        response.contentType = 'application/zip'
+        response.setHeader('Content-Disposition', "attachment; filename=${filename}")
+        response.setContentLength(archive.size())
+        archive.writeTo(response.outputStream)
+        response.outputStream.flush()
     }
 
     private void badRequest(String message) {

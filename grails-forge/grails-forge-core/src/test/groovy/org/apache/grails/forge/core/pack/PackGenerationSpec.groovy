@@ -311,11 +311,11 @@ class PackGenerationSpec extends ApplicationContextSpec {
         ])
 
         when:
-        generate(['acme-audit'], [pack], ApplicationType.WEB, 'con')
+        generate(['acme-audit'], [pack], ApplicationType.WEB, 'com.acme.a~1')
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.startsWith('The feature acme-audit would write the file {name}/x.txt to con/x.txt')
+        e.message.startsWith('The feature acme-audit would write the file {name}/x.txt to a~1/x.txt')
         !Files.exists(marker)
     }
 
@@ -599,9 +599,15 @@ class PackGenerationSpec extends ApplicationContextSpec {
         Pack fromDirectory = pack('acme-local', '')
 
         when:
-        String lock = generate(['acme-audit', 'acme-base', 'acme-local'], [fromRepository, fromFiles, fromDirectory])['.grails/forge.lock.yml']
+        Map<String, String> output = generate(['acme-audit', 'acme-base', 'acme-local'], [fromRepository, fromFiles, fromDirectory])
+        String lock = output['.grails/forge.lock.yml']
 
-        then:
+        then: 'no file of the application or of its state has the directory of this machine'
+        output.findAll { String path, String content -> content != null && (content.contains('someone') || content.contains(directory.toString())) }.keySet().isEmpty()
+        output['grails-forge-cli.yml'].contains("coordinates: 'com.acme:acme-audit-grails:2.3.0'\n    repository: 'https://repo.acme.example/maven/'\n")
+        output['grails-forge-cli.yml'].contains("coordinates: 'com.acme:acme-base:1.0-SNAPSHOT'\n    artifact: 'acme-base-1.0-SNAPSHOT.jar'\n")
+
+        and:
         lock.contains("- name: acme-audit\n  source: pack\n  origin: https://repo.acme.example/maven/\n  coordinates: com.acme:acme-audit-grails\n" +
                 "  version: 2.3.0\n  sha256: ${digest}\n")
         lock.contains("- name: acme-base\n  source: pack\n  coordinates: com.acme:acme-base\n  version: 1.0-SNAPSHOT\n  sha256: ${digest}\n")
@@ -831,7 +837,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         where:
         to                   | name  || written
         '.{name}/hooks/x'    | 'git' || '.git/hooks/x'
-        'src/{name}.txt'     | 'nul' || 'src/nul.txt'
+        'src/{name}.txt'     | 'com.acme.a~1' || 'src/a~1.txt'
     }
 
     void "the settings of an environment are with those the framework has for it"() {

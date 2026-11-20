@@ -25,59 +25,99 @@ import org.apache.grails.forge.core.pack.PackDescriptor
 import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
+import org.apache.grails.forge.core.state.ProjectLock.LockedRepository
 import org.apache.grails.forge.core.state.ProjectManifest.RequestedFeature
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.DefaultTemplateRenderer
 import org.grails.forge.template.Template
 import org.grails.forge.options.Options
 import org.grails.forge.util.VersionInfo
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * Writes the state of a project while it is generated. Every file of the application is rendered once,
- * here: the bytes that are written to the application are the bytes the baseline keeps and the index
- * has the digest of, also for a template that would not render the same a second time. A file is
- * binary in the index when its template says so or when its content is not text in UTF-8.
+ * here, and before anything is written: the bytes that are written to the application are the bytes
+ * the baseline keeps and the index has the digest of, also for a template that would not render the
+ * same a second time. A file is binary in the index when its template says so or when its content is
+ * not text in UTF-8. The state is read back from its bytes before any of it is written, so what is
+ * written is what the reader takes.
  *
  * <p>The baseline holds what the generator rendered. A file that is not written because the directory
  * already has one of its name, as {@code --inplace} allows, is in the baseline as the generator would
- * have written it: the file that is there is to the baseline what a file the user changed is.</p>
+ * have written it: the file that is there is to the baseline what a file the user changed is.
+ * {@code grails-forge-cli.yml}, the earlier record of the features, is written and is no part of the
+ * baseline.</p>
+ *
+ * <p>The manifest is written last. A directory that has other files of the state and no manifest was
+ * not generated to the end: generating into it again replaces what is there.</p>
  *
  * @since 9.0
  */
 @CompileStatic
 final class ProjectStateRecorder {
 
+    private static final List<String> FILES = [ProjectState.ATTRIBUTES, ProjectState.IGNORE, ProjectState.BASELINE_INDEX, ProjectState.LOCK, ProjectState.MANIFEST]
+
     private final ApplicationType applicationType
     private final Project project
     private final GeneratorContext generatorContext
+    private final OutputHandler outputHandler
     private final Map<String, Rendered> files = new TreeMap<>()
+    private long size
 
-    ProjectStateRecorder(ApplicationType applicationType, Project project, GeneratorContext generatorContext) {
+    ProjectStateRecorder(ApplicationType applicationType, Project project, GeneratorContext generatorContext, OutputHandler outputHandler) {
         this.applicationType = applicationType
         this.project = project
         this.generatorContext = generatorContext
+        this.outputHandler = outputHandler
     }
 
     /**
-     * Before anything is written: the state has to be able to name every file of the application, and
-     * there must be no state where it is written, which would be that of another generation.
+     * Before anything is rendered or written: the state has to be able to name every file of the
+     * application, and where it is written there must be no state of a project that was generated to
+     * the end, and nothing in the place of its directories that is not a directory.
      *
      * @param templates the files of the application
-     * @param outputHandler what the application is written to
-     * @throws IllegalArgumentException for an application whose state cannot be written
+     * @throws IllegalArgumentException for an application whose state cannot be written, with what
+     * to do about it
      */
-    void check(Collection<Template> templates, OutputHandler outputHandler) {
-        if ([ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.BASELINE_INDEX].any { String file -> outputHandler.exists(file) }) {
-            throw new IllegalArgumentException("Cannot create the project because the directory already has the state of a generated project in ${ProjectState.DIRECTORY}")
+    void check(Collection<Template> templates) {
+        if (outputHandler instanceof FileSystemOutputHandler) {
+            Path directory = ((FileSystemOutputHandler) outputHandler).getApplicationDirectory().toPath()
+            for (String each : [ProjectState.DIRECTORY, ProjectState.BASELINE, ProjectState.BASELINE_FILES]) {
+                Path path = directory.resolve(each)
+                if (Files.exists(path, LinkOption.NOFOLLOW_LINKS) && !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalArgumentException("Cannot create the project because ${each} in the directory is a file or a link and not a directory; " +
+                            'remove it and create the project again')
+                }
+            }
+            for (String each : FILES) {
+                Path path = directory.resolve(each)
+                if (Files.exists(path, LinkOption.NOFOLLOW_LINKS) && !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
+                    throw new IllegalArgumentException("Cannot create the project because ${each} in the directory is a directory or a link and not a file; " +
+                            'remove it and create the project again')
+                }
+            }
         }
-        if (templates.size() > BaselineIndex.MAX_FILES) {
-            throw new IllegalArgumentException("The features write ${templates.size()} files, and the state of a project can name ${BaselineIndex.MAX_FILES}")
+        if (outputHandler.exists(ProjectState.MANIFEST)) {
+            throw new IllegalArgumentException("Cannot create the project because the directory already has the state of a generated project (${ProjectState.MANIFEST}); " +
+                    "to generate the project anew, remove the directory ${ProjectState.DIRECTORY} first, which discards the record of how it was generated")
+        }
+        if (templates.size() > StateLimits.MAX_FILES) {
+            throw new IllegalArgumentException("The features write ${templates.size()} files, and the state of a project can name ${StateLimits.MAX_FILES}")
         }
         for (Template template : templates) {
             String path = path(template)
@@ -103,24 +143,31 @@ final class ProjectStateRecorder {
         // a template that is not said to be binary can still be an image: what is not text is never
         // read as text, whatever the template says
         Rendered rendered = new Rendered(path(template), content, template.isBinary() || !StateYaml.isText(content), template.isExecutable())
-        if (rendered.content.length > ProjectState.MAX_BASELINE_FILE) {
-            throw new IllegalArgumentException("The file ${rendered.path} has ${rendered.content.length} bytes, and a file of the baseline of a project can have ${ProjectState.MAX_BASELINE_FILE}")
+        if (rendered.path != ProjectState.EARLIER_RECORD) {
+            size += content.length
+            if (content.length > StateLimits.MAX_BASELINE_FILE || size > StateLimits.MAX_BASELINE) {
+                throw new IllegalArgumentException("The file ${rendered.path} has ${content.length} bytes, and a file of the baseline of a project can have " +
+                        "${StateLimits.MAX_BASELINE_FILE} and all of them ${StateLimits.MAX_BASELINE}")
+            }
+            files.put(rendered.path, rendered)
         }
-        files.put(rendered.path, rendered)
         // written under the path the template has, as it was before there was a state
         return new Rendered(template.getPath(), content, template.isBinary(), rendered.executable)
     }
 
     /**
-     * @return the files of the state for the files that were recorded: the content of the baseline,
-     * what tells Git to keep its bytes, its index, the lock and the manifest. They are written whether or not there is a file of the
-     * name already.
+     * The files of the state for the files that were recorded: the content of the baseline, what
+     * tells Git to keep and to commit it, its index, the lock and, last, the manifest. They are
+     * written whether or not there is a file of the name already, after {@link #clear()}.
+     *
+     * @throws IllegalArgumentException for a state that could not be read back, which nothing of is
+     * to be written
      */
     List<Template> state() {
         List<Template> state = []
         List<BaselineFile> index = []
         for (Rendered file : files.values()) {
-            state << new Rendered("${ProjectState.BASELINE_FILES}/${file.path}".toString(), file.content, file.binary, false)
+            state << new Rendered("${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(file.path)}".toString(), file.content, file.binary, false)
             index << new BaselineFile(file.path, StateYaml.sha256(file.content), file.binary ? BaselineFile.BINARY : BaselineFile.TEXT, file.executable)
         }
         byte[] indexBytes = new BaselineIndex(index).toBytes()
@@ -129,6 +176,9 @@ final class ProjectStateRecorder {
         GenerationOptions options = new GenerationOptions(generatorContext.getJdkVersion(), ofApplication.getServletImpl(),
                 ofApplication.getGormImpl(), ofApplication.getDevelopmentReloading())
         String grailsVersion = VersionInfo.getGrailsVersion()
+        List<Feature> applied = new ArrayList<>(generatorContext.getFeatures().getFeatures())
+        applied.sort(FeatureContext.FEATURE_ORDER)
+        List<LockedFeature> locked = applied.collect { Feature feature -> locked(feature) }
         byte[] manifestBytes = new ProjectManifest(
                 grailsVersion,
                 applicationType,
@@ -136,11 +186,9 @@ final class ProjectStateRecorder {
                 project.getPackageName(),
                 options,
                 ProjectManifest.TRACKED,
-                generatorContext.getRequestedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
+                generatorContext.getRequestedFeatures().toSorted().unique().collect { String name -> requested(name, locked) },
                 generatorContext.getExcludedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
                 [:]).toBytes()
-        List<Feature> applied = new ArrayList<>(generatorContext.getFeatures().getFeatures())
-        applied.sort(FeatureContext.FEATURE_ORDER)
         byte[] lockBytes = new ProjectLock(
                 StateYaml.sha256(manifestBytes),
                 ProjectLock.GENERATOR,
@@ -149,19 +197,62 @@ final class ProjectStateRecorder {
                 PackDescriptor.TEMPLATE_API,
                 applicationType,
                 options,
-                generatorContext.getOperatingSystem(),
                 ProjectLock.LINE_ENDINGS_OF_TEMPLATES,
-                applied.collect { Feature feature -> locked(feature) },
+                repositories(generatorContext.getRepositoryOverride()),
+                locked,
                 [:],
                 StateYaml.sha256(indexBytes)).toBytes()
-        if (manifestBytes.length > ProjectState.MAX_MANIFEST || lockBytes.length > ProjectState.MAX_LOCK || indexBytes.length > ProjectState.MAX_INDEX) {
-            throw new IllegalArgumentException('The application has more features or files than the state of a project can name')
+        try {
+            ProjectState.of(manifestBytes, lockBytes, indexBytes)
+        } catch (ProjectStateException e) {
+            throw new IllegalArgumentException("Cannot create the project because the record of how it is generated could not be read again: ${e.message}")
         }
+        // every copy is committed, whatever the patterns of the application or of whoever commits leave out
+        state << new Rendered(ProjectState.IGNORE, '!/baseline/\n!/baseline/**\n'.getBytes(StandardCharsets.UTF_8), false, false)
         state << new Rendered(ProjectState.ATTRIBUTES, '* -text\n'.getBytes(StandardCharsets.UTF_8), false, false)
         state << new Rendered(ProjectState.BASELINE_INDEX, indexBytes, false, false)
         state << new Rendered(ProjectState.LOCK, lockBytes, false, false)
         state << new Rendered(ProjectState.MANIFEST, manifestBytes, false, false)
         return state
+    }
+
+    /**
+     * Removes the baseline that a generation which did not come to its end left in the directory, so
+     * that the baseline has the files of this generation and no others. There is no manifest then,
+     * which {@link #check(Collection)} saw to.
+     */
+    void clear() {
+        if (!(outputHandler instanceof FileSystemOutputHandler)) {
+            return
+        }
+        Path baseline = ((FileSystemOutputHandler) outputHandler).getApplicationDirectory().toPath().resolve(ProjectState.BASELINE)
+        if (!Files.isDirectory(baseline, LinkOption.NOFOLLOW_LINKS)) {
+            return
+        }
+        // a link in the baseline is removed, and what it leads to is left alone
+        Files.walkFileTree(baseline, new SimpleFileVisitor<Path>() {
+
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException {
+                Files.delete(file)
+                return FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult postVisitDirectory(Path directory, IOException failure) throws IOException {
+                if (failure != null) {
+                    throw failure
+                }
+                Files.delete(directory)
+                return FileVisitResult.CONTINUE
+            }
+        })
+    }
+
+    private static RequestedFeature requested(String name, List<LockedFeature> locked) {
+        // a feature of a pack that was taken by its coordinates was asked for by them
+        LockedFeature feature = locked.find { LockedFeature each -> each.name == name }
+        return new RequestedFeature(name, feature?.coordinates, feature?.version)
     }
 
     private static LockedFeature locked(Feature feature) {
@@ -179,11 +270,30 @@ final class ProjectStateRecorder {
             return new LockedFeature(feature.getName(), LockedFeature.PACK)
         }
         // a pack that was taken by the coordinates of its plugin: which artifact, and its very bytes.
-        // The repository is said when it is one anybody can ask, not a directory of this machine
+        // The repository is said when it is an https address, as the repositories of the build are,
+        // and not when it is a directory of this machine
         int version = artifact.coordinates.lastIndexOf(':')
         return new LockedFeature(feature.getName(), LockedFeature.PACK,
-                artifact.getRecordableRepository(),
+                // the one rule for a repository that can be written into a project, and of a length the state takes
+                ProjectLock.isPublicAddress(artifact.getRecordableRepository()) ? artifact.getRecordableRepository() : null,
                 artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256)
+    }
+
+    // the repositories that were given in place of those Grails gives a build, as the build file has them
+    private static List<LockedRepository> repositories(String override) {
+        List<LockedRepository> repositories = []
+        for (String each : (override ?: '').split(';')*.trim().findAll { String given -> !given.isEmpty() }) {
+            if (each == 'mavenLocal()') {
+                repositories << new LockedRepository(LockedRepository.MAVEN_LOCAL)
+            } else if (each == 'mavenCentral()') {
+                repositories << new LockedRepository(LockedRepository.MAVEN_CENTRAL)
+            } else if (GradleRepository.URL_SCHEME_PREFIX.matcher(each).matches() && !each.toLowerCase(Locale.ROOT).startsWith('file:')) {
+                repositories << new LockedRepository(LockedRepository.REMOTE, ProjectLock.isPublicAddress(each) ? each : null)
+            } else {
+                repositories << new LockedRepository(LockedRepository.LOCAL)
+            }
+        }
+        return repositories
     }
 
     private String path(Template template) {

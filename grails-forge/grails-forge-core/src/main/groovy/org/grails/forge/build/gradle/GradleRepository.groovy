@@ -40,7 +40,11 @@ interface GradleRepository extends Ordered {
     }
 
     static Set<GradleRepository> getDefaultBuildRepositories(String grailsVersion) {
-        return defaultRepositories(grailsVersion, System.getenv('GRAILS_REPO_URL'), true)
+        return getDefaultBuildRepositories(grailsVersion, System.getenv('GRAILS_REPO_URL'))
+    }
+
+    static Set<GradleRepository> getDefaultBuildRepositories(String grailsVersion, String overrideRepo) {
+        return defaultRepositories(grailsVersion, overrideRepo, true)
     }
 
     private static Set<GradleRepository> defaultRepositories(String grailsVersion, String overrideRepo, boolean buildRepositories) {

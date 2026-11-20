@@ -38,4 +38,54 @@ class NameUtilsSpec extends Specification {
         ex = thrown(IllegalArgumentException)
         ex.message == '"" is not a valid app name'
     }
+
+    void "a new application is refused a package or a name that is the name of a device on Windows: #name"() {
+        when:
+        NameUtils.parse(name)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == message
+
+        when: 'an application there already is, is taken as it is'
+        def project = NameUtils.parse(name, false)
+
+        then:
+        project.packageName == packageName
+
+        where:
+        name                 | packageName    || message
+        'com.aux.shop'       | 'com.aux'      || 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
+        'CON.acme.shop'      | 'CON.acme'     || 'The package CON.acme has the part CON, which is the name of a device on Windows, so the project could not be checked out there'
+        'com.acme.com1.shop' | 'com.acme.com1' || 'The package com.acme.com1 has the part com1, which is the name of a device on Windows, so the project could not be checked out there'
+        'com.acme.nul'       | 'com.acme'     || 'The name nul is the name of a device on Windows, so a directory of that name could not be made there'
+    }
+
+    void "a name that only starts like the name of a device is taken: #name"() {
+        expect:
+        NameUtils.parse(name).packageName == packageName
+
+        where:
+        name               | packageName
+        'com.auxiliary.shop' | 'com.auxiliary'
+        'com.console.shop' | 'com.console'
+        'com.com10.shop'   | 'com.com10'
+        'com.acme.null'    | 'com.acme'
+    }
+
+    void "a package does not end with a dot: #name"() {
+        when:
+        NameUtils.parse(name)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        expect:
+        !NameUtils.isValidJavaPackage('com.acme.')
+        !NameUtils.isValidJavaPackage('.com.acme')
+        NameUtils.isValidJavaPackage('com.acme')
+
+        where:
+        name << ['com.acme..shop', '.com.acme.shop', 'com..acme.shop']
+    }
 }

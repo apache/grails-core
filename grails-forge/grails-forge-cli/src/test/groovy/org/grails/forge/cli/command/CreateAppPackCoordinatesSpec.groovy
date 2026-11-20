@@ -104,6 +104,22 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
             }
         }
         telling.isEmpty()
+
+        and: 'the repositories of GRAILS_REPO_URL are the configuration of the generated build: the build file has them as they were given, and so has its copy in the baseline; the lock says of a directory only that there was one'
+        String home = new File(System.getProperty('user.home')).canonicalPath
+        List<String> withHome = []
+        new File(dir, 'shop').eachFileRecurse(groovy.io.FileType.FILES) { File file ->
+            if (new String(file.bytes, 'ISO-8859-1').contains(home)) {
+                withHome << new File(dir, 'shop').toPath().relativize(file.toPath()).join('/')
+            }
+        }
+        withHome.every { it in ['build.gradle', '.grails/baseline/files/build.gradle'] }
+        String given = System.getenv('GRAILS_REPO_URL')
+        given == null || new File(dir, 'shop/.grails/forge.lock.yml').text.contains('repositories:\n- kind: ')
+        given == null || given.split(';').every { !it.trim().startsWith('/') || !new File(dir, 'shop/.grails/forge.lock.yml').text.contains(it.trim()) }
+
+        and: 'the manifest says that the feature was asked for by the coordinates of its plugin'
+        new File(dir, 'shop/.grails/project.yml').text.contains('requestedFeatures:\n- name: acme-audit\n  coordinates: com.acme:acme-audit-grails\n  version: 2.3.0\n')
     }
 
     void "the feature of the plugin is listed with the others"() {

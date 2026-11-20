@@ -111,23 +111,38 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         checkPaths(project, generatorContext.getTemplates().values())
 
-        // the state of the project under .grails is written last and holds what was rendered for the
-        // application, so it is not part of its own baseline
-        ProjectStateRecorder state = new ProjectStateRecorder(applicationType, project, generatorContext)
-        state.check(generatorContext.getTemplates().values(), outputHandler)
+        // Everything is rendered, and the state of the project under .grails is read back from what
+        // it will be, before the first file is written: a template that fails and a state that could
+        // not be read leave nothing behind. The state is written last, its manifest at the very end,
+        // and holds what was rendered for the application, so it is not part of its own baseline
+        ProjectStateRecorder state = new ProjectStateRecorder(applicationType, project, generatorContext, outputHandler)
+        state.check(generatorContext.getTemplates().values())
+        List<Template> rendered = []
+        for (Template template : generatorContext.getTemplates().values()) {
+            rendered << state.record(template)
+        }
+        List<Template> stateFiles = state.state()
+        state.clear()
 
+        Map<String, Template> kept = new LinkedHashMap<>()
         try (TemplateRenderer templateRenderer = TemplateRenderer.create(project, outputHandler)) {
-            for (Template template: generatorContext.getTemplates().values()) {
-                RenderResult renderResult = templateRenderer.render(state.record(template))
+            for (Template template : rendered) {
+                RenderResult renderResult = templateRenderer.render(template)
                 if (renderResult.getError() != null) {
                     throw renderResult.getError()
                 }
+                if (renderResult.isSkipped()) {
+                    kept.put(renderResult.getPath(), template)
+                }
             }
-            for (Template template : state.state()) {
+            for (Template template : stateFiles) {
                 RenderResult renderResult = templateRenderer.render(template, true)
                 if (renderResult.getError() != null) {
                     throw renderResult.getError()
                 }
+            }
+            if (!kept.isEmpty()) {
+                outputHandler.kept(kept)
             }
         }
     }

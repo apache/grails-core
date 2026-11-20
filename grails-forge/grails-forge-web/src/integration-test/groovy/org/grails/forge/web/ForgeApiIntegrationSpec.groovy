@@ -213,14 +213,38 @@ class ForgeApiIntegrationSpec extends Specification {
         lock.contains("manifest:\n  sha256: ${sha256(manifest.getBytes('UTF-8'))}\n")
         lock.contains("baselineIndex:\n  sha256: ${sha256(index.getBytes('UTF-8'))}\n")
 
-        and: 'the baseline is the files of the application, each once, and not the state'
+        and: 'the lock ends with the digest of itself'
+        lock.endsWith("seal:\n  sha256: ${sha256(lock.substring(0, lock.lastIndexOf('seal:\n')).getBytes('UTF-8'))}\n")
+
+        and: 'the baseline is the files of the application but its earlier record, each once, and not the state; no copy is a file Git reads'
+        application.contains('grails-forge-cli.yml')
         entries.findAll { it.startsWith('.grails/') }.toSorted() ==
-                (['.grails/project.yml', '.grails/forge.lock.yml', '.grails/baseline/index.yml', '.grails/.gitattributes'] + application.collect { '.grails/baseline/files/' + it }).toSorted()
-        application.every { index.contains("- path: ${it}\n") }
+                (['.grails/project.yml', '.grails/forge.lock.yml', '.grails/baseline/index.yml', '.grails/.gitattributes', '.grails/.gitignore'] +
+                        (application - 'grails-forge-cli.yml').collect { '.grails/baseline/files/' + (it == '.gitignore' ? '.gitignore.baseline' : it) }).toSorted()
+        (application - 'grails-forge-cli.yml').every { index.contains("- path: ${it}\n") }
+        !index.contains('grails-forge-cli.yml')
         index.contains("- path: build.gradle\n  sha256: ${sha256(zipText(zip, 'forge-state/build.gradle').getBytes('UTF-8'))}\n  kind: text\n  executable: false\n")
         index.contains("- path: gradlew\n  sha256: ${sha256(zipText(zip, 'forge-state/gradlew').getBytes('UTF-8'))}\n  kind: binary\n  executable: true\n")
         zipText(zip, 'forge-state/.grails/baseline/files/build.gradle') == zipText(zip, 'forge-state/build.gradle')
         zipText(zip, 'forge-state/.gitignore').contains('.grails/cache/\n')
+    }
+
+    void "the state of a project does not depend on who asks for it"() {
+        when:
+        List<Map<String, String>> states = [
+                [:],
+                ['User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15'],
+                ['User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'],
+                ['User-Agent': 'curl/8.7.1']
+        ].collect { Map<String, String> headers ->
+            byte[] zip = get('/create/web/com.example.forge-state?features=grails-quartz', headers).body as byte[]
+            zipEntries(zip).findAll { it.startsWith('forge-state/.grails/') && !it.endsWith('/') }.collectEntries { [(it): sha256(zipText(zip, it).getBytes('ISO-8859-1'))] }
+        }
+
+        then:
+        states[0].size() > 60
+        !zipText(get('/create/web/com.example.forge-state').body as byte[], 'forge-state/.grails/forge.lock.yml').contains('operatingSystem')
+        states.every { it == states[0] }
     }
 
     void "a preview shows the manifest and the lock of the project, and not the baseline"() {
@@ -234,16 +258,15 @@ class ForgeApiIntegrationSpec extends Specification {
         !contents.keySet().any { (it as String).startsWith('.grails/baseline') }
     }
 
-    void "a diff shows what a feature changes in the manifest and the lock, and not the baseline"() {
-        when:
+    void "a diff shows what a feature changes in the application, and nothing of the state of the project"() {
+        when: 'the manifest and the lock name each other by digest: a difference of them cannot be applied by hand'
         String diff = text(get('/diff/web/forge-state?features=grails-quartz'))
+        String feature = text(get('/diff/web/feature/grails-quartz'))
 
         then:
         diff.contains('+++ build.gradle')
-        diff.contains('+++ .grails/project.yml')
-        diff.contains('+- name: grails-quartz')
-        diff.contains('+++ .grails/forge.lock.yml')
-        !diff.contains('.grails/baseline')
+        feature.contains('+++ build.gradle')
+        !(diff + feature).readLines().any { it.startsWith('+++ .grails') || it.startsWith('--- .grails') || it.contains('sha256') }
     }
 
     void "GET /preview preserves the application name and package in a qualified name ending in #appName"() {
@@ -486,6 +509,13 @@ class ForgeApiIntegrationSpec extends Specification {
         '/preview/web/demo?features=not-a-real-feature'         | 'requested feature does not exist'
         '/diff/web/demo?features=not-a-real-feature'            | 'requested feature does not exist'
         '/create/web/demo?features=com.acme:acme-audit-grails:2.3.0'  | 'requested feature does not exist: com.acme:acme-audit-grails:2.3.0'
+        '/create/web/com.aux.shop'                             | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
+        '/preview/web/com.aux.shop'                            | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
+        '/diff/web/com.aux.shop'                               | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
+        '/create/web/con.acme.shop'                            | 'The package con.acme has the part con, which is the name of a device on Windows'
+        '/create/web/com.acme.nul'                             | 'The name nul is the name of a device on Windows, so a directory of that name could not be made there'
+        "/create/web/${(['p'] * 30).join('.')}.shop"           | 'which is not a path the state of the project can name'
+        "/preview/web/${(['p'] * 30).join('.')}.shop"          | 'which is not a path the state of the project can name'
         '/preview/web/demo?features=com.acme:acme-audit-grails:2.3.0' | 'requested feature does not exist: com.acme:acme-audit-grails:2.3.0'
         '/diff/web/demo?features=com.acme:acme-audit-grails:2.3.0'    | 'requested feature does not exist: com.acme:acme-audit-grails:2.3.0'
         '/create/web/micronaut'                                | 'not a valid app name'

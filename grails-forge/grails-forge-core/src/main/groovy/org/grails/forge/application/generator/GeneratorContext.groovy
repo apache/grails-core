@@ -95,6 +95,7 @@ class GeneratorContext implements DependencyContext {
     private List<String> requestedFeatures = Collections.emptyList()
     private final List<String> excludedFeatures
     private Set<OptionName> applicableOptions = Collections.emptySet()
+    private final String repositoryOverride
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -116,6 +117,24 @@ class GeneratorContext implements DependencyContext {
                             Set<Feature> features,
                             CoordinateResolver coordinateResolver,
                             Collection<String> excludedFeatures) {
+        this(project, type, options, operatingSystem, features, coordinateResolver, excludedFeatures, System.getenv('GRAILS_REPO_URL'))
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that were excluded when the features were selected
+     * @param repositoryOverride the repositories the build is given in place of those of Grails, as
+     * the environment variable {@code GRAILS_REPO_URL} has them, or {@code null} for those of Grails
+     * @since 9.0
+     */
+    GeneratorContext(Project project,
+                            ApplicationType type,
+                            Options options,
+                            @Nullable OperatingSystem operatingSystem,
+                            Set<Feature> features,
+                            CoordinateResolver coordinateResolver,
+                            Collection<String> excludedFeatures,
+                            @Nullable String repositoryOverride) {
+        this.repositoryOverride = repositoryOverride
         this.excludedFeatures = Collections.unmodifiableList(new ArrayList<String>(new TreeSet<String>(excludedFeatures)))
         this.command = type
         this.project = project
@@ -125,8 +144,8 @@ class GeneratorContext implements DependencyContext {
         this.options = options
 
         String grailsVersion = VersionInfo.getGrailsVersion()
-        this.buildRepositories = GradleRepository.getDefaultBuildRepositories(grailsVersion)
-        this.repositories = GradleRepository.getDefaultRepositories(grailsVersion)
+        this.buildRepositories = GradleRepository.getDefaultBuildRepositories(grailsVersion, repositoryOverride)
+        this.repositories = GradleRepository.getDefaultRepositories(grailsVersion, repositoryOverride)
         buildProperties.put('grailsVersion', grailsVersion)
     }
 
@@ -350,6 +369,15 @@ class GeneratorContext implements DependencyContext {
      */
     @Nonnull List<String> getExcludedFeatures() {
         return excludedFeatures
+    }
+
+    /**
+     * @return the repositories the build was given in place of those of Grails, as the environment
+     * variable {@code GRAILS_REPO_URL} has them, or {@code null}
+     * @since 9.0
+     */
+    @Nullable String getRepositoryOverride() {
+        return repositoryOverride
     }
 
     /**

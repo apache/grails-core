@@ -19,6 +19,7 @@
 package org.grails.forge.util
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.Project
 import org.grails.forge.application.ProjectIdentifier
 import java.util.regex.Pattern
@@ -37,6 +38,16 @@ final class NameUtils {
     }
 
     static ProjectIdentifier parseProjectIdentifier(String name) throws IllegalArgumentException {
+        return parseProjectIdentifier(name, true)
+    }
+
+    /**
+     * @param name the name of an application, with or without its package
+     * @param portable whether a package is refused that could not be checked out on Windows, as it is
+     * for a new application; the package of an application there already is, is taken as it is
+     * @since 9.0
+     */
+    static ProjectIdentifier parseProjectIdentifier(String name, boolean portable) throws IllegalArgumentException {
         if (!isValidAppName(name)) {
             throw new IllegalArgumentException('"' + name + '" is not a valid app name')
         }
@@ -60,6 +71,17 @@ final class NameUtils {
         if (!isValidAppName(appName)) {
             throw new IllegalArgumentException('"' + appName + '" is not a valid app name')
         }
+        // the package is the directories of the sources: a project with a directory Windows cannot
+        // make could not be checked out there
+        for (String part : packageName.split('\\.')) {
+            if (portable && PackDescriptorParser.isDeviceName(part)) {
+                throw new IllegalArgumentException("The package ${packageName} has the part ${part}, which is the name of a device on Windows, " +
+                        'so the project could not be checked out there')
+            }
+        }
+        if (portable && PackDescriptorParser.isDeviceName(appName)) {
+            throw new IllegalArgumentException("The name ${appName} is the name of a device on Windows, so a directory of that name could not be made there")
+        }
         return new ProjectIdentifier(packageName, appName)
     }
 
@@ -73,7 +95,16 @@ final class NameUtils {
     }
 
     static Project parse(String name) throws IllegalArgumentException {
-        ProjectIdentifier projectIdentifier = parseProjectIdentifier(name)
+        return parse(name, true)
+    }
+
+    /**
+     * @param name the name of an application, with or without its package
+     * @param portable see {@link #parseProjectIdentifier(String, boolean)}
+     * @since 9.0
+     */
+    static Project parse(String name, boolean portable) throws IllegalArgumentException {
+        ProjectIdentifier projectIdentifier = parseProjectIdentifier(name, portable)
         String packageName = projectIdentifier.getPackageName()
         String appName = projectIdentifier.getName()
         String packagePath = packageName.replace('.', '/')
@@ -572,7 +603,8 @@ final class NameUtils {
         if (isBlank(packageName)) {
             return false
         }
-        final String[] parts = packageName.split('\\.')
+        // with the empty parts a dot at the end leaves, which are no identifiers
+        final String[] parts = packageName.split('\\.', -1)
         for (String part : parts) {
             if (!isValidJavaIdentifier(part)) {
                 return false

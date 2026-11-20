@@ -81,6 +81,53 @@ class CodeGenConfigProjectStateSpec extends Specification {
         config.features.containsAll(['gorm-mongodb', 'jrebel', 'spock'])
         !config.features.contains('gorm-hibernate5')
         !config.legacy
+
+        and: 'that the earlier record says something else is said once, not followed and not passed over'
+        warnings == ['grails-forge-cli.yml and .grails do not say the same about the default package and the features of the project; ' +
+                             'the commands go by .grails, the record of how the project was generated']
+    }
+
+    void "the two records of a project say the same when it is generated, and a change to the earlier one by hand is said"() {
+        given:
+        generate()
+        Path earlier = tempDir.resolve('grails-forge-cli.yml')
+
+        when:
+        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
+
+        then:
+        config.defaultPackage == 'com.example'
+        warnings.empty
+
+        when: 'a feature is added to the earlier record by hand, as it was done to have its commands'
+        Files.writeString(earlier, earlier.toFile().getText('UTF-8').replace('features: [', 'features: [grails-quartz, '))
+        config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
+
+        then:
+        !config.features.contains('grails-quartz')
+        warnings == ['grails-forge-cli.yml and .grails do not say the same about the features of the project; ' +
+                             'the commands go by .grails, the record of how the project was generated']
+
+        when: 'the earlier record cannot be read at all'
+        warnings.clear()
+        Files.writeString(earlier, 'applicationType: nonsense\n')
+        config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
+
+        then:
+        config.defaultPackage == 'com.example'
+        warnings.empty
+    }
+
+    void "the commands read the manifest and the lock, and nothing of the baseline"() {
+        given:
+        generate()
+        Files.writeString(tempDir.resolve('.grails/baseline/index.yml'), 'format: 1\nfiles:\n' + ('- {}\n' * 1_500_000))
+
+        when:
+        CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
+
+        then:
+        config.applicationType == ApplicationType.REST_API
         warnings.empty
     }
 
@@ -112,7 +159,7 @@ class CodeGenConfigProjectStateSpec extends Specification {
 
         then:
         config == null
-        warnings == ['The state of the project is not complete: .grails/baseline/index.yml is missing']
+        warnings == ['The state of the project is not complete: .grails/baseline/index.yml is missing; restore it from version control']
     }
 
     void "a project without state is read from grails-forge-cli.yml without a word"() {

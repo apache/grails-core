@@ -20,7 +20,9 @@ package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.Project
 import org.grails.forge.util.NameUtils
 import java.util.regex.Pattern
 
@@ -43,16 +45,11 @@ final class ProjectManifest {
     public static final String UNTRACKED = 'untracked'
 
     @PackageScope
-    static final int MAX_FEATURES = 1000
-
-    @PackageScope
-    static final int MAX_PARAMETERS = 200
-
-    @PackageScope
     static final Pattern FEATURE_NAME = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9._:#+-]{0,199}/)
 
+    // the group, the artifact and the version of a feature pack are each as long as its coordinates let them be
     @PackageScope
-    static final Pattern VERSION = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9._+-]{0,99}/)
+    static final Pattern VERSION = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9._+-]{0,199}/)
 
     @PackageScope
     static final Pattern COORDINATES = Pattern.compile(/[A-Za-z0-9_][A-Za-z0-9._-]{0,199}:[A-Za-z0-9_][A-Za-z0-9._-]{0,199}/)
@@ -106,17 +103,19 @@ final class ProjectManifest {
 
     @PackageScope
     static ProjectManifest read(byte[] bytes) {
-        StateSection root = new StateSection(ProjectState.MANIFEST, '', StateYaml.load(bytes, ProjectState.MANIFEST))
+        StateSection root = new StateSection(ProjectState.MANIFEST, '', StateYaml.load(bytes, ProjectState.MANIFEST, StateLimits.MANIFEST_LINES))
         format(root, FORMAT)
         String grailsVersion = root.matching('grailsVersion', VERSION, 'a version')
         ApplicationType applicationType = applicationType(root)
         String name = root.text('name')
-        if (!NameUtils.isValidAppName(name)) {
-            throw root.problem('name', 'is not the name of an application')
-        }
         String defaultPackage = root.text('defaultPackage')
-        if (!NameUtils.isValidJavaPackage(defaultPackage)) {
-            throw root.problem('defaultPackage', 'is not the name of a package')
+        // the two are what an application can be created with, and nothing else: the name is one step
+        // of a path and the package is a package, as the create commands take them
+        if (name.contains('/') || !PackDescriptorParser.isPathBelowRoot(name)) {
+            throw root.problem('name', 'is not a name an application can be created with')
+        }
+        if (!created(defaultPackage + '.' + name, name, defaultPackage)) {
+            throw root.problem('defaultPackage', 'is not a package an application can be created with')
         }
         ProjectManifest manifest = new ProjectManifest(
                 grailsVersion,
@@ -125,11 +124,20 @@ final class ProjectManifest {
                 defaultPackage,
                 GenerationOptions.read(root.section('options')),
                 root.oneOf('generationState', [TRACKED, UNTRACKED]),
-                root.sections('requestedFeatures', MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
-                root.sections('excludedFeatures', MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
-                root.texts('parameters', MAX_PARAMETERS))
+                root.sections('requestedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
+                root.sections('excludedFeatures', StateLimits.MAX_FEATURES).collect { StateSection each -> RequestedFeature.read(each) },
+                root.texts('parameters', StateLimits.MAX_PARAMETERS))
         root.end()
         return manifest
+    }
+
+    private static boolean created(String qualified, String name, String defaultPackage) {
+        try {
+            Project project = NameUtils.parse(qualified)
+            return project.getName() == name && project.getPackageName() == defaultPackage
+        } catch (IllegalArgumentException ignored) {
+            return false
+        }
     }
 
     @PackageScope
@@ -149,7 +157,7 @@ final class ProjectManifest {
 
     /**
      * A feature that was asked for by name, or one that was asked to be left out. One of a feature
-     * pack that was found by its coordinates has those and its version.
+     * pack that was taken by the coordinates of its plugin has those and its version.
      */
     @CompileStatic
     static final class RequestedFeature {
@@ -181,7 +189,7 @@ final class ProjectManifest {
         static RequestedFeature read(StateSection section) {
             RequestedFeature feature = new RequestedFeature(
                     section.matching('name', FEATURE_NAME, 'the name of a feature'),
-                    section.optionalMatching('coordinates', COORDINATES, 'a group and an artifact, group:artifact'),
+                    section.optionalMatching('coordinates', COORDINATES, 'a group and an artifact, group:artifact', StateLimits.MAX_COORDINATES),
                     section.optionalMatching('version', VERSION, 'a version'))
             section.end()
             return feature

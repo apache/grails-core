@@ -63,6 +63,15 @@ class ContextFactory {
     private final FeatureValidator featureValidator
     private final DefaultCoordinateResolver coordinateResolver
 
+    /**
+     * The repositories a generated build is given in place of those of Grails, in the form of the
+     * environment variable {@code GRAILS_REPO_URL}, which it is taken from; {@code null} for those of
+     * Grails. They are part of what an application is generated from, and its lock says so.
+     *
+     * @since 9.0
+     */
+    String repositoryOverride = System.getenv('GRAILS_REPO_URL')
+
     ContextFactory(FeatureValidator featureValidator,
                           DefaultCoordinateResolver coordinateResolver) {
         this.featureValidator = featureValidator
@@ -338,7 +347,7 @@ class ContextFactory {
         }
 
         GeneratorContext generatorContext = new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver,
-                featureContext.getExcludedFeatures())
+                featureContext.getExcludedFeatures(), repositoryOverride)
         generatorContext.setRequestedFeatures(featureContext.getRequestedFeatures())
         generatorContext.setApplicableOptions(featureContext.getApplicableOptions())
         return generatorContext
