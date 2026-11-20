@@ -74,6 +74,8 @@ class User {
 }
 ----
 
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see link:{guidePath}conf.html#config[Configuration Types]).
+
 
 === Sharing Constraints
 

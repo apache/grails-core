@@ -62,3 +62,5 @@ grails.gorm.default.mapping = {
     'user-type'(type: org.hibernate.type.YesNoType, class: Boolean)
 }
 ----
+
+`runtime.groovy` is only read when the application also has a `grails-app/conf/application.groovy`, which can be empty (see link:{guidePath}conf.html#config[Configuration Types]).
