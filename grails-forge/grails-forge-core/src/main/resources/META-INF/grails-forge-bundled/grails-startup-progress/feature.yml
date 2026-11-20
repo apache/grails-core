@@ -1,0 +1,42 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: grails-startup-progress
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+# the startup progress page answers on the port of the application while the application starts, and the
+# application serves the report of how the start went once it is running
+title: Startup Progress Page
+description: "Shows a progress page on the application's port while the application starts, instead of the port refusing connections, and a report of how long each stage of the start took once it is running. bootRun opens a browser on the page."
+category: Development Tools
+guideOfGrails: guide/gettingStarted.html#startupProgress
+# only an application starts its own web server; the dependency of a plugin would reach every application using it
+applicationTypes: [web, rest-api]
+dependencies:
+  - scope: implementation
+    coordinates: org.apache.grails:grails-startup-progress
+# bootRun hands every grails.startup.progress.* Gradle property to the application; the gradle.properties of
+# the project ranks below ~/.gradle/gradle.properties and -P, so a developer can still say no
+build:
+  propertyComments:
+    - ' Opens a browser on the startup progress page under bootRun. Delete this line to turn it off for everyone;'
+    - ' for yourself, set it to false in ~/.gradle/gradle.properties or run: ./gradlew bootRun -Pgrails.startup.progress.openBrowser=false'
+  properties:
+    grails.startup.progress.openBrowser: true

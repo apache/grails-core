@@ -1,0 +1,44 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+format: 1
+kind: feature
+templateApi: 1
+name: mongo-sync
+compatibility:
+  grails: '[9.0.0,10.0.0)'
+  forge: '[9.0.0,10.0.0)'
+title: MongoDB Synchronous Driver
+description: Add support for the MongoDB Synchronous Driver.
+category: Database
+documentation: 'https://www.mongodb.com/docs/drivers/java/sync/current/'
+thirdPartyDocumentation: 'https://www.mongodb.com/docs/'
+adds:
+  - testcontainers
+dependencies:
+  - scope: implementation
+    coordinates: org.mongodb:mongodb-driver-sync
+# Grails Data for MongoDB has its own urls, with embedded databases for development and test; the driver
+# alone names a server to reach in every environment, which MONGO_HOST and MONGO_PORT point at another
+configuration:
+  - when: { not: gorm-mongodb }
+    values:
+      grails.mongodb.url: 'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb'
+      environments:
+        development:
+          grails.mongodb.url: 'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb'
+        test:
+          grails.mongodb.url: 'mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb'

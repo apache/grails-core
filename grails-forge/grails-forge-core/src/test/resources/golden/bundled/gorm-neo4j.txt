@@ -1,0 +1,96 @@
+compatibility: grails [9.0.0,10.0.0), forge [9.0.0,10.0.0)
+requires: []
+conflicts: []
+oneOf: data-nosql
+default: data=neo4j
+dependency: implementation org.apache.grails:grails-data-neo4j without a version
+dependency: testRuntimeOnly org.neo4j.test:neo4j-harness without a version
+
+# web
+title: GORM for Neo4j
+description: Configure GORM for using Neo4j
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/neo4j/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm neo4j
+== README.md
++ ## Feature gorm-neo4j documentation
++ - [https://grails.apache.org/docs/latest/grails-data/neo4j/manual/](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-neo4j"
++     testRuntimeOnly "org.neo4j.test:neo4j-harness"
+== grails-app/conf/application.yml
++   neo4j:
++     type: embedded
++     location: build/data/neo4j
+
+# rest_api
+title: GORM for Neo4j
+description: Configure GORM for using Neo4j
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/neo4j/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm neo4j
+== README.md
++ ## Feature gorm-neo4j documentation
++ - [https://grails.apache.org/docs/latest/grails-data/neo4j/manual/](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-neo4j"
++     testRuntimeOnly "org.neo4j.test:neo4j-harness"
+== grails-app/conf/application.yml
++   neo4j:
++     type: embedded
++     location: build/data/neo4j
+
+# web_plugin
+title: GORM for Neo4j
+description: Configure GORM for using Neo4j
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/neo4j/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm neo4j
+== README.md
++ ## Feature gorm-neo4j documentation
++ - [https://grails.apache.org/docs/latest/grails-data/neo4j/manual/](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-neo4j"
++     testRuntimeOnly "org.neo4j.test:neo4j-harness"
+== grails-app/conf/application.yml
++   neo4j:
++     type: embedded
++     location: build/data/neo4j
+
+# plugin
+title: GORM for Neo4j
+description: Configure GORM for using Neo4j
+category: Database
+documentation: null
+thirdPartyDocumentation: https://grails.apache.org/docs/latest/grails-data/neo4j/manual/
+visible: true
+dependentFeatures: []
+in an application without being named: gorm neo4j
+== README.md
++ ## Feature gorm-neo4j documentation
++ - [https://grails.apache.org/docs/latest/grails-data/neo4j/manual/](https://grails.apache.org/docs/latest/grails-data/neo4j/manual/)
++ 
++ 
+== build.gradle
++     implementation "org.apache.grails:grails-data-neo4j"
++     testRuntimeOnly "org.neo4j.test:neo4j-harness"
+== grails-app/conf/application.yml
++   neo4j:
++     type: embedded
++     location: build/data/neo4j
+

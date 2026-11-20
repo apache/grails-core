@@ -37,7 +37,7 @@ class Neo4JGormSpec extends ApplicationContextSpec implements CommandOutputFixtu
 
     void "test there can only be one of either MongoDB or Neo4j feature"() {
         when:
-        getFeatures(beanContext.getBeansOfType(GormOneOfFeature).values()*.name)
+        getFeatures(['gorm-mongodb', 'gorm-neo4j'])
 
         then:
         def ex = thrown(IllegalArgumentException)

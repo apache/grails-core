@@ -169,7 +169,13 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
                 return
             } else {
                 without = generate(type, [])
-                with = generate(type, [name])
+                try {
+                    with = generate(type, [name])
+                } catch (IllegalArgumentException e) {
+                    // a feature that is refused when it is selected alone, as one that is for another feature
+                    text << "no application with it alone: ${e.message}\n\n"
+                    return
+                }
             }
             // the record of the features of the application changes with every feature the framework gains,
             // and the state under .grails repeats it and every file of the application

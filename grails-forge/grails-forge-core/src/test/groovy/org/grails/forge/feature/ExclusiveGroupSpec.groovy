@@ -40,7 +40,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
                 'api-views'           : 'a pack of Forge',
                 'cache-provider'      : 'a pack of Forge',
                 'configuration'       : 'ConfigurationFeature',
-                'data-nosql'          : 'GormOneOfFeature',
+                'data-nosql'          : 'a pack of Forge',
                 'database-driver'     : 'a pack of Forge',
                 'embedded-servlet'    : 'a pack of Forge',
                 'geb'                 : 'a pack of Forge',
@@ -52,7 +52,7 @@ class ExclusiveGroupSpec extends ApplicationContextSpec implements ContextFixtur
                 'reloading'           : 'a pack of Forge',
                 'spring-ai-provider'  : 'a pack of Forge',
                 'spring-security'     : 'a pack of Forge',
-                'threading'           : 'SpringThreadingFeature',
+                'threading'           : 'a pack of Forge',
         ]
     }
 
