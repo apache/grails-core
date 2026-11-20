@@ -278,6 +278,49 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
     }
 
     @Unroll
+    void "#argument: #description is #outcome on #route"() {
+        when:
+        List<TestEntity> found = null
+        Exception refused = null
+        try {
+            found = listFor(route, [(argument): value])
+        }
+        catch (Exception e) {
+            refused = e
+        }
+
+        then: 'a whole number is used, anything else is refused with the name of the argument'
+        accepted ? (refused == null && found) : (refused instanceof IllegalArgumentException && refused.message.contains(argument))
+
+        where:
+        [route, argument, description, value, accepted] << [
+                ['where.list', 'findAll closure', 'findAllBy', 'paged where'],
+                ['timeout', 'fetchSize'],
+                [
+                        ['the whole number 5', 5, true],
+                        ['the whole number 0', 0, true],
+                        ['the long 7', 7L, true],
+                        ['the double 3.0', 3.0d, true],
+                        ['the decimal 4', new BigDecimal('4'), true],
+                        ['the text 6', '6', true],
+                        ['the padded text 8', ' 8 ', true],
+                        ['the text 9.0', '9.0', true],
+                        ['the half 0.5', 0.5d, false],
+                        ['the float 2.5', 2.5f, false],
+                        ['the decimal 1.1', new BigDecimal('1.1'), false],
+                        ['the text 0.5', '0.5', false],
+                        ['the text lots', 'lots', false],
+                        ['an empty text', '', false],
+                        ['a number past the largest int', 3000000000L, false],
+                        ['a decimal past the largest int', new BigDecimal('1e20'), false],
+                        ['not a number', Double.NaN, false],
+                        ['infinity', Double.POSITIVE_INFINITY, false]
+                ]
+        ].combinations().collect { List row -> [row[0], row[1], row[2][0], row[2][1], row[2][2]] }
+        outcome = accepted ? 'accepted' : 'refused'
+    }
+
+    @Unroll
     void "an argument that is null or absent changes nothing on #route"() {
         expect:
         listFor(route, args).size() == 3 || route in ['where.find', 'findBy']

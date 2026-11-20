@@ -120,14 +120,15 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
         }
     }
 
+    /**
+     * The value as an {@code int}, when it is a whole number that fits in one. A number with a fraction, such as 0.5, or one
+     * outside the range of an {@code int} is refused, not cut to a different number.
+     */
     private static int wholeNumber(String argument, Object value) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
-        }
         try {
-            return Integer.parseInt(String.valueOf(value).trim());
+            return new java.math.BigDecimal(String.valueOf(value).trim()).intValueExact();
         }
-        catch (NumberFormatException e) {
+        catch (NumberFormatException | ArithmeticException e) {
             throw new IllegalArgumentException("The " + argument + " argument must be a whole number but was [" + value + "]", e);
         }
     }
