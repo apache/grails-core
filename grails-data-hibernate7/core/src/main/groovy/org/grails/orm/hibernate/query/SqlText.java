@@ -118,6 +118,26 @@ final class SqlText {
     }
 
     /**
+     * Returns the index of the {@code )} that closes the {@code (} at {@code openIndex}. The two parentheses of a
+     * pair carry the same depth, and a parenthesis inside a string literal, a quoted identifier or a comment is not
+     * part of a pair.
+     *
+     * @return the index, or -1 when {@code openIndex} is not a plain {@code (} or the group is not closed
+     */
+    int closingParen(int openIndex) {
+        if (openIndex < 0 || openIndex >= text.length() || kind[openIndex] != PLAIN || text.charAt(openIndex) != '(') {
+            return -1;
+        }
+        int opened = depth[openIndex];
+        for (int i = openIndex + 1; i < text.length(); i++) {
+            if (kind[i] == PLAIN && text.charAt(i) == ')' && depth[i] == opened) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * Splits the text at the separators outside string literals, quoted identifiers, comments and parentheses, and
      * trims each part. A text without the separator is one part.
      */

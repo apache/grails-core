@@ -56,6 +56,28 @@ class HqlTextSpec extends Specification {
         'select b from Book b /* , not a projection */'        | 1     | 'b'           | 'b'   | 'select b from Book b /* , not a projection */'         | Book
         'select m[1], b from Book b'                           | 2     | 'm[1], b'     | 'b'   | 'select m[1], b from Book b'                            | Object[]
         'from Book b where b.height--1 > 0 select b.width'     | 1     | 'b.width'     | 'b'   | 'from Book b where b.height--1 > 0 select b.width'      | Object
+        '(select b.title from Book b)'                         | 1     | 'b.title'     | 'b'   | '(select b.title from Book b)'                          | Object
+        '((select b.title from Book b))'                       | 1     | 'b.title'     | 'b'   | '((select b.title from Book b))'                        | Object
+        '( select b.title from Book b )'                       | 1     | 'b.title'     | 'b'   | '( select b.title from Book b )'                        | Object
+        '(select b.title from Book b) union (select a.name from Author a)' | 1 | 'b.title' | 'b' | '(select b.title from Book b) union (select a.name from Author a)' | Object
+        "(select b.title from Book b) union select 'extra' from Book" | 1 | 'b.title' | 'b' | "(select b.title from Book b) union select 'extra' from Book" | Object
+        '(select b.title from Book b) union all (select a.name from Author a)' | 1 | 'b.title' | 'b' | '(select b.title from Book b) union all (select a.name from Author a)' | Object
+        '((select b.title from Book b) union all (select a.name from Author a))' | 1 | 'b.title' | 'b' | '((select b.title from Book b) union all (select a.name from Author a))' | Object
+        '(select b.title from Book b) /* ) select ignored from ignored */ union (select a.name from Author a)' | 1 | 'b.title' | 'b' | '(select b.title from Book b) /* ) select ignored from ignored */ union (select a.name from Author a)' | Object
+        "(select b.title from Book b where b.title <> ')')"    | 1     | 'b.title'     | 'b'   | "(select b.title from Book b where b.title <> ')')"     | Object
+        "(select 'it''s ), select x from y' from Book b)"      | 1     | "'it''s ), select x from y'" | 'b' | "(select 'it''s ), select x from y' from Book b)" | Object
+        '(select b."title), from ignored" from Book b)'        | 1     | 'b."title), from ignored"' | 'b' | '(select b."title), from ignored" from Book b)' | Object
+        '(select b.`title), from ignored` from Book b)'        | 1     | 'b.`title), from ignored`' | 'b' | '(select b.`title), from ignored` from Book b)' | Object
+        '(/* ignore ) and ( select x from y */ select b.title from Book b)' | 1 | 'b.title' | 'b' | '(/* ignore ) and ( select x from y */ select b.title from Book b)' | Object
+        '(select b.title /* ), ignored */ from Book b)'        | 1     | 'b.title /* ), ignored */' | 'b' | '(select b.title /* ), ignored */ from Book b)' | Object
+        '(select b.height--1 from Book b)'                     | 1     | 'b.height--1' | 'b'   | '(select b.height--1 from Book b)'                      | Object
+        '(select b.title, b.author from Book b)'               | 2     | 'b.title, b.author' | 'b' | '(select b.title, b.author from Book b)'           | Object[]
+        '(select count(b) from Book b)'                        | 1     | 'count(b)'    | 'b'   | '(select count(b) from Book b)'                         | null
+        '(select distinct b from Book b)'                      | 1     | 'b'           | 'b'   | '(select distinct b from Book b)'                       | Book
+        '(select Book from Book)'                              | 1     | 'book'        | null  | '(select Book from Book)'                               | Book
+        '(select b from Book b where b.id in (select a.id from Author a))' | 1 | 'b'    | 'b'   | '(select b from Book b where b.id in (select a.id from Author a))' | Book
+        '(select b.title from Book b) limit 1'                 | 1     | 'b.title'     | 'b'   | '(select b.title from Book b) limit 1'                  | Object
+        '(select b.title from Book b) unionized (select a.name from Author a)' | 1 | 'b.title' | 'b' | '(select b.title from Book b) unionized (select a.name from Author a)' | Object
         ''                                                     | 0     | null          | null  | ''                                                      | Book
     }
 

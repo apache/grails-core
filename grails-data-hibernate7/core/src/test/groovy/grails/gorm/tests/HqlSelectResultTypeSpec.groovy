@@ -71,6 +71,42 @@ class HqlSelectResultTypeSpec extends HibernateGormDatastoreSpec {
         books*.title == ['Emma', 'Persuasion', 'The Hobbit']
         books.every { it instanceof HqlResultTypeBook }
     }
+
+    void 'executeQuery infers scalar results from a parenthesized root query: #hql'() {
+        expect:
+        List results = HqlResultTypeBook.executeQuery(hql)
+        results.sort() == expected
+        results.every { resultType.isInstance(it) }
+
+        where:
+        hql                                                                                                                   | expected                                                | resultType
+        '(select b.title from HqlResultTypeBook b)'                                                                            | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '((select b.title from HqlResultTypeBook b))'                                                                          | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '( select b.title from HqlResultTypeBook b )'                                                                          | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        "(select b.title from HqlResultTypeBook b where b.title <> ')')"                                                       | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(/* ignore ) and ( */ select b.title from HqlResultTypeBook b)'                                                       | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(select b.title from HqlResultTypeBook b where b.author.id in (select a.id from HqlResultTypeAuthor a))'               | ['Emma', 'Persuasion', 'The Hobbit']                      | String
+        '(select b.title from HqlResultTypeBook b) union (select a.name from HqlResultTypeAuthor a)'                             | ['Austen', 'Emma', 'Persuasion', 'The Hobbit', 'Tolkien']  | String
+        "(select b.title from HqlResultTypeBook b) union select 'extra' from HqlResultTypeBook"                                   | ['Emma', 'Persuasion', 'The Hobbit', 'extra']              | String
+    }
+
+    void 'parenthesized root queries retain entity aggregate and tuple results'() {
+        expect:
+        HqlResultTypeBook.executeQuery('(select b from HqlResultTypeBook b order by b.title)')*.title == ['Emma', 'Persuasion', 'The Hobbit']
+        HqlResultTypeBook.executeQuery('(select count(b) from HqlResultTypeBook b)') == [3L]
+        HqlResultTypeBook.executeQuery('(select b.title, b.author.name from HqlResultTypeBook b order by b.title)')
+                .collect { it as List } == [['Emma', 'Austen'], ['Persuasion', 'Austen'], ['The Hobbit', 'Tolkien']]
+    }
+
+    void 'executeQuery infers a scalar from a parenthesized query followed by limit'() {
+        when:
+        List results = HqlResultTypeBook.executeQuery('(select b.title from HqlResultTypeBook b) limit 1')
+
+        then:
+        results.size() == 1
+        results[0] instanceof String
+        ['Emma', 'Persuasion', 'The Hobbit'].contains(results[0])
+    }
 }
 
 @Entity
