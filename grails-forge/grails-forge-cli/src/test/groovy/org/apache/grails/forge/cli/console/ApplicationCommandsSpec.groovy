@@ -21,7 +21,6 @@ package org.apache.grails.forge.cli.console
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Predicate
@@ -31,7 +30,6 @@ import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
-import org.grails.forge.cli.command.BaseCommand
 import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Timeout
@@ -496,7 +494,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'build.gradle').setLastModified(System.currentTimeMillis() - 120_000)
         new File(dir, 'settings.gradle').setLastModified(System.currentTimeMillis() - 120_000)
         new File(dir, 'gradle.properties').setLastModified(System.currentTimeMillis() - 120_000)
-        String how = 'That one is run with: grails-forge-cli gradle runCommand --arg='
+        String how = 'That one is run with: grails-forge-cli run-command '
         List<String> expected = [
                 "c is short for more than one command of the CLI itself (built-in), so the command c of application is not a command here. ${how}c",
                 "install is a command of the CLI itself (built-in), so the command fine of org.example:helper:1 is not a command here. ${how}fine",
@@ -547,11 +545,10 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         'stat'              | 'stats'
     }
 
-    void "where the command line has run-command, that is how a command of the build that is not there is said to be run"() {
+    void "a command of the build that is not there is said to be run with run-command"() {
         given:
         catalog([[name: 'compile', origin: 'org.example:helper:1', target: 'application', registration: 'descriptor']])
         CommandLine commandLine = ForgeCli.createCommandLine(beanContext, false)
-        commandLine.addSubcommand(new RunCommandStandIn())
 
         when:
         int exit = ForgeCli.execute(commandLine, 'help', '--json')
@@ -813,14 +810,5 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         new File(dir, 'gradle.properties').text = 'org.gradle.daemon=false\n'
         new File(dir, 'build.gradle').text = BUILD
         new File(dir, 'grails-app').mkdirs()
-    }
-
-    @CommandLine.Command(name = 'run-command', description = 'Stands for the command that runs a command of the application by its name')
-    static class RunCommandStandIn extends BaseCommand implements Callable<Integer> {
-
-        @Override
-        Integer call() {
-            return 0
-        }
     }
 }
