@@ -23,16 +23,13 @@ import groovy.transform.CompileStatic
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanFactory
 import org.springframework.beans.factory.BeanFactoryAware
-import org.springframework.beans.factory.NoUniqueBeanDefinitionException
 import org.springframework.beans.factory.config.BeanDefinitionHolder
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.config.DependencyDescriptor
-import org.springframework.beans.factory.config.SingletonBeanRegistry
 import org.springframework.beans.factory.support.AutowireCandidateResolver
 import org.springframework.beans.factory.support.DefaultListableBeanFactory
 import org.springframework.cache.CacheManager
-import org.springframework.cache.support.NoOpCacheManager
 import org.springframework.core.ResolvableType
 
 /**
@@ -44,14 +41,15 @@ import org.springframework.core.ResolvableType
  * cannot choose by type, and falls back to the bean named like the field. A trait's field is renamed in
  * the class that implements it, so no bean matched, and the application failed to start.</p>
  *
- * <p>This wraps the bean factory's autowire candidate resolver. When Spring resolves the trait's field,
- * the resolver first runs Spring's own resolution of it, which creates no cache manager that Spring would
- * not create to compare them. Where Spring can choose, the resolver steps aside, and Spring resolves the
- * field as it did: the only cache manager, the one marked primary or the one with the highest priority,
- * judged at that moment, with the objects of the cache managers created by then, the products of factory
- * beans included. Only where Spring would fail because it cannot choose, and {@code grailsCacheManager}
- * is one of the cache managers it cannot choose between, is the field given {@code grailsCacheManager}.
- * Any other injection of a cache manager is left alone.</p>
+ * <p>This wraps the bean factory's autowire candidate resolver. Spring asks the resolver, before it
+ * resolves a dependency, for a proxy to inject in its place; for the trait's field the resolver answers
+ * with the field's resolution itself. It is Spring's own, for the bean being injected, with one change:
+ * where Spring would fail because it cannot choose, and {@code grailsCacheManager} is one of the cache
+ * managers it cannot choose between, it takes {@code grailsCacheManager}. Everywhere else Spring chooses
+ * as it did: the only cache manager, the one marked primary or the one with the highest priority, judged
+ * at that moment, leaving out the bean being injected. The bean is registered as depending on the cache
+ * managers the resolution took, as the injection registers it. Any other injection of a cache manager is
+ * left alone.</p>
  *
  * @since 8.0.1
  */
@@ -80,15 +78,15 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
     }
 
     /**
-     * The bean factory's resolver, with the trait's field given {@code grailsCacheManager} where Spring
-     * cannot choose.
+     * The bean factory's resolver, resolving the trait's field with the fall back to
+     * {@code grailsCacheManager}.
      */
     @CompileStatic
     static class CandidateResolver implements AutowireCandidateResolver, BeanFactoryAware {
 
         private final AutowireCandidateResolver delegate
 
-        private ConfigurableListableBeanFactory beanFactory
+        private DefaultListableBeanFactory beanFactory
 
         CandidateResolver(AutowireCandidateResolver delegate) {
             this.delegate = delegate
@@ -96,28 +94,33 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         @Override
         void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-            this.beanFactory = beanFactory instanceof ConfigurableListableBeanFactory ?
-                    (ConfigurableListableBeanFactory) beanFactory : null
+            this.beanFactory = beanFactory instanceof DefaultListableBeanFactory ? (DefaultListableBeanFactory) beanFactory : null
             if (delegate instanceof BeanFactoryAware) {
                 ((BeanFactoryAware) delegate).beanFactory = beanFactory
             }
         }
 
         @Override
-        Object getSuggestedValue(DependencyDescriptor descriptor) {
-            Object suggested = delegate.getSuggestedValue(descriptor)
-            if (suggested != null || beanFactory == null || descriptor instanceof Probe || !isTraitField(descriptor)) {
-                return suggested
+        Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
+            Object proxy = delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
+            if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || !isTraitField(descriptor)) {
+                return proxy
             }
-            Probe probe = new Probe(descriptor)
-            try {
-                beanFactory.resolveDependency(probe, null)
+            FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
+            Set<String> autowiredBeanNames = new LinkedHashSet<String>()
+            Object value = beanFactory.doResolveDependency(fallback, beanName, autowiredBeanNames, null)
+            if (fallback.fellBack) {
+                autowiredBeanNames << CACHE_MANAGER_BEAN_NAME
             }
-            catch (NoUniqueBeanDefinitionException ignored) {
-                // Spring rejects the candidates before it would fall back, as with two marked primary
-                return null
+            if (beanName != null) {
+                // as the injection registers the bean it injects, which this answer takes the place of
+                for (String autowiredBeanName : autowiredBeanNames) {
+                    if (beanFactory.containsBean(autowiredBeanName)) {
+                        beanFactory.registerDependentBean(autowiredBeanName, beanName)
+                    }
+                }
             }
-            probe.cannotChooseBesideGrails ? beanFactory.getBean(CACHE_MANAGER_BEAN_NAME, CacheManager) : null
+            return value
         }
 
         @Override
@@ -141,8 +144,8 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         }
 
         @Override
-        Object getLazyResolutionProxyIfNecessary(DependencyDescriptor descriptor, String beanName) {
-            delegate.getLazyResolutionProxyIfNecessary(descriptor, beanName)
+        Object getSuggestedValue(DependencyDescriptor descriptor) {
+            delegate.getSuggestedValue(descriptor)
         }
 
         @Override
@@ -156,37 +159,28 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
         }
     }
 
-    /**
-     * Spring's resolution of the trait's field, which tells whether Spring can choose. It creates the
-     * cache managers Spring creates to compare them, those that exist and the products of factory beans
-     * that exist, and not the one it would choose, which Spring creates when it resolves the field.
-     */
+    /** The trait's field, falling back to {@code grailsCacheManager} where Spring cannot choose. */
     @CompileStatic
-    private static class Probe extends DependencyDescriptor {
+    private static class FallbackDescriptor extends DependencyDescriptor {
 
-        /** Stands for the cache manager Spring would choose, which the probe does not create. */
-        private static final CacheManager NOT_CREATED = new NoOpCacheManager()
+        private final BeanFactory beanFactory
 
-        boolean cannotChooseBesideGrails
+        boolean fellBack
 
-        Probe(DependencyDescriptor original) {
+        FallbackDescriptor(DependencyDescriptor original, BeanFactory beanFactory) {
             super(original)
+            this.beanFactory = beanFactory
         }
 
         @Override
         Object resolveNotUnique(ResolvableType type, Map<String, Object> matchingBeans) throws BeansException {
-            if (matchingBeans.containsKey(CACHE_MANAGER_BEAN_NAME)) {
-                cannotChooseBesideGrails = true
-                return NOT_CREATED
+            if (!matchingBeans.containsKey(CACHE_MANAGER_BEAN_NAME)) {
+                return super.resolveNotUnique(type, matchingBeans)
             }
-            super.resolveNotUnique(type, matchingBeans)
-        }
-
-        @Override
-        Object resolveCandidate(String beanName, Class<?> requiredType, BeanFactory beanFactory) throws BeansException {
-            boolean exists = beanFactory instanceof SingletonBeanRegistry &&
-                    ((SingletonBeanRegistry) beanFactory).containsSingleton(beanName)
-            exists ? super.resolveCandidate(beanName, requiredType, beanFactory) : NOT_CREATED
+            fellBack = true
+            Object candidate = matchingBeans.get(CACHE_MANAGER_BEAN_NAME)
+            // created here if it is not yet, as Spring creates the candidate it chooses
+            candidate instanceof Class ? resolveCandidate(CACHE_MANAGER_BEAN_NAME, CacheManager, beanFactory) : candidate
         }
     }
 }

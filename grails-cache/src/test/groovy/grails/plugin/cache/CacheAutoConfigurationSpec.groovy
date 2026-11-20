@@ -29,6 +29,7 @@ import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.config.BeanDefinitionCustomizer
 import org.springframework.cache.CacheManager
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager
+import org.springframework.context.SmartLifecycle
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.core.env.MapPropertySource
 
@@ -219,6 +220,54 @@ class CacheAutoConfigurationSpec extends Specification {
                       'with a priority, which the key generator creates as the cache-aware bean is injected', 'marked primary']
     }
 
+    @Unroll
+    void 'a grailsCacheManager that is cache-aware itself gets the other cache manager, as in 8.0.0, with circular references #circular'() {
+        given: 'Spring leaves a bean out of the candidates for its own fields'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.allowCircularReferences = circular == 'allowed'
+        context.registerBean('grailsCacheManager', CacheAwareGrailsCacheManager)
+        CacheManager other = new ConcurrentMapCacheManager()
+        context.registerBean('other', CacheManager, { -> other } as Supplier<CacheManager>)
+        context.registerBean(CacheAware)
+        context.register(CacheAutoConfiguration)
+
+        when:
+        context.refresh()
+
+        then: 'it starts, and grailsCacheManager is not given itself'
+        context.getBean('grailsCacheManager', GrailsCacheManagerAware).grailsCacheManager.is(other)
+
+        and: 'a cache-aware bean beside both, where Spring cannot choose, gets grailsCacheManager'
+        context.getBean(CacheAware).grailsCacheManager.is(context.getBean('grailsCacheManager'))
+
+        cleanup:
+        context.close()
+
+        where:
+        circular << ['allowed', 'not allowed']
+    }
+
+    void 'a cache-aware bean given grailsCacheManager depends on it, so it stops while that cache manager still runs'() {
+        given: 'a grailsCacheManager stopped in a later phase than the cache-aware bean, and another cache manager'
+        AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()
+        context.registerBean('grailsCacheManager', LifecycleGrailsCacheManager)
+        context.registerBean('cacheManager', CacheManager, { -> new ConcurrentMapCacheManager() } as Supplier<CacheManager>)
+        context.registerBean('service', LifecycleService)
+        context.register(CacheAutoConfiguration)
+        context.refresh()
+        LifecycleService service = context.getBean('service', LifecycleService)
+
+        expect: 'it is given grailsCacheManager, and registered as depending on it, as an injection registers it'
+        service.grailsCacheManager.is(context.getBean('grailsCacheManager'))
+        'service' in context.beanFactory.getDependentBeans('grailsCacheManager')
+
+        when:
+        context.close()
+
+        then: 'it stops first, while grailsCacheManager still runs'
+        service.stoppedWhileCacheManagerRan
+    }
+
     void 'another cache manager in the context, such as the one Spring Security caches users with, is not taken for the Grails one'() {
         given: 'Spring Security defines cacheManager when cacheUsers is set'
         CacheManager other = new ConcurrentMapCacheManager()
@@ -315,6 +364,55 @@ class CacheAutoConfigurationSpec extends Specification {
         @Override
         Class<?> getObjectType() {
             CacheManager
+        }
+    }
+
+    /** A grailsCacheManager that is cache-aware itself. */
+    static class CacheAwareGrailsCacheManager extends GrailsConcurrentMapCacheManager implements GrailsCacheManagerAware {
+    }
+
+    /** A grailsCacheManager with a lifecycle, stopped in a later phase than {@link LifecycleService}. */
+    static class LifecycleGrailsCacheManager extends GrailsConcurrentMapCacheManager implements SmartLifecycle {
+
+        boolean running
+
+        @Override
+        void start() {
+            running = true
+        }
+
+        @Override
+        void stop() {
+            running = false
+        }
+
+        @Override
+        int getPhase() {
+            100
+        }
+    }
+
+    /** A cache-aware bean with a lifecycle, which records whether its cache manager ran when it stopped. */
+    static class LifecycleService implements GrailsCacheManagerAware, SmartLifecycle {
+
+        boolean running
+
+        boolean stoppedWhileCacheManagerRan
+
+        @Override
+        void start() {
+            running = true
+        }
+
+        @Override
+        void stop() {
+            stoppedWhileCacheManagerRan = ((LifecycleGrailsCacheManager) grailsCacheManager).running
+            running = false
+        }
+
+        @Override
+        int getPhase() {
+            0
         }
     }
 
