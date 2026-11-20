@@ -220,7 +220,7 @@ A template can refer to these names. Any other name is an error, so a misspelled
 |The version of Java the application is for, as a number
 
 |`options.data`, `options.servlet`, `options.reloading`
-|The values of the `--data`, `--servlet` and `--reloading` options, such as `hibernate7`, `tomcat` and `devtools`
+|What the application has of what the `--data`, `--servlet` and `--reloading` options choose, written as the values of those options, such as `hibernate7`, `tomcat` and `devtools`. Where the application has none, the value is `none`: a plugin has no servlet container unless one is asked for
 
 |`grailsVersion`
 |The version of Grails the application is generated for

@@ -51,23 +51,23 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
     void "an application is created without the defaults that are excluded, and keeps a record of them"() {
         when:
-        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--exclude-features', 'mockito,asset-pipeline-grails')
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--exclude-features', 'mockito,scaffolding')
 
         then:
         exit == 0
         String buildGradle = new File(dir, 'shop/build.gradle').text
         !buildGradle.contains('mockito')
-        !buildGradle.contains('asset-pipeline')
+        !buildGradle.contains('grails-scaffolding')
         buildGradle.contains('spock')
 
         and:
         List<String> record = new File(dir, 'shop/grails-forge-cli.yml').readLines()
-        record.last() == 'excludedFeatures: [asset-pipeline-grails, mockito]'
+        record.last() == 'excludedFeatures: [mockito, scaffolding]'
         !record.find { it.startsWith('features:') }.contains('mockito')
 
         and: 'which the commands of the application read back'
         CodeGenConfig config = CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP)
-        config.excludedFeatures == ['asset-pipeline-grails', 'mockito']
+        config.excludedFeatures == ['mockito', 'scaffolding']
         !config.features.contains('mockito')
         config.features.contains('spock')
     }
@@ -179,24 +179,23 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 2
         err.toString().contains("The option ${option} none does not agree with the features that are selected or excluded: " +
-                "the application would be made with the feature ${required}. Leave out the option, or the feature that requires it")
+                "the application would be made with the feature ${required} (acme-audit requires ${required}). Leave out the option, or the feature that requires it")
         !new File(dir, 'shop').exists()
 
-        when: 'without the option there is its default: the same feature, or one that cannot be had with what is required'
+        when: 'without the option there is its default, which stands aside for what is required'
         int given = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--features', 'acme-audit',
                 '--feature-pack-dir', pack.absolutePath)
 
         then:
-        given == (recorded == null ? 2 : 0)
-        recorded == null || new File(dir, 'shop/grails-forge-cli.yml').text.contains("reloading: ${recorded}\n")
-        recorded == null || ProjectState.read(new File(dir, 'shop').toPath()).manifest.options.reloading.name == recorded
-        recorded != null || err.toString().contains('There can only be one of the following features selected')
+        given == 0
+        new File(dir, 'shop/grails-forge-cli.yml').text.contains("${recorded}\n")
+        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).features.contains(required)
+        !CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).features.contains(notThere)
 
         where:
-        option        | required                    || recorded
-        '--servlet'   | 'spring-boot-starter-jetty' || null
-        '--reloading' | 'jrebel'                    || null
-        '-r'          | 'spring-boot-devtools'      || 'devtools'
+        option        | required                    || recorded                                 | notThere
+        '--servlet'   | 'spring-boot-starter-jetty' || 'servletImpl: spring-boot-starter-jetty' | 'spring-boot-starter-tomcat'
+        '--reloading' | 'jrebel'                    || 'reloading: jrebel'                      | 'spring-boot-devtools'
     }
 
     @Unroll
@@ -322,31 +321,31 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
     void "the excluded features are in the state of the project, sorted, and are read from there"() {
         when:
-        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--exclude-features', 'mockito,asset-pipeline-grails')
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--exclude-features', 'mockito,scaffolding')
 
         then:
         exit == 0
         ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
-        state.manifest.excludedFeatures*.name == ['asset-pipeline-grails', 'mockito']
+        state.manifest.excludedFeatures*.name == ['mockito', 'scaffolding']
         state.manifest.requestedFeatures.empty
         !state.lock.featureNames.contains('mockito')
 
         when: 'the older record says something else: the state is what is read'
         File record = new File(dir, 'shop/grails-forge-cli.yml')
         String manifest = new File(dir, 'shop/.grails/project.yml').text
-        Files.writeString(record.toPath(), record.text.replace('excludedFeatures: [asset-pipeline-grails, mockito]', 'excludedFeatures: [scaffolding]'))
+        Files.writeString(record.toPath(), record.text.replace('excludedFeatures: [mockito, scaffolding]', 'excludedFeatures: [spock]'))
 
         then:
-        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == ['asset-pipeline-grails', 'mockito']
+        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == ['mockito', 'scaffolding']
 
         when: 'a project without the state is read from the older record'
         new File(dir, 'shop/.grails').deleteDir()
 
         then:
-        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == ['scaffolding']
+        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == ['spock']
 
         when: 'the names in another order give the same manifest'
-        int again = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shopb', '--exclude-features', 'asset-pipeline-grails', '--exclude-features', 'mockito')
+        int again = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shopb', '--exclude-features', 'scaffolding', '--exclude-features', 'mockito')
 
         then:
         again == 0
@@ -446,6 +445,65 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
         cleanup:
         repository?.deleteDir()
+    }
+
+    @Unroll
+    void "an exclusion that would leave what a remaining feature generates without what it uses is refused: #excluded"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, command, 'com.example.shop', '--exclude-features', excluded)
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == message
+        !new File(dir, 'shop').exists()
+
+        where:
+        command             | excluded                 || message
+        'create-app'        | 'gsp,scaffolding'        || 'The feature gsp cannot be excluded: what the feature geb-with-testcontainers generates relies on it'
+        'create-app'        | 'gsp,scaffolding,geb-with-testcontainers' || 'The feature gsp cannot be excluded: what the feature grails-url-mappings generates relies on it'
+        'create-app'        | 'asset-pipeline-grails'  || 'The feature asset-pipeline-grails cannot be excluded: what the feature grails-url-mappings generates relies on it'
+        'create-web-plugin' | 'asset-pipeline-grails'  || 'The feature asset-pipeline-grails cannot be excluded: what the feature gsp generates relies on it'
+        'create-web-plugin' | 'gsp,scaffolding'        || 'The feature gsp cannot be excluded: what the feature grails-url-mappings generates relies on it'
+    }
+
+    @Unroll
+    void "a value an option cannot have is a mistake in the command line: #arguments"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (['create-app', 'com.example.shop'] + arguments) as String[])
+
+        then:
+        exit == 2
+        err.toString().contains(message)
+        err.toString().contains('Usage: ')
+        !new File(dir, 'shop').exists()
+
+        where:
+        arguments                                || message
+        ['--jdk', '5']                           || 'Unsupported JDK version: 5. Supported values are'
+        ['--java-version', '17']                 || 'Unsupported JDK version: 17. Supported values are'
+        ['--servlet', 'websphere']               || 'websphere'
+        ['--features', 'mongodb-testing-support'] || 'mongodb-testing-support requires mongo-sync or gorm-mongodb to be selected.'
+    }
+
+    void "a plugin is recorded with the options it has: no servlet container"() {
+        when:
+        int exit = CliRunner.run(CreatePluginCommand, beanContext, 'com.example.shop')
+
+        then:
+        exit == 0
+        new File(dir, 'shop/grails-forge-cli.yml').text.contains('servletImpl: NONE\n')
+        ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
+        state.manifest.options.servlet.name() == 'NONE'
+        state.lock.options.servlet.name() == 'NONE'
+        !state.lock.featureNames.any { it.contains('tomcat') }
+
+        when: 'and with the one that is asked for'
+        int jetty = CliRunner.run(CreatePluginCommand, beanContext, 'com.example.other', '--servlet', 'jetty')
+
+        then:
+        jetty == 0
+        ProjectState.read(new File(dir, 'other').toPath()).manifest.options.servlet.name() == 'JETTY'
+        ProjectState.read(new File(dir, 'other').toPath()).lock.featureNames.contains('spring-boot-starter-jetty')
     }
 
     void "the option is in the help of the command"() {

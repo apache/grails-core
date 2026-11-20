@@ -47,6 +47,12 @@ interface GebFeature extends OneOfFeature {
         return Category.TESTING
     }
 
+    // the generated specification opens the home page, which is a GSP view
+    @Override
+    default List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        return ['gsp']
+    }
+
     @Override
     default int getOrder() {
         return FeaturePhase.TEST.getOrder()

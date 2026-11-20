@@ -47,7 +47,6 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Language
-import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.options.TestFramework
@@ -94,7 +93,6 @@ class GeneratorContext implements DependencyContext {
     private final List<Runnable> checks = new ArrayList<>()
     private List<String> requestedFeatures = Collections.emptyList()
     private final List<String> excludedFeatures
-    private Set<OptionName> applicableOptions = Collections.emptySet()
     private final String repositoryOverride
 
     GeneratorContext(Project project,
@@ -293,36 +291,26 @@ class GeneratorContext implements DependencyContext {
     @Nonnull Options getApplicationOptions() {
         Options applied = options
         Set<String> names = new HashSet<String>(features)
-        if (applicableOptions.contains(OptionName.DATA) && !names.contains(options.getGormImpl().getName())) {
+        if (!names.contains(options.getGormImpl().getName())) {
+            // an application has one: no option says that there is none
             GormImpl present = GormImpl.values().find { GormImpl each -> names.contains(each.getName()) }
             if (present != null) {
                 applied = applied.withGormImpl(present)
             }
         }
-        if (applicableOptions.contains(OptionName.SERVLET)) {
-            ServletImpl servlet = ServletImpl.values().find { ServletImpl each -> each != ServletImpl.NONE && names.contains(each.getName()) }
-            if (servlet == null || !names.contains(options.getServletImpl().getName())) {
-                applied = applied.withServletImpl(servlet ?: ServletImpl.NONE)
-            }
+        ServletImpl servlet = options.getServletImpl()
+        if (servlet == ServletImpl.NONE || !names.contains(servlet.getName())) {
+            // none where the application has no servlet container, as a plugin has none
+            ServletImpl present = ServletImpl.values().find { ServletImpl each -> each != ServletImpl.NONE && names.contains(each.getName()) }
+            applied = applied.withServletImpl(present ?: ServletImpl.NONE)
         }
-        if (applicableOptions.contains(OptionName.RELOADING)) {
-            ReloadingFeature reloading = features.reloading()
-            if (reloading == null) {
-                applied = applied.withDevelopmentReloading(DevelopmentReloading.NONE)
-            } else if (!features.getFeatures().any { Feature each -> each instanceof ReloadingFeature && ((ReloadingFeature) each).getReloading() == options.getDevelopmentReloading() }) {
-                applied = applied.withDevelopmentReloading(reloading.getReloading())
-            }
+        ReloadingFeature reloading = features.reloading()
+        if (reloading == null) {
+            applied = applied.withDevelopmentReloading(DevelopmentReloading.NONE)
+        } else if (!features.getFeatures().any { Feature each -> each instanceof ReloadingFeature && ((ReloadingFeature) each).getReloading() == options.getDevelopmentReloading() }) {
+            applied = applied.withDevelopmentReloading(reloading.getReloading())
         }
         return applied
-    }
-
-    /**
-     * @param applicableOptions the options that choose a feature this type of application can have; the
-     * others are recorded as they were given, since no feature of the application says otherwise
-     * @since 9.0
-     */
-    void setApplicableOptions(@Nonnull Set<OptionName> applicableOptions) {
-        this.applicableOptions = Collections.unmodifiableSet(new HashSet<OptionName>(applicableOptions))
     }
 
     /**

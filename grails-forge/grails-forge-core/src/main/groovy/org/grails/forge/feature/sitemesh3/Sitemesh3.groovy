@@ -60,6 +60,12 @@ class Sitemesh3 extends GspLayout implements DefaultFeature {
         return false
     }
 
+    // layouts are of GSP pages
+    @Override
+    List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        return ['gsp']
+    }
+
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         return supports(applicationType) &&

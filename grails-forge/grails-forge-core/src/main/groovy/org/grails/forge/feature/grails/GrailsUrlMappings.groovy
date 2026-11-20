@@ -42,6 +42,16 @@ class GrailsUrlMappings implements DefaultFeature {
         return 'grails-url-mappings'
     }
 
+    // the mappings of a web application are to the GSP views of the home page and of the errors, and
+    // those of an application send the browser to its icon among the assets
+    @Override
+    List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        if (applicationType == ApplicationType.WEB) {
+            return ['gsp', 'asset-pipeline-grails']
+        }
+        return applicationType == ApplicationType.WEB_PLUGIN ? ['gsp'] : Collections.<String>emptyList()
+    }
+
     @Override
     boolean supports(ApplicationType applicationType) {
         return true

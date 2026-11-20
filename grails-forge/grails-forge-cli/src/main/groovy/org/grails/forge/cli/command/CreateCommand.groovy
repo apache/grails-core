@@ -508,7 +508,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         if (javaVersion == null) {
             return JdkVersion.DEFAULT_OPTION
         } else {
-            return JdkVersion.valueOf(javaVersion)
+            try {
+                return JdkVersion.valueOf(javaVersion)
+            } catch (IllegalArgumentException e) {
+                throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
+            }
         }
     }
 }

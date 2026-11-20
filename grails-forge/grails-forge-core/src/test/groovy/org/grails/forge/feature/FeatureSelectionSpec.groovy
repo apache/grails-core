@@ -232,11 +232,11 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
 
         where:
         type                     | excluded                                        || alsoLeftOut
-        ApplicationType.WEB      | ['asset-pipeline-grails']                       || []
         ApplicationType.WEB      | ['geb-with-testcontainers']                     || []
         ApplicationType.WEB      | ['mockito']                                     || []
         ApplicationType.WEB      | ['scaffolding']                                 || []
-        ApplicationType.WEB      | ['scaffolding', 'gsp']                          || []
+        ApplicationType.WEB      | ['scaffolding', 'geb-with-testcontainers']      || []
+        ApplicationType.WEB_PLUGIN | ['scaffolding', 'spock', 'mockito']           || []
         ApplicationType.WEB      | ['spock', 'mockito', 'geb-with-testcontainers'] || []
         ApplicationType.REST_API | ['mockito']                                     || []
         ApplicationType.PLUGIN   | ['mockito']                                     || []
@@ -280,20 +280,20 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         state.verifyBaseline(target)
 
         then:
-        state.manifest.excludedFeatures*.name == ['asset-pipeline-grails', 'mockito', 'mysql']
+        state.manifest.excludedFeatures*.name == ['mockito', 'mysql', 'scaffolding']
         state.manifest.excludedFeatures.every { it.coordinates == null && it.version == null }
         state.manifest.requestedFeatures*.name == ['postgres']
         !state.lock.featureNames.contains('mockito')
         target.resolve('.grails/project.yml').toFile().getText('UTF-8').contains(
-                'excludedFeatures:\n- name: asset-pipeline-grails\n- name: mockito\n- name: mysql\n')
+                'excludedFeatures:\n- name: mockito\n- name: mysql\n- name: scaffolding\n')
 
         where:
-        excluded << ['mysql', 'mockito', 'asset-pipeline-grails'].permutations().toList() + [['mockito', 'mysql', 'mockito', 'asset-pipeline-grails']]
+        excluded << ['mysql', 'mockito', 'scaffolding'].permutations().toList() + [['mockito', 'mysql', 'mockito', 'scaffolding']]
     }
 
     void "the state of a project is the same in whatever order the excluded features are named"() {
         expect:
-        ['mysql', 'mockito', 'asset-pipeline-grails'].permutations().collect { List<String> excluded ->
+        ['mysql', 'mockito', 'scaffolding'].permutations().collect { List<String> excluded ->
             generate(['postgres'], [], ApplicationType.WEB, excluded).findAll { it.key.startsWith('.grails/') }
         }.toSet().size() == 1
     }
@@ -355,6 +355,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         then: 'it is refused for a reason, or it is an application'
         output != null || refusal ==~ "The feature ${name} cannot be excluded: (the feature [a-z0-9-]+ requires it|" +
                 'the application would be without the feature [a-z0-9-]+, which it has to have|' +
+                'what the feature [a-z0-9-]+ generates relies on it|' +
                 'it is the Grails Data implementation of the application\\. Choose another one \\(--data\\), or leave the exclusion out)'
 
         and: 'that has every part an application of the type is built on'
@@ -460,8 +461,8 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         where:
         type                     | selected                                                        | excluded
         ApplicationType.WEB      | ['acme-audit', 'acme-one', 'postgres', 'acme-other']            | []
-        ApplicationType.WEB      | ['acme-base', 'acme-other', 'cache-ehcache', 'asciidoctor']     | ['mockito', 'asset-pipeline-grails']
-        ApplicationType.WEB      | ['gorm-hibernate7', 'mysql', 'grails-quartz', 'acme-one']       | ['scaffolding', 'gsp', 'postgres']
+        ApplicationType.WEB      | ['acme-base', 'acme-other', 'cache-ehcache', 'asciidoctor']     | ['mockito', 'scaffolding']
+        ApplicationType.WEB      | ['gorm-hibernate7', 'mysql', 'grails-quartz', 'acme-one']       | ['scaffolding', 'geb-with-testcontainers', 'postgres']
         ApplicationType.REST_API | ['acme-other', 'acme-audit', 'gorm-mongodb']                    | ['mockito', 'spock']
         ApplicationType.PLUGIN   | ['acme-one', 'acme-base', 'shade']                              | ['mockito']
     }
@@ -558,10 +559,236 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         where:
         type                | given                  | options                                                     | selected              || has                                                                    | message
         ApplicationType.WEB | [OptionName.DATA]      | new Options()                                               | ['gorm-hibernate7']   || [GormImpl.HIBERNATE7, ServletImpl.TOMCAT, DevelopmentReloading.DEVTOOLS] | 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'
-        ApplicationType.WEB | [OptionName.SERVLET]   | new Options().withServletImpl(ServletImpl.NONE)             | ['acme-jetty']        || [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS]  | 'The servlet container none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-starter-jetty'
-        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-jrebel'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.JREBEL]    | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature jrebel'
-        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-devtools'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.DEVTOOLS] | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-devtools'
+        ApplicationType.WEB | [OptionName.SERVLET]   | new Options().withServletImpl(ServletImpl.NONE)             | ['acme-jetty']        || [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS]  | 'The servlet container none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-starter-jetty (acme-jetty requires spring-boot-starter-jetty)'
+        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-jrebel'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.JREBEL]    | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature jrebel (acme-jrebel requires jrebel)'
+        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-devtools'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.DEVTOOLS] | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-devtools (acme-devtools requires spring-boot-devtools)'
         ApplicationType.WEB | [OptionName.RELOADING] | new Options().withJavaVersion(JdkVersion.JDK_25)            | ['grails-micronaut']  || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.NONE]      | 'The development reloading devtools that was asked for does not agree with the features that are selected or excluded: the application would be made without Spring Boot DevTools'
+    }
+
+    @Unroll
+    void "the default servlet container or reloader stands aside for #selected when the option was not given, and does not when it was"() {
+        given:
+        List<Pack> packs = [pack('acme-jetty', 'requires: [spring-boot-starter-jetty]\n'), pack('acme-jrebel', 'requires: [jrebel]\n'),
+                            pack('acme-chain', 'requires: [acme-middle]\n'), pack('acme-middle', 'requires: [acme-jetty]\n')]
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+
+        when: 'the option has its value, and nobody said that it was given'
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'), options,
+                OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, packs, [])
+        Options recorded = context.applicationOptions
+
+        then: 'the feature that was selected or is required is there, and not the default'
+        context.features.containsAll(has)
+        !context.features.any { it in hasNot }
+        [recorded.gormImpl, recorded.servletImpl, recorded.developmentReloading] == record
+
+        when: 'the same option, given'
+        generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'), options.withGiven([given]),
+                OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, packs, [])
+
+        then: 'the two are refused together'
+        FeatureSelectionException e = thrown()
+        e.message == message
+
+        where:
+        options                                    | given                | selected            || has                           | hasNot                         | record                                                                 | message
+        new Options()                              | OptionName.SERVLET   | ['acme-jetty']      || ['spring-boot-starter-jetty'] | ['spring-boot-starter-tomcat'] | [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS] | 'There can only be one of the following features selected: [spring-boot-starter-jetty, spring-boot-starter-tomcat]'
+        new Options()                              | OptionName.SERVLET   | ['acme-chain']      || ['spring-boot-starter-jetty'] | ['spring-boot-starter-tomcat'] | [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS] | 'There can only be one of the following features selected: [spring-boot-starter-jetty, spring-boot-starter-tomcat]'
+        new Options().withServletImpl(ServletImpl.UNDERTOW) | OptionName.SERVLET | ['acme-jetty'] || ['spring-boot-starter-jetty'] | ['grails-undertow']           | [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS] | 'There can only be one of the following features selected: [grails-undertow, spring-boot-starter-jetty]'
+        new Options()                              | OptionName.RELOADING | ['acme-jrebel']     || ['jrebel']                    | ['spring-boot-devtools']       | [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.JREBEL]  | 'There can only be one of the following features selected: [jrebel, spring-boot-devtools]'
+    }
+
+    @Unroll
+    void "a Grails Data implementation that is not the default does not stand aside for #selected, given or not: #gorm"() {
+        when: 'the caller passes the implementation and does not say that it was given'
+        beanContext.getBean(ProjectGenerator).createGeneratorContext(type, NameUtils.parse('example.grails.foo'), new Options().withGormImpl(gorm),
+                OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, [], [])
+
+        then: 'it is its choice all the same: the persistence layer is not swapped without a word'
+        FeatureSelectionException e = thrown()
+        e.message == message
+
+        when: 'and says so'
+        beanContext.getBean(ProjectGenerator).createGeneratorContext(type, NameUtils.parse('example.grails.foo'),
+                new Options().withGormImpl(gorm).withGiven([OptionName.DATA]), OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, [], [])
+
+        then:
+        FeatureSelectionException given = thrown()
+        given.message == message
+
+        where:
+        [type, gorm, selected, message] << ApplicationType.values().toList().collectMany { ApplicationType each ->
+            [[each, GormImpl.HIBERNATE7, ['gorm-hibernate5'], 'Only one Grails Data for Hibernate implementation can be selected: gorm-hibernate5 or gorm-hibernate7'],
+             [each, GormImpl.NEO4J, ['gorm-mongodb'], 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'],
+             [each, GormImpl.MONGODB, ['gorm-neo4j'], 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]']]
+        }
+    }
+
+    void "the default Grails Data implementation gives way to a selected Hibernate 7 when it was not given, and only then"() {
+        given:
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+
+        when:
+        GeneratorContext context = generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'), new Options(),
+                OperatingSystem.LINUX, ['gorm-hibernate7'], ConsoleOutput.NOOP, [], [])
+
+        then:
+        context.features.contains('gorm-hibernate7')
+        !context.features.contains('gorm-hibernate5')
+        context.applicationOptions.gormImpl == GormImpl.HIBERNATE7
+
+        when:
+        generator.createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'), new Options().withGiven([OptionName.DATA]),
+                OperatingSystem.LINUX, ['gorm-hibernate7'], ConsoleOutput.NOOP, [], [])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.option == OptionName.DATA
+    }
+
+    void "a given option for none names the way to the feature that is there all the same"() {
+        given:
+        List<Pack> packs = [pack('acme-jetty', 'requires: [spring-boot-starter-jetty]\n'),
+                            pack('acme-chain', 'requires: [acme-middle]\n'), pack('acme-middle', 'requires: [acme-jetty]\n')]
+
+        when:
+        beanContext.getBean(ProjectGenerator).createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'),
+                new Options().withServletImpl(ServletImpl.NONE).withGiven([OptionName.SERVLET]), OperatingSystem.LINUX, ['acme-chain'], ConsoleOutput.NOOP, packs, [])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == 'The servlet container none that was asked for does not agree with the features that are selected or excluded: the application would be made ' +
+                'with the feature spring-boot-starter-jetty (acme-chain requires acme-middle requires acme-jetty requires spring-boot-starter-jetty)'
+    }
+
+    @Unroll
+    void "what is recorded of the options of a #type application is what it has: #servlet"() {
+        when:
+        GeneratorContext context = beanContext.getBean(ProjectGenerator).createGeneratorContext(type, NameUtils.parse('example.grails.foo'),
+                new Options(), OperatingSystem.LINUX, [], ConsoleOutput.NOOP, [], [])
+        Map<String, String> output = generate([], [], type)
+
+        then:
+        context.applicationOptions.servletImpl == servlet
+        context.features.contains('spring-boot-starter-tomcat') == (servlet == ServletImpl.TOMCAT)
+        output['grails-forge-cli.yml'].contains("servletImpl: ${servlet.name}\n")
+        output['.grails/project.yml'].contains("  servlet: ${servlet.name().toLowerCase()}\n")
+        output['.grails/forge.lock.yml'].contains("  servlet: ${servlet.name().toLowerCase()}\n")
+        featuresOf(output).contains(context.applicationOptions.gormImpl.name)
+
+        where:
+        type                       || servlet
+        ApplicationType.WEB        || ServletImpl.TOMCAT
+        ApplicationType.REST_API   || ServletImpl.TOMCAT
+        ApplicationType.WEB_PLUGIN || ServletImpl.TOMCAT
+        ApplicationType.PLUGIN     || ServletImpl.NONE
+    }
+
+    void "a template of a pack is told the options the application has"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: f.txt.gsp\n    to: f.txt\n", ['f.txt.gsp': '${options.servlet} ${options.data} ${options.reloading}'])
+
+        expect: 'a plugin has no servlet container, whatever the default of the option is'
+        generate(['acme-audit'], [pack], ApplicationType.PLUGIN)['f.txt'] == 'none hibernate5 devtools'
+        generate(['acme-audit'], [pack], ApplicationType.WEB)['f.txt'] == 'tomcat hibernate5 devtools'
+        generate(['acme-audit', 'gorm-hibernate7'], [pack], ApplicationType.WEB)['f.txt'] == 'tomcat hibernate7 devtools'
+    }
+
+    @Unroll
+    void "#excluded cannot be excluded from a #type application, where what #by generates relies on it"() {
+        when:
+        context([], [], type, excluded)
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == "The feature ${relied} cannot be excluded: what the feature ${by} generates relies on it"
+
+        where:
+        type                       | excluded                                   || relied                  | by
+        ApplicationType.WEB        | ['asset-pipeline-grails']                  || 'asset-pipeline-grails' | 'grails-url-mappings'
+        ApplicationType.WEB_PLUGIN | ['asset-pipeline-grails']                  || 'asset-pipeline-grails' | 'gsp'
+        ApplicationType.WEB        | ['gsp', 'scaffolding']                     || 'gsp'                   | 'geb-with-testcontainers'
+        ApplicationType.WEB        | ['gsp', 'scaffolding', 'geb-with-testcontainers'] || 'gsp'            | 'grails-url-mappings'
+        ApplicationType.WEB_PLUGIN | ['gsp', 'scaffolding']                     || 'gsp'                   | 'grails-url-mappings'
+        ApplicationType.WEB        | ['asset-pipeline-grails', 'gsp', 'scaffolding', 'geb-with-testcontainers'] || 'gsp'            | 'grails-url-mappings'
+    }
+
+    void "a feature relied on is named with the way to the feature that relies on it"() {
+        given: 'a pack that brings in the pages, in an application that has none by default'
+        Pack pack = pack('acme-pages', 'requires: [gsp]\n')
+
+        expect: 'selection does not add what is relied on: the pages are there without the assets, as before'
+        context(['acme-pages'], [pack], ApplicationType.REST_API).features.contains('gsp')
+        !context(['acme-pages'], [pack], ApplicationType.REST_API).features.contains('asset-pipeline-grails')
+
+        when: 'but it cannot be excluded where it would be there'
+        context(['acme-pages'], [pack], ApplicationType.WEB_PLUGIN, ['asset-pipeline-grails'])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == 'The feature asset-pipeline-grails cannot be excluded: what the feature gsp generates relies on it (acme-pages requires gsp)'
+    }
+
+    @Unroll
+    void "no view or mapping of a #type application without #excluded uses what a feature that is absent provides"() {
+        given: 'which feature provides what a view or a mapping can use'
+        Map<String, String> tagFeatures = ['asset': 'asset-pipeline-grails', 'g': 'gsp', 'sitemesh': 'sitemesh3']
+        Map<String, String> viewFeatures = ['.gsp': 'gsp', '.gson': 'views-json', '.gml': 'views-markup']
+
+        when:
+        Map<String, String> output = generate([], [], type, excluded)
+        List<String> features = featuresOf(output)
+        Map<String, String> views = output.findAll { it.key.startsWith('grails-app/views/') }
+        String mappings = output.find { it.key.endsWith('/UrlMappings.groovy') }?.value ?: ''
+        List<String> mapped = (mappings =~ /view: ?["']\/([A-Za-z]+)["']/).collect { List match -> match[1] as String }
+
+        then: 'every view is of a view layer the application has'
+        views.keySet().every { String path -> features.contains(viewFeatures.find { path.endsWith(it.key) }?.value) }
+
+        and: 'every tag of a page is of a feature the application has'
+        views.findAll { it.key.endsWith('.gsp') }.every { String path, String text ->
+            (text =~ /<([a-z][a-z0-9]*):[A-Za-z]/).collect { List match -> match[1] as String }.unique().every { String namespace ->
+                features.contains(tagFeatures[namespace])
+            }
+        }
+
+        and: 'every view a mapping names is generated, and a mapping to the assets has the assets'
+        mapped.every { String view -> views.keySet().any { it.startsWith("grails-app/views/${view}.") } }
+        !mappings.contains('/assets/') || features.contains('asset-pipeline-grails')
+
+        and: 'a web application has the pages its mappings name'
+        type in [ApplicationType.PLUGIN] || !mapped.isEmpty()
+
+        where:
+        [type, excluded] << ApplicationType.values().toList().collectMany { ApplicationType each ->
+            [[each, []]] + acceptedExclusions(each).collect { List<String> names -> [each, names] }
+        }
+    }
+
+    void "the exclusions that are accepted are those the generated applications were built and run with"() {
+        expect: 'one at a time and in pairs, of the features an application has by default and that can be selected by name'
+        acceptedExclusions(ApplicationType.WEB) == [['geb-with-testcontainers'], ['mockito'], ['scaffolding'],
+                                                    ['geb-with-testcontainers', 'mockito'], ['geb-with-testcontainers', 'scaffolding'],
+                                                    ['geb-with-testcontainers', 'spock'], ['mockito', 'scaffolding']]
+        acceptedExclusions(ApplicationType.WEB_PLUGIN) == [['mockito'], ['scaffolding'], ['spock'], ['mockito', 'scaffolding'], ['mockito', 'spock'],
+                                                           ['scaffolding', 'spock']]
+        acceptedExclusions(ApplicationType.REST_API) == [['mockito'], ['spock'], ['mockito', 'spock']]
+        acceptedExclusions(ApplicationType.PLUGIN) == [['mockito'], ['spock'], ['mockito', 'spock']]
+    }
+
+    // the single visible defaults and the pairs of them that can be excluded from an application of a type
+    private List<List<String>> acceptedExclusions(ApplicationType type) {
+        List<String> defaults = visibleDefaults(type).toSorted()
+        List<List<String>> candidates = defaults.collect { [it] } +
+                defaults.collectMany { String first -> defaults.findAll { it > first }.collect { String second -> [first, second] } }
+        return candidates.findAll { List<String> names ->
+            try {
+                context([], [], type, names)
+                return true
+            } catch (FeatureSelectionException ignored) {
+                return false
+            }
+        }
     }
 
     void "an option that chooses nothing for a type of application agrees with every application of the type"() {
@@ -571,7 +798,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
 
         then:
         !context.features.contains('spring-boot-starter-tomcat')
-        context.applicationOptions.servletImpl == ServletImpl.TOMCAT
+        context.applicationOptions.servletImpl == ServletImpl.NONE
         context.applicationOptions.given == [OptionName.SERVLET, OptionName.DATA, OptionName.RELOADING] as Set
     }
 

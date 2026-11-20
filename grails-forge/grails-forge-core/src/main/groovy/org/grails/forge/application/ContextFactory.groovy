@@ -185,6 +185,9 @@ class ContextFactory {
             added = false
             for (DefaultFeature feature : defaults) {
                 if (!features.contains(feature) && feature.shouldApply(applicationType, newOptions, features)) {
+                    if (standsAside(feature, newOptions, features)) {
+                        continue
+                    }
                     if (excluded.contains(feature.getName())) {
                         if (feature.getName() == newOptions.getGormImpl().getName()) {
                             // the options cannot say that an application has no Grails Data implementation
@@ -210,6 +213,29 @@ class ContextFactory {
             featureContext.exclude(name)
         }
         return featureContext
+    }
+
+    /**
+     * The default servlet container and the default reloader stand aside, when their option was not
+     * given, for a feature of their group that was selected or is required in their place. An option
+     * that was given is a choice and does not stand aside: the two are then refused together.
+     *
+     * <p>The Grails Data implementation is not treated so. Only the plain default, Hibernate 5, gives
+     * way to a selected Hibernate 7, which that feature decides itself. Another value of the option
+     * never stands aside, marked as given or not: a caller of the generator that passes one has no
+     * other way to say that it chose it, and a persistence layer that is swapped without a word is a
+     * worse surprise than a refusal.</p>
+     *
+     * <p>The defaults that are no choice of an option look for a feature of their group themselves.</p>
+     */
+    private static boolean standsAside(DefaultFeature feature, Options options, Set<Feature> features) {
+        OptionName option = feature instanceof SpringBootEmbeddedServlet ? OptionName.SERVLET :
+                feature instanceof ReloadingFeature ? OptionName.RELOADING : null
+        if (option == null || options.getGiven().contains(option)) {
+            return false
+        }
+        String group = ((OneOfFeature) feature).getGroup()
+        return features.any { Feature other -> other instanceof OneOfFeature && ((OneOfFeature) other).getGroup() == group }
     }
 
     /**
@@ -337,19 +363,19 @@ class ContextFactory {
             Set<Feature> features = featureContext.getFinalFeatures(consoleOutput)
 
             checkStructure(featureContext, features)
+            checkReliedOn(featureContext, features)
             String conflict = ConflictingFeatureValidator.conflict(features) { String name -> featureContext.requirementsTo(name) }
             if (conflict != null) {
                 throw new FeatureSelectionException(conflict)
             }
             featureValidator.validatePostProcessing(featureContext.getOptions(), featureContext.getApplicationType(), features)
-            checkGivenOptions(featureContext.getOptions(), featureContext.getApplicableOptions(), features)
+            checkGivenOptions(featureContext, features)
             return features
         }
 
         GeneratorContext generatorContext = new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver,
                 featureContext.getExcludedFeatures(), repositoryOverride)
         generatorContext.setRequestedFeatures(featureContext.getRequestedFeatures())
-        generatorContext.setApplicableOptions(featureContext.getApplicableOptions())
         return generatorContext
     }
 
@@ -371,7 +397,9 @@ class ContextFactory {
      * or excluded leave the application without what the option asks for, or with what it asks not to
      * have, the two do not agree, and one of them would be dropped without a word.
      */
-    private static void checkGivenOptions(Options options, Set<OptionName> applicable, Set<Feature> features) {
+    private static void checkGivenOptions(FeatureContext featureContext, Set<Feature> features) {
+        Options options = featureContext.getOptions()
+        Set<OptionName> applicable = featureContext.getApplicableOptions()
         Set<OptionName> given = options.getGiven().findAll { OptionName option -> applicable.contains(option) } as Set<OptionName>
         Set<String> names = features*.getName() as Set<String>
         if (given.contains(OptionName.DATA) && !names.contains(options.getGormImpl().getName())) {
@@ -381,7 +409,7 @@ class ContextFactory {
             ServletImpl servlet = options.getServletImpl()
             List<String> servlets = features.findAll { Feature feature -> feature instanceof SpringBootEmbeddedServlet }*.getName()
             if (servlet == ServletImpl.NONE && !servlets.isEmpty()) {
-                throw disagreement(OptionName.SERVLET, 'none', null, "the feature ${servlets[0]}")
+                throw disagreement(OptionName.SERVLET, 'none', null, "the feature ${servlets[0]}${requiredThrough(featureContext, servlets[0])}")
             }
             if (servlet != ServletImpl.NONE && !names.contains(servlet.getName())) {
                 throw disagreement(OptionName.SERVLET, servlet.name().toLowerCase(Locale.ENGLISH), "the feature ${servlet.getName()}", null)
@@ -391,10 +419,37 @@ class ContextFactory {
             DevelopmentReloading reloading = options.getDevelopmentReloading()
             List<ReloadingFeature> present = features.findAll { Feature feature -> feature instanceof ReloadingFeature }.collect { Feature feature -> (ReloadingFeature) feature }
             if (reloading == DevelopmentReloading.NONE && !present.isEmpty()) {
-                throw disagreement(OptionName.RELOADING, reloading.getName(), null, "the feature ${present[0].getName()}")
+                throw disagreement(OptionName.RELOADING, reloading.getName(), null, "the feature ${present[0].getName()}${requiredThrough(featureContext, present[0].getName())}")
             }
             if (reloading != DevelopmentReloading.NONE && !present.any { ReloadingFeature feature -> feature.getReloading() == reloading }) {
                 throw disagreement(OptionName.RELOADING, reloading.getName(), reloading.getLabel(), null)
+            }
+        }
+    }
+
+    // which feature brought one in that nobody selected by name
+    private static String requiredThrough(FeatureContext featureContext, String name) {
+        List<String> way = featureContext.requirementsTo(name)
+        return way.size() < 2 ? '' : " (${FeatureSelectionException.chain(way)})"
+    }
+
+    /**
+     * An exclusion leaves out a default and what only that default brought in, but not what a feature
+     * that remains makes use of in what it generates: the views of a web application use the asset
+     * tags, and its mappings are to those views.
+     */
+    private static void checkReliedOn(FeatureContext featureContext, Set<Feature> features) {
+        List<String> excluded = featureContext.getExcludedFeatures()
+        if (excluded.isEmpty()) {
+            return
+        }
+        Set<String> names = features*.getName() as Set<String>
+        for (Feature feature : features.toSorted(Comparator.comparing(Feature::getName))) {
+            for (String reliedOn : feature.getFeaturesReliedOn(featureContext.getApplicationType())) {
+                if (excluded.contains(reliedOn) && !names.contains(reliedOn)) {
+                    throw new FeatureSelectionException("The feature ${reliedOn} cannot be excluded: what the feature ${feature.getName()} " +
+                            "generates relies on it${requiredThrough(featureContext, feature.getName())}")
+                }
             }
         }
     }

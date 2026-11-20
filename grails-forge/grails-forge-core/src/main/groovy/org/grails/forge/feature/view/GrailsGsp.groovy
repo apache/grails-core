@@ -76,6 +76,12 @@ class GrailsGsp implements DefaultFeature {
         return Category.VIEW
     }
 
+    // the layout and the pages this feature writes use the asset tags for their styles, scripts and images
+    @Override
+    List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        return ['asset-pipeline-grails']
+    }
+
     @Override
     void processSelectedFeatures(FeatureContext featureContext) {
         if (!featureContext.isPresent(GrailsWeb) && grailsWeb != null) {

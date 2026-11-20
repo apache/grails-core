@@ -658,7 +658,7 @@ class ForgeApiIntegrationSpec extends Specification {
         get('/create/rest-api/forge-rest').status == 201
     }
 
-    void 'generation endpoint #path refuses the option #query that the selected features would replace'() {
+    void 'generation endpoint #path refuses the chosen option #query that does not agree with the selected features'() {
         when:
         Map response = get("${path}?${query}")
         Map error = json(response)
@@ -673,29 +673,54 @@ class ForgeApiIntegrationSpec extends Specification {
         [path, query, message] << [
                 ['/create/web/demo', '/demo.zip', '/preview/web/demo', '/diff/web/demo'],
                 [
-                        ['gorm=hibernate5&features=gorm-hibernate7', 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'],
-                        ['gorm=HIBERNATE&features=gorm-hibernate7', 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'],
-                        ['reloading=DEVTOOLS&javaVersion=JDK_25&features=grails-micronaut', 'The development reloading devtools that was asked for does not agree with the features that are selected or excluded: the application would be made without Spring Boot DevTools'],
+                        ['gorm=hibernate7&features=gorm-hibernate5', 'Only one Grails Data for Hibernate implementation can be selected: gorm-hibernate5 or gorm-hibernate7'],
+                        ['gorm=neo4j&features=gorm-mongodb', 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'],
+                        ['gorm=mongodb&reloading=DEVTOOLS&servlet=TOMCAT&features=gorm-neo4j', 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'],
                 ]
         ].combinations().collect { List each -> [each[0], each[1][0], each[1][1]] }
     }
 
-    void 'generation endpoint #path lets a default give way to a selected feature, and records what the application has'() {
-        when:
+    void 'generation endpoint #path takes #query, where an option only repeats its default, as it takes the feature alone'() {
+        when: 'what the Forge UI sends when a feature is ticked and the options are left as they are'
         Map response = get("${path}?${query}")
 
         then:
         response.status == status
 
         where:
-        path                | query                                                   || status
-        '/create/web/demo'  | 'features=gorm-hibernate7'                              || 201
-        '/demo.zip'         | 'features=gorm-hibernate7'                              || 201
-        '/create/web/demo'  | 'gorm=hibernate7&features=gorm-hibernate7'              || 201
-        '/create/web/demo'  | 'javaVersion=JDK_25&features=grails-micronaut'          || 201
-        '/create/web/demo'  | 'reloading=NONE&javaVersion=JDK_25&features=grails-micronaut' || 201
-        '/create/plugin/demo' | 'servlet=TOMCAT&gorm=hibernate5&reloading=DEVTOOLS'   || 201
-        '/preview/web/demo' | 'gorm=mongodb&features=gorm-hibernate7'                 || 200
+        path                  | query                                                                         || status
+        '/create/web/demo'    | 'gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS&features=gorm-hibernate7'  || 201
+        '/demo.zip'           | 'gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS&features=gorm-hibernate7'  || 201
+        '/preview/web/demo'   | 'gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS&features=gorm-hibernate7'  || 200
+        '/diff/web/demo'      | 'gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS&features=gorm-hibernate7'  || 200
+        '/diff/web/feature/gorm-hibernate7' | 'gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS'             || 200
+        '/create/web/demo'    | 'gorm=HIBERNATE&features=gorm-hibernate7'                                     || 201
+        '/create/web/demo'    | 'features=gorm-hibernate7'                                                    || 201
+        '/create/web/demo'    | 'gorm=hibernate7&features=gorm-hibernate7'                                    || 201
+        '/create/web/demo'    | 'reloading=DEVTOOLS&javaVersion=JDK_25&features=grails-micronaut'             || 201
+        '/create/web/demo'    | 'reloading=NONE&javaVersion=JDK_25&features=grails-micronaut'                 || 201
+        '/create/plugin/demo' | 'servlet=TOMCAT&gorm=hibernate5&reloading=DEVTOOLS'                           || 201
+        '/preview/web/demo'   | 'gorm=mongodb&features=gorm-hibernate7'                                       || 200
+    }
+
+    void "a request that repeats the default of an option and selects another feature gets that feature, recorded as what the application has"() {
+        when:
+        Map contents = json(get('/preview/web/com.example.forge-ui?gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS&features=gorm-hibernate7')).contents as Map
+
+        then: 'a Hibernate 7 application'
+        (contents['build.gradle'] as String).contains('org.apache.grails:grails-data-hibernate7')
+        !(contents['build.gradle'] as String).contains('org.apache.grails:grails-data-hibernate5"')
+        (contents['.grails/project.yml'] as String).contains('  data: hibernate7\n')
+        (contents['.grails/forge.lock.yml'] as String).contains('- name: gorm-hibernate7\n')
+        !(contents['.grails/forge.lock.yml'] as String).contains('- name: gorm-hibernate5\n')
+        (contents['grails-forge-cli.yml'] as String).contains('gormImpl: gorm-hibernate7\n')
+
+        when: 'a plugin, with every option as the UI sends it'
+        Map plugin = json(get('/preview/plugin/com.example.forge-ui?gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS')).contents as Map
+
+        then: 'is recorded without a servlet container, which it has not'
+        (plugin['.grails/project.yml'] as String).contains('  servlet: none\n')
+        (plugin['grails-forge-cli.yml'] as String).contains('servletImpl: NONE\n')
     }
 
     void "the state of a project names the options the application has, where one was not given"() {

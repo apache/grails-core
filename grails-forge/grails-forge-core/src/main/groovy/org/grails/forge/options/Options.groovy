@@ -139,8 +139,11 @@ class Options {
 
     /**
      * @return the options that were given by whoever asked for the application. Their values are
-     * choices: an application that would not have what one of them asks for is refused. The value of
-     * any other option is a default, which gives way to the features that are selected.
+     * choices: an application that would not have what one of them asks for is refused. The servlet
+     * container and the reloading of an option that was not given are defaults, which give way to a
+     * feature of their kind that is selected or required. Of the Grails Data implementation only the
+     * default value gives way, to a selected Hibernate 7: another value is a choice also when it is
+     * not marked as given here, since a caller that passes one has no other way to say so.
      * @since 9.0
      */
     Set<OptionName> getGiven() {

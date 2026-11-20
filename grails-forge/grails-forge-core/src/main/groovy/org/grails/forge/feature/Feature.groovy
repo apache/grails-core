@@ -147,6 +147,21 @@ interface Feature {
         return Collections.emptyList()
     }
 
+    /**
+     * The features that what this feature generates makes use of, without this feature bringing them
+     * in: a view that uses the tags of another feature, a mapping to a view another feature renders.
+     * Selection never adds them. They matter when one of them is excluded: an exclusion that would
+     * leave this feature in an application without a feature it relies on is refused, since what this
+     * feature generates would then not work.
+     *
+     * @param applicationType the type of application that is generated
+     * @return the names of the features relied on, none by default
+     * @since 9.0
+     */
+    default List<String> getFeaturesReliedOn(ApplicationType applicationType) {
+        return Collections.emptyList()
+    }
+
     default String getCategory() {
         return Category.OTHER
     }

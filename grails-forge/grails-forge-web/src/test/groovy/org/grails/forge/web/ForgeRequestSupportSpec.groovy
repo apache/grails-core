@@ -64,12 +64,16 @@ class ForgeRequestSupportSpec extends Specification {
         options.operatingSystem == OperatingSystem.LINUX
     }
 
-    void "the options a request gives are marked as given, and those it leaves out are not"() {
-        expect:
+    void "an option of a request counts as chosen when it is not the default, since the UI sends every option with every request"() {
+        expect: 'left out, or repeating the default: not chosen'
         ForgeRequestSupport.options(null, null, null, '21', OperatingSystem.LINUX).given.empty
+        ForgeRequestSupport.options('DEVTOOLS', 'hibernate5', 'TOMCAT', '21', OperatingSystem.LINUX).given.empty
+        ForgeRequestSupport.options('devtools', 'HIBERNATE', 'tomcat', null, OperatingSystem.LINUX).given.empty
+
+        and: 'another value: chosen'
         ForgeRequestSupport.options(null, 'hibernate7', null, null, OperatingSystem.LINUX).given == [OptionName.DATA] as Set
-        ForgeRequestSupport.options('NONE', null, 'JETTY', null, OperatingSystem.LINUX).given == [OptionName.RELOADING, OptionName.SERVLET] as Set
-        ForgeRequestSupport.options('DEVTOOLS', 'mongodb', 'TOMCAT', '21', OperatingSystem.LINUX).given == OptionName.values() as Set
+        ForgeRequestSupport.options('NONE', 'hibernate5', 'JETTY', null, OperatingSystem.LINUX).given == [OptionName.RELOADING, OptionName.SERVLET] as Set
+        ForgeRequestSupport.options('JREBEL', 'mongodb', 'NONE', '21', OperatingSystem.LINUX).given == OptionName.values() as Set
     }
 
     void 'generation rejects an invalid #label selection'() {
