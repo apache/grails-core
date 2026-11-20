@@ -1547,3 +1547,65 @@ It also reads three kinds of input it used to fail on or cut short:
 
 * Check commands that read an option followed by an empty argument, or arguments with spaces inside quotes, and expect the values above.
 * Remove workarounds for the three failures, such as passing `--filter=status%3Dactive` and decoding it in the command.
+
+[[upgradingSpringFormatNegotiation]]
+==== 31. Opt Into Spring MVC Content Negotiation for Grails Formats
+
+Set `grails.mime.negotiation.spring: true` to resolve `request.format`, `response.format`, `withFormat` and the format
+`respond` writes in with Spring MVC's content negotiation manager, and to have the `format` parameter, URL extensions and
+the `grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too (see
+<<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>). Grails 9 keeps its own rules by
+default, and Grails 10 makes the setting the default, so an application should check these answers before then.
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mime:
+        negotiation:
+            spring: true
+----
+
+The setting changes these answers, which the framework's tests record by running the same requests both ways:
+
+* *The order of the `Accept` header.* Spring MVC takes a more specific type ahead of a less specific one of equal
+quality, where the Grails rules keep the order of the header: `Accept: */*, application/json` is the `json` format,
+where it is `all` without the setting, and `withFormat` runs the `json` block rather than its first. A type with the
+`+xml` suffix still comes ahead of the XML type of equal quality: `Accept: application/xml, application/atom+xml` is
+`atom` either way, and Spring MVC now writes what an action returns in that order too.
+* *Types with the `+json` and `+xml` suffixes.* A type no configured type names, such as `application/merge-patch+json`,
+`application/soap+xml` or, without a `hal` format, `application/hal+json`, is the `json` or `xml` format, where the
+Grails rules read only the problem types of RFC 9457 so and answer any other as `all`. In `Content-Type` too: a body sent
+as such a type is of the `json` format, where its `request.format` is otherwise `null`, and data binding reads it as JSON.
+* *A request that accepts no configured type.* Such a request, as one that sends only `Accept: image/png`, and one whose
+`Accept` header Spring cannot read, such as `Accept: application/json;q=abc`, is not acceptable: `response.format` and
+`response.mimeType` are `null`, `respond` answers `406 Not Acceptable` and `withFormat` runs its `*` block, or no block,
+where the Grails rules answer as for a client that accepts any type, with the `all` format, or read the header
+leniently. Code that reads `response.format` or `response.mimeType` must allow for `null`.
+* *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
+answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
+`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that
+`spring.mvc.contentnegotiation.media-types` maps, such as `plain: text/plain`, decides what Spring MVC writes, as
+without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406`
+for it. The `all` format leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is otherwise `all`. The
+first value of the parameter counts.
+* *What Spring MVC writes for an action.* The `format` parameter and URL extensions now decide the type of a
+`ResponseEntity`, a `ProblemDetail` or another value Spring MVC writes for a request a URL mapping handles, where Spring
+MVC read only the `Accept` header: `/book/show/1.json` is answered in JSON whatever the `Accept` header asks for, and
+`/book/show/1.html` of an action that returns a map with `406`, since no message converter writes a map as HTML.
+`grails.mime.use.accept.header: false` and `grails.mime.disable.accept.header.*` now ignore the `Accept` header for it
+too.
+* *Without the `all` format.* Where `grails.mime.types` does not list `all`, a request without an `Accept` header is of
+the `all` format, as one that sends `Accept: */*` is, where the Grails rules give the first configured format, so
+`withFormat` runs its `*` block, or its first block, rather than the block of that format. A type of quality `0` comes
+after any other, so `Accept: application/json;q=0, */*;q=0.1` is `all`, where it is otherwise `json`. `?format=all`
+leaves the format to the `Accept` header there too, where the Grails rules give the first configured format.
+* *Wildcards.* A wildcard such as `text/*` is the `all` format as before, but `withFormat` runs the first block of a
+format with a type compatible with it, and `respond` answers in the first such format of the action, where the Grails
+rules run the first block and answer in the first format: `withFormat { pdf {...}; html {...} }` runs the `html` block for
+`Accept: text/*`.
+* *A `Content-Type` Spring cannot read.* A `Content-Type` Spring rejects, such as `application/json;charset=` or a list
+of types, is of no format, where the Grails rules read it leniently as `json`.
+
+Other requests resolve as before, among them those of browsers and those that name one configured type. A Spring MVC
+endpoint, and Spring Security's filters before a URL mapping has matched a request, negotiate as before.

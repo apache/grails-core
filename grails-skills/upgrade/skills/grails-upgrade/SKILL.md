@@ -30,7 +30,7 @@ Activate this skill when:
 - Fixing what Spring Boot 4.2 and Spring Framework 7.1 change: forwarded headers behind a reverse proxy, relative redirect locations, `TestRestTemplate`, the `instance` of a problem, `bootBuildImage`, HTTP server metrics, the RabbitMQ starter, and the Spring Security plugin's saved requests, Digest authentication and `fii.alwaysReauthenticate`.
 - Fixing GraphQL queries that fail with `MaxQueryDepthExceeded` or `MaxQueryFieldsExceeded`, or a schema that fails validation, in an application using `grails-data-graphql`.
 - Deciding whether an application keeps or excludes `grails-xml`.
-- Turning on `grails.web.rendering.json.spring`, `grails.converters.json.legacy: false`, `grails.databinding.json.jackson`, `grails.exceptionresolver.springHandlers` or `grails.controllers.responseBody`, and checking what changes.
+- Turning on `grails.web.rendering.json.spring`, `grails.converters.json.legacy: false`, `grails.databinding.json.jackson`, `grails.exceptionresolver.springHandlers`, `grails.controllers.responseBody` or `grails.mime.negotiation.spring`, and checking what changes.
 - Replacing `JSON.createNamedConfig(...)`, `JSON.use(...)` or marshallers that customize `respond` with Jackson serializers and the `NamedJsonConfigurationRegistry`.
 - Fixing web unit tests (`ControllerUnitTest`, `TagLibUnitTest`, `UrlMappingsUnitTest`, `JsonViewUnitTest`) that fail after the upgrade.
 - Porting code that uses RxGORM, `grails-async-rxjava`, `grails-async-rxjava2`, `grails-events-rxjava`, or `grails-events-rxjava2` to RxJava 3.
@@ -246,6 +246,7 @@ XML conversion, XML request-body binding, and the XML, Atom, HAL XML and Vnd.Err
 | `grails.web.rendering.xml.spring` | XML that `respond` writes for ordinary beans | `false` | unchanged until Grails 11 removes legacy XML conversion |
 | `grails.exceptionresolver.springHandlers` | Exceptions actions throw, resolved by Spring MVC `@ExceptionHandler` methods | `false` | `true` in Grails 10 |
 | `grails.controllers.responseBody` | The values of actions annotated `@ResponseBody`, written by Spring MVC as the body | `false` | `true` in Grails 10 |
+| `grails.mime.negotiation.spring` | `request.format`, `response.format`, `withFormat` and the format `respond` writes in, resolved with Spring MVC's content negotiation manager | `false` | `true` in Grails 10 |
 
 - Grails 10 changes the three JSON settings together, so that `respond`, `render ... as JSON`, `request.JSON` and data binding write and read JSON with the same mapper. Test them together. At the least, set `grails.converters.json.legacy: false` and `grails.databinding.json.jackson: true` together, or `request.JSON` and data binding accept different JSON.
 - Grails 9 logs a warning while a legacy path is used: once when the legacy `respond` path renders, at startup for `JsonSlurper` request binding, and at startup while `grails.converters.json.legacy` is unset. Setting `grails.converters.json.legacy` to either value turns its warning off.
@@ -440,6 +441,17 @@ The Grails HAL JSON renderers remain available through explicit renderer registr
 - The `json`, `xml`, `hal`, `atom`, `rss`, `csv` and `text` formats declared in `grails.mime.types`, or among the defaults where it declares none or `grails.mime.mergeDefaults` adds them, are registered with Spring as format aliases, which Spring MVC uses only with `spring.mvc.contentnegotiation.favor-parameter: true`; Spring Boot leaves it disabled, so `?format=json` still does not change what a Spring MVC endpoint returns. The MIME types a `MimeTypeProvider` bean adds are not registered, and neither are browser formats such as `html` and `js`, which preserves Spring's reflected-file-download protection. Where a format has several media types, an `application/*` one is preferred over a `text/*` one, and `spring.mvc.contentnegotiation.media-types.*` overrides these defaults.
 - A renderer or binding source creator registered for an interface of `java.lang.Class`, such as `Serializable`, no longer matches every class.
 - The MIME types and the `grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` settings live in the application context instead of static fields. Remove test code that reset those fields or called `HttpServletResponseExtension.loadMimeTypeConfig`, and set the settings in a spec's `doWithConfig`, since they are read once for each application context. A subclass of `DefaultAcceptHeaderParser` that overrode `createMimeTypeAndAddToList` must take the requested `MimeType` now.
+
+### Opt Into Spring MVC Content Negotiation for Grails Formats
+
+With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, Grails formats are resolved with Spring MVC's content negotiation manager, and the `format` parameter, URL extensions and the `grails.mime` `Accept` settings also decide what Spring MVC writes for an action. Before turning it on, check these in functional tests:
+
+- `Accept: */*, application/json` is `json`, where it is `all` without the setting: a more specific type comes ahead of a wildcard of equal quality. A `+xml` type still comes ahead of the XML type of equal quality.
+- A type with the `+json` or `+xml` suffix that no configured type names, such as `application/merge-patch+json`, is the `json` or `xml` format, in `Accept` and in `Content-Type`, so data binding reads such a body as JSON.
+- A request that accepts no configured type, such as `Accept: image/png` alone, or whose `Accept` header Spring cannot read, has no format: `response.format` and `response.mimeType` are `null`, `respond` answers `406` and `withFormat` runs its `*` block, or none. Make code that reads them allow for `null`.
+- A format parameter or URL extension no type is configured for is not acceptable, where it was answered in the first configured format. A format only `spring.mvc.contentnegotiation.media-types` maps still decides what Spring MVC writes for an action, such as a `ResponseEntity`, but `respond` answers it with `406`. `?format=all` leaves the format to the `Accept` header.
+- A `ResponseEntity`, `ProblemDetail` or other value Spring MVC writes for an action follows the URL extension and the format parameter: `/book/show/1.json` is JSON whatever the `Accept` header says, and a map at `/book/show/1.html` answers `406`.
+- A wildcard such as `text/*` selects the first `withFormat` block, or the first format of the action, with a type compatible with it.
 
 ## Web Unit Tests
 
