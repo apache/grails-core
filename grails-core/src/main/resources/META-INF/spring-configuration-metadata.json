@@ -187,6 +187,12 @@
             "defaultValue": false
         },
         {
+            "name": "grails.gorm.leftJoinAssociationSort",
+            "type": "java.lang.Boolean",
+            "description": "Whether a sort by a property of an association joins the association with a left join, so that the sort keeps the instances whose association is null. When false, the association is joined with an inner join, which leaves those instances out.",
+            "defaultValue": false
+        },
+        {
             "name": "grails.gorm.autoFlush",
             "type": "java.lang.Boolean",
             "description": "Whether to automatically flush the Hibernate session between queries.",
