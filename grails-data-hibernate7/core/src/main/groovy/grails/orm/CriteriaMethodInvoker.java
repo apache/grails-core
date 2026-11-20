@@ -20,6 +20,7 @@ package grails.orm;
 
 import java.beans.PropertyDescriptor;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
@@ -29,6 +30,8 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
+
+import org.hibernate.NonUniqueResultException;
 
 import org.springframework.beans.BeanUtils;
 
@@ -82,7 +85,16 @@ public class CriteriaMethodInvoker {
         if (method == null || !isCriteriaConstructionMethod(method, args)) {
             return UNHANDLED;
         }
+        try {
+            return runCriteria(method, args);
+        } catch (RuntimeException e) {
+            // the session the builder opened is closed when the call throws, as it is when the call returns
+            builder.closeSessionAfterFailure();
+            throw e;
+        }
+    }
 
+    private Object runCriteria(CriteriaMethods method, Object... args) {
         HibernateQuery hibernateQuery = builder.getHibernateQuery();
         switch (method) {
             case GET_CALL -> builder.setUniqueResult(true);
@@ -96,6 +108,7 @@ public class CriteriaMethodInvoker {
         if (method == CriteriaMethods.LIST_CALL && args.length == 2) {
             builder.setPaginationEnabledList(true);
             if (args[0] instanceof Map<?, ?> map) {
+                hibernateQuery.setArguments(map);
                 if (map.get("max") instanceof Number max) {
                     hibernateQuery.maxResults(max.intValue());
                 }
@@ -143,7 +156,12 @@ public class CriteriaMethodInvoker {
                 result = hibernateQuery.list();
             }
         } else {
-            result = hibernateQuery.singleResult();
+            // a criteria get is the one row that matches: null for none, and an exception for several
+            List<?> rows = hibernateQuery.list();
+            if (rows.size() > 1) {
+                throw new NonUniqueResultException(rows.size());
+            }
+            result = rows.isEmpty() ? null : rows.get(0);
         }
         if (!builder.isParticipate()) {
             builder.closeSession();

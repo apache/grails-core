@@ -55,6 +55,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler;
 import org.grails.datastore.mapping.query.AssociationQuery;
 import org.grails.datastore.mapping.query.Projections;
 import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.query.api.QueryArgumentsAware;
 import org.grails.datastore.mapping.query.api.QueryableCriteria;
 import org.grails.datastore.mapping.query.event.PostQueryEvent;
 import org.grails.datastore.mapping.query.event.PreQueryEvent;
@@ -71,7 +72,7 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public class HibernateQuery extends Query {
+public class HibernateQuery extends Query implements QueryArgumentsAware {
 
     protected static final String ALIAS = "_alias";
     private final Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
@@ -636,6 +637,30 @@ public class HibernateQuery extends Query {
         this.readOnly = readOnly;
     }
 
+    /**
+     * Applies the Hibernate settings of a GORM query arguments map: {@code fetchSize}, {@code timeout},
+     * {@code readOnly} and {@code flushMode}. Settings absent from the map keep their current value.
+     *
+     * @param arguments the query arguments, may be {@code null}
+     * @throws IllegalArgumentException when a numeric argument cannot be converted
+     */
+    @Override
+    public void setArguments(Map arguments) {
+        HibernateQuerySettings settings = HibernateQuerySettings.from(arguments);
+        if (settings.fetchSize() != null) {
+            this.fetchSize = settings.fetchSize();
+        }
+        if (settings.timeout() != null) {
+            this.timeout = settings.timeout();
+        }
+        if (settings.readOnly() != null) {
+            this.readOnly = settings.readOnly();
+        }
+        if (settings.flushMode() != null) {
+            this.flushMode = settings.flushMode();
+        }
+    }
+
     public DetachedCriteria<?> getHibernateCriteria() {
         return detachedCriteria;
     }
@@ -878,6 +903,10 @@ public class HibernateQuery extends Query {
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
+                    // the copy runs the count behind the total of a page, which has to read the data the page read: the flush
+                    // mode and the timeout that the query arguments gave belong to it too
+                    hibernateQuery.flushMode = this.flushMode;
+                    hibernateQuery.timeout = this.timeout;
 
                     return hibernateQuery;
                 });

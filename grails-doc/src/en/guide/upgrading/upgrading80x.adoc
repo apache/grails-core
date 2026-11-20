@@ -4796,6 +4796,21 @@ Removing one element of a unidirectional `hasMany` set or bag, with `removeFrom*
 
 Under Hibernate 7, calling a collection criterion such as `isNotEmpty('pets')`, `isEmpty('pets')`, or `sizeEq('pets', n)` next to an association block for the same collection (`pets { ... }`) threw a `ClassCastException` because the path resolved to the join rather than the collection attribute (issue https://github.com/apache/grails-core/issues/16633[#16633]). Collection criteria now resolve to the collection property on the parent whether they appear before or after an association block of the same name.
 
+==== Query Arguments Reach Criteria Queries, and a Criteria get Is Unique
+
+With Hibernate 7, the `readOnly`, `fetchSize`, `timeout` and `flushMode` arguments were applied to HQL queries but a criteria query dropped them: `Person.where { age > 18 }.list(readOnly: true)`, `Person.findAll(readOnly: true) { age > 18 }`, `Person.findAllByAge(18, [readOnly: true])` and `Person.withCriteria(readOnly: true) { gt('age', 18) }` loaded modifiable entities, and `flushMode: 'MANUAL'` still flushed pending changes first (issue https://github.com/apache/grails-core/issues/16808[#16808]). Every query entry point now reads these arguments the same way, as it did with Hibernate 5. A value that is not a whole number, such as `fetchSize: 'lots'`, throws an `IllegalArgumentException` that names the argument. The `flushMode` values are `MANUAL`, `COMMIT` and `ALWAYS`; `AUTO` follows the session.
+
+`createCriteria().get { ... }` is the unique result of the criteria, as the reference describes it and as it is with Hibernate 5. With Hibernate 7 on 8.0.0 it returned the first of several matching rows; it now throws a `NonUniqueResultException` when several rows match, and returns the row or `null` otherwise. To keep getting the first row, limit the criteria and order it:
+
+[source,groovy]
+----
+Person.createCriteria().get {
+    gt('age', 18)
+    order('age', 'asc')
+    maxResults(1)
+}
+----
+
 ==== Map entries named `properties` or `metaClass`
 
 The accessor-first resolution described above applies to every `Map`, not only to a class that declares an accessor of its own, because every Groovy object has the `properties` and `metaClass` properties.
