@@ -348,7 +348,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        out.toString().contains("Unmatched argument at index 0: '${command}'")
+        out.toString().contains("There is no command ${command}")
         !out.toString().contains('requested=')
 
         when: 'it has the class of a plugin'
