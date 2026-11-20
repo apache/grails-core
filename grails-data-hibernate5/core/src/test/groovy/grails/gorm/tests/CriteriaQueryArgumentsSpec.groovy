@@ -129,4 +129,166 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         then:
         found.size() == 3
     }
+
+    private static List<TestEntity> listFor(String route, Map args) {
+        List<TestEntity> found
+        switch (route) {
+            case 'where.list':
+                found = TestEntity.where { age > 0 }.list(args)
+                break
+            case 'where.find':
+                found = [TestEntity.where { name == 'b' }.find(args)]
+                break
+            case 'findAll closure':
+                found = TestEntity.findAll(args) { age > 0 }
+                break
+            case 'findAllBy':
+                found = TestEntity.findAllByAgeGreaterThan(0, args)
+                break
+            case 'findBy':
+                found = [TestEntity.findByName('b', args)]
+                break
+            case 'paged where':
+                found = TestEntity.where { age > 0 }.list(args + [max: 10])
+                break
+            case 'paged finder':
+                found = TestEntity.findAllByAgeGreaterThan(0, args + [max: 10])
+                break
+            default:
+                throw new IllegalArgumentException(route)
+        }
+        found.findAll { it != null }
+    }
+
+    private static List<TestEntity> changedFor(String route, Map args) {
+        List<TestEntity> found
+        switch (route) {
+            case 'where.list':
+                found = TestEntity.where { age == 99 }.list(args)
+                break
+            case 'where.find':
+                found = [TestEntity.where { age == 99 }.find(args)]
+                break
+            case 'findAll closure':
+                found = TestEntity.findAll(args) { age == 99 }
+                break
+            case 'findAllBy':
+                found = TestEntity.findAllByAge(99, args)
+                break
+            case 'findBy':
+                found = [TestEntity.findByAge(99, args)]
+                break
+            case 'paged where':
+                found = TestEntity.where { age == 99 }.list(args + [max: 10])
+                break
+            case 'paged finder':
+                found = TestEntity.findAllByAge(99, args + [max: 10])
+                break
+            default:
+                throw new IllegalArgumentException(route)
+        }
+        found.findAll { it != null }
+    }
+
+    @Unroll
+    void "readOnly: #readOnly on #route loads #outcome entities"() {
+        when:
+        List<TestEntity> found = listFor(route, [readOnly: readOnly])
+
+        then:
+        found
+        found.every { isReadOnly(it) == readOnly }
+
+        where:
+        route             | readOnly
+        'where.list'      | true
+        'where.list'      | false
+        'where.find'      | true
+        'where.find'      | false
+        'findAll closure' | true
+        'findAll closure' | false
+        'findAllBy'       | true
+        'findAllBy'       | false
+        'findBy'          | true
+        'findBy'          | false
+        'paged where'     | true
+        'paged where'     | false
+        'paged finder'    | true
+        'paged finder'    | false
+        outcome = readOnly ? 'read-only' : 'modifiable'
+    }
+
+    @Unroll
+    void "flushMode: #mode on #route #outcome a pending change"() {
+        given: 'a session that flushes by itself, so only the flush mode of the arguments keeps a change out'
+        TestEntity.withSession { Session s -> s.setHibernateFlushMode(FlushMode.AUTO) }
+        TestEntity first = TestEntity.findByName('a')
+        first.age = 99
+
+        when:
+        List<TestEntity> found = changedFor(route, [flushMode: mode])
+
+        then:
+        found*.name == expected
+
+        where:
+        route             | mode     || expected
+        'where.list'      | 'MANUAL' || []
+        'where.list'      | 'ALWAYS' || ['a']
+        'where.find'      | 'MANUAL' || []
+        'where.find'      | 'ALWAYS' || ['a']
+        'findAll closure' | 'MANUAL' || []
+        'findAll closure' | 'ALWAYS' || ['a']
+        'findAllBy'       | 'MANUAL' || []
+        'findAllBy'       | 'ALWAYS' || ['a']
+        'findBy'          | 'MANUAL' || []
+        'findBy'          | 'ALWAYS' || ['a']
+        'paged where'     | 'MANUAL' || []
+        'paged where'     | 'ALWAYS' || ['a']
+        'paged finder'    | 'MANUAL' || []
+        'paged finder'    | 'ALWAYS' || ['a']
+        outcome = expected ? 'flushes' : 'leaves out'
+    }
+
+    @Unroll
+    void "#argument: #value is refused on #route and the message names the argument"() {
+        when:
+        listFor(route, [(argument): value])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.contains(argument)
+        e.message.contains(value)
+
+        where:
+        route             | argument    | value
+        'where.list'      | 'fetchSize' | 'lots'
+        'findAll closure' | 'fetchSize' | 'lots'
+        'findAllBy'       | 'fetchSize' | 'lots'
+        'findBy'          | 'fetchSize' | 'lots'
+        'paged where'     | 'fetchSize' | 'lots'
+        'where.list'      | 'timeout'   | 'soon'
+        'findAll closure' | 'timeout'   | 'soon'
+        'findAllBy'       | 'timeout'   | 'soon'
+        'where.list'      | 'flushMode' | 'BOGUS'
+        'findAll closure' | 'flushMode' | 'BOGUS'
+        'findAllBy'       | 'flushMode' | 'BOGUS'
+        'findBy'          | 'flushMode' | 'BOGUS'
+        'paged where'     | 'flushMode' | 'BOGUS'
+    }
+
+    @Unroll
+    void "an argument that is null or absent changes nothing on #route"() {
+        expect:
+        listFor(route, args).size() == 3 || route in ['where.find', 'findBy']
+
+        where:
+        route             | args
+        'where.list'      | [readOnly: null, flushMode: null, fetchSize: null, timeout: null]
+        'findAll closure' | [readOnly: null, flushMode: null, fetchSize: null, timeout: null]
+        'findAllBy'       | [readOnly: null, flushMode: null, fetchSize: null, timeout: null]
+        'paged where'     | [readOnly: null, flushMode: null, fetchSize: null, timeout: null]
+        'where.find'      | [readOnly: null, flushMode: null]
+        'findBy'          | [readOnly: null, flushMode: null]
+    }
 }

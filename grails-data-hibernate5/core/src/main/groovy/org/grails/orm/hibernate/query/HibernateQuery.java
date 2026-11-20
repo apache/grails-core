@@ -110,7 +110,12 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
             criteria.setFlushMode(flushMode);
         }
         else if (mode != null) {
-            flushMode = FlushMode.valueOf(String.valueOf(mode));
+            try {
+                flushMode = FlushMode.valueOf(String.valueOf(mode).trim());
+            }
+            catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("The flushMode argument must be one of " + java.util.Arrays.toString(FlushMode.values()) + " but was [" + mode + "]", e);
+            }
             criteria.setFlushMode(flushMode);
         }
     }
