@@ -318,8 +318,8 @@ class SimpleDataBinder implements DataBinder {
             MetaProperty owner = indexedOwner(obj, element, filter)
             boolean okToBind = owner != null && isOkToBind(owner, whiteList, blackList)
             if (supplied != null && !(supplied instanceof Map)) {
-                // only an element that the bind accepts, of a property the object has, is bound at all
-                if (okToBind) {
+                // only an element that the bind accepts, of a property the object has, in a list or map that takes the index, is bound at all
+                if (okToBind && indexAccepted(obj, owner, element, filter)) {
                     deferred.computeIfAbsent(supplied) { new LinkedHashMap<String, Object>() }.putAll(entries)
                 }
                 return
@@ -359,6 +359,29 @@ class SimpleDataBinder implements DataBinder {
         }
         def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
         descriptor ? obj.metaClass.getMetaProperty(descriptor.propertyName) : null
+    }
+
+    /**
+     * Whether the list or map that the object holds in the property takes the element's index: a position inside the list or
+     * below the growth limit, a key the map has or a map below the growth limit. Any other kind of property takes it.
+     */
+    private boolean indexAccepted(obj, MetaProperty owner, String element, String filter) {
+        def descriptor = getIndexedPropertyReferenceDescriptor(elementPath(element, filter))
+        def held
+        try {
+            held = owner.getProperty(obj)
+        } catch (Exception ignored) {
+            held = null
+        }
+        String index = descriptor.index
+        if (held instanceof Map || (held == null && Map.isAssignableFrom(owner.type))) {
+            return held == null || ((Map) held).containsKey(index) || ((Map) held).size() < autoGrowCollectionLimit
+        }
+        if ((held instanceof List || (held == null && List.isAssignableFrom(owner.type))) && index ==~ /\d+/) {
+            int position = index.toInteger()
+            return position < autoGrowCollectionLimit || (held != null && position < ((List) held).size())
+        }
+        true
     }
 
     /**

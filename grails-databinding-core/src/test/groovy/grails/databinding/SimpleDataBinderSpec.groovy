@@ -782,6 +782,70 @@ class SimpleDataBinderSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'A supplied object is changed only when the list or map it is named in accepts it'() {
+        given:
+        def binder = new SimpleDataBinder(autoGrowCollectionLimit: 3)
+        def supplied = new Factory(name: 'Uno')
+        def holder = new IndexedHolder(factories: heldList.collect { new Factory(name: it) }, byName: heldMap.collectEntries { k, v -> [(k): new Factory(name: v)] })
+
+        when:
+        binder.bind holder, new SimpleMapDataBindingSource([(property + '[' + index + ']'): supplied, (property + '[' + index + '][name]'): 'new'])
+
+        then:
+        supplied.name == (accepted ? 'new' : 'Uno')
+
+        where:
+        property    | index   | heldList    | heldMap                    || accepted
+        'factories' | '0'     | []          | [:]                        || true
+        'factories' | '2'     | []          | [:]                        || true
+        'factories' | '3'     | []          | [:]                        || false
+        'factories' | '1000'  | []          | [:]                        || false
+        'factories' | '1'     | ['a']       | [:]                        || true
+        'factories' | '2'     | ['a']       | [:]                        || true
+        'factories' | '3'     | ['a']       | [:]                        || false
+        'factories' | '1'     | ['a', 'b', 'c', 'd'] | [:]               || true
+        'factories' | '5'     | ['a', 'b', 'c', 'd'] | [:]               || false
+        'byName'    | 'x'     | []          | [:]                        || true
+        'byName'    | 'x'     | []          | [a: '1', b: '2']           || true
+        'byName'    | 'x'     | []          | [a: '1', b: '2', c: '3']   || false
+        'byName'    | 'a'     | []          | [a: '1', b: '2', c: '3']   || true
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'The include and exclude lists and the filter decide whether a supplied object or a held map is changed'() {
+        given:
+        def binder = new SimpleDataBinder()
+        def supplied = new Factory(name: 'Uno')
+        def table = new IndexedTable(columns: [[data: 'old']])
+        Map entries = [:]
+        entries[prefix + 'factories[0]'] = supplied
+        entries[prefix + 'factories[0][name]'] = 'new'
+        entries[prefix + 'columns[0][data]'] = 'new'
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(entries), filter, whiteList, blackList
+
+        then:
+        supplied.name == (objectChanged ? 'new' : 'Uno')
+        table.columns == [[data: mapChanged ? 'new' : 'old']]
+
+        where:
+        prefix      | filter      | whiteList                 | blackList                 || objectChanged | mapChanged
+        ''          | null        | null                      | null                      || true          | true
+        ''          | null        | ['factories']             | null                      || true          | false
+        ''          | null        | ['columns']               | null                      || false         | true
+        ''          | null        | ['factories.name']        | null                      || true          | false
+        ''          | null        | null                      | ['factories']             || false         | true
+        ''          | null        | null                      | ['columns']               || true          | false
+        ''          | null        | ['factories', 'columns']  | ['columns']               || true          | false
+        'selected.' | 'selected'  | null                      | null                      || true          | true
+        ''          | 'selected'  | null                      | null                      || false         | false
+        'selected.' | 'selected'  | ['factories']             | null                      || true          | false
+        'selected.' | 'selected'  | null                      | ['columns']               || true          | false
+        'other.'    | 'selected'  | null                      | null                      || false         | false
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
     void 'A supplied object under an indexed name the object has no property for is not changed'() {
         given:
         def binder = new SimpleDataBinder()
@@ -1010,6 +1074,11 @@ class ClassWithInheritedTypedCollection extends AbstractClassWithTypedCollection
 
 class DateCollection {
     List<Date> dates
+}
+
+class IndexedHolder {
+    List<Factory> factories
+    Map<String, Factory> byName
 }
 
 class IndexedTable {
