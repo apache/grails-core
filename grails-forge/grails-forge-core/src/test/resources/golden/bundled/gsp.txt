@@ -20,6 +20,10 @@ in an application without being named: the default options
 + apply plugin: "org.apache.grails.gradle.grails-gsp"
 +     implementation "org.apache.grails:grails-gsp"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   views:
 +     gsp:
 +       encoding: UTF-8
@@ -197,12 +201,6 @@ in an application without being named: the default options
 +                                 <span class="text-body-secondary"><g:message code="welcome.app.version"/></span>
 +                                 <span class="fw-medium" style="font-variant-numeric: tabular-nums;">
 +                                     <g:meta name="info.app.version"/>
-+                                 </span>
-+                             </li>
-+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-+                                 <span class="text-body-secondary"><g:message code="welcome.app.profile"/></span>
-+                                 <span class="fw-medium text-truncate ms-3" title="${grailsApplication.config.getProperty('grails.profile')}">
-+                                     ${grailsApplication.config.getProperty('grails.profile')}
 +                                 </span>
 +                             </li>
 +                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
@@ -1857,6 +1855,10 @@ dependentFeatures: []
 + apply plugin: "org.apache.grails.gradle.grails-gsp"
 +     implementation "org.apache.grails:grails-gsp"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   views:
 +     gsp:
 +       encoding: UTF-8
@@ -2034,12 +2036,6 @@ dependentFeatures: []
 +                                 <span class="text-body-secondary"><g:message code="welcome.app.version"/></span>
 +                                 <span class="fw-medium" style="font-variant-numeric: tabular-nums;">
 +                                     <g:meta name="info.app.version"/>
-+                                 </span>
-+                             </li>
-+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-+                                 <span class="text-body-secondary"><g:message code="welcome.app.profile"/></span>
-+                                 <span class="fw-medium text-truncate ms-3" title="${grailsApplication.config.getProperty('grails.profile')}">
-+                                     ${grailsApplication.config.getProperty('grails.profile')}
 +                                 </span>
 +                             </li>
 +                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
@@ -3695,6 +3691,10 @@ in an application without being named: the default options
 + apply plugin: "org.apache.grails.gradle.grails-gsp"
 +     implementation "org.apache.grails:grails-gsp"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   views:
 +     gsp:
 +       encoding: UTF-8
@@ -3872,12 +3872,6 @@ in an application without being named: the default options
 +                                 <span class="text-body-secondary"><g:message code="welcome.app.version"/></span>
 +                                 <span class="fw-medium" style="font-variant-numeric: tabular-nums;">
 +                                     <g:meta name="info.app.version"/>
-+                                 </span>
-+                             </li>
-+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-+                                 <span class="text-body-secondary"><g:message code="welcome.app.profile"/></span>
-+                                 <span class="fw-medium text-truncate ms-3" title="${grailsApplication.config.getProperty('grails.profile')}">
-+                                     ${grailsApplication.config.getProperty('grails.profile')}
 +                                 </span>
 +                             </li>
 +                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
@@ -5532,6 +5526,10 @@ dependentFeatures: []
 + apply plugin: "org.apache.grails.gradle.grails-gsp"
 +     implementation "org.apache.grails:grails-gsp"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   views:
 +     gsp:
 +       encoding: UTF-8
@@ -5709,12 +5707,6 @@ dependentFeatures: []
 +                                 <span class="text-body-secondary"><g:message code="welcome.app.version"/></span>
 +                                 <span class="fw-medium" style="font-variant-numeric: tabular-nums;">
 +                                     <g:meta name="info.app.version"/>
-+                                 </span>
-+                             </li>
-+                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-+                                 <span class="text-body-secondary"><g:message code="welcome.app.profile"/></span>
-+                                 <span class="fw-medium text-truncate ms-3" title="${grailsApplication.config.getProperty('grails.profile')}">
-+                                     ${grailsApplication.config.getProperty('grails.profile')}
 +                                 </span>
 +                             </li>
 +                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
