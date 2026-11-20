@@ -21,6 +21,7 @@ package grails.gorm.tests
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.hibernate.FlushMode
 import org.hibernate.Session
 import spock.lang.Issue
 import spock.lang.Unroll
@@ -88,6 +89,27 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
         then:
         manual.isEmpty()
         always*.name == ['a']
+    }
+
+    @Unroll
+    void "the total of a page with flushMode #mode #outcome the pending change"() {
+        given: 'a session that flushes by itself, so only the flush mode of the arguments keeps a change out'
+        TestEntity.withSession { Session s -> s.setHibernateFlushMode(FlushMode.AUTO) }
+        TestEntity first = TestEntity.findByName('a')
+        first.age = 99
+
+        when:
+        def page = TestEntity.where { age == 99 }.list(max: 10, flushMode: mode)
+
+        then: 'the page and the count behind its total read the same data'
+        page.size() == expected
+        page.totalCount == expected
+
+        where:
+        mode     || expected
+        'MANUAL' || 0
+        'ALWAYS' || 1
+        outcome = expected ? 'flushes' : 'leaves out'
     }
 
     void "a fetchSize that is not a whole number is rejected with the argument name"() {

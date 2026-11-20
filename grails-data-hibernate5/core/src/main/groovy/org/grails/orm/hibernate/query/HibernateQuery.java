@@ -52,6 +52,10 @@ import org.grails.orm.hibernate.HibernateSession;
 @SuppressWarnings("rawtypes")
 public class HibernateQuery extends AbstractHibernateQuery implements QueryArgumentsAware {
 
+    /** The flush mode and the timeout of the query arguments, which a copy of the query for a count has to keep. */
+    private FlushMode flushMode;
+    private Integer timeout;
+
     public static final HibernateCriterionAdapter HIBERNATE_CRITERION_ADAPTER = new HibernateCriterionAdapter();
 
     public HibernateQuery(Criteria criteria, AbstractHibernateSession session, PersistentEntity entity) {
@@ -94,17 +98,20 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
             criteria.setFetchSize(wholeNumber("fetchSize", arguments.get("fetchSize")));
         }
         if (arguments.get("timeout") != null) {
-            criteria.setTimeout(wholeNumber("timeout", arguments.get("timeout")));
+            timeout = wholeNumber("timeout", arguments.get("timeout"));
+            criteria.setTimeout(timeout);
         }
         if (arguments.get("readOnly") != null) {
             criteria.setReadOnly(Boolean.parseBoolean(String.valueOf(arguments.get("readOnly"))));
         }
-        Object flushMode = arguments.get("flushMode");
-        if (flushMode instanceof FlushMode) {
-            criteria.setFlushMode((FlushMode) flushMode);
+        Object mode = arguments.get("flushMode");
+        if (mode instanceof FlushMode) {
+            flushMode = (FlushMode) mode;
+            criteria.setFlushMode(flushMode);
         }
-        else if (flushMode != null) {
-            criteria.setFlushMode(FlushMode.valueOf(String.valueOf(flushMode)));
+        else if (mode != null) {
+            flushMode = FlushMode.valueOf(String.valueOf(mode));
+            criteria.setFlushMode(flushMode);
         }
     }
 
@@ -169,6 +176,14 @@ public class HibernateQuery extends AbstractHibernateQuery implements QueryArgum
             while (subcriteriaIterator.hasNext()) {
                 CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
                 newCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
+            }
+            // the copy runs the count of a page, which has to read the data the page read: a flush mode or a timeout that the
+            // query arguments gave belongs to it too
+            if (flushMode != null) {
+                newCriteria.setFlushMode(flushMode);
+            }
+            if (timeout != null) {
+                newCriteria.setTimeout(timeout);
             }
             return new HibernateQuery(newCriteria, hibernateSession, entity);
         });
