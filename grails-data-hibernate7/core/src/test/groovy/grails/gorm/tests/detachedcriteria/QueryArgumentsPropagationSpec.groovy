@@ -24,6 +24,7 @@ import grails.gorm.tests.HibernateGormDatastoreSpec
 import spock.lang.Unroll
 
 import org.grails.orm.hibernate.query.HibernateQuery
+import org.hibernate.FlushMode
 import org.hibernate.Session
 
 class QueryArgumentsPropagationSpec extends HibernateGormDatastoreSpec {
@@ -99,6 +100,49 @@ class QueryArgumentsPropagationSpec extends HibernateGormDatastoreSpec {
         then:
         manual.isEmpty()
         always*.name == ['n1']
+    }
+
+    @Unroll
+    void "the total of a page through #route with flushMode #mode #outcome the pending change"() {
+        given: 'a session that flushes by itself, so only the flush mode of the arguments keeps a change out'
+        seed()
+        QueryArgsEntity.withSession { Session s -> s.setHibernateFlushMode(FlushMode.AUTO) }
+        QueryArgsEntity.findByName('n1').amount = 99
+
+        when:
+        def page = paged(route, [max: 10, flushMode: mode])
+
+        then: 'the page and the count behind its total read the same data'
+        page.size() == expected
+        page.totalCount == expected
+
+        where:
+        route                | mode     || expected
+        'where.list'         | 'MANUAL' || 0
+        'where.list'         | 'ALWAYS' || 1
+        'findAll closure'    | 'MANUAL' || 0
+        'findAll closure'    | 'ALWAYS' || 1
+        'createCriteria'     | 'MANUAL' || 0
+        'createCriteria'     | 'ALWAYS' || 1
+        'grouped criteria'   | 'MANUAL' || 0
+        'grouped criteria'   | 'ALWAYS' || 1
+        outcome = expected ? 'flushes' : 'leaves out'
+    }
+
+    private def paged(String route, Map args) {
+        switch (route) {
+            case 'where.list':
+                return QueryArgsEntity.where { amount == 99 }.list(args)
+            case 'findAll closure':
+                return QueryArgsEntity.findAll(args) { amount == 99 }
+            case 'createCriteria':
+                return QueryArgsEntity.createCriteria().list(args) { eq('amount', 99) }
+            default:
+                return QueryArgsEntity.createCriteria().list(args) {
+                    eq('amount', 99)
+                    projections { groupProperty('name') }
+                }
+        }
     }
 
     void "an unparsable fetchSize is rejected with the argument name"() {

@@ -903,6 +903,10 @@ public class HibernateQuery extends Query implements QueryArgumentsAware {
                     }
                     hibernateQuery.setDetachedCriteria(this.detachedCriteria.clone());
                     hibernateQuery.aliases.addAll(this.aliases);
+                    // the copy runs the count behind the total of a page, which has to read the data the page read: the flush
+                    // mode and the timeout that the query arguments gave belong to it too
+                    hibernateQuery.flushMode = this.flushMode;
+                    hibernateQuery.timeout = this.timeout;
 
                     return hibernateQuery;
                 });
