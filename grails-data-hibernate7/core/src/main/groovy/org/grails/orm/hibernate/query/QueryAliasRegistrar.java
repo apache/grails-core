@@ -25,6 +25,7 @@ import jakarta.persistence.criteria.From;
 import jakarta.persistence.criteria.JoinType;
 
 import grails.gorm.DetachedCriteria;
+import grails.orm.HibernateCriteriaBuilder;
 import org.grails.datastore.gorm.query.criteria.DetachedAssociationCriteria;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
@@ -124,7 +125,12 @@ final class QueryAliasRegistrar {
      * @param context the context to register the aliases in
      */
     void registerDetachedJoins(JpaQueryContext context) {
-        detachedCriteria.getJoinTypes().forEach((path, joinType) -> registerImplicit(context, path, joinType));
+        detachedCriteria.getJoinTypes().forEach((path, joinType) -> {
+            // a join type requested for a property that is not an association has nothing to join
+            if (isAssociationPath(path)) {
+                registerImplicit(context, path, joinType);
+            }
+        });
     }
 
     /**
@@ -175,6 +181,26 @@ final class QueryAliasRegistrar {
      * @param path the association path the alias joins, which is also its name
      * @param joinType the join type of the alias
      */
+    private boolean isAssociationPath(String path) {
+        if (path.contains(HibernateCriteriaBuilder.ALIAS_SEPARATOR)) {
+            return true;
+        }
+        // the block of an embedded component has the entity of the component, while its criteria have none
+        PersistentEntity current = detachedCriteria instanceof DetachedAssociationCriteria<?> block ?
+                block.getAssociation().getAssociatedEntity() : detachedCriteria.getPersistentEntity();
+        for (String token : path.split("\\.")) {
+            if (current == null) {
+                // the rest of the path cannot be checked against the model, so it is left to the query
+                return true;
+            }
+            if (!(current.getPropertyByName(token) instanceof Association<?> association)) {
+                return false;
+            }
+            current = association.getAssociatedEntity();
+        }
+        return true;
+    }
+
     private void registerImplicit(JpaQueryContext context, String path, JoinType joinType) {
         AliasRegistry registry = context.getAliasRegistry();
         HibernateAlias visible = registry.getDefinition(path);

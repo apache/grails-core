@@ -43,6 +43,7 @@ import jakarta.persistence.TransactionRequiredException
 import jakarta.persistence.criteria.CriteriaBuilder
 import jakarta.persistence.criteria.CriteriaQuery
 import jakarta.persistence.criteria.Expression
+import jakarta.persistence.criteria.JoinType
 import jakarta.persistence.criteria.Root
 
 import org.hibernate.Session
@@ -59,6 +60,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import grails.orm.HibernateCriteriaBuilder
 import grails.gorm.DetachedCriteria
 import org.grails.datastore.gorm.GormStaticApi
+import org.grails.datastore.gorm.finders.DynamicFinder
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -429,14 +431,39 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D findWhere(Map queryMap, Map args) {
+        if (requestsJoinType(args)) {
+            return whereCriteria(queryMap).find(args)
+        }
         if (!queryMap) return null
         executeSingleHqlQuery(prepareWhereHqlQuery(queryMap, buildFindWhereArgs(args)))
     }
 
     @Override
     List<D> findAllWhere(Map queryMap, Map args) {
+        if (requestsJoinType(args)) {
+            return whereCriteria(queryMap).list(args)
+        }
         if (!queryMap) return null
         executeListHqlQuery(prepareWhereHqlQuery(queryMap, buildQuerySettings(args)))
+    }
+
+    /**
+     * Whether the {@code fetch} argument requests a join type for an association, and not only a fetch mode. A
+     * join type also decides which instances a query returns and counts, so such a query is run as a criteria
+     * query, which applies it.
+     */
+    private static boolean requestsJoinType(Map args) {
+        Object fetch = args?.get(DynamicFinder.ARGUMENT_FETCH)
+        fetch instanceof Map && ((Map) fetch).values().any { Object value -> value instanceof JoinType }
+    }
+
+    private DetachedCriteria<D> whereCriteria(Map queryMap) {
+        DetachedCriteria<D> criteria = new DetachedCriteria<D>(persistentClass)
+        queryMap?.each { Object key, Object value ->
+            String propertyName = validateWherePropertyName(key.toString())
+            criteria = value == null ? criteria.isNull(propertyName) : criteria.eq(propertyName, value)
+        }
+        criteria
     }
 
     private GormQuery prepareWhereHqlQuery(Map queryMap, Map<String, Object> querySettings) {
@@ -616,6 +643,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     List<D> list(Map params = Collections.emptyMap()) {
+        if (requestsJoinType(params)) {
+            return new DetachedCriteria<D>(persistentClass).list(params)
+        }
         firePreQueryEvent()
         HqlListQueryBuilder builder = new HqlListQueryBuilder((GrailsHibernatePersistentEntity) persistentEntity, params)
         String hql = builder.buildListHql()
