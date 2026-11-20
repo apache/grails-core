@@ -332,6 +332,14 @@ class HibernateMappingBuilderSpec extends Specification {
         !evaluate { things lazy: false }.getPropertyConfig('things').lazy
     }
 
+    def "property cascadeValidate keeps a named validation mode and the global default entry"() {
+        expect:
+        evaluate { things cascadeValidate: 'dirty' }.getPropertyConfig('things').cascadeValidate == 'dirty'
+        evaluate { columns { things cascadeValidate: 'owned' } }.getPropertyConfig('things').cascadeValidate == 'owned'
+        evaluate { '*'(cascadeValidate: 'dirty') }.getPropertyConfig('*').cascadeValidate == 'dirty'
+        evaluate { things cascade: 'all' }.getPropertyConfig('things').cascadeValidate == null
+    }
+
     def "property cascades"() {
         expect:
         evaluate { things cascade: 'persist,merge' }.getPropertyConfig('things').cascade == 'persist,merge'
