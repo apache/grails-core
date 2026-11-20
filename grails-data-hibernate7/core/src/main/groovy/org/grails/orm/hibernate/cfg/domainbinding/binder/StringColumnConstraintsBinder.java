@@ -55,7 +55,11 @@ public class StringColumnConstraintsBinder {
     }
 
     private Optional<Integer> getMax(Property mappedForm) {
-        return Optional.ofNullable(mappedForm.getInList()).flatMap(list -> list.stream()
+        // an allowed value is a string only when the property is one: an enum property lists its constants, and a
+        // collection lists whole collections, which have no text to read
+        return Optional.ofNullable(mappedForm.getInList()).flatMap(list -> ((java.util.List<?>) list).stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
                 .map(this::parseInt)
                 .filter(Objects::nonNull)
                 .reduce(Integer::max));
