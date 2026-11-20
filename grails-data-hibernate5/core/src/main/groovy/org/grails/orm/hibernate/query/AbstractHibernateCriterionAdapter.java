@@ -188,21 +188,37 @@ public abstract class AbstractHibernateCriterionAdapter {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Criterion criterion, String alias) {
                 DetachedAssociationCriteria<?> existing = (DetachedAssociationCriteria<?>) criterion;
-                if (existing.getAlias() == null) {
-                    alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria());
-                }
-                else {
+                final boolean branchOfOr = existing.getAlias() == null && hibernateQuery.isInDisjunction();
+                if (existing.getAlias() != null) {
                     alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria(), existing.getAlias());
                 }
+                else if (branchOfOr) {
+                    alias = hibernateQuery.handleOrBranchAssociationQuery(existing.getAssociation());
+                }
+                else {
+                    alias = hibernateQuery.handleAssociationQuery(existing.getAssociation(), existing.getCriteria());
+                }
+                // a block that is a branch of an or asks for an associated entity, and so does a block that reuses the left
+                // join of one: a missing associated entity is a null that a null test in the block would match
+                final boolean requiresAssociated = existing.getAlias() == null && (branchOfOr || hibernateQuery.isLeftBlockAlias(alias));
+                final boolean emptyBlock = existing.getCriteria().isEmpty();
                 Association association = existing.getAssociation();
                 hibernateQuery.associationStack.add(association);
                 Junction conjunction = Restrictions.conjunction();
+                if (requiresAssociated && !emptyBlock) {
+                    conjunction.add(Restrictions.isNotNull(alias + ".id"));
+                }
                 try {
                     applySubCriteriaToJunction(association.getAssociatedEntity(), hibernateQuery, existing.getCriteria(), conjunction, alias);
-                    return conjunction;
                 } finally {
                     hibernateQuery.associationStack.removeLast();
                 }
+                if (requiresAssociated && emptyBlock) {
+                    // a block without criteria is not a branch of the or: it asks for an associated entity of the entity as a whole
+                    hibernateQuery.addToRootCriteria(Restrictions.isNotNull(alias + ".id"));
+                    return null;
+                }
+                return conjunction;
             }
         });
         criterionAdaptors.put(AssociationQuery.class, new CriterionAdaptor() {
@@ -236,15 +252,23 @@ public abstract class AbstractHibernateCriterionAdapter {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Disjunction criterion, String alias) {
                 Disjunction disjunction = Restrictions.disjunction();
-                applySubCriteriaToJunction(hibernateQuery.getEntity(), hibernateQuery, criterion.getCriteria(), disjunction, alias);
+                hibernateQuery.disjunctionDepth++;
+                try {
+                    applySubCriteriaToJunction(hibernateQuery.getEntity(), hibernateQuery, criterion.getCriteria(), disjunction, alias);
+                }
+                finally {
+                    hibernateQuery.disjunctionDepth--;
+                }
                 return disjunction;
             }
         });
         criterionAdaptors.put(Query.Negation.class, new CriterionAdaptor<Query.Negation>() {
             @Override
             public Criterion toHibernateCriterion(AbstractHibernateQuery hibernateQuery, Query.Negation criterion, String alias) {
-                CriterionAdaptor<Query.Disjunction> adapter = (CriterionAdaptor<Query.Disjunction>) criterionAdaptors.get(Query.Disjunction.class);
-                return Restrictions.not(adapter.toHibernateCriterion(hibernateQuery, new Query.Disjunction(criterion.getCriteria()), alias));
+                // the criteria of a negation are joined with or, but they are not branches of an or: a block in one keeps its join
+                Disjunction disjunction = Restrictions.disjunction();
+                applySubCriteriaToJunction(hibernateQuery.getEntity(), hibernateQuery, criterion.getCriteria(), disjunction, alias);
+                return Restrictions.not(disjunction);
             }
         });
     }

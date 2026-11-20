@@ -99,6 +99,10 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+    /** how many disjunctions the criterion being added is inside; a block in one is a branch of an or */
+    protected int disjunctionDepth;
+    /** the aliases of the joins made for a block that is a branch of an or: left joins, so an entity without the association is kept */
+    protected final java.util.Set<String> leftBlockAliases = new java.util.HashSet<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -212,6 +216,11 @@ public abstract class AbstractHibernateQuery extends Query {
 
                 CriteriaAndAlias criteriaAndAlias = getCriteriaAndAlias(associationCriteria);
 
+                if (associationCriteria.getAlias() == null && leftBlockAliases.contains(criteriaAndAlias.alias)) {
+                    // the join is the left join of a block in an or: a block outside it asks for an associated entity, as
+                    // it always did
+                    addToRootCriteria(Restrictions.isNotNull(criteriaAndAlias.alias + ".id"));
+                }
                 if (criteriaAndAlias.criteria != null) {
                     aliasInstanceStack.add(criteriaAndAlias.criteria);
                 }
@@ -504,6 +513,14 @@ public abstract class AbstractHibernateQuery extends Query {
     }
 
     protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias) {
+        return getOrCreateAlias(associationName, alias, null);
+    }
+
+    /**
+     * @param defaultJoinType the join type to make the join with when the caller has not named one for the association,
+     *        or null for an inner join
+     */
+    protected CriteriaAndAlias getOrCreateAlias(String associationName, String alias, JoinType defaultJoinType) {
         CriteriaAndAlias subCriteria = null;
         String associationPath = getAssociationPath(associationName);
         Criteria parentCriteria = criteria;
@@ -525,7 +542,7 @@ public abstract class AbstractHibernateQuery extends Query {
             subCriteria = createdAssociationPaths.get(associationName);
         }
         else {
-            JoinType joinType = joinTypes.get(associationName);
+            JoinType joinType = joinTypes.containsKey(associationName) ? joinTypes.get(associationName) : defaultJoinType;
             if (parentCriteria != null) {
                 Criteria sc = parentCriteria.createAlias(associationPath, alias, resolveJoinType(joinType));
                 subCriteria = new CriteriaAndAlias(sc, alias, associationPath);
@@ -922,6 +939,38 @@ public abstract class AbstractHibernateQuery extends Query {
     @Override
     protected List executeQuery(PersistentEntity entity, Junction criteria) {
         return list();
+    }
+
+    /**
+     * The join of an association block that is a branch of an or: a left join, so that an entity without the association
+     * is still found by the other branches. A join that already exists for the path is reused, and stays what it was.
+     */
+    String handleOrBranchAssociationQuery(Association<?> association) {
+        String associationName = calculatePropertyName(association.getName());
+        boolean existed = createdAssociationPaths.containsKey(getAssociationPath(associationName));
+        CriteriaAndAlias block = getOrCreateAlias(associationName, generateAlias(associationName), JoinType.LEFT);
+        if (!existed) {
+            leftBlockAliases.add(block.alias);
+        }
+        return block.alias;
+    }
+
+    boolean isInDisjunction() {
+        return disjunctionDepth > 0;
+    }
+
+    boolean isLeftBlockAlias(String alias) {
+        return leftBlockAliases.contains(alias);
+    }
+
+    /** Adds a criterion to the query itself, whatever junction or association block is being added. */
+    void addToRootCriteria(org.hibernate.criterion.Criterion criterion) {
+        if (criteria != null) {
+            criteria.add(criterion);
+        }
+        else if (detachedCriteria != null) {
+            detachedCriteria.add(criterion);
+        }
     }
 
     String handleAssociationQuery(Association<?> association, List<Criterion> criteriaList) {
