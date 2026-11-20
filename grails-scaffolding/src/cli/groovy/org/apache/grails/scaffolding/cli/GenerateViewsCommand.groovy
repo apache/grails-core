@@ -36,6 +36,8 @@ import org.grails.io.support.Resource
 @CompileStatic
 class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelper, SkipBootstrap {
 
+    String description = 'Generates GSP views for the specified domain class'
+
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
     @Override
