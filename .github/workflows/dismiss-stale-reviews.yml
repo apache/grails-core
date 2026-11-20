@@ -22,7 +22,8 @@
 # GitHub does not move an approval over a merge of the base branch that had conflicts, since resolving them changes
 # the diff of the pull request. Such an update merge is not a change of the pull request to review again, so the
 # approval is kept as well, as long as every commit pushed after it is a merge of the base branch that differs from
-# the merge git makes by itself only inside the conflicts git could not merge. The pull request then gets a comment
+# the merge git makes by itself only inside the conflicts git could not merge, and writes in each of them only lines
+# of its two sides. A line written by hand there is a change like any other. The pull request then gets a comment
 # naming the files whose conflicts were resolved, once for each merge, since nobody reviewed the resolution. A merge
 # that changes any other line, or that merges anything but the base branch, dismisses the approval like any other
 # push, and so does a walk over the merges that cannot finish, because a request fails or the walk takes more than
@@ -105,31 +106,39 @@ jobs:
             [[ "$entry" == 100*' blob' ]] || return 1
             pushed=$(bounded git -C merges.git ls-tree --format='%(objectmode) %(objecttype)' "$commit" -- "$path") || return 2
             [[ "$pushed" == "$entry" ]] || return 1
+            bounded git -C merges.git cat-file blob "$tree:$path" > conflicted.file || return 2
             # The first and last line of each conflict. A marker is matched with its label, the id of a parent, so
-            # that a line of the file that merely looks like one does not open a conflict. The step runs without
-            # pipefail, so it is set here: a git command that fails or runs out of time would otherwise leave awk
-            # nothing to read, and the file would look like one without conflicts.
-            regions=$(set -o pipefail; bounded git -C merges.git cat-file blob "$tree:$path" | awk -v opening="<<<<<<< $first" -v closing=">>>>>>> $second" '
+            # that a line of the file that merely looks like one does not open a conflict.
+            regions=$(awk -v opening="<<<<<<< $first" -v closing=">>>>>>> $second" '
               { sub(/\r$/, "") }
               $0 == opening || index($0, opening ":") == 1 { if (start) exit 1; start = NR; next }
               $0 == closing || index($0, closing ":") == 1 { if (!start) exit 1; printf "%d %d ", start, NR; start = 0 }
-              END { if (start) exit 1 }') || return 2
+              END { if (start) exit 1 }' conflicted.file) || return 2
             [[ -n "$regions" ]] || return 1
             # Every line the merge commit removed or replaced lies in a conflict, markers included, and every line it
             # only inserted lands between the markers of one: git reports an insertion after an old line, so that
-            # line has to be the opening marker or a line after it, before the closing marker. A line inserted next
-            # to a conflict whose markers are kept is a change outside it. A resolution that removes the markers is
-            # a change of the conflict's own lines, whatever it adds. --text makes git compare a file it takes for
-            # binary line by line too, rather than only say that it differs.
+            # line has to be the opening marker or a line after it, before the closing marker. And every line the
+            # resolution writes is a line of one of the two sides of that conflict: which lines it keeps, and in
+            # which order, is up to the resolution, but a line written by hand, even one placed where a marker was,
+            # is a change nobody reviewed. --text makes git compare a file it takes for binary line by line too,
+            # rather than only say that it differs.
             hunks=$(bounded git -C merges.git diff -U0 --text --no-ext-diff --no-textconv --no-color "$tree:$path" "$commit:$path") || return 2
             awk -v regions="$regions" '
               BEGIN { n = split(regions, r, " ") }
+              FNR == NR { merged[FNR] = $0; next }
               /^@@ / {
-                split(substr($2, 2), h, ","); at = h[1] + 0; count = (2 in h) ? h[2] + 0 : 1; inside = 0
+                split(substr($2, 2), h, ","); at = h[1] + 0; count = (2 in h) ? h[2] + 0 : 1; conflict = 0
                 for (i = 1; i < n; i += 2)
-                  if (count > 0 ? (r[i] <= at && at + count - 1 <= r[i + 1]) : (r[i] <= at && at < r[i + 1])) inside = 1
-                if (!inside) exit 1
-              }' <<< "$hunks" || return 1
+                  if (count > 0 ? (r[i] <= at && at + count - 1 <= r[i + 1]) : (r[i] <= at && at < r[i + 1])) conflict = i
+                if (!conflict) exit 1
+                next
+              }
+              conflict && /^\+/ {
+                written = substr($0, 2); side = 0
+                for (j = r[conflict] + 1; j < r[conflict + 1] && !side; j++)
+                  side = merged[j] == written && merged[j] !~ /^=======\r?$/
+                if (!side) exit 1
+              }' conflicted.file - <<< "$hunks" || return 1
           }
           # Whether every commit from the approved one to the head is a merge of the base branch that changes nothing
           # by hand outside the conflicts git could not merge. Each commit on the way has to have two parents, the
