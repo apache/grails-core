@@ -180,22 +180,25 @@ class PropertyCriterionHandler implements InternalCriterionHandler<Query.Propert
         }
 
         Collection<?> collection = value instanceof Collection ? (Collection<?>) value : Collections.singletonList(value);
-        List<Object> converted = collection.stream()
-            .filter(Objects::nonNull)
-            .map(v -> context.convertValue(propertyName, v, propertyPath))
-            .collect(Collectors.toList());
-
-        if (converted.isEmpty()) {
+        if (collection.isEmpty()) {
             return criteriaBuilder.disjunction();
         }
 
         if (context.isCollectionPath(propertyPath)) {
-            Predicate[] memberOfPredicates = converted.stream()
+            // a null is no member of a collection
+            Predicate[] memberOfPredicates = collection.stream()
+                .filter(Objects::nonNull)
+                .map(v -> context.convertValue(propertyName, v, propertyPath))
                 .map(v -> criteriaBuilder.isMember((Object) v, (Expression) context.resolveCollectionPath(propertyPath)))
                 .toArray(Predicate[]::new);
-            return criteriaBuilder.or(memberOfPredicates);
+            return memberOfPredicates.length == 0 ? criteriaBuilder.disjunction() : criteriaBuilder.or(memberOfPredicates);
         }
 
+        // a null stays in the list, as it does on Hibernate 5 and in the bulk statements: SQL decides what it matches,
+        // so a negated list that holds a null matches no row
+        List<Object> converted = collection.stream()
+            .map(v -> v == null ? null : context.convertValue(propertyName, v, propertyPath))
+            .collect(Collectors.toList());
         return propertyPath.in(converted);
     }
 

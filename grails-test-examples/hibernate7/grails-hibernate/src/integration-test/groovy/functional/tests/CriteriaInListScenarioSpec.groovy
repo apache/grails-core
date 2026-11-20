@@ -42,7 +42,7 @@ class CriteriaInListScenarioSpec extends Specification {
         items*.name.sort()
     }
 
-    void "criteria: inList ignores a null element and matches the rest"() {
+    void "criteria: inList with a null element matches the rest"() {
         given:
         seed()
 
@@ -136,5 +136,58 @@ class CriteriaInListScenarioSpec extends Specification {
         then:
         def e = thrown(Exception)
         e.message.contains('nope')
+    }
+
+    void "a negated in list that holds a null matches no row, in every way into the query"() {
+        given:
+        seed()
+
+        when:
+        def byWhere = ScenarioItem.where { !(qty in [1, null]) }.list()
+        def byCriteria = ScenarioItem.createCriteria().list { not { inList 'qty', [1, null] } }
+        def byFinder = ScenarioItem.findAllByQtyNotInList([1, null])
+
+        then:
+        names(byWhere) == []
+        names(byCriteria) == []
+        names(byFinder) == []
+    }
+
+    void "a negated in list of only a null matches no row"() {
+        given:
+        seed()
+
+        when:
+        def byWhere = ScenarioItem.where { !(qty in [null]) }.list()
+        def byCriteria = ScenarioItem.createCriteria().list { not { inList 'qty', [null] } }
+
+        then:
+        names(byWhere) == []
+        names(byCriteria) == []
+    }
+
+    void "a negated empty in list matches every row"() {
+        given:
+        seed()
+
+        when:
+        def byWhere = ScenarioItem.where { !(qty in []) }.list()
+        def byCriteria = ScenarioItem.createCriteria().list { not { inList 'qty', [] } }
+
+        then:
+        names(byWhere) == ['a', 'b', 'd']
+        names(byCriteria) == ['a', 'b', 'd']
+    }
+
+    void "the bulk statement of a negated in list that holds a null writes no row, as the read finds none"() {
+        given:
+        seed()
+
+        when:
+        int written = ScenarioItem.where { !(qty in [1, null]) }.updateAll(name: 'z')
+
+        then:
+        written == 0
+        names(ScenarioItem.list()) == ['a', 'b', 'd']
     }
 }
