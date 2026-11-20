@@ -24,6 +24,7 @@ import grails.gorm.annotation.Entity
 import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.grails.datastore.mapping.multitenancy.AllTenantsResolver
+import org.grails.datastore.mapping.multitenancy.TenantDataSourceConfig
 import org.grails.orm.hibernate.HibernateDatastore
 import org.grails.orm.hibernate.cfg.Settings
 import spock.lang.Issue
@@ -106,6 +107,7 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         layout                                          | classes
         'declares datasource ALL'                       | [KnownOwnerAll, KnownTargetAll]
         'is mapped by a JPA annotation and lists no datasource' | [KnownOwnerJpa, KnownJpaTarget]
+        'is a multi tenant entity that lists no datasource'     | [KnownOwnerToTenant, KnownTenantTarget]
     }
 
     @Unroll
@@ -120,6 +122,7 @@ class SchemaTenantAssociationLayoutSpec extends Specification {
         where:
         layout                                                  | classes
         'lists only the default connection'                     | [KnownOwnerDefaultOnly, KnownTargetDefaultOnly]
+        'is a multi tenant entity that excludes the tenant schema' | [KnownOwnerToExcludingTenant, KnownExcludingTenantTarget]
     }
 
     void "with the tenant schemas known, an owner pointing at a target that lists only the tenant schema does not start"() {
@@ -321,4 +324,27 @@ class KnownTargetOtherTenant {
 class KnownOwnerOtherTenant implements MultiTenant<KnownOwnerOtherTenant> {
     String name
     KnownTargetOtherTenant target
+}
+
+@Entity
+class KnownTenantTarget implements MultiTenant<KnownTenantTarget> {
+    String name
+}
+
+@Entity
+class KnownOwnerToTenant implements MultiTenant<KnownOwnerToTenant> {
+    String name
+    KnownTenantTarget target
+}
+
+@Entity
+@TenantDataSourceConfig(dataSourcesToExclude = ['tenant1'])
+class KnownExcludingTenantTarget implements MultiTenant<KnownExcludingTenantTarget> {
+    String name
+}
+
+@Entity
+class KnownOwnerToExcludingTenant implements MultiTenant<KnownOwnerToExcludingTenant> {
+    String name
+    KnownExcludingTenantTarget target
 }

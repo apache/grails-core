@@ -740,7 +740,7 @@ public class HibernateDatastore extends AbstractHibernateDatastore implements Me
                     continue;
                 }
                 PersistentEntity target = ((Association<?>) property).getAssociatedEntity();
-                if (target != null && !target.isMultiTenant() && !isMappedWhereOwnerIs(entity, target, tenantSchemaNames)) {
+                if (target != null && !isMappedWhereOwnerIs(entity, target, tenantSchemaNames)) {
                     found.add(entity.getJavaClass().getSimpleName() + '.' + property.getName() + " -> " + target.getJavaClass().getSimpleName());
                 }
             }
