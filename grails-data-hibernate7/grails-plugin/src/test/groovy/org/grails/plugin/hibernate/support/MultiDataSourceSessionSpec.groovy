@@ -198,6 +198,34 @@ class MultiDataSourceSessionSpec extends Specification {
         }
     }
 
+    def "a request whose session for a later datasource fails to be set up closes it, and the sessions opened before"() {
+        given: "after the secondary datasource, one whose new session refuses its flush mode"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(datastore)
+        SessionFactory secondarySf = datastore.getDatastoreForConnection('secondary').sessionFactory
+        Session refusingSession = Mock(Session) {
+            isOpen() >> true
+            setHibernateFlushMode(_) >> { throw new IllegalStateException('flush mode refused') }
+        }
+        SessionFactory refusingSf = Stub(SessionFactory) {
+            openSession() >> refusingSession
+        }
+        def configClass = Class.forName(GrailsOpenSessionInViewInterceptor.name + '$AdditionalSessionFactoryConfig')
+        def constructor = configClass.getDeclaredConstructor(String, SessionFactory, FlushMode)
+        constructor.accessible = true
+        interceptor.@additionalSessionFactories << constructor.newInstance('refusing', refusingSf, FlushMode.AUTO)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, the session that refused is closed, and the earlier sessions are released"
+        thrown(IllegalStateException)
+        1 * refusingSession.close()
+        !TransactionSynchronizationManager.hasResource(refusingSf)
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+    }
+
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()

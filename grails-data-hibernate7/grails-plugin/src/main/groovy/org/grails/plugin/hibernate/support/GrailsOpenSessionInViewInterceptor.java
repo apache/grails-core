@@ -104,8 +104,14 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                         logger.debug("Opening additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
                     }
                     Session session = sf.openSession();
-                    session.setHibernateFlushMode(config.flushMode);
-                    TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
+                    try {
+                        session.setHibernateFlushMode(config.flushMode);
+                        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
+                    } catch (RuntimeException | Error ex) {
+                        // not bound yet, so the release below would not find it
+                        SessionFactoryUtils.closeSession(session);
+                        throw ex;
+                    }
                 }
                 acquired++;
             }
