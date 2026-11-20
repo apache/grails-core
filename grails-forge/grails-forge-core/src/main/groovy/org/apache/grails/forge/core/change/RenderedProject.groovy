@@ -66,6 +66,10 @@ final class RenderedProject implements OutputHandler {
         return path.split('/').findAll { String step -> !step.isEmpty() && step != '.' }.join('/')
     }
 
+    List<String> paths() {
+        return files.keySet().toList()
+    }
+
     byte[] content(String path) {
         return files.get(path)
     }

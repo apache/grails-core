@@ -28,6 +28,7 @@ import org.grails.forge.cli.command.CreateWebappCommand
 import org.grails.forge.cli.command.FeatureCommand
 import org.grails.forge.cli.command.GradleCommand
 import org.grails.forge.cli.command.HelpCommand
+import org.grails.forge.cli.command.ProjectGroupCommand
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
@@ -50,7 +51,12 @@ import java.util.concurrent.Callable
         '',
         'In the directory of an application, a feature is added to it with:',
         '',
-        '*  @|bold feature add|@ @|yellow FEATURE|@'
+        '*  @|bold feature add|@ @|yellow FEATURE|@',
+        '',
+        'and how it was generated is said, and done again, with:',
+        '',
+        '*  @|bold project show|@',
+        '*  @|bold project regenerate|@ @|yellow --output DIRECTORY|@'
 ],
         synopsisHeading = '@|bold,underline Usage:|@ ',
         optionListHeading = '%n@|bold,underline Options:|@%n',
@@ -62,6 +68,7 @@ import java.util.concurrent.Callable
                 CreateWebPluginCommand,
                 CreateRestApiCommand,
                 FeatureCommand,
+                ProjectGroupCommand,
                 GradleCommand,
                 HelpCommand
         ])
