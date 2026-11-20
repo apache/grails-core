@@ -38,6 +38,7 @@ gettingStarted:
 upgrading:
   title: Upgrading from the previous versions
   upgrading90x: Upgrading from Grails 8 to Grails 9
+  automaticModuleNames: Automatic module names
   upgrading81x: Upgrading from Grails 8.0 to Grails 8.1
   upgrading80x: Upgrading from Grails 7 to Grails 8
   upgrading72x: Upgrading from Grails 7.1 to Grails 7.2

@@ -19,6 +19,7 @@
 package org.apache.grails.buildsrc
 
 import org.gradle.api.Project
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.testfixtures.ProjectBuilder
 import org.gradle.testkit.runner.GradleRunner
@@ -70,6 +71,49 @@ class CompilePluginSpec extends Specification {
 
         then:
         compileGroovy.inputs.files.files*.canonicalFile.findAll { it in factoriesFiles }.sort() == factoriesFiles.sort()
+    }
+
+    void 'automatic module name is derived from group and project name'() {
+        given:
+        def project = ProjectBuilder.builder().withName('grails-web-common').build()
+        project.group = 'org.apache.grails.web'
+
+        expect:
+        CompilePlugin.automaticModuleName(project) == 'org.apache.grails.web.grails.web.common'
+    }
+
+    void 'automatic module name can be overridden per project'() {
+        given:
+        def project = ProjectBuilder.builder().withName('grails-web-common').build()
+        project.ext.automaticModuleName = 'org.apache.grails.web.common'
+
+        expect:
+        CompilePlugin.automaticModuleName(project) == 'org.apache.grails.web.common'
+    }
+
+    void 'main jar manifest contains Automatic-Module-Name and classified jars do not'() {
+        given:
+        def project = ProjectBuilder.builder().withName('grails-core').withProjectDir(projectDir).build()
+        project.group = 'org.apache.grails'
+        project.ext.javaVersion = 21
+        project.ext.grailsVersion = '9.0.0-SNAPSHOT'
+        project.ext.formattedBuildDate = '2026-01-01'
+        project.pluginManager.apply('java')
+        project.pluginManager.apply(CompilePlugin)
+
+        when:
+        Jar jar = project.tasks.named('jar', Jar).get()
+        Jar sourcesJar = project.tasks.named('sourcesJar', Jar).get()
+        Jar javadocJar = project.tasks.named('javadocJar', Jar).get()
+
+        then:
+        jar.archiveClassifier.present
+        jar.archiveClassifier.get() == ''
+        jar.manifest.attributes['Automatic-Module-Name'] == 'org.apache.grails.grails.core'
+        sourcesJar.archiveClassifier.get() == 'sources'
+        sourcesJar.manifest.attributes['Automatic-Module-Name'] == null
+        javadocJar.archiveClassifier.get() == 'javadoc'
+        javadocJar.manifest.attributes['Automatic-Module-Name'] == null
     }
 
     def setup() {
