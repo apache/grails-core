@@ -737,6 +737,29 @@ class SimpleDataBinderSpec extends Specification {
     }
 
     @Issue('https://github.com/apache/grails-core/issues/15064')
+    void 'a nested index or key past the growth limit does not grow what the object already holds'() {
+        given:
+        def binder = new SimpleDataBinder(autoGrowCollectionLimit: 3)
+        def table = new IndexedTable(rows: [['a']], columns: [[data: 'old']])
+
+        when:
+        binder.bind table, new SimpleMapDataBindingSource(source)
+
+        then:
+        table.rows == expectedRows
+        table.columns == expectedColumns
+
+        where:
+        source                                                       || expectedRows              | expectedColumns
+        ['rows[0][2]': 'in']                                         || [['a', null, 'in']]       | [[data: 'old']]
+        ['rows[0][1000]': 'far']                                     || [['a']]                   | [[data: 'old']]
+        ['rows[0][3]': 'at the limit']                               || [['a']]                   | [[data: 'old']]
+        ['columns[0][data]': 'new']                                  || [['a']]                   | [[data: 'new']]
+        ['columns[0][one]': '1', 'columns[0][two]': '2']             || [['a']]                   | [[data: 'old', one: '1', two: '2']]
+        ['columns[0][one]': '1', 'columns[0][two]': '2', 'columns[0][three]': '3'] || [['a']]    | [[data: 'old', one: '1', two: '2']]
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15064')
     void 'A supplied object is bound only when its indexed name is accepted by the bind'() {
         given:
         def binder = new SimpleDataBinder()

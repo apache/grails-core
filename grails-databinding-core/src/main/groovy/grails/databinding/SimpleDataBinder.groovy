@@ -329,7 +329,7 @@ class SimpleDataBinder implements DataBinder {
             }
             def held = okToBind ? findHeld(obj, owner, element, filter) : null
             if (held instanceof Map) {
-                ((Map) held).putAll(entries)
+                writeIntoHeldMap((Map) held, entries)
                 grouped.remove(element)
             } else if (held instanceof List && writeIntoHeldList((List) held, entries)) {
                 grouped.remove(element)
@@ -386,18 +386,33 @@ class SimpleDataBinder implements DataBinder {
      * Writes the entries whose keys are all positions into a list that the object holds, {@code rows[0][1]} for
      * {@code rows} holding a list of lists, and leaves the list as it is, returning false, when a key is anything else.
      */
-    private static boolean writeIntoHeldList(List held, Map<String, Object> entries) {
+    private boolean writeIntoHeldList(List held, Map<String, Object> entries) {
         if (!entries.keySet().every { String key -> key ==~ /\d+/ }) {
             return false
         }
         entries.each { String key, Object value ->
             int position = key.toInteger()
-            while (held.size() <= position) {
-                held.add(null)
+            // the list grows only as far as it does for an index of its own: below the growth limit, or inside the list
+            if (position < autoGrowCollectionLimit || position < held.size()) {
+                while (held.size() <= position) {
+                    held.add(null)
+                }
+                held.set(position, value)
             }
-            held.set(position, value)
         }
         true
+    }
+
+    /**
+     * Writes the entries into a map that the object already holds. A key the map does not have is added while the map is
+     * below the growth limit, as for a map entry of its own.
+     */
+    private void writeIntoHeldMap(Map held, Map<String, Object> entries) {
+        entries.each { String key, Object value ->
+            if (held.containsKey(key) || held.size() < autoGrowCollectionLimit) {
+                held.put(key, value)
+            }
+        }
     }
 
     protected boolean isOkToBind(String propName, List whiteList, List blackList) {
