@@ -53,7 +53,7 @@ If no records are found with the above criteria, an empty List is returned.
 
 In Hibernate 7, the criteria builder has been completely rewritten to leverage the JPA Criteria API. The `HibernateCriteriaBuilder` implements the GORM criteria DSL and provides seamless integration with Hibernate 7 features.
 
-The DSL supports all standard GORM criteria methods such as `eq`, `ne`, `gt`, `lt`, `ge`, `le`, `between`, `like`, `ilike`, `in`, `isNull`, `isNotNull`, `isEmpty`, `isNotEmpty`, and more.
+The DSL supports all standard GORM criteria methods such as `eq`, `ne`, `gt`, `lt`, `ge`, `le`, `between`, `like`, `ilike`, `in`, `isNull`, `isNotNull`, `isEmpty`, `isNotEmpty`, and more. `ne` does not return the rows whose property is `null`, as SQL does; add `isNull` in an `or` to include them, as in `or { ne('qty', 2); isNull('qty') }`.
 
 [source,groovy]
 ----

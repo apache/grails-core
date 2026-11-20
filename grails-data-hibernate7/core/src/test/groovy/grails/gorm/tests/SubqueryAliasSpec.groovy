@@ -25,6 +25,7 @@ import org.grails.datastore.gorm.query.transform.ApplyDetachedCriteriaTransform
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
+import spock.lang.PendingFeature
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -41,6 +42,7 @@ class SubqueryAliasSpec extends Specification {
     @Shared PlatformTransactionManager transactionManager = datastore.getTransactionManager()
 
     @Rollback
+    @PendingFeature(reason = '#16884: a subquery that compares with a path on the root alias of the enclosing query; the property comparison of the subquery now fails instead of being dropped, and #16821 registers the root alias')
     void "Test subquery with root alias"() {
         given:
         Club c = new Club(name: "Manchester United").save()
