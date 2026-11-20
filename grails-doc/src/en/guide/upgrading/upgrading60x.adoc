@@ -1308,3 +1308,15 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+[[grails-7-0-19]]
+=== Grails 7.0.19
+
+==== A dynamic finder refuses text after its operator
+
+A dynamic finder name with text after its last operator that the finder does not understand used to run as if the text
+were not there: `findAllByAgeGreaterThanOrderByName(18)` ran as `findAllByAgeGreaterThan(18)` and returned the rows
+unsorted, with no error. The finder now throws an `IllegalArgumentException` whose message names the `sort` and `order`
+arguments, which is how a finder is sorted: `findAllByAgeGreaterThan(18, [sort: 'name'])`. Search the application for
+finders that carry an `OrderBy` or other trailing text and move the sort into the arguments. Finder names without
+trailing text are unchanged.
