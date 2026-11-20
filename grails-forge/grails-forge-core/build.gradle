@@ -170,6 +170,9 @@ tasks.named('test', Test).configure { Test test ->
             refusedLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.REFUSED_LINE,
             packProblemLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.PACK_PROBLEM_LINE,
             summaryLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.SUMMARY_LINE,
+            generatedExitOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.GENERATED as String,
+            refusedExitOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.REFUSED as String,
+            linesReadByGradlePlugin: org.grails.gradle.plugin.core.ForgePackToolTask.MAX_LINES as String,
     ]
     test.jvmArgumentProviders.add({
         ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString(),

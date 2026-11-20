@@ -19,8 +19,11 @@
 package org.grails.gradle.plugin.core
 
 import java.nio.charset.StandardCharsets
+import java.time.Duration
+import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import java.util.stream.Collectors
 
 import javax.inject.Inject
 
@@ -38,8 +41,6 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.options.Option
-import org.gradle.process.ExecResult
-import org.gradle.process.ExecSpec
 import org.gradle.work.DisableCachingByDefault
 
 /**
@@ -58,7 +59,8 @@ import org.gradle.work.DisableCachingByDefault
  * <p>The repositories the generated builds resolve from are given to Forge in the environment variable
  * {@code GRAILS_REPO_URL}, as they are given to the commands that create an application. A build of a
  * fixture uses the Gradle user home of this build, so what it downloads is downloaded once, and the
- * Java of the toolchain of the project. All of what it writes goes to a log of the fixture.</p>
+ * Java of the toolchain of the project. All of what it writes goes to a log of the fixture, and it
+ * has {@link #getFixtureTimeout()} to be done in.</p>
  *
  * @since 9.0
  */
@@ -87,8 +89,16 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
     /** What became of the fixtures, in the report directory. */
     public static final String REPORT_NAME = 'report.txt'
 
-    private static final int GENERATED = 0
-    private static final int REFUSED = 1
+    /** What Forge ends with when it generated every fixture. */
+    public static final int GENERATED = 0
+
+    /** What Forge ends with when the generator refused a fixture or the pack has problems. */
+    public static final int REFUSED = 1
+
+    private static final int STOP_SECONDS = 30
+    private static final int SECONDS_OF_MINUTE = 60
+    // the user and the password of an address, with the at sign after them
+    private static final Pattern USER_INFO = Pattern.compile('(?<=://)[^/\\s@]*@')
     private static final int MAX_OTHER_LINES = 3
     private static final int MAX_TAIL_BYTES = 64 * 1024
     private static final int MAX_TAIL_LINES = 30
@@ -113,11 +123,31 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
 
     /**
      * The repositories the generated applications resolve from before the ones every generated
-     * application has, as entries of {@code GRAILS_REPO_URL}. They are not shown: an address can hold
-     * a password.
+     * application has, as entries of {@code GRAILS_REPO_URL}. An address can hold a password, so they
+     * are no input of the task, which Gradle would keep as text in the history of the project:
+     * {@link #getRepositoriesDigest()} is. This task does not show them. Forge writes them, as they
+     * are, into the build files of the applications.
+     */
+    @Internal
+    abstract ListProperty<String> getRepositories()
+
+    /** A digest of {@link #getRepositories()}, so that other repositories are another test. */
+    @Input
+    abstract Property<String> getRepositoriesDigest()
+
+    /**
+     * What is said, each time the task runs, of the repositories of the build that the applications
+     * do not get: each a line that names a repository without the user and the password it has.
+     */
+    @Internal
+    abstract ListProperty<String> getRepositoriesLeftOut()
+
+    /**
+     * How long the build of one application can take. One that takes longer is stopped, with every
+     * process it started, and is a fixture that could not be built.
      */
     @Input
-    abstract ListProperty<String> getRepositories()
+    abstract Property<Duration> getFixtureTimeout()
 
     /** Whether the generated applications are built with {@code --offline}. */
     @Input
@@ -150,6 +180,10 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
         fileSystemOperations.delete { DeleteSpec spec -> spec.delete(applications, reports) }
         reports.mkdirs()
         requireTooling('tested', 'tests', 'test')
+        repositoriesLeftOut.get().each { String line -> logger.warn(withoutUserInfo(line)) }
+        if (fixtureTimeout.get() <= Duration.ZERO) {
+            throw new GradleException("The feature pack in ${SOURCE} could not be tested: the time a fixture has to be built in is not a time")
+        }
         if (buildTasks.get().isEmpty()) {
             throw new GradleException("The feature pack in ${SOURCE} could not be tested: there is no task to run in the applications")
         }
@@ -159,7 +193,7 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
         for (String name : names) {
             File log = new File(new File(reports, name), LOG_NAME)
             String failure = build(name, new File(applications, name), log)
-            report << "${name}: ${failure == null ? 'built' : 'failed: ' + failure}".toString()
+            report << withoutUserInfo("${name}: ${failure == null ? 'built' : 'failed: ' + failure}")
             if (failure != null) {
                 failures << "  - ${name}: ${failure}\n    the application is in ${new File(applications, name)}\n    the whole log is in ${log}\n".toString() +
                         (whatWentWrong(log) ?: tail(log)).collect { String line -> '      ' + line }.join('\n')
@@ -198,18 +232,20 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
             counted = summary.matches() && summary.group(1) == String.valueOf(generated.size()) && summary.group(2) == String.valueOf(refused.size())
         }
         if (result.exitValue == GENERATED && counted && generated && !refused && !problems && !others) {
-            result.said.each { String line -> logger.info(line) }
+            result.said.each { String line -> logger.info(withoutUserInfo(line)) }
             logger.info('Forge: {}', written.last())
-            return generated.collect { String line -> line.substring('generated '.length()) }
+            return generated.collect { String line -> group(GENERATED_LINE, line, 1) }
         }
         if (result.exitValue == REFUSED && counted && !others && problems && !generated && !refused) {
             throw new GradleException("The feature pack in ${SOURCE} cannot be used:\n" +
-                    problems.collect { String problem -> '  - ' + problem.substring('pack: '.length()) }.join('\n'))
+                    problems.collect { String problem -> '  - ' + withoutUserInfo(group(PACK_PROBLEM_LINE, problem, 1)) }.join('\n'))
         }
         if (result.exitValue == REFUSED && counted && !others && !problems && refused) {
             throw new GradleException("The feature pack in ${SOURCE} could not be tested: of ${generated.size() + refused.size()} fixtures " +
                     "the generator refused ${refused.size()}, and none was built:\n" +
-                    refused.collect { String line -> '  - ' + line.substring('refused '.length()) }.join('\n'))
+                    refused.collect { String line ->
+                        "  - ${group(REFUSED_LINE, line, 1)}: ${withoutUserInfo(group(REFUSED_LINE, line, 2))}".toString()
+                    }.join('\n'))
         }
         String why
         List<String> shown = result.said
@@ -225,46 +261,109 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
             why = launcherHint(result.errors, MAIN_CLASS)
         }
         throw new GradleException("The feature pack in ${SOURCE} could not be tested (Forge ended with ${result.exitValue})" +
-                "${why ? '. ' + why : ''}${shown ? ':\n' + shown.collect { String line -> '  ' + line }.join('\n') : ''}")
+                withoutUserInfo("${why ? '. ' + why : ''}${shown ? ':\n' + shown.collect { String line -> '  ' + line }.join('\n') : ''}"))
+    }
+
+    private static String group(String pattern, String line, int group) {
+        Matcher matcher = Pattern.compile(pattern).matcher(line)
+        return matcher.matches() ? matcher.group(group) : ''
+    }
+
+    /**
+     * The command that builds a generated application: its wrapper, the tasks, and the arguments. Each
+     * element is one argument of the process, whatever spaces it has. On Windows the wrapper is the
+     * batch file itself and not {@code cmd /c} with a line made of it: the quoting of such a line does
+     * not survive a wrapper and a Gradle user home that both have a space in their path.
+     *
+     * @param application the directory of the application
+     * @param windows whether the wrapper is the batch file
+     * @param tasks the tasks to run
+     * @param gradleUserHome the Gradle user home to build with
+     * @param offline whether to build with {@code --offline}
+     * @param arguments further arguments
+     */
+    static List<String> wrapperCommand(File application, boolean windows, List<String> tasks, String gradleUserHome, boolean offline,
+                                       List<String> arguments) {
+        List<String> command = [new File(application, windows ? 'gradlew.bat' : 'gradlew').absolutePath]
+        command.addAll(tasks)
+        // the log is read by people and by this task, and the home is where this build has its dependencies
+        command.addAll(['--console=plain', '--gradle-user-home', gradleUserHome])
+        if (offline) {
+            command << '--offline'
+        }
+        command.addAll(arguments)
+        return command
     }
 
     // why the application could not be built, or null
     private String build(String name, File application, File log) {
         log.parentFile.mkdirs()
-        boolean windows = Os.isFamily(Os.FAMILY_WINDOWS)
-        File wrapper = new File(application, windows ? 'gradlew.bat' : 'gradlew')
+        List<String> command = wrapperCommand(application, Os.isFamily(Os.FAMILY_WINDOWS), buildTasks.get(), gradleUserHome.get(),
+                offline.get(), buildArguments.get())
+        File wrapper = new File(command[0])
         if (!wrapper.isFile()) {
             log.setText("The application has no ${wrapper.name}\n", StandardCharsets.UTF_8.name())
             return "the application was generated without ${wrapper.name}, the Gradle wrapper it is built with"
         }
-        List<String> command = windows ? ['cmd', '/c', wrapper.absolutePath] : [wrapper.absolutePath]
-        command.addAll(buildTasks.get())
-        // the log is read by people and by this task, and the home is where this build has its dependencies
-        command.addAll(['--console=plain', '--gradle-user-home', gradleUserHome.get()])
-        if (offline.get()) {
-            command << '--offline'
-        }
-        command.addAll(buildArguments.get())
-        String javaHome = javaLauncher.isPresent() ? javaLauncher.get().metadata.installationPath.asFile.absolutePath : null
+        Duration limit = fixtureTimeout.get()
         logger.lifecycle('Building the fixture {} of the feature pack: {}', name, buildTasks.get().join(' '))
-        ExecResult result = new FileOutputStream(log).withCloseable { FileOutputStream output ->
-            execOperations.exec { ExecSpec spec ->
-                spec.commandLine(command)
-                spec.workingDir = application
-                if (javaHome != null) {
-                    spec.environment('JAVA_HOME', javaHome)
-                }
-                spec.standardOutput = output
-                spec.errorOutput = output
-                spec.ignoreExitValue = true
-            }
+        // Straight into the file, with no pipe to this JVM: a pipe is open for as long as anything
+        // the wrapper started has it, such as a daemon, and the task would wait for that
+        ProcessBuilder builder = new ProcessBuilder(command)
+                .directory(application)
+                .redirectErrorStream(true)
+                .redirectOutput(log)
+        if (javaLauncher.isPresent()) {
+            builder.environment().put('JAVA_HOME', javaLauncher.get().metadata.installationPath.asFile.absolutePath)
         }
-        if (result.exitValue == 0) {
+        Process process
+        try {
+            process = builder.start()
+        } catch (IOException e) {
+            return "its ${wrapper.name} could not be started: ${clean(e.message ?: e.class.simpleName)}".toString()
+        }
+        // a build is not asked anything
+        process.outputStream.close()
+        boolean ended
+        try {
+            ended = process.waitFor(limit.toMillis(), TimeUnit.MILLISECONDS)
+        } catch (InterruptedException e) {
+            stop(process)
+            Thread.currentThread().interrupt()
+            throw new GradleException("The build of the fixture ${name} was stopped with the build of the plugin", e)
+        }
+        if (!ended) {
+            stop(process)
+            return "the build was not done after ${shown(limit)} and was stopped, with everything it had started".toString()
+        }
+        if (process.exitValue() == 0) {
             return null
         }
         List<String> failed = failedTasks(log)
-        return failed ? "${failed.size() == 1 ? 'task' : 'tasks'} ${failed.join(', ')} failed (Gradle ended with ${result.exitValue})".toString() :
-                "Gradle ended with ${result.exitValue} and named no task that failed".toString()
+        return failed ? "${failed.size() == 1 ? 'task' : 'tasks'} ${failed.join(', ')} failed (Gradle ended with ${process.exitValue()})".toString() :
+                "Gradle ended with ${process.exitValue()} and named no task that failed".toString()
+    }
+
+    // the wrapper and everything below it, the children first as they are now: none is left to run on
+    private static void stop(Process process) {
+        List<ProcessHandle> below = process.descendants().collect(Collectors.toList())
+        process.destroyForcibly()
+        below.each { ProcessHandle each -> each.destroyForcibly() }
+        process.waitFor(STOP_SECONDS, TimeUnit.SECONDS)
+    }
+
+    private static String shown(Duration limit) {
+        long seconds = limit.seconds
+        return seconds % SECONDS_OF_MINUTE == 0 ? "${seconds.intdiv(SECONDS_OF_MINUTE)} ${seconds == SECONDS_OF_MINUTE ? 'minute' : 'minutes'}".toString() :
+                "${seconds} ${seconds == 1 ? 'second' : 'seconds'}".toString()
+    }
+
+    /**
+     * A line without the user and the password an address in it has: what this task shows and writes
+     * down is not where a password is to be read.
+     */
+    static String withoutUserInfo(String line) {
+        return USER_INFO.matcher(line).replaceAll('')
     }
 
     private static List<String> failedTasks(File log) {
@@ -320,7 +419,7 @@ abstract class ForgePackTestTask extends ForgePackToolTask {
     }
 
     private static String clean(String line) {
-        String safe = line.replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]+/, ' ').stripTrailing()
+        String safe = withoutUserInfo(line.replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]+/, ' ').stripTrailing())
         return safe.length() > MAX_TAIL_LINE ? safe.substring(0, safe.offsetByCodePoints(0, safe.codePointCount(0, MAX_TAIL_LINE))) + '...' : safe
     }
 }

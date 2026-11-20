@@ -57,7 +57,7 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         !classPath.contains(File.pathSeparator)
 
         and: 'each application is built in its directory, with the Gradle user home of this build and the task that packages it'
-        ['web', 'rest-api'].every { String fixture ->
+        ['web', 'rest-api', 'web-plugin', 'plugin'].every { String fixture ->
             String log = new File(project, "build/forge-pack-test/${fixture}/build.log").getText('UTF-8')
             wrapperArguments(project, fixture) == 'assemble --console=plain --gradle-user-home <home>' &&
                     log.contains("stand-in wrapper directory: ${new File(project, "build/forge-pack-fixtures/${fixture}")}") &&
@@ -65,13 +65,14 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         }
 
         and: 'with the Java of the toolchain of the project'
-        new File(project, 'build/forge-pack-test/web/build.log').getText('UTF-8').readLines()
-                .find { it.startsWith('stand-in wrapper JAVA_HOME: ') }.length() > 'stand-in wrapper JAVA_HOME: '.length()
+        new File(new File(project, 'build/forge-pack-test/web/build.log').getText('UTF-8').readLines()
+                .find { it.startsWith('stand-in wrapper JAVA_HOME: ') }.substring('stand-in wrapper JAVA_HOME: '.length())).canonicalFile ==
+                new File(System.getProperty('java.home')).canonicalFile
 
         and: 'what became of them is said, and written down'
-        result.output.contains('The feature pack in src/main/forge was generated into 2 applications and built with assemble: web, rest-api. ' +
+        result.output.contains('The feature pack in src/main/forge was generated into 4 applications and built with assemble: web, rest-api, web-plugin, plugin. ' +
                 "The logs are in ${new File(project, 'build/forge-pack-test')}")
-        new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') == 'web: built\nrest-api: built\n'
+        new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') == 'web: built\nrest-api: built\nweb-plugin: built\nplugin: built\n'
     }
 
     def "the fixtures, the tasks and the arguments the build names are the ones that are generated and run"() {
@@ -134,11 +135,11 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
 
         when:
-        BuildResult result = runner.withArguments('forgePackTest', '-Pfixtures=delta:plugin').buildAndFail()
+        BuildResult result = runner.withArguments('forgePackTest', '-Pfixtures=refused-delta:web').buildAndFail()
 
         then:
         result.output.contains('The feature pack in src/main/forge could not be tested: of 2 fixtures the generator refused 1, and none was built:')
-        result.output.contains('  - delta: The feature pack acme-audit is not for an application of the type plugin: its descriptor names [web, rest-api]')
+        result.output.contains('  - refused-delta: The feature pack acme-audit is not for an application of the type plugin: its descriptor names [web, rest-api]')
         !result.output.contains('\u001b[31m')
         !new File(runner.projectDir, 'build/forge-pack-test/alpha').exists()
     }
@@ -277,9 +278,100 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         !new File(runner.projectDir, 'build/forge-pack-test/web/build.log').getText('UTF-8').contains('--offline')
 
         where:
-        where          | argument
-        'build'        | '-PfixtureOffline'
-        'command line' | '--offline-fixtures'
+        where                                  | argument
+        'build'                                | '-PfixtureOffline'
+        'command line'                         | '--offline-fixtures'
+        'build of the plugin, which is itself' | '--offline'
+    }
+
+    def "the build of an application that takes longer than it is given is stopped, and is a fixture that could not be built"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File project = runner.projectDir.canonicalFile
+
+        when:
+        long started = System.currentTimeMillis()
+        BuildResult result = runner.withArguments('forgePackTest', '-Pfixtures=slow-beta:web', '-PfixtureTimeout=3').buildAndFail()
+        long took = System.currentTimeMillis() - started
+
+        then: 'the fixtures beside it are built'
+        result.output.contains('was generated into 2 applications, of which 1 could not be built with assemble:')
+        result.output.contains('  - slow-beta: the build was not done after 3 seconds and was stopped, with everything it had started')
+        result.output.contains('      stand-in wrapper does not end')
+        new File(project, 'build/forge-pack-test/report.txt').getText('UTF-8') ==
+                'alpha: built\nslow-beta: failed: the build was not done after 3 seconds and was stopped, with everything it had started\n'
+
+        and: 'and the task did not wait for what the wrapper had started'
+        took < 120_000
+    }
+
+    def "a process the build of an application leaves behind, which has its output, does not hold the task"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+
+        when:
+        long started = System.currentTimeMillis()
+        BuildResult result = executeTask('forgePackTest', ['-Pfixtures=lingering-beta:web'])
+        long took = System.currentTimeMillis() - started
+
+        then: 'which is left for 45 seconds'
+        assertTaskSuccess('forgePackTest', result)
+        took < 40_000
+    }
+
+    def "a repository of the build is taken for what it is and not for its name, and one that cannot be given to an application is left out and said"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File project = runner.projectDir.canonicalFile
+
+        when:
+        BuildResult result = executeTask('forgePackTest', ['--info', '-PoddRepositories'])
+
+        then: 'the two with the names of Maven Central and of the local repository keep their addresses'
+        new File(project, 'build/forge-pack-fixtures/web/repositories.txt').getText('UTF-8') ==
+                "https://mirror.example.org/maven;${new File(project, 'maven-repo').path};mavenCentral();mavenLocal()"
+
+        and: 'the one with a password is said by its host, and the password is nowhere'
+        result.output.contains('The repository of the build at secret.example.org has a user or a password in its address, and the ' +
+                'applications of forgePackTest do not get it')
+        !result.output.contains('hunter2')
+        !result.output.contains('alice')
+        holding(project, 'hunter2') == []
+
+        and: 'the one that is not https is said by its address'
+        result.output.contains('The repository of the build at http://plain.example.org/maven is not one a generated application can be given')
+
+        when: 'the build is run again, with the configuration of the first'
+        new File(project, 'src/main/forge/templates/.gitignore').text = 'build\n'
+        result = executeTask('forgePackTest', ['--info', '-PoddRepositories'])
+
+        then: 'it is said again'
+        result.output.contains('Reusing configuration cache')
+        result.output.contains('The repository of the build at secret.example.org has a user or a password')
+    }
+
+    def "a repository with a password that the build names for the applications is given to them, and is not shown or kept by the task"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        File project = runner.projectDir.canonicalFile
+
+        when:
+        BuildResult result = executeTask('forgePackTest', ['--info', '-PfixtureSecretRepository'])
+
+        then: 'Forge writes it into the application, as it does for a create command'
+        new File(project, 'build/forge-pack-fixtures/web/repositories.txt').getText('UTF-8') == 'https://alice:hunter2@secret.example.org/maven'
+        result.output.contains('stand-in fixtures repositories: https://secret.example.org/maven')
+
+        and: 'and nothing else has it: not the output, not the report, not what Gradle keeps of the inputs of the task'
+        !result.output.contains('hunter2')
+        holding(project, 'hunter2') == ['build/forge-pack-fixtures/plugin/repositories.txt', 'build/forge-pack-fixtures/rest-api/repositories.txt',
+                                        'build/forge-pack-fixtures/web-plugin/repositories.txt', 'build/forge-pack-fixtures/web/repositories.txt']
+
+        when: 'other repositories'
+        result = executeTask('forgePackTest', ['-PfixtureRepositories'])
+
+        then: 'are another test'
+        result.tasks.find { it.path == ':forgePackTest' }.outcome == TaskOutcome.SUCCESS
     }
 
     def "the applications resolve from #what"() {
@@ -426,6 +518,17 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         shown.first() == 'compiler line 13'
         shown.last() == 'BUILD FAILED in 1s'
         shown.count { it == '0' * 300 + '...' } == 1
+    }
+
+    // the files of the project, but the build script, that have the text in them, whatever else they hold
+    private static List<String> holding(File project, String text) {
+        List<String> files = []
+        project.eachFileRecurse(groovy.io.FileType.FILES) { File file ->
+            if (file.name != 'build.gradle' && new String(file.bytes, 'ISO-8859-1').contains(text)) {
+                files << project.toPath().relativize(file.toPath()).join('/')
+            }
+        }
+        return files.sort()
     }
 
     // what the wrapper of a fixture was started with, the Gradle user home of this build said as <home>

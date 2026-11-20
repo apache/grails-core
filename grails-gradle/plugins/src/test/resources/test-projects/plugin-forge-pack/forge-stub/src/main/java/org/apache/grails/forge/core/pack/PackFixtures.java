@@ -19,8 +19,12 @@ import java.util.List;
  * which says what it was started with and ends as a build that passed, or, for a fixture whose name
  * starts with {@code broken}, as one whose task failed, and for one whose name starts with
  * {@code failing}, as one that also says what went wrong. A fixture whose name starts with
- * {@code bare} has no wrapper, and one of the type {@code plugin} is refused. Without a list there are
- * the fixtures {@code web} and {@code rest-api}. A descriptor can tell it to end as a Forge that went
+ * {@code bare} has no wrapper, and one whose name starts with {@code refused} is refused. The wrapper
+ * of one whose name starts with {@code slow} does not end, and that of one whose name starts with
+ * {@code lingering} ends and leaves a process behind that has its output. Each directory has the
+ * repositories the stand-in was given in {@code repositories.txt}, as an application has them in its
+ * build file. Without a list there are the four fixtures Forge makes of a pack that names no type of
+ * application. A descriptor can tell it to end as a Forge that went
  * wrong does.</p>
  */
 public final class PackFixtures {
@@ -49,6 +53,8 @@ public final class PackFixtures {
             System.err.println("stand-in fixtures are the defaults");
             fixtures.add("web web");
             fixtures.add("rest-api rest-api");
+            fixtures.add("web-plugin web-plugin");
+            fixtures.add("plugin plugin");
         }
         Path descriptor = directory.resolve("feature.yml");
         String text = Files.isRegularFile(descriptor, LinkOption.NOFOLLOW_LINKS) ? Files.readString(descriptor, StandardCharsets.UTF_8) : null;
@@ -91,7 +97,7 @@ public final class PackFixtures {
         for (String fixture : fixtures) {
             String[] words = fixture.split(" ");
             String name = words[0];
-            if (words[1].equals("plugin")) {
+            if (name.startsWith("refused")) {
                 System.out.println("refused " + name + ": The feature pack acme-audit is not for an application of the type plugin: its "
                         + "descriptor names [web, rest-api] \u001b[31m");
                 refused++;
@@ -99,6 +105,13 @@ public final class PackFixtures {
             }
             Path application = Files.createDirectories(output.resolve(name));
             Files.writeString(application.resolve("settings.gradle"), "rootProject.name = 'shop'\n");
+            Files.writeString(application.resolve("repositories.txt"), String.valueOf(System.getenv("GRAILS_REPO_URL")));
+            if (name.startsWith("slow")) {
+                Files.writeString(application.resolve("slow"), "");
+            }
+            if (name.startsWith("lingering")) {
+                Files.writeString(application.resolve("lingers"), "");
+            }
             if (name.startsWith("broken")) {
                 Files.writeString(application.resolve("fails"), "");
             }
@@ -111,6 +124,14 @@ public final class PackFixtures {
                         "echo \"stand-in wrapper arguments: $*\"",
                         "echo \"stand-in wrapper directory: $(pwd -P)\"",
                         "echo \"stand-in wrapper JAVA_HOME: $JAVA_HOME\"",
+                        "if [ -f slow ]; then",
+                        "  echo 'stand-in wrapper does not end'",
+                        "  sleep 600 &",
+                        "  sleep 600",
+                        "fi",
+                        "if [ -f lingers ]; then",
+                        "  sleep 45 &",
+                        "fi",
                         "if [ -f says ]; then",
                         "  echo '> Task :generateI18nDescriptor FAILED'",
                         "  echo 'FAILURE: Build failed with an exception.'",

@@ -59,7 +59,9 @@ abstract class ForgePackToolTask extends DefaultTask {
     protected static final String SOURCE = GrailsPluginGradlePlugin.FORGE_PACK_SOURCE_DIR
     protected static final String TOOLING = GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
 
-    private static final int MAX_LINES = 60
+    /** The most lines of the standard output of Forge that are read: what Forge writes for a pack has to fit. */
+    public static final int MAX_LINES = 60
+
     private static final int MAX_LINE = 2000
     private static final int MAX_LISTED = 10
     private static final int MAX_OTHER_LINE = 200

@@ -112,6 +112,44 @@ if (providers.gradleProperty('fixtureRepositories').present) {
         }
     }
 }
+// Repositories that are not what their names say, one with a password in its address, one that is not
+// https, and the two Gradle has a name for. Nothing is resolved from them.
+if (providers.gradleProperty('oddRepositories').present) {
+    repositories {
+        maven {
+            name = 'MavenRepoMirror'
+            url = uri('https://mirror.example.org/maven')
+        }
+        maven {
+            name = 'MavenLocalCopy'
+            url = uri("${projectDir}/maven-repo")
+        }
+        maven {
+            url = uri('https://alice:hunter2@secret.example.org/maven')
+        }
+        maven {
+            url = uri('http://plain.example.org/maven')
+            allowInsecureProtocol = true
+        }
+        mavenCentral()
+        mavenLocal()
+    }
+}
+if (providers.gradleProperty('fixtureSecretRepository').present) {
+    grails {
+        forgePackTest {
+            repositories = ['https://alice:hunter2@secret.example.org/maven']
+        }
+    }
+}
+if (providers.gradleProperty('fixtureTimeout').present) {
+    int seconds = providers.gradleProperty('fixtureTimeout').get() as int
+    grails {
+        forgePackTest {
+            fixtureTimeout = java.time.Duration.ofSeconds(seconds)
+        }
+    }
+}
 if (providers.gradleProperty('fixtureMavenLocal').present) {
     grails {
         forgePackTest {

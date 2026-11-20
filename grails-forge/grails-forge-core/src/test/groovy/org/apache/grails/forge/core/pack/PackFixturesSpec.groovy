@@ -331,7 +331,19 @@ class PackFixturesSpec extends Specification {
 
         then:
         PackFixtures.name == System.getProperty('forge.packFixtures.mainClassOfGradlePlugin')
-        [PackFixtures.GENERATED, PackFixtures.REFUSED, PackFixtures.NOT_GENERATED] == [0, 1, 2]
+        PackFixtures.GENERATED == Integer.getInteger('forge.packFixtures.generatedExitOfGradlePlugin')
+        PackFixtures.REFUSED == Integer.getInteger('forge.packFixtures.refusedExitOfGradlePlugin')
+        !(PackFixtures.NOT_GENERATED in [PackFixtures.GENERATED, PackFixtures.REFUSED])
+
+        and: 'what it writes at most, a line for each fixture or problem and the last line, is no more than the plugin reads'
+        PackFixtures.MAX_FIXTURES + 1 <= Integer.getInteger('forge.packFixtures.linesReadByGradlePlugin')
+        PackDescriptorParser.MAX_PROBLEMS + 1 <= Integer.getInteger('forge.packFixtures.linesReadByGradlePlugin')
+
+        and: 'and each line starts as the plugin reads it'
+        "${PackFixtures.GENERATED_FIXTURE}web" ==~ System.getProperty('forge.packFixtures.generatedLineOfGradlePlugin')
+        "${PackFixtures.REFUSED_FIXTURE}web: why" ==~ System.getProperty('forge.packFixtures.refusedLineOfGradlePlugin')
+        "${PackFixtures.PACK_PROBLEM}a problem" ==~ System.getProperty('forge.packFixtures.packProblemLineOfGradlePlugin')
+        "${PackFixtures.SUMMARY}generated=1 refused=0" ==~ System.getProperty('forge.packFixtures.summaryLineOfGradlePlugin')
 
         and:
         generated.out.size() == 2

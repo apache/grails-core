@@ -18,6 +18,7 @@
  */
 package org.grails.gradle.plugin.core
 
+import java.time.Duration
 import java.util.regex.Pattern
 
 import javax.inject.Inject
@@ -53,6 +54,7 @@ class GrailsForgePackTestOptions {
     private static final Pattern FIXTURE_NAME = Pattern.compile(/[a-z][a-z0-9]*(-[a-z0-9]+)*/)
     private static final Pattern WORD = Pattern.compile(/[^\s\p{Cc}\p{Cf}\p{Zl}\p{Zp},=]+/)
     private static final int MAX_FIXTURE_NAME = 60
+    private static final int DEFAULT_TIMEOUT_MINUTES = 30
     private static final List<String> OPTIONS = ['data', 'servlet', 'reloading', 'jdk'].asImmutable()
 
     /**
@@ -73,7 +75,10 @@ class GrailsForgePackTestOptions {
     /**
      * The repositories the generated applications resolve from before the ones every generated
      * application has: addresses, paths of directories, {@code mavenLocal()} or {@code mavenCentral()}.
-     * By default, the Maven repositories the build script of the plugin declares.
+     * Each is written into the build files of the applications as it is, a user and a password in an
+     * address included. Without a value, which is the default, they are the Maven repositories the
+     * build script of the plugin declares, those left out whose address has a user or a password or
+     * is not {@code https}; the task says which.
      */
     final ListProperty<String> repositories
 
@@ -83,8 +88,17 @@ class GrailsForgePackTestOptions {
      */
     final Property<Boolean> mavenLocal
 
-    /** Whether the generated applications are built with {@code --offline}. Not by default. */
+    /**
+     * Whether the generated applications are built with {@code --offline}. Not by default, unless the
+     * build of the plugin is itself run with {@code --offline}.
+     */
     final Property<Boolean> offline
+
+    /**
+     * How long the build of one generated application can take before it is stopped and the fixture
+     * is one that could not be built. By default 30 minutes.
+     */
+    final Property<Duration> fixtureTimeout
 
     @Inject
     GrailsForgePackTestOptions(ObjectFactory objects) {
@@ -92,9 +106,10 @@ class GrailsForgePackTestOptions {
         this.fixtures.configureEach { ForgePackFixture fixture -> fixture.applicationType.convention('web') }
         this.tasks = objects.listProperty(String).convention(['assemble'])
         this.arguments = objects.listProperty(String).convention([])
-        this.repositories = objects.listProperty(String)
+        this.repositories = objects.listProperty(String).convention((Iterable<String>) null)
         this.mavenLocal = objects.property(Boolean).convention(false)
         this.offline = objects.property(Boolean).convention(false)
+        this.fixtureTimeout = objects.property(Duration).convention(Duration.ofMinutes(DEFAULT_TIMEOUT_MINUTES))
     }
 
     /**

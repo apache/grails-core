@@ -35,7 +35,6 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
-import org.gradle.api.artifacts.ArtifactRepositoryContainer
 import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
@@ -537,17 +536,15 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         RepositoryHandler declared = project.repositories
         // the repositories of the build script, when the build names no others: read when the task is
         // about to run, after every build script has declared its own
-        options.repositories.convention(project.provider {
-            declared.withType(MavenArtifactRepository).collect { MavenArtifactRepository repository ->
-                if (repository.name.startsWith(ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
-                    return 'mavenLocal()'
-                }
-                if (repository.name.startsWith(ArtifactRepositoryContainer.DEFAULT_MAVEN_CENTRAL_REPO_NAME)) {
-                    return 'mavenCentral()'
-                }
-                repository.url.scheme == 'file' ? new File(repository.url).absolutePath : repository.url.toString()
-            }.unique()
-        })
+        Provider<ForgePackFixtureRepositories> ofBuildScript = project.provider {
+            ForgePackFixtureRepositories.of(declared.withType(MavenArtifactRepository))
+        }
+        Provider<Boolean> named = project.provider { options.repositories.isPresent() }
+        Provider<List<String>> entries = named.flatMap { Boolean given ->
+            given ? options.repositories : ofBuildScript.map { ForgePackFixtureRepositories repositories -> repositories.used }
+        }
+        // a build that is offline builds its fixtures offline: part of what a configuration is stored for
+        boolean offlineBuild = project.gradle.startParameter.offline
         String gradleUserHome = project.gradle.gradleUserHomeDir.absolutePath
         project.tasks.register(FORGE_PACK_TEST_TASK, ForgePackTestTask) { ForgePackTestTask task ->
             task.group = LifecycleBasePlugin.VERIFICATION_GROUP
@@ -557,10 +554,16 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             task.fixtures.set(project.provider { options.fixtureLines() })
             task.buildTasks.set(options.tasks)
             task.buildArguments.set(options.arguments)
-            task.repositories.set(options.mavenLocal.zip(options.repositories) { Boolean mavenLocal, List<String> repositories ->
-                (mavenLocal ? ['mavenLocal()'] + repositories : repositories).toUnique()
+            task.repositories.set(options.mavenLocal.zip(entries) { Boolean mavenLocal, List<String> repositories ->
+                (mavenLocal ? [ForgePackFixtureRepositories.MAVEN_LOCAL] + repositories : repositories).toUnique()
             })
-            task.offline.convention(options.offline)
+            task.repositoriesDigest.set(task.repositories.map { List<String> repositories -> ForgePackFixtureRepositories.digest(repositories) })
+            task.repositoriesLeftOut.set(named.flatMap { Boolean given ->
+                given ? project.provider { Collections.<String>emptyList() } :
+                        ofBuildScript.map { ForgePackFixtureRepositories repositories -> repositories.leftOut }
+            })
+            task.offline.convention(options.offline.map { Boolean offline -> offline || offlineBuild })
+            task.fixtureTimeout.set(options.fixtureTimeout)
             task.gradleUserHome.set(gradleUserHome)
             task.fixturesDirectory.set(layout.buildDirectory.dir('forge-pack-fixtures'))
             task.reportDirectory.set(layout.buildDirectory.dir('forge-pack-test'))
