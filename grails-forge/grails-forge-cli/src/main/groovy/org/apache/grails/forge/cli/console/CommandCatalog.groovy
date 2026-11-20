@@ -23,6 +23,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.grails.build.parsing.ScriptNameResolver
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
 
 /**
@@ -103,9 +104,12 @@ final class CommandCatalog {
                 new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()
         // it may be a command of the application, where the build of the project has not listed those
         String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent) : null
+        // below a project that is not used its commands are not there, which is then why there is none of that name
+        String untrusted = parent.getParent() == null ? ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()).untrusted : null
         return new CommandLine.ParameterException(parent, "There is no command ${given}" +
                 (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
+                (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
                 (listed == null ? '' : "${System.lineSeparator()}${listed}"))
     }
 

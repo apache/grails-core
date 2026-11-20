@@ -185,7 +185,10 @@ final class PackCatalog {
             return read(bytes, address)
         } catch (PackArtifactException e) {
             throw e
-        } catch (RuntimeException | StackOverflowError | OutOfMemoryError e) {
+        } catch (OutOfMemoryError ignored) {
+            // nothing is said of what the document is: it was not read to the end
+            throw new PackArtifactException('it is too large for the memory this command has, and was not read')
+        } catch (RuntimeException | StackOverflowError e) {
             throw new PackArtifactException("it is not a catalog: it could not be read (${e.class.simpleName})")
         }
     }
@@ -207,6 +210,11 @@ final class PackCatalog {
                 int number = ++counts[0]
                 String listed = listedAs(entry)
                 if (!hasPack(entry)) {
+                    // only so many versions are kept, and a pack of a version after them was not seen
+                    if (hasMoreVersions(entry) && counts[1]++ < MAX_PROBLEMS) {
+                        problems << ("plugin ${number}: ${listed ?: 'it'} has more than the ${MAX_VERSIONS} versions a plugin can have, " +
+                                'and none of the first of them has a pack: whether a later one has was not read').toString()
+                    }
                     if (listed != null) {
                         withoutPack << listed
                     }
@@ -279,6 +287,12 @@ final class PackCatalog {
         return 0
     }
 
+    // a text says why the plugin is deprecated; false written as a text says that it is not
+    private static boolean isReason(String deprecated) {
+        String text = deprecated.trim()
+        return !text.isEmpty() && !'false'.equalsIgnoreCase(text)
+    }
+
     // only a plugin that says it has a pack is read, and held to what a plugin with a pack has to say
     private static boolean hasPack(Object entry) {
         if (!(entry instanceof Map)) {
@@ -286,6 +300,11 @@ final class PackCatalog {
         }
         Object versions = ((Map) entry).get('versions')
         return versions instanceof List && ((List) versions).any { Object version -> version instanceof Map && ((Map) version).containsKey('pack') }
+    }
+
+    private static boolean hasMoreVersions(Object entry) {
+        Object versions = entry instanceof Map ? ((Map) entry).get('versions') : null
+        return versions instanceof List && ((List) versions).size() > MAX_VERSIONS
     }
 
     // the group and the artifact an entry is listed under, when it has such
@@ -335,7 +354,7 @@ final class PackCatalog {
             }
             return new Plugin(coordinates, line(said(entry, 'name'), MAX_TITLE), line(said(entry, 'desc'), MAX_DESCRIPTION),
                     docs != null && docs.length() <= MAX_DOCS && DOCS.matcher(docs).matches() ? docs : null,
-                    deprecated == true || (deprecated instanceof String && !((String) deprecated).isEmpty()), versions)
+                    deprecated == true || (deprecated instanceof String && isReason((String) deprecated)), versions)
         } catch (Problem e) {
             throw new Problem("${coordinates}: ${e.message}")
         }

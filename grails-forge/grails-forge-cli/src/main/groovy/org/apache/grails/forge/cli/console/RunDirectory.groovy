@@ -70,7 +70,7 @@ final class RunDirectory {
             return null
         }
         check(run, LOCATION)
-        if (!ConsoleProject.isOwnedByUser(run)) {
+        if (!ConsoleProject.isOwnedByUser(run, project)) {
             throw new IOException("${LOCATION} is not owned by the user who runs the command")
         }
         return run

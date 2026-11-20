@@ -21,8 +21,10 @@ package org.apache.grails.forge.cli.console
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
-import java.nio.file.attribute.UserPrincipal
+import java.nio.file.attribute.PosixFilePermission
 import java.util.function.Predicate
+import java.util.function.Supplier
+import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.state.ProjectState
 
@@ -35,15 +37,19 @@ import org.apache.grails.forge.core.state.ProjectState
  * <p>The directory a command is run in is the project when it is one: the user chose to run there. A
  * project above it is found without the user having named it, and whoever can write to a directory
  * above can put one there, in a shared temporary directory for one. So a project above is used only
- * when it is the user's own, as git does with {@code safe.directory}: its directory and what makes it
- * a project are owned by the user who runs the command. The same holds for a Gradle wrapper that is
- * not in the directory the command is run in.</p>
+ * when it is the user's own, as git does with {@code safe.directory}: its directory is owned by the
+ * user who runs the command and cannot be written to by everybody, and what makes it a
+ * project is owned by that user and, where it is a file, has no other name (a hard link has the
+ * owner of the file it is another name of). The same holds for a Gradle wrapper that is not in the
+ * directory the command is run in, with the settings beside it and the jar and properties it runs.
+ * Owners, modes and link counts are what is looked at: not access control lists, and nothing is held
+ * between the look and the run.</p>
  *
- * <p>The user who runs the command is the one who owns a file the command creates: the identity the
- * system gives to whatever the command writes, on every platform. For root, also under {@code sudo},
- * that is root, so that root does not run from below it what another user owns; on Windows an elevated
- * process creates files owned by the Administrators group, and takes for its own what that group owns.
- * Where the owner of a file cannot be read, nothing above the current directory is used.</p>
+ * <p>The user who runs the command is the one {@link ProcessUser} establishes from the process. For
+ * root, also under {@code sudo}, that is root, so that root does not run from below it what another
+ * user owns. A directory named in the environment variable {@link #SAFE_DIRECTORY} is used whatever
+ * it and what is in it are owned by: the way out where the files are another user's by design, as
+ * for root in a container over a directory of the host.</p>
  *
  * @since 9.0
  */
@@ -58,9 +64,23 @@ final class ConsoleProject {
     // what makes a directory a project, and what the commands read to know what the project is
     private static final List<String> MARKERS = [SOURCES, ProjectState.DIRECTORY, ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.EARLIER_RECORD, 'grails-cli.yml']
     private static final List<String> SETTINGS = ['settings.gradle', 'settings.gradle.kts']
-    private static final Predicate<Path> OWNED_BY_USER = { Path path -> CurrentUser.owns(path) } as Predicate<Path>
+    private static final Predicate<Path> OWNED_BY_USER = { Path path -> ProcessUser.current().owns(path) } as Predicate<Path>
+
+    /**
+     * The environment variable that names the directories that are used whoever owns them: the
+     * directories of projects, and of the roots of builds whose wrapper is run, as absolute paths
+     * separated as the entries of {@code PATH} are. An entry is one directory, compared by its real
+     * path; there are no patterns. The one value {@code *} is every directory.
+     */
+    public static final String SAFE_DIRECTORY = 'GRAILS_SAFE_DIRECTORY'
+
+    private static final String EVERY_DIRECTORY = '*'
+    // what the wrapper script of a directory runs
+    private static final List<String> WRAPPER_FILES = ['gradle', 'gradle/wrapper', 'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']
+    private static final Supplier<String> ENVIRONMENT = { System.getenv(SAFE_DIRECTORY) } as Supplier<String>
 
     private static volatile Predicate<Path> ownedByUser = OWNED_BY_USER
+    private static volatile Supplier<String> safeDirectories = ENVIRONMENT
 
     private final Path directory
     private final boolean above
@@ -95,7 +115,8 @@ final class ConsoleProject {
                 String distrusted = distrust(each, MARKERS)
                 if (distrusted != null) {
                     return new Search(start, null, "The Grails project in ${GradleRunner.line(each)}, above ${GradleRunner.line(start)}, is not used: ${distrusted}. " +
-                            "A project above the current directory is used when it is the user's own; run the command in ${GradleRunner.line(each)} to use this one", null, false)
+                            "A project above the current directory is used when it is the user's own; run the command in ${GradleRunner.line(each)} to use this one, " +
+                            "or name ${GradleRunner.line(each)} in the environment variable ${SAFE_DIRECTORY}", null, false)
                 }
                 return new Search(start, new ConsoleProject(each, true), null, null, false)
             }
@@ -140,6 +161,60 @@ final class ConsoleProject {
     }
 
     /**
+     * Replaces what the environment says of the directories that are used whoever owns them, for a
+     * specification, which cannot change the environment it runs in.
+     *
+     * @param value what {@link #SAFE_DIRECTORY} is taken to be, empty for nothing; {@code null} for
+     * what the environment says
+     */
+    static void setSafeDirectories(String value) {
+        safeDirectories = value == null ? ENVIRONMENT : ({ value } as Supplier<String>)
+    }
+
+    /**
+     * @param path a file or a directory of a project that is used, which the commands keep there
+     * @param project the project
+     * @return whether it is the user's to read and act on: owned by the user who runs the command, or
+     * in a project whose directory {@link #SAFE_DIRECTORY} names, where the files are another user's
+     * by design
+     */
+    static boolean isOwnedByUser(Path path, ConsoleProject project) {
+        return ownedByUser.test(path) || isSafeDirectory(project.directory)
+    }
+
+    /**
+     * @param directory a directory
+     * @return whether {@link #SAFE_DIRECTORY} names it, or names every directory
+     */
+    static boolean isSafeDirectory(Path directory) {
+        String value = safeDirectories.get()
+        if (value == null || value.trim().isEmpty()) {
+            return false
+        }
+        if (value.trim() == EVERY_DIRECTORY) {
+            return true
+        }
+        Path real
+        try {
+            real = directory.toRealPath()
+        } catch (IOException | RuntimeException ignored) {
+            return false
+        }
+        for (String entry : value.split(Pattern.quote(File.pathSeparator))) {
+            try {
+                Path named = entry.isEmpty() ? null : Path.of(entry)
+                // an entry is the directory it names and nothing else: no pattern, and no path that depends on where the command runs
+                if (named != null && named.isAbsolute() && named.toRealPath() == real) {
+                    return true
+                }
+            } catch (IOException | RuntimeException ignored) {
+                // an entry that names nothing that is there names no directory
+            }
+        }
+        return false
+    }
+
+    /**
      * @return the directory of the project
      */
     Path getDirectory() {
@@ -149,9 +224,10 @@ final class ConsoleProject {
     /**
      * The Gradle wrapper of the project: the one in its directory, or for a project that is part of a
      * larger build the nearest one above it, within the repository. The wrapper is a file, or a link
-     * to a file in the same directory. A wrapper that is not in the directory the command is run in is
-     * also the user's own, and one above the project is in a directory that is the user's own and has
-     * the settings of a Gradle build, which make it the root of a build of several projects.
+     * to a file in the directory the link is in or below it. A wrapper that is not in the directory the
+     * command is run in is also the user's own, with the jar and the properties it runs, and one above
+     * the project is in a directory that is the user's own and has the settings of a Gradle build, which
+     * make it the root of a build of several projects and are the user's own too.
      *
      * @param windows whether the script for Windows is asked for
      * @return the wrapper script, or why there is none that is run
@@ -212,10 +288,6 @@ final class ConsoleProject {
             if (!SETTINGS.any { String settings -> Files.isRegularFile(holder.resolve(settings)) }) {
                 return "${GradleRunner.line(holder)} is above the project and has no ${SETTINGS.join(' or ')}, so it is not the root of a build the project is part of"
             }
-            String distrusted = distrust(holder, Collections.<String>emptyList())
-            if (distrusted != null) {
-                return distrusted
-            }
         }
         Path target = null
         if (Files.isSymbolicLink(wrapper)) {
@@ -229,11 +301,18 @@ final class ConsoleProject {
             }
         }
         if (above || aboveProject) {
-            if (!ownedByUser.test(wrapper)) {
-                return notOwned(wrapper)
+            // the script, the settings that make the directory the root of a build, and what the script runs
+            List<String> looked = [wrapper.getFileName().toString()]
+            if (aboveProject) {
+                looked.addAll(SETTINGS)
             }
-            if (target != null && !ownedByUser.test(target)) {
-                return notOwned(target)
+            looked.addAll(WRAPPER_FILES)
+            String distrusted = distrust(holder, looked)
+            if (distrusted == null && target != null && !isSafeDirectory(holder)) {
+                distrusted = distrustEntry(target)
+            }
+            if (distrusted != null) {
+                return "${distrusted}; name ${GradleRunner.line(holder)} in the environment variable ${SAFE_DIRECTORY} to run it all the same"
             }
         }
         return null
@@ -241,19 +320,59 @@ final class ConsoleProject {
 
     // why a directory above, with what is looked at in it, is not the user's own; null when it is
     private static String distrust(Path directory, List<String> names) {
-        if (!ownedByUser.test(directory)) {
-            return notOwned(directory)
+        if (isSafeDirectory(directory)) {
+            return null
+        }
+        String distrusted = distrustEntry(directory)
+        if (distrusted != null) {
+            return distrusted
         }
         for (String name : names) {
             Path file = directory.resolve(name)
-            if (Files.exists(file, LinkOption.NOFOLLOW_LINKS) && !ownedByUser.test(file)) {
-                return notOwned(file)
+            if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {
+                distrusted = distrustEntry(file)
+                if (distrusted != null) {
+                    return distrusted
+                }
             }
         }
         return null
     }
 
+    // Why a directory or a file above is not the user's own. A directory that everybody can write to is
+    // one they can put anything into, whoever owns it. A file with another name can be a file of
+    // someone else that was given a name here: it then has the owner of that file, which for root is
+    // root, so the owner alone says nothing of who put it there.
+    private static String distrustEntry(Path path) {
+        if (!ownedByUser.test(path)) {
+            return notOwned(path)
+        }
+        try {
+            if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                if (path.getFileSystem().supportedFileAttributeViews().contains('posix')) {
+                    Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS)
+                    // a group that can write is taken to be the user's own: with a group for each user, which
+                    // is common, every directory the user creates is writable by it
+                    if (permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+                        return "${GradleRunner.line(path)} can be written to by everybody, so what is in it need not be the user's (chmod o-w keeps the others out)"
+                    }
+                }
+            } else if (path.getFileSystem().supportedFileAttributeViews().contains('unix')) {
+                Object names = Files.getAttribute(path, 'unix:nlink', LinkOption.NOFOLLOW_LINKS)
+                if (names instanceof Number && ((Number) names).intValue() > 1) {
+                    return "${GradleRunner.line(path)} has another name elsewhere (a hard link), so it need not be a file the user put there"
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            return "the mode of ${GradleRunner.line(path)} cannot be read, so it is not known to be the user's alone"
+        }
+        return null
+    }
+
     private static String notOwned(Path path) {
+        if (ownedByUser.is(OWNED_BY_USER) && !ProcessUser.current().isKnown()) {
+            return "the user who runs the command could not be established (asked for: ${ProcessUser.SOURCES.join(', ')}), so ${GradleRunner.line(path)} is not known to be the user's own"
+        }
         String owner
         try {
             owner = Files.getOwner(path, LinkOption.NOFOLLOW_LINKS).getName()
@@ -329,42 +448,6 @@ final class ConsoleProject {
         private Wrapper(Path file, String refusal) {
             this.file = file
             this.refusal = refusal
-        }
-    }
-
-    // the user who runs the command, found when something above the current directory is first looked at
-    private static final class CurrentUser {
-
-        private static final UserPrincipal USER = find()
-
-        static boolean owns(Path path) {
-            if (USER == null) {
-                return false
-            }
-            try {
-                return USER == Files.getOwner(path, LinkOption.NOFOLLOW_LINKS)
-            } catch (IOException | UnsupportedOperationException | SecurityException ignored) {
-                return false
-            }
-        }
-
-        private static UserPrincipal find() {
-            try {
-                Path created = Files.createTempFile('grails-user', null)
-                try {
-                    return Files.getOwner(created, LinkOption.NOFOLLOW_LINKS)
-                } finally {
-                    Files.deleteIfExists(created)
-                }
-            } catch (IOException | UnsupportedOperationException | SecurityException ignored) {
-                // nothing can be created where temporary files go: the home directory is the user's as well
-            }
-            try {
-                String home = System.getProperty('user.home')
-                return home == null ? null : Files.getOwner(Path.of(home))
-            } catch (IOException | UnsupportedOperationException | SecurityException | IllegalArgumentException ignored) {
-                return null
-            }
         }
     }
 }

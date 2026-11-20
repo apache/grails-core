@@ -173,6 +173,7 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         ConsoleProject.setOwnedByUser(null)
+        ConsoleProject.setSafeDirectories(null)
         ConsoleCommands.setInteractive(false)
         RunAppCommand.stopWhatTheShellStarted()
         // whatever a feature started and did not see end is ended here, and the feature has then failed
@@ -856,6 +857,48 @@ class LifecycleCommandsSpec extends CommandSpec implements CommandFixture {
         cleanup:
         ForgeCli.execute(beanContext, 'stop-app')
         outside?.delete()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "in a project above that the environment names as one to use, the commands work on what another user owns there"() {
+        given: 'a project in which nothing is this user\'s, as for root in a container over a directory of the host'
+        scriptedProject('record')
+        File below = new File(dir, 'below')
+        below.mkdirs()
+        System.setProperty('user.dir', below.absolutePath)
+        ConsoleProject.setSafeDirectories('')
+        ConsoleProject.setOwnedByUser({ Path path -> false } as Predicate<Path>)
+
+        when: 'nothing names the directory'
+        int exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'one')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains(', is not used: ')
+        errors()[0].contains("name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY")
+        !new File(dir, 'invoked.txt').exists()
+
+        when: 'the environment names it'
+        out.reset()
+        ConsoleProject.setSafeDirectories(dir.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'run-command', 'my-command', 'one')
+
+        then: 'its wrapper is run, and the directory the commands keep their files in is used'
+        exit == 0
+        errors() == []
+        new File(dir, 'invoked.txt').text.startsWith('<runCommand><--args-file=.grails/run/command-args-0.json>')
+
+        when: 'a record that is there is read, and held to what a record is and not to whose it is'
+        out.reset()
+        new File(dir, '.grails/run/app.json').text = '[1]'
+        exit = ForgeCli.execute(beanContext, 'stop-app')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains('it is not a record of an application')
+        !errors()[0].contains('not owned')
     }
 
     @Unroll

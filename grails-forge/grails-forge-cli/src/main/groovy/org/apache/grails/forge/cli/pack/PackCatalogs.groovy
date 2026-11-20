@@ -30,7 +30,6 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
-import java.nio.file.attribute.UserPrincipal
 import java.security.MessageDigest
 import java.time.Duration
 import java.time.Instant
@@ -40,6 +39,7 @@ import java.time.temporal.ChronoUnit
 import java.util.function.Function
 import java.util.function.Predicate
 import java.util.regex.Pattern
+import org.apache.grails.forge.cli.console.ProcessUser
 import org.apache.grails.forge.cli.pack.PackCatalog.Plugin
 import org.apache.grails.forge.cli.pack.PackCatalog.Version
 
@@ -108,6 +108,7 @@ final class PackCatalogs {
     private Map<String, Listed> listed
     private String unread
     private boolean copiesLookedAt
+    private String copiesRefused
     private Path copies
 
     /**
@@ -536,7 +537,8 @@ final class PackCatalogs {
             // what was asked for anew is not answered with what there was
             if (kept == null || refresh) {
                 throw new PackArtifactException("The feature catalog ${shown} could not be read: ${e.message}" +
-                        (artifacts.offline ? ', and there is no copy of the catalog on this computer' : ''))
+                        (!artifacts.offline ? '' : copiesRefused == null ? ', and there is no copy of the catalog on this computer' :
+                                ", and no copy of a catalog is read on this computer, whether there is one or not: ${copiesRefused}"))
             }
             warnings << ("The feature catalog ${shown} could not be read (${e.message}): the copy of it that was read on " +
                     "${time(keptAt)}, ${old(keptAt)}, is used").toString()
@@ -595,8 +597,8 @@ final class PackCatalogs {
                     copies = directory
                 } else {
                     String named = notOurs.toString().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
-                    warnings << ("No copy of a feature catalog is read or kept: ${named.length() > 200 ? named.substring(0, 200) + '...' : named} is not a directory " +
-                            'of yours that nobody else can write to').toString()
+                    copiesRefused = "${named.length() > 200 ? named.substring(0, 200) + '...' : named} is not a directory of yours that nobody else can write to: it ${whyNotOurs(notOurs)}".toString()
+                    warnings << "No copy of a feature catalog is read or kept: ${copiesRefused}".toString()
                 }
             }
         }
@@ -610,15 +612,8 @@ final class PackCatalogs {
      */
     private Path notOurs(Path directory) {
         boolean posix = FileSystems.default.supportedFileAttributeViews().contains('posix')
-        UserPrincipal user = null
-        if (posix) {
-            try {
-                user = Files.getOwner(home)
-            } catch (IOException | RuntimeException ignored) {
-                // then the owner of the home is not known, and who can write is still looked at
-                user = null
-            }
-        }
+        // who runs the command, and not who owns the home: the two differ under sudo and in a container
+        ProcessUser user = posix && ProcessUser.current().isKnown() ? ProcessUser.current() : null
         for (Path each : [directory.parent.parent, directory.parent, directory]) {
             try {
                 if (!Files.exists(each, LinkOption.NOFOLLOW_LINKS)) {
@@ -630,7 +625,7 @@ final class PackCatalogs {
                 if (posix) {
                     Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(each, LinkOption.NOFOLLOW_LINKS)
                     if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE) ||
-                            (user != null && Files.getOwner(each, LinkOption.NOFOLLOW_LINKS) != user)) {
+                            (user != null && !user.owns(each))) {
                         return each
                     }
                 }
@@ -639,6 +634,27 @@ final class PackCatalogs {
             }
         }
         return null
+    }
+
+    // what is wrong with the one notOurs found, and what makes it right where something does
+    private static String whyNotOurs(Path found) {
+        try {
+            if (Files.isSymbolicLink(found)) {
+                return 'is a link, and copies are kept only in a directory that is reached without one'
+            }
+            if (!Files.isDirectory(found, LinkOption.NOFOLLOW_LINKS)) {
+                return 'is not a directory'
+            }
+            if (FileSystems.default.supportedFileAttributeViews().contains('posix')) {
+                Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(found, LinkOption.NOFOLLOW_LINKS)
+                if (permissions.contains(PosixFilePermission.GROUP_WRITE) || permissions.contains(PosixFilePermission.OTHERS_WRITE)) {
+                    return 'can be written to by its group or by others, so what is in it need not be a copy this command made; chmod go-w on it makes it yours alone'
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            return 'cannot be looked at'
+        }
+        return 'is not owned by the user who runs the command'
     }
 
     // a copy is written whole or not at all: beside its place first, and then moved into it

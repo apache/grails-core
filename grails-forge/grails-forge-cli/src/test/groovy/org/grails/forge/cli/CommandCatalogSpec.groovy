@@ -612,9 +612,11 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         controller == 2
         err.toString().readLines()[0].startsWith('There is no command create-controller')
+        err.toString().readLines()[1].startsWith("The commands of a project are not there: The Grails project in ${project.canonicalPath}, above ${below.canonicalPath}, is not used: ")
+        err.toString().readLines()[1].endsWith("or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY")
         feature == 1
         out.toString().readLines().findAll { it.contains('| Error') }.size() == 1 || err.toString().readLines().findAll { it.contains('| Error') }.size() == 1
-        (out.toString() + err.toString()).contains("to use this one. No feature was added")
+        (out.toString() + err.toString()).contains("to use this one, or name ${project.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. No feature was added")
         !new File(project, 'grails-app/controllers/example/BookController.groovy').exists()
         !new File(below, 'grails-app').exists()
 

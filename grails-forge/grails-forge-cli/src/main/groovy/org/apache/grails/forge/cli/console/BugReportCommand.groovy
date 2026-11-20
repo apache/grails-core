@@ -69,7 +69,9 @@ class BugReportCommand extends InProjectCommand {
     private static final Set<String> NOT_SOURCES = ['.DS_Store', '.gitignore', '.gitattributes', '.gitmodules', '.hgignore', '.hgtags', '.cvsignore', 'vssver.scc'] as Set<String>
     // a file of one of these names is a key, a store of keys or a list of secrets, and never needed to reproduce a bug
     private static final List<String> SECRET_ENDINGS = ['.env', '.jks', '.p12', '.pfx', '.pem', '.key', '.keystore', '.p8', '.ppk', '.kdbx', '.der', '.asc', '.gpg']
-    private static final List<String> SECRET_STARTS = ['.env.', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'truststore', 'credentials', 'secrets']
+    private static final List<String> SECRET_STARTS = ['.env.', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519']
+    // words a source can start with as well: these names are secrets unless they are code
+    private static final List<String> SECRET_WORDS = ['truststore', 'credentials', 'secrets']
     private static final Set<String> SECRET_NAMES = ['.netrc', '.npmrc', '.pypirc', 'cacerts'] as Set<String>
     // a copy of such a file that was put aside is one as well
     private static final List<String> COPY_ENDINGS = ['.bak', '.old', '~']
@@ -171,14 +173,19 @@ class BugReportCommand extends InProjectCommand {
 
     private static Collected collect(Path directory) {
         Collected collected = new Collected()
+        // how many names a file has is known where the file system is one of unix
+        boolean hardLinks = directory.getFileSystem().supportedFileAttributeViews().contains('unix')
         Path buildFile = directory.resolve(BUILD_FILE)
         if (Files.isSymbolicLink(buildFile)) {
             collected.links++
         } else if (Files.isRegularFile(buildFile, LinkOption.NOFOLLOW_LINKS)) {
-            collected.add(buildFile, Files.size(buildFile))
+            // the build file is held to what every other file is: one with another name elsewhere is left out
+            if (hardLinks && names(buildFile) > 1) {
+                collected.shared++
+            } else {
+                collected.add(buildFile, Files.size(buildFile))
+            }
         }
-        // how many names a file has is known where the file system is one of unix
-        boolean hardLinks = directory.getFileSystem().supportedFileAttributeViews().contains('unix')
         for (String each : DIRECTORIES) {
             Path root = directory.resolve(each)
             if (Files.isSymbolicLink(root)) {
@@ -259,7 +266,10 @@ class BugReportCommand extends InProjectCommand {
         if (original in SECRET_NAMES || SECRET_ENDINGS.any { String ending -> original.endsWith(ending) }) {
             return true
         }
-        return SECRET_STARTS.any { String start -> original.startsWith(start) } && !CODE_ENDINGS.any { String ending -> original.endsWith(ending) }
+        if (SECRET_STARTS.any { String start -> original.startsWith(start) }) {
+            return true
+        }
+        return SECRET_WORDS.any { String start -> original.startsWith(start) } && !CODE_ENDINGS.any { String ending -> original.endsWith(ending) }
     }
 
     // how many names the file has: more than one for a file that is linked to from elsewhere

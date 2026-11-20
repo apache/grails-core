@@ -789,9 +789,9 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         compile == 1
         errors().size() == 3
         errors().every { String line -> line.startsWith("| Error The Grails project in ${dir.canonicalPath}, above ${below.canonicalPath}, is not used: ${dir.canonicalPath} is owned by ") }
-        errors()[0].endsWith("run the command in ${dir.canonicalPath} to use this one. Nothing was counted")
-        errors()[1].endsWith("run the command in ${dir.canonicalPath} to use this one. No bug report was created")
-        errors()[2].endsWith("run the command in ${dir.canonicalPath} to use this one. Gradle was not run")
+        errors()[0].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. Nothing was counted")
+        errors()[1].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. No bug report was created")
+        errors()[2].endsWith("run the command in ${dir.canonicalPath} to use this one, or name ${dir.canonicalPath} in the environment variable GRAILS_SAFE_DIRECTORY. Gradle was not run")
         !out.toString().contains('Domain Classes')
         !new File(dir, 'build').exists()
 
@@ -843,6 +843,32 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         out.toString().contains('| Left out: 0 link(s), which are not followed, and 27 file(s) that are keys by their name: keys, stores of keys and files of credentials')
         out.toString().contains('| Left out: 4 directory(ies) named build or .gradle, and 1 file(s) that have another name as well, as a hard link, and so may be a file from elsewhere')
         errors() == []
+
+        cleanup:
+        outside?.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "bug-report leaves out a build file that is a second name of a file elsewhere, and what starts as a file of secrets whatever it ends with"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File outside = Files.createTempDirectory(dir.parentFile.toPath(), 'grailsforgeoutside').toFile()
+        new File(outside, 'elsewhere.txt').text = 'a file of another directory\n'
+        Files.createLink(new File(dir, 'build.gradle').toPath(), new File(outside, 'elsewhere.txt').toPath())
+        source('grails-app/conf/.env.groovy', 'TOKEN = 1\n')
+        source('grails-app/conf/.env.local.java', 'TOKEN = 1\n')
+        source('grails-app/conf/id_rsa.java', 'a key\n')
+        source('grails-app/conf/Config.groovy', 'a = 1\n')
+        source('src/main/groovy/example/SecretsService.groovy', 'package example\nclass SecretsService { }\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 0
+        entries() == ['grails-app/conf/Config.groovy', 'src/main/groovy/example/SecretsService.groovy']
+        out.toString().contains('| Left out: 0 link(s), which are not followed, and 3 file(s) that are keys by their name')
+        out.toString().contains('| Left out: 0 directory(ies) named build or .gradle, and 1 file(s) that have another name as well, as a hard link')
 
         cleanup:
         outside?.deleteDir()

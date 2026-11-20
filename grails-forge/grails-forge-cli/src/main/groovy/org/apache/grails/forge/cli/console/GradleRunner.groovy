@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.grails.forge.feature.FeatureSelectionException
@@ -53,6 +54,10 @@ final class GradleRunner {
     // in what is started; with job control the command is in a process group of its own, and a shell
     // that has none without a terminal starts it with the interrupt ignored instead.
     private static final String IN_THE_BACKGROUND = 'log=$1; shift; trap "" HUP; set -m 2>/dev/null; "$@" </dev/null >>"$log" 2>&1 & echo $!'
+    private static final int SIGNAL_MILLIS = 1000
+    private static final int SIGNAL_STEP_MILLIS = 50
+    private static final int WINDOWS_CONTROL_C = -1073741510
+    private static final AtomicInteger RUNNING = new AtomicInteger()
     private static final String STOPPED = 'Gradle was stopped before it finished, because the command was cancelled'
 
     private static volatile PrintStream processOut
@@ -291,9 +296,22 @@ final class GradleRunner {
             started.accept(process.toHandle())
         }
         AtomicBoolean stopped = new AtomicBoolean()
-        // when this JVM is ended while Gradle runs, Gradle is not left running without it
-        Thread whenEnded = new Thread({ stop(process, stopped) } as Runnable, 'grails-gradle-stop')
+        AtomicBoolean said = new AtomicBoolean()
+        // said once and by whoever comes first: this JVM can end before the thread of the command gets to say it
+        Runnable sayStopped = {
+            if (said.compareAndSet(false, true)) {
+                failed(STOPPED)
+            }
+        } as Runnable
+        // when this JVM is ended while Gradle runs, Gradle is not left running without it; the line comes
+        // before the wait for what does not end by itself, which is then ended by force
+        Thread whenEnded = new Thread({
+            stopped.set(true)
+            sayStopped.run()
+            stop(process, stopped)
+        } as Runnable, 'grails-gradle-stop')
         Runtime.getRuntime().addShutdownHook(whenEnded)
+        RUNNING.incrementAndGet()
         Thread output = inherited ? null : copy(process.getInputStream(), out)
         Thread errors = inherited ? null : copy(process.getErrorStream(), err)
         try {
@@ -303,9 +321,14 @@ final class GradleRunner {
                 output.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
                 errors.join(TimeUnit.SECONDS.toMillis(OUTPUT_SECONDS))
             }
+            // A signal of the terminal reaches Gradle and this JVM alike, and Gradle can have ended by it
+            // before this JVM knows that it is being ended or that the command was cancelled
+            for (int waited = 0; waited < SIGNAL_MILLIS && endedBySignal(exit) && !stopped.get() && !shuttingDown(); waited += SIGNAL_STEP_MILLIS) {
+                Thread.sleep(SIGNAL_STEP_MILLIS)
+            }
             // the exit code of a process that was ended says nothing but that it was
-            if (stopped.get() || (exit != 0 && Thread.currentThread().isInterrupted())) {
-                failed(STOPPED)
+            if (stopped.get() || (exit != 0 && Thread.currentThread().isInterrupted()) || (endedBySignal(exit) && shuttingDown())) {
+                sayStopped.run()
                 return 1
             }
             if (exit != 0) {
@@ -314,16 +337,44 @@ final class GradleRunner {
             }
             return 0
         } catch (InterruptedException ignored) {
+            sayStopped.run()
             stop(process, stopped)
-            failed(STOPPED)
             Thread.currentThread().interrupt()
             return 1
         } finally {
+            RUNNING.decrementAndGet()
             try {
                 Runtime.getRuntime().removeShutdownHook(whenEnded)
             } catch (IllegalStateException ignored) {
                 // the JVM is shutting down, and the hook runs
             }
+        }
+    }
+
+    /**
+     * @return whether a command of this JVM waits for Gradle now, and so can be cancelled by
+     * interrupting its thread. A build that {@link #start} started is not waited for and is none:
+     * it is not this command's to cancel, and goes on when the command is interrupted or the CLI ends
+     */
+    static boolean isRunning() {
+        return RUNNING.get() > 0
+    }
+
+    // 128 and the number of the signal is what a shell and the JVM give for a process a signal ended; the
+    // other is what Windows gives for one that was ended with Ctrl-C
+    private static boolean endedBySignal(int exit) {
+        return (exit > 128 && exit < 160) || exit == WINDOWS_CONTROL_C
+    }
+
+    // a shutdown hook can be neither added nor removed once the JVM is being ended
+    private static boolean shuttingDown() {
+        Thread probe = new Thread({ } as Runnable)
+        try {
+            Runtime.getRuntime().addShutdownHook(probe)
+            Runtime.getRuntime().removeShutdownHook(probe)
+            return false
+        } catch (IllegalStateException ignored) {
+            return true
         }
     }
 

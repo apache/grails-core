@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.jline.reader.Candidate
 import org.jline.reader.Completer
 import org.jline.reader.EndOfFileException
@@ -108,16 +109,24 @@ class InteractiveShell {
     }
 
     /**
-     * Runs one line of the shell. While it runs, the interrupt of the terminal, Ctrl-C, cancels the
-     * command and not the shell: the thread of the command is interrupted, which a command that
-     * waits for Gradle answers by stopping Gradle. At the prompt the interrupt leaves the shell.
+     * Runs one line of the shell. While a command waits for Gradle, the interrupt of the terminal,
+     * Ctrl-C, cancels the command and not the shell: the thread of the command is interrupted, which
+     * stops Gradle. A command that does not run Gradle has no point at which it can be stopped and
+     * leave what it writes whole, so during one the interrupt ends the shell with the command, as it
+     * does at the prompt and as it did before commands could be cancelled.
      *
      * @param terminal the terminal of the shell
      * @param arguments the line, as the arguments it is
      */
     void execute(Terminal terminal, String... arguments) {
         Thread running = Thread.currentThread()
-        Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal -> running.interrupt() } as Terminal.SignalHandler)
+        Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal ->
+            if (GradleRunner.isRunning()) {
+                running.interrupt()
+            } else {
+                interruptedOutsideGradle()
+            }
+        } as Terminal.SignalHandler)
         try {
             executor.accept(arguments)
         } finally {
@@ -125,6 +134,15 @@ class InteractiveShell {
             // an interrupt that came when nothing waited for one is not kept for the next line
             Thread.interrupted()
         }
+    }
+
+    /**
+     * Called for the interrupt of the terminal while a command runs that does not wait for Gradle:
+     * ends the JVM as the interrupt does when nothing handles it, with the exit code a shell gives
+     * for it.
+     */
+    protected void interruptedOutsideGradle() {
+        System.exit(130)
     }
 
     void start() {

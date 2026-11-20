@@ -38,6 +38,7 @@ import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForkedCli
 import org.grails.forge.cli.GrailsPicocliFactory
 import picocli.CommandLine
 import spock.lang.IgnoreIf
@@ -1451,6 +1452,122 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         Files.exists(another)
         Files.list(copies).withCloseable { it.toList() }*.fileName*.toString().sort() ==
                 ['catalog456.tmp', digest(HOSTED.getBytes('UTF-8')) + '.json', 'notes.txt'].sort()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "with --offline a copy in a directory others can write to is not read, and the command says that, and how to make it one that is"() {
+        given: 'a copy of the catalog, under a .grails that the group of the user can write to, as a umask of 002 leaves it'
+        File jar = publish(COORDINATES)
+        byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
+        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        Files.write(copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json'), document)
+        Files.setPosixFilePermissions(copies.parent.parent, PosixFilePermissions.fromString('rwxrwxr-x'))
+
+        when:
+        int exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', HOSTED, '--feature-pack-repository', address, '--offline')
+
+        then:
+        exit == 1
+        err.toString().contains("The feature catalog ${HOSTED} could not be read: not asked, since --offline makes no request to the network, " +
+                "and no copy of a catalog is read on this computer, whether there is one or not: ${copies.parent.parent} is not a directory of yours that nobody else can write to: it can be written to by its group or by others, " +
+                'so what is in it need not be a copy this command made; chmod go-w on it makes it yours alone')
+        !err.toString().contains('there is no copy of the catalog')
+        asked.isEmpty()
+
+        when: 'the directory is made the user\'s alone'
+        Files.setPosixFilePermissions(copies.parent.parent, PosixFilePermissions.fromString('rwx------'))
+        exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', HOSTED, '--feature-pack-repository', address, '--offline')
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address})")
+    }
+
+    @Unroll
+    void "a plugin is deprecated by true and by a reason, and not by #value"() {
+        given:
+        File jar = publish(COORDINATES)
+        byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)], [deprecated: value])]]).getBytes('UTF-8')
+
+        expect:
+        PackCatalog.parse(document, URI.create('https://catalog.invalid/index.json')).plugins*.deprecated == [deprecated]
+
+        where:
+        value         | deprecated
+        true          | true
+        'use another' | true
+        'falsely'     | true
+        false         | false
+        'false'       | false
+        'False'       | false
+        ' false '     | false
+        ''            | false
+    }
+
+    void "a plugin whose only pack is after the versions that are read is named as one that was not read to its end"() {
+        given: 'a plugin with more versions than are read, the pack in one after them'
+        File jar = publish(COORDINATES)
+        Map<String, Object> entry = plugin(PLUGIN, [:])
+        entry.versions = (1..(PackCatalog.MAX_VERSIONS + 5)).collect { int number ->
+            number == PackCatalog.MAX_VERSIONS + 3 ? [version: "1.0.${number}".toString(), pack: pack(jar)] : [version: "1.0.${number}".toString()]
+        }
+        byte[] document = json([format: 1, plugins: [entry, plugin('org.other:other-grails', ['1.0.0': pack(jar, [name: 'other'])])]]).getBytes('UTF-8')
+
+        when:
+        PackCatalog catalog = PackCatalog.parse(document, URI.create('https://catalog.invalid/index.json'))
+
+        then:
+        catalog.plugins*.coordinates == ['org.other:other-grails']
+        catalog.problems == ["plugin 1: ${PLUGIN} has more than the ${PackCatalog.MAX_VERSIONS} versions a plugin can have, and none of the first of them has a pack: " +
+                'whether a later one has was not read']
+    }
+
+    @IgnoreIf({ os.windows || !ForkedCli.available() })
+    void "the CLI as a program, with no catalog named by the command or the environment, asks no computer for one"() {
+        given: 'whatever the program would ask of the network comes here'
+        ServerSocket listener = new ServerSocket(0, 50, InetAddress.loopbackAddress)
+        List<String> connections = [].asSynchronized()
+        Thread accepting = new Thread({
+            try {
+                while (true) {
+                    listener.accept().withCloseable { Socket socket -> connections << socket.remoteSocketAddress.toString() }
+                }
+            } catch (IOException ignored) {
+                // closed when the feature ends
+            }
+        })
+        accepting.daemon = true
+        accepting.start()
+        List<String> jvm = ["-Duser.home=${work.path}".toString(), '-Dhttp.proxyHost=127.0.0.1', "-Dhttp.proxyPort=${listener.localPort}".toString(),
+                            '-Dhttps.proxyHost=127.0.0.1', "-Dhttps.proxyPort=${listener.localPort}".toString(), '-Dhttp.nonProxyHosts=',
+                            '-DsocksProxyHost=127.0.0.1', "-DsocksProxyPort=${listener.localPort}".toString()]
+
+        expect: 'what this build is made with'
+        !PackCatalogs.PLUGIN_INDEX_UNNAMED
+        PackCatalogs.addresses([], null, PackCatalogs.PLUGIN_INDEX_UNNAMED).isEmpty()
+
+        when: 'the features of catalogs are asked for, and an application with a feature that is none of Grails'
+        List<String> said = [['create-app', '--list-catalog-features'], ['create-app', 'shop', '--features', 'acme-audit']].collect { List<String> line ->
+            ProcessBuilder builder = ForkedCli.builder(dir, jvm, line as String[]).redirectErrorStream(true)
+            // the build names no catalog for the specifications; here nothing at all does, as for a user
+            builder.environment().remove('GRAILS_FORGE_CATALOG')
+            Process program = builder.start()
+            String text = program.inputStream.getText('UTF-8')
+            assert program.waitFor(300, java.util.concurrent.TimeUnit.SECONDS)
+            "${program.exitValue()} ${text}".toString()
+        }
+
+        then:
+        said[0].startsWith('0 ')
+        said[0].contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
+        !said[1].startsWith('0 ')
+        said[1].contains('acme-audit')
+        !new File(dir, 'shop').exists()
+        connections.isEmpty()
+        !Files.exists(copies)
+
+        cleanup:
+        listener?.close()
     }
 
     private int run(String... args) {

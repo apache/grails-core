@@ -99,6 +99,7 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         ConsoleProject.setOwnedByUser(null)
+        ConsoleProject.setSafeDirectories(null)
     }
 
     void "the commands the build lists are listed in the help after those of the CLI, with where each comes from"() {
@@ -730,7 +731,21 @@ class ApplicationCommandsSpec extends CommandSpec implements CommandFixture {
         err.toString().readLines()[0].startsWith('There is no command hello-world')
         !err.toString().contains('grailsCommandCatalog')
 
+        when: 'the environment names the directory as one to use, whoever owns it'
+        ConsoleProject.setSafeDirectories(dir.canonicalPath)
+        out.reset()
+        exit = ForgeCli.execute(beanContext, 'help', '--json')
+        described = document()
+
+        then: 'what its build lists is read'
+        exit == 0
+        described.complete == true
+        described.diagnostics == []
+        described.projectDirectory == dir.canonicalPath
+        ((List<Map>) described.commands).any { it.name == 'hello-world' }
+
         when: 'the project is the user\'s own: its commands are there in every directory of it'
+        ConsoleProject.setSafeDirectories('')
         ConsoleProject.setOwnedByUser(null)
         out.reset()
         exit = ForgeCli.execute(beanContext, 'help', '--json')

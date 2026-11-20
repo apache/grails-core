@@ -28,6 +28,12 @@ import spock.lang.Unroll
  */
 class NoFeatureCatalogSpec extends Specification {
 
+    /** The sources of the command line, beside this module: the names of its classes are taken from them, and not written here. */
+    static final File CLI_SOURCES = new File('../grails-forge-cli/src/main/groovy')
+
+    /** The packages the command line is in, under which the hosted Forge has nothing. */
+    static final List<String> CLI_PACKAGES = ['org/apache/grails/forge/cli', 'org/grails/forge/cli']
+
     @Unroll
     void "#type is not on the class path of the hosted Forge"() {
         when:
@@ -39,6 +45,44 @@ class NoFeatureCatalogSpec extends Specification {
         where:
         type << ['org.apache.grails.forge.cli.pack.PackCatalogs', 'org.apache.grails.forge.cli.pack.PackCatalog',
                  'org.apache.grails.forge.cli.pack.PackArtifacts', 'org.grails.forge.cli.command.CreateCommand']
+    }
+
+    void "the classes named above are classes the command line has, so that one that is renamed is noticed"() {
+        expect:
+        ['org/apache/grails/forge/cli/pack/PackCatalogs.groovy', 'org/apache/grails/forge/cli/pack/PackCatalog.groovy',
+         'org/apache/grails/forge/cli/pack/PackArtifacts.groovy', 'org/grails/forge/cli/command/CreateCommand.groovy'].every { String source ->
+            new File(CLI_SOURCES, source).isFile()
+        }
+    }
+
+    void "no class the command line is made of is on the class path of the hosted Forge, by the names its sources give them"() {
+        given: 'every source file of the command line, as the class of its name'
+        List<String> types = []
+        CLI_SOURCES.eachFileRecurse { File file ->
+            if (file.isFile() && (file.name.endsWith('.groovy') || file.name.endsWith('.java'))) {
+                String path = CLI_SOURCES.toPath().relativize(file.toPath()).join('/')
+                types << path.substring(0, path.lastIndexOf('.')).replace('/', '.')
+            }
+        }
+
+        expect: 'the sources are where they are looked for, and all of them are in the packages of the command line'
+        types.size() > 50
+        types.every { String type -> CLI_PACKAGES.any { String prefix -> type.startsWith(prefix.replace('/', '.') + '.') } }
+
+        and: 'none of them can be loaded'
+        types.findAll { String type ->
+            try {
+                Class.forName(type, false, getClass().classLoader)
+                return true
+            } catch (ClassNotFoundException | LinkageError ignored) {
+                return false
+            }
+        } == []
+    }
+
+    void "nothing at all is under the packages of the command line on the class path of the hosted Forge"() {
+        expect:
+        CLI_PACKAGES.collectMany { String prefix -> getClass().classLoader.getResources(prefix).toList() + getClass().classLoader.getResources(prefix + '/').toList() } == []
     }
 
     void "the generator the hosted Forge is made of is there"() {

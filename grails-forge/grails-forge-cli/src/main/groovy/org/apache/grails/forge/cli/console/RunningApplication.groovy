@@ -123,7 +123,7 @@ final class RunningApplication {
         }
         Map<String, Object> said
         try {
-            said = read(record)
+            said = read(record, project)
         } catch (IOException e) {
             return new RunningApplication(State.UNREADABLE, e.getMessage(), record, null, 0L, 0, false)
         }
@@ -144,9 +144,7 @@ final class RunningApplication {
         if (isThisCommand(process)) {
             return new RunningApplication(State.ENDED, "process ${pid} is this command or one that started it", record, null, pid, port, detached)
         }
-        Optional<String> owner = info.user()
-        Optional<String> user = ProcessHandle.current().info().user()
-        if (!owner.isPresent() || !user.isPresent() || owner.get() != user.get()) {
+        if (!ProcessUser.isOfThisUser(process)) {
             return new RunningApplication(State.ENDED, "process ${pid} is not a process of the user who runs the command", record, null, pid, port, detached)
         }
         if (!isGradleOf(project, windows, info)) {
@@ -248,11 +246,11 @@ final class RunningApplication {
         }
     }
 
-    private static Map<String, Object> read(Path record) throws IOException {
+    private static Map<String, Object> read(Path record, ConsoleProject project) throws IOException {
         if (!Files.isRegularFile(record, LinkOption.NOFOLLOW_LINKS)) {
             throw new IOException('it is not a file')
         }
-        if (!ConsoleProject.isOwnedByUser(record)) {
+        if (!ConsoleProject.isOwnedByUser(record, project)) {
             throw new IOException('it is not owned by the user who runs the command')
         }
         if (Files.size(record) > MAX_RECORD) {
