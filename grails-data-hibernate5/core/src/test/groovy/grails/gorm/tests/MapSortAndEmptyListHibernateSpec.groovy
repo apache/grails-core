@@ -73,6 +73,14 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         }*.title == ['omega', 'zeta', 'alpha', 'beta']
     }
 
+    void "a map sort of two properties of the same association joins it once"() {
+        expect:
+        MsBook.list(sort: ['author.name': 'asc', 'author.active': 'desc'])*.author*.name == ['ann', 'ann', 'bob', 'cat']
+        MsBook.createCriteria().list(sort: ['author.active': 'desc', 'author.name': 'desc', title: 'asc']) {
+            gt('id', 0L)
+        }*.title == ['zeta', 'alpha', 'beta', 'omega']
+    }
+
     void "a negated empty list on a collection of strings matches the books without elements"() {
         expect:
         MsBook.createCriteria().list { not { inList('tags', []) }; order('title') }*.title == ['alpha', 'beta', 'omega', 'zeta']
