@@ -1907,7 +1907,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     final boolean aliasExisted = aliasMap.containsKey(associationPath);
                     createAliasIfNeccessary(name, associationPath, joinType);
                     final String blockAlias = getLastAlias();
-                    if (branchOfOr && !aliasExisted) {
+                    final boolean namedLeftJoin = hasMoreThanOneArg &&
+                            joinType == org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.getJoinTypeValue();
+                    if ((branchOfOr || namedLeftJoin) && !aliasExisted) {
+                        // a later block that asks for the association reuses this left join, so it has to ask for the
+                        // associated entity itself, as a block that joined it first would have
                         leftBlockAliases.add(blockAlias);
                     }
                     // a block that is a branch of an "or" asks for an associated entity, and so does a block that

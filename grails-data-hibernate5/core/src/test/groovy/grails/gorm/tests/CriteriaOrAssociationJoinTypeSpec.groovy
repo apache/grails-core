@@ -130,6 +130,44 @@ class CriteriaOrAssociationJoinTypeSpec extends Specification {
         found*.name == ['with']
     }
 
+    private static final List<Map> BLOCKS = [
+            [n: 'left join', c: { child(CriteriaSpecification.LEFT_JOIN) { } }, p: { Map x -> true }],
+            [n: 'left join eq kid', c: { child(CriteriaSpecification.LEFT_JOIN) { eq('name', 'kid') } }, p: { Map x -> x.child == 'kid' }],
+            [n: 'left join isNull', c: { child(CriteriaSpecification.LEFT_JOIN) { isNull('name') } }, p: { Map x -> x.child == null }],
+            [n: 'inner join', c: { child(CriteriaSpecification.INNER_JOIN) { } }, p: { Map x -> x.child != null }],
+            [n: 'inner join eq kid', c: { child(CriteriaSpecification.INNER_JOIN) { eq('name', 'kid') } }, p: { Map x -> x.child == 'kid' }],
+            [n: 'plain', c: { child { } }, p: { Map x -> x.child != null }],
+            [n: 'plain eq kid', c: { child { eq('name', 'kid') } }, p: { Map x -> x.child == 'kid' }],
+            [n: 'or of orphan and kid', c: { or { eq('name', 'orphan'); child { eq('name', 'kid') } } }, p: { Map x -> x.name == 'orphan' || x.child == 'kid' }],
+            [n: 'no block', c: { }, p: { Map x -> true }]
+    ]
+
+    void 'two blocks on the child find the entities that meet both, whichever asked for its join first'() {
+        given:
+        createParents()
+        List<Map> data = [[name: 'with', child: 'kid'], [name: 'other', child: 'stranger'], [name: 'orphan', child: null]]
+        List<String> mismatches = []
+
+        when:
+        BLOCKS.each { Map first ->
+            BLOCKS.each { Map second ->
+                List<String> expected = data.findAll { Map x -> first.p.call(x) && second.p.call(x) }*.name.sort()
+                Closure one = first.c
+                Closure two = second.c
+                List<String> found = JoinParent.createCriteria().list {
+                    with(one)
+                    with(two)
+                }*.name.sort()
+                if (found != expected) {
+                    mismatches << "${first.n} then ${second.n}: found ${found}, expected ${expected}".toString()
+                }
+            }
+        }
+
+        then:
+        mismatches == []
+    }
+
 }
 
 @Entity
