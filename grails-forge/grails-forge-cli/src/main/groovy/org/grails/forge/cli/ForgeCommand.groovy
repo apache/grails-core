@@ -25,6 +25,7 @@ import org.grails.forge.cli.command.CreatePluginCommand
 import org.grails.forge.cli.command.CreateRestApiCommand
 import org.grails.forge.cli.command.CreateWebPluginCommand
 import org.grails.forge.cli.command.CreateWebappCommand
+import org.grails.forge.cli.command.FeatureCommand
 import org.grails.forge.cli.command.GradleCommand
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
@@ -44,7 +45,11 @@ import java.util.concurrent.Callable
         '*  @|bold create-webapp|@ @|yellow NAME|@',
         '*  @|bold create-restapi|@ @|yellow NAME|@',
         '*  @|bold create-plugin|@ @|yellow NAME|@',
-        '*  @|bold create-web-plugin|@ @|yellow NAME|@'
+        '*  @|bold create-web-plugin|@ @|yellow NAME|@',
+        '',
+        'In the directory of an application, a feature is added to it with:',
+        '',
+        '*  @|bold feature add|@ @|yellow FEATURE|@'
 ],
         synopsisHeading = '@|bold,underline Usage:|@ ',
         optionListHeading = '%n@|bold,underline Options:|@%n',
@@ -55,6 +60,7 @@ import java.util.concurrent.Callable
                 CreatePluginCommand,
                 CreateWebPluginCommand,
                 CreateRestApiCommand,
+                FeatureCommand,
                 GradleCommand
         ])
 @Component

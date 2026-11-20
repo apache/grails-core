@@ -262,10 +262,109 @@ grailsw text eol=lf
 
 It is about the wrappers only. The scripts for Windows keep the line endings of Windows and the scripts for Unix those of Unix on every clone, whatever Git is set to do with line endings, so the scripts run wherever the project is checked out, and the jars of the wrappers are never converted. Everything else is left to your own settings of Git; add rules of your own to the file as the project needs them.
 
-`grails-forge-cli.yml` at the root of the project is the record earlier versions wrote. It is still written, with the same content, for the tools that read it, and it is not part of the baseline. In a project that has a `.grails` directory, the `create-*` code generation commands go by `.grails`: changing `grails-forge-cli.yml` by hand no longer changes what they do, and when the two do not say the same default package or the same features, the commands say so in a warning. In a project without a `.grails` directory, a `grails-forge-cli.yml` that is not as it is written (a value that is not one of those it can have, a file that is not YAML or is larger than 256 KiB) is not used: the command line says what is wrong with it in one line and then behaves as in a directory without a project, so its help and the commands that create an application still work. A feature that is added to a project by hand, by adding its dependencies to the build, cannot be made known to the record yet; the command that adds a feature to an existing project and records it is not part of this version.
+`grails-forge-cli.yml` at the root of the project is the record earlier versions wrote. It is still written, with the same content, for the tools that read it, and it is not part of the baseline. In a project that has a `.grails` directory, the `create-*` code generation commands go by `.grails`: changing `grails-forge-cli.yml` by hand no longer changes what they do, and when the two do not say the same default package or the same features, the commands say so in a warning. In a project without a `.grails` directory, a `grails-forge-cli.yml` that is not as it is written (a value that is not one of those it can have, a file that is not YAML or is larger than 256 KiB) is not used: the command line says what is wrong with it in one line and then behaves as in a directory without a project, so its help and the commands that create an application still work. A feature that is added to a project by hand, by adding its dependencies to the build, is not known to the record: add it with `feature add`, described below, which changes the files and the record together.
 
 Do not edit the files of `.grails` by hand, and do not change the copies under `.grails/baseline/files`. The lock has the digest of `project.yml` and of the index of the baseline and ends with the digest of itself, the options and the requested and excluded features of `project.yml` have to agree with the lock, and the index has the digest of every copy. A change to one of the files that is not made to the others in the same way is therefore found when the record is read, and the record is then not used: a command that reads it says what is wrong, in one line, and the `create-*` code generation commands fall back to `grails-forge-cli.yml`. The commands that create an application and `--version` do not read the record of the directory they are run in. The digests show a change that was made by accident or by hand; they are not a signature, and they do not show where a project came from.
 
 A `create-` command with `--inplace` does not generate over a directory that already has such a record: remove the `.grails` directory first to generate the project anew. When a generation did not come to its end, which leaves a `.grails` directory without `project.yml`, the same command with `--inplace` completes it. A file that already exists in the directory is kept, as before, and the baseline holds the file as it would have been generated: the command names the kept files that are not what it would have written, the first twenty of them, and to the record those are files that were changed.
 
 The difference that the website shows for a feature is of the files of the application and does not include `.grails`: applying it to a project by hand changes the application and leaves the record as it was, in which the changed files then count as changed.
+
+=== Adding a feature to a project
+
+`feature add` adds features to a project that already exists, in the directory of the project:
+
+[source,console]
+----
+$ cd myapp
+$ ./grails -t forge feature add grails-quartz
+| Adding the feature grails-quartz
+    update   README.md
+    update   build.gradle
+    update   grails-app/conf/application.yml
+    update   grails-forge-cli.yml
+| Feature grails-quartz added. Commit the changes together with the directory .grails
+----
+
+The names are those `--list-features` shows for the type of the application; several can be given, separated by commas or spaces. The project afterwards is the project that the `create-` command would have made with the feature: the same dependencies and build file changes, the same configuration, the same new files, and the same record under `.grails`, in which the feature is now one that was asked for. A feature brings in the features it requires, and the command names them. Review the changes with your version control and commit them together with `.grails`. The command makes no commit and does not need Git.
+
+Two options show what would happen and change nothing:
+
+[cols="1,3"]
+|===
+| Flag | Description
+
+| `--dry-run`
+| Lists the files that would be added and changed, and the conflicts.
+
+| `--diff`
+| Lists them and shows the changes as a diff.
+|===
+
+==== What happens to your changes
+
+The command works from the record of the project. It generates the application again as it was recorded, which has to give exactly the files of the baseline, and once more with the feature added. Only the files that differ between the two are touched, and each of them is looked at in three versions: as it was generated, as it is generated with the feature, and as it is in your project.
+
+[cols="1,3"]
+|===
+| Listed as | What is done
+
+| `add`
+| The feature writes a file the project does not have. It is written.
+
+| `update`
+| The feature changes a file that you did not change. It gets the new content.
+
+| `merge`
+| The feature changes a file that you changed too, in other lines. The changes of the feature are put into your file, and everything you changed stays. This is the usual case for `build.gradle` and `application.yml`.
+
+| `keep`
+| The file already is what the feature makes of it, or a file the feature adds is already there with the content it would get. It is not written.
+
+| `conflict`
+| The file cannot be written without losing something of yours. See below.
+|===
+
+A file the feature does not change is not read and not written, whatever you did with it: changed, moved or deleted. A file that is yours and that no feature writes is never touched. A text file whose lines end with CR LF, as on a clone that Git checked out for Windows, counts as unchanged when nothing else differs, keeps its line endings, and gets the lines of the feature with them; a new file has the line endings it is generated with. Binary files are never merged: one that you did not change is replaced, and one that both changed is a conflict. Where the feature makes a file executable, the file is made executable.
+
+After the command, the baseline under `.grails/baseline` holds the files as the generator writes them for the application with the feature, not your edited files, so that the next feature is again compared with what was generated.
+
+==== Conflicts
+
+There is a conflict when
+
+* the feature changes lines that you changed too, or lines directly next to them, in another way (the same change made by both is no conflict),
+* the feature changes a file that you removed, or that is now a directory or a symbolic link,
+* the feature changes a binary file that you changed too,
+* the feature adds a file and the project has another file of that name.
+
+With one conflict, nothing is written: no file of the application, and nothing of the record. The command names every file with a conflict and its reason and ends with exit code 1:
+
+[source,console]
+----
+$ ./grails -t forge feature add grails-quartz
+| Adding the feature grails-quartz
+    update   README.md
+    conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them
+    update   grails-app/conf/application.yml
+    update   grails-forge-cli.yml
+| Error The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed. See what the feature would change with --diff, make room for it in the files that are named, and add the feature again
+----
+
+To resolve it, look at what the feature would change with `feature add <feature> --diff`, which shows the change of the feature to each file with a conflict under a line that starts with `rejected:`. Then make room for it in your file: move your own lines away from the lines the feature changes (an added dependency, for example, to another line of the `dependencies` block, or to a block of its own), or restore a file you removed, or rename a file of yours that has the name of a file the feature adds. Run the command again. A change you do not want from the feature can be taken out again afterwards, as any other edit.
+
+==== What is refused
+
+The command changes a project only when it can do so safely, and otherwise says why in one line and changes nothing:
+
+* The directory has no record (`.grails/project.yml`), or the record is not complete or was changed by hand, or a file under `.grails/baseline` is missing or is not what was generated. A project that was created by a version before Grails 9, or by hand, has no record, and a feature cannot be added to it with this command.
+* The project was generated by another version. A feature is added by the version of the command line that generated the project, and the message names that version. Moving a project to a newer version is an upgrade, not something adding a feature does.
+* The application is not generated again as it was recorded. The usual reason is another value of `GRAILS_REPO_URL` than when the project was created: the repositories it gives are part of `build.gradle`.
+* The features cannot be had together with those the application has. The rules are those of the `create-` commands, with the same messages and exit code 2: a feature that does not exist for the type of application, two features of one exclusive group, a feature that was left out with `--exclude-features` when the project was created.
+* The feature would take something away: it would put another servlet container, reloading agent or Grails Data implementation in the place of the one the application was created with, replace a default feature such as the layout engine, or leave a generated file out. Such features are chosen when a project is created.
+* The feature is that of a plugin outside Grails (a feature pack given by coordinates or with `--feature-pack-dir`), or the application has such a feature. Only features that are part of Grails can be added in this version.
+* The application already has the feature. The command says so, changes nothing and ends with exit code 0, so running the same command twice is harmless.
+
+==== When the command is interrupted
+
+The files are written as one change. Before the first file is replaced, the command writes the new content, a copy of each file it replaces and a journal to `.grails/transactions/`, which the generated `.gitignore` excludes. When a file cannot be written, the files that were already written are put back and the project is as it was. When the command itself is ended in the middle, by a power failure for example, the next `feature add` first puts the files back from the journal and says so; until then the record under `.grails` may not read. A file that somebody changed after the interruption is not overwritten: the command names it and where the copy of the file is, and continues once the file is put back or the project is restored from version control. Only one command changes a project at a time; a second one that is started meanwhile ends with a message. This does not protect a file that an editor writes at the very moment the command replaces it, so save your files first.

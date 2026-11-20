@@ -19,7 +19,6 @@
 package org.apache.grails.forge.core.state
 
 import groovy.transform.CompileStatic
-import groovy.transform.PackageScope
 import org.apache.grails.forge.core.state.BaselineIndex.BaselineFile
 import org.apache.grails.forge.core.state.ProjectLock.LockedFeature
 import org.apache.grails.forge.core.state.ProjectManifest.RequestedFeature
@@ -197,11 +196,12 @@ final class ProjectState {
 
     /**
      * The state the three files hold, when they belong together. What writes the state reads it back
-     * with this before it writes anything.
+     * with this before it writes anything, and what adds a feature to a project reads with it the
+     * state the generator writes for the project with the feature.
      *
      * @param indexBytes the index of the baseline, or {@code null} to read the state without it
+     * @throws ProjectStateException with what is wrong, in one line
      */
-    @PackageScope
     static ProjectState of(byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes) {
         for (Map.Entry<String, Integer> each : [(MANIFEST): manifestBytes.length - StateLimits.MAX_MANIFEST, (LOCK): lockBytes.length - StateLimits.MAX_LOCK,
                                                (BASELINE_INDEX): (indexBytes == null ? 0 : indexBytes.length) - StateLimits.MAX_INDEX].entrySet()) {
