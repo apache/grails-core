@@ -44,6 +44,16 @@ class CriteriaVisitorSpec extends Specification {
         void property(String property) {
             events << "property ${property}".toString()
         }
+
+        @Override
+        void enter(Query.Junction junction) {
+            events << "enter ${junction.class.simpleName}".toString()
+        }
+
+        @Override
+        void leave(Query.Junction junction) {
+            events << "leave ${junction.class.simpleName}".toString()
+        }
     }
 
     private List<String> walk(List<Query.Criterion> criteria) {
@@ -100,7 +110,31 @@ class CriteriaVisitorSpec extends Specification {
 
         expect:
         walk([new Query.Conjunction([nested, new Query.Equals('c.name', 'y')])]) ==
-            ['property a.name', 'property b.tag', 'property c.name']
+            ['enter Conjunction', 'enter Disjunction', 'property a.name', 'enter Negation', 'property b.tag',
+             'leave Negation', 'leave Disjunction', 'property c.name', 'leave Conjunction']
+    }
+
+    def 'a junction is left even when a visitor throws while its criteria are visited'() {
+        given:
+        def events = []
+        def visitor = new CriteriaVisitor() {
+            @Override
+            void leave(Query.Junction junction) {
+                events << 'leave'
+            }
+
+            @Override
+            void property(String property) {
+                throw new IllegalStateException('stop')
+            }
+        }
+
+        when:
+        CriteriaVisitor.walk([new Query.Disjunction([new Query.Equals('a', 'x')])], visitor)
+
+        then:
+        thrown(IllegalStateException)
+        events == ['leave']
     }
 
     def 'a block is reported and its criteria are left to the visitor of the block'() {

@@ -42,6 +42,7 @@ final class JoinPlan {
     private final Set<String> mentioned = new HashSet<>();
     private final Map<String, JoinType> inherited = new HashMap<>();
     private final Map<String, JoinType> configured = new HashMap<>();
+    private final Set<String> alternatives = new HashSet<>();
 
     /**
      * Records the join type configured for a path on the criteria, which an association block of the path takes
@@ -69,6 +70,18 @@ final class JoinPlan {
      */
     JoinType configured(String path) {
         return configured.get(path);
+    }
+
+    /**
+     * Records that the left join of a path was chosen by the planner, for a block with criteria in an {@code or}, and not
+     * named by the caller.
+     */
+    void alternative(String path) {
+        alternatives.add(path);
+    }
+
+    boolean isAlternative(String path) {
+        return alternatives.contains(path);
     }
 
     /**
