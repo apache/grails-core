@@ -1598,7 +1598,7 @@ Where a script is run with the Grails Forge CLI or with `./gradlew runScriptComm
 
 A build that has a task of its own named `runScriptCommand` gives it another name: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the scripts are not run by the plugin's task.
 
-==== 29. Two Database Migration Commands Are Application Commands, and Script Commands of Plugins
+==== 34. Two Database Migration Commands Are Application Commands, and Script Commands of Plugins
 
 `dbm-create-changelog` and `dbm-changelog-to-groovy` of the Database Migration plugins (Hibernate 5 and Hibernate 7) were script commands, the only two `dbm-*` commands that were. They are now application commands like the others, with the same names, arguments and options. They run with the application context, as `dbm-update` does: `./gradlew runCommand --arg=dbm-create-changelog --arg=changelog.groovy`, their own Gradle tasks `dbmCreateChangelog` and `dbmChangelogToGroovy`, or by name with the Grails Forge CLI once `grailsCommandCatalog` has listed the commands of the project.
 
@@ -1609,3 +1609,29 @@ The script commands of the other plugins (`s2-quickstart` and the other Spring S
 ===== Required Actions
 
 None for the commands. Code that used the classes `DbmCreateChangelog`, `DbmChangelogToGroovy` or the trait `ScriptDatabaseMigrationCommand` of a database migration `-cli` artifact uses `DbmCreateChangelogCommand` and `DbmChangelogToGroovyCommand`; those artifacts no longer depend on `grails-shell-cli`. A plugin of your own whose script names a completer of the Grails shell in its `description` removes the `import` and names the class in full inside the closure, or removes the line: the build does not evaluate a description.
+
+==== 35. A Generated Application Has No Profile Dependency and No `grails-forge-cli.yml`
+
+An application that Grails Forge generates (`create-app` and the other create commands of the Grails Forge CLI, and the hosted Grails Forge) no longer has two things that the Grails shell and its profiles needed:
+
+* *The `profile` dependency.* `build.gradle` has no `profile "org.apache.grails.profiles:<type>"` line. Nothing of the build or of the running application used that dependency; it told the Grails shell which profile's commands the project has. The commands of the Grails Forge CLI come with the command line and with the plugins of the application.
+* *`grails-forge-cli.yml`.* The file at the root of the project is not written. The `.grails` directory is the record of how the application was generated: `.grails/project.yml` has the application type, the default package, the options and the features that were asked for and excluded, and `.grails/forge.lock.yml` has every feature of the application, and for a feature pack that was taken by its coordinates the version, the SHA-256 and, for an `https` address, the repository. The name of the jar file of such a pack, which `grails-forge-cli.yml` had under `featurePacks`, is not recorded any more. `feature add` changes no `grails-forge-cli.yml` either.
+
+Not changed: `grails.profile` and `grails.codegen.defaultPackage` are still written to `grails-app/conf/application.yml`, because the framework reads both when the application runs. Not changed either: the Grails Forge CLI still reads the `grails-forge-cli.yml` (or `grails-cli.yml`) of a project that an earlier version generated.
+
+===== Required Actions
+
+None for an application that exists: its build and its `grails-forge-cli.yml` are left as they are, and nothing has to be removed from them for this change.
+
+* A tool or script of your own that reads `grails-forge-cli.yml` of a newly generated application reads `.grails/project.yml` (application type, default package, options) and `.grails/forge.lock.yml` (features) instead. There is no option that writes the old file. To have one for such a tool all the same, write it yourself with the keys the tool reads; the Grails Forge CLI then warns when it does not say the same default package and features as `.grails`, and goes by `.grails`.
+* To run the Grails shell (`grails -t shell`) in a newly generated application with the commands of its profile, add the line back to the `dependencies` block of `build.gradle`, with the profile of the type of the application (`web`, `rest-api`, `plugin` or `web-plugin`):
++
+[source,groovy]
+----
+profile 'org.apache.grails.profiles:rest-api'
+----
++
+Without the line the Grails Gradle plugin resolves the `web` profile for an application and the `web-plugin` profile for a plugin when the shell asks for the profile, as it does in any build that declares none.
+* When the files of `.grails` cannot be used, because one was changed by hand or is missing, the `create-*` code generation commands of a newly generated application are not there until the directory is as it was: restore it from version control. An application that has a `grails-forge-cli.yml` goes by that file then, as before.
+* A feature pack of your own that writes a file named `grails-forge-cli.yml` or `grails-cli.yml` to the root of the application is refused when the application is generated, because the command line would read that file as the record of a project. Give the file another name.
+* An application that a snapshot of Grails 9 generated before this change cannot have a feature added with `feature add` by a later build of the same version: the command says that the application cannot be generated again as it was and names `build.gradle`. Add the dependencies and the configuration of the feature by hand, or generate the application again.

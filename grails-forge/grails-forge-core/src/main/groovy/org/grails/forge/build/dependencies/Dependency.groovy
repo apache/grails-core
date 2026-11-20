@@ -234,10 +234,6 @@ final class Dependency {
             return scope(Scope.ANNOTATION_PROCESSOR)
         }
 
-        Builder profile() {
-            return scope(Scope.PROFILE)
-        }
-
         Builder integrationTestImplementationTestFixtures() {
             return scope(Scope.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES)
         }

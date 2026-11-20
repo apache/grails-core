@@ -567,8 +567,11 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
 
         when: 'the change ends after the files of the application and before those of the state'
         try {
-            planOf(generator, project).apply { String path ->
-                if (path == 'grails-forge-cli.yml') {
+            ChangePlan plan = planOf(generator, project)
+            // the files of the application are written in the order of the plan, and those of the state after them
+            String last = plan.files.findAll { it.written }*.path.last()
+            plan.apply { String path ->
+                if (path == last) {
                     throw new Stopped()
                 }
             }

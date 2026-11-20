@@ -124,7 +124,7 @@ class ForgeGrailsPluginSpec extends Specification {
 
         then:
         output.project['build.gradle'].contains('testImplementation "org.mockito:mockito-core"')
-        output.project['grails-forge-cli.yml'].contains('mockito')
+        output.project['.grails/forge.lock.yml'].contains('- name: mockito\n')
         output.project['README.md'].contains('## Feature mockito documentation')
 
         where:

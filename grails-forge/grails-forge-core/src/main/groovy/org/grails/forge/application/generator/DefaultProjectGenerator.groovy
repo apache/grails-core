@@ -21,10 +21,8 @@ package org.grails.forge.application.generator
 import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.apache.grails.forge.core.pack.Pack
-import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackContent
 import org.apache.grails.forge.core.pack.PackDescriptorParser
-import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.pack.PackFeatures
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateRecorder
@@ -34,24 +32,18 @@ import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
 import org.grails.forge.feature.AvailableFeatures
-import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureRegistry
 import org.springframework.stereotype.Component
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.io.OutputUtils
-import org.grails.forge.options.BuildTool
-import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.template.DefaultTemplateRenderer
 import org.grails.forge.template.RenderResult
 import org.grails.forge.template.Template
 import org.grails.forge.template.TemplateRenderer
-import org.grails.forge.template.GspTemplate
-import org.grails.forge.template.GspView
 import java.text.Normalizer
-import java.util.function.Function
 
 @Component('projectGenerator')
 @CompileStatic
@@ -92,17 +84,6 @@ class DefaultProjectGenerator implements ProjectGenerator {
             Project project,
             OutputHandler outputHandler,
             GeneratorContext generatorContext) throws Exception {
-        List<String> features = new ArrayList<>(generatorContext.getFeatures().size())
-        features.addAll(generatorContext.getFeatures())
-        features.sort(Comparator.comparing(Function.identity()))
-
-        // what is recorded is what the application has: a default gives way to the features
-        Options recorded = generatorContext.getApplicationOptions()
-        generatorContext.addTemplate('grailsCli',
-                new GspTemplate('grails-forge-cli.yml',
-                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: recorded.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: recorded.getGormImpl(), servletImpl: recorded.getServletImpl(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext),
-                                                              excludedFeatures: generatorContext.getExcludedFeatures()])))
-
         if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {
             // what the features add was made for the project of the context, its name in it
             throw new IllegalArgumentException("The application ${project.getName()} in ${project.getPackageName()} cannot be generated " +
@@ -244,19 +225,5 @@ class DefaultProjectGenerator implements ProjectGenerator {
 
         FeatureContext featureContext = contextFactory.createFeatureContext(availableFeatures, selectedFeatures, applicationType, options, operatingSystem, excludedFeatures)
         return contextFactory.createGeneratorContext(project, featureContext, consoleOutput)
-    }
-
-    /**
-     * The published jars the packs of the application were read from, in the order of their names, which
-     * are written next to the features so that it can be seen later what the application was made with.
-     */
-    private static List<PackArtifact> packArtifacts(GeneratorContext generatorContext) {
-        List<PackArtifact> artifacts = []
-        for (Feature feature : generatorContext.getFeatures().getFeatures()) {
-            if (feature instanceof PackFeature && ((PackFeature) feature).getPack().getArtifact() != null) {
-                artifacts << ((PackFeature) feature).getPack().getArtifact()
-            }
-        }
-        return artifacts.sort { PackArtifact artifact -> artifact.name }
     }
 }

@@ -861,7 +861,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         said.size() >= 1
         said.every { it.startsWith('| Error Cannot write ') && it.endsWith(": ${link} is a link, and a file of the project is not written through a link") }
         !said.any { it.contains(dir.name) || it.contains(outside.name) }
-        dir.list().sort() == ([link.split('/')[0], '.grails', 'elsewhere', 'grails-forge-cli.yml'] as Set).sort()
+        dir.list().sort() == ([link.split('/')[0], '.grails', 'elsewhere'] as Set).sort()
 
         when: 'the link leads to a directory of the project'
         out.reset()
@@ -1496,7 +1496,6 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 copy.bytes = each.bytes
             }
         }
-        new File(dir, 'grails-forge-cli.yml').bytes = new File(record, 'grails-forge-cli.yml').bytes
     }
 
     private void template(String location, String source) {

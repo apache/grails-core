@@ -193,9 +193,10 @@ class CodeGenConfig {
         void recordNotUsed()
     }
 
-    // The two records are written together and say the same. When grails-forge-cli.yml was changed by
-    // hand, which changed what the commands did before there was a state, the change is not followed
-    // any more, and is not passed over in silence either
+    // A project has grails-forge-cli.yml beside its state when a version that wrote both generated it,
+    // or when the file was put there. When it does not say what the state says, as after a change by
+    // hand, which changed what the commands did before there was a state, it is not followed, and is
+    // not passed over in silence either
     private static void warnOfAnotherRecord(ForgeContext beanContext, File directory, CodeGenConfig config, ConsoleOutput consoleOutput) {
         File record = new File(directory, ProjectState.EARLIER_RECORD)
         if (!record.isFile() || record.length() > MAX_EARLIER_RECORD) {

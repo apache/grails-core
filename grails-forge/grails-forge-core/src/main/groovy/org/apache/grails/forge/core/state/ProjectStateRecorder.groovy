@@ -58,8 +58,9 @@ import java.nio.file.attribute.BasicFileAttributes
  * <p>The baseline holds what the generator rendered. A file that is not written because the directory
  * already has one of its name, as {@code --inplace} allows, is in the baseline as the generator would
  * have written it: the file that is there is to the baseline what a file the user changed is.
- * {@code grails-forge-cli.yml}, the earlier record of the features, is written and is no part of the
- * baseline.</p>
+ * {@code grails-forge-cli.yml}, the record of the features of earlier versions, is not written, and
+ * no feature writes a file of its name: the command line reads one as the record of a project that
+ * has no state.</p>
  *
  * <p>The manifest is written last. A directory that has other files of the state and no manifest was
  * not generated to the end: generating into it again replaces what is there.</p>
@@ -127,6 +128,9 @@ final class ProjectStateRecorder {
             if (ProjectState.isStatePath(path)) {
                 throw new IllegalArgumentException("The features write the file ${path}, and ${ProjectState.DIRECTORY} is where the state of the project is kept")
             }
+            if (BaselineIndex.folded(path) == ProjectState.EARLIER_RECORD || BaselineIndex.folded(path) == 'grails-cli.yml') {
+                throw new IllegalArgumentException("The features write the file ${path}, which the command line reads as the record of a project of an earlier version")
+            }
             if (!BaselineIndex.isBaselinePath(path)) {
                 throw new IllegalArgumentException("The features write the file ${path}, which is not a path the state of the project can name")
             }
@@ -188,14 +192,12 @@ final class ProjectStateRecorder {
         // a template that is not said to be binary can still be an image: what is not text is never
         // read as text, whatever the template says
         Rendered rendered = new Rendered(path(template), content, template.isBinary() || !StateYaml.isText(content), template.isExecutable())
-        if (rendered.path != ProjectState.EARLIER_RECORD) {
-            size += content.length
-            if (content.length > StateLimits.MAX_BASELINE_FILE || size > StateLimits.MAX_BASELINE) {
-                throw new IllegalArgumentException("The file ${rendered.path} has ${content.length} bytes, and a file of the baseline of a project can have " +
-                        "${StateLimits.MAX_BASELINE_FILE} and all of them ${StateLimits.MAX_BASELINE}")
-            }
-            files.put(rendered.path, rendered)
+        size += content.length
+        if (content.length > StateLimits.MAX_BASELINE_FILE || size > StateLimits.MAX_BASELINE) {
+            throw new IllegalArgumentException("The file ${rendered.path} has ${content.length} bytes, and a file of the baseline of a project can have " +
+                    "${StateLimits.MAX_BASELINE_FILE} and all of them ${StateLimits.MAX_BASELINE}")
         }
+        files.put(rendered.path, rendered)
         // written under the path the template has, as it was before there was a state
         return new Rendered(template.getPath(), content, template.isBinary(), rendered.executable)
     }

@@ -144,9 +144,11 @@ class CodeGenConfigEarlierRecordSpec extends CommandSpec implements CommandFixtu
         !out.toString().contains('create-controller')
     }
 
-    void "a project whose state is refused goes by its earlier record when that is one Forge wrote"() {
-        given:
+    void "a project whose state is refused goes by the earlier record it has beside it"() {
+        given: 'a generated project, which has no earlier record, and one put beside its state'
         generateProject(ApplicationType.WEB)
+        assert !new File(dir, 'grails-forge-cli.yml').exists()
+        new File(dir, 'grails-forge-cli.yml').setText(RECORD, 'UTF-8')
         new File(dir, '.grails/forge.lock.yml').append('\n', 'UTF-8')
 
         when:

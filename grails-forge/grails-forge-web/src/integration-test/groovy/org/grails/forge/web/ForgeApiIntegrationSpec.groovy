@@ -220,13 +220,12 @@ class ForgeApiIntegrationSpec extends Specification {
         and: 'the lock ends with the digest of itself'
         lock.endsWith("seal:\n  sha256: ${sha256(lock.substring(0, lock.lastIndexOf('seal:\n')).getBytes('UTF-8'))}\n")
 
-        and: 'the baseline is the files of the application but its earlier record, each once, and not the state; no copy is a file Git reads'
-        application.contains('grails-forge-cli.yml')
+        and: 'the baseline is the files of the application, each once, and not the state; no copy is a file Git reads, and the record of earlier versions is not written'
+        !application.contains('grails-forge-cli.yml')
         entries.findAll { it.startsWith('.grails/') }.toSorted() ==
                 (['.grails/project.yml', '.grails/forge.lock.yml', '.grails/baseline/index.yml', '.grails/.gitattributes', '.grails/.gitignore'] +
-                        (application - 'grails-forge-cli.yml').collect { '.grails/baseline/files/' + (it in ['.gitignore', '.gitattributes'] ? it + '.baseline' : it) }).toSorted()
-        (application - 'grails-forge-cli.yml').every { index.contains("- path: ${it}\n") }
-        !index.contains('grails-forge-cli.yml')
+                        application.collect { '.grails/baseline/files/' + (it in ['.gitignore', '.gitattributes'] ? it + '.baseline' : it) }).toSorted()
+        application.every { index.contains("- path: ${it}\n") }
         index.contains("- path: build.gradle\n  sha256: ${sha256(zipText(zip, 'forge-state/build.gradle').getBytes('UTF-8'))}\n  kind: text\n  executable: false\n")
         index.contains("- path: gradlew\n  sha256: ${sha256(zipText(zip, 'forge-state/gradlew').getBytes('UTF-8'))}\n  kind: binary\n  executable: true\n")
         zipText(zip, 'forge-state/.grails/baseline/files/build.gradle') == zipText(zip, 'forge-state/build.gradle')
@@ -715,14 +714,14 @@ class ForgeApiIntegrationSpec extends Specification {
         (contents['.grails/project.yml'] as String).contains('  data: hibernate7\n')
         (contents['.grails/forge.lock.yml'] as String).contains('- name: gorm-hibernate7\n')
         !(contents['.grails/forge.lock.yml'] as String).contains('- name: gorm-hibernate5\n')
-        (contents['grails-forge-cli.yml'] as String).contains('gormImpl: gorm-hibernate7\n')
+        !contents.containsKey('grails-forge-cli.yml')
 
         when: 'a plugin, with every option as the UI sends it'
         Map plugin = json(get('/preview/plugin/com.example.forge-ui?gorm=hibernate5&servlet=TOMCAT&reloading=DEVTOOLS')).contents as Map
 
         then: 'is recorded without a servlet container, which it has not'
         (plugin['.grails/project.yml'] as String).contains('  servlet: none\n')
-        (plugin['grails-forge-cli.yml'] as String).contains('servletImpl: NONE\n')
+        (plugin['.grails/forge.lock.yml'] as String).contains('  servlet: none\n')
     }
 
     void "the state of a project names the options the application has, where one was not given"() {
@@ -731,14 +730,14 @@ class ForgeApiIntegrationSpec extends Specification {
 
         then:
         (contents['.grails/project.yml'] as String).contains('  data: hibernate7\n')
-        (contents['grails-forge-cli.yml'] as String).contains('gormImpl: gorm-hibernate7\n')
+        (contents['.grails/forge.lock.yml'] as String).contains('  data: hibernate7\n')
 
         when:
         Map micronaut = json(get('/preview/web/com.example.forge-options?javaVersion=JDK_25&features=grails-micronaut')).contents as Map
 
         then:
         (micronaut['.grails/project.yml'] as String).contains('  reloading: none\n')
-        (micronaut['grails-forge-cli.yml'] as String).contains('reloading: none\n')
+        (micronaut['.grails/forge.lock.yml'] as String).contains('  reloading: none\n')
     }
 
     void 'a feature name that is no feature is shown in one bounded line: #name'() {

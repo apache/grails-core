@@ -631,7 +631,7 @@ The jar has to be a plain jar, as Gradle, Maven and the `jar` tool of the JDK wr
 
 A jar can have 64 MiB, the names of its entries 4 MiB together, and its entries 256 MiB together when they are not compressed. A signed jar is read as any other, with the entries of its signature.
 
-The signature of a signed jar is not verified. The coordinates, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features, and with them the repository when it is an `https` address. A directory is not written, since its path names your computer.
+The signature of a signed jar is not verified. The coordinates, the version and the SHA-256 of each such pack are written to `.grails/forge.lock.yml` of the application, with the feature of the pack in the list of its features, and with them the repository when it is an `https` address. The name of the file is not written; for a snapshot the SHA-256 is what tells one build from another. A directory is not written, since its path names your computer.
 
 ===== Selecting the Feature of a Plugin by Its Name
 

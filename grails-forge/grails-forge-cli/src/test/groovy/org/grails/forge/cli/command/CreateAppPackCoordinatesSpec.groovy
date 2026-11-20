@@ -30,7 +30,6 @@ import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.GrailsPicocliFactory
-import org.yaml.snakeyaml.Yaml
 import picocli.CommandLine
 import spock.lang.Unroll
 
@@ -84,10 +83,12 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
         new File(dir, 'shop/grails-app/conf/com/example/audit.txt').text == 'kept as it is'
 
-        and: 'what the application was made with is written next to its features, where the commands of the application still read them'
-        Map config = new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map
-        (config.features as List).containsAll(['acme-audit', 'h2'])
-        config.featurePacks == [[name: 'acme-audit', coordinates: COORDINATES, artifact: 'acme-audit-grails-2.3.0.jar', sha256: sha256(jar)]]
+        and: 'what the application was made with is in the lock of its state, with its features, where the commands of the application read them'
+        String lock = new File(dir, 'shop/.grails/forge.lock.yml').text
+        lock.contains('- name: acme-audit\n  source: pack\n')
+        lock.contains("  coordinates: com.acme:acme-audit-grails\n  version: 2.3.0\n  sha256: ${sha256(jar)}\n")
+        lock.contains('- name: h2\n')
+        !new File(dir, 'shop/grails-forge-cli.yml').exists()
 
         and: 'no file of the application, its state among them, says where on this computer the pack was taken from'
         List<String> places = [repository.absolutePath, repository.canonicalPath, address, new File(System.getProperty('java.io.tmpdir')).canonicalPath]
@@ -441,9 +442,8 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 0
         out.toString().contains("Feature pack acme-audit from com.acme:acme-audit-grails:2.4.0-SNAPSHOT (${address}), sha256 ${sha256(jar)}")
-        Map config = new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map
-        (config.featurePacks as List<Map>)[0].artifact == 'acme-audit-grails-2.4.0-20261119.101112-7.jar'
-        (config.featurePacks as List<Map>)[0].coordinates == 'com.acme:acme-audit-grails:2.4.0-SNAPSHOT'
+        // the lock names the snapshot and the digest of the build that was taken, which is the latest and not the older one
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("  coordinates: com.acme:acme-audit-grails\n  version: 2.4.0-SNAPSHOT\n  sha256: ${sha256(jar)}\n")
 
         where:
         metadata << [
@@ -602,7 +602,8 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         and: 'the password is said nowhere'
         !out.toString().contains('secret')
         !err.toString().contains('secret')
-        !new File(dir, 'shop/grails-forge-cli.yml').text.contains('secret')
+        !new File(dir, 'shop/.grails/forge.lock.yml').text.contains('secret')
+        !new File(dir, 'shop/.grails/project.yml').text.contains('secret')
     }
 
     @Unroll
@@ -666,7 +667,7 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
 
         then:
         exit == 0
-        (new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map).featurePacks[0].artifact == 'acme-audit-grails-2.4.0-20261119.101112-10.jar'
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("  version: 2.4.0-SNAPSHOT\n  sha256: ${sha256(jar)}\n")
     }
 
     @Unroll

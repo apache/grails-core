@@ -17,42 +17,54 @@
  *  under the License.
  */
 
-package org.grails.forge.feature.grailsProfiles
+package org.grails.forge.feature.grails
 
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
-import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
-import org.grails.forge.options.TestFramework
 import spock.lang.Unroll
 
-class GrailsProfilesSpec extends ApplicationContextSpec implements CommandOutputFixture {
+class GrailsProjectSettingsSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Unroll
-    void "test profile dependency is present for #applicationType application"() {
+    void "the build of a #applicationType application has no profile"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
-        output.containsKey("build.gradle")
-        def build = output.get("build.gradle")
-        build.contains("profile \"org.apache.grails.profiles:${applicationType.name.replace("_", "-")}\"")
+        output.containsKey('build.gradle')
+        !output.get('build.gradle').contains('org.apache.grails.profiles')
+        !(output.get('build.gradle') =~ /(?m)^\s*profile\b/).find()
 
         where:
         applicationType << ApplicationType.values().toList()
     }
 
-    void "test config"() {
+    @Unroll
+    void "the configuration of a #applicationType application has its default package and the name of its type"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
-        output.containsKey("grails-app/conf/application.yml")
-        def build = output.get("grails-app/conf/application.yml")
-        build.contains("defaultPackage")
-        build.contains("profile")
+        String configuration = output.get('grails-app/conf/application.yml')
+        configuration.contains("\n  codegen:\n    defaultPackage: example.grails\n  profile: ${applicationType.name.replace('_', '-')}\n")
+
+        where:
+        applicationType << ApplicationType.values().toList()
+    }
+
+    @Unroll
+    void "a #applicationType application has no record but the state under .grails"() {
+        when:
+        def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
+
+        then:
+        !output.containsKey('grails-forge-cli.yml')
+        output.containsKey('.grails/project.yml')
+        output.get('.grails/forge.lock.yml').contains('- name: grails-project-settings\n')
+        !output.get('.grails/forge.lock.yml').contains('grails-profiles')
 
         where:
         applicationType << ApplicationType.values().toList()

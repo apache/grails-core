@@ -71,7 +71,7 @@ class CreateAppFeaturePackSpec extends CommandSpec implements CommandFixture {
         and:
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
         new File(dir, 'shop/grails-app/conf/com/example/audit.txt').text == 'kept as it is'
-        new File(dir, 'shop/grails-forge-cli.yml').text.contains('acme-audit')
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains('- name: acme-audit\n  source: pack\n')
     }
 
     void "an application is created with the feature of a pack in the jar of a plugin"() {

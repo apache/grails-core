@@ -115,7 +115,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         output['README.md'].contains('https://acme.example/docs')
 
         and: 'its name among the features of the application'
-        output['grails-forge-cli.yml'].contains('acme-audit')
+        output['.grails/forge.lock.yml'].contains('- name: acme-audit\n  source: pack\n')
     }
 
     void "a readme of one line is a paragraph of its own"() {
@@ -604,8 +604,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
 
         then: 'no file of the application or of its state has the directory of this machine'
         output.findAll { String path, String content -> content != null && (content.contains('someone') || content.contains(directory.toString())) }.keySet().isEmpty()
-        output['grails-forge-cli.yml'].contains("coordinates: 'com.acme:acme-audit-grails:2.3.0'\n    repository: 'https://repo.acme.example/maven/'\n")
-        output['grails-forge-cli.yml'].contains("coordinates: 'com.acme:acme-base:1.0-SNAPSHOT'\n    artifact: 'acme-base-1.0-SNAPSHOT.jar'\n")
+        !output.containsKey('grails-forge-cli.yml')
 
         and:
         lock.contains("- name: acme-audit\n  source: pack\n  origin: https://repo.acme.example/maven/\n  coordinates: com.acme:acme-audit-grails\n" +
@@ -636,7 +635,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         output['build.gradle'].contains('grails-data-hibernate5-dbmigration')
         output['build.gradle'].contains('implementation "com.acme:acme-base"')
         output.containsKey('grails-app/migrations/.gitkeep')
-        ['acme-audit', 'acme-base', 'database-migration'].every { output['grails-forge-cli.yml'].contains(it) }
+        ['acme-audit', 'acme-base', 'database-migration'].every { output['.grails/forge.lock.yml'].contains("- name: ${it}\n") }
     }
 
     @Unroll
@@ -958,7 +957,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         then:
         output['build.gradle'].contains('org.postgresql:postgresql')
         !output['build.gradle'].contains('com.h2database')
-        output['grails-forge-cli.yml'].contains('postgres')
+        output['.grails/forge.lock.yml'].contains('- name: postgres\n')
     }
 
     void "what a pack requires through another pack is selected before the defaults too"() {

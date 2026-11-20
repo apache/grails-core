@@ -16,31 +16,41 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-package org.grails.forge.feature.grailsProfiles
+package org.grails.forge.feature.grails
 
 import groovy.transform.CompileStatic
 import org.springframework.stereotype.Component
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.generator.GeneratorContext
-import org.grails.forge.build.dependencies.Dependency
-import org.grails.forge.build.dependencies.Scope
 import org.grails.forge.feature.Category
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.options.Options
 
+/**
+ * The settings of the configuration of every application that say what the application is: the
+ * package its classes are created in when none is given, which the framework reads when it runs,
+ * and the name of its type.
+ *
+ * <p>The name of the type is still written as {@code grails.profile}, although no profile is part of
+ * the build of the application any more: the framework makes it an active Spring profile, {@code web}
+ * when there is none, so an application without it would run with another Spring profile than it
+ * does now. The setting goes when the framework stops reading it.</p>
+ */
 @Component
 @CompileStatic
-class GrailsProfiles implements DefaultFeature {
+class GrailsProjectSettings implements DefaultFeature {
 
     @Override
     boolean shouldApply(ApplicationType applicationType, Options options, Set<Feature> selectedFeatures) {
         return true
     }
 
+    // the name is one that is applied where grails-profiles was, between the features whose names are
+    // around it: the settings of an application are written in the order its features are applied
     @Override
     String getName() {
-        return 'grails-profiles'
+        return 'grails-project-settings'
     }
 
     @Override
@@ -55,21 +65,9 @@ class GrailsProfiles implements DefaultFeature {
 
     @Override
     void apply(GeneratorContext generatorContext) {
-
         final Map<String, Object> config = generatorContext.getConfiguration()
-        // Required by profile commands when package is not set
         config.put('grails.codegen.defaultPackage', generatorContext.getProject().getPackageName())
-
-        ApplicationType applicationType = generatorContext.getApplicationType()
-
-        String profile = applicationType.getName().replace('_', '-')
-
-        config.put('grails.profile', profile)
-
-        generatorContext.addDependency(Dependency.builder()
-                .groupId('org.apache.grails.profiles')
-                .artifactId(profile)
-                .scope(Scope.PROFILE))
+        config.put('grails.profile', generatorContext.getApplicationType().getName().replace('_', '-'))
     }
 
     @Override

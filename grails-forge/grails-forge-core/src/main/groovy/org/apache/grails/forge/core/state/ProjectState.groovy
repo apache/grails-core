@@ -90,8 +90,8 @@ final class ProjectState {
     public static final String BASELINE = '.grails/baseline'
 
     /**
-     * The record of the features of an application that was written before there was a state, and
-     * still is, for the tools that read it. It is no part of the baseline.
+     * The record of the features of an application that earlier versions wrote. It is read for a
+     * project that has no state, and is not written.
      */
     public static final String EARLIER_RECORD = 'grails-forge-cli.yml'
 

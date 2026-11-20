@@ -172,7 +172,7 @@ tasks.named('processResources', ProcessResources).configure { ProcessResources t
     task.excludes = task.excludes.findAll { String pattern -> pattern != '**/*.gsp' }
 }
 
-// profile base
+// the Grails wrapper every generated application gets
 TaskProvider<Sync> copyGrailsWrapper = tasks.register('copyGrailsWrapper', Sync)
 copyGrailsWrapper.configure { Sync it ->
     it.dependsOn(gradle.includedBuild('grails-core').task(':grails-wrapper:installDist'))

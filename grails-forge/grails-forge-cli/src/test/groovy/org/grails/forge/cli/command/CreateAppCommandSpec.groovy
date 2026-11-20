@@ -85,11 +85,10 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         state.manifest.requestedFeatures*.name == ['grails-quartz', 'properties']
         state.lock.featureNames.containsAll(['grails-quartz', 'properties', 'spock', 'spring-boot-starter-jetty'])
         state.baseline.files*.path.containsAll(['build.gradle', 'gradlew', 'grails-app/conf/application.properties'])
-        !state.baseline.files*.path.contains('grails-forge-cli.yml')
+        !new File(shop, 'grails-forge-cli.yml').exists()
         !state.baseline.files*.path.any { it.startsWith('.grails') }
 
-        when: 'the old record of the project is gone'
-        assert new File(shop, 'grails-forge-cli.yml').delete()
+        when: 'the project has no record but its state'
         CodeGenConfig config = CodeGenConfig.load(beanContext, shop, ConsoleOutput.NOOP)
 
         then:

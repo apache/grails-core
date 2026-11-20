@@ -96,7 +96,7 @@ class BundledPackGoldenSpec extends ApplicationContextSpec implements CommandOut
             Map<String, String> with = generate(type, [name])
             // the record of the features of the application changes with every feature the framework gains,
             // and the state under .grails repeats it and every file of the application
-            with.keySet().findAll { it != 'grails-forge-cli.yml' && !ProjectState.isStatePath(it) }.toSorted().each { String path ->
+            with.keySet().findAll { !ProjectState.isStatePath(it) }.toSorted().each { String path ->
                 List<String> before = (without[path] ?: '').readLines()
                 List<String> added = []
                 (with[path] ?: '').readLines().each { String line ->

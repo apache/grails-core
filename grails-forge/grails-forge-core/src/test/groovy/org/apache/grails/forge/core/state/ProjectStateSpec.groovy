@@ -108,10 +108,9 @@ class ProjectStateSpec extends ApplicationContextSpec {
         state.lock.manifestSha256 == sha256(project.resolve('.grails/project.yml').toFile().bytes)
         state.lock.baselineIndexSha256 == sha256(project.resolve('.grails/baseline/index.yml').toFile().bytes)
 
-        and: 'the baseline is every file of the application but its earlier record, and nothing of the state'
+        and: 'the baseline is every file of the application, and nothing of the state; the record of earlier versions is not written'
         state.baseline.files*.path == applicationFiles(project)
-        project.resolve('grails-forge-cli.yml').toFile().file
-        !state.baseline.files*.path.contains('grails-forge-cli.yml')
+        !project.resolve('grails-forge-cli.yml').toFile().exists()
         state.baseline.files.every { BaselineFile file ->
             file.sha256 == sha256(project.resolve(file.path).toFile().bytes) &&
                     project.resolve('.grails/baseline/files').resolve(BaselineIndex.copyPath(file.path)).toFile().bytes == project.resolve(file.path).toFile().bytes &&
@@ -323,6 +322,26 @@ class ProjectStateSpec extends ApplicationContextSpec {
         IllegalArgumentException e = thrown()
         e.message == 'The features write the file .grails/cache/audit.txt, and .grails is where the state of the project is kept'
         output.project.isEmpty()
+    }
+
+    void "a feature cannot write the record of an earlier version (#path)"() {
+        given:
+        Pack pack = pack('acme-audit', path)
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('com.acme.shop')
+        MapOutputHandler output = new MapOutputHandler()
+
+        when:
+        generator.generate(ApplicationType.WEB, project, output, generator.createGeneratorContext(ApplicationType.WEB, project,
+                new Options(), OperatingSystem.LINUX, ['acme-audit'], ConsoleOutput.NOOP, [pack]))
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The features write the file ${path}, which the command line reads as the record of a project of an earlier version"
+        output.project.isEmpty()
+
+        where:
+        path << ['grails-forge-cli.yml', 'Grails-Forge-CLI.yml', 'grails-cli.yml']
     }
 
     void "a file that is already there is kept, and the baseline has what the generator would have written"() {
@@ -1389,9 +1408,9 @@ class ProjectStateSpec extends ApplicationContextSpec {
         return new PackLoader().fromDirectory(packDirectory)
     }
 
-    // the files the baseline has: those of the application but the record that was written before there was a state
+    // the files the baseline has: those of the application
     private static List<String> applicationFiles(Path project) {
-        return files(project).findAll { !ProjectState.isStatePath(it) && it != 'grails-forge-cli.yml' }
+        return files(project).findAll { !ProjectState.isStatePath(it) }
     }
 
     // a lock that was changed, with the digest of what it now is at its end, as a tool that wrote it would have it

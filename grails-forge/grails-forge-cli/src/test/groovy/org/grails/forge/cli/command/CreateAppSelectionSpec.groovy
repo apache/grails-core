@@ -61,9 +61,8 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         buildGradle.contains('spock')
 
         and:
-        List<String> record = new File(dir, 'shop/grails-forge-cli.yml').readLines()
-        record.last() == 'excludedFeatures: [mockito, scaffolding]'
-        !record.find { it.startsWith('features:') }.contains('mockito')
+        new File(dir, 'shop/.grails/project.yml').text.contains('excludedFeatures:\n- name: mockito\n- name: scaffolding\n')
+        !new File(dir, 'shop/.grails/forge.lock.yml').text.contains('- name: mockito\n')
 
         and: 'which the commands of the application read back'
         CodeGenConfig config = CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP)
@@ -79,7 +78,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 0
         new File(dir, 'shop/build.gradle').text.contains('mockito')
-        !new File(dir, 'shop/grails-forge-cli.yml').text.contains('excludedFeatures')
+        new File(dir, 'shop/.grails/project.yml').text.contains('excludedFeatures: []\n')
         CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == []
     }
 
@@ -89,7 +88,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        new File(dir, 'api/grails-forge-cli.yml').readLines().last() == 'excludedFeatures: [mockito, spock]'
+        new File(dir, 'api/.grails/project.yml').text.contains('excludedFeatures:\n- name: mockito\n- name: spock\n')
     }
 
     @Unroll
@@ -188,14 +187,14 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
         then:
         given == 0
-        new File(dir, 'shop/grails-forge-cli.yml').text.contains("${recorded}\n")
+        new File(dir, 'shop/.grails/project.yml').text.contains("${recorded}\n")
         CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).features.contains(required)
         !CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).features.contains(notThere)
 
         where:
         option        | required                    || recorded                                 | notThere
-        '--servlet'   | 'spring-boot-starter-jetty' || 'servletImpl: spring-boot-starter-jetty' | 'spring-boot-starter-tomcat'
-        '--reloading' | 'jrebel'                    || 'reloading: jrebel'                      | 'spring-boot-devtools'
+        '--servlet'   | 'spring-boot-starter-jetty' || '  servlet: jetty'                         | 'spring-boot-starter-tomcat'
+        '--reloading' | 'jrebel'                    || '  reloading: jrebel'                      | 'spring-boot-devtools'
     }
 
     @Unroll
@@ -205,13 +204,8 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        List<String> record = new File(dir, 'shop/grails-forge-cli.yml').readLines()
-        record.contains("gormImpl: ${gorm}".toString())
-        record.contains("reloading: ${reloading}".toString())
-        record.contains('servletImpl: spring-boot-starter-tomcat')
-
-        and:
         ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
+        state.manifest.options.servlet.name == 'spring-boot-starter-tomcat'
         state.manifest.options.data.name == gorm
         state.manifest.options.reloading.name == reloading
         state.lock.featureNames.contains(gorm)
@@ -330,10 +324,10 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         state.manifest.requestedFeatures.empty
         !state.lock.featureNames.contains('mockito')
 
-        when: 'the older record says something else: the state is what is read'
+        when: 'a record as earlier versions wrote it says something else: the state is what is read'
         File record = new File(dir, 'shop/grails-forge-cli.yml')
         String manifest = new File(dir, 'shop/.grails/project.yml').text
-        Files.writeString(record.toPath(), record.text.replace('excludedFeatures: [mockito, scaffolding]', 'excludedFeatures: [spock]'))
+        Files.writeString(record.toPath(), 'applicationType: web\ndefaultPackage: com.example\nfeatures: [h2]\nexcludedFeatures: [spock]\n')
 
         then:
         CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).excludedFeatures == ['mockito', 'scaffolding']
@@ -491,7 +485,6 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 0
-        new File(dir, 'shop/grails-forge-cli.yml').text.contains('servletImpl: NONE\n')
         ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
         state.manifest.options.servlet.name() == 'NONE'
         state.lock.options.servlet.name() == 'NONE'

@@ -89,7 +89,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
 
         then:
         output['build.gradle'].count('implementation "com.acme:acme-base"') == 1
-        output['grails-forge-cli.yml'].count('acme-base') == 1
+        output['.grails/forge.lock.yml'].count('- name: acme-base\n') == 1
 
         and: 'however the four are named'
         application(output) == application(generate(['acme-right', 'acme-base', 'acme-top', 'acme-left'], packs))
@@ -228,7 +228,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
 
         and: 'the application is generated, and says what was excluded'
         Map<String, String> output = generate([], [], type, excluded)
-        output['grails-forge-cli.yml'].endsWith("]\nexcludedFeatures: ${excluded.toSorted()}\n")
+        output['.grails/project.yml'].contains("excludedFeatures:\n${excluded.toSorted().collect { "- name: ${it}\n" }.join('')}")
 
         where:
         type                     | excluded                                        || alsoLeftOut
@@ -244,13 +244,11 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
 
     void "an application without excluded features is what it was and says nothing of them"() {
         when:
-        String record = generate([], [])['grails-forge-cli.yml']
+        Map<String, String> output = generate([], [])
 
         then:
-        !record.contains('excludedFeatures')
-        record.readLines().last().startsWith('features: [')
-        record.endsWith(']\n')
-        !record.endsWith('\n\n')
+        output['.grails/project.yml'].contains('excludedFeatures: []\n')
+        !output.containsKey('grails-forge-cli.yml')
         context([], []).excludedFeatures == []
     }
 
@@ -260,9 +258,9 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         Map<String, String> without = generate([], [])
 
         then:
-        with['grails-forge-cli.yml'] == without['grails-forge-cli.yml'] + 'excludedFeatures: [postgres]\n'
-        with.findAll { !it.key.startsWith('.grails/') && it.key != 'grails-forge-cli.yml' } ==
-                without.findAll { !it.key.startsWith('.grails/') && it.key != 'grails-forge-cli.yml' }
+        with['.grails/project.yml'] == without['.grails/project.yml'].replace('excludedFeatures: []\n', 'excludedFeatures:\n- name: postgres\n')
+        with['.grails/project.yml'] != without['.grails/project.yml']
+        with.findAll { !it.key.startsWith('.grails/') } == without.findAll { !it.key.startsWith('.grails/') }
         with.keySet() == without.keySet()
     }
 
@@ -367,8 +365,8 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         output == null || output.keySet().containsAll(['build.gradle', 'gradle.properties', 'grails-app/conf/application.yml', 'grails-app/init/example/grails/Application.groovy'])
 
         and: 'and is recorded as what it is'
-        output == null || featuresOf(output).contains((output['grails-forge-cli.yml'] =~ /(?m)^gormImpl: (.+)$/)[0][1])
-        output == null || output['grails-forge-cli.yml'].contains("excludedFeatures: [${name}]")
+        output == null || featuresOf(output).contains('gorm-' + (output['.grails/project.yml'] =~ /(?m)^  data: (.+)$/)[0][1])
+        output == null || output['.grails/project.yml'].contains("excludedFeatures:\n- name: ${name}\n")
 
         where:
         [type, name] << ApplicationType.values().toList().collectMany { ApplicationType each ->
@@ -433,7 +431,6 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         then:
         featuresOf(output).contains('gorm-hibernate7')
         !featuresOf(output).contains('gorm-hibernate5')
-        output['grails-forge-cli.yml'].contains('gormImpl: gorm-hibernate7\n')
         output['.grails/project.yml'].contains('  data: hibernate7\n')
     }
 
@@ -671,7 +668,6 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         then:
         context.applicationOptions.servletImpl == servlet
         context.features.contains('spring-boot-starter-tomcat') == (servlet == ServletImpl.TOMCAT)
-        output['grails-forge-cli.yml'].contains("servletImpl: ${servlet.name}\n")
         output['.grails/project.yml'].contains("  servlet: ${servlet.name().toLowerCase()}\n")
         output['.grails/forge.lock.yml'].contains("  servlet: ${servlet.name().toLowerCase()}\n")
         featuresOf(output).contains(context.applicationOptions.gormImpl.name)
@@ -820,7 +816,8 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
     }
 
     private static List<String> featuresOf(Map<String, String> output) {
-        return ((output['grails-forge-cli.yml'] =~ /(?m)^features: \[(.*)\]$/)[0][1] as String).split(', ').toList()
+        // the lock names every feature of the application
+        return (output['.grails/forge.lock.yml'] =~ /(?m)^- name: (.+)$/).collect { List<String> match -> match[1] }
     }
 
     // the lines of a build file that apply a Gradle plugin of Grails

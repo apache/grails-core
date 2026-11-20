@@ -87,13 +87,22 @@ class CodeGenConfigProjectStateSpec extends Specification {
                              'the commands go by .grails, the record of how the project was generated']
     }
 
-    void "the two records of a project say the same when it is generated, and a change to the earlier one by hand is said"() {
+    void "a generated project has no earlier record, and one beside its state that says something else is said"() {
         given:
         generate()
         Path earlier = tempDir.resolve('grails-forge-cli.yml')
 
         when:
         CodeGenConfig config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
+
+        then:
+        !Files.exists(earlier)
+        config.defaultPackage == 'com.example'
+        warnings.empty
+
+        when: 'a record as earlier versions wrote it says what the state says'
+        Files.writeString(earlier, "applicationType: ${ApplicationType.REST_API.name}\ndefaultPackage: com.example\nfeatures: [${config.features.join(', ')}]\n".toString())
+        config = CodeGenConfig.load(beanContext, tempDir.toFile(), console)
 
         then:
         config.defaultPackage == 'com.example'
@@ -151,7 +160,6 @@ class CodeGenConfigProjectStateSpec extends Specification {
     void "state that cannot be used and no grails-forge-cli.yml give no configuration"() {
         given:
         generate()
-        Files.delete(tempDir.resolve('grails-forge-cli.yml'))
         Files.delete(tempDir.resolve('.grails/baseline/index.yml'))
 
         when:

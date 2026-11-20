@@ -24,7 +24,6 @@ The default dependencies for the Grails Web application can be seen below:
 [source,groovy]
 ----
 dependencies {
-    profile "org.apache.grails.profiles:web"
     testAndDevelopmentOnly "org.webjars.npm:bootstrap"
     testAndDevelopmentOnly "org.webjars.npm:bootstrap-icons"
     testAndDevelopmentOnly "org.webjars.npm:jquery"

@@ -30,7 +30,6 @@ import org.grails.forge.options.DevelopmentReloading
 enum GradleConfiguration implements Ordered {
 
     CLASSPATH('classpath', -2),
-    PROFILE('profile', -1),
     BUILD('implementation', 0),
     ANNOTATION_PROCESSOR('annotationProcessor', 1),
     KAPT('kapt', 2),
@@ -109,9 +108,6 @@ enum GradleConfiguration implements Ordered {
                 }
                 if (scope.getPhases().contains(Phase.OPENREWRITE)) {
                     return Optional.of(GradleConfiguration.OPENREWRITE)
-                }
-                if (scope.getPhases().contains(Phase.PROFILE)) {
-                    return Optional.of(GradleConfiguration.PROFILE)
                 }
                 if (scope.getPhases().contains(Phase.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES)) {
                     return Optional.of(GradleConfiguration.INTEGRATION_TEST_IMPLEMENTATION_TEST_FIXTURES)
