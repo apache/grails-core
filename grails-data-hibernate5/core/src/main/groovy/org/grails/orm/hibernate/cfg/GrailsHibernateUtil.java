@@ -343,7 +343,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * Applies the join type that a criteria query requests for an association, with the {@code fetch}
      * argument or with {@code join(String, JoinType)}. The association is fetched, as it is for the
      * {@code 'join'} fetch mode. A fetch mode alone always joins with an outer join, so a join type
-     * other than a left join is applied by joining each association on the path that the criteria do
+     * is applied by joining each to-one association on the path that the criteria do
      * not join already; one that they join keeps its join.
      * <p>
      * Hibernate fetches a collection only through a left join, and a join through a collection
@@ -393,8 +393,15 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             currentEntity = associations[i].getAssociatedEntity();
         }
         fetchAssociationsBefore(root, associationPath);
-        if (joinType == null || joinType == jakarta.persistence.criteria.JoinType.LEFT) {
+        if (joinType == null) {
             return;
+        }
+        if (joinType == jakarta.persistence.criteria.JoinType.LEFT) {
+            for (Association association : associations) {
+                if (association instanceof ToMany || association instanceof Basic) {
+                    return;
+                }
+            }
         }
 
         String[] paths = new String[tokens.length];
@@ -412,7 +419,8 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         }
 
         // the associations before a collection that the subquery joins are joined and fetched
-        JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN : JoinType.RIGHT_OUTER_JOIN;
+        JoinType lastJoinType = joinType == jakarta.persistence.criteria.JoinType.INNER ? JoinType.INNER_JOIN :
+                joinType == jakarta.persistence.criteria.JoinType.LEFT ? JoinType.LEFT_OUTER_JOIN : JoinType.RIGHT_OUTER_JOIN;
         int joinedCount = unjoinedCollection < 0 ? tokens.length : unjoinedCollection;
         String parentAlias = null;
         for (int i = 0; i < joinedCount; i++) {
@@ -504,7 +512,10 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
                 // through a left join
                 // a join that the criteria already have for the association, such as the one of a requested join
                 // type, is used for the sort as well
-                Criteria subCriteria = c instanceof CriteriaImpl ? findCriteria(c, sortHead) : null;
+                CriteriaImpl root = getRootCriteria(c);
+                String sortPath = c instanceof CriteriaImpl.Subcriteria ?
+                        getWholePath(root, (CriteriaImpl.Subcriteria) c) + '.' + sortHead : sortHead;
+                Criteria subCriteria = findCriteria(root, sortPath);
                 if (subCriteria == null) {
                     subCriteria = c.createCriteria(sortHead, property instanceof ToMany || !isLeftJoinAssociationSort(property.getOwner()) ?
                             JoinType.INNER_JOIN : JoinType.LEFT_OUTER_JOIN);

@@ -837,6 +837,22 @@ class AssociationJoinTypeSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckM
         JoinType.RIGHT || TEAMS_WITH_A_CLUB
     }
 
+    void 'a criteria sort keeps an explicitly requested left join from #request'() {
+        when:
+        final results = query.call()
+
+        then:
+        results*.name.sort() == expected
+        results.totalCount == expected.size()
+
+        where:
+        request      | query                                                                                                                          | expected
+        'fetch'      | { Team.createCriteria().list(max: 10, sort: 'club.name', fetch: [club: JoinType.LEFT]) {} }                                       | ALL_TEAMS
+        'join'       | { Team.createCriteria().list(max: 10, sort: 'club.name') { join('club', JoinType.LEFT) } }                                         | ALL_TEAMS
+        'nested fetch' | { Player.createCriteria().list(max: 10, sort: 'team.club.name', fetch: ['team.club': JoinType.LEFT]) {} }                     | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+        'nested join'  | { Player.createCriteria().list(max: 10, sort: 'team.club.name') { join('team.club', JoinType.LEFT) } }                       | ['Arsenal Player', 'Chelsea Player', 'MU Player', 'Unattached Player']
+    }
+
     void 'count and get apply an inner join that a criteria query requests'() {
         when:
         final count = Team.createCriteria().count {
