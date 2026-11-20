@@ -40,6 +40,7 @@ import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.process.ExecOperations
 import org.gradle.process.ExecResult
 import org.gradle.process.JavaExecSpec
+import org.gradle.work.DisableCachingByDefault
 
 /**
  * A task that has Forge do something with the Forge feature pack of a plugin: what the tasks that
@@ -54,6 +55,7 @@ import org.gradle.process.JavaExecSpec
  * @since 9.0
  */
 @CompileStatic
+@DisableCachingByDefault(because = 'Each task of a pack tool says for itself why its result is not kept')
 abstract class ForgePackToolTask extends DefaultTask {
 
     protected static final String SOURCE = GrailsPluginGradlePlugin.FORGE_PACK_SOURCE_DIR
