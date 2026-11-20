@@ -1926,9 +1926,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
                     }
                     LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
-                    if (logicalExpression.args.isEmpty() && requiresAssociated) {
+                    if (requiresAssociated && (logicalExpression.args.isEmpty() || explicitInnerJoin)) {
                         // a block without criteria is not a branch of the "or": it asks for an associated entity of
-                        // the entity as a whole, as the inner join it was always given did
+                        // the entity as a whole, as the inner join it was always given did. So does a block that names an
+                        // inner join: it asks for the entity as a whole, also when it sits in an "or" whose other branches
+                        // do not need the association
                         criteria.add(Restrictions.isNotNull(blockAlias + ".id"));
                     }
                     else if (requiresAssociated) {

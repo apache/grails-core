@@ -77,6 +77,26 @@ class CriteriaOrAssociationJoinTypeSpec extends Specification {
         then:
         found*.name == ['orphan']
     }
+    void 'a block that names an inner join in a second or asks for the association on the whole query'() {
+        given:
+        createParents()
+
+        when:
+        def found = JoinParent.createCriteria().list {
+            or {
+                child { eq('name', 'kid') }
+                eq('name', 'orphan')
+            }
+            or {
+                eq('name', 'orphan')
+                child(CriteriaSpecification.INNER_JOIN) { eq('name', 'kid') }
+            }
+        }
+
+        then: 'orphan has no child, and the inner join asked for one'
+        found*.name == ['with']
+    }
+
 }
 
 @Entity
