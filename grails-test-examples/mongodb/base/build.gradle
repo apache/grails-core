@@ -45,6 +45,7 @@ dependencies {
         implementation 'org.apache.grails:grails-layout'
     }
     implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-async'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'

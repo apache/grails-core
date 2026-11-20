@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors, multi-tenancy and the encoding of GSP tag attributes."
 license: Apache-2.0
 ---
 
@@ -849,38 +849,74 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 
 The guide gives no setting that restores encrypted JWTs without a signature.
 
-## GORM for Hibernate 5: Query Arguments Reach Where Queries and Dynamic Finders
+## GSP tag attributes
+
+More GSP tags HTML-encode the attribute values they write.
+
+As of 7.0.18, these tags HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did:
+
+- `<g:form>`, `<g:uploadForm>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+- `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+- `<g:actionSubmit>` and `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+- `<g:datePicker>`: `name`, `id` and `selectDateClass`.
+- `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+- `<g:select>`: the key of `noSelection`.
+- `<g:field>`: `type`.
+- `<g:withTag>`: the values of `attrs` that are not closures.
+- `<g:external>`: `uri`, and `<g:javascript>`: `src`.
+- `<g:paginate>`: `class`, on the current step.
+- `<g:sortableColumn>`: `title`, which it writes as the text of the column's link. A text from `titleKey` is written as the message source returns it.
+- `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. A value encoded with `encodeAsHTML()` before it reaches the tag is written once, and so are a value captured from a GSP body with `<g:set>` and the output of `fieldValue()`, also when a `RequestDataValueProcessor` returns the value unchanged.
+
+Search the GSP views, layouts and tag libraries for these tags. Then check:
+
+- A character reference written in the page, as in `name="a&amp;b"`, is now encoded as well. Write the character itself.
+- `<g:form>` and `<g:formActionSubmit>` build their URL from `uri`, `base`, `controller` and their other link attributes and only then encode it, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A `url` attribute that the tag writes as it is given is written once.
+- When a `RequestDataValueProcessor` changes a value, the tag encodes what the processor returns, so a value encoded beforehand is encoded twice, as `<g:textField>` already did.
+- A `title` of `<g:sortableColumn>` that holds markup must be marked with `raw()`.
+- A value marked with `raw()`, and the text and `default` of `message()`, which comes back marked raw, are still written as given by the tags that wrote them so before. Do not pass request data through `raw()` or as the `default` of `message()`.
+- Tests that compare rendered markup: an `&` in the URL of a form is now written as `&amp;`, as `<g:link>` writes it in an `href`.
+
+These bugs are fixed, which changes what the browser submits or what the page contains:
+
+- `<g:radio>` encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `R&amp;D` for `R&D`. Remove any code that decoded the submitted value to undo this.
+- A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`.
+- `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`. They encoded it twice.
+
+## GORM for Hibernate 5: query arguments reach where queries and dynamic finders
 
 - `readOnly`, `fetchSize`, `timeout` and `flushMode` were ignored by `where` queries, dynamic finders and `findAll(Map, Closure)`. They are applied now, so `Person.where { age > 18 }.list(readOnly: true)` loads read-only entities. Search for these four arguments on those calls. To keep the earlier result, remove the argument from the call.
 
-## GORM for Hibernate 5: Bulk deleteAll and updateAll Reject max and offset
+## GORM for Hibernate 5: bulk deleteAll and updateAll reject max and offset
 
 - `deleteAll()` and `updateAll(Map)` on a `where` query or `DetachedCriteria` run one statement with no row limit, so a query with `max` or an `offset` other than 0 wrote to every matching row. It now throws `InvalidDataAccessResourceUsageException` and writes nothing; an `offset` of 0 is accepted. Search for `deleteAll` and `updateAll` after `max` or `offset`.
 - To keep writing every matching row, call `deleteAll()` or `updateAll(Map)` on the query before `max` or `offset` are applied to it. To limit the rows written, select the ids with the limit, then delete or update by id: `Person.where { id in ids }.deleteAll()`.
 
-## GORM for Hibernate 5: Sorts, Empty in Lists and Paged Totals
+## GORM for Hibernate 5: sorts, empty in lists and paged totals
 
 - A map as the `sort` argument, `list(sort: [a: 'asc', b: 'desc'])`, orders by every property in the order listed; the static `list(sort: map)` kept only the last one. Sorting by a property of a composite id works. A sort no longer joins an association that the query's own block already joined. Review code that relied on the old order.
-- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB. Removing the criterion would return every row, not none: to keep the earlier result, return an empty list before the query when the input list is empty.
+- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB, where Hibernate writes an empty list as `in (null)`. On H2, which accepts an empty `IN` list, they already matched every row. To keep the earlier result on those three databases, return an empty list before running the query when the input list is empty; dropping the criterion would return every row.
 - The `totalCount` of a paged criteria with a `groupProperty` projection is the number of groups, not the number of rows before grouping. Remove workarounds for the larger number.
 - A default `sort` of a `hasMany` that names a property the associated entity does not have fails at startup with an error that names the association and the sort.
 
-## GORM: A Dynamic Finder Refuses Text After Its Operator
+## GORM: a dynamic finder refuses text after its operator
 
 - A finder name with trailing text it does not understand, such as `findAllByAgeGreaterThanOrderByName(18)`, ran as if the text were absent, unsorted and with no error. It now throws `IllegalArgumentException` naming the `sort` and `order` arguments. Search for finders with `OrderBy` or other trailing text and move the sort into the arguments: `findAllByAgeGreaterThan(18, [sort: 'name'])`.
 
-## GORM for Hibernate 5: Enum Columns Take the Length of maxSize
+## GORM for Hibernate 5: enum columns take the length of maxSize
 
-- An enum stored as a string ignored a `maxSize` constraint, so its column was `VARCHAR(255)`; it takes the length a `String` property takes now, and a column created from an `inList` of enum constants is as long as the longest constant name. Only a schema that Hibernate creates changes: an application that manages its schema by hand or by migration keeps its columns, and `hbm2ddl.auto: update` does not change an existing one.
+- Search for enum properties with a `maxSize` or an `inList` constraint. An enum stored as a string ignored a `maxSize` constraint, so its column was `VARCHAR(255)`; it takes the length a `String` property takes now, and a column created from an `inList` of enum constants is as long as the longest constant name. Only a schema that Hibernate creates changes: an application that manages its schema by hand or by migration keeps its columns, and `hbm2ddl.auto: update` does not change an existing one.
 
-## GORM for Hibernate 5: The Query Cache Follows the cache Option, and lock: false No Longer Locks
+## GORM for Hibernate 5: the query cache follows the cache option, and lock: false no longer locks
 
 - A query is cached when the mapping of its entity caches, when `cache: true` or `cache(true)` asks for it, or when `grails.hibernate.cache.queries` is `true`; an explicit `false` always keeps it out of the cache. A criteria `cache(false)` and a `cache: false` argument were overridden before, and a sort through a cached association cached a query that nothing asked to cache. To keep the old result for one query, pass `cache: true`.
 - A finder with `lock: false` took a write lock, as with `true`. It takes none now, so `[lock: params.boolean('lock')]` locks only when the parameter is true. An application that relied on `lock: false` to lock must pass `lock: true`.
 
-## Spring Security: Remember-Me Redirect
+## Spring Security: remember-me redirect
 
-- A remember-me login is redirected only for a GET page request that is not an Ajax call and not the request for the login form. A POST, PUT, PATCH, DELETE, HEAD or Ajax request goes on to the controller as the remembered user instead of being turned into a GET, and the login form request reaches the login controller.
+- Search for subclasses of `GrailsRememberMeAuthenticationFilter` and for calls to `setAuthenticationSuccessHandler`. A remember-me login is redirected only for a GET page request that is not an Ajax call and not the request for the login form. A POST, PUT, PATCH, DELETE, HEAD or Ajax request goes on to the controller as the remembered user instead of being turned into a GET, and the login form request reaches the login controller.
 - `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler; the redirect is decided in `onSuccessfulAuthentication`. A subclass that overrides it without calling `super` no longer redirects. To redirect another kind of request, subclass the filter, override `redirects(request)` to return `true` for it, and register it as the `rememberMeAuthenticationFilter` bean.
 
 # After the Upgrade
