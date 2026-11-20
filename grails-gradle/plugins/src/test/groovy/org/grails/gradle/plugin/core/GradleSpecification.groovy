@@ -56,9 +56,15 @@ abstract class GradleSpecification extends Specification {
         // The TestKit directory is the Gradle user home of the builds, so every test project runs with the
         // configuration cache, as generated applications do, and fails on any configuration cache problem.
         // A test passes --no-configuration-cache to run a build without it.
+        // The daemon does not watch the file system: every test of a spec has its project in the same
+        // directory, which is deleted and copied again between two builds of one daemon, and on a busy
+        // machine the next build started with what the daemon remembered of a file of the test before.
+        // It then stored that as an input of the configuration, and the build after it found the file
+        // changed and did not reuse the configuration cache, although nothing had touched the file.
         Files.writeString(testKitDir.resolve('gradle.properties'), '''\
             org.gradle.configuration-cache=true
             org.gradle.configuration-cache.problems=fail
+            org.gradle.vfs.watch=false
             '''.stripIndent())
         gradleRunner = GradleRunner.create()
                 .withPluginClasspath()

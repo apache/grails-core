@@ -236,6 +236,30 @@ class GrailsPluginForgePackTestSpec extends GradleSpecification {
         result.tasks.find { it.path == ':forgePackTest' }.outcome == TaskOutcome.SUCCESS
     }
 
+    def "no file of the pack is read while the build is configured for the test: #change is seen with the configuration of the build before"() {
+        given:
+        GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
+        executeTask('forgePackTest')
+        edit.call(new File(runner.projectDir, 'src/main/forge'))
+
+        when:
+        BuildResult result = passes ? executeTask('forgePackTest') : runner.withArguments('forgePackTest').buildAndFail()
+
+        then: 'the pack is an input of the task, which runs again, and not of the configuration'
+        result.output.contains('Reusing configuration cache')
+        !result.output.contains('configuration cache cannot be reused')
+        result.tasks.find { it.path == ':forgePackTest' }.outcome == (passes ? TaskOutcome.SUCCESS : TaskOutcome.FAILED)
+        said == null || result.output.contains(said)
+
+        where:
+        change                              | edit                                                                       | passes || said
+        'a template that is edited'         | { File pack -> new File(pack, 'templates/Audit.groovy.gsp') << '// more' } | true   || null
+        'a file that is added'              | { File pack -> new File(pack, 'templates/conf/more.txt').text = 'more' }   | true   || null
+        'a file Gradle does not look at'    | { File pack -> new File(pack, 'templates/.gitignore').text = 'build' }     | true   || null
+        'a descriptor that is spoiled'      | { File pack -> new File(pack, 'feature.yml') << 'colour: red\n' }          | false  || "  - the descriptor: has the key 'colour', which this version of Forge does not read here"
+        'a descriptor that is taken away'   | { File pack -> new File(pack, 'feature.yml').delete() }                    | false  || '  - There is no feature.yml in the directory, or it is not a file'
+    }
+
     def "the applications are built offline when the #where says so"() {
         given:
         GradleRunner runner = setupTestResourceProject('plugin-forge-pack')
