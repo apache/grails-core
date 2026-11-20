@@ -31,6 +31,7 @@ import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackArtifacts.Reply
 import org.apache.grails.forge.cli.pack.PackArtifacts.Transport
 import org.apache.grails.forge.cli.pack.PackCatalog
+import org.apache.grails.forge.cli.pack.PackCatalogProbe
 import org.apache.grails.forge.cli.pack.PackCatalogs
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.WebAvailableFeatures
@@ -69,6 +70,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     Map<String, Closure<Reply>> answers = [:]
     Duration within = Duration.ofSeconds(30)
     boolean answered = true
+    boolean pluginIndex = false
 
     void setup() {
         originalOut = System.out
@@ -77,7 +79,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         System.setErr(new PrintStream(err))
         repository = Files.createTempDirectory('grailsforgerepository').toFile()
         work = Files.createTempDirectory('grailsforgecatalog').toFile()
-        copies = work.toPath().resolve('copies')
+        copies = work.toPath().resolve('.grails').resolve('forge').resolve('catalogs')
         address = repository.toPath().toAbsolutePath().normalize().toUri().toString()
     }
 
@@ -101,10 +103,16 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit == 0
         out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address}), sha256 ${sha256(jar)}")
         out.toString().contains("    the coordinates are those the feature catalog ${catalog.toPath().toUri()} (sha256 ${sha256(catalog)}) has for the feature acme-audit")
-        out.toString().contains('    the jar has the SHA-256 the catalog records for it')
+        out.toString().contains('    the SHA-256 is the one that same catalog gives for the jar: the jar is the one the catalog means, which nobody else has checked')
         out.toString().contains('    the jar was not checked: the repository gave no checksum for it')
         out.toString().contains('Application created')
         !out.toString().contains('--feature-pack-sha256')
+
+        and: 'which plugin the catalog made of the name, and where it is looked for, is said before the plugin is asked for'
+        String before = "The feature acme-audit is taken as ${COORDINATES}, which the feature catalog ${catalog.toPath().toUri()} (sha256 ${sha256(catalog)}) " +
+                "names for it, with the SHA-256 ${sha256(jar)}. Asking ${address}"
+        out.toString().contains(before)
+        out.toString().indexOf(before) < out.toString().indexOf('Feature pack acme-audit from')
 
         and: 'the application has what the pack gives it'
         new File(dir, 'shop/build.gradle').text.contains('implementation "com.acme:acme-audit-grails:2.3.0"')
@@ -183,7 +191,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        PosixFilePermissions.toString(Files.getPosixFilePermissions(copies)) == 'rwx------'
+        [copies, copies.parent, copies.parent.parent].every { PosixFilePermissions.toString(Files.getPosixFilePermissions(it)) == 'rwx------' }
         Files.list(copies).withCloseable { it.toList() }.every { PosixFilePermissions.toString(Files.getPosixFilePermissions(it)) == 'rw-------' }
     }
 
@@ -191,7 +199,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         given:
         File jar = publish(COORDINATES)
         byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
-        Files.createDirectories(copies)
+        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, document)
         Files.setLastModifiedTime(copy, FileTime.from(Instant.parse('2026-01-02T03:04:05Z')))
@@ -202,7 +210,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        out.toString().contains("The feature catalog ${HOSTED} could not be read (HTTP status 503): the copy of it that was read on 2026-01-02T03:04:05Z is used")
+        out.toString().contains("The feature catalog ${HOSTED} could not be read (HTTP status 503): the copy of it that was read on 2026-01-02T03:04:05Z, ")
+        out.toString() =~ /2026-01-02T03:04:05Z, \d+ days old, is used/
         out.toString().contains("Feature pack acme-audit from ${COORDINATES}")
 
         when:
@@ -229,7 +238,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         asked.isEmpty()
 
         when:
-        Files.createDirectories(copies)
+        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, document)
         Files.setLastModifiedTime(copy, FileTime.from(Instant.parse('2026-01-02T03:04:05Z')))
@@ -238,6 +247,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         then:
         exit == 0
         out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address})")
+        out.toString() =~ 'The feature catalog ' + java.util.regex.Pattern.quote(HOSTED) + / is read from its copy of 2026-01-02T03:04:05Z, \d+ days old: --offline asks nothing of the network/
         asked.isEmpty()
 
         when: 'the jar is only in a repository of the network'
@@ -262,7 +272,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         given:
         File jar = publish(COORDINATES)
         byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
-        Files.createDirectories(copies)
+        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
         Path copy = copies.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
         Files.write(copy, '{"format": 1, "plugins": [[[[[[[[[[[[[[[['.getBytes('UTF-8'))
         answers[HOSTED] = { new Reply(200, null, new ByteArrayInputStream(document)) }
@@ -279,6 +289,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "no catalog is read for an application of features of the framework, or for what is no name of a feature"() {
         given: 'the plugin index of Grails is the catalog, and every request fails the feature'
         setting = null
+        pluginIndex = true
 
         when:
         int exit = run('com.example.shop', '--features', 'h2')
@@ -310,7 +321,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then: 'which this specification does not answer'
         exit == 2
-        asked*.toString() == [PackCatalogs.DEFAULT]
+        asked*.toString() == [PackCatalogs.PLUGIN_INDEX]
         err.toString().readLines()[0] == 'The requested feature does not exist: acme-audit'
         !new File(dir, 'other').exists()
     }
@@ -427,6 +438,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "a deprecated plugin and a snapshot are used by their coordinates, for which no catalog is read"() {
         given:
         setting = null
+        pluginIndex = true
         publish("${PLUGIN}:2.4.0-SNAPSHOT")
 
         when:
@@ -571,7 +583,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         what                           | content                                                                          || message
         'larger than a catalog can be' | { new byte[PackCatalog.MAX_BYTES + 1] }                                          || "the catalog has more than the ${PackCatalog.MAX_BYTES} bytes it can have"
         'nested too deep'              | { ('{"format":1,"plugins":' + ('[' * 100000) + (']' * 100000) + '}').bytes }      || "it is not a catalog: it is nested deeper than ${PackCatalog.MAX_DEPTH}"
-        'nothing but open brackets'    | { ('[' * 5000000).bytes }                                                        || 'it is not a catalog: it is nested deeper than'
+        'nothing but open brackets'    | { ('[' * 1000000).bytes }                                                        || 'it is not a catalog: it is nested deeper than'
         'of more values than allowed'  | { ('[' + ('0,' * PackCatalog.MAX_VALUES) + '0]').bytes }                         || "it is not a catalog: it has more than ${PackCatalog.MAX_VALUES} values"
         'not JSON'                     | { '<html>@|red not found|@\u001b[31m</html>'.bytes }                             || 'it is not a catalog: it is not JSON'
         'YAML'                         | { 'format: 1\nplugins: []\n'.bytes }                                             || 'it is not a catalog: it is not JSON'
@@ -584,7 +596,13 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         'of a later format'            | { '{"format": 2, "plugins": []}'.bytes }                                         || 'it is of format 2, and this Forge reads format 1'
         'without plugins'              | { '{"format": 1, "plugins": {"a": 1}}'.bytes }                                   || 'it is not a catalog: it has no plugins, which is an array'
         'with a key twice'             | { '{"format": 1, "format": 1, "plugins": []}'.bytes }                            || 'it is not a catalog: an object has one key twice'
-        'with a text too long'         | { ('{"format": 1, "plugins": [], "x": "' + ('x' * (PackCatalog.MAX_TEXT + 1)) + '"}').bytes } || "it is not a catalog: a text has more than ${PackCatalog.MAX_TEXT} characters"
+        'with a number too long'       | { ('{"format": 1, "plugins": [], "x": 1.' + ('3' * PackCatalog.MAX_NUMBER) + '}').bytes } || "it is not a catalog: a number has more than ${PackCatalog.MAX_NUMBER} characters"
+        'with a number that is none'   | { '{"format": 1, "plugins": [], "x": 01}'.bytes }                                || 'it is not a catalog: it is not JSON'
+        'with half a number'           | { '{"format": 1, "plugins": [], "x": 1e}'.bytes }                                || 'it is not a catalog: it is not JSON'
+        'of a format with a fraction'  | { '{"format": 1.0, "plugins": []}'.bytes }                                       || 'it is not a catalog: it has no format, which is a whole number'
+        'of a format with an exponent' | { '{"format": 1e0, "plugins": []}'.bytes }                                       || 'it is not a catalog: it has no format, which is a whole number'
+        'with a key too long'          | { ('{"format": 1, "plugins": [], "' + ('k' * 201) + '": 1}').bytes }              || 'it is not a catalog: an object has a key of more than 200 characters'
+        'of too many plugins'          | { ('{"format": 1, "plugins": [' + (['{}'] * (PackCatalog.MAX_PLUGINS + 1)).join(',') + ']}').bytes } || "it is not a catalog: it has more than the ${PackCatalog.MAX_PLUGINS} plugins a catalog can have"
         'with a control character'     | { '{"format": 1, "plugins": [], "x": "a\u0007b"}'.bytes }                        || 'it is not a catalog: a text has a control character in it'
     }
 
@@ -629,10 +647,10 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         where:
         what                                  | change                                                                         || problem
-        'coordinates that are none'           | { it.coords = 'com.acme' }                                                     || 'coords is not group:artifact, but com.acme'
-        'coordinates that are markup'         | { it.coords = '@|red x|@:\u001b[31my' }                                        || 'coords is not group:artifact, but @ |red x|@:?[31my'
-        'coordinates that go up a directory'  | { it.coords = 'com.acme:../../etc' }                                           || 'coords is not group:artifact, but com.acme:../../etc'
-        'coordinates of three parts'          | { it.coords = COORDINATES }                                                    || "coords is not group:artifact, but ${COORDINATES}"
+        'coordinates that are none'           | { it.coords = 'com.acme' }                                                     || 'coords is not group:artifact of at most 120 characters, but com.acme'
+        'coordinates that are markup'         | { it.coords = '@|red x|@:\u001b[31my' }                                        || 'coords is not group:artifact of at most 120 characters, but @ |red x|@:?[31my'
+        'coordinates that go up a directory'  | { it.coords = 'com.acme:../../etc' }                                           || 'coords is not group:artifact of at most 120 characters, but com.acme:../../etc'
+        'coordinates of three parts'          | { it.coords = COORDINATES }                                                    || "coords is not group:artifact of at most 120 characters, but ${COORDINATES}"
         'coordinates that are a number'       | { it.coords = 7 }                                                              || 'coords is not a text'
         'no coordinates'                      | { it.remove('coords') }                                                        || 'coords is not a text'
         'a version that is a range'           | { it.versions[0].version = '[2.0,3.0)' }                                       || "${PLUGIN}: version [2.0,3.0) is not one version of a plugin"
@@ -652,7 +670,10 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         'no compatibility'                    | { it.versions[0].pack.remove('compatibility') }                                || "${PLUGIN}: the pack of version 2.3.0: compatibility is not an object"
         'a range that is none'                | { it.versions[0].pack.compatibility.grails = '@|red 9|@' }                     || "${PLUGIN}: the pack of version 2.3.0: compatibility.grails is not a range of versions"
         'a type of application there is not'  | { it.versions[0].pack.applicationTypes = ['web', 'desktop'] }                  || "${PLUGIN}: the pack of version 2.3.0: applicationTypes is not an array of web, rest-api, web-plugin, plugin"
-        'an artifact that is none'            | { it.versions[0].pack.coords = 'com.acme:acme-audit-grails:[1,2)' }            || "${PLUGIN}: the pack of version 2.3.0: coords is not one version of a plugin"
+        'coordinates longer than a plugin has' | { it.coords = "com.${'a' * 120}:acme" }                                       || 'coords is not group:artifact of at most 120 characters, but com.aaaa'
+        'coordinates longer than a text'      | { it.coords = "com.${'a' * 5000}:acme" }                                       || 'coords has more than 4096 characters'
+        'a version longer than a version has' | { it.versions[0].version = '1.' + ('0' * 60) }                                 || "${PLUGIN}: has a version of more than 60 characters"
+        'more versions than a plugin has'     | { (1..PackCatalog.MAX_VERSIONS).each { n -> it.versions << [version: "1.0.${n}"] } } || "${PLUGIN}: has more than the ${PackCatalog.MAX_VERSIONS} versions a plugin can have"
         'a repository with a password'        | { it['maven-repo'] = 'https://user:secret@repo.acme.invalid/maven' }           || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
         'a repository that is a directory'    | { it['maven-repo'] = 'file:/tmp/repository' }                                  || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
         'a repository without TLS'            | { it['maven-repo'] = 'http://repo.acme.invalid/maven' }                        || "${PLUGIN}: maven-repo is not the https address of a repository that a catalog can name"
@@ -683,7 +704,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         File old = publish('org.old:old-audit:1.0.0', pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('name: acme-audit', 'name: old-audit')))
         File shadow = publish('org.other:h2-pack:1.0.0')
         File catalog = catalog([
-                plugin(PLUGIN, ['2.3.0': pack(jar), '2.2.0': pack(jar)], [name: 'Acme', desc: "Audits @|red everything|@\u001b[31m\nand more " + ('x' * 5000), docs: 'javascript:alert(1)']),
+                plugin(PLUGIN, ['2.3.0': pack(jar), '2.2.0': pack(jar)], [desc: "Audits @|red everything|@\u001b[31m\nand more " + ('x' * 3000), docs: 'javascript:alert(1)', name: 'A' * 5000]),
                 plugin('org.old:old-audit', ['1.0.0': pack(old, [name: 'old-audit'])], [deprecated: true]),
                 plugin('org.other:h2-pack', ['1.0.0': pack(shadow, [name: 'h2'])]),
                 [coords: '@|red not looked at|@', versions: [[version: '\u0007']], name: 7],
@@ -716,7 +737,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        out.toString().contains('No feature catalog is read')
+        out.toString().contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
     }
 
     void "a jar that is not the one the catalog records is refused before it is opened, and nothing is created"() {
@@ -759,7 +780,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 0
-        out.toString().contains('    the jar has the SHA-256 the catalog records for it')
+        out.toString().contains('    the SHA-256 is the one that same catalog gives for the jar')
 
         when:
         exit = run('shop', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address,
@@ -779,7 +800,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         !new File(dir, 'shop').exists()
     }
 
-    void "the repository a catalog names is asked after those of the environment and before Maven Central, and not when repositories are given"() {
+    void "the repository a catalog names is asked after those the user has, Maven Central among them, and not when repositories are given"() {
         given:
         File jar = publish(COORDINATES)
         File catalog = catalog([plugin(PLUGIN, ['2.3.0': pack(jar)], ['maven-repo': 'https://repo.acme.invalid/maven'])])
@@ -794,20 +815,33 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         then:
         exit == 0
         out.toString().contains("Feature pack acme-audit from ${COORDINATES} (https://repo.acme.invalid/maven/), sha256 ${sha256(jar)}")
-        asked*.toString().first() == "https://repo.acme.invalid/maven/${path}"
-        asked.every { it.host == 'repo.acme.invalid' }
+        asked*.toString().take(2) == ["${PackArtifacts.MAVEN_CENTRAL}${path}", "https://repo.acme.invalid/maven/${path}"]
+        out.toString().contains("Asking ${empty.toPath().toUri()}, ${PackArtifacts.MAVEN_CENTRAL}, https://repo.acme.invalid/maven/")
 
         when: 'the repository of the catalog does not have it'
         asked.clear()
         answers.clear()
         exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString())
 
-        then: 'Maven Central is asked last'
+        then: 'it is asked last, after Maven Central'
         exit == 1
-        asked*.toString() == ["https://repo.acme.invalid/maven/${path}", "${PackArtifacts.MAVEN_CENTRAL}${path}"]
-        err.toString().contains("${empty.toPath().toUri()}: not found; https://repo.acme.invalid/maven/: not found; ${PackArtifacts.MAVEN_CENTRAL}: not found")
+        asked*.toString() == ["${PackArtifacts.MAVEN_CENTRAL}${path}", "https://repo.acme.invalid/maven/${path}"]
+        err.toString().contains("${empty.toPath().toUri()}: not found; ${PackArtifacts.MAVEN_CENTRAL}: not found; https://repo.acme.invalid/maven/: not found")
 
-        when: 'repositories are given'
+        and: 'what the catalog made of the name was said although nothing came of it'
+        out.toString().contains("The feature acme-audit is taken as ${COORDINATES}, which the feature catalog")
+
+        when: 'the repositories of the user have Maven Central first among them'
+        asked.clear()
+        environment = "mavenCentral();https://corp.invalid/repo;${empty.absolutePath}"
+        exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString())
+
+        then: 'the repository of the catalog is still the last'
+        exit == 1
+        asked*.host == ['repo.maven.apache.org', 'corp.invalid', 'repo.acme.invalid']
+
+        when: 'repositories are given, with the environment as it was'
+        environment = empty.absolutePath
         asked.clear()
         exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', empty.toURI().toString())
 
@@ -833,7 +867,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "a name that is not known is what it was before there were catalogs when the catalog nobody named cannot be read: #reason"() {
         given: 'the plugin index of Grails is the catalog, and it does not answer'
         setting = null
-        answers[PackCatalogs.DEFAULT] = answer
+        pluginIndex = true
+        answers[PackCatalogs.PLUGIN_INDEX] = answer
 
         when:
         int exit = run('shop', '--features', 'h2,hibernate-validtor')
@@ -842,13 +877,13 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit == 2
         List<String> said = err.toString().readLines()
         said[0] == 'The requested feature does not exist: hibernate-validtor'
-        said[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: ${reason}, so hibernate-validtor was not looked for there"
+        said[1] == "The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: ${reason}, so hibernate-validtor was not looked for there"
         said[2].startsWith('Usage: create-app')
         !new File(dir, 'shop').exists()
-        asked*.toString() == [PackCatalogs.DEFAULT]
+        asked*.toString() == [PackCatalogs.PLUGIN_INDEX]
 
         and: 'that it could not be read is kept beside the copies, for the user alone'
-        Path marker = copies.resolve(digest(PackCatalogs.DEFAULT.getBytes('UTF-8')) + '.unread')
+        Path marker = copies.resolve(digest(PackCatalogs.PLUGIN_INDEX.getBytes('UTF-8')) + '.unread')
         Files.size(marker) == 0
         org.grails.forge.application.OperatingSystem.WINDOWS == null || !Files.getFileStore(marker).supportsFileAttributeView('posix') ||
                 PosixFilePermissions.toString(Files.getPosixFilePermissions(marker)) == 'rw-------'
@@ -861,7 +896,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit == 2
         asked.isEmpty()
         err.toString().readLines()[0] == 'The requested feature does not exist: postgress'
-        err.toString().readLines()[1] ==~ 'The feature catalog ' + java.util.regex.Pattern.quote(PackCatalogs.DEFAULT) +
+        err.toString().readLines()[1] ==~ 'The feature catalog ' + java.util.regex.Pattern.quote(PackCatalogs.PLUGIN_INDEX) +
                 / could not be read: the last attempt, at \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ, failed, and it is not asked for again within a day; / +
                 /--refresh asks for it, so postgress was not looked for there/
 
@@ -870,8 +905,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 2
-        asked*.toString() == [PackCatalogs.DEFAULT]
-        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: ${reason}, so postgress was not looked for there"
+        asked*.toString() == [PackCatalogs.PLUGIN_INDEX]
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: ${reason}, so postgress was not looked for there"
 
         when: 'the day is over'
         asked.clear()
@@ -880,7 +915,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
         then:
         exit == 2
-        asked*.toString() == [PackCatalogs.DEFAULT]
+        asked*.toString() == [PackCatalogs.PLUGIN_INDEX]
 
         where:
         reason                                 | answer
@@ -894,8 +929,9 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "the catalog nobody named is waited for a few seconds and not as long as a jar"() {
         given:
         setting = null
+        pluginIndex = true
         within = Duration.ofSeconds(2)
-        answers[PackCatalogs.DEFAULT] = {
+        answers[PackCatalogs.PLUGIN_INDEX] = {
             Thread.sleep(120000)
             new Reply(404, null, null)
         }
@@ -908,7 +944,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit == 2
         Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(60)
         err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
-        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: timeout, so hibernate-validtor was not looked for there"
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: timeout, so hibernate-validtor was not looked for there"
         PackCatalogs.DEFAULT_WITHIN <= Duration.ofSeconds(10)
     }
 
@@ -951,6 +987,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "with --offline and no copy of the catalog nobody named, a name that is not known does not exist, and nothing is asked"() {
         given:
         setting = null
+        pluginIndex = true
 
         when:
         int exit = run('shop', '--features', 'hibernate-validtor', '--offline')
@@ -958,7 +995,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         then:
         exit == 2
         err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
-        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: not asked, since --offline makes no request to " +
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: not asked, since --offline makes no request to " +
                 'the network, and there is no copy of the catalog on this computer, so hibernate-validtor was not looked for there'
         asked.isEmpty()
 
@@ -969,37 +1006,38 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "a name is found in the catalog nobody named, and the plugin index of today has none"() {
         given:
         setting = null
+        pluginIndex = true
         File jar = publish(COORDINATES)
         byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
-        answers[PackCatalogs.DEFAULT] = { new Reply(200, null, new ByteArrayInputStream(document)) }
+        answers[PackCatalogs.PLUGIN_INDEX] = { new Reply(200, null, new ByteArrayInputStream(document)) }
 
         when:
         int exit = run('com.example.shop', '--features', 'acme-audit', '--feature-pack-repository', address)
 
         then:
         exit == 0
-        asked*.toString() == [PackCatalogs.DEFAULT]
-        out.toString().contains("    the coordinates are those the feature catalog ${PackCatalogs.DEFAULT} (sha256 ${digest(document)}) has for the feature acme-audit")
-        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("  catalog: ${PackCatalogs.DEFAULT}\n  catalogSha256: ${digest(document)}\n")
+        asked*.toString() == [PackCatalogs.PLUGIN_INDEX]
+        out.toString().contains("    the coordinates are those the feature catalog ${PackCatalogs.PLUGIN_INDEX} (sha256 ${digest(document)}) has for the feature acme-audit")
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("  catalog: ${PackCatalogs.PLUGIN_INDEX}\n  catalogSha256: ${digest(document)}\n")
 
         when: 'the index is as it is published today'
         Files.list(copies).withCloseable { it.toList() }.each { Files.delete(it) }
-        answers[PackCatalogs.DEFAULT] = { new Reply(200, null, new ByteArrayInputStream('[{"name": "Cache", "coords": "org.apache.grails:grails-cache"}]'.bytes)) }
+        answers[PackCatalogs.PLUGIN_INDEX] = { new Reply(200, null, new ByteArrayInputStream('[{"name": "Cache", "coords": "org.apache.grails:grails-cache"}]'.bytes)) }
         exit = run('other', '--features', 'acme-audit')
 
         then:
         exit == 2
         err.toString().readLines()[0] == 'The requested feature does not exist: acme-audit. acme-audit was not found in the feature catalog ' +
-                "${PackCatalogs.DEFAULT} (the plugin index without a format, which records no feature pack) either"
+                "${PackCatalogs.PLUGIN_INDEX} (the plugin index without a format, which records no feature pack) either"
 
         when: 'the list of the catalog nobody named is asked for, and it cannot be read'
         Files.list(copies).withCloseable { it.toList() }.each { Files.delete(it) }
-        answers[PackCatalogs.DEFAULT] = { new Reply(500, null, null) }
+        answers[PackCatalogs.PLUGIN_INDEX] = { new Reply(500, null, null) }
         exit = run('--list-catalog-features')
 
         then: 'that is what was asked for, and it failed'
         exit == 1
-        err.toString().contains("The feature catalog ${PackCatalogs.DEFAULT} could not be read: HTTP status 500")
+        err.toString().contains("The feature catalog ${PackCatalogs.PLUGIN_INDEX} could not be read: HTTP status 500")
     }
 
     void "of a plugin Forge has a version for, that version is the one that is taken, and no other"() {
@@ -1064,17 +1102,15 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     void "a request these specifications do not answer themselves fails the specification, and is not made"() {
         given: 'the command as it is made outside these specifications, and the plugin index of Grails as its catalog'
         setting = null
+        pluginIndex = true
         answered = false
-
-        expect:
-        Boolean.getBoolean(PackArtifacts.NO_NETWORK_PROPERTY)
 
         when:
         run('shop', '--features', 'hibernate-validtor')
 
         then:
         AssertionError e = thrown()
-        e.message == "A request was made to ${PackCatalogs.DEFAULT}, and ${PackArtifacts.NO_NETWORK_PROPERTY} says that nothing is asked of another computer"
+        e.message == "A request was made to ${PackCatalogs.PLUGIN_INDEX}, and the specifications of the Forge CLI ask nothing of another computer"
 
         when: 'a jar is asked for'
         new PackArtifacts().resolve(PackArtifacts.coordinates(COORDINATES), [PackArtifacts.repository('https://repository.invalid/maven')], null)
@@ -1084,10 +1120,344 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         ofTheJar.message.startsWith('A request was made to https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0/acme-audit-grails-2.3.0.jar')
     }
 
+    void "without a catalog that is named, a name that is not known is what it was before there were catalogs"() {
+        given: 'the command as it is, with nothing named'
+        setting = null
+        pluginIndex = PackCatalogs.PLUGIN_INDEX_UNNAMED
+
+        expect: 'the plugin index of Grails is not read unless it is named'
+        !PackCatalogs.PLUGIN_INDEX_UNNAMED
+
+        when:
+        int exit = run('shop', '--features', 'h2,hibernate-validtor')
+
+        then: 'the refusal of before, and nothing else'
+        exit == 2
+        err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
+        err.toString().readLines()[1].startsWith('Usage: create-app')
+        !err.toString().contains('catalog could not')
+        asked.isEmpty()
+
+        and: 'nothing is written under the home of the user'
+        !Files.exists(work.toPath().resolve('.grails'))
+
+        when:
+        exit = run('--list-catalog-features')
+
+        then:
+        exit == 0
+        out.toString().contains('No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one')
+        asked.isEmpty()
+    }
+
+    void "numbers of any size and form a catalog has are checked to be numbers and are not made numbers of"() {
+        given:
+        File jar = publish(COORDINATES)
+        File catalog = new File(work, 'numbers.json')
+        catalog.setText('{"format": 1, "x": 1e99999999999, "y": [-0.0E-7, 1E+99999999999, 1.333333333333333333333333333333333333333, -1e-99999999999, 0, -0], ' +
+                '"plugins": [' + json(plugin(PLUGIN, ['2.3.0': pack(jar)], [stars: 1.0e400])).replace('1.0E+400', '1.0e400') + ']}', 'UTF-8')
+
+        when:
+        int exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address})")
+        !err.toString().contains('exponent')
+
+        when: 'such a number is where a whole one is read'
+        catalog.setText(catalog.getText('UTF-8').replace('"templateApi": 1', '"templateApi": 1e99999999999'), 'UTF-8')
+        exit = run('shop', '--features', 'acme-audit', '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'the plugin is left out'
+        exit == 2
+        err.toString().readLines()[0].contains("plugin 1: ${PLUGIN}: the pack of version 2.3.0: templateApi is not a whole number from 1")
+    }
+
+    void "a catalog of the most a catalog can be is read in a small memory, and what is not read of it is not kept"() {
+        given: 'documents as large as a catalog can be: one of plugins with packs, one of what is not read'
+        File jar = publish(COORDINATES)
+        String digest = sha256(jar)
+        StringBuilder withPacks = new StringBuilder('{"format": 1, "plugins": [')
+        int plugins = 0
+        while (withPacks.length() < PackCatalog.MAX_BYTES - 4000 && plugins < PackCatalog.MAX_PLUGINS && (plugins + 1) * 140 < PackCatalog.MAX_VALUES) {
+            withPacks.append(plugins++ == 0 ? '' : ',').append('{"coords": "com.acme:p').append(plugins).append('", "versions": [')
+            (1..12).each { int version ->
+                withPacks.append(version == 1 ? '' : ',').append('{"version": "1.').append(version).append('", "pack": {"format": 1, "kind": "feature", "name": "f')
+                        .append(plugins).append('", "templateApi": 1, "compatibility": {"grails": "[9.0.0,10.0.0)", "forge": "[9.0.0,10.0.0)"}, "sha256": "')
+                        .append(digest).append('"}}')
+            }
+            withPacks.append(']}')
+        }
+        withPacks.append(']}')
+        File packed = new File(work, 'packed.json')
+        packed.setText(withPacks.toString(), 'UTF-8')
+        File unread = new File(work, 'unread.json')
+        String filler = '"' + ('x' * 2000) + '"'
+        unread.setText('{"format": 1, "plugins": [' + json(plugin(PLUGIN, ['2.3.0': pack(jar)])) + '], "other": [' +
+                ([filler] * ((PackCatalog.MAX_BYTES - 4000).intdiv(filler.length() + 1))).join(',') + ']}', 'UTF-8')
+
+        expect:
+        packed.length() > PackCatalog.MAX_BYTES.intdiv(2)
+        packed.length() <= PackCatalog.MAX_BYTES
+        unread.length() > PackCatalog.MAX_BYTES - 8000
+        unread.length() <= PackCatalog.MAX_BYTES
+
+        when: 'each is read in a virtual machine with 128 MiB'
+        // what reading a catalog needs, and no more: the classes of this module and of the generator, and Groovy
+        String classPath = [PackCatalogProbe, PackCatalog, org.apache.grails.forge.core.pack.PackVersionRange, GroovyObject]
+                .collect { Class type -> new File(type.protectionDomain.codeSource.location.toURI()).path }.unique().join(File.pathSeparator)
+        List<String> results = [packed, unread].collect { File document ->
+            Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').path, '-Xmx128m', '-cp', classPath,
+                    PackCatalogProbe.name, document.toURI().toString()).redirectErrorStream(true).start()
+            String said = process.inputStream.getText('UTF-8')
+            assert process.waitFor(120, java.util.concurrent.TimeUnit.SECONDS)
+            "${process.exitValue()} ${said.trim()}".toString()
+        }
+
+        then:
+        results[0].startsWith("0 plugins=${plugins} versions=${plugins * 12} ")
+        results[1].startsWith('0 plugins=1 versions=1 ')
+        originalOut.println "heap used after reading a catalog of the most plugins with packs, and one of what is not read: ${results}"
+    }
+
+    void "a pack is the main jar of the plugin it is listed under, whatever else a catalog says of it"() {
+        given: 'a catalog that gives a pack other coordinates than those of its plugin'
+        File jar = publish(COORDINATES)
+        publish('org.evil:evil-thing:6.6.6')
+        org.grails.forge.build.dependencies.Coordinate known = beanContext.getBean(ContextFactory).coordinateResolver.resolve('grails-web-console').get()
+        File wrapped = publish('org.evil:wrapper:1.0.0')
+        publish("${known.groupId}:${known.artifactId}:0.0.1")
+        File catalog = catalog([
+                plugin(PLUGIN, ['2.3.0': pack(jar, [coords: 'org.evil:evil-thing:6.6.6'])]),
+                plugin('org.evil:wrapper', ['1.0.0': pack(wrapped, [name: 'wrapped', coords: "${known.groupId}:${known.artifactId}:0.0.1".toString()])]),
+        ])
+
+        when:
+        int exit = run('--list-features', '--features', "${PLUGIN}#acme-audit", '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'the jar is that of the plugin'
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address}), sha256 ${sha256(jar)}")
+        !out.toString().contains('org.evil')
+
+        when: 'the other coordinates are those of a plugin Forge has a version for'
+        exit = run('--list-catalog-features', '--feature-catalog', catalog.toURI().toString())
+
+        then: 'what would be taken is the plugin the pack is listed under'
+        exit == 0
+        out.toString().readLines().any { it.startsWith('  wrapped     org.evil:wrapper:1.0.0') }
+        !out.toString().contains(known.artifactId)
+    }
+
+    void "a name that is a feature of the framework for another type of application is never looked for in a catalog"() {
+        given: 'a feature the framework has, and not for a REST API'
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        String other = generator.availableFeatures(org.grails.forge.application.ApplicationType.WEB, []).allFeatures.toList()*.name
+                .find { !generator.availableFeatures(org.grails.forge.application.ApplicationType.REST_API, []).findFeature(it, true).isPresent() }
+        assert other != null
+        CreateRestApiCommand command = new CreateRestApiCommand(beanContext.getBean(org.grails.forge.application.RestApiAvailableFeatures),
+                beanContext.getBean(ContextFactory), generator) {
+
+            @Override
+            protected PackArtifacts createPackArtifacts() {
+                return new PackArtifacts({ URI asking -> throw new AssertionError("asked ${asking}") } as Transport)
+            }
+
+            @Override
+            protected String featureCatalogSetting() {
+                return 'https://catalog.invalid/never.json'
+            }
+        }
+
+        when:
+        int exit = new CommandLine(command, new GrailsPicocliFactory(beanContext)).execute('shop', '--features', other, '--feature-pack-repository', address)
+
+        then: 'the refusal of the framework, and no request'
+        exit == 2
+        err.toString().readLines()[0] == "The requested feature does not exist: ${other}"
+        !new File(dir, 'shop').exists()
+    }
+
+    @Unroll
+    void "the first catalog that lists a plugin speaks for it, also when it has it #how, and the list agrees"() {
+        given:
+        File jar = publish(COORDINATES)
+        File other = publish('org.other:audit:1.0.0', pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('name: acme-audit', 'name: other-audit')))
+        File withoutPack = new File(work, 'without-pack.json')
+        withoutPack.setText(json([format: 1, plugins: [[coords: PLUGIN, versions: [[version: '2.3.0']]]]]), 'UTF-8')
+        File withoutName = catalog([plugin(PLUGIN, ['2.3.0': pack(jar, [name: 'acme-other'])])], 'without-name.json')
+        File leftOut = catalog([plugin(PLUGIN, ['2.3.0': pack(jar, [sha256: 'none'])])], 'left-out.json')
+        File second = catalog([plugin(PLUGIN, ['2.3.0': pack(jar)]), plugin('org.other:audit', ['1.0.0': pack(other, [name: 'other-audit'])])], 'second.json')
+        File first = [withoutPack, withoutName, leftOut][which]
+
+        when:
+        int exit = run('shop', '--features', 'acme-audit', '--feature-catalog', first.toURI().toString(), '--feature-catalog', second.toURI().toString(),
+                '--feature-pack-repository', address)
+
+        then: 'what the second catalog says of the plugin is not looked at'
+        exit == 2
+        err.toString().readLines()[0] == "The feature acme-audit is not taken from the feature catalog: the feature catalog ${first.toPath().toUri()} is the first that " +
+                "lists ${PLUGIN} and has no feature acme-audit for it, and what a later catalog says of that plugin is not looked at"
+        !new File(dir, 'shop').exists()
+
+        when: 'the full name is given'
+        exit = run('shop', '--features', "${PLUGIN}#acme-audit", '--feature-catalog', first.toURI().toString(), '--feature-catalog', second.toURI().toString(),
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].contains("is the first that lists ${PLUGIN}")
+
+        when: 'the catalogs are listed'
+        exit = run('--list-catalog-features', '--feature-catalog', first.toURI().toString(), '--feature-catalog', second.toURI().toString())
+
+        then: 'the plugin is not offered by the second, and another plugin of the second is'
+        exit == 0
+        !out.toString().readLines().any { it.startsWith('  acme-audit ') }
+        out.toString().readLines().any { it.startsWith('  other-audit  org.other:audit:1.0.0') }
+        out.toString().contains('  1 plugin is not looked at: a catalog that is named before this one lists it')
+
+        when: 'a plugin only the second has is asked for'
+        exit = run('--list-features', '--features', 'other-audit', '--feature-catalog', first.toURI().toString(), '--feature-catalog', second.toURI().toString(),
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack other-audit from org.other:audit:1.0.0 (${address})")
+
+        where:
+        which | how
+        0     | 'without a pack'
+        1     | 'without the name'
+        2     | 'with a pack that is left out'
+    }
+
+    void "a message that is made of what a catalog says is one line of a length that has an end"() {
+        given: 'as many plugins as can have one name, with coordinates as long as a plugin has'
+        File jar = publish(COORDINATES)
+        List plugins = (1..300).collect { int number -> plugin("com.${'a' * 100}:p${number}", ['1.0.0': pack(jar)]) }
+        File many = catalog(plugins, 'many.json')
+        File reasons = catalog((1..300).collect { int number -> plugin("com.${'a' * 100}:p${number}", [('1.0.0-' + ('b' * 50)): pack(jar)]) }, 'reasons.json')
+
+        when:
+        int exit = run('shop', '--features', 'acme-audit', '--feature-catalog', many.toURI().toString())
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith('More than one plugin of the feature catalog has a feature acme-audit: name the one that is meant as com.aaa')
+        err.toString().readLines()[0].endsWith('(and 297 more)')
+        err.toString().readLines()[0].length() < 600
+
+        when:
+        exit = run('shop', '--features', 'acme-audit', '--feature-catalog', reasons.toURI().toString())
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith('The feature acme-audit is not taken from the feature catalog: com.aaa')
+        err.toString().readLines()[0].length() <= PackCatalogs.MAX_MESSAGE + 3
+
+        when: 'more names than a line names are not found'
+        exit = run('shop', '--features', (1..40).collect { "nothing-${'c' * 60}-${it}" }.join(','), '--feature-catalog', many.toURI().toString())
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].length() < 6000
+        err.toString().readLines()[0].contains(' and 37 more were not found in the feature catalog')
+    }
+
+    @Unroll
+    void "the feature of one pack that is asked for as #features is taken once, and is one feature"() {
+        given:
+        File jar = publish(COORDINATES)
+        File catalog = catalog([plugin(PLUGIN, ['2.3.0': pack(jar)])])
+
+        when:
+        int exit = run('com.example.shop', '--features', features, '--feature-catalog', catalog.toURI().toString(), '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().count('Feature pack acme-audit from') == 1
+        !err.toString().contains('both have the name')
+        new File(dir, 'shop/.grails/project.yml').text.count('- name: acme-audit\n') == 1
+        new File(dir, 'shop/build.gradle').text.count('com.acme:acme-audit-grails:2.3.0') == 1
+
+        where:
+        features << ["acme-audit,${PLUGIN}#acme-audit", "${PLUGIN}#acme-audit,acme-audit", "${COORDINATES},${PLUGIN}#acme-audit", "${PLUGIN}#acme-audit,${COORDINATES},acme-audit",
+                     "acme-audit,${COORDINATES}", 'acme-audit,acme-audit']
+    }
+
+    @IgnoreIf({ os.windows })
+    @Unroll
+    void "a copy is read only from directories that are the user's own: #what"() {
+        given: 'a copy someone put where the copies are, which names another jar than the catalog does'
+        File jar = publish(COORDINATES)
+        File planted = publish("${PLUGIN}:6.6.6")
+        byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
+        byte[] hostile = json([format: 1, plugins: [plugin(PLUGIN, ['6.6.6': pack(planted)])]]).getBytes('UTF-8')
+        answers[HOSTED] = { new Reply(200, null, new ByteArrayInputStream(document)) }
+        Path elsewhere = Files.createDirectories(work.toPath().resolve('elsewhere'))
+        Path directory = arrange.call(copies, elsewhere) as Path
+        Path copy = directory.resolve(digest(HOSTED.getBytes('UTF-8')) + '.json')
+        Files.write(copy, hostile)
+
+        when:
+        int exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', HOSTED, '--feature-pack-repository', address)
+
+        then: 'the catalog is asked for, the copy is not read, and none is written'
+        exit == 0
+        asked*.toString() == [HOSTED]
+        out.toString().contains("Feature pack acme-audit from ${COORDINATES} (${address})")
+        out.toString().contains('No copy of a feature catalog is read or kept: ')
+        out.toString().contains(' is not a directory of yours that nobody else can write to')
+        out.toString().count('No copy of a feature catalog') == 1
+        Files.readAllBytes(copy) == hostile
+
+        cleanup:
+        [copies, copies?.parent, copies?.parent?.parent].each { Path each ->
+            if (each != null && Files.isDirectory(each, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
+                Files.setPosixFilePermissions(each, PosixFilePermissions.fromString('rwx------'))
+            }
+        }
+
+        where:
+        what                                         | arrange
+        'the directory of the copies is a link'      | { Path at, Path other -> Files.createDirectories(at.parent); Files.createSymbolicLink(at, other); other }
+        'the directory above it is a link'           | { Path at, Path other -> Files.createDirectories(at.parent.parent); Files.createSymbolicLink(at.parent, other); Files.createDirectories(other.resolve('catalogs')) }
+        'anybody can write to it'                    | { Path at, Path other -> Files.createDirectories(at); Files.setPosixFilePermissions(at, PosixFilePermissions.fromString('rwxrwxrwx')); at }
+        'its group can write to the one above'       | { Path at, Path other -> Files.createDirectories(at); Files.setPosixFilePermissions(at.parent, PosixFilePermissions.fromString('rwxrwx---')); at }
+        'anybody can write to .grails'               | { Path at, Path other -> Files.createDirectories(at); Files.setPosixFilePermissions(at.parent.parent, PosixFilePermissions.fromString('rwxr-xrwx')); at }
+    }
+
+    void "what a command that was ended while it wrote a copy left behind is removed, and what is being written is not"() {
+        given:
+        File jar = publish(COORDINATES)
+        byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
+        answers[HOSTED] = { new Reply(200, null, new ByteArrayInputStream(document)) }
+        Files.createDirectories(copies, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString('rwx------')))
+        Path old = Files.write(copies.resolve('catalog123.tmp'), 'half'.bytes)
+        Files.setLastModifiedTime(old, FileTime.from(Instant.now() - Duration.ofHours(2)))
+        Path fresh = Files.write(copies.resolve('catalog456.tmp'), 'half'.bytes)
+        Path another = Files.write(copies.resolve('notes.txt'), 'mine'.bytes)
+        Files.setLastModifiedTime(another, FileTime.from(Instant.now() - Duration.ofHours(2)))
+
+        when:
+        int exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', HOSTED, '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        !Files.exists(old)
+        Files.exists(fresh)
+        Files.exists(another)
+        Files.list(copies).withCloseable { it.toList() }*.fileName*.toString().sort() ==
+                ['catalog456.tmp', digest(HOSTED.getBytes('UTF-8')) + '.json', 'notes.txt'].sort()
+    }
+
     private int run(String... args) {
         String catalogs = setting
         String repositories = environment
-        Path keptIn = copies
+        Path home = work.toPath()
+        boolean index = pluginIndex
         Duration waited = within
         boolean fake = answered
         Transport transport = { URI asking ->
@@ -1104,8 +1474,13 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
             }
 
             @Override
-            protected Path featureCatalogCopies() {
-                return keptIn
+            protected Path featureCatalogHome() {
+                return home
+            }
+
+            @Override
+            protected boolean readsPluginIndexUnnamed() {
+                return index
             }
 
             @Override

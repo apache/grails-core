@@ -112,10 +112,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     @CommandLine.Option(names = ['--feature-catalog'], paramLabel = 'URL',
             description = 'A feature catalog, in which a name given to --features that is neither a feature of Grails nor that of a ' +
-                    'feature pack that was given is looked up: the catalog says which plugin has the feature and in which version, and ' +
-                    'the feature pack is then taken from that plugin as it is by coordinates. The address is https, or file: for a file; ' +
-                    'none is for no catalog. Without the option, the catalogs of the GRAILS_FORGE_CATALOG environment variable are read, ' +
-                    'and without that the plugin index of Grails. A catalog is read only when a name is looked up. Can be given more than once.')
+                    'feature pack that was given is looked up: the catalog says which plugin has the feature, in which version, with ' +
+                    'which SHA-256, and can name a repository to take it from, and the feature pack of that plugin is then used. A pack is ' +
+                    'code: name a catalog only when you trust whoever writes it as you would trust the plugins themselves. The address is ' +
+                    'https, or file: for a file; none is for no catalog. Without the option, the catalogs of the GRAILS_FORGE_CATALOG ' +
+                    'environment variable are read, and without that none. Can be given more than once.')
     List<String> featureCatalogs = new ArrayList<>()
 
     @CommandLine.Option(names = ['--list-catalog-features'],
@@ -195,10 +196,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 // the list was asked for, and there is none
                 throw new PackArtifactException(catalogs.getUnread())
             }
-            List<String> lines = catalogs.isEmpty() ? ['No feature catalog is read'] :
-                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), { String name ->
-                        availableFeatures.findFeature(name, true).isPresent()
-                    }, this.&managedVersion)
+            List<String> lines = catalogs.isEmpty() ? ['No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one'] :
+                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&isOfTheFramework, this.&managedVersion)
             saidOf(catalogs)
             for (String line : lines) {
                 out(line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
@@ -310,9 +309,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         if (artifact != null) {
             // the digest says which jar was read; only a checksum from elsewhere says it is the one that was published
             if (artifact.catalog != null) {
-                out("    the coordinates are those the feature catalog ${artifact.catalog.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')} " +
+                String catalog = artifact.catalog.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+                out("    the coordinates are those the feature catalog ${catalog.length() > 200 ? catalog.substring(0, 200) + '...' : catalog} " +
                         "(sha256 ${artifact.catalogSha256}) has for the feature ${pack.descriptor.name}")
-                out('    the jar has the SHA-256 the catalog records for it')
+                // the catalog chose the jar and said what its digest is: that the two agree is no word of anyone else
+                out('    the SHA-256 is the one that same catalog gives for the jar: the jar is the one the catalog means, which nobody else has checked')
             } else if (artifact.pinned) {
                 out('    the jar has the SHA-256 that was asked for with --feature-pack-sha256')
             }
@@ -465,12 +466,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         List<String> unused = []
         // what a catalog can be asked for: a name that is not known here, or the full name of a feature of a plugin
         List<String> sought = getSelectedFeatures().findAll { String feature ->
-            PackCatalogs.isId(feature) || (PackCatalogs.isName(feature) && !availableFeatures.findFeature(feature, true).isPresent() &&
+            PackCatalogs.isId(feature) || (PackCatalogs.isName(feature) && !isOfTheFramework(feature) &&
                     !packs.any { Pack pack -> pack.descriptor.name == feature })
         }.unique()
         try {
             if (featureCatalogs) {
-                PackCatalogs.addresses(featureCatalogs, null)
+                PackCatalogs.addresses(featureCatalogs, null, false)
             }
             if (offline && refresh) {
                 throw new IllegalArgumentException('--refresh reads a feature catalog anew and --offline asks nothing of the network: give one of them')
@@ -517,13 +518,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         List<String> features = []
         Set<String> taken = new HashSet<>()
         for (String feature : getSelectedFeatures()) {
-            // the same coordinates, or the same full name, given twice are one selection
-            if (PackArtifacts.isCoordinates(feature) && names.containsKey(feature)) {
-                if (taken.add(feature)) {
-                    features << names.get(feature)
-                }
-            } else {
-                features << feature
+            // the feature of a pack is one selection, however often and in whichever ways it was asked for:
+            // by the coordinates of its plugin, by its full name and by its name
+            String selected = PackArtifacts.isCoordinates(feature) && names.containsKey(feature) ? names.get(feature) : feature
+            if (!names.containsValue(selected) || taken.add(selected)) {
+                features << selected
             }
         }
         return new Selection(packs, features)
@@ -544,13 +543,24 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             try {
                 catalogs.read()
             } catch (PackArtifactException e) {
-                throw new PackArtifactException("${shown.join(', ')} ${shown.size() == 1 ? 'is' : 'are'} not of Grails or of a feature pack that was given, " +
+                throw new PackArtifactException(PackCatalogs.bounded("${shown.take(3).join(', ')}${shown.size() > 3 ? " and ${shown.size() - 3} more" : ''} " +
+                        "${shown.size() == 1 ? 'is' : 'are'} not of Grails or of a feature pack that was given, " +
                         "and ${shown.size() == 1 ? 'was' : 'were'} looked for in a feature catalog. ${e.getMessage()}. A plugin can be given by its " +
-                        'coordinates, group:artifact:version, and --feature-catalog names the catalog to read, or none')
+                        'coordinates, group:artifact:version, and --feature-catalog names the catalog to read, or none'))
             }
             saidOf(catalogs)
             List<URI> repositories = asked
-            for (String feature : sought) {
+            // a full name first: the name alone is then the feature of the plugin that was named in full
+            for (String feature : sought.findAll { String each -> PackCatalogs.isId(each) } + sought.findAll { String each -> !PackCatalogs.isId(each) }) {
+                String name = PackCatalogs.nameOf(feature)
+                String plugin = PackCatalogs.pluginOf(feature)
+                // what was already taken for this command, by coordinates or by another way of naming it, is not taken again
+                if (packs.any { Pack pack ->
+                    pack.descriptor.name == name && (plugin == null || (pack.artifact != null && pack.artifact.coordinates.startsWith(plugin + ':')))
+                }) {
+                    names.put(feature, name)
+                    continue
+                }
                 PackCatalogs.Choice choice
                 try {
                     choice = catalogs.choose(feature, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&managedVersion)
@@ -569,7 +579,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     }
                 }
                 PackArtifacts.Coordinates coordinates = choice.version.coordinates
-                String from = choice.catalog.recordableAddress ?: choice.catalog.address
+                String from = choice.catalog.address
                 String asPinned = digests.get(coordinates.toString())
                 if (asPinned != null && asPinned != choice.version.sha256) {
                     throw new PackArtifactException("The feature catalog ${from} records the SHA-256 ${choice.version.sha256} for ${coordinates}, " +
@@ -577,34 +587,41 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 }
                 pinned << coordinates.toString()
                 List<URI> where = new ArrayList<>(repositories)
-                // the repository the catalog names is asked after those of the user and before Maven Central, and not at all when repositories were given
+                // the repository the catalog names is asked last, when none of those the user has gave the jar, and not at all when repositories were given
                 if (featurePackRepositories.isEmpty() && choice.version.repository != null && !where.contains(choice.version.repository)) {
-                    where.add(where.size() - 1, choice.version.repository)
+                    where << choice.version.repository
                 }
+                // said before anything of the plugin is asked for: which plugin a catalog made of the name, and where it is looked for
+                out('@|blue ||@ ' + ("The feature ${name} is taken as ${coordinates}, which the feature catalog ${from} (sha256 ${choice.catalog.sha256}) " +
+                        "names for it, with the SHA-256 ${choice.version.sha256}. Asking ${where.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}" +
+                        "${where.size() > 4 ? " and ${where.size() - 4} more" : ''}").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
                 Pack pack = packArtifacts().resolve(coordinates, where, choice.version.sha256)
                 if (pack.descriptor.name != choice.version.name) {
                     throw new PackArtifactException("The feature catalog ${from} says that ${coordinates} has the feature ${choice.version.name}, " +
                             "and the jar has the feature pack ${pack.descriptor.name}")
                 }
-                packs << pack.withArtifact(pack.artifact.withCatalog(from, choice.catalog.sha256))
+                packs << pack.withArtifact(pack.artifact.withCatalog(choice.catalog.recordableAddress ?: choice.catalog.address, choice.catalog.sha256))
                 names.put(feature, pack.descriptor.name)
             }
             // a name of Grails is the feature of Grails, whatever a catalog has under it
             for (String feature : getSelectedFeatures().unique(false)) {
-                if (PackCatalogs.isName(feature) && availableFeatures.findFeature(feature, true).isPresent()) {
+                if (PackCatalogs.isName(feature) && isOfTheFramework(feature)) {
                     List<String> others = catalogs.pluginsWith(feature)
                     if (!others.isEmpty()) {
                         out("@|blue ||@ The feature ${feature} is that of Grails. The feature catalog has a feature of that name for " +
-                                "${others.take(3).join(', ')}${others.size() > 3 ? ' and others' : ''}, which is not used")
+                                "${others.take(3).join(', ')}${others.size() > 3 ? " and ${others.size() - 3} more" : ''}, which is not used")
                     }
                 }
             }
+            notFound.sort { String feature -> sought.indexOf(feature) }
             if (catalogs.getUnread() != null) {
                 // the catalog nobody named: a name that is not known is what it was without a catalog, and a line says what was not looked at
-                notInCatalog = '\n' + ("${catalogs.getUnread()}, so ${shown.join(', ')} ${shown.size() == 1 ? 'was' : 'were'} not looked for there").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+                notInCatalog = '\n' + PackCatalogs.bounded("${catalogs.getUnread()}, so ${shown.take(3).join(', ')}${shown.size() > 3 ? " and ${shown.size() - 3} more" : ''} " +
+                        "${shown.size() == 1 ? 'was' : 'were'} not looked for there").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
             } else if (!notFound.isEmpty()) {
-                notInCatalog = (". ${notFound.collect { String feature -> FeatureSelectionException.shown(feature) }.join(', ')} " +
-                        "${notFound.size() == 1 ? 'was' : 'were'} not found in ${catalogs.searched()} either").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+                List<String> missed = notFound.collect { String feature -> FeatureSelectionException.shown(feature) }
+                notInCatalog = PackCatalogs.bounded(". ${missed.take(3).join(', ')}${missed.size() > 3 ? " and ${missed.size() - 3} more" : ''} " +
+                        "${missed.size() == 1 ? 'was' : 'were'} not found in ${catalogs.searched()} either").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
             }
         }
         for (String each : digests.keySet()) {
@@ -628,8 +645,9 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             }
             packArtifacts().offline = offline
             String setting = featureCatalogSetting()
-            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, setting), featureCatalogCopies(), refresh,
-                    PackCatalogs.isByDefault(featureCatalogs, setting), defaultCatalogWithin())
+            boolean pluginIndex = readsPluginIndexUnnamed()
+            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, setting, pluginIndex), featureCatalogHome(), refresh,
+                    PackCatalogs.isByDefault(featureCatalogs, setting, pluginIndex), defaultCatalogWithin())
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
@@ -674,17 +692,37 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
 
     /**
      * @return the feature catalogs that are read when the command names none: addresses separated by
-     * semicolons, {@code none} for no catalog, or {@code null} for the plugin index of Grails
+     * semicolons, {@code none} for no catalog, or {@code null} when the environment names none
      */
     protected String featureCatalogSetting() {
         return System.getenv('GRAILS_FORGE_CATALOG')
     }
 
     /**
-     * @return the directory the copies of the feature catalogs are kept in
+     * Whether the plugin index of Grails is read as a catalog when neither the command nor the
+     * environment names one. It is not, and nothing a user sets makes it so: this is here for the day
+     * the index records packs, and for the specifications of what the command then does.
      */
-    protected Path featureCatalogCopies() {
-        return Path.of(System.getProperty('user.home'), '.grails', 'forge', 'catalogs')
+    protected boolean readsPluginIndexUnnamed() {
+        return PackCatalogs.PLUGIN_INDEX_UNNAMED
+    }
+
+    /**
+     * @return the home of the user, in which the copies of the feature catalogs are kept, under
+     * {@code .grails/forge/catalogs}
+     */
+    protected Path featureCatalogHome() {
+        return Path.of(System.getProperty('user.home'))
+    }
+
+    /**
+     * @return whether a name is that of a feature of the framework, for whichever type of application:
+     * such a name means that feature whatever is created, and is never looked for in a catalog
+     */
+    private boolean isOfTheFramework(String name) {
+        return availableFeatures.findFeature(name, true).isPresent() || ApplicationType.values().any { ApplicationType type ->
+            projectGenerator.availableFeatures(type, Collections.<Pack>emptyList()).findFeature(name, true).isPresent()
+        }
     }
 
     /**

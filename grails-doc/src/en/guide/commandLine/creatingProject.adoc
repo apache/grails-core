@@ -223,7 +223,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | --feature-catalog
-| A feature catalog, in which a name given to `--features` that is neither a feature of Grails nor that of a feature pack that was given is looked up; the feature pack is then taken from the plugin and the version the catalog has for the name. The address is `https`, or `file:` for a file, and `none` is for no catalog. Without the option the catalogs of the `GRAILS_FORGE_CATALOG` environment variable are read, and without that the plugin index of Grails. A catalog is read only when a name is looked up. A catalog that cannot be read ends the command with exit code 1; an address that cannot be read is exit code 2. Can be given more than once. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+| A feature catalog, in which a name given to `--features` that is neither a feature of Grails nor that of a feature pack that was given is looked up; the feature pack is then taken from the plugin and the version the catalog has for the name. There is no catalog unless one is named, with this option or with the `GRAILS_FORGE_CATALOG` environment variable. A catalog chooses the plugin, can name the repository it is fetched from and supplies the SHA-256 it is checked against: name one only when you trust it as you trust the plugins. The address is `https`, or `file:` for a file, and `none` is for no catalog. A catalog that cannot be read ends the command with exit code 1; an address that cannot be read is exit code 2. Can be given more than once. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
 |
 [source,shell]
 ----
@@ -231,7 +231,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | --list-catalog-features
-| Output the features of the feature catalogs that can be selected by their name, with the coordinates each would be taken by. `--list-features` does not read a catalog.
+| Output the features of the feature catalogs that can be selected by their name, with the plugin and the version each would be taken from. `--list-features` reads a catalog only when a name given with `--features` has to be looked up.
 |
 [source,shell]
 ----

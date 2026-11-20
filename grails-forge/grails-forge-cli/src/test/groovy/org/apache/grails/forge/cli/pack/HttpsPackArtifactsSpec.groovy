@@ -37,6 +37,7 @@ import javax.net.ssl.TrustManagerFactory
 import org.apache.grails.forge.core.pack.Pack
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * The client the command asks a repository with, against a repository that is a server on the loopback
@@ -280,6 +281,50 @@ class HttpsPackArtifactsSpec extends Specification {
 
         expect:
         artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null).artifact.checkedAgainst == null
+    }
+
+    @Unroll
+    void "a catalog that is given a few seconds is ended after them by the client as the command has it, when #what"() {
+        given: 'the times of a jar, which are far longer'
+        handlers['/catalog.json'] = handler
+        PackArtifacts artifacts = new PackArtifacts(PackArtifacts.https(context, PackArtifacts.ANSWER_TIMEOUT), PackArtifacts.ANSWER_TIMEOUT, PackArtifacts.FILE_TIMEOUT)
+
+        when:
+        long started = System.nanoTime()
+        artifacts.file(URI.create("https://localhost:${server.address.port}/catalog.json"), 4 * 1024 * 1024, 'the catalog', Duration.ofSeconds(2))
+
+        then:
+        PackArtifactException e = thrown()
+        e.message == 'timeout'
+        Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(30)
+        Duration.ofNanos(System.nanoTime() - started) >= Duration.ofSeconds(2)
+
+        where:
+        what                                 | handler
+        'the request is never answered'      | { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+        'the answer begins and then stops'   | { HttpExchange exchange ->
+            exchange.sendResponseHeaders(200, 1000)
+            exchange.responseBody.write('{"format": 1'.bytes)
+            exchange.responseBody.flush()
+            released.await(120, TimeUnit.SECONDS)
+        }
+        'the answer keeps coming slowly'     | { HttpExchange exchange ->
+            exchange.sendResponseHeaders(200, 0)
+            for (int sent = 0; sent < 600 && released.count > 0; sent++) {
+                exchange.responseBody.write(' '.bytes)
+                exchange.responseBody.flush()
+                Thread.sleep(200)
+            }
+        }
+    }
+
+    void "a catalog is read over TLS as a jar is"() {
+        given:
+        handlers['/catalog.json'] = { HttpExchange exchange -> send(exchange, 200, '{"format": 1, "plugins": []}'.bytes) }
+
+        expect:
+        new String(artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).file(URI.create("https://localhost:${server.address.port}/catalog.json"),
+                1024, 'the catalog', Duration.ofSeconds(30)), 'UTF-8') == '{"format": 1, "plugins": []}'
     }
 
     private PackArtifacts artifacts(Duration answer, Duration file) {

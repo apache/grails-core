@@ -37,6 +37,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 import javax.net.ssl.SSLContext
@@ -87,13 +88,6 @@ class PackArtifacts {
     /** How long one file can take */
     public static final Duration FILE_TIMEOUT = Duration.ofMinutes(5)
 
-    /**
-     * The system property that, when it is {@code true}, makes a request to another computer an
-     * {@link AssertionError} that names the address. It is for the tests of this module, which ask
-     * nothing of the network: a test that would, fails, and does not reach it.
-     */
-    public static final String NO_NETWORK_PROPERTY = 'grails.forge.cli.noNetwork'
-
     /** The option that names the repositories to ask */
     public static final String REPOSITORY_OPTION = '--feature-pack-repository'
 
@@ -143,6 +137,7 @@ class PackArtifacts {
     private static final Set<Integer> NOT_GIVEN = [401, 403] as Set<Integer>
 
     private static ScheduledExecutorService watcher
+    private static volatile Consumer<URI> beforeRequest
 
     private final Transport transport
     private final Duration answerTimeout
@@ -172,6 +167,18 @@ class PackArtifacts {
         this.transport = transport
         this.answerTimeout = answerTimeout
         this.fileTimeout = fileTimeout
+    }
+
+    /**
+     * Has every request this class makes of a server announced before it is made, to code that is
+     * part of the program: the tests of this module refuse a request to another computer with it. A
+     * {@link RequestRefused} of what is told is not taken for a failure of a repository, and ends the
+     * command. Nothing a user can set reaches this.
+     *
+     * @param before is told the address of each request, or {@code null} for nothing
+     */
+    static void beforeEachRequest(Consumer<URI> before) {
+        beforeRequest = before
     }
 
     /**
@@ -632,7 +639,7 @@ class PackArtifacts {
     // an answer can be made to overflow the stack of what reads it, which is a failure of the answer;
     // any other error of the virtual machine is not one a repository is told of
     private static boolean isOfTheMachine(Throwable e) {
-        return (e instanceof VirtualMachineError && !(e instanceof StackOverflowError)) || e instanceof NetworkAsked
+        return (e instanceof VirtualMachineError && !(e instanceof StackOverflowError)) || e instanceof RequestRefused
     }
 
     private Pack from(URI repository, String where, Coordinates coordinates, String pinned) {
@@ -1177,8 +1184,9 @@ class PackArtifacts {
 
         @Override
         Reply get(URI address) throws IOException {
-            if (Boolean.getBoolean(NO_NETWORK_PROPERTY) && !isNearby(address.host ?: '')) {
-                throw new NetworkAsked(address)
+            Consumer<URI> before = beforeRequest
+            if (before != null) {
+                before.accept(address)
             }
             if (client == null) {
                 HttpClient.Builder builder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(CONNECT_TIMEOUT)
@@ -1220,11 +1228,14 @@ class PackArtifacts {
         }
     }
 
-    // a request that a test made and was not to make
-    private static final class NetworkAsked extends AssertionError {
+    /**
+     * Thrown by what {@link #beforeEachRequest} was given for a request that is not to be made. It is
+     * no failure of a repository: nothing here catches it.
+     */
+    static final class RequestRefused extends AssertionError {
 
-        NetworkAsked(URI address) {
-            super("A request was made to ${shown(address)}, and ${NO_NETWORK_PROPERTY} says that nothing is asked of another computer" as Object)
+        RequestRefused(String message) {
+            super((Object) message)
         }
     }
 

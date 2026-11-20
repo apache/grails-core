@@ -117,10 +117,9 @@ dependencies {
 }
 
 tasks.named('test', Test).configure { Test test ->
-    // a spec that asks for a feature there is not would otherwise look for it in the plugin index, on the network
+    // the specs name their catalogs themselves, whatever the environment of whoever runs them names; and a spec that
+    // would ask another computer for anything fails with the address (NoNetworkExtension, in the test sources)
     test.environment('GRAILS_FORGE_CATALOG', 'none')
-    // and a spec that would ask another computer for anything fails with the address, and asks nothing
-    test.systemProperty('grails.forge.cli.noNetwork', 'true')
 }
 
 apply {
