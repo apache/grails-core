@@ -110,7 +110,8 @@ final class CommandCatalog {
                 (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
                 (untrusted == null ? '' : "${System.lineSeparator()}The commands of a project are not there: ${untrusted}") +
-                (listed == null ? '' : "${System.lineSeparator()}${listed}"))
+                (listed == null ? '' : "${System.lineSeparator()}${listed}") +
+                FormerCommands.line(parent, typed))
     }
 
     /**

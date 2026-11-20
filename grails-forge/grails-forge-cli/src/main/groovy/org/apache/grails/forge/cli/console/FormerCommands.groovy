@@ -1,0 +1,187 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.apache.grails.forge.cli.console
+
+import groovy.transform.CompileStatic
+import picocli.CommandLine
+
+/**
+ * The commands of the Grails shell and of its profiles that are no command of this command line
+ * under the name they had, or not in every directory, each with what there is in its place. The
+ * table is fixed: it is read from no profile, no project and no build, and what was typed is only
+ * looked up in it and never repeated from it.
+ *
+ * @since 9.0
+ */
+@CompileStatic
+final class FormerCommands {
+
+    /** What became of a command. */
+    static enum Status {
+
+        /** A command of this command line does it, under another name. */
+        REPLACED('replaced'),
+        /** It is a command of this command line where a project of some kind is, and not elsewhere. */
+        ELSEWHERE('kept, in some directories'),
+        /** A command of a plugin does it, which is a command here once the build of the project has listed it. */
+        PLUGIN('a command of a plugin'),
+        /** It is gone and nothing takes its place. */
+        REMOVED('removed'),
+        /** Nothing takes its place today, and none is recorded as decided. */
+        NO_REPLACEMENT('no replacement')
+
+        final String shown
+
+        Status(String shown) {
+            this.shown = shown
+        }
+    }
+
+    /** One command of the table. */
+    static final class Former {
+
+        final String name
+        /** Where the Grails shell had it. */
+        final String origin
+        final Status status
+        /** What is said for it, with {@code {cli}} where the name of this command line stands. */
+        final String hint
+
+        Former(String name, String origin, Status status, String hint) {
+            this.name = name
+            this.origin = origin
+            this.status = status
+            this.hint = hint
+        }
+    }
+
+    private static final String IN_A_PROJECT = 'is a command in the directory of a Grails project whose record is read, and the current directory is in none'
+    private static final String PROFILES_GONE = 'Profiles are replaced by application types, features and feature packs, and no command creates any of these'
+    private static final String REST_API = 'is a command in the directory of a REST API application (create-restapi), and the current directory is in none'
+    private static final String PLUGIN_PROJECT = 'is a command in the directory of a Grails plugin, which has a class whose name ends with GrailsPlugin under src/main/groovy, and the current directory is in none'
+    private static final String SCAFFOLDING = 'is a command of the scaffolding plugin (grails-scaffolding) for applications with GSP views: where the application has the plugin, ' +
+            '{cli} gradle grailsCommandCatalog makes it a command here. What the REST API profile generated with it (JSON views) has no replacement'
+
+    private static final Map<String, Former> TABLE = table()
+
+    private FormerCommands() {
+    }
+
+    /**
+     * @return every command of the table, in the order of their names
+     */
+    static List<Former> all() {
+        return new ArrayList<Former>(TABLE.values())
+    }
+
+    /**
+     * What is added to the refusal of something that was typed for a command and is none, when the
+     * Grails shell had a command by that name. Only a command at the top of the command line is
+     * looked up, by the name as it was typed.
+     *
+     * @param parent the command a command was expected of
+     * @param typed what was typed
+     * @return a line break and one line, or nothing
+     */
+    static String line(CommandLine parent, String typed) {
+        Former former = parent == null || parent.getParent() != null ? null : find(typed)
+        return former == null ? '' : System.lineSeparator() + former.hint.replace('{cli}', parent.getCommandSpec().root().name())
+    }
+
+    /**
+     * @param typed what was typed
+     * @return the command of the table by that name, or {@code null}
+     */
+    static Former find(String typed) {
+        if (typed == null) {
+            return null
+        }
+        // the shell ran what followed an exclamation mark as a program: whatever follows, it is that command
+        return TABLE.get(typed.startsWith('!') ? '!' : typed)
+    }
+
+    private static Map<String, Former> table() {
+        Map<String, Former> table = new TreeMap<String, Former>()
+        Closure<Void> add = { String name, String origin, Status status, String hint ->
+            if (table.put(name, new Former(name, origin, status, hint)) != null) {
+                throw new IllegalStateException("${name} is in the table twice")
+            }
+            return null
+        }
+
+        add('test', 'base profile, another name of test-app', Status.REPLACED,
+                'test was another name of test-app in the Grails shell. Type: {cli} test-app')
+        add('create-tag-lib', 'web profile, another name of create-taglib', Status.REPLACED,
+                'create-tag-lib was another name of create-taglib in the Grails shell. Type: {cli} create-taglib')
+        add('quit', 'shell, interactive mode', Status.REPLACED,
+                'quit ended the interactive mode of the Grails shell. The interactive mode of {cli} is ended with exit, and there is none to end outside it')
+        add('exit', 'shell, interactive mode', Status.REPLACED,
+                'exit ends the interactive mode, which {cli} starts when it is given no command. It is no command outside it')
+        add('list-profiles', 'shell', Status.REPLACED,
+                'list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: {cli} help lists the create commands, ' +
+                'and each lists its features with --list-features')
+        add('profile-info', 'shell', Status.REPLACED,
+                'profile-info described a profile of the Grails shell. Profiles are replaced by application types and features: {cli} create-app --list-features ' +
+                'lists the features of an application, and the other create commands those of their types')
+
+        add('generate-all', 'rest-api profile', Status.PLUGIN, 'generate-all ' + SCAFFOLDING)
+        add('generate-controller', 'rest-api profile', Status.PLUGIN, 'generate-controller ' + SCAFFOLDING)
+        add('generate-views', 'rest-api profile', Status.PLUGIN, 'generate-views ' + SCAFFOLDING)
+
+        add('generate-resource-controller', 'rest-api profile, another name of generate-all and generate-controller', Status.NO_REPLACEMENT,
+                'generate-resource-controller was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
+                'create-restful-controller writes a controller for a domain class in a REST API application')
+        add('generate-unit-test', 'rest-api profile', Status.NO_REPLACEMENT,
+                'generate-unit-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; create-unit-test writes an empty test')
+        add('generate-functional-test', 'rest-api profile', Status.NO_REPLACEMENT,
+                'generate-functional-test was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
+                'create-functional-test writes an empty test in a REST API application')
+        add('list-plugins', 'base profile', Status.NO_REPLACEMENT,
+                'list-plugins listed the plugins of the Grails plugin portal in the Grails shell. It has no replacement in {cli}')
+        add('plugin-info', 'base profile', Status.NO_REPLACEMENT,
+                'plugin-info described a plugin of the Grails plugin portal in the Grails shell. It has no replacement in {cli}')
+        add('open', 'shell', Status.NO_REPLACEMENT,
+                'open opened a file with the program the desktop has for it in the Grails shell. It has no replacement in {cli}')
+        add('!', 'shell, interactive mode', Status.NO_REPLACEMENT,
+                'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in {cli}')
+
+        add('create-profile', 'shell', Status.REMOVED, 'create-profile created a profile for the Grails shell. ' + PROFILES_GONE)
+        add('create-creator-command', 'profile profile', Status.REMOVED, 'create-creator-command wrote a command of a profile for the Grails shell. ' + PROFILES_GONE)
+        add('create-generator-command', 'profile profile', Status.REMOVED, 'create-generator-command wrote a command of a profile for the Grails shell. ' + PROFILES_GONE)
+        add('create-gradle-command', 'profile profile', Status.REMOVED, 'create-gradle-command wrote a command of a profile for the Grails shell. ' + PROFILES_GONE)
+        add('create-feature', 'profile profile', Status.REMOVED, 'create-feature wrote a feature of a profile for the Grails shell. ' + PROFILES_GONE)
+        add('create-template', 'profile profile', Status.REMOVED, 'create-template wrote a template of a profile for the Grails shell. ' + PROFILES_GONE)
+
+        for (String name : ['add-property', 'create-command', 'create-controller', 'create-domain-class', 'create-interceptor', 'create-script',
+                            'create-service', 'create-taglib', 'create-unit-test', 'install-templates']) {
+            add(name, name == 'install-templates' ? 'scaffolding plugin' : 'base, web and rest-api profiles', Status.ELSEWHERE, "${name} ${IN_A_PROJECT}".toString())
+        }
+        add('create-integration-test', 'web and rest-api profiles', Status.ELSEWHERE,
+                'create-integration-test is a command in the directory of a Grails application or web plugin whose record is read, not of a plain plugin, and the current directory is in none')
+        add('create-job', 'Quartz plugin', Status.ELSEWHERE,
+                'create-job is a command in the directory of a Grails project that has the grails-quartz feature, which {cli} feature add grails-quartz adds, ' +
+                'and the current directory is in none')
+        add('create-domain-resource', 'rest-api profile', Status.ELSEWHERE, 'create-domain-resource ' + REST_API)
+        add('create-functional-test', 'rest-api profile', Status.ELSEWHERE, 'create-functional-test ' + REST_API)
+        add('create-restful-controller', 'rest-api profile', Status.ELSEWHERE, 'create-restful-controller ' + REST_API)
+        add('package-plugin', 'plugin profile', Status.ELSEWHERE, 'package-plugin ' + PLUGIN_PROJECT)
+        add('publish-plugin', 'plugin profile', Status.ELSEWHERE, 'publish-plugin ' + PLUGIN_PROJECT)
+        return Collections.unmodifiableMap(table)
+    }
+}

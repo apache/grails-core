@@ -328,6 +328,119 @@ $ grails -t forge install-templates
 $ grails -t forge gradle runCommand --arg=install-templates
 ----
 
+=== Commands of Earlier Versions
+
+The Grails shell and its profiles had commands that the Grails Forge CLI does not have under the name they had. When one of these names is typed, the command line refuses it as it refuses anything that is no command, with exit code 2, and adds one line that says what there is in its place:
+
+[source,console]
+----
+$ grails -t forge list-profiles
+There is no command list-profiles
+list-profiles listed the profiles of the Grails shell. Profiles are replaced by application types and features: grails-forge-cli help lists the create commands, and each lists its features with --list-features
+----
+
+The same line is added for a command that the Grails Forge CLI has in some directories only, when it is typed where it is none: `create-controller` outside a project, `create-restful-controller` in an application that is no REST API application, `create-job` in a project without the `grails-quartz` feature, `publish-plugin` in a project that is no plugin. Only the name of a command, exactly as it was, is looked up; nothing is run for it.
+
+[cols="2,2,5"]
+|===
+|Command |Was a command of |Now
+
+|`!`
+|the shell, in interactive mode
+|no replacement: `!ls` ran a program from the interactive mode. Run the program in a terminal of its own.
+
+|`create-creator-command`
+|the profile for writing profiles
+|removed: Profiles are replaced by application types, features and feature packs (see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation]). No command creates any of these.
+
+|`create-feature`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-generator-command`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-gradle-command`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`create-profile`
+|the shell
+|removed: As `create-creator-command`.
+
+|`create-tag-lib`
+|the web profile, another name of `create-taglib`
+|replaced: `create-taglib`
+
+|`create-template`
+|the profile for writing profiles
+|removed: As `create-creator-command`.
+
+|`exit`
+|the shell, in interactive mode
+|replaced: `exit` ends the interactive mode of the Grails Forge CLI as well. Outside the interactive mode it is no command.
+
+|`generate-all`
+|the REST API profile
+|a command of a plugin: `generate-all` of the scaffolding plugin, for applications with GSP views (see the section before this one for how the command of a plugin becomes a command here). The JSON views the profile command generated have no replacement.
+
+|`generate-controller`
+|the REST API profile
+|a command of a plugin: `generate-controller` of the scaffolding plugin; as `generate-all`.
+
+|`generate-functional-test`
+|the REST API profile
+|no replacement: `create-functional-test` writes an empty test in a REST API application.
+
+|`generate-resource-controller`
+|the REST API profile, another name of `generate-all` and `generate-controller`
+|no replacement: `create-restful-controller` writes a controller for a domain class in a REST API application.
+
+|`generate-unit-test`
+|the REST API profile
+|no replacement: `create-unit-test` writes an empty test.
+
+|`generate-views`
+|the REST API profile
+|a command of a plugin: `generate-views` of the scaffolding plugin; as `generate-all`.
+
+|`install`
+|the plugin profile and the profile for writing profiles
+|replaced: `gradle publishToMavenLocal`. `install` is still answered, by saying so; it installs nothing and ends with exit code 1.
+
+|`list-plugins`
+|the base profile
+|no replacement: Nothing lists the plugins of the plugin portal.
+
+|`list-profiles`
+|the shell
+|replaced: `help` lists the create commands, one for each type of application, and each of them lists its features with `--list-features`.
+
+|`open`
+|the shell
+|no replacement: Open the file with the program of your choice.
+
+|`plugin-info`
+|the base profile
+|no replacement: Nothing describes a plugin of the plugin portal.
+
+|`profile-info`
+|the shell
+|replaced: `create-app --list-features`, and the same option of the other create commands.
+
+|`quit`
+|the shell, in interactive mode
+|replaced: `exit`
+
+|`test`
+|the base profile, another name of `test-app`
+|replaced: `test-app`
+
+|===
+
+Every other command of the shell and of the profiles is a command of the Grails Forge CLI under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `gradle` and `help`. `run`, which compiled and ran a Groovy script in the shell outside a project, is now another name of `run-app`.
+
 === Grails Default Package Configuration
 
 The project's default package is determined based on the project's name. For instance, running the following command:
