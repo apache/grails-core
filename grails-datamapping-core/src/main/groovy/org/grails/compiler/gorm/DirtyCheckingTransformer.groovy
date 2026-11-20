@@ -184,7 +184,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
             }
         }
 
-        int jpaIdPropertyCount = 0
+        Set<String> jpaIdPropertyNames = new LinkedHashSet<String>()
         for (PropertyNode pn in propertyNodes) {
             final List<AnnotationNode> idCandidates = pn.annotations + pn.getField().annotations
             final GetterAndSetter idGetterAndSetter = gettersAndSetters[pn.name]
@@ -192,11 +192,12 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 idCandidates.addAll(idGetterAndSetter.getter.annotations)
             }
             if (hasAnnotation(idCandidates, GormEntityTransformation.JPA_ID_ANNOTATION_NODE)) {
-                jpaIdPropertyCount++
+                jpaIdPropertyNames.add(pn.name)
             }
         }
-        // an identifier declared on a superclass belongs to the same key, so it counts as well
-        jpaIdPropertyCount += inheritedJpaIdCount(classNode)
+        // an identifier declared on a superclass belongs to the same key, so it counts as well, once, also when the entity declares it again
+        jpaIdPropertyNames.addAll(inheritedJpaIdNames(classNode))
+        int jpaIdPropertyCount = jpaIdPropertyNames.size()
 
         boolean hasVersion = false
         for (PropertyNode pn in propertyNodes) {
@@ -507,7 +508,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
     /**
      * Counts the JPA {@code @Id} properties that the mapped superclasses of a class declare, by field, property or getter.
      */
-    private static int inheritedJpaIdCount(ClassNode classNode) {
+    private static Set<String> inheritedJpaIdNames(ClassNode classNode) {
         Set<String> names = new LinkedHashSet<String>()
         for (ClassNode superClass = classNode.superClass; superClass != null && superClass != ClassHelper.OBJECT_TYPE; superClass = superClass.superClass) {
             if (!keepsMapping(superClass)) {
@@ -530,7 +531,7 @@ class DirtyCheckingTransformer implements CompilationUnitAware {
                 }
             }
         }
-        return names.size()
+        return names
     }
 
     @CompileStatic

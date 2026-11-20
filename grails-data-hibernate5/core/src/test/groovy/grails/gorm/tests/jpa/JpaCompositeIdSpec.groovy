@@ -64,6 +64,8 @@ class JpaCompositeIdSpec extends Specification {
         'an entity superclass (one) and the entity (one)' | JpaEntityBaseChild      || false
         'a mapped superclass (one) above a plain class, and the entity (one)' | JpaMappedAbovePlainChild || false
         'a plain superclass whose @Id is on a getter, and the entity (one)' | JpaPlainGetterIdChild || true
+        'a mapped superclass and the entity declaring the same @Id (one)' | JpaRedeclaredIdEntity || true
+        'a mapped superclass getter and the entity declaring the same @Id (one)' | JpaRedeclaredGetterIdEntity || true
         outcome = declaresGetId ? 'give it a getId()' : 'leave getId() to the key'
     }
 
@@ -180,4 +182,38 @@ abstract class JpaPlainGetterIdBase {
 class JpaPlainGetterIdChild extends JpaPlainGetterIdBase {
     @Id
     String userNo
+}
+
+@MappedSuperclass
+abstract class JpaCodeBase implements Serializable {
+    @Id
+    Long code
+}
+
+@Entity
+class JpaRedeclaredIdEntity extends JpaCodeBase {
+    @Id
+    Long code
+    String name
+}
+
+@MappedSuperclass
+abstract class JpaCodeGetterBase implements Serializable {
+    private Long code
+
+    @Id
+    Long getCode() {
+        code
+    }
+
+    void setCode(Long code) {
+        this.code = code
+    }
+}
+
+@Entity
+class JpaRedeclaredGetterIdEntity extends JpaCodeGetterBase {
+    @Id
+    Long code
+    String name
 }
