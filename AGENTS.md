@@ -170,7 +170,7 @@ All managed dependency versions live in `dependencies.gradle` (the single source
 
 **Testing**: `grails-testing-support-core`, `grails-testing-support-web`, `grails-geb`
 
-**Other**: `grails-bom` (dependency management), `grails-doc`, `grails-shell-cli`, `grails-forge`
+**Other**: `grails-bom` (dependency management), `grails-doc`, `grails-forge` (the `grails` command line is `grails-forge/grails-forge-cli`, its launcher `grails-forge/grails-cli`)
 
 ## Artefact Types
 

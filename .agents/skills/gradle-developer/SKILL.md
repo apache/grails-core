@@ -64,10 +64,10 @@ This git repo is **several independent Gradle builds**, not one flat multiprojec
 
 | Build | Path | Role | How to run |
 |-------|------|------|------------|
-| **Root framework** | repo root | 60+ published modules, BOMs, test-examples, profiles, docs | `./gradlew …` from root |
+| **Root framework** | repo root | 60+ published modules, BOMs, test-examples, docs | `./gradlew …` from root |
 | **build-logic** | `build-logic/` | Shared **convention plugins** via `includeBuild` | `cd build-logic && ./gradlew …` (or root pluginManagement includeBuild) |
 | **grails-gradle** | `grails-gradle/` | **Published** Grails Gradle plugins for apps | `cd grails-gradle && ./gradlew …` |
-| **grails-forge** | `grails-forge/` | App generator: a Grails plugin and two Grails applications built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
+| **grails-forge** | `grails-forge/` | App generator and the `grails` command line: a Grails plugin and two Grails applications (`grails-forge-web`, and `grails-forge-cli`, which is the command line, with its launcher `grails-cli`) built against the framework by coordinates (`includeBuild('..')` substitution) | `cd grails-forge && ./gradlew …` |
 | **end-to-end** | `end-to-end/` | Tests against **published** artifacts in `build/local-maven` | Full 3-step flow below (see `end-to-end/README.md`) |
 | **gradle-bootstrap** | `gradle-bootstrap/` | Regenerates shared wrappers from `.sdkmanrc` | `gradle -p gradle-bootstrap` (see wrapper section) |
 
@@ -160,8 +160,6 @@ Never unify those casually.
 3. Manually refresh the locations bootstrap does **not** cover. For each tree, keep the **full** wrapper set in sync (`gradle-wrapper.properties`, `gradle-wrapper.jar`, `gradlew`, `gradlew.bat`) - not properties alone:
 
    - `build-logic/` - run its wrapper task or copy the complete set from root after bootstrap
-   - `grails-profiles/base/skeleton/` and `grails-profiles/profile/skeleton/`
-   - `grails-shell-cli/src/test/resources/gradle-sample/` (and `bin/test` copy if present)
    - Forge **generated-app** wrapper assets (all of these - properties alone is not enough):
      - `grails-forge/grails-forge-core/grails-app/views/forge/.../gradleWrapperProperties.gsp` (properties page)
      - `grails-forge/grails-forge-core/src/main/resources/gradle/gradlew`
