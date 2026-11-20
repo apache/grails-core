@@ -1308,3 +1308,18 @@ As of Grails 7.0.18, with `grails.plugin.springsecurity.rest.token.storage.jwt.u
 * For an encrypted JWT, `JwtService.parse` and the `accessTokenJwt` property of an `AccessToken` now return a `grails.plugin.springsecurity.rest.token.generation.jwt.NestedJwt` instead of a `com.nimbusds.jwt.EncryptedJWT`. Its claims are those of the signed JWT inside, its header is that of the encrypted JWT, and it serializes to the token.
 * With encrypted JWTs enabled, a signed JWT is rejected as an invalid token, and with signed JWTs, an encrypted JWT is. Previously such a token failed with a `NullPointerException`.
 * An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
+
+[[grails-7-0-19]]
+=== Grails 7.0.19
+
+==== A remember-me login is redirected only for a GET page request
+
+Before, every request that logged in through the remember-me cookie was handed to the authentication success handler, which redirected it and stopped the filter chain. A POST, PUT, PATCH, DELETE, HEAD or Ajax request was turned into a GET, or into the Ajax success URL, and its action never ran. The request for the login form was redirected as well, which sent a remembered user from the login form back to the page that had asked for a full login, and back again.
+
+Now only a GET that is not an Ajax call and not the request for the login form is redirected:
+
+* a remember-me login on a POST, PUT, PATCH, DELETE or HEAD request, or on an Ajax request, goes on to the controller as the remembered user, and nothing is saved in the request cache for it;
+* a remember-me login on the request for the login form (`auth.loginFormUrl`, compared by its path) reaches the login controller;
+* `GrailsRememberMeAuthenticationFilter.setAuthenticationSuccessHandler` no longer sets Spring Security's handler. The redirect is decided in `onSuccessfulAuthentication`, so a subclass that overrides that method without calling `super` no longer redirects at all.
+
+To keep the old result for a kind of request, extend `GrailsRememberMeAuthenticationFilter`, override `redirects(request)` to return `true` for it, and register the subclass as the `rememberMeAuthenticationFilter` bean.

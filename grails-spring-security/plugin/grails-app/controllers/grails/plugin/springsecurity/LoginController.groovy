@@ -56,12 +56,18 @@ class LoginController {
         }
     }
 
-    /** Show the login page. */
+    /** Show the login page; a user who is logged in only by a remember-me cookie goes to the full login page. */
     def auth() {
 
         def conf = getConf()
 
         if (springSecurityService.isLoggedIn()) {
+            if (authenticationTrustResolver.isRememberMe(authentication)) {
+                // only a cookie: the user was sent here because a page needs a full login (IS_AUTHENTICATED_FULLY or the
+                // equivalent expression), and sending the user on to the target page would only start over
+                redirect action: 'full', params: params
+                return
+            }
             redirect uri: conf.successHandler.defaultTargetUrl
             return
         }
