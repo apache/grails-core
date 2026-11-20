@@ -170,6 +170,31 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         outcome = fails ? 'fails' : 'commits'
     }
 
+    @Unroll
+    void 'a flushed save with tenant #tenantId and boundSession=#boundSession needs no tenant transaction'() {
+        given:
+        Closure write = {
+            Tenants.withTenant(PlainMongoNote, tenantId) {
+                new PlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        if (boundSession) {
+            PlainMongoNote.withSession { write.call() }
+        }
+        else {
+            write.call()
+        }
+
+        then: 'read without GORM'
+        textsIn('plainClassDefaultDb', PlainMongoNote) == ['flushed', 'seed']
+        textsIn('plainClassFooDb', PlainMongoNote) == []
+
+        where:
+        [tenantId, boundSession] << [['foo', 'unregistered'], [false, true]].combinations()
+    }
+
     static final Map<String, Closure> WRITES = [
             'a flushed save': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').save(flush: true) },
             'a flushed insert': { PlainClassInTenantBlockSpec spec -> new PlainMongoNote(text: 'inner').insert(flush: true) },

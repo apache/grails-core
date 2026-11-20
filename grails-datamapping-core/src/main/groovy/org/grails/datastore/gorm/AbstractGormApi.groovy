@@ -176,11 +176,12 @@ abstract class AbstractGormApi<D> extends AbstractDatastoreApi {
      * tenant's transaction belongs to the tenant's datastore: a change left pending there would be lost, or written
      * although the tenant's transaction rolled back. Such a write runs in a transaction of the class's own datastore.
      * Flushing does not enlist the write in the tenant's transaction and does not replace that transaction.
+     * With no active transaction, the write needs no tenant datastore lookup.
      *
      * @param flush Whether the write is flushed at once; this does not exempt it from requiring its own transaction
      */
     protected void requireTransactionForWrite(boolean flush) {
-        if (MultiTenant.isAssignableFrom(persistentClass)) {
+        if (MultiTenant.isAssignableFrom(persistentClass) || !TransactionSynchronizationManager.isActualTransactionActive()) {
             return
         }
         Datastore ds = getDatastore()

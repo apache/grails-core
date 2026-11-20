@@ -20,7 +20,9 @@ package org.grails.datastore.gorm
 
 import grails.gorm.annotation.Entity
 import grails.gorm.multitenancy.CurrentTenantHolder
+import grails.gorm.multitenancy.Tenants
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
 import org.grails.datastore.mapping.core.SessionCallback
 import org.grails.datastore.mapping.core.connections.ConnectionSource
@@ -135,11 +137,11 @@ class AbstractGormApiSpec extends Specification {
         AbstractGormApi.EXCLUDES.is(AbstractGormApi.getEXCLUDES())
 
         and: "the exact set jdaugherty's review restored, plus getTransactionManager for the new abstract getter"
-        AbstractGormApi.EXCLUDES as Set == [
+        (AbstractGormApi.EXCLUDES as Set) == ([
             'setProperty', 'getProperty', 'getMetaClass', 'setMetaClass', 'invokeMethod',
             'getMethods', 'getExtendedMethods', 'wait', 'equals', 'toString', 'hashCode',
             'getClass', 'notify', 'notifyAll', 'setTransactionManager', 'getTransactionManager'
-        ] as Set
+        ] as Set)
     }
 
     void "ConstantDatastoreResolver always resolves to the datastore it was constructed with"() {
@@ -149,6 +151,22 @@ class AbstractGormApiSpec extends Specification {
 
         expect:
         resolver.resolve().is(ds)
+    }
+
+    void 'a plain class can be flushed with an unregistered tenant bound and no transaction'() {
+        given:
+        datastore.close()
+        datastore = new SimpleMapDatastore(
+                DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
+                [ConnectionSource.DEFAULT], AbstractGormApiThing)
+
+        when:
+        def saved = Tenants.withTenant(AbstractGormApiThing, 'unregistered') {
+            new AbstractGormApiThing(name: 'flushed').save(flush: true)
+        }
+
+        then:
+        AbstractGormApiThing.get(saved.id)?.name == 'flushed'
     }
 
     interface MixedDatastore extends MultiTenantCapableDatastore, Datastore {}

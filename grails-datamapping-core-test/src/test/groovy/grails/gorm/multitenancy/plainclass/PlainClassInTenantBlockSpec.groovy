@@ -205,6 +205,33 @@ class PlainClassInTenantBlockSpec extends Specification {
         mode << MODES
     }
 
+    @Unroll
+    void 'with #mode multi-tenancy, a flushed save with tenant #tenantId and boundSession=#boundSession needs no tenant transaction'() {
+        given:
+        startDatastore(mode)
+        PlainNote saved
+        Closure write = {
+            Tenants.withTenant(PlainNote, tenantId) {
+                saved = new PlainNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        if (boundSession) {
+            PlainNote.withSession { write.call() }
+        }
+        else {
+            write.call()
+        }
+
+        then:
+        holder(PlainNote, saved.id).is(datastore)
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
+
+        where:
+        [mode, tenantId, boundSession] << [MODES, ['foo', 'unregistered'], [false, true]].combinations()
+    }
+
     static final List<MultiTenancySettings.MultiTenancyMode> MODES = [
             MultiTenancySettings.MultiTenancyMode.DATABASE, MultiTenancySettings.MultiTenancyMode.SCHEMA
     ]
