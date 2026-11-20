@@ -109,6 +109,270 @@ class NestedAliasPathSubqueryHibernateSpec extends GrailsDataTckSpec<GrailsDataH
         teams*.name.sort() == ['United First Team', 'United Reserves']
     }
 
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison =="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id == id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison !="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id != id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison <"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id < id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == []
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison <="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id <= id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison >"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id > id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the id of the subquery on the right keeps the comparison >="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { t.club.id >= id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team', 'United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison =="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id == t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison !="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id != t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id > t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == []
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id >= t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id < t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { id <= t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team', 'United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison =="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id == c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison !="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id != c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison <"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id < c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == []
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison <="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id <= c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison >"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id > c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the nested path of the enclosing alias on the left and the aliased id of the subquery on the right keeps the comparison >="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; t.club.id >= c.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team', 'United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison =="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id == t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison !="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id != t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id > t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == []
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison <="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id >= t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['United First Team', 'United Reserves']
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >"() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id < t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team']
+    }
+
+    void "a subquery with the aliased id of the subquery on the left and the nested path of the enclosing alias on the right keeps the comparison >="() {
+        when:
+        def teams = Team.where {
+            def t = Team
+            exists(Club.where { def c = Club; c.id <= t.club.id && name == 'Manchester United' }.property('name'))
+        }.list()
+
+        then:
+        teams*.name.sort() == ['Arsenal First Team', 'United First Team', 'United Reserves']
+    }
+
     void "an alias declared in one method does not turn a local variable of a later method into an alias"() {
         when: 'a Map named t, while an earlier method of this class declared t as an alias'
         Map t = [club: [name: 'Arsenal']]

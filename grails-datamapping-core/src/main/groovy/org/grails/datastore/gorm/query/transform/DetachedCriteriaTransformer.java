@@ -915,6 +915,11 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         return aliases.containsKey(((VariableExpression) ((PropertyExpression) expression).getObjectExpression()).getName());
     }
 
+    /** Whether the expression is the name of a property of the class the query is on, such as {@code id}. */
+    private static boolean isPropertyOfQueriedClass(Expression expression, List<String> propertyNames) {
+        return expression instanceof VariableExpression && propertyNames.contains(((VariableExpression) expression).getName());
+    }
+
     private void addBinaryExpressionToNewBody(List<String> propertyNames, BlockStatement newCode, BinaryExpression be, boolean addAll, VariableScope variableScope) {
         Token operation = be.getOperation();
 
@@ -923,9 +928,10 @@ public class DetachedCriteriaTransformer extends ClassCodeVisitorSupport {
         Expression leftExpression = be.getLeftExpression();
         Expression rightExpression = be.getRightExpression();
         String swappedOperator = SWAPPED_COMPARISON_OPERATORS.get(operator);
-        if (swappedOperator != null && isNestedAliasPath(leftExpression) && isAliasProperty(rightExpression)) {
-            // t.club.id == c.id: a nested path of an alias is handled on the right of the comparison, so the sides change
-            // places, and the operator with them
+        if (swappedOperator != null && isNestedAliasPath(leftExpression) &&
+                (isAliasProperty(rightExpression) || isPropertyOfQueriedClass(rightExpression, propertyNames))) {
+            // t.club.id == c.id or t.club.id == id: a nested path of an alias is handled on the right of the comparison, so
+            // the sides change places, and the operator with them
             BinaryExpression swapped = new BinaryExpression(rightExpression, Token.newSymbol(swappedOperator, operation.getStartLine(), operation.getStartColumn()), leftExpression);
             swapped.setSourcePosition(be);
             addBinaryExpressionToNewBody(propertyNames, newCode, swapped, addAll, variableScope);
