@@ -147,9 +147,33 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
      * @throws org.hibernate.HibernateException Indicates a problem creating the sub criteria
      * @see #createAlias(String, String)
      */
-    public Criteria createAlias(String associationPath, String alias, int joinType) {
-        aliasMap.put(associationPath, alias);
-        return criteria.createAlias(associationPath, alias, JoinType.parse(joinType));
+    public Criteria createAlias(String path, String alias, int joinType) {
+        boolean declaredByCaller = createAliasDepth == 0 && !pathsFromRoot;
+        createAliasDepth++;
+        try {
+            String block = blockPath();
+            String written = withoutRoot(path);
+            String associationPath = redirectHead(written);
+            if (redirectToExistingJoin(block + associationPath, alias, block + written)) {
+                return criteria;
+            }
+            String absolute = absoluteAssociationPath(block + associationPath);
+            String qualified = joinPrefix(associationPath, joinType);
+            String blockAlias = blockAliasOfPaths();
+            if (blockAlias != null && !aliasMap.containsValue(qualified.split("\\.")[0])) {
+                // inside a block the path is the one of the association of the block
+                qualified = blockAlias + '.' + qualified;
+            }
+            aliasMap.put(absolute, alias);
+            Criteria created = criteria.createAlias(qualified, alias, JoinType.parse(joinType));
+            if (declaredByCaller) {
+                declaredAliases.add(alias);
+            }
+            return created;
+        }
+        finally {
+            createAliasDepth--;
+        }
     }
 
     @Override

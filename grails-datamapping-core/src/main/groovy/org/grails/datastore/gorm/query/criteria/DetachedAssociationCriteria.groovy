@@ -35,6 +35,14 @@ class DetachedAssociationCriteria<T> extends DetachedCriteria<T> implements Crit
     final Association association
     final String associationPath
 
+    /**
+     * The path as it was written when it starts with an alias declared earlier, as {@code c2.related}, which is
+     * {@link #getAssociationPath()} {@code children.related}. It names the alias the join continues from, which the
+     * association path alone does not when the association has several aliases. {@code null} when the path does not
+     * start with an alias.
+     */
+    String pathFromAlias
+
     DetachedAssociationCriteria(Class<T> targetClass, Association association) {
         this(targetClass, association, null)
     }
