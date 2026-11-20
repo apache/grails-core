@@ -266,7 +266,9 @@ final class ProjectLock {
      * A feature of the application and where it came from. A feature of the framework has only its
      * name. A feature of a feature pack that is not part of Forge has, as far as they are known, the
      * address of the repository the pack was taken from, the coordinates and the version of the
-     * artifact it is in, and the digest of that artifact.
+     * artifact it is in, and the digest of that artifact; and, when the coordinates were those a
+     * catalog gave for the name of the feature, the address of that catalog and the digest of the
+     * catalog as it was read.
      */
     @CompileStatic
     static final class LockedFeature {
@@ -286,8 +288,13 @@ final class ProjectLock {
         final String coordinates
         final String version
         final String sha256
+        final String catalog
+        final String catalogSha256
 
-        LockedFeature(String name, String source, String origin = null, String coordinates = null, String version = null, String sha256 = null) {
+        LockedFeature(String name, String source, String origin = null, String coordinates = null, String version = null, String sha256 = null,
+                      String catalog = null, String catalogSha256 = null) {
+            this.catalog = catalog
+            this.catalogSha256 = catalogSha256
             this.name = name
             this.source = source
             this.origin = origin
@@ -313,6 +320,12 @@ final class ProjectLock {
             if (sha256 != null) {
                 map.put('sha256', sha256)
             }
+            if (catalog != null) {
+                map.put('catalog', catalog)
+            }
+            if (catalogSha256 != null) {
+                map.put('catalogSha256', catalogSha256)
+            }
             return map
         }
 
@@ -326,7 +339,17 @@ final class ProjectLock {
                     section.has('origin') ? section.text('origin', StateLimits.MAX_ADDRESS) : null,
                     section.optionalMatching('coordinates', ProjectManifest.COORDINATES, 'a group and an artifact, group:artifact', StateLimits.MAX_COORDINATES),
                     section.optionalMatching('version', ProjectManifest.VERSION, 'a version'),
-                    section.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal'))
+                    section.optionalMatching('sha256', SHA256, 'a SHA-256 digest in hexadecimal'),
+                    section.has('catalog') ? section.text('catalog', StateLimits.MAX_ADDRESS) : null,
+                    section.optionalMatching('catalogSha256', SHA256, 'a SHA-256 digest in hexadecimal'))
+            if (feature.catalog != null && !isPublicAddress(feature.catalog)) {
+                throw section.problem('catalog', 'must be the https address of a catalog, without a name, a password, a query or a fragment')
+            }
+            // what a catalog gives is the coordinates of an artifact and its digest
+            if ((feature.catalog != null && feature.catalogSha256 == null) ||
+                    (feature.catalogSha256 != null && (feature.coordinates == null || feature.version == null || feature.sha256 == null))) {
+                throw section.problem('catalogSha256', 'is the digest of the catalog that gave the coordinates, the version and the digest of the artifact, and goes with them')
+            }
             if (source != PACK && (feature.origin != null || feature.coordinates != null || feature.version != null || feature.sha256 != null)) {
                 throw section.problem('source', "is ${source}, and only a feature of a feature pack that is not part of Forge has an origin, coordinates, a version or a digest")
             }

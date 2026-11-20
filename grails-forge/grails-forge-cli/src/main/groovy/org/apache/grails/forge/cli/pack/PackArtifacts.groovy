@@ -142,6 +142,9 @@ class PackArtifacts {
     private final Duration fileTimeout
     private final PackLoader loader = new PackLoader()
 
+    /** Whether nothing is asked of the network: only a directory gives a file then */
+    boolean offline
+
     PackArtifacts() {
         this(new HttpTransport(null, ANSWER_TIMEOUT))
     }
@@ -326,41 +329,74 @@ class PackArtifacts {
      * see {@link GradleRepository#shownAddress(String)}.
      */
     static URI repository(String address) {
+        URI uri = checked(address, 'repository', 'a repository a feature pack is taken from', true)
+        return uri.rawPath?.endsWith('/') ? uri : URI.create("${uri}/")
+    }
+
+    /**
+     * @param address the address of a feature catalog: {@code https}, or {@code file:} for a file
+     * @return the address
+     * @throws IllegalArgumentException when it is not one a catalog is read from, by the rules of
+     * {@link #repository(String)}
+     */
+    static URI catalog(String address) {
+        return checked(address, 'feature catalog', 'a feature catalog that is read', false)
+    }
+
+    /**
+     * The repository a catalog names for a plugin. A catalog is read from elsewhere, and what it names
+     * is asked as a repository is that a redirect leads to: over https, and not on this computer or
+     * in its network, which only the command line and the environment can name.
+     *
+     * @param address the address as the catalog has it
+     * @return the address, as that of a directory
+     * @throws IllegalArgumentException when it is not such an address
+     */
+    static URI repositoryOfCatalog(String address) {
+        URI uri = repository(address)
+        if (!HTTPS.equalsIgnoreCase(uri.scheme) || isNearby(uri.host)) {
+            throw new Unusable('a catalog names only https repositories that are not of this computer or of its network')
+        }
+        // the name the plugin index has for Maven Central
+        return uri.host.equalsIgnoreCase('repo1.maven.org') && uri.rawPath == '/maven2/' && uri.port == -1 ? URI.create(MAVEN_CENTRAL) : uri
+    }
+
+    private static URI checked(String address, String kind, String use, boolean directory) {
         if (address == null || address.isEmpty() || address.length() > MAX_ADDRESS || NOT_IN_AN_ADDRESS.matcher(address).find()) {
-            throw new Unusable("${described(address)} is not the address of a repository")
+            throw new Unusable("${described(address)} is not the address of a ${kind}")
         }
         if (NOT_ASCII.matcher(address).find()) {
-            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: an address is written in ASCII, and a " +
+            throw new Unusable("${described(address)} is not ${use}: an address is written in ASCII, and a " +
                     'host name with other characters in its ASCII form, which begins with xn--')
         }
         URI uri
         try {
             uri = new URI(address)
         } catch (URISyntaxException ignored) {
-            throw new Unusable("${described(address)} is not the address of a repository")
+            throw new Unusable("${described(address)} is not the address of a ${kind}")
         }
         if (FILE.equalsIgnoreCase(uri.scheme)) {
             try {
-                return directory(Path.of(uri))
+                return directory ? PackArtifacts.directory(Path.of(uri)) : Path.of(uri).toAbsolutePath().normalize().toUri()
             } catch (Exception ignored) {
-                throw new Unusable("${described(address)} is not the address of a directory")
+                throw new Unusable("${described(address)} is not the address of a ${directory ? 'directory' : 'file'}")
             }
         }
         if (!HTTPS.equalsIgnoreCase(uri.scheme)) {
-            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address has to be https, or file: for a directory")
+            throw new Unusable("${described(address)} is not ${use}: the address has to be https, or file: for a ${directory ? 'directory' : 'file'}")
         }
         // an at sign is where a user and a password end, also where they are not read as such
         if (uri.rawUserInfo != null || address.contains('@')) {
-            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address has a user or password, and credentials are not sent")
+            throw new Unusable("${described(address)} is not ${use}: the address has a user or password, and credentials are not sent")
         }
         if (uri.rawQuery != null || uri.rawFragment != null) {
-            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address cannot have a query or a fragment")
+            throw new Unusable("${described(address)} is not ${use}: the address cannot have a query or a fragment")
         }
         if (!canBeAsked(uri)) {
-            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: its host or port is not one a request can be made to. " +
+            throw new Unusable("${described(address)} is not ${use}: its host or port is not one a request can be made to. " +
                     'A host is a name, or an address written as four numbers from 0 to 255 with dots, or in brackets')
         }
-        return uri.rawPath?.endsWith('/') ? uri : URI.create("${uri}/")
+        return uri
     }
 
     private static URI directory(Path path) {
@@ -501,6 +537,9 @@ class PackArtifacts {
             } catch (Missing ignored) {
                 tried << "${where}: not found".toString()
                 continue
+            } catch (Offline e) {
+                tried << "${where}: ${e.message}".toString()
+                continue
             } catch (Local e) {
                 throw new PackArtifactException("The feature pack of ${coordinates} was not taken from ${where}: ${e.message}. " +
                         'This is about this computer, not about the repository')
@@ -533,6 +572,47 @@ class PackArtifacts {
         throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}")
     }
 
+    /**
+     * Reads one file that is no jar of a plugin, such as a catalog, as a file of a repository is read:
+     * over https or from a file, with the limits, the times and the rules for a redirect that hold for
+     * a jar.
+     *
+     * @param address the address of the file, as {@link #catalog(String)} gives it
+     * @param limit the most bytes the file can have
+     * @param name what the file is called in a message
+     * @return the bytes of the file
+     * @throws PackArtifactException when the file was not read, with the reason and nothing else as its
+     * message; as with {@link #resolve}, nothing an answer holds leaves this method in another way
+     */
+    byte[] file(URI address, int limit, String name) {
+        ByteArrayOutputStream sink = new ByteArrayOutputStream()
+        String why
+        try {
+            copy(address, address, limit, name, sink, [])
+            return sink.toByteArray()
+        } catch (Missing ignored) {
+            why = 'not found'
+        } catch (Offline | Refused e) {
+            why = e.message
+        } catch (IOException e) {
+            why = reason(e)
+        } catch (Throwable e) {
+            if (isOfTheMachine(e)) {
+                throw e
+            }
+            why = "cannot be asked (${e.class.simpleName})"
+        }
+        throw new PackArtifactException(why)
+    }
+
+    /**
+     * @param address an address this class made
+     * @return the address as a message has it
+     */
+    static String shownAddress(URI address) {
+        return shown(address)
+    }
+
     // an answer can be made to overflow the stack of what reads it, which is a failure of the answer;
     // any other error of the virtual machine is not one a repository is told of
     private static boolean isOfTheMachine(Throwable e) {
@@ -540,6 +620,9 @@ class PackArtifacts {
     }
 
     private Pack from(URI repository, String where, Coordinates coordinates, String pinned) {
+        if (offline && !FILE.equalsIgnoreCase(repository.scheme)) {
+            throw new Offline()
+        }
         URI directory = repository.resolve("${coordinates.group.replace('.', '/')}/${coordinates.artifact}/${coordinates.version}/")
         String file = fileName(directory, repository, coordinates)
         URI jar = directory.resolve(file)
@@ -827,6 +910,9 @@ class PackArtifacts {
             }
             return Files.newInputStream(file)
         }
+        if (offline) {
+            throw new Offline()
+        }
         URI current = address
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             // every address that is asked, the first and each one a repository sends on to
@@ -1109,6 +1195,14 @@ class PackArtifacts {
 
         NotGiven(int status) {
             super("HTTP status ${status}")
+        }
+    }
+
+    // a file that is not asked for because nothing is asked of the network
+    private static final class Offline extends RuntimeException {
+
+        Offline() {
+            super('not asked, since --offline makes no request to the network', null, false, false)
         }
     }
 

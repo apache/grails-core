@@ -126,6 +126,8 @@ dependencies {
 // compiled pages off a Grails build's test class path, where an application renders its views from source.
 tasks.named('test', Test).configure { Test test ->
     test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
+    // a spec that asks for a feature there is not would otherwise look for it in the plugin index, on the network
+    test.environment('GRAILS_FORGE_CATALOG', 'none')
 }
 
 apply {

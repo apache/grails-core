@@ -20,7 +20,7 @@ under the License.
 
 A plugin can describe what an application needs in order to use it: the dependency on the plugin, settings, files. That description is a _feature pack_. With it, the plugin is a feature that can be selected when an application is created, like the features Grails itself offers.
 
-NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory, or is that of a published plugin that is given by its coordinates. Selecting the feature of a plugin by its name alone, from the list of published plugins, is not available yet.
+NOTE: Feature packs are new in Grails 9 and the first form of them is described here: a pack is given to the `create-` commands as a directory, or is that of a published plugin that is given by its coordinates, or by the name of its feature when a feature catalog has the plugin for that name. The list of published plugins does not record feature packs yet, so a name is found only in a catalog you name yourself.
 
 
 ==== The Layout of a Pack
@@ -600,4 +600,80 @@ $ grails -t forge create-app com.example.shop \
 
 The signature of a signed jar is not verified. The coordinates, the file name and the SHA-256 of each such pack are written to `grails-forge-cli.yml` of the application, under `featurePacks`, next to the list of its features, and with them the repository when it is an `https` address. A directory is not written, since its path names your computer.
 
-The hosted application generator at https://start.grails.org offers the features of Grails only: it takes neither a pack nor the coordinates of a plugin.
+===== Selecting the Feature of a Plugin by Its Name
+
+A feature of a published plugin can also be selected by the name of the feature, without its coordinates:
+
+[source,console]
+----
+$ grails -t forge create-app com.example.shop --features=h2,acme-audit
+----
+
+A name given to `--features` that is neither a feature of Grails nor the feature of a pack that was given (as a directory, or by the coordinates of its plugin) is looked up in a _feature catalog_. The catalog says which plugin has a feature of that name, in which versions, and which SHA-256 the jar of each version has. The command chooses a version, and from there on everything is as if the coordinates had been given: the same repositories are asked, the jar is checked in the same way, and the same lines are printed, with two more that say that the coordinates came from a catalog:
+
+[source]
+----
+| Feature pack acme-audit from com.acme:acme-audit-grails:2.3.0 (https://repo.acme.example/maven/), sha256 5f2c...
+    the coordinates are those the feature catalog https://catalog.acme.example/index.json (sha256 91ab...) has for the feature acme-audit
+    the jar has the SHA-256 the catalog records for it
+    the jar matches the sha256 checksum the repository publishes for it
+----
+
+A catalog names a plugin; it is not where the pack is read from. The jar has to have the SHA-256 the catalog records for it and is refused before it is opened when it has another one, and the pack in the jar has to have the name that was asked for. As with coordinates, this shows which jar was used, not who published it: use a catalog only when you trust who maintains it.
+
+The version that is chosen is the latest release of the plugin whose pack is for the type of application that is created, for this version of Grails and for this version of the command. A release is a version made of numbers and dots only. A snapshot, a milestone or a release candidate is never chosen for a name, and neither is any version of a plugin the catalog marks as deprecated: the command says so and names the coordinates, by which such a version can still be used. The version is chosen once, when the application is created: it is written to the state of the project with the SHA-256 of the jar and of the catalog, and a later change of the catalog does not change it.
+
+A name of Grails is always the feature of Grails. A catalog cannot replace one: when a catalog has a plugin with a feature of such a name, the command says that the feature of Grails is the one that is used. When more than one plugin of the catalogs has a feature of the name that was asked for, the command refuses the name and lists the plugins; one of them is then selected by its full name, `group:artifact#name`:
+
+[source,console]
+----
+$ grails -t forge create-app com.example.shop \
+    --features='com.acme:acme-audit-grails#acme-audit'
+----
+
+*Which catalog is read.* Without any configuration the catalog is the plugin index of Grails, `https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json`. The `GRAILS_FORGE_CATALOG` environment variable names other catalogs in its place, separated by semicolons, and `--feature-catalog`, which can be given more than once, names them for one command; with several catalogs, the one named first is the one that is used for a plugin that more than one of them has. The address of a catalog is `https`, or `file:` for a file, under the rules for the address of a repository above. The value `none`, for the variable or the option, means no catalog: a name that is not known is then refused at once.
+
+A catalog is read only when a name has to be looked up. A command that selects only features of Grails, packs of directories and coordinates makes no request for a catalog, and neither does `--list-features`. To see what the catalogs offer, use `--list-catalog-features`, which lists each feature that can be selected by its name with the coordinates that would be used for it.
+
+NOTE: The plugin index of Grails does not record feature packs yet. Until it does, a name is found only in a catalog you name yourself, and a name that is looked up in the plugin index is reported as a feature that does not exist.
+
+*The copy on your computer.* A catalog that was read from an `https` address is kept as a file in `.grails/forge/catalogs` of your home directory, which is created readable by you alone where the file system has such permissions. The file holds the catalog as it was read and nothing else, under a name made from the address. For 24 hours the copy is used and the catalog is not asked for again; `--refresh` asks for it again at once. When a catalog cannot be read and there is an older copy, the copy is used and the command says so with the time the copy was read (not with `--refresh`). A catalog that is a file is read every time and is not copied. The directory can be deleted at any time.
+
+*Without a network.* `--offline` makes no request to the network: a catalog is read from its copy, however old, or from a file, and the jar of a plugin is taken only from a repository that is a directory, such as the local Maven repository. What is not there is reported and nothing is created.
+
+*When something is wrong.* A catalog that cannot be read, is too large (16 MiB) or is not a catalog ends the command with exit code 1 and one line that names the catalog and the reason; nothing is created. This is so only for a command that needed the catalog. A plugin of a catalog whose entry cannot be used is left out, and the others are still found; `--list-catalog-features` lists what was left out and why. A name that no catalog has does not exist, as before, with exit code 2, and the message says in which catalogs it was looked for. So do a name that more than one plugin has and a name whose plugin has no version that can be chosen.
+
+A catalog is a JSON document:
+
+[source,json]
+----
+{
+  "format": 1,
+  "plugins": [
+    {
+      "coords": "com.acme:acme-audit-grails",
+      "name": "Acme Audit",
+      "desc": "Adds an audit trail",
+      "maven-repo": "https://repo.acme.example/maven",
+      "versions": [
+        {
+          "version": "2.3.0",
+          "pack": {
+            "format": 1,
+            "kind": "feature",
+            "name": "acme-audit",
+            "templateApi": 1,
+            "applicationTypes": ["web", "rest-api"],
+            "compatibility": { "grails": "[9.0.0,10.0.0)", "forge": "[9.0.0,10.0.0)" },
+            "sha256": "5f2c..."
+          }
+        }
+      ]
+    }
+  ]
+}
+----
+
+Of a plugin, `coords` and `versions` are required; of a version, `version`; of a `pack`, everything shown except `applicationTypes`, which is left out for a pack that is for every type of application. `deprecated` (`true`, or a text that says why) marks a plugin as deprecated. `maven-repo` names a repository the plugin is published to, for a plugin or for one `pack`: it is asked after the repositories of `GRAILS_REPO_URL` and before Maven Central, has to be an `https` address that is not of your computer or of a private network, and is not asked at all when `--feature-pack-repository` is given. A `pack` can give the exact artifact it is in as `coords`, `group:artifact:version`. Other fields are not read, and a plugin without a `pack` is not looked at.
+
+The hosted application generator at https://start.grails.org offers the features of Grails only: it takes neither a pack nor the coordinates of a plugin, and reads no catalog.

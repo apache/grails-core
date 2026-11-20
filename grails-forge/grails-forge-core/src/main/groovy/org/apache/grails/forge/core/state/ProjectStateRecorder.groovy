@@ -324,7 +324,9 @@ final class ProjectStateRecorder {
         return new LockedFeature(feature.getName(), LockedFeature.PACK,
                 // the rule of the pack for a repository that can be written into a project, and that of the state
                 ProjectLock.recordableAddress(artifact.getRecordableRepository()),
-                artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256)
+                artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256,
+                // of the catalog that gave the coordinates for a name: its digest, and its address by the same rule
+                artifact.catalogSha256 == null ? null : ProjectLock.recordableAddress(artifact.getRecordableCatalog()), artifact.catalogSha256)
     }
 
     // the repositories that were given in place of those Grails gives a build, as the build file has them

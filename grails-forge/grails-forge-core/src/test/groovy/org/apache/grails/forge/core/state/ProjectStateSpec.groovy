@@ -230,6 +230,84 @@ class ProjectStateSpec extends ApplicationContextSpec {
         locked.sha256 == 'ab' * 32
     }
 
+    void "a lock says which catalog gave the coordinates of a feature pack, and a lock without one is read as before"() {
+        given:
+        String digest = 'cd' * 32
+        String catalogDigest = 'ef' * 32
+        Pack named = pack('acme-audit').withArtifact(new PackArtifact('acme-audit', 'com.acme:acme-audit-grails:2.3.0',
+                'https://repo.acme.example/maven/', 'acme-audit-grails-2.3.0.jar', digest, 'sha256', true)
+                .withCatalog('https://catalog.acme.example/index.json', catalogDigest))
+        Pack ofAFile = pack('acme-base', 'grails-app/conf/base.txt').withArtifact(new PackArtifact('acme-base', 'com.acme:acme-base:1.0',
+                'https://repo.acme.example/maven/', 'acme-base-1.0.jar', digest, null, true)
+                .withCatalog('file:///home/zzsomeone/catalog.json', catalogDigest))
+        Pack given = pack('acme-given', 'grails-app/conf/given.txt').withArtifact(new PackArtifact('acme-given', 'com.acme:acme-given:1.0',
+                'https://repo.acme.example/maven/', 'acme-given-1.0.jar', digest, null, false))
+        ProjectGenerator generator = beanContext.getBean(ProjectGenerator)
+        Project project = NameUtils.parse('com.acme.shop')
+        Path target = Files.createDirectory(directory.resolve('app'))
+
+        when:
+        generator.generate(ApplicationType.WEB, project, new FileSystemOutputHandler(target.toFile(), ConsoleOutput.NOOP),
+                generator.createGeneratorContext(ApplicationType.WEB, project, new Options(), OperatingSystem.LINUX,
+                        ['acme-audit', 'acme-base', 'acme-given'], ConsoleOutput.NOOP, [named, ofAFile, given]))
+        ProjectState state = ProjectState.read(target)
+        state.verifyBaseline(target)
+
+        then: 'the catalog of an https address is named, with the digest of what was read of it'
+        with(state.lock.features.find { it.name == 'acme-audit' }) {
+            coordinates == 'com.acme:acme-audit-grails'
+            version == '2.3.0'
+            sha256 == digest
+            catalog == 'https://catalog.acme.example/index.json'
+            catalogSha256 == catalogDigest
+        }
+        target.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains(
+                "  sha256: ${digest}\n  catalog: https://catalog.acme.example/index.json\n  catalogSha256: ${catalogDigest}\n")
+
+        and: 'of a catalog that is a file of this machine only the digest is said'
+        with(state.lock.features.find { it.name == 'acme-base' }) {
+            catalog == null
+            catalogSha256 == catalogDigest
+        }
+        !target.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8').contains('zzsomeone')
+
+        and: 'a feature whose coordinates were given has neither'
+        with(state.lock.features.find { it.name == 'acme-given' }) {
+            catalog == null
+            catalogSha256 == null
+        }
+
+        and: 'the manifest says which plugin and version the name was'
+        with(state.manifest.requestedFeatures.find { it.name == 'acme-audit' }) {
+            coordinates == 'com.acme:acme-audit-grails'
+            version == '2.3.0'
+        }
+    }
+
+    @Unroll
+    void "a lock whose feature names a catalog #what is refused"() {
+        given:
+        Path project = generate('shop', [])
+        Path lock = project.resolve('.grails/forge.lock.yml')
+        Files.writeString(lock, sealed(lock.toFile().getText('UTF-8').replace('features:\n', 'features:\n- name: acme-audit\n' + entry)))
+
+        when:
+        ProjectState.read(project)
+
+        then:
+        ProjectStateException e = thrown()
+        e.message.contains(message)
+
+        where:
+        what                             | entry                                                                                                || message
+        'without its digest'             | "  source: pack\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n  catalog: https://c.example/i.json\n" || 'catalogSha256'
+        'without the artifact it gave'   | "  source: pack\n  catalogSha256: ${'ab' * 32}\n"                                                 || 'catalogSha256'
+        'with a password in its address' | "  source: pack\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n  catalog: https://u:p@c.example/i.json\n  catalogSha256: ${'ab' * 32}\n" || 'catalog'
+        'that is a file'                 | "  source: pack\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n  catalog: file:///home/me/i.json\n  catalogSha256: ${'ab' * 32}\n" || 'catalog'
+        'with a digest that is none'     | "  source: pack\n  coordinates: com.acme:audit\n  version: 1.0\n  sha256: ${'ab' * 32}\n  catalogSha256: abc\n" || 'catalogSha256'
+        'and is of the framework'        | "  source: framework\n  catalogSha256: ${'ab' * 32}\n"                                            || 'catalogSha256'
+    }
+
     void "a feature cannot write into the state of the project"() {
         given:
         Pack pack = pack('acme-audit', "'.grails/cache/audit.txt'")

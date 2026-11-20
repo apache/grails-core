@@ -50,7 +50,20 @@ final class PackArtifact {
     /** Whether the digest is the one that was asked for */
     final boolean pinned
 
+    /** The address of the catalog that gave the coordinates for the name of a feature, or {@code null} when they were given */
+    final String catalog
+
+    /** The SHA-256 of the bytes of that catalog as it was read, in lowercase hexadecimal, or {@code null} */
+    final String catalogSha256
+
     PackArtifact(String name, String coordinates, String repository, String file, String sha256, String checkedAgainst, boolean pinned) {
+        this(name, coordinates, repository, file, sha256, checkedAgainst, pinned, null, null)
+    }
+
+    private PackArtifact(String name, String coordinates, String repository, String file, String sha256, String checkedAgainst, boolean pinned,
+                         String catalog, String catalogSha256) {
+        this.catalog = catalog
+        this.catalogSha256 = catalogSha256
         this.name = name
         this.coordinates = coordinates
         this.repository = repository
@@ -68,12 +81,33 @@ final class PackArtifact {
      * @return the address, or {@code null} when it is not one to write
      */
     String getRecordableRepository() {
-        if (repository == null) {
+        return recordable(repository)
+    }
+
+    /**
+     * @param catalog the address of the catalog that gave the coordinates of this jar for the name of a feature
+     * @param catalogSha256 the SHA-256 of the bytes of the catalog as it was read
+     * @return this, as the jar of a pack that was found by its name in that catalog
+     */
+    PackArtifact withCatalog(String catalog, String catalogSha256) {
+        return new PackArtifact(name, coordinates, repository, file, sha256, checkedAgainst, pinned, catalog, catalogSha256)
+    }
+
+    /**
+     * @return the address of the catalog as it may be written into a project, by the rule of
+     * {@link #getRecordableRepository()}, or {@code null}
+     */
+    String getRecordableCatalog() {
+        return recordable(catalog)
+    }
+
+    private static String recordable(String given) {
+        if (given == null) {
             return null
         }
         try {
-            URI address = new URI(repository)
-            return 'https'.equalsIgnoreCase(address.scheme) && address.host != null && address.rawUserInfo == null ? repository : null
+            URI address = new URI(given)
+            return 'https'.equalsIgnoreCase(address.scheme) && address.host != null && address.rawUserInfo == null ? given : null
         } catch (URISyntaxException ignored) {
             return null
         }

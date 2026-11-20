@@ -542,6 +542,8 @@ class ForgeApiIntegrationSpec extends Specification {
         '/preview/web/demo?features=not-a-real-feature'         | 'requested feature does not exist'
         '/diff/web/demo?features=not-a-real-feature'            | 'requested feature does not exist'
         '/create/web/demo?features=com.acme:acme-audit-grails:2.3.0'  | 'requested feature does not exist: com.acme:acme-audit-grails:2.3.0'
+        '/create/web/demo?features=acme-audit'                 | 'requested feature does not exist: acme-audit'
+        '/create/web/demo?features=com.acme:acme-audit-grails%23acme-audit' | 'requested feature does not exist: com.acme:acme-audit-grails#acme-audit'
         '/create/web/com.aux.shop'                             | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
         '/preview/web/com.aux.shop'                            | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
         '/diff/web/com.aux.shop'                               | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
