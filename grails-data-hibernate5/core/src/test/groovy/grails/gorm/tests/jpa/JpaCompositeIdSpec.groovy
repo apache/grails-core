@@ -66,6 +66,12 @@ class JpaCompositeIdSpec extends Specification {
         'a plain superclass whose @Id is on a getter, and the entity (one)' | JpaPlainGetterIdChild || true
         'a mapped superclass and the entity declaring the same @Id (one)' | JpaRedeclaredIdEntity || true
         'a mapped superclass getter and the entity declaring the same @Id (one)' | JpaRedeclaredGetterIdEntity || true
+        'the entity, on a getter (one)'                 | JpaGetterIdEntity       || true
+        'the entity, on a field and on its getter (one)' | JpaFieldAndGetterIdEntity || true
+        'a mapped superclass getter and the entity, with other names (two)' | JpaGetterSplitIdEntity || false
+        'a mapped grandparent, a plain parent and the entity declaring the same @Id (one)' | JpaGrandRedeclaredIdEntity || true
+        'an entity superclass and the entity declaring the same @Id (one)' | JpaEntityBaseRedeclared || true
+        'two mapped superclasses and the entity (three)' | JpaThreeLevelIdEntity   || false
         outcome = declaresGetId ? 'give it a getId()' : 'leave getId() to the key'
     }
 
@@ -216,4 +222,79 @@ class JpaRedeclaredGetterIdEntity extends JpaCodeGetterBase {
     @Id
     Long code
     String name
+}
+
+@Entity
+class JpaGetterIdEntity {
+    Long code
+
+    @Id
+    Long getCode() {
+        code
+    }
+}
+
+@Entity
+class JpaFieldAndGetterIdEntity {
+    @Id
+    Long code
+
+    @Id
+    Long getCode() {
+        code
+    }
+}
+
+@MappedSuperclass
+abstract class JpaGetterOrgBase implements Serializable {
+    private Long orgId
+
+    @Id
+    Long getOrgId() {
+        orgId
+    }
+
+    void setOrgId(Long orgId) {
+        this.orgId = orgId
+    }
+}
+
+@Entity
+class JpaGetterSplitIdEntity extends JpaGetterOrgBase {
+    @Id
+    String userNo
+}
+
+class JpaPlainBetween extends JpaCodeBase {
+    String note
+}
+
+@Entity
+class JpaGrandRedeclaredIdEntity extends JpaPlainBetween {
+    @Id
+    Long code
+}
+
+@Entity
+class JpaEntityBaseRedeclared extends JpaEntityBase {
+    @Id
+    Long orgId
+}
+
+@MappedSuperclass
+abstract class JpaTopIdBase implements Serializable {
+    @Id
+    Long orgId
+}
+
+@MappedSuperclass
+abstract class JpaMiddleIdBase extends JpaTopIdBase {
+    @Id
+    Long unitNo
+}
+
+@Entity
+class JpaThreeLevelIdEntity extends JpaMiddleIdBase {
+    @Id
+    String userNo
 }
