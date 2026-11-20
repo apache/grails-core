@@ -35,6 +35,7 @@ public class GSPWriter extends PrintWriter {
 
     private int lineNumber = 1;
     private int[] lineNumbers = new int[1000];
+    private boolean afterCarriageReturn;
     //private static final Pattern LINE_BREAK = Pattern.compile("\\r\\n|\\n|\\r");
     private GroovyPageParser parse;
 
@@ -45,7 +46,42 @@ public class GSPWriter extends PrintWriter {
 
     @Override
     public void write(char buf[], int off, int len) {
+        for (int i = off; i < off + len; i++) {
+            written(buf[i]);
+        }
         super.write(buf, off, len);
+    }
+
+    @Override
+    public void write(String s, int off, int len) {
+        for (int i = off; i < off + len; i++) {
+            written(s.charAt(i));
+        }
+        super.write(s, off, len);
+    }
+
+    @Override
+    public void write(int c) {
+        written((char) c);
+        super.write(c);
+    }
+
+    /**
+     * What is printed can have line breaks of its own, an expression or a scriptlet of several lines
+     * has: each ends a line of the generated source as {@link #println()} does, and is recorded as one.
+     */
+    private void written(char c) {
+        if (c == '\n') {
+            if (!afterCarriageReturn) {
+                addLineNumber();
+            }
+            afterCarriageReturn = false;
+        } else if (c == '\r') {
+            addLineNumber();
+            afterCarriageReturn = true;
+        } else {
+            afterCarriageReturn = false;
+        }
     }
 
     public void printlnToResponse(String s) {
@@ -74,18 +110,18 @@ public class GSPWriter extends PrintWriter {
 
     @Override
     public void println() {
+        // the line separator goes to the target as it is, and not through the methods that count
         addLineNumber();
+        afterCarriageReturn = false;
         super.println();
     }
 
     private void addLineNumber() {
-        if (lineNumber >= lineNumbers.length) {
+        if (lineNumber > lineNumbers.length) {
             lineNumbers = (int[]) resizeArray(lineNumbers, lineNumbers.length * 2);
         }
-        else {
-            lineNumbers[lineNumber - 1] = parse.getCurrentOutputLineNumber();
-            lineNumber++;
-        }
+        lineNumbers[lineNumber - 1] = parse.getCurrentOutputLineNumber();
+        lineNumber++;
     }
 
     private Object resizeArray(Object oldArray, int newSize) {

@@ -573,10 +573,14 @@ With a database or a schema per tenant, a domain class that does not implement `
 
 ## A GSP Error Names the Line of the Page It Is On
 
-The line a GSP error names was wrong for an error on the last line of a page, which was reported on line 1, and for everything after a `<%-- --%>` or `%{-- --}%` comment of several lines, which was reported too early. Both now name the line of the page: in the message of `GroovyPagesException` and `GrailsTagException` and in their `getLineNumber()`.
+The line a GSP error names was wrong for many pages and is now the line of the page: in the message of `GroovyPagesException` and `GrailsTagException` and in their `getLineNumber()`.
 
-- What a page renders is not changed.
-- A test that asserts the earlier line of such an error asserts the line of the page instead. No setting restores the earlier numbers.
+- An error on the last line of a page that does not end with a line break was reported on line 1.
+- What follows a `<%-- --%>` or `%{-- --}%` comment, also one of a single line, could be reported on an earlier line.
+- After an expression, scriptlet or tag attribute of several lines, compile errors and mapped stack trace lines were too late; in a page with more than 1,000 generated lines they were off by one or more.
+- What is found only at the end of a page, such as a tag that is never closed, is reported on the last line of the page.
+- What a page renders is not changed. Precompiled pages carry the lines, so they differ from those of Grails 8 and are compiled again by the build.
+- No action for an application. A test that asserts the earlier line of such an error asserts the line of the page instead. No setting restores the earlier numbers.
 
 # After the Upgrade
 
