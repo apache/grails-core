@@ -84,7 +84,14 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
         Session session = super.openSession();
-        applyFlushMode(session);
+        try {
+            applyFlushMode(session);
+        }
+        catch (RuntimeException | Error ex) {
+            // not bound yet, so afterCompletion would not find it
+            SessionFactoryUtils.closeSession(session);
+            throw ex;
+        }
         return session;
     }
 

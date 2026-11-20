@@ -227,6 +227,28 @@ class MultiDataSourceSessionSpec extends Specification {
         !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
     }
 
+    def "a request whose default session fails to be set up closes it"() {
+        given: "an interceptor whose flush mode the new default session refuses"
+        Session refused = null
+        def interceptor = new GrailsOpenSessionInViewInterceptor() {
+            @Override
+            protected void applyFlushMode(Session session) {
+                refused = session
+                throw new IllegalStateException('flush mode refused')
+            }
+        }
+        interceptor.setHibernateDatastore(datastore)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, and the default session is closed and not bound"
+        thrown(IllegalStateException)
+        refused != null
+        !refused.open
+        !TransactionSynchronizationManager.hasResource(datastore.sessionFactory)
+    }
+
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
