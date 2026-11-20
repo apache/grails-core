@@ -101,9 +101,12 @@ final class CommandCatalog {
         // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
         List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() :
                 new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()
+        // it may be a command of the application, where the build of the project has not listed those
+        String listed = parent.getParent() == null ? ApplicationCommands.whenUnknown(parent) : null
         return new CommandLine.ParameterException(parent, "There is no command ${given}" +
                 (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
-                (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?"))
+                (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?") +
+                (listed == null ? '' : "${System.lineSeparator()}${listed}"))
     }
 
     /**
@@ -218,6 +221,11 @@ final class CommandCatalog {
         List<Map<String, Object>> described = []
         for (CommandLine command : listed(parent)) {
             CommandLine.Model.CommandSpec spec = command.getCommandSpec()
+            if (spec.userObject() instanceof ApplicationCommandCommand) {
+                // a command of the application is described by the build of the project
+                described.add(((ApplicationCommandCommand) spec.userObject()).describe())
+                continue
+            }
             Map<String, Object> each = new LinkedHashMap<>()
             each.put('name', spec.name())
             each.put('aliases', spec.aliases().toList())

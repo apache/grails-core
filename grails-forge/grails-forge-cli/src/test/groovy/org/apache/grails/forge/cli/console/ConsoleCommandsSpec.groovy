@@ -921,7 +921,8 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         and: 'which is all the list says of them: the next line is the next command'
         ['test-app', 'assemble, war, package', 'bug-report'].every { String name ->
             int at = listed.findIndexOf { String line -> line.startsWith("  ${name} ") }
-            at + 1 == listed.size() || listed[at + 1] ==~ /  \S.*/
+            // after the last of them an empty line, and then what there is to say of the commands of the application
+            at + 1 == listed.size() || listed[at + 1].isEmpty() || listed[at + 1] ==~ /  \S.*/
         }
 
         when:

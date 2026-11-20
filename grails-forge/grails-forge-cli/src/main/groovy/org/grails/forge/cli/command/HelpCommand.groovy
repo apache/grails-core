@@ -22,6 +22,7 @@ import java.nio.file.Path
 import java.util.concurrent.Callable
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.grails.forge.io.FileSystemOutputHandler
@@ -74,8 +75,14 @@ class HelpCommand extends BaseCommand implements Callable<Integer> {
                 // the commands of a project above that is not used are not there, and a tool is told why
                 said.add(search.untrusted)
             }
+            // what the build of the project lists of the commands of the application, and what is not there of it
+            ApplicationCommands application = ApplicationCommands.of(catalog.getRoot())
+            if (application != null) {
+                said.addAll(application.diagnostics(catalog.getRoot()))
+            }
             // written as it is: a description is not markup of the command line
-            spec.commandLine().getOut().println(JsonOutput.toJson(catalog.describe(directory, said, complete && search.untrusted == null)))
+            spec.commandLine().getOut().println(JsonOutput.toJson(catalog.describe(directory, said,
+                    complete && search.untrusted == null && (application == null || application.isComplete()))))
             return 0
         }
         CommandLine shown = catalog.getRoot()

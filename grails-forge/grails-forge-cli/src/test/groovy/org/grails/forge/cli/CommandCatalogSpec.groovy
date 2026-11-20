@@ -440,8 +440,12 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         json == 0
         described.projectDirectory == project.path
-        described.complete == true
         ((List<Map>) described.commands).findAll { it.project }*.name.containsAll(['gradle', 'create-controller', 'create-service', 'create-domain-class', 'add-property'])
+
+        and: 'the build of the project has not listed the commands of the application, so they are not all there'
+        described.complete == false
+        described.diagnostics == ['The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json. ' +
+                                          'They are listed after: grails-forge-cli gradle grailsCommandCatalog']
     }
 
     void "the commands are not those of a project in another repository, or of a project above the nearest one"() {
@@ -485,8 +489,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         described.complete == false
-        described.diagnostics.size() == 1
+        described.diagnostics.size() == 2
         described.diagnostics[0].startsWith("grails-forge-cli.yml: applicationType is not a type of application, but 'nonsense'")
+        described.diagnostics[1].startsWith('The commands of the application and its plugins are not listed: the project has no build/grails/command-catalog.json')
         described.projectDirectory == dir.canonicalPath
         !((List<Map>) described.commands).any { it.name == 'create-controller' }
 
@@ -505,6 +510,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         File project = new File(dir, 'shop')
         File record = new File(project, 'grails-forge-cli.yml')
         record.setText(record.getText('UTF-8').replaceFirst(/(?m)^defaultPackage:.*$/, 'defaultPackage: other.pkg'), 'UTF-8')
+        // the build of the project has listed the commands of the application, of which there are none
+        new File(project, 'build/grails').mkdirs()
+        new File(project, 'build/grails/command-catalog.json').text = '{"format":1,"complete":true,"diagnostics":[],"commands":[]}'
         System.setProperty('user.dir', project.absolutePath)
         out.reset()
 

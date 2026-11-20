@@ -21,6 +21,7 @@ package org.grails.forge.cli
 import java.util.function.BiFunction
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
@@ -153,6 +154,7 @@ final class ForgeCli {
                 command.complete = held.recordUsed
             } else {
                 held.replay(root)
+                ApplicationCommands.said(commandLine, commandOf(args), commandOf(expanded))
             }
         }
         return commandLine.execute(expanded)
@@ -240,6 +242,8 @@ final class ForgeCli {
             }
         }
         ConsoleCommands.addTo(commandLine, readsProject)
+        // last: a command of the application does not take the name of a command that is there
+        ApplicationCommands.addTo(commandLine, readsProject)
         // once every command is there: the width is given to the commands there are when it is set
         commandLine.setUsageHelpWidth(USAGE_WIDTH)
         return commandLine
