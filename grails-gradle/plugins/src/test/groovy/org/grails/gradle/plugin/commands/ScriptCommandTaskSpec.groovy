@@ -147,6 +147,39 @@ class ScriptCommandTaskSpec extends CommandProjectSpecification {
         !planned.output.contains(':classes')
     }
 
+    def "a project the project depends on is built for a script, and the project itself is not compiled"() {
+        given:
+        setupCommandProject('''
+            dependencies {
+                implementation project(':companion')
+            }
+        ''')
+
+        when:
+        BuildResult planned = executeTask('runScriptCommand', ['--arg=data-import', '--dry-run'])
+
+        then:
+        planned.output.contains(':companion:jar SKIPPED')
+        planned.output.contains(':runScriptCommand SKIPPED')
+        !planned.output.contains(':compileGroovy')
+        !planned.output.readLines().contains(':classes SKIPPED')
+    }
+
+    def "the stack trace of a script is asked for with the system property of the build, also by a build whose configuration is reused"() {
+        given:
+        setupCommandProject(WITH_STAND_IN)
+
+        when:
+        BuildResult without = executeTask('runScriptCommand', ['--arg=data-import'])
+        BuildResult with = executeTask('runScriptCommand', ['--arg=data-import', '-Dgrails.full.stacktrace=true'])
+        BuildResult again = executeTask('runScriptCommand', ['--arg=data-import'])
+
+        then:
+        without.output.contains('STACKTRACE=false')
+        with.output.contains('STACKTRACE=true')
+        again.output.contains('STACKTRACE=false')
+    }
+
     def "a script that fails is a failed build"() {
         given:
         setupCommandProject(WITH_STAND_IN)

@@ -19,14 +19,25 @@
 package org.apache.grails.core.cli.script
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.codehaus.groovy.control.messages.Message
+import org.codehaus.groovy.control.messages.SyntaxErrorMessage
+import org.codehaus.groovy.syntax.SyntaxException
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 
+import grails.build.logging.GrailsConsole
 import grails.util.BuildSettings
+import grails.util.Environment
 import grails.util.GrailsNameUtils
 import org.apache.grails.core.cli.ExecutionContext
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
@@ -40,10 +51,18 @@ import org.grails.build.parsing.DefaultCommandLine
  * and is run where the build of the project runs, by nothing else.
  *
  * <p>A script is found by the name of the command it is: first among the files
- * {@code src/main/scripts/*.groovy} of the project, then as {@code META-INF/commands/<name>.groovy}
- * on the class path, where plugins have theirs. The name of a file gives the name of the command
- * as the Grails shell made it: a name with a hyphen in lower case, any other with a hyphen in front
- * of each of its words ({@code DataImport.groovy} is {@code data-import}).</p>
+ * {@code src/main/scripts/*.groovy} of the project, then among the files of
+ * {@code META-INF/commands} on the class path, where plugins have theirs. The name of a file gives
+ * the name of the command as the Grails shell made it: a name with a hyphen in lower case, any
+ * other with a hyphen in front of each of its words ({@code DataImport.groovy} is
+ * {@code data-import}). A script of the project is a plain file in a directory that is reached
+ * through no link, by the rule the Grails Forge CLI lists the scripts of a project with: what that
+ * lists under a name is what is run under it, and a link is never followed out of the project.</p>
+ *
+ * <p>The arguments of a script are data. They are read for the flags and arguments the script asks
+ * for, and nothing of them changes the JVM: {@code -Dgrails.env=production} among them is in
+ * {@code commandLine.systemProperties} and does not set the environment the script runs in, which
+ * is that of the build.</p>
  *
  * <p>The JVM is started with {@code --} and then the name and the arguments, or with the one
  * argument {@code --grails-args-file=<path>} that names a file that holds them (see
@@ -69,9 +88,16 @@ class ScriptCommandRunner {
     private static final Pattern NAME = Pattern.compile('[a-z][a-z0-9]*(-[a-z0-9]+)*')
     // stands where the name of the command is while the arguments are read: a name is not read as an environment
     private static final String PLACEHOLDER = 'script-command'
+    // what a script had in the Grails shell and has not here, with how the sentence that says so ends
+    private static final Map<String, String> ONLY_IN_THE_SHELL = [
+            gradle: ': a script that the build runs cannot run a build. Run the Gradle tasks from the command line, or make the script a task of the build.',
+            spring: '.',
+            profile: ': there are no profiles here.',
+    ].asImmutable()
 
     private final File baseDir
     private final ClassLoader classLoader
+    private final PrintStream out
     private final PrintStream err
     private final Map<String, List<Closure>> listeners = [:]
 
@@ -85,6 +111,15 @@ class ScriptCommandRunner {
      * @param err where it is said why a script was not run or did not succeed
      */
     ScriptCommandRunner(File baseDir, ClassLoader classLoader, PrintStream err) {
+        this(baseDir, classLoader, null, err)
+    }
+
+    /**
+     * @param out where the console of a script writes, or {@code null} for the standard output of the JVM
+     * @see #ScriptCommandRunner(File, ClassLoader, PrintStream)
+     */
+    ScriptCommandRunner(File baseDir, ClassLoader classLoader, PrintStream out, PrintStream err) {
+        this.out = out
         this.baseDir = baseDir
         this.classLoader = classLoader
         this.err = err
@@ -98,7 +133,8 @@ class ScriptCommandRunner {
      * Runs the script the JVM was started for.
      *
      * @param args what the JVM was started with
-     * @return 0 when the script ran and did not return {@code false}, 1 otherwise; why is said in one line
+     * @return 0 when the script ran and did not return {@code false}, 1 otherwise; why is said in one
+     * line, and with the system property {@code grails.full.stacktrace} the stack trace of what a script threw follows it
      */
     int start(String... args) {
         List<String> vector
@@ -115,20 +151,75 @@ class ScriptCommandRunner {
             err.println("A script command is started with ${VECTOR} and then its name and its arguments, or with ${CommandArgumentsFile.ARGUMENT} and the path of a file that holds them.")
             return 1
         }
+        // Gradle is no terminal: what the script says through the console is whole lines of plain text
+        GrailsConsole console = GrailsConsole.getInstance()
         try {
-            return run(vector)
+            GrailsConsole.setInstance(new ScriptConsole(out, err))
+            int ended = run(vector)
+            if (ended != 0) {
+                err.println("The script ${vector[0]} returned false, which is how a script says that it did not succeed.")
+            }
+            return ended
         } catch (ScriptCommandException e) {
             err.println(e.message)
         } catch (CompilationFailedException e) {
-            err.println('The script could not be compiled. A script is compiled without the Grails shell: what it imports from org.grails.cli is not there.')
-            err.println(e.message)
-        } catch (Throwable e) {
-            err.println("The script failed: ${e.getClass().name}: ${e.message}")
-            if (Boolean.getBoolean('grails.full.stacktrace')) {
-                e.printStackTrace(err)
+            err.println(notCompiled(e))
+        } catch (MissingMethodException e) {
+            // the method of a script that is not there, which nothing in the script caught
+            if (e.type != null && ScriptCommand.isAssignableFrom(e.type) && !vector.isEmpty()) {
+                err.println("The script ${vector[0]} calls ${e.method}(), and there is neither such a method nor a script command ${GrailsNameUtils.getScriptName(e.method)}. " +
+                        'A script that the build runs can call another script command; a command of the Grails command line that is no script, ' +
+                        'such as run-app or test-app, is run from the command line.')
+            } else {
+                failed(e)
             }
+        } catch (MissingPropertyException e) {
+            String only = e.type != null && ScriptCommand.isAssignableFrom(e.type) ? ONLY_IN_THE_SHELL.get(e.property) : null
+            if (only != null && !vector.isEmpty()) {
+                err.println("The script ${vector[0]} uses ${e.property}, which a script has only in the Grails shell${only}")
+            } else {
+                failed(e)
+            }
+        } catch (Throwable e) {
+            failed(e)
+        } finally {
+            GrailsConsole.setInstance(console)
         }
         return 1
+    }
+
+    private void failed(Throwable e) {
+        err.println("The script failed: ${e.getClass().name}: ${e.message}")
+        if (Boolean.getBoolean('grails.full.stacktrace')) {
+            e.printStackTrace(err)
+        }
+    }
+
+    // Why a script was not compiled: the first error and its line, and for a class of the Grails
+    // shell that is not there, that it is the shell that is missing.
+    private static String notCompiled(CompilationFailedException e) {
+        String first = null
+        int line = 0
+        boolean shell = false
+        if (e instanceof MultipleCompilationErrorsException) {
+            for (Object each : ((MultipleCompilationErrorsException) e).errorCollector.errors ?: []) {
+                String text = each instanceof SyntaxErrorMessage ? ((SyntaxErrorMessage) each).cause.originalMessage : null
+                if (text == null && each instanceof Message) {
+                    StringWriter written = new StringWriter()
+                    ((Message) each).write(new PrintWriter(written))
+                    text = written.toString()
+                }
+                if (first == null && text != null) {
+                    first = text
+                    SyntaxException cause = each instanceof SyntaxErrorMessage ? ((SyntaxErrorMessage) each).cause : null
+                    line = cause == null ? 0 : cause.line
+                }
+                shell = shell || (text != null && text.contains('unable to resolve class org.grails.cli.'))
+            }
+        }
+        first = (first ?: String.valueOf(e.message)).readLines().find { String each -> !each.trim().isEmpty() } ?: 'no reason is given'
+        return 'The script could not be compiled' + (line > 0 ? ", line ${line}" : '') + ": ${first.trim()}" +
+                (shell ? '. A script is compiled without the Grails shell: what it imports from org.grails.cli is not there.' : '')
     }
 
     /**
@@ -153,7 +244,18 @@ class ScriptCommandRunner {
         List<String> placed = [PLACEHOLDER]
         placed.addAll(vector.subList(1, vector.size()))
         DefaultCommandLine commandLine = new DefaultCommandLine()
-        new CommandLineParser().parse(commandLine, placed as String[])
+        // The arguments are data: reading -Dgrails.env=NAME among them sets the environment of the
+        // JVM, as it did in the Grails shell, where it was typed for the shell. Here it is undone.
+        String environment = System.getProperty(Environment.KEY)
+        try {
+            new CommandLineParser().parse(commandLine, placed as String[])
+        } finally {
+            if (environment == null) {
+                System.clearProperty(Environment.KEY)
+            } else {
+                System.setProperty(Environment.KEY, environment)
+            }
+        }
         commandLine.setCommand(name)
         // what the script was given, as it was given: the name and every argument
         commandLine.setRawArguments(vector as String[])
@@ -214,17 +316,60 @@ class ScriptCommandRunner {
     }
 
     private URL find(String name) {
-        File directory = new File(baseDir, PROJECT_LOCATION)
-        String[] names = directory.isDirectory() ? directory.list() : null
-        if (names != null) {
-            // the one that is first in the order of file names, where two files give one name
-            for (String fileName : names.toList().sort()) {
-                File file = new File(directory, fileName)
-                if (commandName(fileName) == name && file.isFile()) {
-                    return file.toURI().toURL()
+        File ofProject = projectScript(baseDir, name)
+        return ofProject == null ? pluginScript(name) : ofProject.toURI().toURL()
+    }
+
+    /**
+     * Finds the script of a project that is a command, by the rule the Grails Forge CLI lists the
+     * scripts of a project with.
+     *
+     * @param baseDir the directory of the project
+     * @param name the name of a command
+     * @return the plain file in {@code src/main/scripts} whose name gives that name, the first in the
+     * order of file names where there are several; {@code null} when there is none, or when
+     * {@code src}, {@code src/main} or {@code src/main/scripts} is a link or leads out of the project
+     */
+    static File projectScript(File baseDir, String name) {
+        try {
+            Path project = baseDir.toPath()
+            Path directory = project
+            for (Path step : Path.of(PROJECT_LOCATION)) {
+                directory = directory.resolve(step)
+                if (Files.isSymbolicLink(directory) || !Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS)) {
+                    return null
+                }
+            }
+            if (directory.toRealPath() != project.toRealPath().resolve(PROJECT_LOCATION)) {
+                return null
+            }
+            String[] names = directory.toFile().list()
+            for (String fileName : (names == null ? [] : names.toList().sort())) {
+                // a link, a pipe or a directory is no script: a link would lead to a file that is not the project's
+                if (commandName(fileName) == name && Files.isRegularFile(directory.resolve(fileName), LinkOption.NOFOLLOW_LINKS)) {
+                    return directory.resolve(fileName).toFile()
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // what cannot be read has no script
+        }
+        return null
+    }
+
+    // The script of a plugin: among the files of META-INF/commands of each place on the class path, in
+    // the order of the class path, the first in the order of file names whose name gives the name.
+    private URL pluginScript(String name) {
+        Enumeration<URL> places = classLoader.getResources(CLASSPATH_LOCATION)
+        while (places.hasMoreElements()) {
+            URL place = places.nextElement()
+            for (String fileName : fileNames(place).sort()) {
+                if (commandName(fileName) == name) {
+                    String at = place.toExternalForm()
+                    return new URL(at + (at.endsWith('/') ? '' : '/') + fileName)
                 }
             }
         }
+        // a jar without entries for its directories is not among the places
         for (String fileName : [name, GrailsNameUtils.getNameFromScript(name)]) {
             URL resource = classLoader.getResource("${CLASSPATH_LOCATION}/${fileName}${ENDING}")
             if (resource != null) {
@@ -232,6 +377,36 @@ class ScriptCommandRunner {
             }
         }
         return null
+    }
+
+    private static List<String> fileNames(URL place) {
+        List<String> names = []
+        try {
+            if (place.protocol == 'file') {
+                String[] listed = new File(place.toURI()).list()
+                if (listed != null) {
+                    names.addAll(listed)
+                }
+            } else if (place.protocol == 'jar') {
+                JarURLConnection connection = (JarURLConnection) place.openConnection()
+                connection.setUseCaches(false)
+                String prefix = connection.entryName.endsWith('/') ? connection.entryName : connection.entryName + '/'
+                JarFile jar = connection.jarFile
+                try {
+                    for (JarEntry entry : Collections.list(jar.entries())) {
+                        String entryName = entry.name
+                        if (entryName.startsWith(prefix) && entryName.indexOf('/', prefix.length()) < 0 && entryName.length() > prefix.length()) {
+                            names.add(entryName.substring(prefix.length()))
+                        }
+                    }
+                } finally {
+                    jar.close()
+                }
+            }
+        } catch (IOException | URISyntaxException | RuntimeException ignored) {
+            // a place that cannot be listed has no scripts
+        }
+        return names
     }
 
     private ScriptCommand compile(URL source, String name) {

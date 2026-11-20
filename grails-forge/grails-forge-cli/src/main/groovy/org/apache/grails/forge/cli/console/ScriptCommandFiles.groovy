@@ -33,9 +33,13 @@ import groovy.transform.CompileStatic
  *
  * <p>A script is code of the project, as its build is, and the CLI does not run it: it is run by the
  * build of the project, through the Gradle task {@code runScriptCommand}. So nothing of a script is
- * read here. The names of the files of the one directory are looked at, a bounded number of them,
- * and of each file whether it is a file; no file is opened, and what a script says of itself (its
- * description) is therefore not known.</p>
+ * read here. The names of the files of the one directory are looked at, and of each file whether it
+ * is a file; no file is opened, and what a script says of itself (its description) is therefore not
+ * known. A directory with more files than are looked at has no commands, since which of them were
+ * looked at would be the order the file system has them in; of more scripts than are made commands
+ * the first in the order of their names are. The build finds the script to run by the same rule
+ * ({@code ScriptCommandRunner} of the command line tier of Grails), and a table of cases that both
+ * are tested against keeps the two from drifting apart.</p>
  *
  * @since 9.0
  */
@@ -169,10 +173,11 @@ final class ScriptCommandFiles {
         } finally {
             entries.close()
         }
-        List<String> said = []
         if (more) {
-            said.add("${OF_WHAT} may not all be listed: ${LOCATION} has more than the ${MAX_ENTRIES} files that are looked at".toString())
+            // which of them would be looked at is the order the file system gives them in: none is a command
+            return notListed("${LOCATION} has more than the ${MAX_ENTRIES} files that are looked at")
         }
+        List<String> said = []
         List<String> names = new ArrayList<String>(scripts.keySet())
         if (names.size() > MAX_SCRIPTS) {
             said.add("${OF_WHAT} are not all listed: ${LOCATION} has more than the ${MAX_SCRIPTS} scripts that are made commands".toString())
@@ -183,7 +188,7 @@ final class ScriptCommandFiles {
                     'and not a link, that is named with the letters a to z and digits in words that capitals or hyphens set apart, as in ' +
                     "data-import.groovy or DataImport.groovy, with at most ${ApplicationCommandFile.MAX_NAME} characters, and the only one of its name").toString())
         }
-        return new ScriptCommandFiles(names.collect { String name -> ApplicationCommandFile.Entry.script(name) }, said, !more && scripts.size() <= MAX_SCRIPTS)
+        return new ScriptCommandFiles(names.collect { String name -> ApplicationCommandFile.Entry.script(name) }, said, scripts.size() <= MAX_SCRIPTS)
     }
 
     // a link, a pipe, a device or a directory is no script, and is not opened to find out

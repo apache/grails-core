@@ -135,7 +135,8 @@ class GrailsCliGradlePlugin implements Plugin<Project> {
      * Registers the task that runs a script command of the project or of one of its plugins (see
      * {@link ScriptCommandTask}). Its class path is what the project depends on at run time and
      * {@code grailsCliClasspath}, without the output of the project: a script is run without
-     * compiling the application, which it may be about to generate code for.
+     * compiling the project it is run in, which it may be about to generate code for. The projects
+     * that one depends on are on its run time class path and are built.
      */
     protected void configureRunScriptCommand(Project project) {
         project.pluginManager.withPlugin('java') {

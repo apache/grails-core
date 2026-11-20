@@ -1523,7 +1523,7 @@ The Grails shell (`grails -t shell`) runs scripts as before, and nothing changes
 
 ===== Required Actions
 
-None for a script that only uses what the guide documents for scripts: `description`, `args`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files, the console, `ant` and calling another script.
+None for a script that only uses what the guide documents for scripts: `description`, `args`, `flag`, `model`, `render`, `template`, `templates`, the methods for working with files (`copy { from ...; into ... }` among them), the console, `ant` and calling another script.
 
 Where a script is run with the Grails Forge CLI or with `./gradlew runScriptCommand`:
 
@@ -1533,5 +1533,8 @@ Where a script is run with the Grails Forge CLI or with `./gradlew runScriptComm
 * `profile`, `spring`, `isServerAvailable()` and `waitForStartup()` are not available.
 * The description of a script is not shown by `help`. A command written as a class in `grails-app/commands` is listed with its description, and script commands are deprecated in its favour.
 * A script is not run with the classes of the application on its class path, as it never was.
+* `-Dgrails.env=NAME` after the name of a script does not set the environment the script runs in: the arguments of a script are data, and the environment is that of the build (`./gradlew -Dgrails.env=NAME runScriptCommand ...`).
+* What a script writes through `console` is plain lines, without colours and progress indicators.
+* A script that is a link, or that is below a `src`, `src/main` or `src/main/scripts` that is a link, is not run as a script of the project.
 
 A build that has a task of its own named `runScriptCommand` gives it another name: a task registered after the plugin is applied fails the build as a duplicate, and one registered before it is kept, with a warning that the scripts are not run by the plugin's task.

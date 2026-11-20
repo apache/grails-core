@@ -40,7 +40,9 @@ import org.apache.grails.gradle.model.cli.CommandArgumentsFile
  * plugin has under {@code META-INF/commands}. The script is compiled and run by a JVM of the build
  * that has the dependencies of the project and the command line tier of Grails on its class path,
  * and neither the classes of the application nor the application itself: a script generates code and
- * works on the files of the project.
+ * works on the files of the project. The project itself is therefore not compiled for a script; a
+ * project it depends on ({@code implementation project(':lib')}) is built first, as for anything
+ * that uses the run time class path.
  *
  * <p>The name of the script and its arguments are given in one of two ways, never both:</p>
  * <ul>
@@ -64,13 +66,16 @@ abstract class ScriptCommandTask extends JavaExec {
     /** The class that compiles and runs a script, in the command line tier of Grails. */
     public static final String RUNNER = 'org.apache.grails.core.cli.script.ScriptCommandRunner'
 
+    /** The system property of the build with which the stack trace of what a script threw is shown: {@code -Dgrails.full.stacktrace=true}. */
+    public static final String FULL_STACKTRACE = 'grails.full.stacktrace'
+
     /** What the class that runs a script is started with in front of a name and arguments that are given as they are. */
     public static final String VECTOR = '--'
 
     @Inject
     ScriptCommandTask() {
         mainClass.convention(RUNNER)
-        systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') } as Map<String, Object>)
+        systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') && it.key != FULL_STACKTRACE } as Map<String, Object>)
         argumentsFileBase.convention(project.layout.projectDirectory)
     }
 
@@ -136,6 +141,11 @@ abstract class ScriptCommandTask extends JavaExec {
     @Override
     void exec() {
         args(runnerArguments())
+        // Asked for when the task runs and not when it is configured, so that a build whose configuration
+        // is reused shows the stack trace of a script exactly when this build was started with the property.
+        if (Boolean.getBoolean(FULL_STACKTRACE)) {
+            systemProperty(FULL_STACKTRACE, 'true')
+        }
         super.exec()
     }
 }

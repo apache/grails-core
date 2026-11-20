@@ -18,8 +18,13 @@
  */
 package org.apache.grails.core.cli.script
 
+import java.nio.file.Files
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
+
 import groovy.json.JsonOutput
 
+import spock.lang.IgnoreIf
 import spock.lang.Specification
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -36,6 +41,7 @@ class ScriptCommandRunnerSpec extends Specification {
     @TempDir
     File plugin
 
+    ByteArrayOutputStream out = new ByteArrayOutputStream()
     ByteArrayOutputStream err = new ByteArrayOutputStream()
 
     def 'a script of the project is run with its arguments and flags, and its description is not evaluated'() {
@@ -195,12 +201,12 @@ class ScriptCommandRunnerSpec extends Specification {
 
         where:
         what                                  | source                                   | lines | message
-        'returns false'                       | 'return false'                           | 0     | null
+        'returns false'                       | 'return false'                           | 1     | 'The script broken returned false, which is how a script says that it did not succeed.'
         'throws'                              | 'throw new IllegalStateException("no")'  | 1     | 'The script failed: java.lang.IllegalStateException: no'
         'runs Gradle'                         | 'gradle.compileGroovy()'                 | 1     | 'The script broken uses gradle, which a script has only in the Grails shell: a script that the build runs cannot run a build. Run the Gradle tasks from the command line, or make the script a task of the build.'
         'uses the profile'                    | 'profile.name'                           | 1     | 'The script broken uses profile, which a script has only in the Grails shell: there are no profiles here.'
         'runs a command that is no script'    | 'testApp("--debug-jvm")'                 | 1     | 'The script broken calls testApp(), and there is neither such a method nor a script command test-app. A script that the build runs can call another script command; a command of the Grails command line that is no script, such as run-app or test-app, is run from the command line.'
-        'calls a script that fails'           | 'return fails()'                         | 0     | null
+        'calls a script that fails'           | 'return fails()'                         | 1     | 'The script broken returned false, which is how a script says that it did not succeed.'
     }
 
     def 'a script that uses a class of the Grails shell is not compiled, and it is said why'() {
@@ -212,8 +218,215 @@ class ScriptCommandRunnerSpec extends Specification {
 
         then:
         exit == 1
-        said().readLines()[0] == 'The script could not be compiled. A script is compiled without the Grails shell: what it imports from org.grails.cli is not there.'
-        said().contains('DomainClassCompleter')
+        said().readLines() == ['The script could not be compiled, line 1: unable to resolve class org.grails.cli.interactive.completers.DomainClassCompleter. ' +
+                                       'A script is compiled without the Grails shell: what it imports from org.grails.cli is not there.']
+    }
+
+    def 'a script with a mistake in it is not compiled, and the mistake and its line are said, not the Grails shell'() {
+        given:
+        script('wrong', source)
+
+        when:
+        int exit = run('wrong')
+
+        then:
+        exit == 1
+        said().readLines().size() == 1
+        said().startsWith("The script could not be compiled, line ${line}: ")
+        said().contains(mistake)
+        !said().contains('org.grails.cli')
+        !said().contains('Grails shell')
+
+        where:
+        source                                      | line | mistake
+        'println 1\nprintln 2\ndef x = (\n'        | 3    | "Missing ')'"    
+        'println 1\nimport no.such.Type\nprintln 2' | 2    | 'unable to resolve class no.such.Type'
+    }
+
+    def 'what a script says through the console is whole lines of plain text, and the stack trace of what it threw is shown when asked for'() {
+        given:
+        script('talk', '''
+            console.addStatus "model: Book"
+            console.updateStatus "working"
+            addStatus "added"
+            console.error 'it went wrong'
+            error 'so did this'
+            console.warning 'careful'
+            console.error 'Label', 'with a label'
+            console.indicateProgress()
+            println 'printed'
+            console.info 'info'
+            grailsConsole.log 'logged'
+            throw new IllegalStateException('thrown')
+        ''')
+
+        when:
+        int exit = run('talk')
+
+        then:
+        exit == 1
+        out.toString().readLines() == ['| model: Book', '| working', '| added', 'printed', 'info', 'logged']
+        err.toString().readLines() == ['| Error it went wrong', '| Error so did this', '| Warning careful', '| Label with a label',
+                                       'The script failed: java.lang.IllegalStateException: thrown']
+        !(out.toString() + err.toString()).contains('\u001b')
+
+        when: 'the build was started for stack traces'
+        err.reset()
+        System.setProperty('grails.full.stacktrace', 'true')
+        run('talk')
+
+        then:
+        err.toString().readLines().findAll { it.startsWith('The script failed') || it.startsWith('java.lang.IllegalStateException: thrown') }.size() == 2
+        err.toString().contains('\tat ')
+
+        cleanup:
+        System.clearProperty('grails.full.stacktrace')
+    }
+
+    @Unroll
+    def 'a closure of a script reaches what its delegate has: #what'() {
+        given:
+        new File(project, 'src/main/templates').mkdirs()
+        new File(project, 'src/main/templates/c.txt').text = 'c'
+        new File(plugin, 'META-INF/templates/t').mkdirs()
+        new File(plugin, 'META-INF/templates/t/a.txt').text = 'a'
+        new File(plugin, 'META-INF/templates/t/b.txt').text = 'b'
+        script('delegates', source + "\nfile('result.txt').text = String.valueOf(result)\n")
+
+        when:
+        int exit = run('delegates')
+
+        then:
+        said() == ''
+        exit == 0
+        new File(project, 'result.txt').text == expected
+
+        where:
+        what                           | expected                    | source
+        'copy with from and into'      | '[a.txt, b.txt]'            | 'mkdir "build/cc"\ncopy {\n from templates("t/*.txt")\n into "build/cc"\n}\ndef result = new File(baseDir, "build/cc").list().toList().sort()'
+        'an Ant task with a file set'  | 'true'                      | 'ant.zip(destfile: "${baseDir}/build/x.zip") { fileset(dir: "${baseDir}/src/main/templates") }\ndef result = new File(baseDir, "build/x.zip").isFile()'
+        'a builder'                    | "<root><child a='1' /></root>" | 'def w = new StringWriter()\nnew groovy.xml.MarkupBuilder(new IndentPrinter(new PrintWriter(w), "", false)).root { child(a: 1) }\ndef result = w'
+        'a delegate that is set'       | '3'                         | 'def c = { size() }\nc.delegate = "abc"\ndef result = c()'
+        'a method that is caught'      | 'caught noSuchThing'        | 'def result\ntry { noSuchThing(1) } catch (MissingMethodException e) { result = "caught " + e.method }'
+        'a property that is caught'    | 'caught gradle'             | 'def result\ntry { gradle.build() } catch (MissingPropertyException e) { result = "caught " + e.property }'
+        'a property of the delegate'   | 'p'                         | 'def c = { profile }\nc.delegate = [profile: "p"]\ndef result = c()'
+    }
+
+    def 'the arguments of a script are data: none of them changes the environment or a property of the JVM'() {
+        given:
+        script('show', '''
+            file('seen.txt').text = [System.getProperty('grails.env'), System.getProperty('script.probe'), grailsEnv, commandLine.systemProperties['grails.env'],
+                                     commandLine.systemProperties['script.probe'], args, flag('after')].inspect()
+        ''')
+        String before = System.getProperty('grails.env')
+
+        when:
+        int exit = run('show', '-Dgrails.env=production', '-Dscript.probe=1', 'one', '--', '--after')
+
+        then:
+        exit == 0
+        System.getProperty('grails.env') == before
+        System.getProperty('script.probe') == null
+        new File(project, 'seen.txt').text == [before, null, grails.util.Environment.current.name, 'production', '1', ['one'], true].inspect()
+    }
+
+    @IgnoreIf({ os.windows })
+    def 'the script of a project that is run for a name is the one the Forge CLI lists, by the table that is held to as well'() {
+        given:
+        List<List<String>> cases = table('script-command-files.tsv')
+
+        expect:
+        cases.size() > 12
+        cases.eachWithIndex { List<String> each, int number ->
+            File at = layout(new File(plugin, "case${number}"), each[0])
+            ByteArrayOutputStream errors = new ByteArrayOutputStream()
+            int exit = new ScriptCommandRunner(at, getClass().classLoader, new PrintStream(errors, true)).start('--', each[1])
+            File ran = new File(at, 'ran.txt')
+            assert (ran.isFile() ? ran.text : '-') == each[2], each.toString() + ' ' + errors
+            assert exit == (each[2] == '-' ? 1 : 0), each.toString()
+            assert each[2] != '-' || errors.toString().startsWith("There is no script command ${each[1]}: "), each.toString()
+        }
+    }
+
+    def 'a script in the jar of a plugin is found by the name its file gives it, whichever way the file is named'() {
+        given: 'a jar as a build writes it, with entries for its directories'
+        File jar = new File(plugin, 'plugin-cli.jar')
+        jar.withOutputStream { OutputStream output ->
+            JarOutputStream written = new JarOutputStream(output)
+            ['META-INF/', 'META-INF/commands/'].each { String directory ->
+                written.putNextEntry(new JarEntry(directory))
+                written.closeEntry()
+            }
+            ['XMLImport', 'dataImport', 'CreateThing', 'plain-name'].each { String each ->
+                written.putNextEntry(new JarEntry("META-INF/commands/${each}.groovy"))
+                written.write("new File(baseDir, 'ran.txt').text = '${each}'".getBytes('UTF-8'))
+                written.closeEntry()
+            }
+            written.putNextEntry(new JarEntry('META-INF/commands/deeper/nested.groovy'))
+            written.write("new File(baseDir, 'ran.txt').text = 'nested'".getBytes('UTF-8'))
+            written.closeEntry()
+            written.close()
+        }
+        URLClassLoader loader = new URLClassLoader([jar.toURI().toURL()] as URL[], getClass().classLoader)
+
+        expect:
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', name) == (base == null ? 1 : 0)
+        (new File(project, 'ran.txt').isFile() ? new File(project, 'ran.txt').text : null) == base
+
+        cleanup:
+        loader?.close()
+
+        where:
+        name           | base
+        'xmli-mport'   | 'XMLImport'
+        'data-import'  | 'dataImport'
+        'create-thing' | 'CreateThing'
+        'plain-name'   | 'plain-name'
+        'nested'       | null
+    }
+
+    @Unroll
+    def 'the script #name of #module runs as the build runs it: #outcome'() {
+        given: 'the scripts and templates of the plugin, where its jar has them'
+        File root = new File(getClass().getResource('/script-command-names.tsv').toURI())
+        while (!(new File(root, 'grails-forge/grails-forge-cli').isDirectory() && new File(root, 'grails-core/src/test-cli').isDirectory())) {
+            root = root.parentFile
+        }
+        copyTree(new File(root, "${module}/src/main/scripts"), new File(plugin, 'META-INF/commands'))
+        copyTree(new File(root, "${module}/src/main/templates"), new File(plugin, 'META-INF/templates'))
+        new File(project, 'grails-app/conf').mkdirs()
+        new File(project, 'grails-app/conf/application.yml').text = 'grails:\n    codegen:\n        defaultPackage: com.example\n'
+        new File(project, 'grails-app/i18n').mkdirs()
+        new File(project, 'grails-app/i18n/messages.properties').text = ''
+        new File(project, 'gradle.properties').text = 'grailsVersion=9.0.0\n'
+
+        when:
+        int exit = run(([name] + arguments) as String[])
+        String first = said().readLines().find { !it.isEmpty() } ?: ''
+
+        then:
+        first.startsWith(outcome)
+        exit == (outcome.isEmpty() ? 0 : 1)
+        written.every { String path -> new File(project, path).isFile() }
+
+        where:
+        module                               | name                              | arguments          | outcome | written
+        'grails-scaffolding' | 'install-templates' | [] | '' | ['src/main/templates/scaffolding/index.gsp', 'src/main/templates/scaffolding/Controller.groovy', 'src/main/templates/scaffolding/Spec.groovy']
+        'grails-scaffolding' | 'create-scaffold-controller' | ['Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy']
+        'grails-scaffolding' | 'create-scaffold-service' | ['Book'] | '' | ['grails-app/services/com/example/BookService.groovy']
+        'grails-scaffolding' | 'generate-scaffold-all' | ['Book'] | '' | ['grails-app/controllers/com/example/BookController.groovy', 'grails-app/services/com/example/BookService.groovy']
+        'grails-scaffolding' | 'generate-all' | ['Book'] | 'The script could not be compiled, line 20: unable to resolve class org.grails.cli.interactive.completers.DomainClassCompleter. A script is compiled without the Grails shell' | []
+        'grails-scaffolding' | 'generate-controller' | ['Book'] | 'The script could not be compiled, line 20: unable to resolve class org.grails.cli.interactive.completers.DomainClassCompleter. A script is compiled without the Grails shell' | []
+        'grails-scaffolding' | 'generate-async-controller' | ['Book'] | 'The script could not be compiled, line 20: unable to resolve class org.grails.cli.interactive.completers.DomainClassCompleter. A script is compiled without the Grails shell' | []
+        'grails-scaffolding' | 'generate-views' | ['Book'] | 'The script could not be compiled, line 20: unable to resolve class org.grails.cli.interactive.completers.DomainClassCompleter. A script is compiled without the Grails shell' | []
+        'grails-quartz' | 'create-job' | ['Nightly'] | '' | ['grails-app/jobs/com/example/NightlyJob.groovy']
+        'grails-geb' | 'create-functional-test' | ['Home'] | '' | ['src/integration-test/groovy/com/example/HomeSpec.groovy']
+        'grails-spring-security/plugin' | 's2-create-persistent-token' | ['com.example.PersistentLogin'] | '' | ['grails-app/domain/com/example/PersistentLogin.groovy', 'grails-app/conf/application.groovy']
+        'grails-spring-security/plugin' | 's2-create-role-hierarchy-entry' | ['com.example.RoleHierarchyEntry'] | '' | ['grails-app/domain/com/example/RoleHierarchyEntry.groovy']
+        'grails-spring-security/plugin' | 's2-quickstart' | ['com.example', 'User', 'Role'] | '' | ['grails-app/domain/com/example/User.groovy', 'grails-app/domain/com/example/UserRole.groovy']
+        'grails-spring-security/acl/plugin' | 's2-create-acl-domains' | [] | '' | ['grails-app/domain/grails/plugin/springsecurity/acl/AclClass.groovy', 'grails-app/domain/grails/plugin/springsecurity/acl/AclSid.groovy']
+        'grails-spring-security/ui/plugin' | 's2ui-create-challenge-questions' | ['com.example', 'Profile', 'com.example.User'] | '' | ['grails-app/domain/com/example/Profile.groovy', 'grails-app/controllers/com/example/ProfileController.groovy']
+        'grails-spring-security/oauth2/plugin' | 'init-oauth2' | ['com.example', 'User', 'OAuthID'] | '' | ['grails-app/domain/com/example/OAuthID.groovy']
     }
 
     @Unroll
@@ -241,24 +454,70 @@ class ScriptCommandRunnerSpec extends Specification {
     }
 
     def 'the name of a file gives the name of a command by the table the Forge CLI is held to as well'() {
-        given: 'the table, which this build and the build of the Forge CLI each have a copy of'
-        URL table = getClass().getResource('/script-command-names.tsv')
-        List<List<String>> cases = table.getText('UTF-8').readLines().findAll { !it.startsWith('#') && !it.isEmpty() }*.split('\t')*.toList()
+        given:
+        List<List<String>> cases = table('script-command-names.tsv')
 
         expect:
         cases.size() > 30
         cases.each { List<String> each ->
             assert ScriptCommandRunner.commandName(each[0]) == (each[1] == '-' ? null : each[1])
         }
+    }
 
-        and: 'the two copies are one table'
+    // A project and what is outside it, as a line of the table of cases says: see script-command-files.tsv.
+    private static File layout(File top, String what) {
+        File project = new File(top, 'project')
+        File outside = new File(top, 'outside')
+        new File(outside, 'main/scripts').mkdirs()
+        String elsewhere = "new File(baseDir, 'ran.txt').text = 'outside'\n"
+        [outside, new File(outside, 'main'), new File(outside, 'main/scripts')].each { File each -> new File(each, 'planted.groovy').text = elsewhere }
+        new File(outside, 'script.groovy').text = elsewhere
+        List<String> items = what.split(' ').toList()
+        String link = items.find { String item -> item.startsWith('L:') }?.substring(2)
+        File scripts = new File(project, 'src/main/scripts')
+        if (link == null) {
+            scripts.mkdirs()
+        } else {
+            File at = new File(project, link)
+            at.parentFile.mkdirs()
+            Files.createSymbolicLink(at.toPath(), (link == 'src' ? outside : new File(outside, link.substring(4))).toPath())
+        }
+        items.each { String item ->
+            File file = new File(scripts, item.substring(2))
+            if (item.startsWith('f:')) {
+                file.text = "new File(baseDir, 'ran.txt').text = '${file.name}'\n"
+            } else if (item.startsWith('l:')) {
+                Files.createSymbolicLink(file.toPath(), new File(outside, 'script.groovy').toPath())
+            } else if (item.startsWith('d:')) {
+                file.mkdirs()
+            }
+        }
+        return project
+    }
+
+    private List<List<String>> table(String name) {
+        URL table = getClass().getResource('/' + name)
         File root = new File(table.toURI())
         while (root != null && !(new File(root, 'grails-forge/grails-forge-cli').isDirectory() && new File(root, 'grails-core/src/test-cli').isDirectory())) {
             root = root.parentFile
         }
-        root != null
-        new File(root, 'grails-forge/grails-forge-cli/src/test/resources/script-command-names.tsv').bytes ==
-                new File(root, 'grails-core/src/test-cli/resources/script-command-names.tsv').bytes
+        // the two copies are one table
+        assert root != null
+        assert new File(root, "grails-forge/grails-forge-cli/src/test/resources/${name}").bytes == new File(root, "grails-core/src/test-cli/resources/${name}").bytes
+        return table.getText('UTF-8').readLines().findAll { String line -> !line.startsWith('#') && !line.isEmpty() }*.split('\t')*.toList()
+    }
+
+    private static void copyTree(File from, File to) {
+        to.mkdirs()
+        from.eachFileRecurse { File each ->
+            File copy = new File(to, from.toPath().relativize(each.toPath()).toString())
+            if (each.directory) {
+                copy.mkdirs()
+            } else {
+                copy.parentFile.mkdirs()
+                copy.bytes = each.bytes
+            }
+        }
     }
 
     private void script(String base, String source) {
@@ -268,7 +527,7 @@ class ScriptCommandRunnerSpec extends Specification {
     }
 
     private ScriptCommandRunner runner() {
-        new ScriptCommandRunner(project, new URLClassLoader([plugin.toURI().toURL()] as URL[], getClass().classLoader), new PrintStream(err, true))
+        new ScriptCommandRunner(project, new URLClassLoader([plugin.toURI().toURL()] as URL[], getClass().classLoader), new PrintStream(out, true), new PrintStream(err, true))
     }
 
     private int run(String... vector) {

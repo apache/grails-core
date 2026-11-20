@@ -42,8 +42,8 @@ import org.grails.config.CodeGenConfig
  * ({@code args}, {@code argsMap}, {@code flag}), {@code model}, {@code render}, {@code template}
  * and {@code templates}, the methods that work on the files of the project, the console, Ant,
  * events, and calling another script command as a method. A script is not run by the Grails shell
- * here and has no profile: it cannot run Gradle, a command of the command line that is no script,
- * or the application.</p>
+ * here and has no profile: it has no {@code gradle}, {@code spring} or {@code profile}, and a method
+ * that names a command of the command line that is no script is a method that is missing.</p>
  *
  * @since 9.0
  * @deprecated script commands are kept for the applications and plugins that have them; a new
@@ -236,53 +236,26 @@ abstract class ScriptCommand extends Script implements ModelBuilder, ConsoleLogg
     }
 
     /**
-     * Gradle is not run from a script that the build runs.
-     *
-     * @throws ScriptCommandException always
-     */
-    Object getGradle() {
-        throw new ScriptCommandException("The script ${name} uses gradle, which a script has only in the Grails shell: " +
-                'a script that the build runs cannot run a build. Run the Gradle tasks from the command line, or make the script a task of the build.')
-    }
-
-    /**
-     * There is no Spring Boot CLI where the build runs a script.
-     *
-     * @throws ScriptCommandException always
-     */
-    Object getSpring() {
-        throw new ScriptCommandException("The script ${name} uses spring, which a script has only in the Grails shell.")
-    }
-
-    /**
-     * There is no profile where the build runs a script.
-     *
-     * @throws ScriptCommandException always
-     */
-    Object getProfile() {
-        throw new ScriptCommandException("The script ${name} uses profile, which a script has only in the Grails shell: there are no profiles here.")
-    }
-
-    /**
      * Runs another script command when a method is called that the script does not have:
      * {@code generateController('Book')} runs the script {@code generate-controller}.
      *
      * @param method the name of the method
      * @param arguments the arguments of the command
      * @return whether the command succeeded
-     * @throws ScriptCommandException when there is no script command of that name
+     * @throws MissingMethodException when there is no script command of that name, as for any method
+     * that is not there: a closure of the script whose delegate has the method then calls it there
+     * ({@code copy { from ...; into ... }}, a builder, Ant), and a script can catch it. One that
+     * nothing catches is said in one line by what runs the script.
      */
     def methodMissing(String method, Object arguments) {
         Object[] given = arguments instanceof Object[] ? (Object[]) arguments : [arguments] as Object[]
         String commandName = GrailsNameUtils.getScriptName(method)
+        if (runner == null || !runner.has(commandName)) {
+            throw new MissingMethodException(method, getClass(), given)
+        }
         List<String> vector = [commandName]
         for (Object each : given) {
             vector.add(String.valueOf(each))
-        }
-        if (!runner.has(commandName)) {
-            throw new ScriptCommandException("The script ${name} calls ${method}(), and there is neither such a method nor a script command ${commandName}. " +
-                    'A script that the build runs can call another script command; a command of the Grails command line that is no script, ' +
-                    'such as run-app or test-app, is run from the command line.')
         }
         return runner.run(vector) == 0
     }

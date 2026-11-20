@@ -207,7 +207,7 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         described.diagnostics[0].startsWith('1 of the .groovy files in src/main/scripts is no command: ')
     }
 
-    void "of a directory with ten thousand files a bounded number is looked at and a bounded number are commands, and it is said that there are more"() {
+    void "a directory with ten thousand files has no commands, since which of them are looked at is not in anyone's hands, and that is said"() {
         given:
         catalog([])
         File scripts = new File(dir, 'src/main/scripts')
@@ -222,10 +222,27 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
         exit == 0
         err.toString().isEmpty()
         described.complete == false
-        described.diagnostics == [
-                'The scripts of the application may not all be listed: src/main/scripts has more than the 4096 files that are looked at',
-                'The scripts of the application are not all listed: src/main/scripts has more than the 256 scripts that are made commands']
-        ((List<Map>) described.commands).findAll { it.registration == 'script' }.size() == 256
+        described.diagnostics == ['The scripts of the application are not listed: src/main/scripts has more than the 4096 files that are looked at']
+        !((List<Map>) described.commands).any { it.registration == 'script' }
+    }
+
+    void "of more scripts than are made commands the first in the order of their names are, whatever order the directory has them in"() {
+        given:
+        catalog([])
+        File scripts = new File(dir, 'src/main/scripts')
+        scripts.mkdirs()
+        List<String> names = (1..300).collect { int number -> 's' + String.valueOf(1000 + number) }
+        names.reverse().each { String name -> new File(scripts, "${name}.groovy").text = '' }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = document()
+
+        then:
+        exit == 0
+        described.complete == false
+        described.diagnostics == ['The scripts of the application are not all listed: src/main/scripts has more than the 256 scripts that are made commands']
+        ((List<Map>) described.commands).findAll { it.registration == 'script' }*.name == names.sort().take(256)
     }
 
     @IgnoreIf({ os.windows })
@@ -513,24 +530,75 @@ class ScriptCommandsSpec extends CommandSpec implements CommandFixture {
     }
 
     void "the name of a file gives the name of a command by the table the build that runs the script is held to as well"() {
-        given: 'the table, which this build and the build of the Forge CLI each have a copy of'
-        URL table = getClass().getResource('/script-command-names.tsv')
-        List<List<String>> cases = table.getText('UTF-8').readLines().findAll { !it.startsWith('#') && !it.isEmpty() }*.split('\t')*.toList()
+        given: 'the table, which this build and the build of the framework each have a copy of'
+        List<List<String>> cases = table('script-command-names.tsv')
 
         expect:
         cases.size() > 30
         cases.each { List<String> each ->
             assert ScriptCommandFiles.commandName(each[0]) == (each[1] == '-' ? null : each[1])
         }
+    }
 
-        and: 'the two copies are one table'
+    @IgnoreIf({ os.windows })
+    void "a name is listed exactly when the build has a file of the project to run for it, by the table the build is held to as well"() {
+        given:
+        List<List<String>> cases = table('script-command-files.tsv')
+        File top = Files.createTempDirectory('grailsforgescripts').toFile().canonicalFile
+
+        expect:
+        cases.size() > 12
+        cases.eachWithIndex { List<String> each, int number ->
+            File project = layout(new File(top, "case${number}"), each[0])
+            ScriptCommandFiles listed = ScriptCommandFiles.list(project.toPath())
+            assert (each[1] in listed.commands*.name) == (each[2] != '-'), each.toString()
+        }
+
+        cleanup:
+        top?.deleteDir()
+    }
+
+    // A project and what is outside it, as a line of the table of cases says: see script-command-files.tsv.
+    private static File layout(File top, String what) {
+        File project = new File(top, 'project')
+        File outside = new File(top, 'outside')
+        new File(outside, 'main/scripts').mkdirs()
+        String elsewhere = "new File(baseDir, 'ran.txt').text = 'outside'\n"
+        [outside, new File(outside, 'main'), new File(outside, 'main/scripts')].each { File each -> new File(each, 'planted.groovy').text = elsewhere }
+        new File(outside, 'script.groovy').text = elsewhere
+        List<String> items = what.split(' ').toList()
+        String link = items.find { String item -> item.startsWith('L:') }?.substring(2)
+        File scripts = new File(project, 'src/main/scripts')
+        if (link == null) {
+            scripts.mkdirs()
+        } else {
+            File at = new File(project, link)
+            at.parentFile.mkdirs()
+            Files.createSymbolicLink(at.toPath(), (link == 'src' ? outside : new File(outside, link.substring(4))).toPath())
+        }
+        items.each { String item ->
+            File file = new File(scripts, item.substring(2))
+            if (item.startsWith('f:')) {
+                file.text = "new File(baseDir, 'ran.txt').text = '${file.name}'\n"
+            } else if (item.startsWith('l:')) {
+                Files.createSymbolicLink(file.toPath(), new File(outside, 'script.groovy').toPath())
+            } else if (item.startsWith('d:')) {
+                file.mkdirs()
+            }
+        }
+        return project
+    }
+
+    private List<List<String>> table(String name) {
+        URL table = getClass().getResource('/' + name)
         File root = new File(table.toURI())
         while (root != null && !(new File(root, 'grails-forge/grails-forge-cli').isDirectory() && new File(root, 'grails-core/src/test-cli').isDirectory())) {
             root = root.parentFile
         }
-        root != null
-        new File(root, 'grails-forge/grails-forge-cli/src/test/resources/script-command-names.tsv').bytes ==
-                new File(root, 'grails-core/src/test-cli/resources/script-command-names.tsv').bytes
+        // the two copies are one table
+        assert root != null
+        assert new File(root, "grails-forge/grails-forge-cli/src/test/resources/${name}").bytes == new File(root, "grails-core/src/test-cli/resources/${name}").bytes
+        return table.getText('UTF-8').readLines().findAll { String line -> !line.startsWith('#') && !line.isEmpty() }*.split('\t')*.toList()
     }
 
     private boolean notEvaluated() {
