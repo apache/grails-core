@@ -140,7 +140,12 @@ bomPropertyOverrides {
     // Register specific BOMs (e.g. ones referenced indirectly)
     bom 'com.example:my-bom:1.0.0'
     bom 'com.example:other-bom:2.0.0'
+
+    // Leave a configuration as it is, such as the class path of a tool
+    excludeConfiguration 'myTool'
 }
 ----
+
+A configuration named with `excludeConfiguration` gets no override, and a platform declared on it is not detected. That is for a configuration that holds a tool the build runs and not a part of what the project builds, which is resolved with the versions the tool was published with.
 
 In Grails applications, `autoDetect = false` also disables automatic property-override processing of the lazily contributed Grails BOM unless you register it explicitly with `bom`. It does not disable the platform itself; use `grails { bom = null }` to opt out of automatic platform application.

@@ -395,6 +395,10 @@ Try the pack out for those, as described below. Rendering a template runs its co
 
 A plugin without `src/main/forge` skips the task. The task is up to date when neither the pack nor the generator changed. Building the jar does not run it: `jar`, `assemble` and `publishToMavenLocal` package a pack that was not checked. `check` and `build` fail for a pack that cannot be used, and so does publishing the plugin to a repository with the `maven-publish` plugin (`publish` and the `publish...Repository` tasks), which checks the pack first.
 
+NOTE: Every task that publishes a plugin with a pack to a Maven repository checks the pack, a repository that is a directory (`file:`) included. So such a plugin cannot be published, even to a directory, unless the generator for its `grailsVersion` can be resolved from the repositories of the build, or another one is declared as shown below. `publishToMavenLocal` is the exception: it installs the plugin with a pack nobody checked.
+
+The task takes a check for passed only when the generator says, in one line and nothing else, that it checked the pack. That keeps an accident from passing: a template that ends the JVM, or writes to the standard output itself, fails the task. It is no protection against a template written to imitate that line, and is not meant as one: the templates of a pack are code of its author.
+
 The generator runs in a JVM of its own, with the Java of the toolchain of the project, and is not a dependency of the plugin. It is resolved from the repositories of the build as `org.apache.grails.forge:grails-forge-core`, in the version of Grails the plugin is built with (`grailsVersion`), with the versions of its own dependencies it was published with: `groovy.version` and the overrides of BOM properties of the project do not apply to it. When no repository of the build has it the task fails and says so. To check the pack with another version, declare it:
 
 [source,groovy]

@@ -28,10 +28,6 @@ import groovy.transform.CompileStatic
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.artifacts.result.DependencyResult
-import org.gradle.api.artifacts.result.ResolvedComponentResult
-import org.gradle.api.artifacts.result.ResolvedDependencyResult
-import org.gradle.api.artifacts.result.UnresolvedDependencyResult
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
@@ -60,7 +56,10 @@ import org.gradle.work.DisableCachingByDefault
  * told the directory of the pack and ends with 0 for a pack without problems, having written the one
  * line {@link #CHECKED_LINE} to its standard output; with 1 for a pack with problems, having written
  * them there, one on a line; and with anything else when it could not check. An end with 0 without that
- * line is not a pack that was checked: something ended the JVM before Forge was done.</p>
+ * line, or with another line beside it, is not a pack that was checked: something ended the JVM before
+ * Forge was done, or wrote where only the check is to write. The line keeps an accident from passing for
+ * a check. It does not keep a template from writing the line itself and ending the JVM: the templates of
+ * a pack are code of its author, who is the one running the check.</p>
  *
  * @since 9.0
  */
@@ -78,10 +77,20 @@ abstract class CheckForgePackTask extends DefaultTask {
     private static final int PROBLEMS = 1
     private static final int MAX_LINES = 60
     private static final int MAX_LINE = 2000
-    private static final int MAX_UNRESOLVED = 10
-    private static final int MAX_REASON_LINES = 8
+    private static final int MAX_LISTED = 10
+    private static final int MAX_OTHER_LINES = 3
+    private static final int MAX_OTHER_LINE = 200
     private static final int FIRST_CLASS_FILE_VERSION = 44
-    private static final Pattern CLASS_FILE_VERSION = Pattern.compile(/class file version (\d+)/)
+    // the two lines the launcher of Java writes for a main class compiled for a later Java
+    private static final Pattern OLDER_JAVA = Pattern.compile('(?m)^Error: LinkageError occurred while loading main class ' +
+            Pattern.quote(MAIN_CLASS) + /\s*$\s+^\s*java\.lang\.UnsupportedClassVersionError: .*class file version (\d+)/)
+    private static final Pattern NO_MAIN_CLASS = Pattern.compile('(?m)^Error: Could not find or load main class ' +
+            Pattern.quote(MAIN_CLASS) + /\s*$/)
+    private static final List<String> SLF4J_WITHOUT_PROVIDER = [
+            'SLF4J(W): No SLF4J providers were found.',
+            'SLF4J(W): Defaulting to no-operation (NOP) logger implementation',
+            'SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.',
+    ].asImmutable()
     private static final String SOURCE = GrailsPluginGradlePlugin.FORGE_PACK_SOURCE_DIR
     private static final String TOOLING = GrailsPluginGradlePlugin.FORGE_PACK_TOOLING_CONFIGURATION
 
@@ -95,14 +104,15 @@ abstract class CheckForgePackTask extends DefaultTask {
 
     /**
      * Forge and what it needs to run: the files of the tooling configuration that could be resolved.
-     * What could not be is in {@link #getToolingResolution()}, and fails the task with words of its own.
+     * What could not be is in {@link #getToolingProblems()}, and fails the task with words of its own
+     * before Forge is started.
      */
     @Classpath
     abstract ConfigurableFileCollection getToolingClasspath()
 
-    /** What the tooling configuration resolved to, for what of it could not be resolved. */
+    /** What of the tooling configuration could not be resolved or fetched. */
     @Internal
-    abstract Property<ResolvedComponentResult> getToolingResolution()
+    abstract Property<ForgeToolingProblems> getToolingProblems()
 
     /** The Java that runs Forge: that of the toolchain of the project. */
     @Nested
@@ -120,14 +130,7 @@ abstract class CheckForgePackTask extends DefaultTask {
     void check() {
         File marker = markerFile.get().asFile
         marker.delete()
-        List<String> unresolved = unresolved(toolingResolution.getOrNull())
-        if (unresolved) {
-            throw new GradleException("The feature pack in ${SOURCE} could not be checked: Forge, which checks it, was not found in the " +
-                    "repositories of the build. The ${TOOLING} configuration could not resolve:\n" +
-                    unresolved.collect { String each -> '  - ' + each }.join('\n') + '\n' +
-                    'A pack is checked with the Forge of the Grails version of the project. Add a repository that has it, or name ' +
-                    "the Forge to check with: dependencies { ${TOOLING} '${GrailsPluginGradlePlugin.FORGE_PACK_TOOLING}:<version>' }")
-        }
+        checkTooling(toolingProblems.getOrNull())
         if (toolingClasspath.empty) {
             throw new GradleException("The feature pack in ${SOURCE} could not be checked: the ${TOOLING} configuration has nothing " +
                     'to check it with')
@@ -149,13 +152,17 @@ abstract class CheckForgePackTask extends DefaultTask {
             spec.systemProperty('stdout.encoding', StandardCharsets.UTF_8.name())
             spec.systemProperty('sun.stdout.encoding', StandardCharsets.UTF_8.name())
             spec.systemProperty('java.awt.headless', 'true')
+            // Forge is published without a logging implementation, which SLF4J says in three lines each time
+            spec.systemProperty('slf4j.internal.verbosity', 'ERROR')
             spec.standardOutput = out
             spec.errorOutput = err
             spec.ignoreExitValue = true
         }
         List<String> written = lines(out)
-        List<String> said = lines(err)
-        if (result.exitValue == VALID && written.size() == 1 && written[0] ==~ CHECKED_LINE) {
+        // of an SLF4J that does not know the property
+        List<String> said = lines(err).findAll { String line -> !(line in SLF4J_WITHOUT_PROVIDER) }
+        List<String> summaries = written.findAll { String line -> line ==~ CHECKED_LINE }
+        if (result.exitValue == VALID && written.size() == 1 && summaries.size() == 1) {
             said.each { String line -> logger.info(line) }
             logger.info('Forge: {}', written[0])
             marker.setText("${packState.get()}\n", StandardCharsets.UTF_8.name())
@@ -165,67 +172,79 @@ abstract class CheckForgePackTask extends DefaultTask {
             throw new GradleException("The feature pack in ${SOURCE} cannot be used:\n" +
                     written.collect { String problem -> '  - ' + problem }.join('\n'))
         }
-        String why = hint(result.exitValue, new String(err.toByteArray(), StandardCharsets.UTF_8))
-        List<String> shown = result.exitValue == VALID ? written + said : said
+        String why
+        List<String> shown = said
+        if (result.exitValue == VALID && summaries.size() == 1) {
+            List<String> others = written - summaries
+            why = 'It checked the pack and found no problem, and other lines were written to the standard output, which only the ' +
+                    "check itself is to write, so it cannot be told that the check was not ended early: ${some(others.collect { String line -> quoted(line) }, MAX_OTHER_LINES)}"
+        } else if (result.exitValue == VALID) {
+            why = 'It ended as a check without problems does, without saying that it had checked the pack: a template may have ' +
+                    "ended the JVM, or the Forge of the ${TOOLING} configuration is older than this version of the Grails Gradle plugin expects"
+            shown = written + said
+        } else {
+            // with no output of its own, the JVM may not have got as far as Forge
+            why = launcherHint(new String(err.toByteArray(), StandardCharsets.UTF_8))
+            if (why == null && result.exitValue == PROBLEMS) {
+                why = 'It ended as a check that found problems does, without naming one: a template may have ended the JVM'
+            }
+        }
         throw new GradleException("The feature pack in ${SOURCE} could not be checked (Forge ended with ${result.exitValue})" +
                 "${why ? '. ' + why : ''}${shown ? ':\n' + shown.collect { String line -> '  ' + line }.join('\n') : ''}")
     }
 
     /**
-     * What is known of why Forge did not check, where its own words would not tell the author of a
-     * plugin what to do.
+     * Fails for a class path of Forge that is not whole, before anything is started with it.
      */
-    private String hint(int exit, String errors) {
-        if (errors.contains('UnsupportedClassVersionError')) {
-            Matcher version = CLASS_FILE_VERSION.matcher(errors)
-            String needed = version.find() ? "Java ${Integer.parseInt(version.group(1)) - FIRST_CLASS_FILE_VERSION} or later" : 'a later Java'
-            String used = javaLauncher.isPresent() ? "Java ${javaLauncher.get().metadata.languageVersion.asInt()}" : 'the Java of the build'
-            return "This Forge needs ${needed}, and the toolchain of the project runs it with ${used}"
+    private static void checkTooling(ForgeToolingProblems problems) {
+        if (problems == null || problems.empty) {
+            return
         }
-        if (errors.contains('Could not find or load main class') || errors.contains("ClassNotFoundException: ${MAIN_CLASS}")) {
-            return "What the ${TOOLING} configuration resolved has no ${MAIN_CLASS}: it is a Forge older than this version of the " +
-                    'Grails Gradle plugin expects, such as an earlier snapshot a repository of the build still has, or it is not Forge'
+        if (problems.notFound) {
+            throw new GradleException("The feature pack in ${SOURCE} could not be checked: Forge, which checks it, was not found in the " +
+                    "repositories of the build. The ${TOOLING} configuration could not resolve:\n" +
+                    problems.notFound.take(MAX_LISTED).collect { String each -> '  - ' + each }.join('\n') + '\n' +
+                    (problems.notFound.size() > MAX_LISTED ? "  and ${problems.notFound.size() - MAX_LISTED} more\n" : '') +
+                    'A pack is checked with the Forge of the Grails version of the project. Add a repository that has it, or name ' +
+                    "the Forge to check with: dependencies { ${TOOLING} '${GrailsPluginGradlePlugin.FORGE_PACK_TOOLING}:<version>' }")
         }
-        if (exit == VALID) {
-            return 'It ended as a check without problems does, without saying that it had checked the pack: a template may have ' +
-                    "ended the JVM, or the Forge of the ${TOOLING} configuration is older than this version of the Grails Gradle plugin expects"
+        if (problems.neededNotFound) {
+            int count = problems.neededNotFound.size()
+            throw new GradleException("The feature pack in ${SOURCE} could not be checked: Forge, which checks it, was found, and " +
+                    "${count} ${count == 1 ? 'module it needs was' : 'modules it needs were'} not: ${some(problems.neededNotFound, MAX_LISTED)}. " +
+                    'They are where Grails is: add the repositories that have Grails to the repositories of the build')
         }
-        return null
+        throw new GradleException("The feature pack in ${SOURCE} could not be checked: ${some(problems.notFetched, MAX_LISTED)} could not be " +
+                "fetched from the repositories of the build, which have ${problems.notFetched.size() == 1 ? 'its module' : 'their modules'}. " +
+                'Forge is not run with a part of what it needs')
+    }
+
+    private static String some(List<String> all, int most) {
+        List<String> shown = all.take(most)
+        return all.size() > shown.size() ? "${shown.join(', ')} and ${all.size() - shown.size()} more" : shown.join(', ')
+    }
+
+    private static String quoted(String line) {
+        return "'${line.length() > MAX_OTHER_LINE ? line.substring(0, line.offsetByCodePoints(0, line.codePointCount(0, MAX_OTHER_LINE))) + '...' : line}'"
     }
 
     /**
-     * What of the tooling could not be resolved, each with the first lines of why.
+     * What is known of why the JVM did not get to Forge, from what the launcher of Java itself says and
+     * as it says it: at the start of a line. Text that only has those words in it, which a template can
+     * write, is not it.
      */
-    private static List<String> unresolved(ResolvedComponentResult root) {
-        List<String> unresolved = []
-        if (root == null) {
-            return unresolved
+    private String launcherHint(String errors) {
+        Matcher version = OLDER_JAVA.matcher(errors)
+        if (version.find()) {
+            String used = javaLauncher.isPresent() ? "Java ${javaLauncher.get().metadata.languageVersion.asInt()}" : 'the Java of the build'
+            return "This Forge needs Java ${Integer.parseInt(version.group(1)) - FIRST_CLASS_FILE_VERSION} or later, and the toolchain of the " +
+                    "project runs it with ${used}"
         }
-        Set<ResolvedComponentResult> seen = new HashSet<>()
-        Deque<ResolvedComponentResult> pending = new ArrayDeque<>()
-        pending.add(root)
-        while (!pending.isEmpty() && unresolved.size() < MAX_UNRESOLVED) {
-            ResolvedComponentResult component = pending.poll()
-            if (!seen.add(component)) {
-                continue
-            }
-            for (DependencyResult dependency : component.dependencies) {
-                if (dependency instanceof UnresolvedDependencyResult) {
-                    UnresolvedDependencyResult missing = (UnresolvedDependencyResult) dependency
-                    // with where it was looked for, which Gradle says on the lines after the first
-                    List<String> why = (missing.failure?.message ?: '').readLines()
-                            .collect { String line -> line.replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]+/, ' ').trim() }
-                            .findAll { String line -> !line.isEmpty() }.take(MAX_REASON_LINES)
-                    String each = "${missing.attempted.displayName}${why ? ': ' + why.join('\n      ') : ''}".toString()
-                    if (!unresolved.contains(each)) {
-                        unresolved << each
-                    }
-                } else if (dependency instanceof ResolvedDependencyResult) {
-                    pending.add(((ResolvedDependencyResult) dependency).selected)
-                }
-            }
+        if (NO_MAIN_CLASS.matcher(errors).find()) {
+            return "What the ${TOOLING} configuration resolved has no ${MAIN_CLASS}: it is a Forge older than this version of the " +
+                    'Grails Gradle plugin expects, such as an earlier snapshot a repository of the build still has, or it is not Forge'
         }
-        return unresolved
+        return null
     }
 
     // what another program wrote: a bounded number of lines of bounded length, without control characters

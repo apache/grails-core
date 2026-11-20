@@ -52,6 +52,7 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.provider.ValueSourceParameters
 import org.gradle.api.provider.ValueSourceSpec
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository
 import org.gradle.api.tasks.Copy
@@ -77,6 +78,8 @@ import org.yaml.snakeyaml.error.YAMLException
 import org.yaml.snakeyaml.representer.Representer
 import org.yaml.snakeyaml.resolver.Resolver
 
+import org.grails.gradle.plugin.bom.BomPropertyOverridesExtension
+import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
 import org.grails.gradle.plugin.commands.GrailsCliArtifactGradlePlugin
 import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
 import org.grails.gradle.plugin.run.FindMainClassTask
@@ -457,6 +460,11 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         }
 
         File sourceDirectory = source.asFile
+        Provider<String> lookAgain = providers.of(NeverTheSameValueSource) { ValueSourceSpec<ValueSourceParameters.None> spec -> }
+        // the overrides of BOM properties of the project are not for the class path of Forge either
+        project.pluginManager.withPlugin(BomPropertyOverridesPlugin.PLUGIN_ID) {
+            project.extensions.getByType(BomPropertyOverridesExtension).excludeConfiguration(FORGE_PACK_TOOLING_CONFIGURATION)
+        }
         Provider<JavaLauncher> launcher = project.extensions.getByType(JavaToolchainService)
                 .launcherFor(project.extensions.getByType(JavaPluginExtension).toolchain)
         TaskProvider<CheckForgePackTask> checkForgePack = project.tasks.register(FORGE_PACK_CHECK_TASK, CheckForgePackTask) { CheckForgePackTask task ->
@@ -468,11 +476,19 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
                 spec.parameters.packDirectory.set(source)
                 spec.parameters.digest.set(true)
             })
-            // what cannot be resolved is left out here and fails the task, which can say what it is for
+            // what cannot be resolved or fetched is left out here and fails the task, which can say what it is for
             task.toolingClasspath.from(tooling.map { Configuration configuration ->
                 configuration.incoming.artifactView { ArtifactView.ViewConfiguration view -> view.lenient(true) }.files
             })
-            task.toolingResolution.set(tooling.flatMap { Configuration configuration -> configuration.incoming.resolutionResult.rootComponent })
+            task.toolingProblems.set(tooling.map { Configuration configuration ->
+                ForgeToolingProblems problems = ForgeToolingProblems.of(configuration)
+                if (!problems.empty) {
+                    // kept with the configuration cache, this would be what the next build is told too,
+                    // although the repository has it by then: that build is to look again
+                    lookAgain.get()
+                }
+                problems
+            })
             task.javaLauncher.set(launcher)
             task.markerFile.set(layout.buildDirectory.file('grails/forge-pack-check/checked'))
             task.onlyIf("there is a feature pack in ${FORGE_PACK_SOURCE_DIR}") { Task checked ->

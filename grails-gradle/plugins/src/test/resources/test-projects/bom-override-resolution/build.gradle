@@ -32,6 +32,32 @@ ext['childbom.version'] = '2.0.0'
 // ${project.groupId}:grouplib.
 ext['grouplib.version'] = '2.0.0'
 
+// The class path of a tool, which the overrides are not for: it keeps the version it asks for.
+configurations {
+    tool
+}
+
+bomPropertyOverrides {
+    excludeConfiguration 'tool'
+}
+
+dependencies {
+    tool 'org.example:mylib:2.0.0'
+}
+
+tasks.register('printToolVersions') {
+    def tool = configurations.tool
+    def resolved = providers.provider {
+        tool.incoming.resolutionResult.allComponents
+                .collect { it.moduleVersion }
+                .findAll { it != null }
+                .collect { "${it.group}:${it.name}:${it.version}" as String }
+    }
+    doLast {
+        resolved.get().each { println "TOOL=${it}" }
+    }
+}
+
 tasks.register('printVersions') {
     def runtimeClasspath = configurations.runtimeClasspath
     def resolved = providers.provider {

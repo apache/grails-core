@@ -32,6 +32,7 @@ public final class PackCheck {
         System.err.println("stand-in directory: " + directory);
         System.err.println("stand-in class path: " + System.getProperty("java.class.path"));
         System.err.println("stand-in working directory: " + System.getProperty("user.dir"));
+        System.err.println("stand-in verbosity of SLF4J: " + System.getProperty("slf4j.internal.verbosity"));
         List<String> problems = new ArrayList<>();
         Path descriptor = directory.resolve("feature.yml");
         if (!Files.isRegularFile(descriptor, LinkOption.NOFOLLOW_LINKS)) {
@@ -39,6 +40,9 @@ public final class PackCheck {
         } else {
             String text = Files.readString(descriptor, StandardCharsets.UTF_8);
             if (text.contains("stand-in: crash")) {
+                System.err.println("SLF4J(W): No SLF4J providers were found.");
+                System.err.println("SLF4J(W): Defaulting to no-operation (NOP) logger implementation");
+                System.err.println("SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.");
                 System.err.println("stand-in crashed");
                 System.exit(3);
             }
@@ -52,6 +56,20 @@ public final class PackCheck {
             if (text.contains("stand-in: ended")) {
                 // as a template that ends the JVM does
                 System.exit(0);
+            }
+            if (text.contains("stand-in: writes-and-passes")) {
+                // as a template that writes to the standard output itself, around what Forge leaves it
+                System.out.println("written by a template");
+                System.out.println("feature pack checked: templates=1 applications=4");
+                System.out.println("and again");
+                System.exit(0);
+            }
+            if (text.contains("stand-in: names-older-java")) {
+                // the words of the launcher of Java, said by something else: not at the start of a line
+                System.err.println("The feature pack could not be checked: Error: LinkageError occurred while loading main class "
+                        + "org.apache.grails.forge.core.pack.PackCheck java.lang.UnsupportedClassVersionError: Audit (class file version 70.0)");
+                System.err.println("a template said: Error: Could not find or load main class org.apache.grails.forge.core.pack.PackCheck");
+                System.exit(2);
             }
             if (text.contains("stand-in: says-and-passes")) {
                 System.out.println("a line that is not the one of a pack that was checked");

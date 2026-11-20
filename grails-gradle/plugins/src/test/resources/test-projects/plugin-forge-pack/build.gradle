@@ -32,6 +32,12 @@ if (providers.gradleProperty('versionsOfTheProject').present || providers.gradle
         }
     }
 }
+// What a repository has a part of: a module without its jar, or one that needs modules nobody has.
+if (providers.gradleProperty('toolingExtra').present) {
+    dependencies {
+        grailsForgePackTooling providers.gradleProperty('toolingExtra').get()
+    }
+}
 if (providers.gradleProperty('versionsOfTheProject').present) {
     apply plugin: 'org.apache.grails.gradle.bom-property-overrides'
 
