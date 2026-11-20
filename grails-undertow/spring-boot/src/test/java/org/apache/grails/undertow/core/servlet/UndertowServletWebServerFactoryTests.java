@@ -23,6 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.net.ssl.SSLContext;
@@ -30,9 +33,12 @@ import javax.net.ssl.SSLContext;
 import io.undertow.Undertow.Builder;
 import io.undertow.servlet.api.Deployment;
 
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -57,6 +63,7 @@ import org.apache.grails.undertow.core.UndertowBuilderCustomizer;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.boot.web.server.WebServerException;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.util.FileCopyUtils;
@@ -266,6 +273,48 @@ class UndertowServletWebServerFactoryTests {
         webServer.stop();
         assertThat(tempDir).doesNotExist();
         assertThat(documentRoot.toPath().resolve("index.html")).hasContent("Hello World");
+    }
+
+    @Test
+    void aFilterReadsTheDispatcherTypeOfItsDispatchOnceAForwardItMadeHasReturned() throws Exception {
+        List<DispatcherType> readAfterChain = new CopyOnWriteArrayList<>();
+        Filter recordingFilter = (request, response, chain) -> {
+            chain.doFilter(request, response);
+            readAfterChain.add(request.getDispatcherType());
+        };
+        FilterRegistrationBean<Filter> filterRegistration = new FilterRegistrationBean<>(recordingFilter);
+        filterRegistration.setDispatcherTypes(EnumSet.of(DispatcherType.REQUEST, DispatcherType.ASYNC));
+        ServletRegistrationBean<HttpServlet> forwarding = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response)
+                    throws ServletException, IOException {
+                request.getRequestDispatcher("/hello").forward(request, response);
+            }
+
+        }, "/forwarding");
+        forwarding.setName("forwarding");
+        ServletRegistrationBean<HttpServlet> asynchronous = new ServletRegistrationBean<>(new HttpServlet() {
+
+            @Override
+            protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+                request.startAsync().dispatch("/forwarding");
+            }
+
+        }, "/asynchronous");
+        asynchronous.setName("asynchronous");
+        asynchronous.setAsyncSupported(true);
+        UndertowServletWebServerFactory factory = new UndertowServletWebServerFactory(0);
+        this.webServer = factory.getWebServer(filterRegistration, helloWorldServletRegistration(), forwarding,
+            asynchronous);
+        this.webServer.start();
+
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/forwarding")).isEqualTo("Hello World");
+        assertThat(getResponse("http://localhost:" + this.webServer.getPort() + "/asynchronous"))
+            .isEqualTo("Hello World");
+
+        Awaitility.await().untilAsserted(() -> assertThat(readAfterChain).containsExactly(DispatcherType.REQUEST,
+            DispatcherType.REQUEST, DispatcherType.ASYNC));
     }
 
     private ServletRegistrationBean<HttpServlet> helloWorldServletRegistration() {

@@ -131,6 +131,11 @@ The route is now set before the Grails interceptors run, so that a failure in on
 An interceptor whose `before()` returns `false`, to render a 403 or to redirect, stopped the request before its route was set, so the request was reported with a `uri` of `UNKNOWN`, or `REDIRECTION` for a redirect.
 It is now reported under the route of the action, so a dashboard or alert keyed on those `uri` values sees those requests move.
 
+* *On Undertow, a request reads as its own dispatch again once a forward returns.*
+Undertow left a request reading as a forward once a forward to a path had returned, as Tomcat and Jetty do not.
+Spring Framework 7.1's observation filter then took an asynchronous request that had forwarded, for example to an error controller, for a plain one, and reported its failure twice.
+`grails-undertow` now restores the dispatcher type when the forward returns, so a filter that reads `getDispatcherType()` once its chain has returned sees `REQUEST` or `ASYNC` rather than `FORWARD`, as it does on Tomcat and Jetty.
+
 * *`http.server.requests.active` is no longer registered by default.*
 Spring Boot 4.2 makes this long task timer opt-in.
 A dashboard or alert that reads it sets `management.metrics.observations.include-active-long-task-timer` to `true`, which replaces `management.metrics.observations.ignored-meters`.
