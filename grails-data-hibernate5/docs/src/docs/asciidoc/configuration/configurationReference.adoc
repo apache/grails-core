@@ -24,6 +24,7 @@ You can refer to the link:../api/org/grails/orm/hibernate/connections/HibernateC
 name,description,default value
 `grails.gorm.flushMode`, The flush mode to use, `COMMIT`
 `grails.gorm.failOnError`, Whether to throw an exception on validation error, `false`
+`grails.gorm.leftJoinAssociationSort`, Whether a sort by a property of an association joins the association with a left join and so keeps the instances whose association is `null`, `false`
 `grails.gorm.default.mapping`,The default mapping to apply to all classes, `null`
 `grails.gorm.default.constraints`,The default constraints to apply to all classes, `null`
 `grails.gorm.multiTenancy.mode`,The multi tenancy mode, `NONE`
