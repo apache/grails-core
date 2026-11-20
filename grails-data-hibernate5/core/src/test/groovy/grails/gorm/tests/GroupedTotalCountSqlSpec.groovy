@@ -28,10 +28,11 @@ import spock.lang.AutoCleanup
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
- * The total of a page of a criteria grouped by one property is counted by the database, as the distinct values of the
- * property, and not by loading the groups to count them.
+ * The total of a page of a criteria grouped by one property is counted by the database as the distinct values of the
+ * property, and one grouped by several as the rows of the grouped query, and not by loading the groups to count them.
  */
 @Issue('https://github.com/apache/grails-core/issues/14431')
 class GroupedTotalCountSqlSpec extends Specification {
@@ -43,7 +44,7 @@ class GroupedTotalCountSqlSpec extends Specification {
                     (Settings.SETTING_DB_CREATE): 'create-drop',
                     'hibernate.session_factory.statement_inspector': new GroupedSqlCapture(statements)
             ),
-            GroupedSqlItem
+            GroupedSqlOwner, GroupedSqlItem
     )
 
     @Rollback
@@ -71,6 +72,110 @@ class GroupedTotalCountSqlSpec extends Specification {
         statements.any { it.toLowerCase().contains('count(distinct') }
     }
 
+    @Rollback
+    void "the total of a page grouped by two properties is counted by the database"() {
+        given: 'a, x twice; a, y; b, x; and two rows with a null city, one of them with a null name too'
+        [['a', 'x'], ['a', 'x'], ['a', 'y'], ['b', 'x'], [null, 'x'], [null, null], [null, null]].eachWithIndex { List pair, int i ->
+            new GroupedSqlItem(name: pair[1], city: pair[0]).save(flush: true, failOnError: true)
+        }
+        GroupedSqlItem.withSession { it.clear() }
+
+        when:
+        def page = GroupedSqlItem.createCriteria().list(max: 2) {
+            projections {
+                groupProperty('city')
+                groupProperty('name')
+            }
+            order('city')
+        }
+        statements.clear()
+        int total = page.totalCount
+
+        then: '(a, x), (a, y), (b, x), (null, x) and (null, null): five groups, from one query that returns one number'
+        total == 5
+        statements.size() == 1
+        statements[0].toLowerCase().startsWith('select count(')
+    }
+
+    @Rollback
+    void "the total of a grouped page that has a condition and a count projection is counted by the database"() {
+        given:
+        [['a', 'x'], ['a', 'x'], ['a', 'y'], ['b', 'x'], ['c', 'z']].each { List pair ->
+            new GroupedSqlItem(name: pair[1], city: pair[0]).save(flush: true, failOnError: true)
+        }
+        GroupedSqlItem.withSession { it.clear() }
+
+        when:
+        def page = GroupedSqlItem.createCriteria().list(max: 1) {
+            ne('city', 'c')
+            projections {
+                groupProperty('city')
+                groupProperty('name')
+                rowCount()
+            }
+        }
+        statements.clear()
+        int total = page.totalCount
+
+        then: 'the condition is part of the count'
+        total == 3
+        statements.size() == 1
+        statements[0].toLowerCase().startsWith('select count(')
+    }
+
+    @Rollback
+    @Unroll
+    void "the total of a page grouped as #shape equals the number of groups"() {
+        given:
+        GroupedSqlOwner ann = new GroupedSqlOwner(label: 'ann').save(failOnError: true)
+        GroupedSqlOwner bob = new GroupedSqlOwner(label: 'bob').save(failOnError: true)
+        [['a', 'x', ann, 1], ['a', 'x', bob, 2], ['a', 'y', ann, 3], ['b', 'x', ann, 4], [null, 'x', bob, 5], [null, null, bob, 6],
+         [null, null, bob, 7]].each { List row ->
+            new GroupedSqlItem(city: row[0], name: row[1], owner: row[2], amount: row[3]).save(failOnError: true)
+        }
+        GroupedSqlItem.withSession { it.flush(); it.clear() }
+
+        when:
+        List all = GroupedSqlItem.createCriteria().list(closure)
+        def page = GroupedSqlItem.createCriteria().list(max: 1, offset: 1, closure)
+        statements.clear()
+        int total = page.totalCount
+
+        then: 'the database counts the groups, in queries that return one number each: one for several properties, two for a single one'
+        total == all.size()
+        total == expected
+        statements.size() == (shape == 'the property of an association' ? 2 : 1)
+        statements.every { it.toLowerCase().startsWith('select count(') }
+
+        where:
+        shape                                     | expected | closure
+        'city and name'                           | 5        | { -> projections { groupProperty('city'); groupProperty('name') } }
+        'name and city'                           | 5        | { -> projections { groupProperty('name'); groupProperty('city') } }
+        'city, name and owner'                    | 6        | { -> projections { groupProperty('city'); groupProperty('name'); groupProperty('owner') } }
+        'city and an aggregate'                   | 3        | { -> projections { groupProperty('city'); max('amount') } }
+        'the property of an association'          | 2        | { ->
+            createAlias('owner', 'o')
+            projections { groupProperty('o.label') }
+        }
+        'a property and one of an association'    | 4        | { ->
+            createAlias('owner', 'o')
+            projections { groupProperty('city'); groupProperty('o.label') }
+        }
+        'two properties under a condition'        | 2        | { ->
+            ne('city', 'b')
+            projections { groupProperty('city'); groupProperty('name') }
+        }
+        'two properties with no rows'             | 0        | { ->
+            eq('city', 'none')
+            projections { groupProperty('city'); groupProperty('name') }
+        }
+        'two properties that are all null'        | 1        | { ->
+            isNull('city')
+            isNull('name')
+            projections { groupProperty('city'); groupProperty('name') }
+        }
+    }
+
     static class GroupedSqlCapture implements StatementInspector {
         private final List<String> statements
 
@@ -87,11 +192,21 @@ class GroupedTotalCountSqlSpec extends Specification {
 }
 
 @Entity
+class GroupedSqlOwner {
+    String label
+}
+
+@Entity
 class GroupedSqlItem {
     String name
     String city
+    GroupedSqlOwner owner
+    Integer amount
 
     static constraints = {
+        name nullable: true
+        owner nullable: true
+        amount nullable: true
         city nullable: true
     }
 }
