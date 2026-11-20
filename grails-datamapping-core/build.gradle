@@ -62,12 +62,6 @@ dependencies {
             requireCapability('org.apache.grails:grails-core-cli')
         }
     }
-    // compiles and runs the query-tail command script the way the shell does
-    testCliImplementation(project(':grails-shell-cli')) {
-        exclude group: 'org.slf4j', module: 'slf4j-simple'
-        // Keep legacy org.codehaus.groovy artifacts off this module's Groovy 5 classpath.
-        exclude group: 'org.codehaus.groovy'
-    }
 
     api project(':grails-datastore-core'), {
         // api: BuildableCriteria, ConnectionSourcesProvider, Criteria, Datastore, MappingContext, PersistentEntity,

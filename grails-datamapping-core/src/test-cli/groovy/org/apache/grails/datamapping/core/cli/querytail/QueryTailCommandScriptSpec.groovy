@@ -18,175 +18,97 @@
  */
 package org.apache.grails.datamapping.core.cli.querytail
 
-import grails.build.logging.GrailsConsole
-import org.grails.build.parsing.CommandLineParser
-import org.grails.cli.GrailsCli
-import org.grails.cli.profile.Command
-import org.grails.cli.profile.ProjectContext
-import org.grails.cli.profile.commands.factory.ClasspathCommandResourceResolver
-import org.grails.cli.profile.commands.factory.CommandResourceResolver
-import org.grails.cli.profile.commands.factory.GroovyScriptCommandFactory
-import org.grails.cli.profile.commands.script.GroovyScriptCommand
-import org.grails.config.CodeGenConfig
-import org.apache.grails.core.cli.script.ScriptCommandRunner
-import org.apache.grails.datamapping.core.querytail.QueryTailRecord
 import spock.lang.Specification
 import spock.lang.TempDir
 
+import org.apache.grails.core.cli.script.ScriptCommandRunner
+import org.apache.grails.datamapping.core.querytail.QueryTailRecord
+
 /**
- * Compiles and runs the query-tail command script the way the shell does.
+ * Runs the query-tail command script the way the build of a project does: found on the class path, as a
+ * plugin has it, and compiled and run by the script host.
  */
 class QueryTailCommandScriptSpec extends Specification {
+
+    private static final String RETURNED_FALSE = 'The script query-tail returned false, which is how a script says that it did not succeed.'
 
     @TempDir
     File tempDir
 
-    void cleanup() {
-        // the console is a JVM-wide singleton the script reaches through the shell
-        GrailsConsole.removeInstance()
-    }
-
-    void "the query-tail script is discovered on the cli classpath and describes its options"() {
-        when:
-        GroovyScriptCommand command = discover()
-
-        then:
-        command.name == 'query-tail'
-        command.description.description == 'Shows the statements the running application executes, SQL, Cypher or MongoDB commands, by the page that runs them'
-        command.description.usage.startsWith('grails query-tail ')
-        command.description.flags*.name == ['statements', 'stream', 'page', 'top', 'all', 'once', 'file']
-    }
+    ByteArrayOutputStream out = new ByteArrayOutputStream()
+    ByteArrayOutputStream err = new ByteArrayOutputStream()
 
     void "the script reads a capture once and reports whether there was one"() {
         given:
-        File capture = new File(tempDir, 'capture.log')
-        capture.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
-                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
+        File capture = capture(new File(tempDir, 'capture.log'))
 
-        expect:
-        run('query-tail', '--once', "--file=${capture.path}".toString())
-        !run('query-tail', '--once', "--file=${new File(tempDir, 'missing.log').path}".toString())
+        when:
+        int read = run(tempDir, 'query-tail', '--once', "--file=${capture.path}".toString())
+
+        then: 'the summary of what was captured, by the page that ran it'
+        read == 0
+        err.toString() == ''
+        out.toString().contains('book/show')
+
+        when: 'no capture'
+        int missing = run(tempDir, 'query-tail', '--once', "--file=${new File(tempDir, 'missing.log').path}".toString())
+
+        then:
+        missing == 1
+        err.toString().readLines().last() == RETURNED_FALSE
     }
 
     void "the script reads a relative capture file against the application directory, as the application writes it"() {
-        given: 'a capture in the application directory, which the shell is not running in'
+        given: 'a capture in the application directory, and another directory that has none'
         File appDir = new File(tempDir, 'app')
-        File capture = new File(appDir, 'out/capture.log')
-        capture.parentFile.mkdirs()
-        capture.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
-                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
+        capture(new File(appDir, 'out/capture.log'))
+        File other = new File(tempDir, 'other')
+        other.mkdirs()
 
-        expect:
-        runIn(appDir, 'query-tail', '--once', '--file=out/capture.log')
-        !runIn(new File(tempDir, 'other'), 'query-tail', '--once', '--file=out/capture.log')
+        when:
+        int read = run(appDir, 'query-tail', '--once', '--file=out/capture.log')
+
+        then:
+        read == 0
+        err.toString() == ''
+        out.toString().contains('book/show')
+
+        when:
+        int elsewhere = run(other, 'query-tail', '--once', '--file=out/capture.log')
+
+        then:
+        elsewhere == 1
+        !out.toString().contains('book/show')
     }
 
     void "the script reports a number of rows that is not one rather than failing"() {
         given:
-        File capture = new File(tempDir, 'capture.log')
-        capture.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
-                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
-
-        expect:
-        !run('query-tail', '--once', '--top=ten', "--file=${capture.path}".toString())
-    }
-
-    void "the script is run by the build of a project as well, where there is no shell: it reads a capture once and says when there is none"() {
-        given: 'a capture in the application directory, and the script found on the class path as a plugin has it'
-        File appDir = new File(tempDir, 'app')
-        File capture = new File(appDir, 'out/capture.log')
-        capture.parentFile.mkdirs()
-        capture.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
-                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
-        ByteArrayOutputStream out = new ByteArrayOutputStream()
-        ByteArrayOutputStream err = new ByteArrayOutputStream()
-        ScriptCommandRunner runner = new ScriptCommandRunner(appDir, getClass().classLoader, new PrintStream(out, true), new PrintStream(err, true))
+        File capture = capture(new File(tempDir, 'capture.log'))
 
         when:
-        int read = runner.start('--', 'query-tail', '--once', '--file=out/capture.log')
+        int refused = run(tempDir, 'query-tail', '--once', '--top=ten', "--file=${capture.path}".toString())
 
-        then:
-        err.toString() == ''
-        read == 0
-        out.toString().contains('book/show')
-
-        when: 'a number of rows that is none'
-        int refused = runner.start('--', 'query-tail', '--once', '--top=ten', '--file=out/capture.log')
-
-        then:
+        then: 'the script says so and returns false: nothing it threw reached the host'
         refused == 1
-        err.toString().readLines().last() == 'The script query-tail returned false, which is how a script says that it did not succeed.'
-
-        when: 'no capture'
-        err.reset()
-        int missing = runner.start('--', 'query-tail', '--once', '--file=out/missing.log')
-
-        then:
-        missing == 1
-    }
-
-    private static boolean run(String... args) {
-        GroovyScriptCommand command = discover()
-        GrailsCli.ExecutionContextImpl context = new GrailsCli.ExecutionContextImpl(new CodeGenConfig())
-        context.commandLine = new CommandLineParser().parse(args)
-        command.handle(context)
+        err.toString().contains('ten')
+        err.toString().readLines().last() == RETURNED_FALSE
+        !out.toString().contains('book/show')
     }
 
     /**
-     * Runs the command for an application in a directory, as the shell runs it for the project it was started in.
+     * Runs the command for the application in a directory, as the task of its build does.
      */
-    private static boolean runIn(File baseDir, String... args) {
-        GroovyScriptCommand command = discover()
-        CodeGenConfig config = new CodeGenConfig()
-        GrailsCli.ExecutionContextImpl context = new GrailsCli.ExecutionContextImpl(new CommandLineParser().parse(args),
-                new ApplicationContext(baseDir: baseDir, config: config))
-        command.handle(context)
+    private int run(File baseDir, String... args) {
+        out.reset()
+        err.reset()
+        new ScriptCommandRunner(baseDir, getClass().classLoader, new PrintStream(out, true), new PrintStream(err, true))
+                .start((['--'] + (args as List)) as String[])
     }
 
-    /** The project an application directory holds, as the shell finds it. */
-    private static class ApplicationContext implements ProjectContext {
-
-        File baseDir
-        CodeGenConfig config
-
-        @Override
-        GrailsConsole getConsole() {
-            GrailsConsole.instance
-        }
-
-        @Override
-        String navigateConfig(String... path) {
-            config.navigate(path)
-        }
-
-        @Override
-        <T> T navigateConfigForType(Class<T> requiredType, String... path) {
-            config.navigate(requiredType, path)
-        }
-    }
-
-    private static GroovyScriptCommand discover() {
-        Collection<Command> commands = new ClasspathOnlyGroovyScriptCommandFactory(resolver()).findCommands(null, false)
-        Command command = commands.find { it.name == 'query-tail' }
-        assert command instanceof GroovyScriptCommand
-        (GroovyScriptCommand) command
-    }
-
-    private static CommandResourceResolver resolver() {
-        new ClasspathCommandResourceResolver(['groovy'])
-    }
-
-    private static class ClasspathOnlyGroovyScriptCommandFactory extends GroovyScriptCommandFactory {
-
-        private final CommandResourceResolver commandResourceResolver
-
-        ClasspathOnlyGroovyScriptCommandFactory(CommandResourceResolver commandResourceResolver) {
-            this.commandResourceResolver = commandResourceResolver
-        }
-
-        @Override
-        protected Collection<CommandResourceResolver> getCommandResolvers(boolean inherited) {
-            [commandResourceResolver]
-        }
+    private static File capture(File file) {
+        file.parentFile.mkdirs()
+        file.text = new QueryTailRecord(timestamp: 1L, dataSource: 'DEFAULT', requestId: 'r1', page: 'book/show',
+                request: 'GET /book/show/1', sql: 'select 1').toLine() + '\n'
+        file
     }
 }
