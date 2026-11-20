@@ -2258,7 +2258,10 @@ public class GrailsDomainBinder implements MetadataContributor {
 
         simpleValue.addColumn(column);
 
-        if (typeName == null && (pc == null || DEFAULT_ENUM_TYPE.equals(pc.getEnumType()) || "string".equalsIgnoreCase(pc.getEnumType()))) {
+        // the length constraints of the property are those of the enum name only when the property is the enum: for a collection of
+        // enums, maxSize limits how many values it holds, not how long the name of each is
+        if (typeName == null && propertyType.equals(property.getType()) &&
+                (pc == null || DEFAULT_ENUM_TYPE.equals(pc.getEnumType()) || "string".equalsIgnoreCase(pc.getEnumType()))) {
             bindStringColumnConstraints(column, property);
         }
 

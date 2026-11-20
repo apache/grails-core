@@ -28,7 +28,7 @@ import spock.lang.Issue
 class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing])
+        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing, EnumCollectionThing])
     }
 
     void "maxSize constrains the column of an enum property like it does a string property"() {
@@ -46,6 +46,28 @@ class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMan
         then:
         lengths['string_field'] == 100
         lengths['enum_field'] == 100
+    }
+
+    void "maxSize of a collection of enums limits how many values it holds, not the length of the column of each"() {
+        given:
+        new EnumCollectionThing(kinds: [EnumSizedKind.ONE]).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        Map<String, Integer> lengths = [:]
+        manager.sessionFactory.currentSession.doWork { conn ->
+            def rs = conn.createStatement().executeQuery(
+                    "select column_name, character_maximum_length from information_schema.columns " +
+                    "where lower(table_name) like '%enum_collection_thing%' and character_maximum_length is not null")
+            while (rs.next()) {
+                lengths[rs.getString(1).toLowerCase()] = rs.getInt(2)
+            }
+        }
+
+        then: 'the name of the constant ONE is stored, in a column that is not one character wide'
+        EnumCollectionThing.list().first().kinds == [EnumSizedKind.ONE] as Set
+        lengths.values().every { it > 1 }
+        !new EnumCollectionThing(kinds: [EnumSizedKind.ONE, EnumSizedKind.TWO]).validate()
     }
 
     void "an enum property with an inList of enum values stores and reads its value"() {
@@ -83,5 +105,16 @@ class EnumListedThing {
 
     static constraints = {
         kind inList: [EnumSizedKind.ONE]
+    }
+}
+
+@Entity
+class EnumCollectionThing {
+    Set<EnumSizedKind> kinds
+
+    static hasMany = [kinds: EnumSizedKind]
+
+    static constraints = {
+        kinds maxSize: 1
     }
 }
