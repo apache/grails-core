@@ -90,6 +90,7 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails.bootstrap:grails-bootstrap' // grails.codegen.model, for add-property
     implementation 'org.apache.groovy:groovy'
+    implementation 'org.apache.groovy:groovy-json' // reads the command manifest of a project
 
     // renders the compiled pages, without a web request
     implementation 'org.apache.grails.views:grails-gsp-core'
