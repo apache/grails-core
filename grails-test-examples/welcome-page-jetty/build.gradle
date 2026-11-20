@@ -54,12 +54,13 @@ dependencies {
     integrationTestImplementation 'org.apache.grails.testing:grails-testing-support-core'
 }
 
-// The page under test is the web profile's welcome page itself, which GrailsGspSpec pins to the forge copy,
-// so it is staged into a views directory of its own rather than copied into the source tree.
+// The page under test is the welcome page Grails Forge gives a web application, which the generator copies
+// as it is (`template: false` in the gsp feature), so it is staged into a views directory of its own rather
+// than copied into the source tree.
 def welcomePageDir = layout.buildDirectory.dir('generated/welcome-page')
 def stageWelcomePage = tasks.register('stageWelcomePage', Sync) {
     into welcomePageDir.map { it.dir('grails-app/views') }
-    from rootProject.layout.projectDirectory.file('grails-profiles/web/skeleton/grails-app/views/index.gsp')
+    from rootProject.layout.projectDirectory.file('grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/gsp/templates/index.gsp')
 }
 tasks.named('compileGroovyPages') {
     source = welcomePageDir.get().dir('grails-app/views')

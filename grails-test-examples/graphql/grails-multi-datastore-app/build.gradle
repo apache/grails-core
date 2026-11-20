@@ -59,8 +59,6 @@ dependencies {
     implementation 'com.h2database:h2'
     implementation 'org.apache.tomcat:tomcat-jdbc'
 
-    profile 'org.apache.grails.profiles:rest-api'
-
     compileOnly 'org.apache.grails:grails-testing-support-datamapping'
     compileOnly 'org.apache.grails:grails-testing-support-web'
 

@@ -53,7 +53,6 @@ dependencies {
     implementation project(':grails-gsp')
     implementation project(':grails-layout')
     console project(':grails-console')
-    profile project(':grails-profiles-web-plugin')
     runtimeOnly project(':grails-services')
     runtimeOnly project(':grails-domain-class')
     testImplementation project(':grails-testing-support-datamapping')
