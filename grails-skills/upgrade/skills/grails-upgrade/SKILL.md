@@ -1,6 +1,6 @@
 ---
 name: grails-upgrade
-description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.19). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
+description: "Upgrades a Grails application to Grails 7.0 (releases 7.0.0 to 7.0.18). Base version: Grails 6; use it for an application on Grails 6 or on an earlier Grails 7.0 release. An application on Grails 5 or earlier first upgrades to the last Grails 6 release. Covers Java 17, Groovy 4, Spring Boot 3, Spring Framework 6, Jakarta EE packages, Apache coordinates, the Grails BOM, Gradle plugin changes, Micronaut, Spring Security, Quartz, layouts, JSON rendering, data binding, interceptors and multi-tenancy."
 license: Apache-2.0
 ---
 
@@ -31,7 +31,7 @@ Activate this skill when:
 The base version of this skill is Grails 6. After this section the skill has one part per release, in ascending order, each under a heading such as "Grails 7.0.0", and a last part, "After the Upgrade". A change sits in the part of the first release that carried it, as in the upgrade guide. A change that adds a configuration setting names the setting and its default.
 
 1. Read the application's current Grails version from `grailsVersion` in `gradle.properties`.
-2. Establish the target version. This skill covers targets up to Grails 7.0.19.
+2. Establish the target version. This skill covers targets up to Grails 7.0.18.
 3. Apply the part of every release after the application's current version, up to and including the target version, in ascending order.
 4. An application on Grails 6 starts at "Grails 7.0.0" and applies every part from there up to and including the target version. An application on Grails 5 or earlier first upgrades to the last Grails 6 release.
 5. Finish with "After the Upgrade".
@@ -848,10 +848,6 @@ Search the configuration for `useEncryptedJwt`. If it is enabled, check each poi
 - An encrypted JWT whose content encryption key is encrypted with `RSA1_5` is rejected unless `grails.plugin.springsecurity.rest.token.generation.jwt.jweAlgorithm` is `RSA1_5`. The plugin passes that setting to the new `jweAlgorithm` property of `JwtService`. A `jwtService` bean that an application defines itself accepts `RSA1_5` as before, unless the application sets that property too.
 
 The guide gives no setting that restores encrypted JWTs without a signature.
-
-# Grails 7.0.19
-
-Apply this part when the application is on Grails 6 or on Grails 7.0.18 or earlier. Each change below restores a documented behavior or ends a silent wrong result, so search the application for the calls it names.
 
 ## GORM for Hibernate 5: Query Arguments Reach Where Queries and Dynamic Finders
 
