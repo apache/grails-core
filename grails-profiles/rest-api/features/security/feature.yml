@@ -1,4 +1,0 @@
-description: Adds Spring Security REST to the project
-dependencies:
-    - scope: implementation
-      coords: "org.apache.grails:grails-spring-security-rest:7.0.0-SNAPSHOT"

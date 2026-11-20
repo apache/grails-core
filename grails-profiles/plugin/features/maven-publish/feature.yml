@@ -1,6 +1,0 @@
-description: Publish Artifacts to Maven Central
-build:
-    repositories:
-        - "https://plugins.gradle.org/m2/"
-    plugins:
-        - maven-publish

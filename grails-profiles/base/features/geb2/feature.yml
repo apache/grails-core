@@ -1,4 +1,0 @@
-description: Adds Geb dependencies to run functional tests
-build:
-    plugins:
-dependencies:

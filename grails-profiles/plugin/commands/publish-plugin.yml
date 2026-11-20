@@ -1,8 +1,0 @@
-description: Publishes the plugin to the Grails central repository
-minArguments: 0
-usage: |
- publish-plugin
-steps:
- - command: gradle
-   tasks:
-     - publish

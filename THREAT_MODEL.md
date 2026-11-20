@@ -66,7 +66,7 @@ The framework is large; not every module has the same threat profile. The model 
 | CLI / shell (`grails-shell-cli`) | [`GrailsCli`](./grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy), [`MavenProfileRepository`](./grails-shell-cli/src/main/groovy/org/grails/cli/profile/repository/MavenProfileRepository.groovy) | Yes - network (Maven), filesystem | **In** (with caveats - see §3 and §7) |
 | Interactive consoles (`grails-console`) | [`GrailsShell`](./grails-console/src/main/groovy/grails/ui/shell/GrailsShell.groovy), `GroovyConsoleApplicationContext` | Local I/O | **Out** - developer-only tool, see §3 |
 | Hosted `grails-forge` HTTP APIs | [`ZipCreateController`](./grails-forge/grails-forge-web/grails-app/controllers/org/grails/forge/web/ZipCreateController.groovy) and sibling controllers | Yes - network | **Out** - separate Grails 8 web application deployed independently from user applications built with Grails; modeled separately by the Forge service operators. *(inferred)* |
-| Generated application scaffolding | `grails-profiles/`, files emitted by `create-app` | n/a | **Out** - separately authored; the framework's contract does not extend to scaffolded code once it is in the user's repository. See §3. |
+| Generated application scaffolding | the templates and bundled feature packs of `grails-forge/grails-forge-core/`, files emitted by `create-app` | n/a | **Out** - separately authored; the framework's contract does not extend to scaffolded code once it is in the user's repository. See §3. |
 | `grails-test-examples/`, demo apps | n/a | n/a | **Out** - test/demo code, not shipped. See §3. |
 
 ---

@@ -199,7 +199,6 @@ include(
         'grails-spring-security-rest-grailscache',
         'grails-spring-security-rest-memcached',
         'grails-spring-security-rest-redis',
-        'grails-spring-security-rest-testapp-profile',
         'grails-spring-security-ui',
 
         // AI
@@ -478,28 +477,6 @@ project(':grails-test-examples-graphql-grails-multi-datastore-app').projectDir =
 include 'grails-test-examples-graphql-spring-boot-app'
 project(':grails-test-examples-graphql-spring-boot-app').projectDir = new File(settingsDir, 'grails-test-examples/graphql/spring-boot-app')
 
-// profiles
-include 'grails-profiles-base'
-project(':grails-profiles-base').projectDir = file('grails-profiles/base')
-
-include 'grails-profiles-profile'
-project(':grails-profiles-profile').projectDir = file('grails-profiles/profile')
-
-include 'grails-profiles-plugin'
-project(':grails-profiles-plugin').projectDir = file('grails-profiles/plugin')
-
-include 'grails-profiles-rest-api'
-project(':grails-profiles-rest-api').projectDir = file('grails-profiles/rest-api')
-
-include 'grails-profiles-rest-api-plugin'
-project(':grails-profiles-rest-api-plugin').projectDir = file('grails-profiles/rest-api-plugin')
-
-include 'grails-profiles-web'
-project(':grails-profiles-web').projectDir = file('grails-profiles/web')
-
-include 'grails-profiles-web-plugin'
-project(':grails-profiles-web-plugin').projectDir = file('grails-profiles/web-plugin')
-
 // Spring Security
 project(':grails-spring-security-acl').projectDir = new File(settingsDir, 'grails-spring-security/acl/plugin')
 project(':grails-spring-security-cas').projectDir = new File(settingsDir, 'grails-spring-security/cas/plugin')
@@ -512,7 +489,6 @@ project(':grails-spring-security-rest-gorm').projectDir = new File(settingsDir, 
 project(':grails-spring-security-rest-grailscache').projectDir = new File(settingsDir, 'grails-spring-security/rest/grailscache')
 project(':grails-spring-security-rest-memcached').projectDir = new File(settingsDir, 'grails-spring-security/rest/memcached')
 project(':grails-spring-security-rest-redis').projectDir = new File(settingsDir, 'grails-spring-security/rest/redis')
-project(':grails-spring-security-rest-testapp-profile').projectDir = new File(settingsDir, 'grails-spring-security/rest/testapp-profile')
 project(':grails-spring-security-ui').projectDir = new File(settingsDir, 'grails-spring-security/ui/plugin')
 
 // Spring Security Functional Tests
@@ -676,7 +652,14 @@ includeBuild('./build-logic') {
     name = 'build-logic-root'
 }
 
-// Due to https://github.com/gradle/gradle/issues/2986 , we can't change the global exclude for profiles, it must be done everywhere
+// The skeleton of a profile had a .gitignore and a .gitattributes, and Gradle only lets a settings script take
+// them out of the default excludes, in every build of a composite (https://github.com/gradle/gradle/issues/2986).
+// Grails 9 has no profiles and no build packages such a file any more. This stays all the same, because a Gradle
+// daemon remembers the default excludes of the builds it ran: in a daemon that ran a build with these lines (a
+// release branch that still has profiles), the Sync tasks of a build without them fail with "Cannot change default
+// excludes during the build" until the daemon is stopped; the reverse order was not tried and should fail alike.
+// Remove it from the five settings scripts (this one, build-logic, grails-gradle, grails-forge, end-to-end)
+// together, once no branch that is still built has it.
 for (String pattern in DirectoryScanner.defaultExcludes) {
     if (pattern.contains('gitignore') || pattern.contains('gitattributes')) {
         DirectoryScanner.removeDefaultExclude(pattern)

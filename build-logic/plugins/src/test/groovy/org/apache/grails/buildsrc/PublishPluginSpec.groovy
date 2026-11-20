@@ -72,25 +72,23 @@ class PublishPluginSpec extends Specification {
         files.size() == 3
     }
 
-    void "collectChecksumInputFiles excludes plugin metadata sidecars"() {
-        given: "a publication carrying a jar alongside the plugin descriptor and profile sidecars"
+    void "collectChecksumInputFiles excludes the plugin metadata sidecar"() {
+        given: "a publication carrying a jar alongside the plugin descriptor sidecar"
         Project project = ProjectBuilder.builder().withName('grails-core').build()
         PublishingExtension publishing = publishingOf(project)
 
         File jar = artifact('grails-core-1.0.jar')
         File pluginXml = artifact('grails-plugin.xml')
-        File profileYml = artifact('profile.yml')
 
         publishing.publications.create('maven', MavenPublication) { MavenPublication pub ->
             pub.artifact(jar)
             pub.artifact(pluginXml)
-            pub.artifact(profileYml)
         }
 
         when:
         List<File> files = PublishPlugin.collectChecksumInputFiles(project, publishing)
 
-        then: "only the jar is checksummed; grails-plugin.xml and profile.yml are skipped"
+        then: "only the jar is checksummed; grails-plugin.xml is skipped"
         files == [jar]
     }
 

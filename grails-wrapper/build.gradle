@@ -95,7 +95,7 @@ startScripts.configure { CreateStartScripts t ->
 }
 
 project.extensions.getByType(DistributionContainer).configureEach {
-    // WARNING: changing the distro name / classifier requires updating the task in grails-profiles-base to copy from the correct location
+    // WARNING: changing the distro name / classifier requires updating the copyGrailsWrapper task of grails-forge-core (the grails-forge build) to copy from the correct location
     it.distributionBaseName = 'apache-grails-wrapper'
     it.distributionClassifier = 'bin'
     it.contents {

@@ -101,7 +101,7 @@ components:
     in_model: false
     out_of_model_reason: "Separately authored; not shipped in framework distributions (§3)."
     representative_files:
-      - grails-profiles/
+      - grails-forge/grails-forge-core/src/main/resources/META-INF/grails-forge-bundled/
       - grails-test-examples/
 
 # §5a - build-time and configuration variants that change the security envelope.
