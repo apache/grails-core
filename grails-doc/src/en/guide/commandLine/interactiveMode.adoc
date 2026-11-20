@@ -42,7 +42,7 @@ To exit interactive mode enter the `exit` command. Note that if the Grails appli
 
 With Grails Forge, when you execute the `grails -t forge` command, the Grails Command Line Interface (CLI) enters interactive mode. In this mode, it functions like a shell, allowing you to run multiple CLI commands without the need to re-initialize the CLI runtime. This mode is particularly useful when working with code-generation commands (such as `create-controller`), creating multiple projects, or exploring various CLI features.
 
-One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. Here's an example of the available options in interactive mode:
+One of the advantages of interactive mode is the availability of tab-completion. You can simply press the TAB key to view possible options for a given command or flag. The commands that are completed are those of the current directory as it is after the last command: once a command has made the directory a project, or has added a feature that brings a command, the commands of the project are completed without leaving interactive mode. Here's an example of the available options in interactive mode:
 
 The Grails Shell CLI (`grails`) supports interactive tab-completion and most developer commands. However, advanced configuration flags are only available via the Forge CLI (`grails -t forge`).
 Here's an example of the available options in interactive mode:
@@ -56,7 +56,7 @@ grails>
 
 == Help and Information
 
-You can access general usage information for Grails commands using the help flag associated with a specific command.
+You can access general usage information for Grails commands using the help flag associated with a specific command, or with the `help` command followed by the name of the command (`help create-app`); `help` alone lists the commands. The names of commands can be shortened in interactive mode as on the command line: `cA` is `create-app` there too.
 
 [source,shell]
 ----

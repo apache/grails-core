@@ -27,6 +27,7 @@ import org.grails.forge.cli.command.CreateWebPluginCommand
 import org.grails.forge.cli.command.CreateWebappCommand
 import org.grails.forge.cli.command.FeatureCommand
 import org.grails.forge.cli.command.GradleCommand
+import org.grails.forge.cli.command.HelpCommand
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
@@ -61,7 +62,8 @@ import java.util.concurrent.Callable
                 CreateWebPluginCommand,
                 CreateRestApiCommand,
                 FeatureCommand,
-                GradleCommand
+                GradleCommand,
+                HelpCommand
         ])
 @Component
 @Scope('prototype')

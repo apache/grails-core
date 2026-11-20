@@ -19,6 +19,8 @@
 package org.grails.forge.cli.command
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.ProjectCommand
 import org.apache.grails.forge.core.change.ChangePlan
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.change.ChangePlan.PlannedFile
@@ -48,7 +50,7 @@ import java.util.concurrent.Callable
 @Component
 @Scope('prototype')
 @CompileStatic
-class FeatureAddCommand extends BaseCommand implements Callable<Integer> {
+class FeatureAddCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
 
     public static final String NAME = 'add'
 
@@ -73,7 +75,8 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer> {
 
     @Override
     Integer call() throws Exception {
-        Path directory = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
+        // the project the current directory is in, so that the command does the same in every directory of it
+        Path directory = ConsoleProject.directoryFor(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
         boolean preview = dryRun || diff
         try {
             if (!ProjectState.exists(directory)) {

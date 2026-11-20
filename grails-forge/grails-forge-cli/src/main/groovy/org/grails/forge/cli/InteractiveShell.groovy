@@ -19,6 +19,8 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
@@ -32,6 +34,7 @@ import picocli.CommandLine
 import picocli.shell.jline3.PicocliJLineCompleter
 import java.util.function.BiFunction
 import java.util.function.Consumer
+import java.util.function.Supplier
 
 import static picocli.CommandLine.Help.Ansi.AUTO
 
@@ -44,6 +47,8 @@ class InteractiveShell {
     private final Consumer<String[]> executor
     private final BiFunction<Throwable, CommandLine, Integer> onError
     private final String prompt
+    private final Supplier<CommandLine> commands
+    private volatile CommandLine completed
 
     InteractiveShell(CommandLine commandLine,
                             Consumer<String[]> executor,
@@ -51,23 +56,63 @@ class InteractiveShell {
         this(commandLine, executor, onError, DEFAULT_PROMPT)
     }
 
+    /**
+     * @param commands gives the command line with the commands there are now, which is asked for
+     * after every command: a command can change which commands there are, as one that makes the
+     * directory a project or adds a feature to it does
+     */
+    InteractiveShell(CommandLine commandLine,
+                            Consumer<String[]> executor,
+                            BiFunction<Throwable, CommandLine, Integer> onError,
+                            Supplier<CommandLine> commands) {
+        this(commandLine, executor, onError, DEFAULT_PROMPT, commands)
+    }
+
     InteractiveShell(CommandLine commandLine,
                             Consumer<String[]> executor,
                             BiFunction<Throwable, CommandLine, Integer> onError,
                             String prompt) {
+        this(commandLine, executor, onError, prompt, null)
+    }
+
+    InteractiveShell(CommandLine commandLine,
+                            Consumer<String[]> executor,
+                            BiFunction<Throwable, CommandLine, Integer> onError,
+                            String prompt,
+                            Supplier<CommandLine> commands) {
         this.commandLine = commandLine
         this.executor = executor
         this.onError = onError
         this.prompt = prompt
+        this.commands = commands
+        this.completed = commandLine
+    }
+
+    /**
+     * @return what completes a line of the shell: with the commands, options and values of the
+     * command line as it was when the shell started or when {@link #refresh} was last called
+     */
+    Completer completer() {
+        return { LineReader reader, ParsedLine line, List<Candidate> candidates ->
+            new PicocliJLineCompleter(completed.getCommandSpec()).complete(reader, line, candidates)
+        } as Completer
+    }
+
+    /**
+     * Makes the commands there are now the ones that are completed. The shell does it after every command.
+     */
+    void refresh() {
+        if (commands != null) {
+            completed = commands.get()
+        }
     }
 
     void start() {
         try {
-            PicocliJLineCompleter picocliCommands = new PicocliJLineCompleter(commandLine.getCommandSpec())
             Terminal terminal = TerminalBuilder.terminal()
             LineReader reader = LineReaderBuilder.builder()
                     .terminal(terminal)
-                    .completer(picocliCommands)
+                    .completer(completer())
                     .parser(new DefaultParser())
                     .variable(LineReader.LIST_MAX, 50)   // max tab completion candidates
                     .build()
@@ -94,6 +139,7 @@ class InteractiveShell {
                     ParsedLine pl = reader.getParser().parse(line, 0)
                     String[] arguments = pl.words().toArray(new String[0])
                     executor.accept(arguments)
+                    refresh()
                 } catch (UserInterruptException | EndOfFileException e) {
                     return
                 }

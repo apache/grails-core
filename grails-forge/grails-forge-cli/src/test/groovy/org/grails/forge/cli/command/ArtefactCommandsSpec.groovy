@@ -203,7 +203,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
 
         then:
         exit == 2
-        out.toString().contains('Unmatched argument')
+        out.toString().contains("There is no command ${command}")
         written == [:]
 
         where:

@@ -90,6 +90,8 @@ dependencies {
     implementation 'org.apache.groovy:groovy'
     // a template of a project in the Groovy syntax, for create-job and create-script
     implementation 'org.apache.groovy:groovy-templates'
+    // the document help --json writes
+    implementation 'org.apache.groovy:groovy-json'
 
     implementation "info.picocli:picocli:$picocliVersion"
     implementation "info.picocli:picocli-shell-jline3:$picocliVersion"

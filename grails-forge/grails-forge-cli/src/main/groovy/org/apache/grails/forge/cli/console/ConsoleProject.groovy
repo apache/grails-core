@@ -65,6 +65,19 @@ final class ConsoleProject {
     }
 
     /**
+     * The directory a command that works on a project reads and writes in when it is run in the given
+     * directory: the directory of the project the given one is in, so that the command does the same
+     * in every directory of a project.
+     *
+     * @param from the directory the command is run in
+     * @return the directory of the project, or the given directory when it is in no project
+     */
+    static Path directoryFor(Path from) {
+        ConsoleProject project = find(from)
+        return project == null ? from : project.directory
+    }
+
+    /**
      * @return the directory of the project
      */
     Path getDirectory() {

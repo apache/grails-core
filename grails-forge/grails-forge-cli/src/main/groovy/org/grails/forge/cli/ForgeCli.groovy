@@ -19,11 +19,13 @@
 package org.grails.forge.cli
 
 import java.util.function.BiFunction
+import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleCommands
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
+import org.apache.grails.forge.cli.console.CommandCatalog
 import org.grails.forge.cli.command.AddPropertyCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.grails.forge.cli.command.CodeGenCommand
@@ -41,6 +43,7 @@ import org.grails.forge.cli.command.CreateServiceCommand
 import org.grails.forge.cli.command.CreateTagLibCommand
 import org.grails.forge.cli.command.CreateUnitTestCommand
 import org.grails.forge.cli.command.InstallTemplatesCommand
+import org.grails.forge.cli.command.HelpCommand
 import org.grails.forge.io.ConsoleOutput
 
 /**
@@ -107,11 +110,46 @@ final class ForgeCli {
     }
 
     /**
-     * Executes one command line on a running context, which stays open for the next one.
+     * Executes one command line on a running context, which stays open for the next one. The name
+     * of a command can be given in its short form, as {@code cA} for {@code create-app}: it is
+     * replaced by the name before the command line is read, see {@link CommandCatalog#expand}.
      */
     static int execute(ApplicationContext context, String... args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
-        return createCommandLine(context, noOpConsole, readsProject(args)).execute(args)
+        // What reading the record of the project has to say is held back until the command is known:
+        // a short form is looked up among the commands of the project too, and may then be a command
+        // that has nothing to do with the project.
+        HeldBack held = new HeldBack()
+        return execute(createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, readsProject(args)), held, args)
+    }
+
+    /**
+     * Executes a command line on the commands that were put together for it, and on those that were
+     * added to them since.
+     */
+    static int execute(CommandLine commandLine, String... args) {
+        return execute(commandLine, new HeldBack(), args)
+    }
+
+    private static int execute(CommandLine commandLine, HeldBack held, String... args) {
+        ConsoleOutput root = (ConsoleOutput) commandLine.getCommand()
+        String[] expanded
+        try {
+            expanded = new CommandCatalog(commandLine).expand(args)
+        } catch (CommandLine.ParameterException e) {
+            held.replay(root)
+            return commandLine.getParameterExceptionHandler().handleParseException(e, args)
+        }
+        if (readsProject(expanded)) {
+            CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
+            if (help != null && commandOf(expanded) == HelpCommand.NAME && expanded.contains('--json')) {
+                // the document is all that is written: it says what was held back
+                ((HelpCommand) help.getCommand()).diagnostics = held.messages()
+            } else {
+                held.replay(root)
+            }
+        }
+        return commandLine.execute(expanded)
     }
 
     /**
@@ -121,17 +159,21 @@ final class ForgeCli {
      * has, because it lists the commands there are in this directory.
      */
     static boolean readsProject(String... args) {
-        String command = args.find { String arg -> !arg.startsWith('-') }
+        String command = commandOf(args)
         if (command == null) {
             return !args.any { String arg -> arg == '-V' || arg == '--version' }
         }
         for (Class<?> type : ForgeCommand.getAnnotation(CommandLine.Command).subcommands()) {
             CommandLine.Command create = type.getAnnotation(CommandLine.Command)
             if (create != null && (create.name() == command || command in create.aliases())) {
-                return false
+                return type == HelpCommand
             }
         }
         return true
+    }
+
+    private static String commandOf(String... args) {
+        return args.find { String arg -> !arg.startsWith('-') }
     }
 
     /**
@@ -139,7 +181,8 @@ final class ForgeCli {
      */
     static void interactive(ApplicationContext context) {
         CommandLine commandLine = createCommandLine(context, true)
-        new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER).start()
+        new InteractiveShell(commandLine, { String[] commandArgs -> execute(context, commandArgs) }, EXCEPTION_HANDLER,
+                { createCommandLine(context, true) } as Supplier<CommandLine>).start()
     }
 
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole) {
@@ -151,13 +194,26 @@ final class ForgeCli {
      * the code generation commands the project has
      */
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole, boolean readsProject) {
+        return createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : null, readsProject)
+    }
+
+    /**
+     * Puts the command line together: the commands that are registered with {@link ForgeCommand},
+     * and in a project the code generation commands of {@link #CODE_GEN_COMMANDS} that apply to it.
+     * A command that is registered in either way is found by its short form, shown by {@code help}
+     * and described by {@code help --json} without anything else being done for it.
+     *
+     * @param console where reading the record of the project says what it has to say, or
+     * {@code null} for the output of the command line
+     */
+    private static CommandLine createCommandLine(ApplicationContext context, ConsoleOutput console, boolean readsProject) {
         ForgeCommand root = context.getBean(ForgeCommand)
         CommandLine commandLine = new CommandLine(root, new GrailsPicocliFactory(context))
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
             EXCEPTION_HANDLER.apply(ex, failed)
         } as CommandLine.IExecutionExceptionHandler
         commandLine.usageHelpWidth = 100
-        CodeGenConfig codeGenConfig = readsProject ? CodeGenConfig.load(context, noOpConsole ? ConsoleOutput.NOOP : root) : null
+        CodeGenConfig codeGenConfig = readsProject ? CodeGenConfig.load(context, console ?: root) : null
         if (codeGenConfig != null) {
             for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
                 CodeGenCommand command
@@ -174,6 +230,60 @@ final class ForgeCli {
         }
         ConsoleCommands.addTo(commandLine, readsProject)
         return commandLine
+    }
+
+    /** Keeps what is said until it is known whether it is to be said, and then says it in the order it came. */
+    private static final class HeldBack implements ConsoleOutput {
+
+        private final List<Closure> said = []
+        private final List<String> lines = []
+
+        @Override
+        void out(String message) {
+            said.add { ConsoleOutput to -> to.out(message) }
+        }
+
+        @Override
+        void err(String message) {
+            lines.add(message)
+            said.add { ConsoleOutput to -> to.err(message) }
+        }
+
+        @Override
+        void warning(String message) {
+            lines.add(message)
+            said.add { ConsoleOutput to -> to.warning(message) }
+        }
+
+        @Override
+        void green(String message) {
+            said.add { ConsoleOutput to -> to.green(message) }
+        }
+
+        @Override
+        void red(String message) {
+            said.add { ConsoleOutput to -> to.red(message) }
+        }
+
+        @Override
+        boolean showStacktrace() {
+            return false
+        }
+
+        @Override
+        boolean verbose() {
+            return false
+        }
+
+        /** The warnings and errors, without what marks them as such on a terminal. */
+        List<String> messages() {
+            return new ArrayList<String>(lines)
+        }
+
+        void replay(ConsoleOutput to) {
+            said.each { Closure each -> each.call(to) }
+            said.clear()
+        }
     }
 
 }

@@ -26,7 +26,6 @@ import org.grails.forge.util.ThrowingSupplier
 import jakarta.inject.Inject
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.io.ConsoleOutput
-import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import picocli.CommandLine.Command
 import picocli.CommandLine.Option
@@ -134,7 +133,7 @@ class AddPropertyCommand extends CodeGenCommand {
             return 1
         }
 
-        File projectDir = FileSystemOutputHandler.getDefaultBaseDirectory()
+        File projectDir = getProjectDirectory()
         File domainFile = domainFieldModifier.findDomainFile(projectDir, domainClassName)
 
         if (domainFile == null || !domainFile.exists()) {

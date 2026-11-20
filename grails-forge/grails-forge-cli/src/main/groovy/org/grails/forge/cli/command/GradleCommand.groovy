@@ -24,6 +24,7 @@ import java.util.function.Consumer
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
@@ -43,7 +44,7 @@ import picocli.CommandLine
         ],
         preprocessor = GradleCommand.EverythingIsGradles)
 @CompileStatic
-class GradleCommand extends BaseCommand implements Callable<Integer> {
+class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
 
     public static final String NAME = 'gradle'
 

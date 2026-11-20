@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.artefact.ArtefactName
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.apache.grails.forge.cli.artefact.ArtefactTemplates
+import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.util.ThrowingSupplier
 import org.grails.forge.application.Project
 import org.grails.forge.cli.CodeGenConfig
@@ -37,7 +38,7 @@ import picocli.CommandLine
 import java.util.concurrent.Callable
 
 @CompileStatic
-abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
+abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
 
     protected final CodeGenConfig config
 
@@ -49,7 +50,7 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
 
     CodeGenCommand(CodeGenConfig config) {
         this.config = config
-        this.outputHandlerSupplier = () -> new FileSystemOutputHandler(FileSystemOutputHandler.getDefaultBaseDirectory(), this)
+        this.outputHandlerSupplier = () -> new FileSystemOutputHandler(getProjectDirectory(), this)
         this.consoleOutput = null
     }
 
@@ -62,6 +63,15 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer> {
     }
 
     abstract boolean applies()
+
+    /**
+     * @return the directory of the project the command writes in: the one its record was read in,
+     * which is the current directory or one above it
+     */
+    protected File getProjectDirectory() throws IOException {
+        File directory = config == null ? null : config.getProjectDirectory()
+        return directory == null ? FileSystemOutputHandler.getDefaultBaseDirectory() : directory
+    }
 
     protected Project getProject(String name) {
         if (name.indexOf('-') > -1) {

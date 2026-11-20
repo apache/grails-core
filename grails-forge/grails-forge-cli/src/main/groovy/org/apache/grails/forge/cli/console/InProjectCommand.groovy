@@ -30,7 +30,7 @@ import org.grails.forge.io.FileSystemOutputHandler
  * @since 9.0
  */
 @CompileStatic
-abstract class InProjectCommand extends BaseCommand implements Callable<Integer> {
+abstract class InProjectCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
 
     @Override
     Integer call() throws Exception {
