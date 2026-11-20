@@ -1030,4 +1030,25 @@ app:
             reads
         }
     }
+
+    @Issue('#16766')
+    void 'a name written with dots in application.groovy and as a path in application.yml is one entry in the block'() {
+        given: 'application.groovy writing a key with dots inside a block, and application.yml writing the same name'
+        def groovyConfig = new NavigableMap()
+        groovyConfig.merge([logging: [level: ['org.hibernate.SQL': 'debug']]])
+        def groovySource = new NavigableMapPropertySource('application.groovy', groovyConfig)
+        def yamlSource = new YamlPropertySourceLoader().load('application.yml',
+                new ByteArrayResource('logging.level.org.hibernate.SQL: info'.bytes)).first()
+        def propertySources = new MutablePropertySources()
+        propertySources.addLast(groovySource)
+        propertySources.addFirst(yamlSource)
+
+        when:
+        def config = new PropertySourcesConfig(propertySources)
+
+        then: 'the value of the source with the higher precedence is the one read, however the block is read'
+        config.getProperty('logging.level.org.hibernate.SQL') == 'info'
+        config.navigate('logging', 'level') == ['org.hibernate.SQL': 'info']
+        config.logging.level.get('org.hibernate.SQL') == 'info'
+    }
 }

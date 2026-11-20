@@ -143,6 +143,19 @@ class MyService {
 }
 ----
 
+=== Names With Dots
+
+A configuration name can be written as a path, `logging.level.org.hibernate.SQL: info` in `application.yml`, or as a key that holds the dots inside a map, as `application.groovy` writes it:
+
+[source,groovy]
+----
+logging.level = ['org.hibernate.SQL': 'debug']
+----
+
+Spring Boot reads both as the same property. The merged configuration does as well when a nested map, as `application.groovy` and its maps are, is merged over a block that holds the name as a key with dots: the value of the source with the higher precedence replaces the value of the key, and the block holds one entry. Reading the name with `getProperty('logging.level.org.hibernate.SQL')` gives that value, and so does reading the block as a map, as a plugin does that hands a map such as `grails.mail.props` to another library.
+
+Only a name that a block already holds as a key with dots is written into that key. A name written as a path in one source, and as a key with dots in a source merged after it, is still held in both forms; reading it with `getProperty` and the whole name gives the value merged last, and Spring Boot binding is not affected. To keep one form in every case, write the name the same way in each source: as a path, or as a key in brackets, `grails.mail.props[mail.smtp.auth]: true`, which holds the dots in one key in `application.yml`.
+
 === Placeholders in YAML Lists
 
 YAML list elements can contain Spring property placeholders, including environment variables and default values.
