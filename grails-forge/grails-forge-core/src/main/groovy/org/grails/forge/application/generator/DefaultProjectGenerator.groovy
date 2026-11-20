@@ -94,9 +94,11 @@ class DefaultProjectGenerator implements ProjectGenerator {
         features.addAll(generatorContext.getFeatures())
         features.sort(Comparator.comparing(Function.identity()))
 
+        // what is recorded is what the application has: a default gives way to the features
+        Options recorded = generatorContext.getApplicationOptions()
         generatorContext.addTemplate('grailsCli',
                 new GspTemplate('grails-forge-cli.yml',
-                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: generatorContext.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: generatorContext.getGorm(), servletImpl: generatorContext.getServlet(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext),
+                        GspView.of('/forge/feature/cli.gsp', [language: Language.DEFAULT_OPTION, reloading: recorded.getDevelopmentReloading(), buildTool: BuildTool.DEFAULT_OPTION, gormImpl: recorded.getGormImpl(), servletImpl: recorded.getServletImpl(), project: generatorContext.getProject(), features: features, applicationType: applicationType, packArtifacts: packArtifacts(generatorContext),
                                                               excludedFeatures: generatorContext.getExcludedFeatures()])))
 
         if (generatorContext.getProject() != null && generatorContext.getProject().getProperties() != project.getProperties()) {

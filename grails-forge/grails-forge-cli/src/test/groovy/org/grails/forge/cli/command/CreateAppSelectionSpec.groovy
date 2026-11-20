@@ -26,6 +26,7 @@ import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.ForgeCli
 import org.grails.forge.io.ConsoleOutput
 import spock.lang.Unroll
 
@@ -84,11 +85,11 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
 
     void "the option can be given more than once, and with the other create commands"() {
         when:
-        int exit = CliRunner.run(CreateRestApiCommand, beanContext, 'com.example.api', '--exclude-features', 'mockito', '--exclude-features', 'views-json')
+        int exit = CliRunner.run(CreateRestApiCommand, beanContext, 'com.example.api', '--exclude-features', 'mockito', '--exclude-features', 'spock')
 
         then:
         exit == 0
-        new File(dir, 'api/grails-forge-cli.yml').readLines().last() == 'excludedFeatures: [mockito, views-json]'
+        new File(dir, 'api/grails-forge-cli.yml').readLines().last() == 'excludedFeatures: [mockito, spock]'
     }
 
     @Unroll
@@ -96,9 +97,10 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         when:
         int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--features', features, '--exclude-features', excluded)
 
-        then:
-        exit == 1
+        then: 'a mistake in the command line, as an option that does not exist is'
+        exit == 2
         err.toString().contains(message)
+        err.toString().contains('Usage:')
         !new File(dir, 'shop').exists()
 
         where:
@@ -106,7 +108,10 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         'postgres' | 'postgres'           || 'The feature postgres is both selected and excluded'
         'postgres' | 'no-such-feature'    || 'The excluded feature does not exist: no-such-feature'
         'postgres' | 'logback'            || 'The feature logback cannot be excluded: it is not a feature that is selected by name'
-        'postgres' | 'gorm-hibernate5'    || 'The feature gorm-hibernate5 cannot be excluded: the feature postgres requires it'
+        'postgres' | 'gorm-hibernate5'    || 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application. Choose another one (--data), or leave the exclusion out'
+        'cache'    | 'gorm-hibernate5,h2' || 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application. Choose another one (--data), or leave the exclusion out'
+        'cache'    | 'zzz-none,aaa-none'  || 'The excluded features do not exist: aaa-none, zzz-none'
+        'zzz-none,cache,aaa-none' | 'mockito' || 'The requested features do not exist: aaa-none, zzz-none'
         'cache'    | 'h2'                 || 'The feature h2 cannot be excluded: the feature gorm-hibernate5 requires it'
         'cache'    | 'mockito,spock'      || 'The feature spock cannot be excluded: the feature geb-with-testcontainers requires it'
     }
@@ -124,14 +129,17 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         where:
         arguments                                                         || code | message
         ['--data', 'hibernate5', '--features', 'gorm-hibernate7']         || 2    | 'The option --data hibernate5 does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'
-        ['--gorm', 'hibernate5', '--features', 'gorm-hibernate7']         || 2    | 'The option --data hibernate5 does not agree with the features that are selected or excluded'
-        ['--data', 'hibernate5', '--exclude-features', 'gorm-hibernate5,h2'] || 2 | 'The option --data hibernate5 does not agree with the features that are selected or excluded'
+        ['--gorm', 'hibernate', '--features', 'gorm-hibernate7']          || 2    | 'The option --gorm hibernate does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'
+        ['-g', 'HIBERNATE5', '--features', 'gorm-hibernate7']             || 2    | 'The option -g HIBERNATE5 does not agree with the features that are selected or excluded'
+        ['--data=hibernate5', '--features', 'gorm-hibernate7']            || 2    | 'The option --data=hibernate5 does not agree with the features that are selected or excluded'
+        ['--data', 'hibernate5', '--exclude-features', 'gorm-hibernate5,h2'] || 2 | 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application'
+        ['--data', 'mongodb', '--exclude-features', 'gorm-mongodb']       || 2    | 'The feature gorm-mongodb cannot be excluded: it is the Grails Data implementation of the application'
         ['--jdk', '25', '--reloading', 'devtools', '--features', 'grails-micronaut'] || 2    | 'The option --reloading devtools does not agree with the features that are selected or excluded: the application would be made without Spring Boot DevTools'
-        ['--data', 'hibernate7', '--features', 'gorm-hibernate5']         || 1    | 'Only one Grails Data for Hibernate implementation can be selected: gorm-hibernate5 or gorm-hibernate7'
-        ['--data', 'neo4j', '--features', 'gorm-mongodb']                 || 1    | 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'
-        ['--data', 'mongodb', '--features', 'gorm-neo4j']                 || 1    | 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'
-        ['--servlet', 'jetty', '--features', 'spring-boot-starter-tomcat'] || 1   | 'The requested feature does not exist: spring-boot-starter-tomcat'
-        ['--features', 'postgres,mysql']                                  || 1    | 'There can only be one of the following features selected: [mysql, postgres]'
+        ['--data', 'hibernate7', '--features', 'gorm-hibernate5']         || 2    | 'Only one Grails Data for Hibernate implementation can be selected: gorm-hibernate5 or gorm-hibernate7'
+        ['--data', 'neo4j', '--features', 'gorm-mongodb']                 || 2    | 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'
+        ['--data', 'mongodb', '--features', 'gorm-neo4j']                 || 2    | 'There can only be one of the following features selected: [gorm-mongodb, gorm-neo4j]'
+        ['--servlet', 'jetty', '--features', 'spring-boot-starter-tomcat'] || 2   | 'The requested feature does not exist: spring-boot-starter-tomcat'
+        ['--features', 'postgres,mysql']                                  || 2    | 'There can only be one of the following features selected: [mysql, postgres]'
     }
 
     @Unroll
@@ -153,6 +161,153 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         ['--jdk', '25', '--reloading', 'none', '--features', 'grails-micronaut'] || ['grails-micronaut']                   | ['spring-boot-devtools']
         ['--data', 'mongodb', '--features', 'gorm-hibernate5']     || ['gorm-mongodb', 'gorm-hibernate5', 'h2'] | []
         ['--servlet', 'jetty']                                     || ['spring-boot-starter-jetty']          | ['spring-boot-starter-tomcat']
+        ['--servlet', 'none', '--reloading', 'none']               || ['gorm-hibernate5']                    | ['spring-boot-starter-tomcat', 'spring-boot-devtools']
+    }
+
+    @Unroll
+    void "an option that asks for none is a choice too: #option none with a feature that requires #required"() {
+        given:
+        File pack = new File(dir, 'pack')
+        new File(pack, 'templates').mkdirs()
+        new File(pack, 'feature.yml').text = CreateAppFeaturePackSpec.DESCRIPTOR + "requires: [${required}]\n"
+        new File(pack, 'templates/audit.txt').text = 'kept as it is'
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--features', 'acme-audit', option, 'none',
+                '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 2
+        err.toString().contains("The option ${option} none does not agree with the features that are selected or excluded: " +
+                "the application would be made with the feature ${required}. Leave out the option, or the feature that requires it")
+        !new File(dir, 'shop').exists()
+
+        when: 'without the option there is its default: the same feature, or one that cannot be had with what is required'
+        int given = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--features', 'acme-audit',
+                '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        given == (recorded == null ? 2 : 0)
+        recorded == null || new File(dir, 'shop/grails-forge-cli.yml').text.contains("reloading: ${recorded}\n")
+        recorded == null || ProjectState.read(new File(dir, 'shop').toPath()).manifest.options.reloading.name == recorded
+        recorded != null || err.toString().contains('There can only be one of the following features selected')
+
+        where:
+        option        | required                    || recorded
+        '--servlet'   | 'spring-boot-starter-jetty' || null
+        '--reloading' | 'jrebel'                    || null
+        '-r'          | 'spring-boot-devtools'      || 'devtools'
+    }
+
+    @Unroll
+    void "what is recorded of an option that was not given is what the application has: #arguments"() {
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, (['com.example.shop'] + arguments) as String[])
+
+        then:
+        exit == 0
+        List<String> record = new File(dir, 'shop/grails-forge-cli.yml').readLines()
+        record.contains("gormImpl: ${gorm}".toString())
+        record.contains("reloading: ${reloading}".toString())
+        record.contains('servletImpl: spring-boot-starter-tomcat')
+
+        and:
+        ProjectState state = ProjectState.read(new File(dir, 'shop').toPath())
+        state.manifest.options.data.name == gorm
+        state.manifest.options.reloading.name == reloading
+        state.lock.featureNames.contains(gorm)
+
+        and: 'which is what the commands of the application read'
+        CodeGenConfig.load(beanContext, new File(dir, 'shop'), ConsoleOutput.NOOP).reloading.name == reloading
+
+        where:
+        arguments                                          || gorm              | reloading
+        []                                                 || 'gorm-hibernate5' | 'devtools'
+        ['--features', 'gorm-hibernate7']                  || 'gorm-hibernate7' | 'devtools'
+        ['--features', 'gorm-hibernate7,postgres']         || 'gorm-hibernate7' | 'devtools'
+        ['--jdk', '25', '--features', 'grails-micronaut']  || 'gorm-hibernate5' | 'none'
+        ['--data', 'mongodb', '--features', 'gorm-hibernate7'] || 'gorm-mongodb' | 'devtools'
+    }
+
+    @Unroll
+    void "through the command line as it is run, #arguments is refused in one bounded line that is no markup"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, (['create-app', 'com.example.shop'] + arguments) as String[])
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        lines[0] == message
+        lines[1].startsWith('Usage: ')
+        !err.toString().contains('Exception')
+        !err.toString().contains('\u001b')
+        !new File(dir, 'shop').exists()
+
+        where:
+        arguments                                           || message
+        ['--exclude-features', '@|red x|@']                 || 'The excluded feature does not exist: @ |red x|@'
+        ['--exclude-features', '@|bogus x|@']               || 'The excluded feature does not exist: @ |bogus x|@'
+        ['--features', '@|red x|@']                         || 'The requested feature does not exist: @ |red x|@'
+        ['--features', '@|bogus x|@']                       || 'The requested feature does not exist: @ |bogus x|@'
+        ['--exclude-features', 'a\u001b[31mb\nsecond']      || 'The excluded feature does not exist: a?[31mb?second'
+        ['--features', 'a\u001b[31mb\nsecond']              || 'The requested feature does not exist: a?[31mb?second'
+        ['--exclude-features', 'x' * 3000]                  || 'The excluded feature does not exist: ' + ('x' * 80) + '...'
+        ['--features', 'x' * 3000]                          || 'The requested feature does not exist: ' + ('x' * 80) + '...'
+        ['--exclude-features', ('y' * 3000) + ':b']         || '--exclude-features takes the names of features, and ' + ('y' * 80) + '... is not one: the feature of a plugin is excluded by the name of the feature, not by the coordinates of the plugin'
+        ['--exclude-features', 'a:b:1@|red x|@\u001b[0m']   || '--exclude-features takes the names of features, and a:b:1@ |red x|@?[0m is not one: the feature of a plugin is excluded by the name of the feature, not by the coordinates of the plugin'
+        ['--exclude-features', '']                          || 'The excluded feature does not exist: (empty)'
+        ['--exclude-features', 'logback']                   || 'The feature logback cannot be excluded: it is not a feature that is selected by name'
+        ['--features', 'postgres,mysql']                    || 'There can only be one of the following features selected: [mysql, postgres]'
+        ['--gorm', 'hibernate', '--features', 'gorm-hibernate7'] || 'The option --gorm hibernate does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5. Leave out the option, or the feature that takes its place'
+    }
+
+    void "a failure that is no mistake in the command line is not reported as one"() {
+        given: 'a pack whose template fails when the application is made'
+        File pack = new File(dir, 'pack')
+        new File(pack, 'templates').mkdirs()
+        new File(pack, 'feature.yml').text = CreateAppFeaturePackSpec.DESCRIPTOR.replace('from: audit.txt', 'from: audit.txt.gsp')
+        new File(pack, 'templates/audit.txt.gsp').text = '<% throw new IllegalStateException("the template failed") %>'
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-app', 'com.example.shop', '--features', 'acme-audit', '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 1
+        !err.toString().contains('Usage: ')
+    }
+
+    @Unroll
+    void "the list of features is held to the exclusions too: #excluded"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-app', '--list-features', '--exclude-features', excluded)
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == message
+        !out.toString().contains('Available Features')
+
+        where:
+        excluded  || message
+        'no-such' || 'The excluded feature does not exist: no-such'
+        'a:b:c'   || '--exclude-features takes the names of features, and a:b:c is not one: the feature of a plugin is excluded by the name of the feature, not by the coordinates of the plugin'
+        'h2'      || 'The feature h2 cannot be excluded: the feature gorm-hibernate5 requires it'
+    }
+
+    void "the list of features marks the defaults without those that are excluded"() {
+        when:
+        int all = ForgeCli.execute(beanContext, 'create-app', '--list-features')
+        String complete = out.toString()
+        out.reset()
+        int without = ForgeCli.execute(beanContext, 'create-app', '--list-features', '--exclude-features', 'mockito')
+        String excluded = out.toString()
+
+        then:
+        all == 0
+        without == 0
+        complete =~ /mockito \(\+\)/
+        !(excluded =~ /mockito \(\+\)/)
+        excluded =~ /mockito\s/
+        excluded =~ /spock \(\+\)/
     }
 
     void "a feature that is not for the type of application is refused"() {
@@ -160,7 +315,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
         int exit = CliRunner.run(CreatePluginCommand, beanContext, 'com.example.shop', '--features', 'asset-pipeline-grails')
 
         then:
-        exit == 1
+        exit == 2
         err.toString().contains('The requested feature does not exist: asset-pipeline-grails')
         !new File(dir, 'shop').exists()
     }
@@ -258,7 +413,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
                 '--exclude-features', 'acme-audit', '--feature-pack-repository', address)
 
         then:
-        both == 1
+        both == 2
         err.toString().contains('The feature acme-audit is both selected and excluded')
         !new File(dir, 'two').exists()
 
@@ -267,7 +422,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
                 '--exclude-features', 'database-migration', '--feature-pack-repository', address)
 
         then:
-        required == 1
+        required == 2
         err.toString().contains('The feature database-migration cannot be excluded: the feature acme-audit requires it')
         !new File(dir, 'three').exists()
 
@@ -276,7 +431,7 @@ class CreateAppSelectionSpec extends CommandSpec implements CommandFixture {
                 '--data', 'mongodb', '--feature-pack-repository', address)
 
         then:
-        conflict == 1
+        conflict == 2
         err.toString().contains('The feature acme-audit cannot be used with the feature gorm-mongodb')
         !new File(dir, 'four').exists()
 

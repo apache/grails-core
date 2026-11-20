@@ -19,9 +19,11 @@
 package org.grails.forge.feature.validation
 
 import groovy.transform.CompileStatic
+import java.util.function.Function
 import org.apache.grails.forge.core.pack.PackFeature
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.feature.Feature
+import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.options.Options
 import org.springframework.stereotype.Component
 
@@ -43,6 +45,21 @@ class ConflictingFeatureValidator implements FeatureValidator {
 
     @Override
     void validatePostProcessing(Options options, ApplicationType applicationType, Set<Feature> features) {
+        String conflict = conflict(features) { String name -> [name] }
+        if (conflict != null) {
+            throw new FeatureSelectionException(conflict)
+        }
+    }
+
+    /**
+     * @param features the features of an application
+     * @param requirementsTo gives, for the name of a feature, the names of the features that led to it
+     * through what each requires, ending with the feature itself
+     * @return what to say of the first pack, by name, that is there with a feature it conflicts with, or
+     * {@code null} when there is none. A name among the conflicts of a pack that is no feature of the
+     * application conflicts with nothing: a pack can name a feature another type of application has.
+     */
+    static String conflict(Set<Feature> features, Function<String, List<String>> requirementsTo) {
         Set<String> names = new HashSet<>()
         for (Feature feature : features) {
             names.add(feature.getName())
@@ -51,10 +68,17 @@ class ConflictingFeatureValidator implements FeatureValidator {
             if (feature instanceof PackFeature) {
                 for (String conflict : ((PackFeature) feature).getPack().descriptor.conflicts) {
                     if (names.contains(conflict)) {
-                        throw new IllegalArgumentException("The feature ${feature.getName()} cannot be used with the feature ${conflict}")
+                        // which feature brought in the one that conflicts, or else the pack itself
+                        List<String> way = requirementsTo.apply(conflict)
+                        if (way.size() < 2) {
+                            way = requirementsTo.apply(feature.getName())
+                        }
+                        return "The feature ${feature.getName()} cannot be used with the feature ${conflict}" +
+                                (way.size() < 2 ? '' : " (${FeatureSelectionException.chain(way)})")
                     }
                 }
             }
         }
+        return null
     }
 }

@@ -32,13 +32,24 @@ class Options {
     private final GormImpl gormImpl
     private final ServletImpl servletImpl
     private final JdkVersion javaVersion
+    private final Set<OptionName> given
 
     Options(DevelopmentReloading reloading,
                    GormImpl gormImpl,
                    ServletImpl servletImpl,
                    JdkVersion javaVersion,
                    OperatingSystem operatingSystem) {
+        this(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, Collections.<OptionName>emptySet())
+    }
 
+    private Options(DevelopmentReloading reloading,
+                    GormImpl gormImpl,
+                    ServletImpl servletImpl,
+                    JdkVersion javaVersion,
+                    OperatingSystem operatingSystem,
+                    Set<OptionName> given) {
+
+        this.given = given
         this.reloading = reloading
         this.buildTool = BuildTool.DEFAULT_OPTION
         this.gormImpl = gormImpl
@@ -107,22 +118,42 @@ class Options {
     }
 
     Options withOperatingSystem(OperatingSystem operatingSystem) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
     }
 
     Options withDevelopmentReloading(DevelopmentReloading reloading) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
     }
 
     Options withGormImpl(GormImpl gormImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
     }
 
     Options withServletImpl(ServletImpl servletImpl) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
     }
 
     Options withJavaVersion(JdkVersion javaVersion) {
-        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem)
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, given)
+    }
+
+    /**
+     * @return the options that were given by whoever asked for the application. Their values are
+     * choices: an application that would not have what one of them asks for is refused. The value of
+     * any other option is a default, which gives way to the features that are selected.
+     * @since 9.0
+     */
+    Set<OptionName> getGiven() {
+        return given
+    }
+
+    /**
+     * @param given the options that were given by whoever asked for the application
+     * @return these options with those marked as given, and no others
+     * @since 9.0
+     */
+    Options withGiven(Collection<OptionName> given) {
+        Set<OptionName> names = given.isEmpty() ? Collections.<OptionName>emptySet() : Collections.unmodifiableSet(EnumSet.copyOf(given))
+        return new Options(reloading, gormImpl, servletImpl, javaVersion, operatingSystem, names)
     }
 }

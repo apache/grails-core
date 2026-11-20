@@ -27,18 +27,38 @@ import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.DefaultFeature
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
+import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.feature.OneOfFeature
+import org.grails.forge.feature.reloading.ReloadingFeature
+import org.grails.forge.feature.spring.SpringBootEmbeddedServlet
+import org.grails.forge.feature.validation.ConflictingFeatureValidator
 import org.grails.forge.feature.validation.FeatureValidator
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.BuildTool
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.Language
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
+import java.util.function.Supplier
 
 @Component
 @CompileStatic
 class ContextFactory {
+
+    // the most names a message lists
+    private static final int MAX_NAMES = 10
+
+    // see where the defaults are applied
+    private static final Comparator<Feature> DEFAULTS_ORDER = { Feature first, Feature second ->
+        int byGroup = Boolean.compare(first instanceof OneOfFeature, second instanceof OneOfFeature)
+        if (byGroup != 0) {
+            return byGroup
+        }
+        int byRequirements = Boolean.compare(first.getDependentFeatures().isEmpty(), second.getDependentFeatures().isEmpty())
+        return byRequirements != 0 ? byRequirements : first.getName() <=> second.getName()
+    } as Comparator<Feature>
 
     private final FeatureValidator featureValidator
     private final DefaultCoordinateResolver coordinateResolver
@@ -62,8 +82,10 @@ class ContextFactory {
      * defaults for what nothing has chosen and what those require, until nothing is added.
      *
      * @param excludedFeatures the names of features the application is not to have. A default among them
-     * is not applied. A name that is no feature, that cannot be selected by name, that is selected too or
-     * that a feature of the application requires is refused
+     * is not applied. A name that is no feature, that cannot be selected by name, that is selected too,
+     * that a feature of the application requires, or without which the application would lose a feature
+     * it cannot be without, is refused
+     * @throws FeatureSelectionException when the features cannot be selected as they were asked for
      * @since 9.0
      */
     FeatureContext createFeatureContext(AvailableFeatures availableFeatures,
@@ -72,29 +94,60 @@ class ContextFactory {
                                                Options options,
                                                @Nullable OperatingSystem operatingSystem,
                                                Collection<String> excludedFeatures) {
+        return selecting {
+            // by name, so that what is refused first does not depend on the order the names were given in
+            Set<String> excluded = new TreeSet<>()
+            for (String name : excludedFeatures) {
+                excluded.add(String.valueOf(name))
+            }
+            FeatureContext featureContext = select(availableFeatures, selectedFeatures, applicationType, options, operatingSystem, excluded)
+            if (!excluded.isEmpty()) {
+                featureContext.setStructure(structure(availableFeatures, selectedFeatures, applicationType, options, operatingSystem))
+            }
+            return featureContext
+        }
+    }
+
+    private FeatureContext select(AvailableFeatures availableFeatures,
+                                  List<String> selectedFeatures,
+                                  ApplicationType applicationType,
+                                  Options options,
+                                  @Nullable OperatingSystem operatingSystem,
+                                  Set<String> excluded) {
         final Set<Feature> features = Collections.newSetFromMap(new IdentityHashMap<>(8))
         List<String> requested = []
+        Set<String> unknown = new TreeSet<>()
         for (String name : selectedFeatures) {
-            Feature feature = availableFeatures.findFeature(name).orElse(null)
+            Feature feature = name == null ? null : availableFeatures.findFeature(name).orElse(null)
             if (feature != null) {
                 features.add(feature)
                 requested << feature.getName()
             } else {
-                throw new IllegalArgumentException('The requested feature does not exist: ' + name)
+                unknown.add(String.valueOf(name))
             }
         }
+        if (!unknown.isEmpty()) {
+            throw new FeatureSelectionException(notThere('requested', unknown))
+        }
 
-        // by name, so that what is refused first does not depend on the order the names were given in
-        Set<String> excluded = new TreeSet<>(excludedFeatures)
+        Map<String, Feature> toExclude = new TreeMap<>()
         for (String name : excluded) {
-            Feature feature = availableFeatures.findFeature(name, true).orElseThrow {
-                new IllegalArgumentException('The excluded feature does not exist: ' + name)
+            Feature feature = availableFeatures.findFeature(name, true).orElse(null)
+            if (feature != null) {
+                toExclude.put(name, feature)
+            } else {
+                unknown.add(name)
             }
+        }
+        if (!unknown.isEmpty()) {
+            throw new FeatureSelectionException(notThere('excluded', unknown))
+        }
+        toExclude.each { String name, Feature feature ->
             if (!feature.isVisible()) {
-                throw new IllegalArgumentException("The feature ${name} cannot be excluded: it is not a feature that is selected by name")
+                throw new FeatureSelectionException("The feature ${name} cannot be excluded: it is not a feature that is selected by name")
             }
             if (features.contains(feature)) {
-                throw new IllegalArgumentException("The feature ${name} is both selected and excluded")
+                throw new FeatureSelectionException("The feature ${name} is both selected and excluded")
             }
         }
 
@@ -108,36 +161,115 @@ class ContextFactory {
             .withGormImpl(determineGormImpl(options.getGormImpl()))
             .withServletImpl(determineServletImpl(options.getServletImpl()))
 
+        // A default can depend on another default, such as Mockito on Spock, and can require features.
+        // What a default requires is selected as soon as the default is, and the defaults of exclusive
+        // groups come last, those without requirements last of all: a default that requires one database
+        // driver is there before the group is given another. Every round adds a feature or is the last,
+        // so there are no more rounds than features.
         List<DefaultFeature> defaults = availableFeatures.getAllFeatures()
                 .filter { it instanceof DefaultFeature }
                 .map { (DefaultFeature) it }
-                .sorted(Comparator.comparing(Feature::getName))
+                .sorted(DEFAULTS_ORDER)
                 .toList()
-        // A default can depend on another default, such as Mockito on Spock. Resolve the
-        // complete set before processing it, independently of component registration order.
-        // Every round adds a feature or is the last, so there are no more rounds than features.
         boolean added
         do {
             added = false
-            List<Feature> applied = []
             for (DefaultFeature feature : defaults) {
-                if (!features.contains(feature) && !excluded.contains(feature.getName()) && feature.shouldApply(applicationType, newOptions, features)) {
+                if (!features.contains(feature) && feature.shouldApply(applicationType, newOptions, features)) {
+                    if (excluded.contains(feature.getName())) {
+                        if (feature.getName() == newOptions.getGormImpl().getName()) {
+                            // the options cannot say that an application has no Grails Data implementation
+                            throw new FeatureSelectionException("The feature ${feature.getName()} cannot be excluded: it is the " +
+                                    "${OptionName.DATA.label} of the application. Choose another one (--data), or leave the exclusion out")
+                        }
+                        continue
+                    }
                     features.add(feature)
-                    applied.add(feature)
+                    selectRequired(availableFeatures, features, [(Feature) feature], requiredBy, excluded)
                     added = true
                 }
             }
-            selectRequired(availableFeatures, features, applied, requiredBy, excluded)
         } while (added)
 
         featureValidator.validatePreProcessing(newOptions, applicationType, features)
 
         FeatureContext featureContext = new FeatureContext(newOptions, applicationType, operatingSystem, features)
         featureContext.setRequestedFeatures(requested)
+        featureContext.setApplicableOptions(applicableOptions(availableFeatures, newOptions))
+        requiredBy.each { Feature required, Feature by -> featureContext.requiredBy(required.getName(), by.getName()) }
         for (String name : excluded) {
             featureContext.exclude(name)
         }
         return featureContext
+    }
+
+    /**
+     * The hidden features the application has when nothing is excluded: the parts every application of
+     * its kind is built on, which no exclusion may take away. A visible feature can be the only one that
+     * brings such a part in, as the JSON views bring the web layer into a REST API.
+     *
+     * @return their names, or none when the selection cannot be made without the exclusions either, in
+     * which case the exclusions are not held to it
+     */
+    private Set<String> structure(AvailableFeatures availableFeatures,
+                                  List<String> selectedFeatures,
+                                  ApplicationType applicationType,
+                                  Options options,
+                                  @Nullable OperatingSystem operatingSystem) {
+        try {
+            FeatureContext whole = select(availableFeatures, selectedFeatures, applicationType, options, operatingSystem, Collections.<String>emptySet())
+            whole.processSelectedFeatures()
+            Set<String> hidden = new TreeSet<>()
+            for (Feature feature : whole.getFinalFeatures(ConsoleOutput.NOOP)) {
+                if (!feature.isVisible()) {
+                    hidden.add(feature.getName())
+                }
+            }
+            return hidden
+        } catch (IllegalArgumentException ignored) {
+            return Collections.<String>emptySet()
+        }
+    }
+
+    // an option chooses a feature; where the type of application has not the feature its value names, as
+    // a plugin has no Tomcat, the option chooses nothing and no feature can disagree with it. An option
+    // that asks for none chooses wherever the type of application has a feature of the kind
+    private static Set<OptionName> applicableOptions(AvailableFeatures availableFeatures, Options options) {
+        Set<OptionName> applicable = EnumSet.noneOf(OptionName)
+        if (availableFeatures.findFeature(options.getGormImpl().getName(), true).isPresent()) {
+            applicable.add(OptionName.DATA)
+        }
+        ServletImpl servlet = options.getServletImpl()
+        if (servlet == ServletImpl.NONE ? availableFeatures.getAllFeatures().anyMatch { Feature feature -> feature instanceof SpringBootEmbeddedServlet } :
+                availableFeatures.findFeature(servlet.getName(), true).isPresent()) {
+            applicable.add(OptionName.SERVLET)
+        }
+        DevelopmentReloading reloading = options.getDevelopmentReloading()
+        if (availableFeatures.getAllFeatures().anyMatch { Feature feature ->
+            feature instanceof ReloadingFeature && (reloading == DevelopmentReloading.NONE || ((ReloadingFeature) feature).getReloading() == reloading)
+        }) {
+            applicable.add(OptionName.RELOADING)
+        }
+        return applicable
+    }
+
+    // every refusal of a selection is of one type, whichever part of the selection found it
+    private static <T> T selecting(Supplier<T> selection) {
+        try {
+            return selection.get()
+        } catch (FeatureSelectionException e) {
+            throw e
+        } catch (IllegalArgumentException e) {
+            throw new FeatureSelectionException(e.getMessage(), e)
+        }
+    }
+
+    private static String notThere(String kind, Set<String> names) {
+        List<String> shown = names.take(MAX_NAMES).collect { String name -> FeatureSelectionException.shown(name) }
+        if (names.size() == 1) {
+            return "The ${kind} feature does not exist: ${shown[0]}"
+        }
+        return "The ${kind} features do not exist: ${shown.join(', ')}" + (names.size() > MAX_NAMES ? " and ${names.size() - MAX_NAMES} more" : '')
     }
 
     /**
@@ -155,11 +287,11 @@ class ContextFactory {
             Feature feature = pending.pop()
             for (String name : feature.getDependentFeatures()) {
                 Feature required = availableFeatures.findFeature(name, true).orElseThrow {
-                    new IllegalArgumentException("The feature ${feature.getName()} requires the feature ${name}, " +
+                    new FeatureSelectionException("The feature ${feature.getName()} requires the feature ${name}, " +
                             "which there is not for this type of application${through(feature, requiredBy)}")
                 }
                 if (excluded.contains(required.getName())) {
-                    throw new IllegalArgumentException("The feature ${name} cannot be excluded: the feature ${feature.getName()} " +
+                    throw new FeatureSelectionException("The feature ${name} cannot be excluded: the feature ${feature.getName()} " +
                             "requires it${through(feature, requiredBy)}")
                 }
                 if (features.add(required)) {
@@ -179,22 +311,89 @@ class ContextFactory {
         for (Feature step = feature; step != null; step = requiredBy.get(step)) {
             names.add(0, step.getName())
         }
-        return " (${names.join(' requires ')})"
+        return " (${FeatureSelectionException.chain(names)})"
     }
 
+    /**
+     * @throws FeatureSelectionException when the features cannot be had together, when an exclusion
+     * would take away a feature the application cannot be without, or when the application would not
+     * have what an option that was given asks for ({@link Options#getGiven()})
+     */
     GeneratorContext createGeneratorContext(Project project,
                                                    FeatureContext featureContext,
                                                    ConsoleOutput consoleOutput) {
-        featureContext.processSelectedFeatures()
+        Set<Feature> featureList = selecting {
+            featureContext.processSelectedFeatures()
 
-        Set<Feature> featureList = featureContext.getFinalFeatures(consoleOutput)
+            Set<Feature> features = featureContext.getFinalFeatures(consoleOutput)
 
-        featureValidator.validatePostProcessing(featureContext.getOptions(), featureContext.getApplicationType(), featureList)
+            checkStructure(featureContext, features)
+            String conflict = ConflictingFeatureValidator.conflict(features) { String name -> featureContext.requirementsTo(name) }
+            if (conflict != null) {
+                throw new FeatureSelectionException(conflict)
+            }
+            featureValidator.validatePostProcessing(featureContext.getOptions(), featureContext.getApplicationType(), features)
+            checkGivenOptions(featureContext.getOptions(), featureContext.getApplicableOptions(), features)
+            return features
+        }
 
         GeneratorContext generatorContext = new GeneratorContext(project, featureContext.getApplicationType(), featureContext.getOptions(), featureContext.getOperatingSystem(), featureList, coordinateResolver,
                 featureContext.getExcludedFeatures())
         generatorContext.setRequestedFeatures(featureContext.getRequestedFeatures())
+        generatorContext.setApplicableOptions(featureContext.getApplicableOptions())
         return generatorContext
+    }
+
+    // an exclusion takes a default out, and with it what only that default brought in, but never a
+    // hidden feature: those are what an application is built on, not what it can choose
+    private static void checkStructure(FeatureContext featureContext, Set<Feature> features) {
+        Set<String> names = features*.getName() as Set<String>
+        List<String> lost = featureContext.getStructure().findAll { String name -> !names.contains(name) }.toList()
+        if (!lost.isEmpty()) {
+            List<String> excluded = featureContext.getExcludedFeatures()
+            throw new FeatureSelectionException((excluded.size() == 1 ? "The feature ${excluded[0]} cannot be excluded" :
+                    "The features ${excluded.take(MAX_NAMES).join(', ')}${excluded.size() > MAX_NAMES ? ' and others' : ''} cannot be excluded together") +
+                    ": the application would be without the feature ${lost[0]}, which it has to have")
+        }
+    }
+
+    /**
+     * An option that was given is a choice like a selected feature: when the features that were selected
+     * or excluded leave the application without what the option asks for, or with what it asks not to
+     * have, the two do not agree, and one of them would be dropped without a word.
+     */
+    private static void checkGivenOptions(Options options, Set<OptionName> applicable, Set<Feature> features) {
+        Set<OptionName> given = options.getGiven().findAll { OptionName option -> applicable.contains(option) } as Set<OptionName>
+        Set<String> names = features*.getName() as Set<String>
+        if (given.contains(OptionName.DATA) && !names.contains(options.getGormImpl().getName())) {
+            throw disagreement(OptionName.DATA, options.getGormImpl().name().toLowerCase(Locale.ENGLISH), "the feature ${options.getGormImpl().getName()}", null)
+        }
+        if (given.contains(OptionName.SERVLET)) {
+            ServletImpl servlet = options.getServletImpl()
+            List<String> servlets = features.findAll { Feature feature -> feature instanceof SpringBootEmbeddedServlet }*.getName()
+            if (servlet == ServletImpl.NONE && !servlets.isEmpty()) {
+                throw disagreement(OptionName.SERVLET, 'none', null, "the feature ${servlets[0]}")
+            }
+            if (servlet != ServletImpl.NONE && !names.contains(servlet.getName())) {
+                throw disagreement(OptionName.SERVLET, servlet.name().toLowerCase(Locale.ENGLISH), "the feature ${servlet.getName()}", null)
+            }
+        }
+        if (given.contains(OptionName.RELOADING)) {
+            DevelopmentReloading reloading = options.getDevelopmentReloading()
+            List<ReloadingFeature> present = features.findAll { Feature feature -> feature instanceof ReloadingFeature }.collect { Feature feature -> (ReloadingFeature) feature }
+            if (reloading == DevelopmentReloading.NONE && !present.isEmpty()) {
+                throw disagreement(OptionName.RELOADING, reloading.getName(), null, "the feature ${present[0].getName()}")
+            }
+            if (reloading != DevelopmentReloading.NONE && !present.any { ReloadingFeature feature -> feature.getReloading() == reloading }) {
+                throw disagreement(OptionName.RELOADING, reloading.getName(), reloading.getLabel(), null)
+            }
+        }
+    }
+
+    private static FeatureSelectionException disagreement(OptionName option, String value, String without, String with) {
+        return new FeatureSelectionException("The ${option.label} ${value} that was asked for does not agree with the features that are " +
+                "selected or excluded: the application would be made ${without != null ? "without ${without}" : "with ${with}"}",
+                null, option, without, with)
     }
 
     DevelopmentReloading determineDevelopmentReloading(DevelopmentReloading reloading) {

@@ -29,6 +29,7 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.FeatureFilter
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 
@@ -76,13 +77,24 @@ class ForgeRequestSupport {
      * is a client error, unlike an unknown filter on a feature listing.
      */
     static Options options(String reloading, String gorm, String servlet, String javaVersion, OperatingSystem operatingSystem) {
+        // an option the request gives is a choice, which the features it selects do not replace
+        Set<OptionName> given = EnumSet.noneOf(OptionName)
+        if (reloading != null) {
+            given.add(OptionName.RELOADING)
+        }
+        if (gorm != null) {
+            given.add(OptionName.DATA)
+        }
+        if (servlet != null) {
+            given.add(OptionName.SERVLET)
+        }
         new Options(
                 selection('development reloading', reloading, parseEnum(DevelopmentReloading, reloading), DevelopmentReloading.DEFAULT_OPTION),
                 selection('Grails Data implementation', gorm, GormImpl.parse(gorm), GormImpl.DEFAULT_OPTION),
                 selection('servlet container', servlet, parseEnum(ServletImpl, servlet), ServletImpl.DEFAULT_OPTION),
                 selection('JDK version', javaVersion, parseJdk(javaVersion), JdkVersion.DEFAULT_OPTION),
                 operatingSystem
-        )
+        ).withGiven(given)
     }
 
     static Map<String, Object> error(String message) {

@@ -34,7 +34,12 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.MapOutputHandler
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
+import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
 import spock.lang.TempDir
 import spock.lang.Unroll
@@ -134,8 +139,32 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
                 new Options(), OperatingSystem.LINUX, ['database-migration'])
 
         then:
-        IllegalArgumentException e = thrown()
+        FeatureSelectionException e = thrown()
         e.message == 'The feature database-migration cannot be excluded: the feature acme-needed requires it (acme-default requires acme-needed)'
+    }
+
+    @Unroll
+    void "what a default requires of an exclusive group is there before the group is given its default: #required"() {
+        given: 'a default that is last by name and requires one of a group, or what a default gives way to'
+        AvailableFeatures framework = beanContext.getBean(FeatureRegistry).availableFeatures(ApplicationType.WEB)
+        AvailableFeatures available = new WithMore(framework, [new RequiringDefault('zzz-default', [required])])
+
+        when:
+        FeatureContext featureContext = beanContext.getBean(ContextFactory).createFeatureContext(available, [], ApplicationType.WEB,
+                new Options(), OperatingSystem.LINUX)
+        GeneratorContext context = beanContext.getBean(ContextFactory).createGeneratorContext(NameUtils.parse('example.grails.foo'), featureContext, ConsoleOutput.NOOP)
+
+        then:
+        context.features.containsAll(['zzz-default', required])
+        !context.features.contains(notThere)
+
+        where:
+        required                  || notThere
+        'postgres'                || 'h2'
+        'gorm-hibernate7'         || 'gorm-hibernate5'
+        'properties'              || 'yaml'
+        'grails-layout'           || 'sitemesh3'
+        'geb-with-local-browsers' || 'geb-with-testcontainers'
     }
 
     @Unroll
@@ -147,7 +176,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         context(selected, packs)
 
         then:
-        IllegalArgumentException e = thrown()
+        FeatureSelectionException e = thrown()
         e.message == message
 
         where:
@@ -155,14 +184,15 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         'is selected'                       | ['acme-audit', 'postgres'] | ['acme-audit': 'conflicts: [postgres]\n']                                         || 'The feature acme-audit cannot be used with the feature postgres'
         'is a default'                      | ['acme-audit']           | ['acme-audit': 'conflicts: [h2]\n']                                                 || 'The feature acme-audit cannot be used with the feature h2'
         'is a default nobody can select'    | ['acme-audit']           | ['acme-audit': 'conflicts: [logback]\n']                                            || 'The feature acme-audit cannot be used with the feature logback'
-        'another feature brings in'         | ['acme-audit', 'postgres'] | ['acme-audit': 'conflicts: [testcontainers]\n']                                   || 'The feature acme-audit cannot be used with the feature testcontainers'
-        'another pack requires'             | ['acme-audit', 'acme-b'] | ['acme-audit': 'conflicts: [database-migration]\n', 'acme-b': 'requires: [database-migration]\n'] || 'The feature acme-audit cannot be used with the feature database-migration'
-        'is a pack that requires this one'  | ['acme-b']               | ['acme-audit': 'conflicts: [acme-b]\n', 'acme-b': 'requires: [acme-audit]\n']       || 'The feature acme-audit cannot be used with the feature acme-b'
+        'another feature brings in'         | ['acme-audit', 'postgres'] | ['acme-audit': 'conflicts: [testcontainers]\n']                                   || 'The feature acme-audit cannot be used with the feature testcontainers (postgres requires testcontainers)'
+        'another pack requires'             | ['acme-audit', 'acme-b'] | ['acme-audit': 'conflicts: [database-migration]\n', 'acme-b': 'requires: [database-migration]\n'] || 'The feature acme-audit cannot be used with the feature database-migration (acme-b requires database-migration)'
+        'is a pack that requires this one'  | ['acme-b']               | ['acme-audit': 'conflicts: [acme-b]\n', 'acme-b': 'requires: [acme-audit]\n']       || 'The feature acme-audit cannot be used with the feature acme-b (acme-b requires acme-audit)'
+        'it requires through another pack' | ['acme-audit']           | ['acme-audit': 'requires: [acme-b]\nconflicts: [database-migration]\n', 'acme-b': 'requires: [database-migration]\n'] || 'The feature acme-audit cannot be used with the feature database-migration (acme-audit requires acme-b requires database-migration)'
     }
 
-    void "a pack that conflicts with a feature the application has not is used"() {
+    void "a pack that conflicts with a feature the application has not, or that there is not, is used"() {
         given:
-        Pack pack = pack('acme-audit', 'conflicts: [postgres, gorm-mongodb]\n')
+        Pack pack = pack('acme-audit', 'conflicts: [postgres, gorm-mongodb, acme-no-such-feature]\n')
 
         expect:
         context(['acme-audit'], [pack]).features.contains('acme-audit')
@@ -208,8 +238,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         ApplicationType.WEB      | ['scaffolding']                                 || []
         ApplicationType.WEB      | ['scaffolding', 'gsp']                          || []
         ApplicationType.WEB      | ['spock', 'mockito', 'geb-with-testcontainers'] || []
-        ApplicationType.WEB      | ['h2', 'gorm-hibernate5']                       || []
-        ApplicationType.REST_API | ['views-json']                                  || ['grails-web']
+        ApplicationType.REST_API | ['mockito']                                     || []
         ApplicationType.PLUGIN   | ['mockito']                                     || []
     }
 
@@ -279,7 +308,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         context(selected, packs, ApplicationType.WEB, excluded)
 
         then:
-        IllegalArgumentException e = thrown()
+        FeatureSelectionException e = thrown()
         e.message == message
 
         where:
@@ -293,33 +322,118 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         'a pack requires it through another'       | ['acme-audit']  | ['database-migration']  || 'The feature database-migration cannot be excluded: the feature acme-base requires it (acme-audit requires acme-base)'
         'a required pack'                          | ['acme-audit']  | ['acme-base']           || 'The feature acme-base cannot be excluded: the feature acme-audit requires it'
         'the default of a group a default needs'   | []              | ['h2']                  || 'The feature h2 cannot be excluded: the feature gorm-hibernate5 requires it'
+        'the Grails Data implementation'           | []              | ['gorm-hibernate5']     || 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application. Choose another one (--data), or leave the exclusion out'
+        'the implementation and its driver'        | []              | ['gorm-hibernate5', 'h2'] || 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application. Choose another one (--data), or leave the exclusion out'
+        'several that are no features'             | []              | ['zzz-missing', 'mockito', 'aaa-missing'] || 'The excluded features do not exist: aaa-missing, zzz-missing'
         'a default another default needs'          | []              | ['spock']               || 'The feature spock cannot be excluded: the feature geb-with-testcontainers requires it'
-        'a default a selected feature brings in'   | ['postgres']    | ['gorm-hibernate5']     || 'The feature gorm-hibernate5 cannot be excluded: the feature postgres requires it'
+        'a default a selected feature brings in'   | ['postgres']    | ['gorm-hibernate5']     || 'The feature gorm-hibernate5 cannot be excluded: it is the Grails Data implementation of the application. Choose another one (--data), or leave the exclusion out'
         'a feature a selected feature brings in'   | ['postgres']    | ['testcontainers']      || 'The feature testcontainers cannot be excluded: the feature postgres requires it'
-        'the first by name, whatever the order'    | []              | ['zzz-missing', 'aaa-missing'] || 'The excluded feature does not exist: aaa-missing'
     }
 
     @Unroll
-    void "every feature a #type application has by default and can be selected by name is left out when excluded, or refused for what requires it"() {
-        given:
-        List<String> defaults = context([], [], type).features.features.findAll { it.visible }*.name
+    void "a #type application without one of its defaults is still one that can be built: #name"() {
+        given: 'what an application of the type always has'
+        GeneratorContext whole = context([], [], type)
+        List<String> structure = whole.features.features.findAll { !it.visible }*.name
+        Map<String, String> complete = generate([], [], type)
+        List<String> plugins = grailsPlugins(complete['build.gradle'])
 
-        expect:
-        defaults.size() > 2
+        expect: 'the type has such parts, and the application of the type has what is asked of the others below'
+        structure.containsAll(['base', 'gradle', 'grails-gradle-plugin', 'yaml'])
+        !plugins.isEmpty()
+        complete.keySet().containsAll(['build.gradle', 'gradle.properties', 'grails-app/conf/application.yml', 'grails-app/init/example/grails/Application.groovy'])
 
-        and:
-        defaults.every { String name ->
-            try {
-                Map<String, String> output = generate([], [], type, [name])
-                return !output['grails-forge-cli.yml'].readLines().find { it.startsWith('features:') }.contains(" ${name},") &&
-                        output['grails-forge-cli.yml'].contains("excludedFeatures: [${name}]")
-            } catch (IllegalArgumentException e) {
-                return e.message ==~ "The feature ${name} cannot be excluded: the feature [a-z0-9-]+ requires it"
-            }
+        when:
+        Map<String, String> output = null
+        String refusal = null
+        try {
+            output = generate([], [], type, [name])
+        } catch (FeatureSelectionException e) {
+            refusal = e.message
         }
 
+        then: 'it is refused for a reason, or it is an application'
+        output != null || refusal ==~ "The feature ${name} cannot be excluded: (the feature [a-z0-9-]+ requires it|" +
+                'the application would be without the feature [a-z0-9-]+, which it has to have|' +
+                'it is the Grails Data implementation of the application\\. Choose another one \\(--data\\), or leave the exclusion out)'
+
+        and: 'that has every part an application of the type is built on'
+        output == null || featuresOf(output).containsAll(structure)
+        output == null || !featuresOf(output).contains(name)
+
+        and: 'applies the Grails Gradle plugins of its type, and has its configuration, its class and its build'
+        output == null || grailsPlugins(output['build.gradle']) == plugins
+        output == null || output.keySet().containsAll(['build.gradle', 'gradle.properties', 'grails-app/conf/application.yml', 'grails-app/init/example/grails/Application.groovy'])
+
+        and: 'and is recorded as what it is'
+        output == null || featuresOf(output).contains((output['grails-forge-cli.yml'] =~ /(?m)^gormImpl: (.+)$/)[0][1])
+        output == null || output['grails-forge-cli.yml'].contains("excludedFeatures: [${name}]")
+
         where:
-        type << ApplicationType.values().toList()
+        [type, name] << ApplicationType.values().toList().collectMany { ApplicationType each ->
+            visibleDefaults(each).collect { String visible -> [each, visible] }
+        }
+    }
+
+    void "every type of application has defaults that can be left out, and some that cannot"() {
+        expect:
+        ApplicationType.values().every { ApplicationType type ->
+            List<String> outcomes = visibleDefaults(type).collect { String name ->
+                try {
+                    context([], [], type, [name])
+                    return 'left out'
+                } catch (FeatureSelectionException ignored) {
+                    return 'refused'
+                }
+            }
+            outcomes.contains('left out') && outcomes.contains('refused')
+        }
+    }
+
+    void "a feature that alone brings in a part the application is built on cannot be excluded"() {
+        when: 'the JSON views bring the web layer into a REST API, and with it the Grails Gradle plugin'
+        context([], [], ApplicationType.REST_API, ['views-json'])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == 'The feature views-json cannot be excluded: the application would be without the feature grails-web, which it has to have'
+
+        when: 'with another feature left out too, the two are named'
+        context([], [], ApplicationType.REST_API, ['views-json', 'mockito'])
+
+        then:
+        FeatureSelectionException both = thrown()
+        both.message == 'The features mockito, views-json cannot be excluded together: the application would be without the feature grails-web, which it has to have'
+
+        expect: 'where another feature brings that part in, the views can be left out'
+        !context(['views-markup'], [], ApplicationType.REST_API, ['views-json']).features.contains('views-json')
+        context(['views-markup'], [], ApplicationType.REST_API, ['views-json']).features.contains('grails-web')
+    }
+
+    @Unroll
+    void "the Grails Data implementation #gorm chooses cannot be excluded, since no option says there is none"() {
+        when:
+        beanContext.getBean(ProjectGenerator).createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'),
+                new Options().withGormImpl(gorm), OperatingSystem.LINUX, [], ConsoleOutput.NOOP, [], [gorm.name])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == "The feature ${gorm.name} cannot be excluded: it is the Grails Data implementation of the application. " +
+                'Choose another one (--data), or leave the exclusion out'
+
+        where:
+        gorm << GormImpl.values().toList()
+    }
+
+    void "the implementation an option does not choose can be excluded, and the record names the one the application has"() {
+        when:
+        Map<String, String> output = generate(['gorm-hibernate7'], [], ApplicationType.WEB, ['gorm-hibernate5'])
+
+        then:
+        featuresOf(output).contains('gorm-hibernate7')
+        !featuresOf(output).contains('gorm-hibernate5')
+        output['grails-forge-cli.yml'].contains('gormImpl: gorm-hibernate7\n')
+        output['.grails/project.yml'].contains('  data: hibernate7\n')
     }
 
     @Unroll
@@ -348,7 +462,7 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         ApplicationType.WEB      | ['acme-audit', 'acme-one', 'postgres', 'acme-other']            | []
         ApplicationType.WEB      | ['acme-base', 'acme-other', 'cache-ehcache', 'asciidoctor']     | ['mockito', 'asset-pipeline-grails']
         ApplicationType.WEB      | ['gorm-hibernate7', 'mysql', 'grails-quartz', 'acme-one']       | ['scaffolding', 'gsp', 'postgres']
-        ApplicationType.REST_API | ['acme-other', 'acme-audit', 'gorm-mongodb']                    | ['views-json']
+        ApplicationType.REST_API | ['acme-other', 'acme-audit', 'gorm-mongodb']                    | ['mockito', 'spock']
         ApplicationType.PLUGIN   | ['acme-one', 'acme-base', 'shade']                              | ['mockito']
     }
 
@@ -361,6 +475,130 @@ class FeatureSelectionSpec extends ApplicationContextSpec {
         ['acme-a', 'acme-b', 'acme-c'].permutations().collect { refusal(it, packs) }.toSet() == ['The feature acme-c requires the feature acme-missing-one, which there is not for this type of application'].toSet()
         ['acme-d', 'acme-c'].permutations().collect { refusal(it, packs) }.toSet() == ['The feature acme-c requires the feature acme-missing-one, which there is not for this type of application'].toSet()
         ['acme-a', 'acme-b'].permutations().collect { refusal(it, packs) }.toSet() == ['The feature acme-a cannot be used with the feature acme-b'].toSet()
+    }
+
+    void "what is refused is the same in whatever order features of the framework are named"() {
+        expect:
+        [['postgres', 'mysql', 'h2'], ['zzz-missing', 'postgres', 'aaa-missing', 'mmm-missing'], ['gorm-hibernate5', 'gorm-hibernate7', 'mysql', 'postgres'],
+         ['gorm-mongodb', 'gorm-neo4j', 'no-such']].every { List<String> selection ->
+            selection.permutations().collect { refusal(it, []) }.toSet().size() == 1 && refusal(selection, []) != null
+        }
+        refusal(['zzz-missing', 'postgres', 'aaa-missing', 'mmm-missing'], []) == 'The requested features do not exist: aaa-missing, mmm-missing, zzz-missing'
+        refusal(['postgres', 'no-such'], []) == 'The requested feature does not exist: no-such'
+        refusal((1..14).collect { "missing-${it}".toString() }, []) == 'The requested features do not exist: ' +
+                'missing-1, missing-10, missing-11, missing-12, missing-13, missing-14, missing-2, missing-3, missing-4, missing-5 and 4 more'
+    }
+
+    @Unroll
+    void "a name that is given is shown in one bounded line that is no markup: #what"() {
+        when:
+        context(selected, [], ApplicationType.WEB, excluded)
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == message
+        !e.message.contains('@|')
+        !(e.message =~ /\p{Cntrl}/)
+        e.message.length() < 200
+
+        where:
+        what                           | selected               | excluded                      || message
+        'markup, selected'             | ['@|red x|@']          | []                            || 'The requested feature does not exist: @ |red x|@'
+        'markup of no style, selected' | ['@|bogus x|@']        | []                            || 'The requested feature does not exist: @ |bogus x|@'
+        'markup, excluded'             | []                     | ['@|bogus x|@']               || 'The excluded feature does not exist: @ |bogus x|@'
+        'an escape and a line'         | []                     | ['a\u001b[31mb\nsecond']      || 'The excluded feature does not exist: a?[31mb?second'
+        'a line, selected'             | ['a\r\nb\u2028c\u202ed'] | []                            || 'The requested feature does not exist: a??b?c?d'
+        'a long name'                  | []                     | ['x' * 3000]                  || 'The excluded feature does not exist: ' + ('x' * 80) + '...'
+        'a long name, selected'        | ['y' * 3000]           | []                            || 'The requested feature does not exist: ' + ('y' * 80) + '...'
+        'no name'                      | []                     | ['']                          || 'The excluded feature does not exist: (empty)'
+        'no name, selected'            | ['']                   | []                            || 'The requested feature does not exist: (empty)'
+    }
+
+    void "a long way to a requirement there is not is shown by its ends"() {
+        given:
+        List<Pack> packs = (1..40).collect { int i ->
+            pack("acme-${String.format('%02d', i)}", "requires: [${i < 40 ? "acme-${String.format('%02d', i + 1)}" : 'acme-missing'}]\n")
+        }
+
+        when:
+        context(['acme-01'], packs)
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == 'The feature acme-40 requires the feature acme-missing, which there is not for this type of application ' +
+                '(acme-01 requires acme-02 requires acme-03 requires ... 34 more ... requires acme-38 requires acme-39 requires acme-40)'
+    }
+
+    @Unroll
+    void "an option that is given is a choice the features do not replace: #given #options.gormImpl #options.servletImpl #options.developmentReloading with #selected"() {
+        given:
+        List<Pack> packs = [pack('acme-jetty', 'requires: [spring-boot-starter-jetty]\n'), pack('acme-jrebel', 'requires: [jrebel]\n'),
+                            pack('acme-devtools', 'requires: [spring-boot-devtools]\n')]
+
+        when:
+        beanContext.getBean(ProjectGenerator).createGeneratorContext(type, NameUtils.parse('example.grails.foo'), options.withGiven(given),
+                OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, packs, [])
+
+        then:
+        FeatureSelectionException e = thrown()
+        e.message == message
+        e.option == given[0]
+        (e.without ?: e.with) != null
+
+        when: 'the same without saying that the option was given: it is a default, and gives way'
+        GeneratorContext context = beanContext.getBean(ProjectGenerator).createGeneratorContext(type, NameUtils.parse('example.grails.foo'), options,
+                OperatingSystem.LINUX, selected, ConsoleOutput.NOOP, packs, [])
+        Options recorded = context.applicationOptions
+
+        then: 'and what is recorded is what the application has'
+        [recorded.gormImpl, recorded.servletImpl, recorded.developmentReloading] == has
+        context.features.contains(recorded.gormImpl.name)
+        recorded.servletImpl == ServletImpl.NONE || context.features.contains(recorded.servletImpl.name)
+
+        where:
+        type                | given                  | options                                                     | selected              || has                                                                    | message
+        ApplicationType.WEB | [OptionName.DATA]      | new Options()                                               | ['gorm-hibernate7']   || [GormImpl.HIBERNATE7, ServletImpl.TOMCAT, DevelopmentReloading.DEVTOOLS] | 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'
+        ApplicationType.WEB | [OptionName.SERVLET]   | new Options().withServletImpl(ServletImpl.NONE)             | ['acme-jetty']        || [GormImpl.HIBERNATE5, ServletImpl.JETTY, DevelopmentReloading.DEVTOOLS]  | 'The servlet container none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-starter-jetty'
+        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-jrebel'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.JREBEL]    | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature jrebel'
+        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withDevelopmentReloading(DevelopmentReloading.NONE) | ['acme-devtools'] || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.DEVTOOLS] | 'The development reloading none that was asked for does not agree with the features that are selected or excluded: the application would be made with the feature spring-boot-devtools'
+        ApplicationType.WEB | [OptionName.RELOADING] | new Options().withJavaVersion(JdkVersion.JDK_25)            | ['grails-micronaut']  || [GormImpl.HIBERNATE5, ServletImpl.TOMCAT, DevelopmentReloading.NONE]      | 'The development reloading devtools that was asked for does not agree with the features that are selected or excluded: the application would be made without Spring Boot DevTools'
+    }
+
+    void "an option that chooses nothing for a type of application agrees with every application of the type"() {
+        when: 'a plugin has no servlet container to choose'
+        GeneratorContext context = beanContext.getBean(ProjectGenerator).createGeneratorContext(ApplicationType.PLUGIN, NameUtils.parse('example.grails.foo'),
+                new Options().withGiven([OptionName.SERVLET, OptionName.DATA, OptionName.RELOADING]), OperatingSystem.LINUX, [], ConsoleOutput.NOOP, [], [])
+
+        then:
+        !context.features.contains('spring-boot-starter-tomcat')
+        context.applicationOptions.servletImpl == ServletImpl.TOMCAT
+        context.applicationOptions.given == [OptionName.SERVLET, OptionName.DATA, OptionName.RELOADING] as Set
+    }
+
+    void "options that are given and agree with the features are accepted, and recorded as they are"() {
+        when:
+        Options options = new Options(DevelopmentReloading.JREBEL, GormImpl.MONGODB, ServletImpl.JETTY, JdkVersion.DEFAULT_OPTION)
+                .withGiven(OptionName.values().toList())
+        GeneratorContext context = beanContext.getBean(ProjectGenerator).createGeneratorContext(ApplicationType.WEB, NameUtils.parse('example.grails.foo'),
+                options, OperatingSystem.LINUX, ['gorm-hibernate7', 'postgres'], ConsoleOutput.NOOP, [], [])
+
+        then:
+        context.features.containsAll(['gorm-mongodb', 'gorm-hibernate7', 'postgres', 'spring-boot-starter-jetty', 'jrebel'])
+        [context.applicationOptions.gormImpl, context.applicationOptions.servletImpl, context.applicationOptions.developmentReloading] ==
+                [GormImpl.MONGODB, ServletImpl.JETTY, DevelopmentReloading.JREBEL]
+    }
+
+    private List<String> visibleDefaults(ApplicationType type) {
+        return context([], [], type).features.features.findAll { it.visible }*.name
+    }
+
+    private static List<String> featuresOf(Map<String, String> output) {
+        return ((output['grails-forge-cli.yml'] =~ /(?m)^features: \[(.*)\]$/)[0][1] as String).split(', ').toList()
+    }
+
+    // the lines of a build file that apply a Gradle plugin of Grails
+    private static List<String> grailsPlugins(String buildGradle) {
+        return buildGradle.readLines()*.trim().findAll { it.contains('org.apache.grails.gradle.grails-') }.toSorted()
     }
 
     private String refusal(List<String> selected, List<Pack> packs) {

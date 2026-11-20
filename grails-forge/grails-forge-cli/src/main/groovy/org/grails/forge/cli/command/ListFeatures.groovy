@@ -39,12 +39,26 @@ class ListFeatures {
     private final ApplicationType applicationType
     private final OperatingSystem operatingSystem
     private final ContextFactory contextFactory
+    private final Collection<String> excludedFeatures
 
     ListFeatures(AvailableFeatures availableFeatures,
                         Options options,
                         ApplicationType applicationType,
                         @Nullable OperatingSystem operatingSystem,
                         ContextFactory contextFactory) {
+        this(availableFeatures, options, applicationType, operatingSystem, contextFactory, Collections.<String>emptyList())
+    }
+
+    /**
+     * @param excludedFeatures the names of the features that are left out of the defaults the list marks
+     */
+    ListFeatures(AvailableFeatures availableFeatures,
+                        Options options,
+                        ApplicationType applicationType,
+                        @Nullable OperatingSystem operatingSystem,
+                        ContextFactory contextFactory,
+                        Collection<String> excludedFeatures) {
+        this.excludedFeatures = excludedFeatures
         this.availableFeatures = availableFeatures
         this.options = options
         this.applicationType = applicationType
@@ -57,7 +71,8 @@ class ListFeatures {
                 Collections.emptyList(),
                 applicationType,
                 options,
-                operatingSystem
+                operatingSystem,
+                excludedFeatures
                 )
         GeneratorContext generatorContext = contextFactory.createGeneratorContext(null, featureContext, ConsoleOutput.NOOP)
 

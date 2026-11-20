@@ -590,6 +590,78 @@ class ForgeApiIntegrationSpec extends Specification {
         get('/create/rest-api/forge-rest').status == 201
     }
 
+    void 'generation endpoint #path refuses the option #query that the selected features would replace'() {
+        when:
+        Map response = get("${path}?${query}")
+        Map error = json(response)
+
+        then:
+        response.status == 400
+        response.contentType.startsWith('application/json')
+        error.message == message
+        error._embedded.errors[0].message == error.message
+
+        where:
+        [path, query, message] << [
+                ['/create/web/demo', '/demo.zip', '/preview/web/demo', '/diff/web/demo'],
+                [
+                        ['gorm=hibernate5&features=gorm-hibernate7', 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'],
+                        ['gorm=HIBERNATE&features=gorm-hibernate7', 'The Grails Data implementation hibernate5 that was asked for does not agree with the features that are selected or excluded: the application would be made without the feature gorm-hibernate5'],
+                        ['reloading=DEVTOOLS&javaVersion=JDK_25&features=grails-micronaut', 'The development reloading devtools that was asked for does not agree with the features that are selected or excluded: the application would be made without Spring Boot DevTools'],
+                ]
+        ].combinations().collect { List each -> [each[0], each[1][0], each[1][1]] }
+    }
+
+    void 'generation endpoint #path lets a default give way to a selected feature, and records what the application has'() {
+        when:
+        Map response = get("${path}?${query}")
+
+        then:
+        response.status == status
+
+        where:
+        path                | query                                                   || status
+        '/create/web/demo'  | 'features=gorm-hibernate7'                              || 201
+        '/demo.zip'         | 'features=gorm-hibernate7'                              || 201
+        '/create/web/demo'  | 'gorm=hibernate7&features=gorm-hibernate7'              || 201
+        '/create/web/demo'  | 'javaVersion=JDK_25&features=grails-micronaut'          || 201
+        '/create/web/demo'  | 'reloading=NONE&javaVersion=JDK_25&features=grails-micronaut' || 201
+        '/create/plugin/demo' | 'servlet=TOMCAT&gorm=hibernate5&reloading=DEVTOOLS'   || 201
+        '/preview/web/demo' | 'gorm=mongodb&features=gorm-hibernate7'                 || 200
+    }
+
+    void "the state of a project names the options the application has, where one was not given"() {
+        when:
+        Map contents = json(get('/preview/web/com.example.forge-options?features=gorm-hibernate7')).contents as Map
+
+        then:
+        (contents['.grails/project.yml'] as String).contains('  data: hibernate7\n')
+        (contents['grails-forge-cli.yml'] as String).contains('gormImpl: gorm-hibernate7\n')
+
+        when:
+        Map micronaut = json(get('/preview/web/com.example.forge-options?javaVersion=JDK_25&features=grails-micronaut')).contents as Map
+
+        then:
+        (micronaut['.grails/project.yml'] as String).contains('  reloading: none\n')
+        (micronaut['grails-forge-cli.yml'] as String).contains('reloading: none\n')
+    }
+
+    void 'a feature name that is no feature is shown in one bounded line: #name'() {
+        when:
+        Map response = get("/preview/web/demo?features=${URLEncoder.encode(name, 'UTF-8')}")
+
+        then:
+        response.status == 400
+        json(response).message == message
+
+        where:
+        name                 || message
+        'no-such'            || 'The requested feature does not exist: no-such'
+        'zzz-none,aaa-none'  || 'The requested features do not exist: aaa-none, zzz-none'
+        'x' * 500            || 'The requested feature does not exist: ' + ('x' * 80) + '...'
+        'a\u001b[31mb'        || 'The requested feature does not exist: a?[31mb'
+    }
+
     void "a features parameter may list several features, comma separated"() {
         when:
         Map preview = json(get('/preview/web/forge-features?features=grails-quartz,gorm-mongodb&gorm=mongodb'))

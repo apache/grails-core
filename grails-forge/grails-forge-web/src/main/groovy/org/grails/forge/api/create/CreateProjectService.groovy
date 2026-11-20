@@ -30,6 +30,7 @@ import org.grails.forge.options.BuildTool
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.util.NameUtils
@@ -63,18 +64,43 @@ class CreateProjectService {
             ServletImpl servlet,
             JdkVersion javaVersion,
             String userAgent) {
-        Project project = NameUtils.parse(name)
+        // an option that is given is a choice, which the features that are selected do not replace
+        Set<OptionName> given = EnumSet.noneOf(OptionName)
+        if (reloading != null) {
+            given.add(OptionName.RELOADING)
+        }
+        if (gorm != null) {
+            given.add(OptionName.DATA)
+        }
+        if (servlet != null) {
+            given.add(OptionName.SERVLET)
+        }
         Options options = new Options(
                 reloading != null ? reloading : DevelopmentReloading.DEFAULT_OPTION,
                 gorm != null ? gorm : GormImpl.DEFAULT_OPTION,
                 servlet != null ? servlet : ServletImpl.DEFAULT_OPTION,
                 javaVersion != null ? javaVersion : JdkVersion.DEFAULT_OPTION,
                 UserAgentParser.getOperatingSystem(userAgent)
-        )
+        ).withGiven(given)
+        return createProjectGeneratorContext(type, name, features, options, userAgent)
+    }
+
+    /**
+     * @param options the options of the application, with those the request gave marked as given
+     * ({@link Options#getGiven()}): an application that would not have what one of them asks for is
+     * refused with a {@link org.grails.forge.feature.FeatureSelectionException}
+     */
+    GeneratorContext createProjectGeneratorContext(
+            ApplicationType type,
+            String name,
+            List<String> features,
+            Options options,
+            String userAgent) {
+        Project project = NameUtils.parse(name)
         GeneratorContext generatorContext = projectGenerator.createGeneratorContext(
                 type,
                 project,
-                options,
+                options.withOperatingSystem(getOperatingSystem(userAgent)),
                 getOperatingSystem(userAgent),
                 features ?: [],
                 ConsoleOutput.NOOP

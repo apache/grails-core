@@ -24,6 +24,7 @@ import org.grails.forge.application.OperatingSystem
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.springframework.mock.web.MockHttpServletRequest
@@ -61,6 +62,14 @@ class ForgeRequestSupportSpec extends Specification {
         options.servletImpl == ServletImpl.DEFAULT_OPTION
         options.javaVersion == JdkVersion.JDK_21
         options.operatingSystem == OperatingSystem.LINUX
+    }
+
+    void "the options a request gives are marked as given, and those it leaves out are not"() {
+        expect:
+        ForgeRequestSupport.options(null, null, null, '21', OperatingSystem.LINUX).given.empty
+        ForgeRequestSupport.options(null, 'hibernate7', null, null, OperatingSystem.LINUX).given == [OptionName.DATA] as Set
+        ForgeRequestSupport.options('NONE', null, 'JETTY', null, OperatingSystem.LINUX).given == [OptionName.RELOADING, OptionName.SERVLET] as Set
+        ForgeRequestSupport.options('DEVTOOLS', 'mongodb', 'TOMCAT', '21', OperatingSystem.LINUX).given == OptionName.values() as Set
     }
 
     void 'generation rejects an invalid #label selection'() {

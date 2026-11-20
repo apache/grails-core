@@ -38,6 +38,7 @@ import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureContext
 import org.grails.forge.feature.Features
+import org.grails.forge.feature.reloading.ReloadingFeature
 import org.grails.forge.feature.build.gradle.GradleBuildSrc
 import org.grails.forge.feature.config.ApplicationConfiguration
 import org.grails.forge.feature.config.BootstrapConfiguration
@@ -46,6 +47,7 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Language
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
 import org.grails.forge.options.TestFramework
@@ -92,6 +94,7 @@ class GeneratorContext implements DependencyContext {
     private final List<Runnable> checks = new ArrayList<>()
     private List<String> requestedFeatures = Collections.emptyList()
     private final List<String> excludedFeatures
+    private Set<OptionName> applicableOptions = Collections.emptySet()
 
     GeneratorContext(Project project,
                             ApplicationType type,
@@ -256,6 +259,51 @@ class GeneratorContext implements DependencyContext {
      */
     @Nonnull ServletImpl getServlet() {
         return options.getServletImpl()
+    }
+
+    /**
+     * The options as the application has them. An option that was not given is a default, which gives
+     * way to the features: an application that was asked for with the feature of Hibernate 7 and no
+     * option has Hibernate 7 and not the default. This is what is recorded with the application and
+     * what a template of a feature pack is told; the features themselves are applied with the options
+     * as they were given or defaulted.
+     *
+     * @return the options, each naming what the application has
+     * @since 9.0
+     */
+    @Nonnull Options getApplicationOptions() {
+        Options applied = options
+        Set<String> names = new HashSet<String>(features)
+        if (applicableOptions.contains(OptionName.DATA) && !names.contains(options.getGormImpl().getName())) {
+            GormImpl present = GormImpl.values().find { GormImpl each -> names.contains(each.getName()) }
+            if (present != null) {
+                applied = applied.withGormImpl(present)
+            }
+        }
+        if (applicableOptions.contains(OptionName.SERVLET)) {
+            ServletImpl servlet = ServletImpl.values().find { ServletImpl each -> each != ServletImpl.NONE && names.contains(each.getName()) }
+            if (servlet == null || !names.contains(options.getServletImpl().getName())) {
+                applied = applied.withServletImpl(servlet ?: ServletImpl.NONE)
+            }
+        }
+        if (applicableOptions.contains(OptionName.RELOADING)) {
+            ReloadingFeature reloading = features.reloading()
+            if (reloading == null) {
+                applied = applied.withDevelopmentReloading(DevelopmentReloading.NONE)
+            } else if (!features.getFeatures().any { Feature each -> each instanceof ReloadingFeature && ((ReloadingFeature) each).getReloading() == options.getDevelopmentReloading() }) {
+                applied = applied.withDevelopmentReloading(reloading.getReloading())
+            }
+        }
+        return applied
+    }
+
+    /**
+     * @param applicableOptions the options that choose a feature this type of application can have; the
+     * others are recorded as they were given, since no feature of the application says otherwise
+     * @since 9.0
+     */
+    void setApplicableOptions(@Nonnull Set<OptionName> applicableOptions) {
+        this.applicableOptions = Collections.unmodifiableSet(new HashSet<OptionName>(applicableOptions))
     }
 
     /**

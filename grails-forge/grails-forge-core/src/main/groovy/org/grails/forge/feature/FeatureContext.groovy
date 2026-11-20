@@ -26,6 +26,7 @@ import org.grails.forge.feature.reloading.ReloadingFeature
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
+import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
 import java.util.stream.Stream
 
@@ -53,6 +54,9 @@ class FeatureContext {
     private List<String> requestedFeatures = Collections.emptyList()
     private final Set<String> excludedNames = new TreeSet<>()
     private final Deque<Feature> processing = new ArrayDeque<>()
+    private final Map<String, String> requiredBy = new HashMap<>()
+    private Set<String> structure = Collections.emptySet()
+    private Set<OptionName> applicableOptions = Collections.emptySet()
     private ListIterator<Feature> iterator
 
     FeatureContext(Options options,
@@ -89,6 +93,65 @@ class FeatureContext {
      */
     void setRequestedFeatures(List<String> requestedFeatures) {
         this.requestedFeatures = Collections.unmodifiableList(new ArrayList<String>(requestedFeatures))
+    }
+
+    /**
+     * @return the names of the features the application cannot be without, whatever is excluded
+     * @since 9.0
+     */
+    Set<String> getStructure() {
+        return structure
+    }
+
+    /**
+     * @param structure the names of the features the application cannot be without
+     * @since 9.0
+     */
+    void setStructure(Set<String> structure) {
+        this.structure = Collections.unmodifiableSet(new TreeSet<String>(structure))
+    }
+
+    /**
+     * @return the options whose value names a feature this type of application can have. The servlet
+     * container Tomcat is none for a plugin, which has no feature for it.
+     * @since 9.0
+     */
+    Set<OptionName> getApplicableOptions() {
+        return applicableOptions
+    }
+
+    /**
+     * @param applicableOptions the options that choose a feature this type of application can have
+     * @since 9.0
+     */
+    void setApplicableOptions(Set<OptionName> applicableOptions) {
+        this.applicableOptions = Collections.unmodifiableSet(new HashSet<OptionName>(applicableOptions))
+    }
+
+    /**
+     * Notes that a feature is there because another one requires it.
+     *
+     * @param required the name of the feature that is required
+     * @param by the name of the feature that requires it
+     * @since 9.0
+     */
+    void requiredBy(String required, String by) {
+        requiredBy.putIfAbsent(required, by)
+    }
+
+    /**
+     * @param name the name of a feature
+     * @return the names of the features that led to it through what each requires, from the one that was
+     * selected or is a default to the feature itself; only the feature when nothing is known to require it
+     * @since 9.0
+     */
+    List<String> requirementsTo(String name) {
+        List<String> names = []
+        Set<String> seen = new HashSet<>()
+        for (String step = name; step != null && seen.add(step); step = requiredBy.get(step)) {
+            names.add(0, step)
+        }
+        return names
     }
 
     void processSelectedFeatures() {
@@ -167,6 +230,9 @@ class FeatureContext {
             Feature requiring = processing.peek()
             throw new IllegalArgumentException("The feature ${feature.getName()} cannot be excluded: " +
                     (requiring != null ? "the feature ${requiring.getName()} requires it" : 'a feature of the application requires it'))
+        }
+        if (!processing.isEmpty()) {
+            requiredBy(feature.getName(), processing.peek().getName())
         }
         if (iterator != null) {
             iterator.add(feature)

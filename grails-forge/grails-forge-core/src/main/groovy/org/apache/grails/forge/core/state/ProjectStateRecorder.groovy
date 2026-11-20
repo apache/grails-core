@@ -34,6 +34,7 @@ import org.grails.forge.feature.FeatureContext
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.template.DefaultTemplateRenderer
 import org.grails.forge.template.Template
+import org.grails.forge.options.Options
 import org.grails.forge.util.VersionInfo
 import java.nio.charset.StandardCharsets
 
@@ -123,8 +124,10 @@ final class ProjectStateRecorder {
             index << new BaselineFile(file.path, StateYaml.sha256(file.content), file.binary ? BaselineFile.BINARY : BaselineFile.TEXT, file.executable)
         }
         byte[] indexBytes = new BaselineIndex(index).toBytes()
-        GenerationOptions options = new GenerationOptions(generatorContext.getJdkVersion(), generatorContext.getServlet(),
-                generatorContext.getGorm(), generatorContext.getDevelopmentReloading())
+        // what the application has: an option that was not given gives way to the features
+        Options ofApplication = generatorContext.getApplicationOptions()
+        GenerationOptions options = new GenerationOptions(generatorContext.getJdkVersion(), ofApplication.getServletImpl(),
+                ofApplication.getGormImpl(), ofApplication.getDevelopmentReloading())
         String grailsVersion = VersionInfo.getGrailsVersion()
         byte[] manifestBytes = new ProjectManifest(
                 grailsVersion,

@@ -84,8 +84,8 @@ final class PackModel {
      */
     static Map<String, Object> of(GeneratorContext generatorContext, PackDescriptor descriptor) {
         Map<String, Object> model = model(generatorContext.getProject().getProperties(), generatorContext.getFeatures(),
-                generatorContext.getApplicationType(), generatorContext.getJdkVersion(), generatorContext.getGorm(),
-                generatorContext.getServlet(), generatorContext.getDevelopmentReloading(), descriptor)
+                generatorContext.getApplicationType(), generatorContext.getJdkVersion(), generatorContext.getApplicationOptions().getGormImpl(),
+                generatorContext.getApplicationOptions().getServletImpl(), generatorContext.getApplicationOptions().getDevelopmentReloading(), descriptor)
         if (descriptor.versionsOfForge) {
             Map<String, Object> versions = new LinkedHashMap<>()
             descriptor.versionsOfForge.each { String artifact, String otherwise ->
