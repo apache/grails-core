@@ -77,7 +77,13 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     @Override
     Integer call() throws Exception {
         // the project the current directory is in, so that the command does the same in every directory of it
-        Path directory = ConsoleProject.directoryFor(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
+        Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
+        ConsoleProject.Search search = ConsoleProject.search(current)
+        if (search.untrusted != null) {
+            err(search.none('No feature was added'))
+            return 1
+        }
+        Path directory = search.project == null ? current : search.project.directory
         boolean preview = dryRun || diff
         try {
             if (!ProjectState.exists(directory)) {

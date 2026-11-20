@@ -19,14 +19,19 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.Callable
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Predicate
 import java.util.zip.ZipFile
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.command.BaseCommand
+import picocli.CommandLine
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
@@ -95,6 +100,7 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setProperty('os.name', originalOs)
+        ConsoleProject.setOwnedByUser(null)
     }
 
     @Unroll
@@ -299,6 +305,56 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         ['dependency-report', 'a', 'b']   | "Unmatched argument at index 2: 'b'"
         ['stats', 'now']                  | "Unmatched argument at index 1: 'now'"
         ['bug-report', '--overwrite']     | "Unknown option: '--overwrite'"
+        ['test-app', '-D', 'BookSpec']    | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D BookSpec names none'
+        ['test-app', '-D=x']              | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D=x names none'
+        ['test-app', '-D', '=x']          | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D =x names none'
+        ['assemble', '-D']                | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D names none'
+        ['war', '-Dgrails.env=a', '-D', '--clean'] | '-D is followed by the name of a system property and its value, as in -Dgrails.env=test: -D --clean names none'
+    }
+
+    void "the collection or the map of an option is the command's own, whatever type the field has, and no bean of the application"() {
+        given: 'a command whose options have the types the application has beans of'
+        CommandLine commandLine = ForgeCli.createCommandLine(beanContext, true, false)
+        Throwaway command = new Throwaway()
+        commandLine.addSubcommand(command)
+
+        when:
+        int exit = ForgeCli.execute(commandLine, 'throwaway', '-m', 'console.commands.spec=map', '-c', 'console.commands.spec', '-q', 'console.commands.spec',
+                '-p', 'console.commands.spec=properties')
+
+        then:
+        exit == 0
+        command.map == ['console.commands.spec': 'map']
+        command.collection as List == ['console.commands.spec']
+        command.queue as List == ['console.commands.spec']
+        command.properties == ['console.commands.spec': 'properties'] as Properties
+
+        and: 'the application was asked for none of them'
+        [Map, Collection, Queue, Properties].every { Class type ->
+            !beanContext.getBeansOfType(type, true, false).values().any { Object bean ->
+                bean.is(command.map) || bean.is(command.collection) || bean.is(command.queue) || bean.is(command.properties)
+            }
+        }
+        !beanContext.getBeansOfType(Map, true, false).values().any { Map map -> map.containsKey('console.commands.spec') }
+        !beanContext.getBeansOfType(Collection, true, false).values().any { Collection collection ->
+            try {
+                return collection.contains('console.commands.spec')
+            } catch (ClassCastException | NullPointerException ignored) {
+                return false
+            }
+        }
+        System.getProperty('console.commands.spec') == null
+
+        when: 'the command line is read again, as the next line of the interactive shell is'
+        Throwaway next = new Throwaway()
+        CommandLine again = ForgeCli.createCommandLine(beanContext, true, false)
+        again.addSubcommand(next)
+        exit = ForgeCli.execute(again, 'throwaway', '-m', 'other=1')
+
+        then: 'nothing of the line before is left'
+        exit == 0
+        next.map == [other: '1']
+        next.collection == null
     }
 
     @Unroll
@@ -561,9 +617,10 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         ]
         new ZipFile(archive()).withCloseable { ZipFile zip -> zip.getInputStream(zip.getEntry('src/main/groovy/example/Util.groovy')).text } == 'package example\nclass Util { }\n'
         out.toString().contains("| Created bug report ZIP: build/${archive().name}")
-        out.toString().contains('| It holds 4 file(s): what is under grails-app and src, and build.gradle, as they are. ' +
-                'The configuration of the application is among them: look through the ZIP for passwords and keys before you attach it to an issue')
+        out.toString().contains('| It holds 4 file(s): what is under grails-app and src, and build.gradle, as they are')
         out.toString().contains('| Left out: 0 link(s), which are not followed, and 4 file(s) that are keys by their name')
+        out.toString().readLines().contains('| Warning The bug report holds the configuration of the application, ' +
+                'which is where passwords usually are: grails-app/conf/application.yml. Look through it before the ZIP is given to anyone')
         errors() == []
 
         and: 'nothing else is left in the build directory, and Gradle was not run'
@@ -682,6 +739,203 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
         errors()[0].endsWith('has no files under grails-app or src and no build.gradle. No bug report was created')
     }
 
+    @IgnoreIf({ os.windows })
+    void "stats does not count a source directory that is reached through a link"() {
+        given: 'a project whose src is elsewhere'
+        new File(dir, 'grails-app').mkdirs()
+        source('grails-app/domain/example/Book.groovy', 'package example\nclass Book { }\n')
+        File outside = Files.createTempDirectory('grailsforgeoutside').toFile()
+        new File(outside, 'main/groovy').mkdirs()
+        new File(outside, 'main/groovy/Secret.groovy').text = 'class Secret { }\n'
+        new File(outside, 'services').mkdirs()
+        new File(outside, 'services/OtherService.groovy').text = 'class OtherService { }\n'
+        Files.createSymbolicLink(new File(dir, 'src').toPath(), outside.toPath())
+        Files.createSymbolicLink(new File(dir, 'grails-app/services').toPath(), new File(outside, 'services').toPath())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'stats')
+
+        then:
+        exit == 0
+        out.toString().contains('| Domain Classes       |     1 |     2 | ')
+        out.toString().contains('| Totals               |     1 |     2 | ')
+        !out.toString().contains('Helpers')
+        !out.toString().contains('Services')
+        out.toString().readLines().findAll { String line -> line.contains('Warning') } ==
+                ['| Warning Not counted, because it is reached through a link and links are not followed: grails-app/services, src/main/groovy, src/test/groovy, src/integration-test/groovy, src/main/scripts']
+
+        cleanup:
+        outside?.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "the commands that look at a project do not look at one above that is not the user's own, and write nothing there"() {
+        given:
+        source('grails-app/domain/example/Book.groovy', 'package example\nclass Book { }\n')
+        source('build.gradle', 'version = 1\n')
+        File below = new File(dir, 'work/any')
+        below.mkdirs()
+        System.setProperty('user.dir', below.absolutePath)
+        ConsoleProject.setOwnedByUser({ Path path -> path != dir.canonicalFile.toPath() } as Predicate<Path>)
+
+        when:
+        int stats = ForgeCli.execute(beanContext, 'stats')
+        int report = ForgeCli.execute(beanContext, 'bug-report')
+        int compile = ForgeCli.execute(beanContext, 'compile')
+
+        then:
+        stats == 1
+        report == 1
+        compile == 1
+        errors().size() == 3
+        errors().every { String line -> line.startsWith("| Error The Grails project in ${dir.canonicalPath}, above ${below.canonicalPath}, is not used: ${dir.canonicalPath} is owned by ") }
+        errors()[0].endsWith("run the command in ${dir.canonicalPath} to use this one. Nothing was counted")
+        errors()[1].endsWith("run the command in ${dir.canonicalPath} to use this one. No bug report was created")
+        errors()[2].endsWith("run the command in ${dir.canonicalPath} to use this one. Gradle was not run")
+        !out.toString().contains('Domain Classes')
+        !new File(dir, 'build').exists()
+
+        when: 'the project is the user\'s own'
+        out.reset()
+        ConsoleProject.setOwnedByUser(null)
+        stats = ForgeCli.execute(beanContext, 'stats')
+        report = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        stats == 0
+        report == 0
+        out.toString().contains('| Domain Classes       |     1 |     2 | ')
+        entries() == ['build.gradle', 'grails-app/domain/example/Book.groovy']
+    }
+
+    @IgnoreIf({ os.windows })
+    void "bug-report leaves out what is a key or a list of secrets by its name, what a build left behind, and a file with another name elsewhere"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('grails-app/controllers/example/CredentialsController.groovy', 'package example\nclass CredentialsController { }\n')
+        source('grails-app/services/example/SecretsService.groovy', 'package example\nclass SecretsService { }\n')
+        source('src/main/resources/certs/server.crt', 'a certificate\n')
+        ['id_rsa', 'id_rsa.pub', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'ID_ED25519.old', '.netrc', '.npmrc', '.pypirc', 'k.p8', 'k.ppk', 'k.kdbx', 'k.der', 'k.asc', 'k.gpg',
+         'truststore', 'truststore.jks', 'cacerts', 'credentials', 'credentials.json', 'secrets.properties', 'Secrets.yml', 'key.pem.bak', 'server.key.old', 'k.P12.BAK',
+         'k.jks.bak.old', '.env.bak'].each { String name ->
+            source("src/main/resources/certs/${name}", 'secret\n')
+        }
+        source('src/build/out.class', 'compiled\n')
+        source('src/main/groovy/example/build/Generated.groovy', 'generated\n')
+        source('src/.gradle/cache.bin', 'cache\n')
+        source('grails-app/assets/.gradle/cache.bin', 'cache\n')
+        File outside = Files.createTempDirectory(dir.parentFile.toPath(), 'grailsforgeoutside').toFile()
+        new File(outside, 'elsewhere.txt').text = 'a file of another directory\n'
+        Files.createLink(new File(dir, 'src/main/resources/linked.txt').toPath(), new File(outside, 'elsewhere.txt').toPath())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 0
+        entries() == [
+                'build.gradle',
+                'grails-app/controllers/example/CredentialsController.groovy',
+                'grails-app/services/example/SecretsService.groovy',
+                'src/main/resources/certs/server.crt'
+        ]
+        out.toString().contains('| Left out: 0 link(s), which are not followed, and 27 file(s) that are keys by their name: keys, stores of keys and files of credentials')
+        out.toString().contains('| Left out: 4 directory(ies) named build or .gradle, and 1 file(s) that have another name as well, as a hard link, and so may be a file from elsewhere')
+        errors() == []
+
+        cleanup:
+        outside?.deleteDir()
+    }
+
+    @IgnoreIf({ os.windows })
+    void "bug-report leaves out a file whose name has a control character, and says so"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('src/main/groovy/a\nb.groovy', 'class A { }\n')
+        source('src/main/groovy/e\u001b[31m@|red z|@.groovy', 'class E { }\n')
+        source('src/main/groovy/dir\u0007/Inner.groovy', 'class Inner { }\n')
+        source('src/main/groovy/Plain.groovy', 'class Plain { }\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+
+        then:
+        exit == 0
+        entries() == ['build.gradle', 'src/main/groovy/Plain.groovy']
+        out.toString().readLines().findAll { String line -> line.contains('Warning') } ==
+                ['| Warning Left out: 3 file(s) with a control character in the name, which a ZIP file is not given, the first of them src/main/groovy/a?b.groovy']
+        !out.toString().contains('\u001b[31m')
+    }
+
+    void "bug-report names the configuration files it holds, as where passwords usually are, before it says what it created"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        source('build.gradle', 'version = 1\n')
+        source('grails-app/conf/application.yml', 'dataSource:\n  password: hunter2\n')
+        source('grails-app/conf/application-prod.yml', 'dataSource:\n  password: s3cret\n')
+        source('grails-app/conf/application.groovy', 'dataSource.password = "x"\n')
+        source('grails-app/conf/application-test.properties', 'dataSource.password=x\n')
+        source('grails-app/conf/logback-spring.xml', '<configuration/>\n')
+        source('grails-app/conf/spring/resources.groovy', 'beans = { }\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'bug-report')
+        List<String> said = out.toString().readLines()
+
+        then:
+        exit == 0
+        said[0] == '| Warning The bug report holds the configuration of the application, which is where passwords usually are: ' +
+                'grails-app/conf/application-prod.yml, grails-app/conf/application-test.properties, grails-app/conf/application.groovy, grails-app/conf/application.yml. ' +
+                'Look through it before the ZIP is given to anyone'
+        said[1] == "| Created bug report ZIP: build/${archive().name}"
+        said[2] == '| It holds 7 file(s): what is under grails-app and src, and build.gradle, as they are'
+        said.size() == 3
+
+        when: 'a project without such a file'
+        out.reset()
+        new File(dir, 'grails-app/conf').deleteDir()
+        exit = ForgeCli.execute(beanContext, 'bug-report', '--force')
+
+        then:
+        exit == 0
+        !out.toString().contains('Warning')
+        out.toString().readLines()[0] == "| Created bug report ZIP: build/${archive().name}"
+    }
+
+    void "the list of commands gives each a sentence, and the usage of every command is as wide as that of the others"() {
+        given:
+        generateProject(ApplicationType.WEB)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, '--help')
+        List<String> listed = out.toString().readLines()
+
+        then:
+        exit == 0
+        listed.any { String line -> line ==~ /  test-app +Runs the tests of the Grails project\./ }
+        listed.any { String line -> line ==~ /  assemble, war, package +Creates the JAR or WAR archive of the Grails project for deployment\./ }
+        listed.any { String line -> line ==~ /  bug-report +Creates a ZIP file of the sources of the Grails project\./ }
+
+        and: 'which is all the list says of them: the next line is the next command'
+        ['test-app', 'assemble, war, package', 'bug-report'].every { String name ->
+            int at = listed.findIndexOf { String line -> line.startsWith("  ${name} ") }
+            at + 1 == listed.size() || listed[at + 1] ==~ /  \S.*/
+        }
+
+        when:
+        Map<String, Integer> widths = ['create-app', 'test-app', 'bug-report', 'create-controller', 'feature'].collectEntries { String command ->
+            out.reset()
+            assert ForgeCli.execute(beanContext, command, '--help') == 0
+            [(command): out.toString().readLines()*.length().max()]
+        }
+
+        then: 'the commands that are added for a project and those that are there from the start alike'
+        widths.values().every { int width -> width <= 100 }
+        ['create-app', 'test-app', 'bug-report'].every { String command -> widths[command] > 80 }
+    }
+
     private File archive() {
         return new File(dir, "build/${dir.name}-bug-report-${LocalDate.now().format(DateTimeFormatter.ofPattern('ddMMyyyy'))}.zip")
     }
@@ -705,6 +959,27 @@ class ConsoleCommandsSpec extends CommandSpec implements CommandFixture {
 
     private List<String> errors() {
         return out.toString().readLines().findAll { String line -> line.contains('| Error') }
+    }
+
+    @CommandLine.Command(name = 'throwaway', description = 'A command with options of the types the application has beans of')
+    static class Throwaway extends BaseCommand implements Callable<Integer> {
+
+        @CommandLine.Option(names = ['-m'])
+        Map<String, String> map
+
+        @CommandLine.Option(names = ['-c'])
+        Collection<String> collection
+
+        @CommandLine.Option(names = ['-q'])
+        Queue<String> queue
+
+        @CommandLine.Option(names = ['-p'])
+        Properties properties
+
+        @Override
+        Integer call() {
+            return 0
+        }
     }
 
     // the wrapper of a generated application, and around it a build that needs nothing of Grails

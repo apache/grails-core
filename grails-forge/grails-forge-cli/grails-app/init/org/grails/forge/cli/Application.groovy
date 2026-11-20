@@ -30,6 +30,7 @@ import grails.boot.config.GrailsAutoConfiguration
 import grails.util.Environment
 import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.apache.grails.core.plugins.PluginDiscovery
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.grails.forge.ForgeGrailsPlugin
 import org.grails.plugins.CoreGrailsPlugin
 
@@ -48,6 +49,8 @@ import org.grails.plugins.CoreGrailsPlugin
 class Application extends GrailsAutoConfiguration {
 
     static void main(String[] args) {
+        // Gradle is given the output of the process for as long as it is the output of the CLI
+        GradleRunner.outputOfProcess(System.out, System.err)
         System.exit(ForgeCli.run(args))
     }
 

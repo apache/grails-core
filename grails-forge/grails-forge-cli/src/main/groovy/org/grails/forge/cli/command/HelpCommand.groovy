@@ -54,6 +54,12 @@ class HelpCommand extends BaseCommand implements Callable<Integer> {
      */
     List<String> diagnostics = []
 
+    /**
+     * Whether the record of the project could be used when the command line was put together, so
+     * that the commands of the project are all there; set by what puts the command line together.
+     */
+    boolean complete = true
+
     @Override
     Integer call() throws Exception {
         CommandCatalog catalog = new CommandCatalog(spec.root().commandLine())
@@ -61,10 +67,15 @@ class HelpCommand extends BaseCommand implements Callable<Integer> {
             if (!command.isEmpty()) {
                 throw new CommandLine.ParameterException(spec.commandLine(), '--json describes every command there is here: name no command with it')
             }
-            ConsoleProject project = ConsoleProject.find(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
-            Path directory = project == null ? null : project.getDirectory()
+            ConsoleProject.Search search = ConsoleProject.search(FileSystemOutputHandler.getDefaultBaseDirectory().toPath())
+            Path directory = search.project == null ? null : search.project.getDirectory()
+            List<String> said = new ArrayList<String>(diagnostics)
+            if (search.untrusted != null) {
+                // the commands of a project above that is not used are not there, and a tool is told why
+                said.add(search.untrusted)
+            }
             // written as it is: a description is not markup of the command line
-            spec.commandLine().getOut().println(JsonOutput.toJson(catalog.describe(directory, diagnostics)))
+            spec.commandLine().getOut().println(JsonOutput.toJson(catalog.describe(directory, said, complete && search.untrusted == null)))
             return 0
         }
         CommandLine shown = catalog.getRoot()

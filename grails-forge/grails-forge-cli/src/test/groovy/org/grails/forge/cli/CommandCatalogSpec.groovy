@@ -18,9 +18,12 @@
  */
 package org.grails.forge.cli
 
+import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.function.Predicate
 import java.util.function.Supplier
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.cli.console.ConsoleProject
 import org.apache.grails.forge.cli.console.ProjectCommand
 import org.grails.forge.cli.command.BaseCommand
 import org.jline.reader.Candidate
@@ -53,6 +56,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
     void cleanup() {
         System.setOut(originalOut)
         System.setErr(originalErr)
+        ConsoleProject.setOwnedByUser(null)
     }
 
     @Unroll
@@ -493,6 +497,126 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         help == 0
         out.toString().readLines().findAll { it.contains('Warning') }.size() == 1
+    }
+
+    void "a warning about a record that is used is a diagnostic of a document that is complete"() {
+        given: 'a generated application whose earlier record was changed by hand'
+        assert ForgeCli.execute(beanContext, 'create-app', 'example.shop') == 0
+        File project = new File(dir, 'shop')
+        File record = new File(project, 'grails-forge-cli.yml')
+        record.setText(record.getText('UTF-8').replaceFirst(/(?m)^defaultPackage:.*$/, 'defaultPackage: other.pkg'), 'UTF-8')
+        System.setProperty('user.dir', project.absolutePath)
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        described.complete == true
+        described.diagnostics.size() == 1
+        described.diagnostics[0].startsWith('grails-forge-cli.yml and .grails do not say the same about the default package of the project')
+        ((List<Map>) described.commands).any { it.name == 'create-controller' }
+    }
+
+    void "after the two dashes --json is no option: the commands are not described, and what the record says is said"() {
+        given:
+        new File(dir, 'grails-forge-cli.yml').setText('applicationType: nonsense\ndefaultPackage: com.example\nfeatures: []\n', 'UTF-8')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--', '--json')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == 'There is no command --json'
+        out.toString().readLines().findAll { it.contains('Warning') }.size() == 1
+        !out.toString().contains('"format"')
+    }
+
+    @Unroll
+    void "#args asks for #what, which is the answer whatever else was typed"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, *args)
+
+        then:
+        !(out.toString() + err.toString()).contains('There is no command')
+        (out.toString() + err.toString()).contains(shown)
+        !new File(dir, 'bogus').exists()
+        exit == expected
+
+        where:
+        args                   | what          | shown                                         | expected
+        ['--help', 'bogus']    | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
+        ['-h', 'bogus', 'x']   | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
+        ['-xvh', 'bogus']      | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
+        ['-V', 'bogus']        | 'the version' | 'Grails Version: '                            | 0
+        ['--version', 'bogus'] | 'the version' | 'Grails Version: '                            | 0
+    }
+
+    @Unroll
+    void "the commands that are like what was typed are not offered for #what"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, *args)
+
+        then:
+        exit == 2
+        err.toString().readLines()[0].startsWith(said)
+        err.toString().readLines()[0] == said || err.toString().readLines()[0].endsWith('ppp...')
+        !err.toString().readLines()[0].contains('Did you mean')
+
+        where:
+        what                                  | args                      | said
+        'nothing'                             | ['']                      | 'There is no command (empty)'
+        'nothing, for help'                   | ['help', '']              | 'There is no command (empty)'
+        'what is not shown as it was typed'   | ['create\u001b-app']      | 'There is no command create?-app'
+        'what is shown shortened'             | ['create-app' + 'p' * 80] | 'There is no command create-appppp'
+    }
+
+    void "the commands of a project above that is not the user's own are not there, and a tool is told why"() {
+        given: 'a generated application, as one that was put above where others work'
+        assert ForgeCli.execute(beanContext, 'create-app', 'example.shop') == 0
+        File project = new File(dir, 'shop')
+        File below = new File(project, 'work/any')
+        below.mkdirs()
+        System.setProperty('user.dir', below.absolutePath)
+        ConsoleProject.setOwnedByUser({ Path path -> path != project.canonicalFile.toPath() } as Predicate<Path>)
+        out.reset()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'help', '--json')
+        Map described = (Map) new JsonSlurper().parseText(out.toString())
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        described.projectDirectory == null
+        described.complete == false
+        described.diagnostics.size() == 1
+        described.diagnostics[0].startsWith("The Grails project in ${project.canonicalPath}, above ${below.canonicalPath}, is not used: ${project.canonicalPath} is owned by ")
+        !((List<Map>) described.commands).any { it.name == 'create-controller' }
+
+        when: 'a command that would write into it'
+        int controller = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+        int feature = ForgeCli.execute(beanContext, 'feature', 'add', 'mongodb')
+
+        then:
+        controller == 2
+        err.toString().readLines()[0].startsWith('There is no command create-controller')
+        feature == 1
+        out.toString().readLines().findAll { it.contains('| Error') }.size() == 1 || err.toString().readLines().findAll { it.contains('| Error') }.size() == 1
+        (out.toString() + err.toString()).contains("to use this one. No feature was added")
+        !new File(project, 'grails-app/controllers/example/BookController.groovy').exists()
+        !new File(below, 'grails-app').exists()
+
+        when: 'the project is the user\'s own'
+        ConsoleProject.setOwnedByUser(null)
+        controller = ForgeCli.execute(beanContext, 'create-controller', 'Book')
+
+        then:
+        controller == 0
+        new File(project, 'grails-app/controllers/example/BookController.groovy').isFile()
     }
 
     void "what the record of the directory says is not said for a short form that is no command of a project"() {

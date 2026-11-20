@@ -35,9 +35,10 @@ abstract class InProjectCommand extends BaseCommand implements Callable<Integer>
     @Override
     Integer call() throws Exception {
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
-        ConsoleProject project = ConsoleProject.find(current)
+        ConsoleProject.Search search = ConsoleProject.search(current)
+        ConsoleProject project = search.project
         if (project == null) {
-            err(GradleRunner.noProject(current, notDone()))
+            err(search.none(notDone()))
             return 1
         }
         return run(project)

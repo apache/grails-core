@@ -18,14 +18,16 @@
  */
 package org.grails.forge.cli
 
+import java.lang.reflect.Modifier
 import groovy.transform.CompileStatic
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
 import picocli.CommandLine
 
 /**
- * Builds picocli commands from the beans of the Forge application, falling back to picocli's own
- * factory for everything that is not a bean (converters, completion candidates).
+ * Builds picocli commands from the beans of the Forge application: the commands, what tells the
+ * version, and the lists of features an option can have. Everything else picocli asks for, the
+ * collections and maps of options and the converters among it, comes from picocli's own factory.
  */
 @CompileStatic
 class GrailsPicocliFactory implements CommandLine.IFactory {
@@ -48,12 +50,32 @@ class GrailsPicocliFactory implements CommandLine.IFactory {
 
     @Override
     <K> K create(Class<K> cls) throws Exception {
+        if (!isOfTheApplication(cls)) {
+            return defaultFactory.create(cls)
+        }
         try {
             return beanContext.getBean(cls)
         }
         catch (NoSuchBeanDefinitionException ignored) {
             return defaultFactory.create(cls)
         }
+    }
+
+    /**
+     * Whether the application is asked for an instance of a type. picocli asks its factory for more
+     * than commands: for the collection or the map of an option too, by the type the field has. The
+     * application has beans of such types, its configuration as a {@code Map} for one, and what is
+     * given on a command line must not end up in them. So the application is asked for what it can
+     * only mean to provide: a class of its own, never an interface, an abstract class or a type of
+     * the JDK, that is a command, tells the version, or lists the values an option can have.
+     */
+    private static boolean isOfTheApplication(Class<?> cls) {
+        if (cls.isInterface() || cls.isArray() || cls.isPrimitive() || Modifier.isAbstract(cls.getModifiers()) || cls.getClassLoader() == null) {
+            return false
+        }
+        return cls.isAnnotationPresent(CommandLine.Command) ||
+                CommandLine.IVersionProvider.isAssignableFrom(cls) ||
+                (Iterable.isAssignableFrom(cls) && !Map.isAssignableFrom(cls))
     }
 
 }

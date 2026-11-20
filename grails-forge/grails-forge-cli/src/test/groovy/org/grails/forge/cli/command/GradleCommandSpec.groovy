@@ -18,11 +18,20 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.Consumer
+import java.util.function.Predicate
+import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.GradleRunner
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.cli.ForgeCli
+import org.grails.forge.cli.InteractiveShell
+import org.jline.terminal.Terminal
+import org.jline.terminal.TerminalBuilder
 import spock.lang.IgnoreIf
 import spock.lang.Unroll
 import spock.util.concurrent.PollingConditions
@@ -74,6 +83,7 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(originalOut)
         System.setErr(originalErr)
         System.setProperty('os.name', originalOs)
+        ConsoleProject.setOwnedByUser(null)
     }
 
     @IgnoreIf({ os.windows })
@@ -334,6 +344,319 @@ class GradleCommandSpec extends CommandSpec implements CommandFixture {
         '-Pgiven="quoted"'             | '-Pgiven="quoted"'
         '-Pgiven=a&b'                  | '-Pgiven=a&b'
         '-Pgiven=@|red x|@\u001b[35m'  | '-Pgiven=@ |red x|@?[35m'
+        '-Pgiven=two words\\'          | '-Pgiven=two words\\'
+        ''                             | '(empty)'
+    }
+
+    @Unroll
+    void "on Windows an argument that ends with a backslash and has no space is one a batch file gets as it is: #argument"() {
+        expect:
+        !GradleRunner.notForABatchFile(argument)
+
+        where:
+        argument << ['-Pgiven=C:\\dir\\', 'build', '-Pgiven=two words', '--project-dir=..\\other']
+    }
+
+    @Unroll
+    void "on Windows a project whose path a batch file would not be started with as it is, is not built: #name"() {
+        given:
+        File project = new File(dir, name)
+        new File(project, 'grails-app').mkdirs()
+        new File(project, 'gradlew.bat').text = '@echo the wrapper ran\r\n'
+        System.setProperty('user.dir', project.canonicalPath)
+        System.setProperty('os.name', 'Windows 11')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains(' Gradle cannot be run from here for ')
+        errors()[0].contains("${File.separator}${name}${File.separator}gradlew.bat: the Gradle wrapper of Windows is a batch file, and a path with one of ")
+        errors()[0].contains('Gradle was not run')
+        !out.toString().contains('could not be started')
+
+        where:
+        name << ['a&b', '100%', 'x^y']
+    }
+
+    @Unroll
+    @IgnoreIf({ os.windows })
+    void "a project above the current directory that is not the user's own is not used, and its wrapper is not run: #what"() {
+        given: 'a project with a wrapper, as anyone can put one into a directory that others work below'
+        new File(dir, 'grails-app').mkdirs()
+        wrapper(dir)
+        File below = new File(dir, 'work/any')
+        below.mkdirs()
+        System.setProperty('user.dir', below.canonicalPath)
+        File another = notOwned == '.' ? dir : new File(dir, notOwned)
+        ConsoleProject.setOwnedByUser({ Path path -> path != another.canonicalFile.toPath() } as Predicate<Path>)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].startsWith(said.replace('DIR', dir.canonicalPath).replace('BELOW', below.canonicalPath))
+        errors()[0].contains("${another.canonicalPath} is owned by ")
+        errors()[0].contains(', not by the user who runs the command')
+        errors()[0].endsWith(ends.replace('DIR', dir.canonicalPath))
+        !out.toString().contains('the wrapper ran')
+        !out.toString().contains('Usage:')
+
+        when: 'the command is run in the project, which is then the one the user chose'
+        out.reset()
+        System.setProperty('user.dir', dir.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with build')
+
+        where:
+        what                                  | notOwned     | said                                                              | ends
+        'the directory is another user\'s'    | '.'          | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one. Gradle was not run'
+        'the grails-app is another user\'s'   | 'grails-app' | '| Error The Grails project in DIR, above BELOW, is not used: '  | 'run the command in DIR to use this one. Gradle was not run'
+        'the wrapper is another user\'s'      | 'gradlew'    | '| Error The Gradle wrapper DIR/gradlew is not run for the project in DIR: ' | 'Gradle was not run, since the command runs the Gradle of the project and no other'
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a project above that is the user's own is used, and a record another user put beside it makes it one that is not"() {
+        given:
+        new File(dir, 'grails-app/controllers').mkdirs()
+        wrapper(dir)
+        System.setProperty('user.dir', new File(dir, 'grails-app/controllers').canonicalPath)
+
+        when: 'what the system says of the files this specification created'
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with build')
+
+        when:
+        out.reset()
+        File record = new File(dir, 'grails-forge-cli.yml')
+        record.text = 'applicationType: web\ndefaultPackage: planted\nfeatures: []\n'
+        ConsoleProject.setOwnedByUser({ Path path -> path != record.canonicalFile.toPath() } as Predicate<Path>)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors().size() == 1
+        errors()[0].contains("is not used: ${record.canonicalPath} is owned by ")
+        !out.toString().contains('the wrapper ran')
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "the user who runs the command owns what the command creates, and not what the system has"() {
+        expect:
+        ConsoleProject.isOwnedByUser(dir.toPath())
+        ConsoleProject.isOwnedByUser(Files.createFile(dir.toPath().resolve('created')))
+        !ConsoleProject.isOwnedByUser(Path.of('/'))
+        !ConsoleProject.isOwnedByUser(Path.of('/bin/sh'))
+        !ConsoleProject.isOwnedByUser(dir.toPath().resolve('missing'))
+    }
+
+    @Unroll
+    @IgnoreIf({ os.windows })
+    void "a wrapper above the project is run only from the root of a build that is the user's own: #what"() {
+        given: 'a project in the current directory, and a wrapper in the directory above it'
+        File project = new File(dir, 'victim')
+        new File(project, 'grails-app').mkdirs()
+        wrapper(dir)
+        if (settings != null) {
+            new File(dir, settings).text = "include 'victim'\n"
+        }
+        System.setProperty('user.dir', project.canonicalPath)
+        ConsoleProject.setOwnedByUser({ Path path -> !(path.fileName.toString() in notOwned) && (dirOwned || path != dir.canonicalFile.toPath()) } as Predicate<Path>)
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == (said == null ? 0 : 1)
+        out.toString().contains('the wrapper ran') == (said == null)
+        said == null || (errors().size() == 1 && errors()[0].startsWith("| Error The Gradle wrapper ${dir.canonicalPath}/gradlew is not run for the project in ${project.canonicalPath}: ${said.replace('DIR', dir.canonicalPath)}"))
+        said == null || errors()[0].endsWith('. Gradle was not run, since the command runs the Gradle of the project and no other')
+
+        where:
+        what                               | settings              | dirOwned | notOwned    | said
+        'no settings'                      | null                  | true     | []          | 'DIR is above the project and has no settings.gradle or settings.gradle.kts, so it is not the root of a build the project is part of'
+        'settings, another user\'s root'   | 'settings.gradle'     | false    | []          | 'DIR is owned by '
+        'settings, another user\'s script' | 'settings.gradle.kts' | true     | ['gradlew'] | 'DIR/gradlew is owned by '
+        'settings, all the user\'s own'    | 'settings.gradle.kts' | true     | []          | null
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a wrapper that is a link is run when it leads to a file beside it, and not when it leads out of the project"() {
+        given:
+        new File(dir, 'grails-app').mkdirs()
+        File outside = Files.createTempDirectory('grailsforgeoutside').toFile()
+        wrapper(outside)
+        Files.createSymbolicLink(new File(dir, 'gradlew').toPath(), new File(outside, 'gradlew').toPath())
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors() == ["| Error The Gradle wrapper ${dir.canonicalPath}/gradlew is not run for the project in ${dir.canonicalPath}: it is a link to a file outside ${dir.canonicalPath}. " +
+                'Gradle was not run, since the command runs the Gradle of the project and no other']
+        !out.toString().contains('the wrapper ran')
+
+        when:
+        out.reset()
+        new File(dir, 'gradlew').delete()
+        new File(dir, 'tools').mkdirs()
+        wrapper(new File(dir, 'tools'))
+        Files.createSymbolicLink(new File(dir, 'gradlew').toPath(), Path.of('tools/gradlew'))
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 0
+        out.toString().contains('the wrapper ran with build')
+
+        cleanup:
+        outside?.deleteDir()
+    }
+
+    void "where the search for a project ended is what the command says: at the directories it looks at, or where there are no more"() {
+        given: 'more directories than are looked at, none of them a project'
+        File deep = new File(dir, (1..(ConsoleProject.MAX_LEVELS + 2)).collect { int level -> "l${level}" }.join('/'))
+        deep.mkdirs()
+
+        when:
+        System.setProperty('user.dir', deep.canonicalPath)
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors() == ["| Error There is no Grails project here: neither ${deep.canonicalPath} nor one of the 32 directories above it, which is as far as is looked, " +
+                'has a grails-app directory or the record of a generated project. Gradle was not run']
+
+        when: 'a project whose wrapper would be further up than is looked'
+        out.reset()
+        new File(deep, 'grails-app').mkdirs()
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors() == ["| Error The project in ${deep.canonicalPath} has no Gradle wrapper: there is no ${wrapperName} in it or in one of the 32 directories above it, which is as far as is looked. " +
+                'Gradle was not run, since the command runs the Gradle of the project and no other']
+
+        when: 'a directory with nothing above it but the file system'
+        out.reset()
+        System.setProperty('user.dir', dir.canonicalPath)
+        exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+
+        then:
+        exit == 1
+        errors() == ["| Error There is no Grails project here: neither ${dir.canonicalPath} nor a directory above it has a grails-app directory or the record of a generated project. Gradle was not run"]
+
+        where:
+        wrapperName = System.getProperty('os.name').toLowerCase().contains('win') ? 'gradlew.bat' : 'gradlew'
+    }
+
+    @IgnoreIf({ os.windows })
+    void "what Gradle writes reaches the output as the bytes it is"() {
+        given: 'a wrapper that writes what is no text in the encoding of the output'
+        new File(dir, 'grails-app').mkdirs()
+        wrapper(dir, 'printf \'before \\377\\376\\200\\342\\202 after\\n\'\nprintf \'error \\377\\n\' >&2\n')
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'gradle', 'build')
+        List<Integer> written = out.toByteArray().collect { byte each -> each & 0xff }
+
+        then:
+        exit == 0
+        Collections.indexOfSubList(written, [0xff, 0xfe, 0x80, 0xe2, 0x82]) > -1
+        Collections.indexOfSubList(written, 'error '.bytes.toList().collect { byte each -> each & 0xff } + [0xff, 0x0a]) > -1
+        !out.toString('UTF-8').contains('Error')
+    }
+
+    @IgnoreIf({ os.windows })
+    void "when the command is cancelled every process the wrapper started is ended, and the command says it was stopped"() {
+        given: 'a wrapper that starts a process and stays the script it is, as one that does not become Gradle'
+        new File(dir, 'grails-app').mkdirs()
+        wrapper(dir, 'sleep 300 &\necho $! > started.txt\nwait\n')
+        File started = new File(dir, 'started.txt')
+        AtomicInteger exit = new AtomicInteger(-1)
+        Thread command = new Thread({ exit.set(ForgeCli.execute(beanContext, 'gradle', 'build')) })
+
+        when:
+        command.start()
+        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+            assert started.isFile() && started.text.endsWith('\n')
+        }
+        long sleeper = started.text.trim() as long
+        boolean ran = ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
+        command.interrupt()
+        command.join(60_000)
+
+        then:
+        ran
+        !command.alive
+        exit.get() == 1
+        errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
+
+        and: 'what the script started is gone, long before it would have ended'
+        new PollingConditions(timeout: 30, delay: 0.2).eventually {
+            assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
+        }
+    }
+
+    @IgnoreIf({ os.windows })
+    void "in the interactive shell the interrupt of the terminal cancels the command that runs, and the shell goes on"() {
+        given: 'a shell on a terminal that is none, and a wrapper that does not end by itself'
+        new File(dir, 'grails-app').mkdirs()
+        wrapper(dir, 'sleep 300 &\necho $! > started.txt\nwait\n')
+        File started = new File(dir, 'started.txt')
+        Terminal terminal = TerminalBuilder.builder().dumb(true).system(false)
+                .streams(new ByteArrayInputStream(new byte[0]), new ByteArrayOutputStream()).build()
+        List<Integer> exits = [].asSynchronized()
+        InteractiveShell shell = new InteractiveShell(ForgeCli.createCommandLine(beanContext, true),
+                { String[] args -> exits.add(ForgeCli.execute(beanContext, args)) } as Consumer<String[]>, null)
+        Thread line = new Thread({
+            shell.execute(terminal, 'gradle', 'build')
+            // the next line of the shell, on the same thread
+            new File(dir, 'gradlew').text = '#!/bin/sh\necho "the wrapper ran with $*"\n'
+            shell.execute(terminal, 'gradle', 'next')
+        })
+
+        when: 'Ctrl-C while the command runs'
+        line.start()
+        new PollingConditions(timeout: 60, delay: 0.2).eventually {
+            assert started.isFile() && started.text.endsWith('\n')
+        }
+        long sleeper = started.text.trim() as long
+        terminal.raise(Terminal.Signal.INT)
+        line.join(60_000)
+
+        then: 'the command was stopped, and the one after it ran'
+        !line.alive
+        exits == [1, 0]
+        errors() == ['| Error Gradle was stopped before it finished, because the command was cancelled']
+        out.toString().contains('the wrapper ran with next')
+        new PollingConditions(timeout: 30, delay: 0.2).eventually {
+            assert !ProcessHandle.of(sleeper).map { ProcessHandle handle -> handle.alive }.orElse(false)
+        }
+
+        cleanup:
+        terminal?.close()
+    }
+
+    private List<String> errors() {
+        return out.toString().readLines().findAll { String line -> line.contains('| Error') }
+    }
+
+    // a wrapper that is a script of a few lines, so that Gradle itself is not started
+    private static void wrapper(File directory, String script = 'echo "the wrapper ran with $*"\n') {
+        File wrapper = new File(directory, 'gradlew')
+        wrapper.text = '#!/bin/sh\n' + script
+        wrapper.setExecutable(true, false)
     }
 
     @IgnoreIf({ os.windows })

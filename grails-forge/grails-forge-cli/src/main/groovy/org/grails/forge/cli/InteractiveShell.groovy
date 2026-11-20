@@ -107,6 +107,26 @@ class InteractiveShell {
         }
     }
 
+    /**
+     * Runs one line of the shell. While it runs, the interrupt of the terminal, Ctrl-C, cancels the
+     * command and not the shell: the thread of the command is interrupted, which a command that
+     * waits for Gradle answers by stopping Gradle. At the prompt the interrupt leaves the shell.
+     *
+     * @param terminal the terminal of the shell
+     * @param arguments the line, as the arguments it is
+     */
+    void execute(Terminal terminal, String... arguments) {
+        Thread running = Thread.currentThread()
+        Terminal.SignalHandler before = terminal.handle(Terminal.Signal.INT, { Terminal.Signal signal -> running.interrupt() } as Terminal.SignalHandler)
+        try {
+            executor.accept(arguments)
+        } finally {
+            terminal.handle(Terminal.Signal.INT, before)
+            // an interrupt that came when nothing waited for one is not kept for the next line
+            Thread.interrupted()
+        }
+    }
+
     void start() {
         try {
             Terminal terminal = TerminalBuilder.terminal()
@@ -138,7 +158,7 @@ class InteractiveShell {
                     }
                     ParsedLine pl = reader.getParser().parse(line, 0)
                     String[] arguments = pl.words().toArray(new String[0])
-                    executor.accept(arguments)
+                    execute(terminal, arguments)
                     refresh()
                 } catch (UserInterruptException | EndOfFileException e) {
                     return

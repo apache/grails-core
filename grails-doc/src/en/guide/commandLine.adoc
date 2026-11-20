@@ -220,7 +220,7 @@ This is the rule the Grails shell goes by. There have to be as many parts as the
 * The name of a command always is that command, also when it happens to be the short form of another one.
 * When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits and ends with exit code 2; type more of the name. Where the Grails shell runs the first command that fits, the Grails Forge CLI asks. In a project this happens with two short forms that come to mind first: `cC` fits `create-controller` and `create-command`, and `cS` fits `create-service` and `create-script`. `cCont` and `cSe` are the controller and the service, `cCom` and `cSc` the command and the script.
 * Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
-* What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it.
+* What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails -t forge --help anything` shows the help.
 
 === Help
 
@@ -235,6 +235,8 @@ $ grails -t forge help gradle
 ----
 
 `help gradle` is how to see the help of the `gradle` command itself, since `gradle --help` is given to Gradle. In a project, `help` lists the commands of the project as well, in every directory of it. A command there is not ends `help` with exit code 2.
+
+The usage of every command is laid out for a width of 100 columns, and the list of commands shows the first sentence of the description of each.
 
 `help --json` writes the commands of the current directory as one JSON document on one line of the standard output, and nothing else, for an editor or another tool to read:
 
@@ -272,7 +274,7 @@ $ grails -t forge help gradle
 | The version of the document, `1`. It changes only when a reader of the earlier version would misread the document; members can be added without it changing, so a reader ignores the members it does not know.
 
 | `complete`, `diagnostics`
-| `complete` is `false` when not every command of the directory could be found, and `diagnostics` then says why, one line each: for example that the record of the project cannot be used, in which case the code generation commands are missing.
+| `complete` is `false` when not every command of the directory could be found, and `diagnostics` then says why, one line each: that the record of the project cannot be used, or that the project above the current directory is not your own and is not used (see the section on running Gradle with the Grails Forge CLI), in which cases the code generation commands are missing. `diagnostics` can also have a line when `complete` is `true`: a warning about a record that is used, for example that `grails-forge-cli.yml` was changed and no longer says what `.grails` says.
 
 | `projectDirectory`
 | The directory of the project the current directory is in, or `null` outside a project.

@@ -84,7 +84,7 @@ final class ConsoleCommands {
      */
     static boolean isPlugin(ConsoleProject project) {
         Path sources = project.directory.resolve(PLUGIN_SOURCES)
-        if (!Files.isDirectory(sources, LinkOption.NOFOLLOW_LINKS)) {
+        if (project.isLinked(PLUGIN_SOURCES) || !Files.isDirectory(sources, LinkOption.NOFOLLOW_LINKS)) {
             return false
         }
         boolean[] found = [false] as boolean[]

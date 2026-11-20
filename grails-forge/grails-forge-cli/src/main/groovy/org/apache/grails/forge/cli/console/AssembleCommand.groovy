@@ -29,8 +29,8 @@ import picocli.CommandLine
  */
 @CommandLine.Command(name = 'assemble', aliases = ['war', 'package'],
         description = [
-                'Creates the JAR or WAR archive of the Grails project for deployment: the Gradle task assemble,',
-                'for the production environment unless -Dgrails.env names another one.',
+                'Creates the JAR or WAR archive of the Grails project for deployment.',
+                'Runs the Gradle task assemble, for the production environment unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
         preprocessor = GradleTaskCommand.PassedOn)

@@ -157,10 +157,27 @@ class CodeGenConfig {
                 warnOfAnotherRecord(beanContext, directory, codeGenConfig, consoleOutput)
                 return codeGenConfig
             } catch (ProjectStateException e) {
+                notUsed(consoleOutput)
                 consoleOutput.warning(e.getMessage())
             }
         }
         return loadEarlierRecord(beanContext, directory, consoleOutput)
+    }
+
+    private static void notUsed(ConsoleOutput consoleOutput) {
+        if (consoleOutput instanceof RecordListener) {
+            ((RecordListener) consoleOutput).recordNotUsed()
+        }
+    }
+
+    /**
+     * What a record of a project is read for can be this as well as where the reading says what it
+     * has to say: it is then told that a record is there and cannot be used, which is more than a
+     * warning about a record that is used.
+     */
+    interface RecordListener {
+
+        void recordNotUsed()
     }
 
     // The two records are written together and say the same. When grails-forge-cli.yml was changed by
@@ -209,8 +226,10 @@ class CodeGenConfig {
         try {
             return earlierRecord(beanContext, EarlierRecord.read(grailsCli.toPath()), grailsCli.getName(), consoleOutput)
         } catch (ProjectStateException e) {
+            notUsed(consoleOutput)
             consoleOutput.warning("${e.getMessage()}; the commands that create the classes of an application are not there without it")
         } catch (RuntimeException e) {
+            notUsed(consoleOutput)
             // nothing of the file is repeated: what failed was not foreseen, and neither is what it would say
             consoleOutput.warning("${grailsCli.getName()} cannot be used (${e.getClass().getSimpleName()}); " +
                     'the commands that create the classes of an application are not there without it')

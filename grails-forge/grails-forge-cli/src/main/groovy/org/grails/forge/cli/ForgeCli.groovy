@@ -85,6 +85,8 @@ final class ForgeCli {
         return 1
     } as BiFunction<Throwable, CommandLine, Integer>
 
+    private static final int USAGE_WIDTH = 100
+
     private ForgeCli() {
     }
 
@@ -133,6 +135,8 @@ final class ForgeCli {
 
     private static int execute(CommandLine commandLine, HeldBack held, String... args) {
         ConsoleOutput root = (ConsoleOutput) commandLine.getCommand()
+        // for the commands that were added since the command line was put together as well
+        commandLine.setUsageHelpWidth(USAGE_WIDTH)
         String[] expanded
         try {
             expanded = new CommandCatalog(commandLine).expand(args)
@@ -142,9 +146,11 @@ final class ForgeCli {
         }
         if (readsProject(expanded)) {
             CommandLine help = commandLine.getSubcommands().get(HelpCommand.NAME)
-            if (help != null && commandOf(expanded) == HelpCommand.NAME && expanded.contains('--json')) {
+            if (help != null && commandOf(expanded) == HelpCommand.NAME && optionsOf(expanded).contains('--json')) {
                 // the document is all that is written: it says what was held back
-                ((HelpCommand) help.getCommand()).diagnostics = held.messages()
+                HelpCommand command = (HelpCommand) help.getCommand()
+                command.diagnostics = held.messages()
+                command.complete = held.recordUsed
             } else {
                 held.replay(root)
             }
@@ -174,6 +180,12 @@ final class ForgeCli {
 
     private static String commandOf(String... args) {
         return args.find { String arg -> !arg.startsWith('-') }
+    }
+
+    // what can be an option: after -- nothing is
+    private static List<String> optionsOf(String... args) {
+        int end = args.findIndexOf { String arg -> arg == '--' }
+        return (args as List<String>).subList(0, end < 0 ? args.length : end)
     }
 
     /**
@@ -212,7 +224,6 @@ final class ForgeCli {
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
             EXCEPTION_HANDLER.apply(ex, failed)
         } as CommandLine.IExecutionExceptionHandler
-        commandLine.usageHelpWidth = 100
         CodeGenConfig codeGenConfig = readsProject ? CodeGenConfig.load(context, console ?: root) : null
         if (codeGenConfig != null) {
             for (Class<? extends CodeGenCommand> type : CODE_GEN_COMMANDS) {
@@ -229,14 +240,24 @@ final class ForgeCli {
             }
         }
         ConsoleCommands.addTo(commandLine, readsProject)
+        // once every command is there: the width is given to the commands there are when it is set
+        commandLine.setUsageHelpWidth(USAGE_WIDTH)
         return commandLine
     }
 
     /** Keeps what is said until it is known whether it is to be said, and then says it in the order it came. */
-    private static final class HeldBack implements ConsoleOutput {
+    private static final class HeldBack implements ConsoleOutput, CodeGenConfig.RecordListener {
 
         private final List<Closure> said = []
         private final List<String> lines = []
+
+        /** Whether no record of the project was found that could not be used. */
+        boolean recordUsed = true
+
+        @Override
+        void recordNotUsed() {
+            recordUsed = false
+        }
 
         @Override
         void out(String message) {

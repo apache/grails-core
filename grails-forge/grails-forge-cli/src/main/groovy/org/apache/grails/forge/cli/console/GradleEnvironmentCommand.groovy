@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.console
 
 import groovy.transform.CompileStatic
+import org.grails.forge.feature.FeatureSelectionException
 import picocli.CommandLine
 
 /**
@@ -32,10 +33,11 @@ import picocli.CommandLine
 abstract class GradleEnvironmentCommand extends GradleTaskCommand {
 
     private static final String ENVIRONMENT = 'grails.env'
+    private static final String SYSTEM_PROPERTY = '-D'
 
-    @CommandLine.Option(names = ['-D'], paramLabel = 'NAME=VALUE', mapFallbackValue = '',
+    @CommandLine.Option(names = [SYSTEM_PROPERTY], paramLabel = 'NAME=VALUE', mapFallbackValue = '',
             description = 'A system property for the build; can be given more than once. -Dgrails.env=NAME selects the Grails environment.')
-    SystemProperties systemProperties = new SystemProperties()
+    Map<String, String> systemProperties = new LinkedHashMap<>()
 
     /**
      * @return the environment the build runs for when none is given
@@ -64,10 +66,33 @@ abstract class GradleEnvironmentCommand extends GradleTaskCommand {
     }
 
     /**
-     * The system properties given to a command. The type is the command's own on purpose: picocli asks
-     * the factory of the CLI for the map of an option, and the factory would answer for a plain
-     * {@code Map} with a bean of the application, which the properties would then be put into.
+     * Refuses a {@code -D} that names no system property, before the command line is read: picocli
+     * would take the argument after a {@code -D} that stands alone for the name of a property without
+     * a value, so that {@code -D BookSpec} would set a property and run every test.
+     *
+     * @param args the arguments of the command, the next one on top
+     * @param commandSpec the command
      */
-    static class SystemProperties extends LinkedHashMap<String, String> {
+    static void checkSystemProperties(List<String> args, CommandLine.Model.CommandSpec commandSpec) {
+        if (commandSpec.findOption(SYSTEM_PROPERTY) == null) {
+            return
+        }
+        for (int i = args.size() - 1; i >= 0; i--) {
+            String arg = args.get(i)
+            if (arg == '--') {
+                return
+            }
+            if (!arg.startsWith(SYSTEM_PROPERTY)) {
+                continue
+            }
+            boolean attached = arg.length() > SYSTEM_PROPERTY.length()
+            String given = attached ? arg.substring(SYSTEM_PROPERTY.length()) : (i > 0 ? args.get(i - 1) : null)
+            // -Dname is the property without a value; after a -D that stands alone only name=value is one
+            if (given == null || given.startsWith('=') || (!attached && given.indexOf('=') < 1)) {
+                throw new CommandLine.ParameterException(commandSpec.commandLine(),
+                        "${SYSTEM_PROPERTY} is followed by the name of a system property and its value, as in -Dgrails.env=test: " +
+                                "${FeatureSelectionException.shown(attached || given == null ? arg : arg + ' ' + given)} names none")
+            }
+        }
     }
 }

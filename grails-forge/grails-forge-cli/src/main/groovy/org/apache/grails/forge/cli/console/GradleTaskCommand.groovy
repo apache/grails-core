@@ -56,8 +56,7 @@ abstract class GradleTaskCommand extends InProjectCommand {
             arguments.add('--debug')
         }
         arguments.addAll(passedOn)
-        GradleRunner runner = new GradleRunner(spec.commandLine().getOut(), spec.commandLine().getErr(),
-                { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+        GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         int exit
         try {
             exit = runner.run(project, arguments)
@@ -101,6 +100,7 @@ abstract class GradleTaskCommand extends InProjectCommand {
                 args.subList(0, at + 1).clear()
                 ((GradleTaskCommand) commandSpec.userObject()).passedOn = after
             }
+            GradleEnvironmentCommand.checkSystemProperties(args, commandSpec)
             return false
         }
     }

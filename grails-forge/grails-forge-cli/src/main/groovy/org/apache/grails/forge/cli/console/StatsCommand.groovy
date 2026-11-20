@@ -61,7 +61,13 @@ class StatsCommand extends InProjectCommand {
         List<Kind> kinds = kinds()
         int[] seen = [0] as int[]
         List<Path> notRead = []
+        List<String> linked = []
         for (String directory : kinds*.directory.unique()) {
+            // what is reached through a link, src itself for one, is not a source directory of this project
+            if (project.isLinked(directory)) {
+                linked.add(directory)
+                continue
+            }
             Path root = project.directory.resolve(directory)
             if (!Files.isDirectory(root, LinkOption.NOFOLLOW_LINKS)) {
                 continue
@@ -74,6 +80,9 @@ class StatsCommand extends InProjectCommand {
             }
         }
         print(kinds)
+        if (linked) {
+            warning("Not counted, because it is reached through a link and links are not followed: ${linked.join(', ')}")
+        }
         if (notRead) {
             warning("The lines of ${notRead.size()} file(s) larger than ${MAX_FILE_BYTES.intdiv(1024 * 1024)} MiB were not counted, the first of them ${GradleRunner.line(project.directory.relativize(notRead[0]))}")
         }

@@ -68,13 +68,13 @@ class GradleCommand extends BaseCommand implements Callable<Integer>, ProjectCom
             throw new CommandLine.ParameterException(spec.commandLine(), 'Say what Gradle is to do: the tasks to run or an option of Gradle, as in gradle build')
         }
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
-        ConsoleProject project = ConsoleProject.find(current)
+        ConsoleProject.Search search = ConsoleProject.search(current)
+        ConsoleProject project = search.project
         if (project == null) {
-            err(GradleRunner.noProject(current, 'Gradle was not run'))
+            err(search.none('Gradle was not run'))
             return 1
         }
-        GradleRunner runner = new GradleRunner(spec.commandLine().getOut(), spec.commandLine().getErr(),
-                { String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
+        GradleRunner runner = new GradleRunner({ String message -> err(message) } as Consumer<String>, getOperatingSystem() == OperatingSystem.WINDOWS)
         try {
             return runner.run(project, arguments)
         } catch (GradleRunner.RefusedArgumentException e) {

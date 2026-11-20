@@ -98,7 +98,9 @@ final class CommandCatalog {
      */
     static CommandLine.ParameterException unknown(CommandLine parent, String typed) {
         String given = FeatureSelectionException.shown(typed)
-        List<String> similar = new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(given)).getSuggestions()
+        // what was typed is compared, and nothing else: not what stands for an empty name or for one that cannot be shown as it is
+        List<String> similar = typed == null || typed.isEmpty() || given != typed ? Collections.<String>emptyList() :
+                new CommandLine.UnmatchedArgumentException(parent, Collections.singletonList(typed)).getSuggestions()
         return new CommandLine.ParameterException(parent, "There is no command ${given}" +
                 (parent.getParent() == null ? '' : " of ${parent.getCommandName()}") +
                 (similar.isEmpty() ? '' : ". Did you mean: ${similar.join(' or ')}?"))
@@ -119,6 +121,7 @@ final class CommandCatalog {
     String[] expand(String... args) {
         String[] expanded = args.clone()
         CommandLine current = root
+        boolean help = false
         for (int i = 0; i < expanded.length; i++) {
             String arg = expanded[i]
             CommandLine.Model.CommandSpec spec = current.getCommandSpec()
@@ -132,6 +135,7 @@ final class CommandCatalog {
             }
             if (arg.startsWith('-')) {
                 if (isSwitches(spec, arg)) {
+                    help = help || (1..<arg.length()).any { int at -> asksForHelp(spec.findOption('-' + arg.charAt(at))) }
                     continue
                 }
                 int assigned = arg.indexOf('=')
@@ -139,6 +143,7 @@ final class CommandCatalog {
                 if (option == null) {
                     break
                 }
+                help = help || asksForHelp(option)
                 if (assigned < 0 && option.arity().max() > 0) {
                     // an option whose value may be left out: the next argument is its value or a command
                     if (option.arity().min() == 0) {
@@ -152,6 +157,10 @@ final class CommandCatalog {
             if (named == null) {
                 named = find(current, arg)
                 if (named == null) {
+                    // the help or the version was asked for: that is the answer, whatever else was typed
+                    if (help) {
+                        break
+                    }
                     throw unknown(current, arg)
                 }
                 expanded[i] = named.getCommandName()
@@ -164,6 +173,10 @@ final class CommandCatalog {
     // @file is read as a file of arguments when there is such a file, and is an argument like any other when there is none
     private boolean isArgumentFile(String arg) {
         return arg.length() > 1 && arg.startsWith('@') && root.isExpandAtFiles() && new File(arg.substring(1)).exists()
+    }
+
+    private static boolean asksForHelp(CommandLine.Model.OptionSpec option) {
+        return option != null && (option.usageHelp() || option.versionHelp())
     }
 
     // several options that take no value written as one, as -xv
@@ -185,13 +198,16 @@ final class CommandCatalog {
      * is described in the design of the command line; a reader ignores what it does not know.
      *
      * @param projectDirectory the directory of the project the commands are those of, or {@code null} outside a project
-     * @param diagnostics what kept commands from being found, one line each; the catalog is complete when there is none
+     * @param diagnostics what there is to say about the commands of the project, one line each
+     * @param complete whether every command of the project is among the commands: false when the
+     * record of the project could not be used, or the project is not used. A diagnostic alone, as
+     * that the two records of a project do not say the same, leaves the catalog complete
      * @return the document, as maps, lists, strings, numbers and booleans
      */
-    Map<String, Object> describe(Path projectDirectory, List<String> diagnostics) {
+    Map<String, Object> describe(Path projectDirectory, List<String> diagnostics, boolean complete) {
         Map<String, Object> document = new LinkedHashMap<>()
         document.put('format', FORMAT)
-        document.put('complete', diagnostics.isEmpty())
+        document.put('complete', complete)
         document.put('diagnostics', new ArrayList<String>(diagnostics))
         document.put('projectDirectory', projectDirectory == null ? null : projectDirectory.toString())
         document.put('commands', commands(root))

@@ -28,6 +28,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.regex.Pattern
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import groovy.transform.CompileStatic
@@ -36,17 +37,18 @@ import picocli.CommandLine
 /**
  * {@code bug-report}: a ZIP file of the sources of the project, to attach to an issue. It holds the
  * files under {@code grails-app} and {@code src} and the {@code build.gradle} of the project, and is
- * written to the {@code build} directory. Links are not followed, so nothing from outside the project
- * gets into it, and files that are keys by their name are left out; the configuration of the
- * application is part of the sources and is in it.
+ * written to the {@code build} directory. Links are not followed and a file that has another name
+ * elsewhere is left out, so nothing from outside the project gets into it; files that are keys by
+ * their name are left out, and so is what a build left behind. The configuration of the application
+ * is part of the sources and is in it, which the command says before anything else.
  *
  * @since 9.0
  */
 @CommandLine.Command(name = 'bug-report',
         description = [
-                'Creates a ZIP file of the sources of the Grails project, to attach to an issue: what is under grails-app and src,',
-                'and build.gradle. It is written to the build directory. The configuration under grails-app/conf is in it as it is:',
-                'look through the file for passwords before it is given to anyone.'
+                'Creates a ZIP file of the sources of the Grails project.',
+                'It is to attach to an issue, holds what is under grails-app and src, and build.gradle, and is written to the build directory.',
+                'The configuration under grails-app/conf is in it as it is: look through the ZIP for passwords before it is given to anyone.'
         ])
 @CompileStatic
 class BugReportCommand extends InProjectCommand {
@@ -66,7 +68,17 @@ class BugReportCommand extends InProjectCommand {
     private static final Set<String> NOT_SOURCES_DIRECTORIES = ['.git', '.svn', '.hg', '.bzr', 'CVS', 'SCCS'] as Set<String>
     private static final Set<String> NOT_SOURCES = ['.DS_Store', '.gitignore', '.gitattributes', '.gitmodules', '.hgignore', '.hgtags', '.cvsignore', 'vssver.scc'] as Set<String>
     // a file of one of these names is a key, a store of keys or a list of secrets, and never needed to reproduce a bug
-    private static final List<String> SECRET_ENDINGS = ['.env', '.jks', '.p12', '.pfx', '.pem', '.key', '.keystore']
+    private static final List<String> SECRET_ENDINGS = ['.env', '.jks', '.p12', '.pfx', '.pem', '.key', '.keystore', '.p8', '.ppk', '.kdbx', '.der', '.asc', '.gpg']
+    private static final List<String> SECRET_STARTS = ['.env.', 'id_rsa', 'id_dsa', 'id_ecdsa', 'id_ed25519', 'truststore', 'credentials', 'secrets']
+    private static final Set<String> SECRET_NAMES = ['.netrc', '.npmrc', '.pypirc', 'cacerts'] as Set<String>
+    // a copy of such a file that was put aside is one as well
+    private static final List<String> COPY_ENDINGS = ['.bak', '.old', '~']
+    // a class named for what it handles is a source: CredentialsController.groovy holds no credentials
+    private static final List<String> CODE_ENDINGS = ['.groovy', '.java', '.gsp', '.gson', '.kt']
+    // what a build leaves behind, wherever it ran
+    private static final Set<String> BUILD_DIRECTORIES = ['build', '.gradle'] as Set<String>
+    private static final Pattern CONFIGURATION = Pattern.compile(/grails-app\/conf\/application[^\/]*\.(yml|yaml|groovy|properties)/)
+    private static final Pattern NOT_SHOWN = Pattern.compile(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/)
 
     @CommandLine.Option(names = ['-f', '--force'], description = 'Replace the ZIP file when there is one of the same name, as there is after the command was run earlier on the same day.')
     boolean force
@@ -138,11 +150,21 @@ class BugReportCommand extends InProjectCommand {
             }
         }
 
+        List<String> configuration = collected.files.collect { Path file -> directory.relativize(file).join('/') }.findAll { String file -> CONFIGURATION.matcher(file).matches() }
+        if (configuration) {
+            warning("The bug report holds the configuration of the application, which is where passwords usually are: ${GradleRunner.line(configuration.join(', '))}. " +
+                    'Look through it before the ZIP is given to anyone')
+        }
         out("| Created bug report ZIP: ${shown}")
-        out("| It holds ${collected.files.size()} file(s): what is under ${DIRECTORIES.join(' and ')}, and ${BUILD_FILE}, as they are. " +
-                'The configuration of the application is among them: look through the ZIP for passwords and keys before you attach it to an issue')
+        out("| It holds ${collected.files.size()} file(s): what is under ${DIRECTORIES.join(' and ')}, and ${BUILD_FILE}, as they are")
         if (collected.links > 0 || collected.secrets > 0) {
-            out("| Left out: ${collected.links} link(s), which are not followed, and ${collected.secrets} file(s) that are keys by their name (${SECRET_ENDINGS.join(', ')})")
+            out("| Left out: ${collected.links} link(s), which are not followed, and ${collected.secrets} file(s) that are keys by their name: keys, stores of keys and files of credentials")
+        }
+        if (collected.directories > 0 || collected.shared > 0) {
+            out("| Left out: ${collected.directories} directory(ies) named ${BUILD_DIRECTORIES.join(' or ')}, and ${collected.shared} file(s) that have another name as well, as a hard link, and so may be a file from elsewhere")
+        }
+        if (collected.unnamed > 0) {
+            warning("Left out: ${collected.unnamed} file(s) with a control character in the name, which a ZIP file is not given, the first of them ${GradleRunner.line(collected.firstUnnamed)}")
         }
         return 0
     }
@@ -155,6 +177,8 @@ class BugReportCommand extends InProjectCommand {
         } else if (Files.isRegularFile(buildFile, LinkOption.NOFOLLOW_LINKS)) {
             collected.add(buildFile, Files.size(buildFile))
         }
+        // how many names a file has is known where the file system is one of unix
+        boolean hardLinks = directory.getFileSystem().supportedFileAttributeViews().contains('unix')
         for (String each : DIRECTORIES) {
             Path root = directory.resolve(each)
             if (Files.isSymbolicLink(root)) {
@@ -169,7 +193,15 @@ class BugReportCommand extends InProjectCommand {
 
                 @Override
                 FileVisitResult preVisitDirectory(Path visited, BasicFileAttributes attributes) {
-                    return visited.getFileName().toString() in NOT_SOURCES_DIRECTORIES ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE
+                    String name = visited.getFileName().toString()
+                    if (name in NOT_SOURCES_DIRECTORIES) {
+                        return FileVisitResult.SKIP_SUBTREE
+                    }
+                    if (name in BUILD_DIRECTORIES) {
+                        collected.directories++
+                        return FileVisitResult.SKIP_SUBTREE
+                    }
+                    return FileVisitResult.CONTINUE
                 }
 
                 @Override
@@ -183,6 +215,14 @@ class BugReportCommand extends InProjectCommand {
                         return FileVisitResult.CONTINUE
                     } else if (secret(fileName)) {
                         collected.secrets++
+                    } else if (NOT_SHOWN.matcher(directory.relativize(file).toString()).find()) {
+                        collected.unnamed++
+                        String unnamed = directory.relativize(file).toString()
+                        if (collected.firstUnnamed == null || unnamed < collected.firstUnnamed) {
+                            collected.firstUnnamed = unnamed
+                        }
+                    } else if (hardLinks && names(file) > 1) {
+                        collected.shared++
                     } else {
                         collected.add(file, attributes.size())
                     }
@@ -211,7 +251,25 @@ class BugReportCommand extends InProjectCommand {
 
     private static boolean secret(String name) {
         String lower = name.toLowerCase(Locale.ROOT)
-        return lower.startsWith('.env.') || SECRET_ENDINGS.any { String ending -> lower.endsWith(ending) }
+        String copy
+        while ((copy = COPY_ENDINGS.find { String ending -> lower.length() > ending.length() && lower.endsWith(ending) }) != null) {
+            lower = lower.substring(0, lower.length() - copy.length())
+        }
+        String original = lower
+        if (original in SECRET_NAMES || SECRET_ENDINGS.any { String ending -> original.endsWith(ending) }) {
+            return true
+        }
+        return SECRET_STARTS.any { String start -> original.startsWith(start) } && !CODE_ENDINGS.any { String ending -> original.endsWith(ending) }
+    }
+
+    // how many names the file has: more than one for a file that is linked to from elsewhere
+    private static int names(Path file) {
+        try {
+            Object count = Files.getAttribute(file, 'unix:nlink', LinkOption.NOFOLLOW_LINKS)
+            return count instanceof Number ? ((Number) count).intValue() : 1
+        } catch (IOException | UnsupportedOperationException | IllegalArgumentException ignored) {
+            return 1
+        }
     }
 
     // The files are read again here, and may have grown since they were listed: the bound holds for what is written
@@ -254,6 +312,10 @@ class BugReportCommand extends InProjectCommand {
         long bytes
         int links
         int secrets
+        int directories
+        int shared
+        int unnamed
+        String firstUnnamed
         String refusal
 
         void add(Path file, long size) {

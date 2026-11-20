@@ -31,8 +31,9 @@ import picocli.CommandLine
  */
 @CommandLine.Command(name = 'test-app',
         description = [
-                'Runs the tests of the Grails project: the Gradle task test and, where the project has a',
-                'src/integration-test directory, integrationTest, for the test environment unless -Dgrails.env names another one.',
+                'Runs the tests of the Grails project.',
+                'Runs the Gradle task test and, where the project has a src/integration-test directory, integrationTest,',
+                'for the test environment unless -Dgrails.env names another one.',
                 'What follows @|bold --|@ is given to Gradle as it is.'
         ],
         preprocessor = GradleTaskCommand.PassedOn)
