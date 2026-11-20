@@ -18,6 +18,8 @@
  */
 package org.grails.plugin.cache
 
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 
 import org.springframework.beans.BeansException
@@ -48,8 +50,9 @@ import org.springframework.core.ResolvableType
  * managers it cannot choose between, it takes {@code grailsCacheManager}. Everywhere else Spring chooses
  * as it did: the only cache manager, the one marked primary or the one with the highest priority, judged
  * at that moment, leaving out the bean being injected. The bean is registered as depending on the cache
- * managers the resolution took, as the injection registers it. Any other injection of a cache manager is
- * left alone.</p>
+ * managers the resolution took, as the injection registers it, and the cache manager taken is remembered
+ * for the next injection of that bean, as the injection remembers it, so that a prototype bean resolves
+ * the field once. Any other injection of a cache manager is left alone.</p>
  *
  * @since 8.0.1
  */
@@ -88,6 +91,12 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
 
         private DefaultListableBeanFactory beanFactory
 
+        /**
+         * The cache manager each bean's field was given, by bean name and injection point, where the
+         * injection would remember it: one bean, of the field's type.
+         */
+        private final Map<List<Object>, String> remembered = new ConcurrentHashMap<List<Object>, String>()
+
         CandidateResolver(AutowireCandidateResolver delegate) {
             this.delegate = delegate
         }
@@ -106,6 +115,13 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
             if (proxy != null || beanFactory == null || descriptor instanceof FallbackDescriptor || !isTraitField(descriptor)) {
                 return proxy
             }
+            List<Object> injectionPoint = Arrays.<Object>asList(beanName, descriptor)
+            String rememberedName = remembered.get(injectionPoint)
+            if (rememberedName != null && beanFactory.containsBean(rememberedName) &&
+                    beanFactory.isTypeMatch(rememberedName, descriptor.dependencyType)) {
+                // as the injection resolves a field it has resolved before, by the name of the bean it took
+                return beanFactory.getBean(rememberedName, descriptor.dependencyType)
+            }
             FallbackDescriptor fallback = new FallbackDescriptor(descriptor, beanFactory)
             Set<String> autowiredBeanNames = new LinkedHashSet<String>()
             Object value = beanFactory.doResolveDependency(fallback, beanName, autowiredBeanNames, null)
@@ -118,6 +134,12 @@ class GrailsCacheManagerFallback implements BeanFactoryPostProcessor {
                     if (beanFactory.containsBean(autowiredBeanName)) {
                         beanFactory.registerDependentBean(autowiredBeanName, beanName)
                     }
+                }
+            }
+            if (value != null && autowiredBeanNames.size() == 1) {
+                String autowiredBeanName = autowiredBeanNames.iterator().next()
+                if (beanFactory.containsBean(autowiredBeanName) && beanFactory.isTypeMatch(autowiredBeanName, descriptor.dependencyType)) {
+                    remembered.putIfAbsent(injectionPoint, autowiredBeanName)
                 }
             }
             return value

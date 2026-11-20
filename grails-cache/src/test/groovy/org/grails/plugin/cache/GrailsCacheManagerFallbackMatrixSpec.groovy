@@ -57,8 +57,9 @@ import grails.plugin.cache.GrailsCacheKeyGenerator
  * difference: where Spring could not choose, which failed startup, the class gets
  * {@code grailsCacheManager}, unless another cache manager is preferred, as primary or by priority, where
  * Spring rejects the tie itself. Otherwise the choice, and every failure, is 8.0.0's: what the cache-aware
- * bean and a cache-aware {@code grailsCacheManager} get, the beans the cache-aware bean is registered as
- * depending on, and how many of each cache manager are created, other than {@code grailsCacheManager}.</p>
+ * bean, three instances of a prototype cache-aware bean and a cache-aware {@code grailsCacheManager} get,
+ * the beans the cache-aware bean is registered as depending on, and how many of each cache manager are
+ * created, other than {@code grailsCacheManager}.</p>
  */
 class GrailsCacheManagerFallbackMatrixSpec extends Specification {
 
@@ -101,11 +102,21 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             String overCreated = ((List<String>) now.created).countBy { it }.find { String name, Integer count ->
                 count > (wasCreated[name] ?: 0) + (name == NAMED ? 1 : 0)
             }?.key
+            // the prototypes as in 8.0.0, and where 8.0.0 failed before them, as the probe's own resolution
+            Map<String, Integer> prototypesMayCreate = ((fallsBack ? now.created : was.createdByPrototypes) ?: []).countBy { it }
+            String overCreatedByPrototypes = ((List<String>) (now.createdByPrototypes ?: [])).countBy { it }
+                    .find { String name, Integer count -> count > (prototypesMayCreate[name] ?: 0) }?.key
             if (got != expected) {
                 mismatches << "${row}: got ${got}, expected ${expected} (8.0.0: ${was.failed ? 'failed' : was.chosen})".toString()
             }
             else if (overCreated) {
                 mismatches << "${row}: created ${now.created}, where 8.0.0 created ${was.created}".toString()
+            }
+            else if (overCreatedByPrototypes) {
+                mismatches << "${row}: prototypes created ${now.createdByPrototypes}, where 8.0.0 created ${was.createdByPrototypes}".toString()
+            }
+            else if (!now.failed && now.prototypes != (fallsBack ? [NAMED] * 3 : was.prototypes)) {
+                mismatches << "${row}: prototypes got ${now.prototypes}, where in 8.0.0 they got ${was.prototypes}".toString()
             }
             else if (!now.failed && !was.failed && now.self != was.self) {
                 mismatches << "${row}: grailsCacheManager got ${now.self}, where in 8.0.0 it got ${was.self}".toString()
@@ -141,10 +152,31 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         Map<String, Object> was = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], false)
         Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], true)
 
-        expect: 'it is asked once, with the fallback as without it, and grailsCacheManager is injected'
+        expect: 'it is asked once for the injection, with the fallback as without it, and grailsCacheManager is injected'
         ((List<String>) was.created).count('factory') == 1
         ((List<String>) now.created).count('factory') == 1
         now.chosen == NAMED && was.chosen == NAMED
+    }
+
+    void 'prototype beans resolve their cache manager once, as in 8.0.0, so a factory bean of new cache managers is asked once'() {
+        given: 'such a factory created first, beside a grailsCacheManager marked primary, and three prototype cache-aware beans'
+        Map<String, Object> was = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], false)
+        Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'primary'], true)
+
+        expect: 'the factory is asked once for the first prototype, then the choice is reused'
+        was.prototypes == [NAMED] * 3 && now.prototypes == [NAMED] * 3
+        ((List<String>) now.createdByPrototypes).count('factory') == ((List<String>) was.createdByPrototypes).count('factory')
+        ((List<String>) now.createdByPrototypes).count('factory') == 1
+    }
+
+    void 'prototype beans given grailsCacheManager where Spring cannot choose keep it, and create nothing more'() {
+        given: 'a factory bean of new cache managers and grailsCacheManager, which Spring cannot choose between'
+        Map<String, Object> now = run([factory: 'prototypeFactoryBean', (NAMED): 'plain'], true)
+
+        expect: 'the first prototype asks the factory once, and the rest reuse the choice'
+        now.chosen == NAMED
+        now.prototypes == [NAMED] * 3
+        ((List<String>) now.createdByPrototypes).count('factory') == 1
     }
 
     void 'a cache manager injected anywhere else is left as Spring resolves it'() {
@@ -204,6 +236,10 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
                 result.self = nameOf(((GrailsCacheManagerAware) started.getBean(NAMED)).grailsCacheManager, instances)
             }
             result.dependencies = (started.beanFactory.getDependenciesForBean('probe') as List<String>).sort()
+            int beforePrototypes = created.size()
+            result.prototypes = (1..3).collect { nameOf(((CacheAware) started.getBean('prototype')).grailsCacheManager, instances) }
+            result.createdByPrototypes = new ArrayList<String>(created.subList(beforePrototypes, created.size()))
+            created.subList(beforePrototypes, created.size()).clear()
         }
         catch (BeansException ignored) {
             result.failed = true
@@ -211,7 +247,8 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
         finally {
             started?.close()
         }
-        result.created = created - atStartup
+        // what was created after startup, each creation counted, as a list difference would drop repeats
+        result.created = new ArrayList<String>(created.subList(atStartup.size(), created.size()))
         result
     }
 
@@ -270,6 +307,8 @@ class GrailsCacheManagerFallbackMatrixSpec extends Specification {
             } as Supplier<GrailsCacheKeyGenerator>, lazy)
         }
         context.registerBean('probe', CacheAware, lazy)
+        context.registerBean('prototype', CacheAware,
+                { BeanDefinition definition -> definition.scope = BeanDefinition.SCOPE_PROTOTYPE } as BeanDefinitionCustomizer)
         beforeRefresh?.call(context)
         context.refresh()
         context
