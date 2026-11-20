@@ -144,6 +144,52 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         ProjectState.read(dir.toPath()).lock.featureNames.contains('grails-quartz')
     }
 
+    void "what is no name for an application is a mistake in the command line, said in one line that is safe to show: #what"() {
+        given:
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(new ByteArrayOutputStream()))
+        System.setErr(new PrintStream(err))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, name)
+
+        then:
+        exit == 2
+        err.toString().contains(message)
+        err.toString().contains('Usage:')
+        !err.toString().contains('\u001b[31m')
+        !err.toString().contains('could not be read again')
+        !err.toString().contains('The features write')
+        dir.list().length == 0
+
+        where:
+        what                 | name                          | message
+        'an escape sequence' | 'com.ex\u001b[31mample.shop'   | '"com.ex?[31mample.shop" is not a valid app name: it has a character that is not shown, such as a control character'
+        'a line break'       | 'com.example.sh\nop'           | '"com.example.sh?op" is not a valid app name: it has a character that is not shown, such as a control character'
+        'a slash'            | 'com.example.sh/op'           | '"com.example.sh/op" is not a valid app name: it has a path separator'
+        'a colon'            | 'com.example.sh:op'           | '"sh:op" is not a valid app name: not every file system takes it as the name of a directory'
+    }
+
+    void "a file where the application needs a directory is said before anything is written, without the path of the directory"() {
+        given:
+        ByteArrayOutputStream err = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(new ByteArrayOutputStream()))
+        System.setErr(new PrintStream(err))
+        new File(dir, 'grails-app').setText('a file', 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'com.example.shop', '--inplace')
+
+        then:
+        exit == 1
+        err.toString().contains('Cannot create the project because grails-app in the directory is a file, and the project has files in a directory of that name; ' +
+                'remove or rename it and create the project again')
+        !err.toString().contains(dir.absolutePath)
+        !err.toString().contains(dir.canonicalPath)
+        !err.toString().contains('Usage:')
+        dir.list() as List == ['grails-app']
+    }
+
     void "a directory whose .grails is not a directory is left as it is, and that is no mistake in the command line"() {
         given:
         ByteArrayOutputStream err = new ByteArrayOutputStream()

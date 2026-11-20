@@ -40,6 +40,8 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.diff.FeatureDiffer
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
+import org.grails.forge.io.OutputFailedException
+import org.grails.forge.io.OutputHandler
 import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.io.ZipOutputHandler
 import org.grails.forge.options.DevelopmentReloading
@@ -47,6 +49,7 @@ import org.grails.forge.options.GormImpl
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
+import org.grails.forge.template.Template
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 import spock.lang.IgnoreIf
@@ -122,7 +125,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
 
         and: 'Git is told to keep the bytes of the state, which the digests are of'
         project.resolve('.grails/.gitattributes').toFile().getText('UTF-8') == '* -text\n'
-        project.resolve('.grails/.gitignore').toFile().getText('UTF-8') == '!/baseline/\n!/baseline/**\n'
+        project.resolve('.grails/.gitignore').toFile().getText('UTF-8') == '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n'
         stateFiles(project) - state.baseline.files.collect { '.grails/baseline/files/' + BaselineIndex.copyPath(it.path) } ==
                 ['.grails/.gitattributes', '.grails/.gitignore', '.grails/baseline/index.yml', '.grails/forge.lock.yml', '.grails/project.yml']
 
@@ -363,7 +366,8 @@ class ProjectStateSpec extends ApplicationContextSpec {
 
         then:
         ProjectStateException partial = thrown()
-        partial.message == 'The state of the project is not complete: .grails/forge.lock.yml is missing; restore it from version control'
+        partial.message == 'The state of the project is not complete: .grails/forge.lock.yml is missing; the baseline is there, as it is when the file was ' +
+                'not committed with the project: see whether a rule of a .gitignore, also a global one, leaves it out, and commit it from where the project was generated'
 
         when:
         Files.delete(project.resolve('.grails/baseline/index.yml'))
@@ -373,16 +377,28 @@ class ProjectStateSpec extends ApplicationContextSpec {
         ProjectStateException more = thrown()
         more.message == 'The state of the project is not complete: .grails/forge.lock.yml and .grails/baseline/index.yml are missing; restore them from version control'
 
-        when: 'the manifest, which is written last, is missing'
+        when: 'the manifest and the lock are missing and the baseline is all there, as in a clone of a project they were not committed with'
+        Path cloned = generate('shop', [], ApplicationType.WEB, 'cloned')
+        Files.delete(cloned.resolve('.grails/project.yml'))
+        Files.delete(cloned.resolve('.grails/forge.lock.yml'))
+        ProjectState.read(cloned)
+
+        then:
+        ProjectStateException ignored = thrown()
+        ignored.message == 'The state of the project is not complete: .grails/project.yml and .grails/forge.lock.yml are missing; the baseline is there, as it is when ' +
+                'the files were not committed with the project: see whether a rule of a .gitignore, also a global one, leaves them out, and commit them from where the project was generated'
+        !ProjectState.exists(cloned)
+
+        when: 'the manifest, which is written last, is missing, and so is the index that is written before it'
         Path unfinished = generate('shop', [], ApplicationType.WEB, 'unfinished')
         Files.delete(unfinished.resolve('.grails/project.yml'))
+        Files.delete(unfinished.resolve('.grails/baseline/index.yml'))
         ProjectState.read(unfinished)
 
         then:
         ProjectStateException interrupted = thrown()
-        interrupted.message == 'The state of the project is not complete: .grails/project.yml is missing; the project was not generated to the end, ' +
+        interrupted.message == 'The state of the project is not complete: .grails/project.yml and .grails/baseline/index.yml are missing; the project was not generated to the end, ' +
                 'and creating it again in this directory with --inplace completes it'
-        !ProjectState.exists(unfinished)
     }
 
     @Unroll
@@ -831,6 +847,7 @@ class ProjectStateSpec extends ApplicationContextSpec {
         state.lock.repositories*.kind == [LockedRepository.REMOTE, LockedRepository.LOCAL, LockedRepository.MAVEN_LOCAL, LockedRepository.REMOTE,
                                           LockedRepository.LOCAL, LockedRepository.MAVEN_CENTRAL]
         state.lock.repositories*.url == ['https://repo.acme.example/maven', null, null, null, null, null]
+        state.lock.repositoriesNotNamed == 0
         lock.contains('repositories:\n- kind: remote\n  url: https://repo.acme.example/maven\n- kind: local\n- kind: maven-local\n- kind: remote\n- kind: local\n- kind: maven-central\n')
         !lock.contains('someone')
         !given.resolve('.grails/project.yml').toFile().getText('UTF-8').contains('someone')
@@ -847,6 +864,179 @@ class ProjectStateSpec extends ApplicationContextSpec {
 
         cleanup:
         contextFactory.repositoryOverride = before
+    }
+
+    void "the lock has the address of a repository without what a token is given in, and counts the repositories it does not name"() {
+        given:
+        ContextFactory contextFactory = beanContext.getBean(ContextFactory)
+        String before = contextFactory.repositoryOverride
+
+        when: 'an address with a query and a fragment, and more repositories than a lock names'
+        contextFactory.repositoryOverride = 'https://Repo.Acme.Example:8443/m%20aven/?token=hunter2#frag;' + (1..60).collect { "https://repo${it}.acme.example/m" }.join(';')
+        Path project = generate('shop', [])
+        ProjectState state = ProjectState.read(project)
+        String lock = project.resolve('.grails/forge.lock.yml').toFile().getText('UTF-8')
+
+        then: 'the scheme, the host, the port and the path are said, and nothing else'
+        state.lock.repositories.size() == StateLimits.MAX_REPOSITORIES
+        state.lock.repositories[0].url == 'https://Repo.Acme.Example:8443/m%20aven/'
+        state.lock.repositories[1].url == 'https://repo1.acme.example/m'
+        state.lock.repositoriesNotNamed == 11
+        lock.contains("repositoriesNotNamed: 11\n")
+        !lock.contains('hunter2')
+        !lock.contains('frag')
+
+        and: 'the build file has every one of them, as it was given'
+        project.resolve('build.gradle').toFile().getText('UTF-8').contains("url = 'https://Repo.Acme.Example:8443/m%20aven/?token=hunter2#frag'")
+        project.resolve('build.gradle').toFile().getText('UTF-8').contains("url = 'https://repo60.acme.example/m'")
+
+        when: 'a lock that names an address with a query'
+        Path lockFile = project.resolve('.grails/forge.lock.yml')
+        Files.writeString(lockFile, sealed(lock.replace('url: https://repo1.acme.example/m\n', 'url: https://repo1.acme.example/m?token=hunter2\n')))
+        ProjectState.read(project)
+
+        then:
+        ProjectStateException e = thrown()
+        e.message == '.grails/forge.lock.yml: repositories[1].url must be the https address of a repository, without a name, a password, a query or a fragment, ' +
+                'and only a remote repository has one'
+
+        cleanup:
+        contextFactory.repositoryOverride = before
+    }
+
+    @Unroll
+    void "a repository that would be code of the build file is refused, without being repeated: #what"() {
+        given:
+        ContextFactory contextFactory = beanContext.getBean(ContextFactory)
+        String before = contextFactory.repositoryOverride
+        Path project = Files.createDirectory(directory.resolve('app'))
+
+        when:
+        contextFactory.repositoryOverride = 'https://repo.acme.example/m;' + entry
+        generateInto(project, 'shop', [])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'Entry 2 of 2 of GRAILS_REPO_URL has a character the address or the path of a repository cannot have here: a control character, a quote or a $'
+        project.toFile().list().length == 0
+
+        cleanup:
+        contextFactory.repositoryOverride = before
+
+        where:
+        what              | entry
+        'a line break'    | 'https://repo.example.com/m\n}\nprintln "PWNED"'
+        'a single quote'  | "https://repo.example.com/m'+System.exit(1)+'"
+        'a double quote'  | '/home/me/"repo"'
+        'a dollar'        | 'https://repo.example.com/${System.exit(1)}'
+        'an escape'       | "/home/me/repo\u001b[31m"
+        'a secret in it'  | "https://someone:hunter2'@repo.example.com/m"
+    }
+
+    void "a path with a backslash or a space is written into the build file as the text it is"() {
+        given:
+        ContextFactory contextFactory = beanContext.getBean(ContextFactory)
+        String before = contextFactory.repositoryOverride
+
+        when:
+        contextFactory.repositoryOverride = 'C:\\Users\\me\\my repo\\releases'
+        String build = generate('shop', []).resolve('build.gradle').toFile().getText('UTF-8')
+
+        then: 'the backslashes are escaped, so that the string of the build file is the path'
+        build.contains("url = 'C:\\\\Users\\\\me\\\\my repo\\\\releases'")
+
+        cleanup:
+        contextFactory.repositoryOverride = before
+    }
+
+    void "a file where the project needs a directory, and a directory that cannot be written to, are seen before anything is written"() {
+        given:
+        Path project = Files.createDirectory(directory.resolve('app'))
+        Files.writeString(project.resolve('grails-app'), 'a file')
+
+        when:
+        generateInto(project, 'shop', [])
+
+        then:
+        IllegalArgumentException file = thrown()
+        file.message == 'Cannot create the project because grails-app in the directory is a file, and the project has files in a directory of that name; ' +
+                'remove or rename it and create the project again'
+        !file.message.contains(directory.toString())
+        project.toFile().list() as List == ['grails-app']
+
+        when: 'a directory where the project has a file'
+        Files.delete(project.resolve('grails-app'))
+        Files.createDirectory(project.resolve('build.gradle'))
+        generateInto(project, 'shop', [])
+
+        then:
+        IllegalArgumentException dir = thrown()
+        dir.message == 'Cannot create the project because build.gradle in the directory is a directory, and the project has a file of that name; ' +
+                'remove or rename it and create the project again'
+        project.toFile().list() as List == ['build.gradle']
+    }
+
+    @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
+    void "a directory that cannot be written to is seen before anything is written"() {
+        given:
+        Path project = Files.createDirectory(directory.resolve('app'))
+        Path state = Files.createDirectory(project.resolve('.grails'))
+        state.toFile().setWritable(false)
+
+        when:
+        generateInto(project, 'shop', [])
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'Cannot create the project because .grails in the directory cannot be written to'
+        project.toFile().list() as List == ['.grails']
+
+        when:
+        state.toFile().setWritable(true)
+        Files.delete(state)
+        project.toFile().setWritable(false)
+        generateInto(project, 'shop', [])
+
+        then:
+        IllegalArgumentException whole = thrown()
+        whole.message == 'Cannot create the project because the directory cannot be written to'
+
+        cleanup:
+        state.toFile().setWritable(true)
+        project.toFile().setWritable(true)
+    }
+
+    void "a file that cannot be written is said by its path in the project, with what was written before it"() {
+        given: 'an output that fails at its twelfth file, as a disk does that is full'
+        List<String> written = []
+        OutputHandler failing = new OutputHandler() {
+            @Override
+            boolean exists(String path) { false }
+            @Override
+            void write(String path, Template contents) throws IOException {
+                if (written.size() == 11) {
+                    throw new java.nio.file.FileSystemException('/home/zzsomeone/projects/shop/' + path, null, 'No space left on device')
+                }
+                written << path
+            }
+            @Override
+            String getOutputLocation() { null }
+            @Override
+            void close() { }
+        }
+
+        when:
+        beanContext.getBean(ProjectGenerator).generate(ApplicationType.WEB, NameUtils.parse('com.acme.shop'), new Options(), OperatingSystem.LINUX,
+                [], failing, ConsoleOutput.NOOP)
+
+        then:
+        OutputFailedException e = thrown()
+        e.message.startsWith('Cannot write ')
+        e.message.contains(': the file system says "No space left on device". The project is not complete: 11 files were written before it (')
+        e.message.endsWith(' and 1 more)')
+        written.take(10).every { e.message.contains(it) }
+        !e.message.contains('zzsomeone')
+        e.message.readLines().size() == 1
     }
 
     @Unroll

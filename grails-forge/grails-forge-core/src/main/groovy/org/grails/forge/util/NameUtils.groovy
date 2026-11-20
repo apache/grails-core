@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.application.Project
 import org.grails.forge.application.ProjectIdentifier
+import org.grails.forge.feature.FeatureSelectionException
 import java.util.regex.Pattern
 import java.util.stream.Collectors
 
@@ -49,7 +50,15 @@ final class NameUtils {
      */
     static ProjectIdentifier parseProjectIdentifier(String name, boolean portable) throws IllegalArgumentException {
         if (!isValidAppName(name)) {
-            throw new IllegalArgumentException('"' + name + '" is not a valid app name')
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name')
+        }
+        // what is not one line of text, or is a path, is no name: said here, where the name is given,
+        // and not where a file of the application cannot be written
+        if (portable && PackDescriptorParser.hasUnsafeCharacter(name)) {
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name: it has a character that is not shown, such as a control character')
+        }
+        if (portable && (name.contains('/') || name.contains('\\'))) {
+            throw new IllegalArgumentException('"' + said(name) + '" is not a valid app name: it has a path separator')
         }
         String packageName
         String appName
@@ -59,17 +68,17 @@ final class NameUtils {
             packageName = createPackageName(appName)
         } else {
             if (parts.length == 0) {
-                throw new IllegalArgumentException('Cannot create a valid package name for [' + name + ']. Please specify a name that is also a valid Java package.')
+                throw new IllegalArgumentException('Cannot create a valid package name for [' + said(name) + ']. Please specify a name that is also a valid Java package.')
             }
             int lastIdx = parts.length - 1
             appName = parts[lastIdx]
             packageName = Arrays.stream(parts).limit(lastIdx).collect(Collectors.joining('.'))
         }
         if (!isValidJavaPackage(packageName)) {
-            throw new IllegalArgumentException('Cannot create a valid package name for [' + packageName + ']. Please specify a name that is also a valid Java package.')
+            throw new IllegalArgumentException('Cannot create a valid package name for [' + said(packageName) + ']. Please specify a name that is also a valid Java package.')
         }
         if (!isValidAppName(appName)) {
-            throw new IllegalArgumentException('"' + appName + '" is not a valid app name')
+            throw new IllegalArgumentException('"' + said(appName) + '" is not a valid app name')
         }
         // the package is the directories of the sources: a project with a directory Windows cannot
         // make could not be checked out there
@@ -82,7 +91,17 @@ final class NameUtils {
         if (portable && PackDescriptorParser.isDeviceName(appName)) {
             throw new IllegalArgumentException("The name ${appName} is the name of a device on Windows, so a directory of that name could not be made there")
         }
+        // the name is a directory and part of the names of files: what not every file system takes
+        // for one, such as a name that ends with a space or has a colon, is no name for an application
+        if (portable && !PackDescriptorParser.isPathBelowRoot(appName)) {
+            throw new IllegalArgumentException('"' + said(appName) + '" is not a valid app name: not every file system takes it as the name of a directory')
+        }
         return new ProjectIdentifier(packageName, appName)
+    }
+
+    // a name as a message repeats it: nothing in it that a terminal or the command line acts on, and not all of a long one
+    private static String said(String name) {
+        return name == null || name.isEmpty() ? String.valueOf(name) : FeatureSelectionException.shown(name)
     }
 
     /**

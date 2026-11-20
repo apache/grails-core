@@ -112,6 +112,9 @@ final class ProjectStateRecorder {
                 }
             }
         }
+        if (outputHandler instanceof FileSystemOutputHandler) {
+            obstacles(((FileSystemOutputHandler) outputHandler).getApplicationDirectory().toPath(), templates)
+        }
         if (outputHandler.exists(ProjectState.MANIFEST)) {
             throw new IllegalArgumentException("Cannot create the project because the directory already has the state of a generated project (${ProjectState.MANIFEST}); " +
                     "to generate the project anew, remove the directory ${ProjectState.DIRECTORY} first, which discards the record of how it was generated")
@@ -126,6 +129,48 @@ final class ProjectStateRecorder {
             }
             if (!BaselineIndex.isBaselinePath(path)) {
                 throw new IllegalArgumentException("The features write the file ${path}, which is not a path the state of the project can name")
+            }
+        }
+    }
+
+    // What can be seen before anything is written: a file where the project needs a directory, a
+    // directory where it needs a file, and a directory that cannot be written to
+    private void obstacles(Path directory, Collection<Template> templates) {
+        Path existing = directory
+        while (existing != null && !Files.exists(existing)) {
+            existing = existing.getParent()
+        }
+        if (existing != null && existing != directory && !Files.isWritable(existing)) {
+            throw new IllegalArgumentException('Cannot create the project because the directory it is to be created in cannot be written to')
+        }
+        Set<String> checked = new HashSet<>()
+        List<String> paths = templates.collect { Template template -> path(template) }
+        paths << ProjectState.MANIFEST << "${ProjectState.BASELINE_FILES}/x".toString()
+        for (String path : paths) {
+            List<String> steps = path.split('/').toList()
+            Path current = directory
+            String at = ''
+            for (int index = 0; index < steps.size(); index++) {
+                boolean last = index == steps.size() - 1
+                if (Files.exists(current) && !Files.isDirectory(current)) {
+                    break
+                }
+                if (Files.isDirectory(current) && !Files.exists(current.resolve(steps[index]), LinkOption.NOFOLLOW_LINKS) && checked.add('w:' + at) && !Files.isWritable(current)) {
+                    throw new IllegalArgumentException("Cannot create the project because ${at ?: 'the directory'}${at ? ' in the directory' : ''} cannot be written to")
+                }
+                current = current.resolve(steps[index])
+                at = at ? at + '/' + steps[index] : steps[index]
+                if (!checked.add(at) || !Files.exists(current, LinkOption.NOFOLLOW_LINKS)) {
+                    continue
+                }
+                if (!last && !Files.isDirectory(current)) {
+                    throw new IllegalArgumentException("Cannot create the project because ${at} in the directory is a file, and the project has files in a directory of that name; " +
+                            'remove or rename it and create the project again')
+                }
+                if (last && Files.isDirectory(current) && path != "${ProjectState.BASELINE_FILES}/x".toString()) {
+                    throw new IllegalArgumentException("Cannot create the project because ${at} in the directory is a directory, and the project has a file of that name; " +
+                            'remove or rename it and create the project again')
+                }
             }
         }
     }
@@ -189,6 +234,8 @@ final class ProjectStateRecorder {
                 generatorContext.getRequestedFeatures().toSorted().unique().collect { String name -> requested(name, locked) },
                 generatorContext.getExcludedFeatures().toSorted().unique().collect { String name -> new RequestedFeature(name) },
                 [:]).toBytes()
+        // more repositories than the lock names are counted: they are in the build file, all of them
+        List<LockedRepository> repositories = repositories(generatorContext.getRepositoryOverride())
         byte[] lockBytes = new ProjectLock(
                 StateYaml.sha256(manifestBytes),
                 ProjectLock.GENERATOR,
@@ -198,7 +245,8 @@ final class ProjectStateRecorder {
                 applicationType,
                 options,
                 ProjectLock.LINE_ENDINGS_OF_TEMPLATES,
-                repositories(generatorContext.getRepositoryOverride()),
+                repositories.take(StateLimits.MAX_REPOSITORIES),
+                Math.max(0, repositories.size() - StateLimits.MAX_REPOSITORIES),
                 locked,
                 [:],
                 StateYaml.sha256(indexBytes)).toBytes()
@@ -208,7 +256,7 @@ final class ProjectStateRecorder {
             throw new IllegalArgumentException("Cannot create the project because the record of how it is generated could not be read again: ${e.message}")
         }
         // every copy is committed, whatever the patterns of the application or of whoever commits leave out
-        state << new Rendered(ProjectState.IGNORE, '!/baseline/\n!/baseline/**\n'.getBytes(StandardCharsets.UTF_8), false, false)
+        state << new Rendered(ProjectState.IGNORE, ProjectState.IGNORE_CONTENT.getBytes(StandardCharsets.UTF_8), false, false)
         state << new Rendered(ProjectState.ATTRIBUTES, '* -text\n'.getBytes(StandardCharsets.UTF_8), false, false)
         state << new Rendered(ProjectState.BASELINE_INDEX, indexBytes, false, false)
         state << new Rendered(ProjectState.LOCK, lockBytes, false, false)
@@ -274,8 +322,8 @@ final class ProjectStateRecorder {
         // and not when it is a directory of this machine
         int version = artifact.coordinates.lastIndexOf(':')
         return new LockedFeature(feature.getName(), LockedFeature.PACK,
-                // the one rule for a repository that can be written into a project, and of a length the state takes
-                ProjectLock.isPublicAddress(artifact.getRecordableRepository()) ? artifact.getRecordableRepository() : null,
+                // the rule of the pack for a repository that can be written into a project, and that of the state
+                ProjectLock.recordableAddress(artifact.getRecordableRepository()),
                 artifact.coordinates.substring(0, version), artifact.coordinates.substring(version + 1), artifact.sha256)
     }
 
@@ -288,7 +336,7 @@ final class ProjectStateRecorder {
             } else if (each == 'mavenCentral()') {
                 repositories << new LockedRepository(LockedRepository.MAVEN_CENTRAL)
             } else if (GradleRepository.URL_SCHEME_PREFIX.matcher(each).matches() && !each.toLowerCase(Locale.ROOT).startsWith('file:')) {
-                repositories << new LockedRepository(LockedRepository.REMOTE, ProjectLock.isPublicAddress(each) ? each : null)
+                repositories << new LockedRepository(LockedRepository.REMOTE, ProjectLock.recordableAddress(each))
             } else {
                 repositories << new LockedRepository(LockedRepository.LOCAL)
             }

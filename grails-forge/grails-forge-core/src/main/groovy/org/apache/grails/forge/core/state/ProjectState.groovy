@@ -79,6 +79,14 @@ final class ProjectState {
      */
     public static final String IGNORE = '.grails/.gitignore'
 
+    /**
+     * What {@link #IGNORE} says: every file of the state that has to be committed is committed, also
+     * where a pattern of a {@code .gitignore} above it, or of the one of whoever commits, would leave
+     * it out. A pattern that leaves out the directory {@code .grails} itself is not undone by it: Git
+     * does not look into a directory that is ignored.
+     */
+    public static final String IGNORE_CONTENT = '!/project.yml\n!/forge.lock.yml\n!/.gitattributes\n!/.gitignore\n!/baseline/\n!/baseline/**\n'
+
     /** The directory of the baseline, the index and the content */
     public static final String BASELINE = '.grails/baseline'
 
@@ -166,10 +174,16 @@ final class ProjectState {
             throw new ProjectStateException("There is no state of a generated project here: ${MANIFEST} is missing")
         }
         if (missing) {
-            // the manifest is written last
-            String advice = missing.contains(MANIFEST) ?
-                    'the project was not generated to the end, and creating it again in this directory with --inplace completes it' :
-                    "restore ${missing.size() == 1 ? 'it' : 'them'} from version control"
+            // The manifest is written last, after the baseline, so a generation that did not come to
+            // its end has no manifest. A clone whose manifest or lock was not committed looks the same
+            // but for its baseline, which is all there: that is what an ignore rule of Git leaves behind
+            String it = missing.size() == 1 ? 'it' : 'them'
+            String advice = !missing.contains(BASELINE_INDEX) && Files.isDirectory(projectDirectory.resolve(BASELINE_FILES), LinkOption.NOFOLLOW_LINKS) ?
+                    "the baseline is there, as it is when ${it == 'it' ? 'the file was' : 'the files were'} not committed with the project: see whether a rule of a .gitignore, " +
+                            "also a global one, leaves ${it} out, and commit ${it} from where the project was generated" :
+                    missing.contains(MANIFEST) ?
+                            'the project was not generated to the end, and creating it again in this directory with --inplace completes it' :
+                            "restore ${it} from version control"
             throw new ProjectStateException("The state of the project is not complete: ${missing.join(' and ')} ${missing.size() == 1 ? 'is' : 'are'} missing; ${advice}")
         }
         try {

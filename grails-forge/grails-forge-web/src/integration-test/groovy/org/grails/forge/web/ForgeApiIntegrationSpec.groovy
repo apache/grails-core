@@ -18,9 +18,11 @@
  */
 package org.grails.forge.web
 
+import com.github.difflib.UnifiedDiffUtils
 import grails.testing.mixin.integration.Integration
 import grails.web.mapping.cors.GrailsCorsConfiguration
 import groovy.json.JsonSlurper
+import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.util.VersionInfo
 import org.grails.forge.template.GspView
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -38,6 +40,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Duration
 import java.time.LocalDate
 import java.security.MessageDigest
@@ -228,6 +232,34 @@ class ForgeApiIntegrationSpec extends Specification {
         zipText(zip, 'forge-state/.grails/baseline/files/build.gradle') == zipText(zip, 'forge-state/build.gradle')
         zipText(zip, 'forge-state/.gitignore').contains('.grails/cache/\n')
         zipText(zip, 'forge-state/.gitattributes').contains('*.bat text eol=crlf\n')
+    }
+
+    void "the difference the service gives for a feature, applied to the project it gives without it, leaves a project whose state reads"() {
+        given: 'the project without the feature, as it is downloaded'
+        Path project = Files.createTempDirectory('forgediff')
+        unzipTo(get('/create/web/com.example.forge-state').body as byte[], project)
+        Path root = project.resolve('forge-state')
+        byte[] with = get('/create/web/com.example.forge-state?features=grails-quartz').body as byte[]
+
+        when: 'the difference is applied as patch applies it'
+        String diff = text(get('/diff/web/com.example.forge-state?features=grails-quartz'))
+        List<String> changed = applyDiff(root, diff)
+        ProjectState state = ProjectState.read(root)
+        state.verifyBaseline(root)
+
+        then: 'the files of the application are those of the project with the feature'
+        changed.containsAll(['build.gradle', 'README.md', 'grails-app/conf/application.yml'])
+        !changed.any { it.startsWith('.grails') }
+        changed.every { root.resolve(it).toFile().getText('UTF-8').trim() == zipText(with, 'forge-state/' + it).trim() }
+
+        and: 'the state is the one the project was generated with, to which the changed files are changed files'
+        !state.lock.featureNames.contains('grails-quartz')
+        !state.isAsGenerated(root, 'build.gradle')
+        state.isAsGenerated(root, 'gradlew')
+        state.isAsGenerated(root, '.gitattributes')
+
+        cleanup:
+        project?.toFile()?.deleteDir()
     }
 
     void "the state of a project does not depend on who asks for it"() {
@@ -515,6 +547,11 @@ class ForgeApiIntegrationSpec extends Specification {
         '/diff/web/com.aux.shop'                               | 'The package com.aux has the part aux, which is the name of a device on Windows, so the project could not be checked out there'
         '/create/web/con.acme.shop'                            | 'The package con.acme has the part con, which is the name of a device on Windows'
         '/create/web/com.acme.nul'                             | 'The name nul is the name of a device on Windows, so a directory of that name could not be made there'
+        '/create/web/com.example.sh%0Aop'                      | 'Invalid application name'
+        '/preview/web/com.ex%1B%5B31mample.shop'               | 'Invalid application name'
+        '/diff/web/com.example.sh%7Cop'                        | 'Invalid application name'
+        '/create/web/com.example.sh:op'                        | 'Invalid application name'
+        '/create/web/com.example..shop'                        | 'Cannot create a valid package name'
         "/create/web/${(['p'] * 30).join('.')}.shop"           | 'which is not a path the state of the project can name'
         "/preview/web/${(['p'] * 30).join('.')}.shop"          | 'which is not a path the state of the project can name'
         '/preview/web/demo?features=com.acme:acme-audit-grails:2.3.0' | 'requested feature does not exist: com.acme:acme-audit-grails:2.3.0'
@@ -732,6 +769,42 @@ class ForgeApiIntegrationSpec extends Specification {
 
     private static String text(Map response) {
         new String(response.body as byte[], StandardCharsets.UTF_8)
+    }
+
+    private static void unzipTo(byte[] archive, Path target) {
+        new ZipInputStream(new ByteArrayInputStream(archive)).withCloseable { ZipInputStream zip ->
+            for (ZipEntry entry = zip.nextEntry; entry != null; entry = zip.nextEntry) {
+                Path file = target.resolve(entry.name)
+                if (entry.directory) {
+                    Files.createDirectories(file)
+                } else {
+                    Files.createDirectories(file.parent)
+                    Files.write(file, zip.readAllBytes())
+                }
+            }
+        }
+    }
+
+    // applies a unified difference for each file, as patch does
+    private static List<String> applyDiff(Path project, String diff) {
+        List<List<String>> files = []
+        diff.readLines().each { String line ->
+            if (line.startsWith('--- ')) {
+                files << []
+            }
+            if (files) {
+                files.last() << line
+            }
+        }
+        return files.collect { List<String> lines ->
+            String path = lines[0].substring(4)
+            File file = project.resolve(path).toFile()
+            List<String> before = file.file ? file.getText('UTF-8').split('\n') as List<String> : []
+            List<String> after = UnifiedDiffUtils.parseUnifiedDiff(lines.reverse().dropWhile { it == '' }.reverse()).applyTo(before)
+            file.parentFile.mkdirs()
+            file.setText(after.join('\n') + '\n', 'UTF-8')
+            path
+        }
     }
 
     private static String sha256(byte[] bytes) {

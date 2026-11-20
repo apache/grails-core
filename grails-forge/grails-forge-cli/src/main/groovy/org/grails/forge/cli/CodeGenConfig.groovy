@@ -19,6 +19,7 @@
 package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
+import org.apache.grails.forge.core.state.EarlierRecord
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.springframework.context.ApplicationContext
@@ -33,8 +34,7 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Language
 import org.grails.forge.options.Options
 import org.grails.forge.options.DevelopmentReloading
-import org.yaml.snakeyaml.Yaml
-import java.nio.file.Files
+import org.grails.forge.util.NameUtils
 import java.util.stream.Collectors
 
 @CompileStatic
@@ -50,6 +50,8 @@ class CodeGenConfig {
     private boolean legacy
 
     private static final int MAX_EARLIER_RECORD = 256 * 1024
+    private static final int MAX_VALUE = 255
+    private static final int MAX_FEATURES = 1000
 
     ApplicationType getApplicationType() {
         return applicationType
@@ -146,12 +148,8 @@ class CodeGenConfig {
         if (!record.isFile() || record.length() > MAX_EARLIER_RECORD) {
             return
         }
-        CodeGenConfig earlier
-        try {
-            earlier = loadEarlierRecord(beanContext, directory, ConsoleOutput.NOOP)
-        } catch (RuntimeException ignored) {
-            return
-        }
+        // an earlier record that cannot be used is not compared, and nothing is said of it: the state is what counts
+        CodeGenConfig earlier = loadEarlierRecord(beanContext, directory, ConsoleOutput.NOOP)
         if (earlier == null || earlier.legacy) {
             return
         }
@@ -168,6 +166,13 @@ class CodeGenConfig {
         }
     }
 
+    /**
+     * Reads {@code grails-forge-cli.yml}, or {@code grails-cli.yml} before it. The file is whatever the
+     * directory holds, of a project that was cloned as well: it is read within bounds and without
+     * anything of YAML the file has no use for, and every value of it is held to what it has to be.
+     * A file that cannot be used is said to be, in one line, and the directory is then one without a
+     * project for the commands.
+     */
     private static CodeGenConfig loadEarlierRecord(ApplicationContext beanContext, File directory, ConsoleOutput consoleOutput) {
 
         File grailsCli = new File(directory, 'grails-forge-cli.yml')
@@ -175,92 +180,125 @@ class CodeGenConfig {
         if (!grailsCli.exists()) {
             grailsCli = new File(directory, 'grails-cli.yml')
         }
-
-        if (grailsCli.exists()) {
-            try (InputStream inputStream = Files.newInputStream(grailsCli.toPath())) {
-                Yaml yaml = new Yaml()
-                Map<String, Object> map = new LinkedHashMap<>()
-                Iterable<Object> objects = yaml.loadAll(inputStream)
-                Iterator<Object> i = objects.iterator()
-                if (i.hasNext()) {
-                    while (i.hasNext()) {
-                        Object object = i.next()
-                        if (object instanceof Map) {
-                            map.putAll((Map) object)
-                        }
-                    }
-                }
-                CodeGenConfig codeGenConfig = new CodeGenConfig()
-                if (map.get('applicationType') != null) {
-                    codeGenConfig.setApplicationType(ApplicationType.valueOf(map.get('applicationType').toString().toUpperCase(Locale.ENGLISH).replace('-', '_')))
-                }
-                if (map.get('defaultPackage') != null) {
-                    codeGenConfig.setDefaultPackage(map.get('defaultPackage').toString())
-                }
-                if (map.get('reloading') != null) {
-                    String reloading = map.get('reloading').toString()
-                    codeGenConfig.setReloading(Arrays.stream(DevelopmentReloading.values())
-                            .filter(value -> value.getName().equals(reloading))
-                            .findFirst()
-                            .orElseThrow(() -> new IllegalArgumentException('Unknown development reloading option: ' + reloading)))
-                }
-                if (map.get('sourceLanguage') != null) {
-                    codeGenConfig.setSourceLanguage(Language.valueOf(map.get('sourceLanguage').toString().toUpperCase(Locale.ENGLISH)))
-                }
-                if (map.get('features') instanceof List) {
-                    List<String> features = new ArrayList<>()
-                    for (Object feature : (List<?>) map.get('features')) {
-                        features.add(feature.toString())
-                    }
-                    codeGenConfig.setFeatures(features)
-                }
-                if (map.get('excludedFeatures') instanceof List) {
-                    List<String> excluded = new ArrayList<>()
-                    for (Object feature : (List<?>) map.get('excludedFeatures')) {
-                        excluded.add(feature.toString())
-                    }
-                    codeGenConfig.setExcludedFeatures(excluded)
-                }
-
-                if (map.containsKey('testFramework') && !map.containsKey('reloading')) {
-                    codeGenConfig.setReloading(DevelopmentReloading.NONE)
-                }
-
-                if (map.containsKey('profile')) {
-                    codeGenConfig.legacy = true
-                    String profile = map.get('profile').toString()
-                    if (profile.equals('web')) {
-                        codeGenConfig.setApplicationType(ApplicationType.WEB)
-                    } else if (profile.equals('rest-api')) {
-                        codeGenConfig.setApplicationType(ApplicationType.REST_API)
-                    } else if (profile.equals('plugin')) {
-                        codeGenConfig.setApplicationType(ApplicationType.PLUGIN)
-                    } else if (profile.equals('web-plugin')) {
-                        codeGenConfig.setApplicationType(ApplicationType.WEB_PLUGIN)
-                    } else {
-                        return null
-                    }
-
-                    AvailableFeatures availableFeatures = beanContext.getBean(FeatureRegistry)
-                            .availableFeatures(codeGenConfig.getApplicationType())
-
-                    codeGenConfig.setFeatures(availableFeatures.getAllFeatures()
-                            .filter(f -> f instanceof DefaultFeature)
-                            .map { (DefaultFeature) it }
-                            .filter(f -> f.shouldApply(
-                                    codeGenConfig.getApplicationType(),
-                                    new Options(codeGenConfig.getReloading(), JdkVersion.DEFAULT_OPTION),
-                                    new HashSet<>()))
-                            .map(Feature::getName)
-                            .collect(Collectors.toList()))
-
-                    consoleOutput.warning('This project is using Grails Forge CLI v2 but is still using the v1 grails-forge-cli.yml format')
-                    consoleOutput.warning('To replace the configuration with the new format, run `grails update-cli-config`')
-                }
-
-                return codeGenConfig
-            } catch (IOException ignored) { }
+        if (!grailsCli.exists()) {
+            return null
+        }
+        try {
+            return earlierRecord(beanContext, EarlierRecord.read(grailsCli.toPath()), grailsCli.getName(), consoleOutput)
+        } catch (ProjectStateException e) {
+            consoleOutput.warning("${e.getMessage()}; the commands that create the classes of an application are not there without it")
+        } catch (RuntimeException e) {
+            // nothing of the file is repeated: what failed was not foreseen, and neither is what it would say
+            consoleOutput.warning("${grailsCli.getName()} cannot be used (${e.getClass().getSimpleName()}); " +
+                    'the commands that create the classes of an application are not there without it')
         }
         return null
+    }
+
+    private static CodeGenConfig earlierRecord(ApplicationContext beanContext, Map<String, Object> map, String file, ConsoleOutput consoleOutput) {
+        CodeGenConfig codeGenConfig = new CodeGenConfig()
+        String type = text(map, 'applicationType', file)
+        if (type != null) {
+            codeGenConfig.setApplicationType(ApplicationType.values().find { ApplicationType each -> each.name().equalsIgnoreCase(type.replace('-', '_')) })
+            if (codeGenConfig.getApplicationType() == null) {
+                throw new ProjectStateException("${file}: applicationType is not a type of application, but '${EarlierRecord.shown(type)}'")
+            }
+        }
+        String defaultPackage = text(map, 'defaultPackage', file)
+        if (defaultPackage == null || !NameUtils.isValidJavaPackage(defaultPackage)) {
+            throw new ProjectStateException("${file}: defaultPackage ${defaultPackage == null ? 'is missing' : 'is not the name of a package'}")
+        }
+        codeGenConfig.setDefaultPackage(defaultPackage)
+        String reloading = text(map, 'reloading', file)
+        if (reloading != null) {
+            codeGenConfig.setReloading(DevelopmentReloading.values().find { DevelopmentReloading each -> each.getName() == reloading })
+            if (codeGenConfig.getReloading() == null) {
+                throw new ProjectStateException("${file}: reloading is not a way an application reloads, but '${EarlierRecord.shown(reloading)}'")
+            }
+        }
+        String language = text(map, 'sourceLanguage', file)
+        if (language != null) {
+            codeGenConfig.setSourceLanguage(Language.values().find { Language each -> each.name().equalsIgnoreCase(language) })
+            if (codeGenConfig.getSourceLanguage() == null) {
+                throw new ProjectStateException("${file}: sourceLanguage is not a language of an application, but '${EarlierRecord.shown(language)}'")
+            }
+        }
+        codeGenConfig.setFeatures(names(map, 'features', file))
+        List<String> excluded = names(map, 'excludedFeatures', file)
+        if (excluded != null) {
+            codeGenConfig.setExcludedFeatures(excluded)
+        }
+
+        if (map.containsKey('testFramework') && !map.containsKey('reloading')) {
+            codeGenConfig.setReloading(DevelopmentReloading.NONE)
+        }
+
+        if (map.containsKey('profile')) {
+            codeGenConfig.legacy = true
+            String profile = text(map, 'profile', file)
+            if ('web' == profile) {
+                codeGenConfig.setApplicationType(ApplicationType.WEB)
+            } else if ('rest-api' == profile) {
+                codeGenConfig.setApplicationType(ApplicationType.REST_API)
+            } else if ('plugin' == profile) {
+                codeGenConfig.setApplicationType(ApplicationType.PLUGIN)
+            } else if ('web-plugin' == profile) {
+                codeGenConfig.setApplicationType(ApplicationType.WEB_PLUGIN)
+            } else {
+                return null
+            }
+
+            AvailableFeatures availableFeatures = beanContext.getBean(FeatureRegistry)
+                    .availableFeatures(codeGenConfig.getApplicationType())
+
+            codeGenConfig.setFeatures(availableFeatures.getAllFeatures()
+                    .filter(f -> f instanceof DefaultFeature)
+                    .map { (DefaultFeature) it }
+                    .filter(f -> f.shouldApply(
+                            codeGenConfig.getApplicationType(),
+                            new Options(codeGenConfig.getReloading(), JdkVersion.DEFAULT_OPTION),
+                            new HashSet<>()))
+                    .map(Feature::getName)
+                    .collect(Collectors.toList()))
+
+            consoleOutput.warning('This project is using Grails Forge CLI v2 but is still using the v1 grails-forge-cli.yml format')
+            consoleOutput.warning('To replace the configuration with the new format, run `grails update-cli-config`')
+        }
+        // the commands ask what kind of application it is and which features it has
+        if (codeGenConfig.getApplicationType() == null || codeGenConfig.getFeatures() == null) {
+            throw new ProjectStateException("${file}: ${codeGenConfig.getApplicationType() == null ? 'applicationType' : 'features'} is missing")
+        }
+        return codeGenConfig
+    }
+
+    // a value that is one line of text, or nothing
+    private static String text(Map<String, Object> map, String key, String file) {
+        Object value = map.get(key)
+        if (value == null || value == '') {
+            return null
+        }
+        if (!(value instanceof String) || !EarlierRecord.isLine((String) value, MAX_VALUE)) {
+            throw new ProjectStateException("${file}: ${key} must be one line of at most ${MAX_VALUE} characters, none of them a control character or one that is not shown")
+        }
+        return (String) value
+    }
+
+    // a list of the names of features, or nothing
+    private static List<String> names(Map<String, Object> map, String key, String file) {
+        Object value = map.get(key)
+        if (value == null || value == '') {
+            return null
+        }
+        if (!(value instanceof List) || ((List) value).size() > MAX_FEATURES) {
+            throw new ProjectStateException("${file}: ${key} must be a list of at most ${MAX_FEATURES} names of features")
+        }
+        List<String> names = new ArrayList<>()
+        for (Object each : (List) value) {
+            if (!(each instanceof String) || !EarlierRecord.FEATURE_NAME.matcher((String) each).matches()) {
+                throw new ProjectStateException("${file}: ${key} has an entry that is not the name of a feature")
+            }
+            names.add((String) each)
+        }
+        return names
     }
 }

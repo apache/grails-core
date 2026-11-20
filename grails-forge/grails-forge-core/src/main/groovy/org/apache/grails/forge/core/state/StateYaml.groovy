@@ -75,6 +75,13 @@ final class StateYaml {
      * @return the mapping the file holds, every single value of it text
      */
     static Map<String, Object> load(byte[] bytes, String file, int lines) {
+        return load(bytes, file, lines, StateLimits.MAX_LINE)
+    }
+
+    /**
+     * @param length the most characters a line, and a single value, of the file can have
+     */
+    static Map<String, Object> load(byte[] bytes, String file, int lines, int length) {
         String text
         try {
             text = StandardCharsets.UTF_8.newDecoder()
@@ -87,7 +94,7 @@ final class StateYaml {
         if (text.isBlank()) {
             throw new ProjectStateException("${file} is empty")
         }
-        String refused = refusedAsText(text, lines)
+        String refused = refusedAsText(text, lines, length)
         if (refused != null) {
             throw new ProjectStateException("${file} ${refused}")
         }
@@ -101,7 +108,7 @@ final class StateYaml {
             options.setCodePointLimit(text.length() + 1)
             DumperOptions dumperOptions = new DumperOptions()
             Yaml reader = new Yaml(new SafeConstructor(options), new Representer(dumperOptions), dumperOptions, options, new TextResolver())
-            refused = refusedByScan(reader, text, 4 * lines + 64)
+            refused = refusedByScan(reader, text, 4 * lines + 64, length)
             if (refused != null) {
                 throw new ProjectStateException("${file} ${refused}")
             }
@@ -123,7 +130,7 @@ final class StateYaml {
     // that costs grows with the square of the length of the line; and every line can open a mapping.
     // Forge writes short lines and a known number of them, so a file with more of either is not one
     // Forge wrote, and it is refused before the library sees it.
-    private static String refusedAsText(String text, int lines) {
+    private static String refusedAsText(String text, int lines, int length) {
         int count = 1
         int start = 0
         for (int index = 0; index < text.length(); index++) {
@@ -133,15 +140,15 @@ final class StateYaml {
                 if (++count > lines) {
                     return "has more than ${lines} lines".toString()
                 }
-            } else if (index - start >= StateLimits.MAX_LINE) {
-                return "has a line of more than ${StateLimits.MAX_LINE} characters".toString()
+            } else if (index - start >= length) {
+                return "has a line of more than ${length} characters".toString()
             }
         }
         return null
     }
 
     // the files are written without any of these, so one that has them was not written by Forge
-    private static String refusedByScan(Yaml reader, String text, int events) {
+    private static String refusedByScan(Yaml reader, String text, int events, int length) {
         // for each mapping or list that is open: whether it is a mapping whose next entry is a key
         // (TRUE), a mapping whose next entry is a value (FALSE), or a list (empty)
         Deque<Optional<Boolean>> open = new ArrayDeque<>()
@@ -161,8 +168,8 @@ final class StateYaml {
             if (tag != null) {
                 return "gives a value the tag '${shown(tag, MAX_ECHO)}', and the state of a project does not use tags".toString()
             }
-            if (event instanceof ScalarEvent && ((ScalarEvent) event).getValue().length() > StateLimits.MAX_LINE) {
-                return "has a value of more than ${StateLimits.MAX_LINE} characters".toString()
+            if (event instanceof ScalarEvent && ((ScalarEvent) event).getValue().length() > length) {
+                return "has a value of more than ${length} characters".toString()
             }
             if (event instanceof CollectionEndEvent) {
                 open.pop()

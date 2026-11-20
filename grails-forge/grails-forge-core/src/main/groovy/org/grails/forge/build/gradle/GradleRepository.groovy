@@ -32,6 +32,12 @@ interface GradleRepository extends Ordered {
 
     Pattern KNOWN_SCHEME = Pattern.compile('(?i)(https|http|file|ftp|sftp|jar|s3|gs|ssh):')
 
+    /**
+     * What an entry of {@code GRAILS_REPO_URL} cannot have: it is written into the build file of the
+     * application, where a line break, a quote or a {@code $} would be code of the build.
+     */
+    Pattern NOT_IN_A_REPOSITORY = Pattern.compile(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}'"$]/)
+
     @Nonnull
     String toSnippet(String basePadding)
 
@@ -88,7 +94,13 @@ interface GradleRepository extends Ordered {
                 .filter(s -> !s.isEmpty())
                 .toList()
 
-            for (String overrideUrl : overrides) {
+            for (int entry = 0; entry < overrides.size(); entry++) {
+                String overrideUrl = overrides.get(entry)
+                if (NOT_IN_A_REPOSITORY.matcher(overrideUrl).find()) {
+                    // the entry is not repeated: it can have a password in it, and is not safe to show
+                    throw new IllegalArgumentException("Entry ${entry + 1} of ${overrides.size()} of GRAILS_REPO_URL has a character the address or the path of a repository " +
+                            'cannot have here: a control character, a quote or a $')
+                }
                 // The Gradle repository aliases render as their method calls rather than a
                 // maven { url = ... } block, so the generated build resolves them natively
                 if ('mavenLocal()'.equals(overrideUrl)) {

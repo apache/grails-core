@@ -26,7 +26,9 @@ import org.apache.grails.forge.core.pack.PackContent
 import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.apache.grails.forge.core.pack.PackFeature
 import org.apache.grails.forge.core.pack.PackFeatures
+import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateRecorder
+import org.grails.forge.io.OutputFailedException
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.OperatingSystem
@@ -122,29 +124,43 @@ class DefaultProjectGenerator implements ProjectGenerator {
             rendered << state.record(template)
         }
         List<Template> stateFiles = state.state()
-        state.clear()
+        List<String> written = []
+        try {
+            state.clear()
+        } catch (IOException e) {
+            throw OutputFailedException.of(ProjectState.BASELINE, e, written)
+        }
 
         Map<String, Template> kept = new LinkedHashMap<>()
         try (TemplateRenderer templateRenderer = TemplateRenderer.create(project, outputHandler)) {
             for (Template template : rendered) {
                 RenderResult renderResult = templateRenderer.render(template)
                 if (renderResult.getError() != null) {
-                    throw renderResult.getError()
+                    throw failed(renderResult, written)
                 }
                 if (renderResult.isSkipped()) {
                     kept.put(renderResult.getPath(), template)
+                } else {
+                    written << renderResult.getPath()
                 }
             }
             for (Template template : stateFiles) {
                 RenderResult renderResult = templateRenderer.render(template, true)
                 if (renderResult.getError() != null) {
-                    throw renderResult.getError()
+                    throw failed(renderResult, written)
                 }
+                written << renderResult.getPath()
             }
             if (!kept.isEmpty()) {
                 outputHandler.kept(kept)
             }
         }
+    }
+
+    // what the file system refused is said by the path of the file in the project, not by where the project is
+    private static Exception failed(RenderResult renderResult, List<String> written) {
+        Exception error = renderResult.getError()
+        return error instanceof IOException ? OutputFailedException.of(renderResult.getPath(), (IOException) error, written) : error
     }
 
     /**

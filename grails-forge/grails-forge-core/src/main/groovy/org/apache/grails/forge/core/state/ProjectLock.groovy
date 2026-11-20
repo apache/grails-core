@@ -60,6 +60,7 @@ final class ProjectLock {
     final GenerationOptions options
     final String lineEndings
     final List<LockedRepository> repositories
+    final int repositoriesNotNamed
     final List<LockedFeature> features
     final Map<String, String> parameters
     final String baselineIndexSha256
@@ -67,6 +68,17 @@ final class ProjectLock {
     ProjectLock(String manifestSha256, String generatorName, String generatorVersion, String grailsVersion, int templateApi,
                 ApplicationType applicationType, GenerationOptions options, String lineEndings, List<LockedRepository> repositories,
                 List<LockedFeature> features, Map<String, String> parameters, String baselineIndexSha256) {
+        this(manifestSha256, generatorName, generatorVersion, grailsVersion, templateApi, applicationType, options, lineEndings, repositories, 0,
+                features, parameters, baselineIndexSha256)
+    }
+
+    /**
+     * @param repositoriesNotNamed how many repositories were given beyond those that are named
+     */
+    ProjectLock(String manifestSha256, String generatorName, String generatorVersion, String grailsVersion, int templateApi,
+                ApplicationType applicationType, GenerationOptions options, String lineEndings, List<LockedRepository> repositories,
+                int repositoriesNotNamed, List<LockedFeature> features, Map<String, String> parameters, String baselineIndexSha256) {
+        this.repositoriesNotNamed = repositoriesNotNamed
         this.manifestSha256 = manifestSha256
         this.generatorName = generatorName
         this.generatorVersion = generatorVersion
@@ -102,6 +114,9 @@ final class ProjectLock {
         if (repositories) {
             map.put('repositories', repositories.collect { LockedRepository each -> each.toMap() })
         }
+        if (repositoriesNotNamed > 0) {
+            map.put('repositoriesNotNamed', repositoriesNotNamed)
+        }
         map.put('features', features.collect { LockedFeature each -> each.toMap() })
         map.put('parameters', new LinkedHashMap<String, Object>(parameters))
         map.put('baselineIndex', [sha256: baselineIndexSha256] as Map<String, Object>)
@@ -130,6 +145,10 @@ final class ProjectLock {
         String lineEndings = root.oneOf('lineEndings', [LINE_ENDINGS_OF_TEMPLATES])
         List<LockedRepository> repositories = !root.has('repositories') ? [] as List<LockedRepository> :
                 root.sections('repositories', StateLimits.MAX_REPOSITORIES).collect { StateSection each -> LockedRepository.read(each) }
+        int repositoriesNotNamed = root.has('repositoriesNotNamed') ? root.number('repositoriesNotNamed', 1, 1_000_000) : 0
+        if (repositoriesNotNamed > 0 && repositories.size() != StateLimits.MAX_REPOSITORIES) {
+            throw root.problem('repositoriesNotNamed', "is there although fewer than ${StateLimits.MAX_REPOSITORIES} repositories are named")
+        }
         List<LockedFeature> features = root.sections('features', StateLimits.MAX_FEATURES).collect { StateSection each -> LockedFeature.read(each) }
         Set<String> names = new HashSet<>()
         for (LockedFeature feature : features) {
@@ -153,7 +172,7 @@ final class ProjectLock {
             throw new ProjectStateException("${ProjectState.LOCK} was changed after it was written: it does not have the digest it ends with")
         }
         return new ProjectLock(manifestSha256, generatorName, generatorVersion, grailsVersion, templateApi, applicationType, options,
-                lineEndings, repositories, features, parameters, baselineIndexSha256)
+                lineEndings, repositories, repositoriesNotNamed, features, parameters, baselineIndexSha256)
     }
 
     /**
@@ -200,7 +219,7 @@ final class ProjectLock {
             String kind = section.oneOf('kind', [REMOTE, LOCAL, MAVEN_LOCAL, MAVEN_CENTRAL])
             String url = section.has('url') ? section.text('url', StateLimits.MAX_ADDRESS) : null
             if (url != null && (kind != REMOTE || !isPublicAddress(url))) {
-                throw section.problem('url', 'must be the https address of a repository, without a name or a password, and only a remote repository has one')
+                throw section.problem('url', 'must be the https address of a repository, without a name, a password, a query or a fragment, and only a remote repository has one')
             }
             section.end()
             return new LockedRepository(kind, url)
@@ -210,18 +229,36 @@ final class ProjectLock {
     /**
      * @param address the address of a repository
      * @return whether the address can be committed with a project: it is an {@code https} address,
-     * in whatever case that is written, of a length the state can hold and without a name or a
-     * password in it. A directory and a {@code file:} address are of one machine and are not.
+     * in whatever case that is written, of a length the state can hold and without a name, a
+     * password, a query or a fragment in it: see {@link #recordableAddress(String)}.
      */
     static boolean isPublicAddress(String address) {
-        if (address == null || !StateYaml.isLine(address, StateLimits.MAX_ADDRESS)) {
-            return false
+        return address != null && address == recordableAddress(address)
+    }
+
+    /**
+     * The one rule for what of the address of a repository is written into the state of a project,
+     * which is committed: the scheme, the host, the port and the path of an {@code https} address.
+     * A query and a fragment are left out, because a token is given to a repository in them; an
+     * address with a name or a password in it, an address that is not {@code https}, a directory and
+     * an address longer than the state takes are not written at all.
+     *
+     * @param address the address of a repository, as it was given
+     * @return what of it can be committed, or {@code null}
+     */
+    static String recordableAddress(String address) {
+        if (address == null) {
+            return null
         }
         try {
             URI uri = new URI(address)
-            return 'https'.equalsIgnoreCase(uri.getScheme()) && uri.getRawAuthority() != null && uri.getRawUserInfo() == null
+            if (!'https'.equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getRawUserInfo() != null) {
+                return null
+            }
+            String recorded = "${uri.getScheme()}://${uri.getHost()}${uri.getPort() >= 0 ? ':' + uri.getPort() : ''}${uri.getRawPath() ?: ''}".toString()
+            return StateYaml.isLine(recorded, StateLimits.MAX_ADDRESS) ? recorded : null
         } catch (URISyntaxException ignored) {
-            return false
+            return null
         }
     }
 
@@ -294,7 +331,7 @@ final class ProjectLock {
                 throw section.problem('source', "is ${source}, and only a feature of a feature pack that is not part of Forge has an origin, coordinates, a version or a digest")
             }
             if (feature.origin != null && !isPublicAddress(feature.origin)) {
-                throw section.problem('origin', 'must be the https address of a repository, without a name or a password')
+                throw section.problem('origin', 'must be the https address of a repository, without a name, a password, a query or a fragment')
             }
             section.end()
             return feature

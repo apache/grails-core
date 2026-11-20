@@ -217,7 +217,7 @@ grails create-app com.example.myapp
 
 In this case, "com.example" becomes the default package for your project.
 
-Each part of the package becomes a directory of the sources. A part that Windows keeps for a device (`con`, `prn`, `aux`, `nul`, `com1` to `com9`, `lpt1` to `lpt9`), such as in `com.aux.myapp`, is therefore refused, as is such a name for the application itself: the project could not be checked out on Windows.
+Each part of the package becomes a directory of the sources, and the name of the application a directory and part of the names of files. A part that is one of the names Windows keeps for devices, such as `aux` in `com.aux.myapp`, is therefore refused, as is such a name for the application itself: the project could not be checked out on Windows. Those names are `con`, `prn`, `aux`, `nul`, `conin$`, `conout$`, `clock$`, and `com` or `lpt` followed by one digit, which can also be a superscript `¹`, `²` or `³`, in any case of letters. A name with a control character, a slash or a backslash, and a name for the application that not every file system takes for a directory (one with `:`, `*`, `?`, `"`, `<`, `>` or `|` in it, or with a space or a dot at its end), are refused as well, as mistakes in the command line.
 
 === Gradle Build Tool
 

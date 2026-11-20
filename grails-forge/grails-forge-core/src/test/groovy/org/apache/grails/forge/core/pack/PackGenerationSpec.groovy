@@ -305,17 +305,17 @@ class PackGenerationSpec extends ApplicationContextSpec {
     void "a pack that cannot write one of its files runs none of its templates"() {
         given:
         Path marker = directory.resolve('ran.marker')
-        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n  - from: plain.txt\n    to: '{name}/x.txt'\n", [
+        Pack pack = pack('acme-audit', "files:\n  - from: first.txt.gsp\n    to: first.txt\n  - from: plain.txt\n    to: '.{name}/x.txt'\n", [
                 'first.txt.gsp': "<% new File('${marker.toString().replace('\\', '/')}').text = 'ran' %>x".toString(),
                 'plain.txt'    : 'x',
         ])
 
         when:
-        generate(['acme-audit'], [pack], ApplicationType.WEB, 'com.acme.a~1')
+        generate(['acme-audit'], [pack], ApplicationType.WEB, 'com.acme.git')
 
         then:
         IllegalArgumentException e = thrown()
-        e.message.startsWith('The feature acme-audit would write the file {name}/x.txt to a~1/x.txt')
+        e.message.startsWith('The feature acme-audit would write the file .{name}/x.txt to .git/x.txt')
         !Files.exists(marker)
     }
 
@@ -837,7 +837,7 @@ class PackGenerationSpec extends ApplicationContextSpec {
         where:
         to                   | name  || written
         '.{name}/hooks/x'    | 'git' || '.git/hooks/x'
-        'src/{name}.txt'     | 'com.acme.a~1' || 'src/a~1.txt'
+        '.{name}'            | 'com.acme.git' || '.git'
     }
 
     void "the settings of an environment are with those the framework has for it"() {

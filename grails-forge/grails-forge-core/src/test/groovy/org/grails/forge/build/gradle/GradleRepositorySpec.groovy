@@ -115,4 +115,16 @@ class GradleRepositorySpec extends Specification {
         def e = thrown(IllegalArgumentException)
         e.message == "Remote GRAILS_REPO_URL repositories must use HTTPS: 'c://host/releases'"
     }
+
+    def 'what a repository is written with into a build file is the text it is'() {
+        expect:
+        new DefaultGradleRepository(0, url).toSnippet('') == "maven {\n   url = '" + written + "'\n}"
+
+        where:
+        url                          | written
+        'https://repo.example/m'     | 'https://repo.example/m'
+        'C:\\repo\\sub'              | 'C:\\\\repo\\\\sub'
+        "/home/o'brien/repo"         | "/home/o\\'brien/repo"
+        '/home/me/repo\n}\nprintln 1' | '/home/me/repo\\u000a}\\u000aprintln 1'
+    }
 }

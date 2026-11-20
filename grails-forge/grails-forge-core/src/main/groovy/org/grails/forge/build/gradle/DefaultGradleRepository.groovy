@@ -97,16 +97,16 @@ class DefaultGradleRepository implements GradleRepository {
         String indent = '   '
         StringBuilder snippet = new StringBuilder()
         snippet.append('maven {\n')
-        snippet.append(basePadding).append(indent).append('url = \'').append(url).append('\'\n')
+        snippet.append(basePadding).append(indent).append('url = \'').append(quoted(url)).append('\'\n')
         if (name != null && !name.isEmpty()) {
-            snippet.append(basePadding).append(indent).append('name = \'').append(name).append('\'\n')
+            snippet.append(basePadding).append(indent).append('name = \'').append(quoted(name)).append('\'\n')
         }
         for (VersionRegexRepoFilter filter : versionFilters) {
             snippet.append(basePadding).append(indent).append('content {\n')
                 .append(basePadding).append(indent).append(indent).append('includeVersionByRegex(\'')
-                .append(filter.groupRegex()).append('\', \'')
-                .append(filter.artifactRegex()).append('\', \'')
-                .append(filter.versionRegex())
+                .append(quoted(filter.groupRegex())).append('\', \'')
+                .append(quoted(filter.artifactRegex())).append('\', \'')
+                .append(quoted(filter.versionRegex()))
                 .append('\')').append('\n')
                 .append(basePadding).append(indent).append('}\n')
         }
@@ -123,6 +123,26 @@ class DefaultGradleRepository implements GradleRepository {
         }
         snippet.append(basePadding).append('}')
         return snippet.toString()
+    }
+
+    /**
+     * A text as it stands between the single quotes of a string of the build file, in which it is
+     * that text and nothing else: a backslash and a quote are escaped, and so is a character that
+     * would end the line.
+     */
+    static String quoted(String text) {
+        StringBuilder quoted = new StringBuilder()
+        for (int index = 0; index < text.length(); index++) {
+            char each = text.charAt(index)
+            if (each == ('\\' as char) || each == ('\'' as char)) {
+                quoted.append('\\').append(each)
+            } else if (each < (' ' as char) || each == (0x7F as char) || each == (0x85 as char) || each == (0x2028 as char) || each == (0x2029 as char)) {
+                quoted.append(String.format('\\u%04x', (int) each))
+            } else {
+                quoted.append(each)
+            }
+        }
+        return quoted.toString()
     }
 
     @Override
