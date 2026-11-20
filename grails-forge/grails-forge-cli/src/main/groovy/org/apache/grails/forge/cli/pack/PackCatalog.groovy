@@ -31,44 +31,52 @@ import org.apache.grails.forge.core.pack.PackVersionRange
 import org.grails.forge.feature.FeatureSelectionException
 
 /**
- * A feature catalog as it was read: the plugins of the plugin index that have a feature pack, with the
+ * A feature catalog as it was read: the plugins of a plugin index that have a feature pack, with the
  * versions the index records a pack for. A catalog says which plugin has the feature of a name, and in
  * which versions; it gives coordinates and the digest the jar has to have, and no pack is read from it.
  *
- * <p>The document is the JSON the plugin index publishes, with what this reads of it:</p>
+ * <p>The document is the plugin index of Grails as {@code apache/grails-plugins-metadata} publishes it,
+ * {@code grails-plugins-index.json}: a JSON array of plugins, in which a version of a plugin can have a
+ * {@code pack} member. What this reads of it:</p>
  * <pre>
- * { "format": 1,
- *   "plugins": [
- *     { "coords": "com.acme:acme-audit-grails", "name": "Acme Audit", "desc": "...", "docs": "https://...",
- *       "maven-repo": "https://repo.acme.example/maven", "deprecated": false,
- *       "versions": [
- *         { "version": "2.3.0",
- *           "pack": { "format": 1, "kind": "feature", "name": "acme-audit", "templateApi": 1,
- *                     "applicationTypes": ["web"],
- *                     "compatibility": { "grails": "[9.0.0,10.0.0)", "forge": "[9.0.0,10.0.0)" },
- *                     "sha256": "...", "maven-repo": "https://repo.acme.example/maven" } } ] } ] }
+ * [ { "coords": "org.grails.plugins:grails-mail", "name": "Mail", "desc": "...", "docs": "https://...",
+ *     "maven-repo": "https://repo1.maven.org/maven2", "deprecated": "why it is",
+ *     "versions": [
+ *       { "version": "5.0.3", "grailsVersion": "7.0.0 > *",
+ *         "pack": { "format": 1, "kind": "feature", "name": "mail", "templateApi": 1,
+ *                   "applicationTypes": ["web"],
+ *                   "compatibility": { "grails": "[9.0.0,10.0.0)", "forge": "[9.0.0,10.0.0)" },
+ *                   "sha256": "..." } },
+ *       { "version": "4.0.2", "grailsVersion": "6.0.0 > *", "coords": "org.grails.plugins:mail",
+ *         "maven-repo": "https://repo.grails.org/plugins", "artifactAvailable": false } ] } ]
  * </pre>
- * <p>{@code format} and {@code plugins} are required, and of a plugin {@code coords} and
- * {@code versions}; of a version {@code version}; of a {@code pack} its {@code format}, {@code kind}
- * ({@code feature} or {@code preset}), {@code name}, {@code templateApi}, both ranges of
- * {@code compatibility} and {@code sha256}, the SHA-256 of the main jar. Everything else can be left
- * out, and a field that is not named here is not read. The artifact of a pack is always the main jar
- * of the plugin it is listed under, in the version it is listed under: a catalog cannot give a pack
- * other coordinates. A document that is an array is the index as it was before it had a format: it
- * records no pack, and no feature is found in it.</p>
+ * <p>Of a plugin {@code coords} and {@code versions} are required, and of a version {@code version}.
+ * A version can have {@code coords} and {@code maven-repo} of its own, which the index has for a
+ * plugin that was published under other coordinates or to another repository over time: the artifact
+ * of a version is its own {@code group:artifact}, or else that of the plugin, in that version, and
+ * the repository named for it likewise. A version with {@code artifactAvailable: false} is not
+ * offered. {@code grailsVersion} is the range the descriptor of the plugin gives, {@code lower > upper}
+ * with {@code *} for any. A {@code pack} is what the descriptor of the feature pack in the jar says,
+ * and the SHA-256 of the jar: {@code format}, {@code kind} ({@code feature} or {@code preset}),
+ * {@code name}, {@code templateApi}, both ranges of {@code compatibility} and {@code sha256} are
+ * required, {@code applicationTypes} is not. A pack is for a Grails that both {@code grailsVersion}
+ * and its own range have: neither is taken over the other. A field that is not named here is not
+ * read. No order of the versions is relied on: which is the latest is found by comparing them.</p>
  *
  * <p>A catalog is read from elsewhere and is not trusted. What is wrong with the document as a whole
  * refuses it; a plugin with a pack that has something wrong with it is left out, with one line that
- * says what; of a plugin without a pack only its coordinates are kept. The limits are those of an index
- * many times the one that is published (0.64 MiB and 257 plugins in 2026): what is not read is checked
- * to be JSON and is not kept, so reading costs little more memory than the document has bytes.</p>
+ * says what, and so is one version whose {@code grailsVersion} is not such a range; of a plugin without
+ * a pack only its coordinates are kept. The limits are those of an index several times the one that
+ * is published (0.64 MiB, 257 plugins, 5,081 versions, 303 of one plugin, 26,167 values and texts of
+ * at most 678 characters in November 2026): what is not read is checked to be JSON and is not kept,
+ * so reading costs little more memory than the document has bytes.</p>
  *
  * @since 9.0
  */
 @CompileStatic
 final class PackCatalog {
 
-    /** The format of the catalog this reads */
+    /** The format of the {@code pack} member this reads */
     public static final int FORMAT = 1
 
     /** The most bytes a catalog can have */
@@ -90,9 +98,9 @@ final class PackCatalog {
     public static final int MAX_PLUGINS = 5000
 
     /** The most versions a plugin of a catalog can have */
-    public static final int MAX_VERSIONS = 200
+    public static final int MAX_VERSIONS = 1000
 
-    /** The most plugins that are left out of which it is kept what was wrong with them */
+    /** The most plugins and versions that are left out of which it is kept what was wrong with them */
     public static final int MAX_PROBLEMS = 20
 
     /** What a plugin is left out for is one line of at most this many characters */
@@ -129,9 +137,14 @@ final class PackCatalog {
     private static final Object TOO_LONG = new Object()
 
     private static final Map<String, Object> OF_A_PACK = [format: ANY, kind: ANY, name: ANY, templateApi: ANY, applicationTypes: ANY,
-                                                           compatibility: [grails: ANY, forge: ANY], sha256: ANY, 'maven-repo': ANY] as Map<String, Object>
+                                                           compatibility: [grails: ANY, forge: ANY], sha256: ANY] as Map<String, Object>
     private static final Map<String, Object> OF_A_PLUGIN = [coords: ANY, name: ANY, desc: ANY, docs: ANY, 'maven-repo': ANY, deprecated: ANY,
-                                                             versions: [[version: ANY, pack: OF_A_PACK]]] as Map<String, Object>
+                                                             versions: [[version: ANY, coords: ANY, 'maven-repo': ANY, grailsVersion: ANY,
+                                                                         artifactAvailable: ANY, pack: OF_A_PACK]]] as Map<String, Object>
+    // the range of the descriptor of a plugin: a version, > or >=, and a version or * for any
+    private static final String OF_A_RANGE = /(\d{1,9}|\*)(?:\.(\d{1,9}|\*))?(?:\.(\d{1,9}|\*))?(?:\.(\d{1,9}|\*))?(?:[.\-][A-Za-z][A-Za-z0-9\-]*)?/
+    private static final Pattern GRAILS_VERSION = Pattern.compile('\\s*' + OF_A_RANGE + '\\s*>=?\\s*(?:(\\*)|' + OF_A_RANGE + ')\\s*')
+    private static final Pattern LEADS_TO = Pattern.compile(/(\d{1,9})(?:\.(\d{1,9}))?(?:\.(\d{1,9}))?(?:\.(\d{1,9}))?(?:[-+].*|\.[^0-9].*)?/)
 
     /** The address the catalog was read from, as a message has it */
     final String address
@@ -142,7 +155,7 @@ final class PackCatalog {
     /** The SHA-256 of the bytes that were read, in lowercase hexadecimal */
     final String sha256
 
-    /** Whether the document is the index as it was before it recorded packs */
+    /** Whether the catalog records no feature pack that is read, as the plugin index did before it recorded packs */
     final boolean withoutPacks
 
     /** The plugins that have a feature pack, in the order of the document */
@@ -160,8 +173,12 @@ final class PackCatalog {
     /** How many plugins are left out */
     final int leftOut
 
+    /** How many versions of plugins that are not left out are left out */
+    final int versionsLeftOut
+
     private PackCatalog(String address, String recordableAddress, String sha256, boolean withoutPacks, List<Plugin> plugins, Set<String> withoutPack,
-                        List<String> problems, int leftOut) {
+                        List<String> problems, int leftOut, int versionsLeftOut) {
+        this.versionsLeftOut = versionsLeftOut
         this.address = address
         this.recordableAddress = recordableAddress
         this.sha256 = sha256
@@ -201,7 +218,7 @@ final class PackCatalog {
         Set<String> withoutPack = new LinkedHashSet<>()
         List<String> problems = []
         Set<String> seen = new HashSet<>()
-        int[] counts = new int[2]
+        int[] counts = new int[3]
         Json json
         try {
             String text = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT)
@@ -221,7 +238,11 @@ final class PackCatalog {
                     return
                 }
                 try {
-                    Plugin plugin = plugin((Map<String, Object>) entry)
+                    Plugin plugin = plugin((Map<String, Object>) entry, { String line ->
+                        if (counts[1] + counts[2]++ < MAX_PROBLEMS) {
+                            problems << bounded("plugin ${number}: ${line}")
+                        }
+                    } as Consumer<String>)
                     if (!seen.add(plugin.coordinates)) {
                         throw new Problem("${plugin.coordinates} is in the catalog more than once")
                     }
@@ -230,9 +251,8 @@ final class PackCatalog {
                     if (listed != null && !seen.contains(listed)) {
                         withoutPack << listed
                     }
-                    if (counts[1]++ < MAX_PROBLEMS) {
-                        String line = "plugin ${number}: ${e.message}"
-                        problems << (line.length() > MAX_PROBLEM ? line.substring(0, MAX_PROBLEM) + '...' : line)
+                    if (counts[1]++ + counts[2] < MAX_PROBLEMS) {
+                        problems << bounded("plugin ${number}: ${e.message}")
                     }
                 }
             } as Consumer<Object>)
@@ -245,23 +265,15 @@ final class PackCatalog {
         String digest = HexFormat.of().formatHex(MessageDigest.getInstance('SHA-256').digest(bytes))
         String shown = PackArtifacts.shownAddress(address)
         String recordable = 'https'.equalsIgnoreCase(address.scheme) ? address.toString() : null
-        if (json.array) {
-            return new PackCatalog(shown, recordable, digest, true, [], new LinkedHashSet<String>(), [], 0)
-        }
-        if (!json.object) {
-            throw new PackArtifactException('it is not a catalog: the document is neither an object nor an array')
-        }
-        if (!(json.format instanceof Long)) {
-            throw new PackArtifactException('it is not a catalog: it has no format, which is a whole number')
-        }
-        if (json.format != (long) FORMAT) {
-            throw new PackArtifactException("it is of format ${json.format}, and this Forge reads format ${FORMAT}")
-        }
-        if (!json.plugins) {
-            throw new PackArtifactException('it is not a catalog: it has no plugins, which is an array')
+        if (!json.array) {
+            throw new PackArtifactException('it is not a catalog: the document is not an array of plugins, as the plugin index is')
         }
         withoutPack.removeAll(seen)
-        return new PackCatalog(shown, recordable, digest, false, plugins, withoutPack, problems, counts[1])
+        return new PackCatalog(shown, recordable, digest, plugins.isEmpty(), plugins, withoutPack, problems, counts[1], counts[2])
+    }
+
+    private static String bounded(String line) {
+        return line.length() > MAX_PROBLEM ? line.substring(0, MAX_PROBLEM) + '...' : line
     }
 
     /**
@@ -319,7 +331,7 @@ final class PackCatalog {
                 !parts[0].contains('..') && !parts[0].endsWith('.')
     }
 
-    private static Plugin plugin(Map<String, Object> entry) {
+    private static Plugin plugin(Map<String, Object> entry, Consumer<String> versionLeftOut) {
         String coordinates = text(entry, 'coords', true, MAX_TEXT)
         if (!isPlugin(coordinates)) {
             throw new Problem("coords is not group:artifact of at most ${MAX_PLUGIN} characters, but ${shown(coordinates)}")
@@ -343,10 +355,20 @@ final class PackCatalog {
                     throw new Problem('has a version that is not an object')
                 }
                 Map<String, Object> listedVersion = (Map<String, Object>) each
-                if (!listedVersion.containsKey('pack')) {
+                Object available = listedVersion.get('artifactAvailable')
+                if (!listedVersion.containsKey('pack') || available == false) {
                     continue
                 }
-                Version read = version(coordinates, listedVersion, repositoryOfAll)
+                if (available != null && available != true) {
+                    throw new Problem('has a version whose artifactAvailable is neither true nor false')
+                }
+                Version read
+                try {
+                    read = version(coordinates, listedVersion, repositoryOfAll)
+                } catch (OfOneVersion e) {
+                    versionLeftOut.accept("${coordinates}: ${e.message}".toString())
+                    continue
+                }
                 if (!seen.add(read.version)) {
                     throw new Problem("has the version ${read.version} more than once")
                 }
@@ -354,7 +376,7 @@ final class PackCatalog {
             }
             return new Plugin(coordinates, line(said(entry, 'name'), MAX_TITLE), line(said(entry, 'desc'), MAX_DESCRIPTION),
                     docs != null && docs.length() <= MAX_DOCS && DOCS.matcher(docs).matches() ? docs : null,
-                    deprecated == true || (deprecated instanceof String && isReason((String) deprecated)), versions)
+                    deprecated == true ? '' : deprecated instanceof String && isReason((String) deprecated) ? line((String) deprecated, MAX_TITLE) : null, versions)
         } catch (Problem e) {
             throw new Problem("${coordinates}: ${e.message}")
         }
@@ -365,11 +387,33 @@ final class PackCatalog {
         if (version.length() > MAX_VERSION) {
             throw new Problem("has a version of more than ${MAX_VERSION} characters")
         }
+        // a version can have been published under other coordinates than the plugin has now
+        String own = text(entry, 'coords', false, MAX_TEXT)
+        if (own != null && !isPlugin(own)) {
+            throw new Problem("the coords of version ${shown(version)} is not group:artifact of at most ${MAX_PLUGIN} characters, but ${shown(own)}")
+        }
         PackArtifacts.Coordinates ofVersion
         try {
-            ofVersion = PackArtifacts.coordinates("${plugin}:${version}")
+            ofVersion = PackArtifacts.coordinates("${own ?: plugin}:${version}")
         } catch (IllegalArgumentException ignored) {
             throw new Problem("version ${shown(version)} is not one version of a plugin")
+        }
+        String ownRepository = text(entry, 'maven-repo', false, 2000)
+        URI repository
+        try {
+            repository = ownRepository == null ? repositoryOfAll : repositoryOf(ownRepository)
+        } catch (Problem e) {
+            throw new Problem("version ${version}: ${e.message}")
+        }
+        long[] grailsVersion = null
+        Object ofDescriptor = entry.get('grailsVersion')
+        if (ofDescriptor != null) {
+            grailsVersion = ofDescriptor instanceof String ? rangeOfDescriptor((String) ofDescriptor) : null
+            if (grailsVersion == null) {
+                // what the descriptor of a plugin says is copied into the index as it is: one version is left out for it, not the plugin
+                throw new OfOneVersion("version ${version} is left out: its grailsVersion is not a range of the form 7.0.0 > *, but " +
+                        "${ofDescriptor instanceof String ? shown((String) ofDescriptor) : 'no text'}")
+            }
         }
         Object value = entry.get('pack')
         if (!(value instanceof Map)) {
@@ -401,13 +445,39 @@ final class PackCatalog {
                 }
                 applicationTypes = new LinkedHashSet<String>((List<String>) types)
             }
-            String repository = text(pack, 'maven-repo', false, 2000)
             return new Version(version, kind, name, whole(pack, 'format'), whole(pack, 'templateApi'), applicationTypes,
                     range((Map<String, Object>) compatibility, 'grails'), range((Map<String, Object>) compatibility, 'forge'),
-                    sha256.toLowerCase(Locale.ROOT), ofVersion, repository == null ? repositoryOfAll : repositoryOf(repository))
+                    sha256.toLowerCase(Locale.ROOT), ofVersion, repository, grailsVersion,
+                    ofDescriptor == null ? null : ((String) ofDescriptor).trim().replaceAll(/\s+/, ' '))
         } catch (Problem e) {
             throw new Problem("the pack of version ${version}: ${e.message}")
         }
+    }
+
+    /**
+     * The range the descriptor of a plugin gives for Grails, as the index has it: {@code 7.0.0 > *},
+     * also with {@code >=}, with more than one space, with a qualifier after the lower version, with
+     * {@code *} for a part of a version, and with a version in the place of the last {@code *}.
+     *
+     * @return the eight numbers of the lowest and the highest version, the highest being the most a
+     * number can be where any is allowed; {@code null} when the text is not such a range
+     */
+    private static long[] rangeOfDescriptor(String text) {
+        if (text.length() > MAX_RANGE) {
+            return null
+        }
+        java.util.regex.Matcher matcher = GRAILS_VERSION.matcher(text)
+        if (!matcher.matches()) {
+            return null
+        }
+        long[] range = new long[8]
+        for (int part = 0; part < 4; part++) {
+            String lower = matcher.group(part + 1)
+            range[part] = lower == null || lower == '*' ? 0L : Long.parseLong(lower)
+            String upper = matcher.group(5) != null ? '*' : matcher.group(part + 6)
+            range[part + 4] = upper == '*' ? Long.MAX_VALUE : upper == null ? 0L : Long.parseLong(upper)
+        }
+        return range
     }
 
     private static URI repositoryOf(String address) {
@@ -453,7 +523,8 @@ final class PackCatalog {
 
     // what a catalog says of a plugin for people to read: one that is longer than a text is left unsaid, and the plugin is not left out for it
     private static String said(Map<String, Object> entry, String key) {
-        return TOO_LONG.is(entry.get(key)) ? null : text(entry, key, false, MAX_TEXT)
+        // the index has plugins with an empty description
+        return TOO_LONG.is(entry.get(key)) || entry.get(key) == '' ? null : text(entry, key, false, MAX_TEXT)
     }
 
     // what a catalog says of a plugin for people to read, as one line that is no markup of the command
@@ -483,11 +554,12 @@ final class PackCatalog {
         final String description
         /** The https address of its documentation, or {@code null} */
         final String docs
-        final boolean deprecated
+        /** Why the plugin is deprecated, as one line, which is empty when the index gives no reason; {@code null} for a plugin that is not */
+        final String deprecated
         /** The versions the catalog records a pack for */
         final List<Version> versions
 
-        private Plugin(String coordinates, String title, String description, String docs, boolean deprecated, List<Version> versions) {
+        private Plugin(String coordinates, String title, String description, String docs, String deprecated, List<Version> versions) {
             this.coordinates = coordinates
             this.title = title
             this.description = description
@@ -514,13 +586,19 @@ final class PackCatalog {
         final PackVersionRange forge
         /** The SHA-256 the main jar has to have, in lowercase hexadecimal */
         final String sha256
-        /** The artifact the pack is in: the plugin it is listed under, in this version */
+        /** The artifact the pack is in: this version of the coordinates the version has, or else of those of the plugin */
         final PackArtifacts.Coordinates coordinates
-        /** The repository the catalog names for it, or {@code null} */
+        /** The repository the catalog names for the version, or else for the plugin, or {@code null} */
         final URI repository
+        /** The range of the descriptor of the plugin as the index has it, or {@code null} when it has none */
+        final String grailsVersion
+        private final long[] grailsVersionRange
 
         private Version(String version, String kind, String name, int format, int templateApi, Set<String> applicationTypes, PackVersionRange grails,
-                        PackVersionRange forge, String sha256, PackArtifacts.Coordinates coordinates, URI repository) {
+                        PackVersionRange forge, String sha256, PackArtifacts.Coordinates coordinates, URI repository, long[] grailsVersionRange,
+                        String grailsVersion) {
+            this.grailsVersionRange = grailsVersionRange
+            this.grailsVersion = grailsVersion
             this.version = version
             this.kind = kind
             this.name = name
@@ -544,12 +622,46 @@ final class PackCatalog {
         boolean isFeature() {
             return kind == FEATURE
         }
+
+        /**
+         * @param version a version of Grails, which can be one that leads to a release, such as a snapshot
+         * @return whether the pack is for it: both the range of the pack and that of the descriptor
+         * of the plugin, when the index has one, have it
+         */
+        boolean isForGrails(String version) {
+            if (!grails.contains(version)) {
+                return false
+            }
+            if (grailsVersionRange == null) {
+                return true
+            }
+            java.util.regex.Matcher release = LEADS_TO.matcher(version == null ? '' : version.trim())
+            if (!release.matches()) {
+                return false
+            }
+            int low = 0
+            int high = 0
+            for (int part = 0; part < 4 && (low == 0 || high == 0); part++) {
+                long number = release.group(part + 1) == null ? 0L : Long.parseLong(release.group(part + 1))
+                low = low != 0 ? low : Long.compare(number, grailsVersionRange[part])
+                high = high != 0 ? high : Long.compare(number, grailsVersionRange[part + 4])
+            }
+            return low >= 0 && high <= 0
+        }
     }
 
-    private static final class Problem extends RuntimeException {
+    private static class Problem extends RuntimeException {
 
         Problem(String message) {
             super(message, null, false, false)
+        }
+    }
+
+    // what is wrong with one version of a plugin, and leaves that version out and not the plugin
+    private static final class OfOneVersion extends Problem {
+
+        OfOneVersion(String message) {
+            super(message)
         }
     }
 
@@ -570,9 +682,6 @@ final class PackCatalog {
         private int at
         private int values
         boolean array
-        boolean object
-        boolean plugins
-        Object format
 
         Json(String text, Consumer<Object> onPlugin) {
             this.text = text
@@ -583,14 +692,12 @@ final class PackCatalog {
 
         void document() {
             space()
-            char first = peek()
-            if (first == (char) '{') {
-                object = true
+            if (peek() == (char) '[') {
+                array = true
                 count()
                 at++
-                members(1, null, true)
+                listed(1)
             } else {
-                array = first == (char) '['
                 value(1, null)
             }
             space()
@@ -615,7 +722,7 @@ final class PackCatalog {
                 }
                 at++
                 if (c == (char) '{') {
-                    return members(depth, pattern instanceof Map ? (Map<String, Object>) pattern : null, false)
+                    return members(depth, pattern instanceof Map ? (Map<String, Object>) pattern : null)
                 }
                 return elements(depth, pattern instanceof List ? ((List) pattern).first() : null, pattern instanceof List || ANY.is(pattern))
             }
@@ -633,9 +740,8 @@ final class PackCatalog {
 
         /**
          * @param read the members that are read, or {@code null} when none is
-         * @param top whether this is the object the document is, of which the format and the plugins are taken
          */
-        private Object members(int depth, Map<String, Object> read, boolean top) {
+        private Object members(int depth, Map<String, Object> read) {
             Map<String, Object> map = read == null ? null : new LinkedHashMap<String, Object>()
             Set<String> keys = new HashSet<>()
             space()
@@ -660,19 +766,7 @@ final class PackCatalog {
                     throw new Problem('a key of an object has no colon after it')
                 }
                 at++
-                if (top && key == 'format') {
-                    format = value(depth + 1, ANY)
-                } else if (top && key == 'plugins') {
-                    space()
-                    if (peek() == (char) '[') {
-                        plugins = true
-                        count()
-                        at++
-                        listed(depth + 1)
-                    } else {
-                        value(depth + 1, null)
-                    }
-                } else if (map != null && read.containsKey(key)) {
+                if (map != null && read.containsKey(key)) {
                     map.put((String) key, value(depth + 1, read.get(key)))
                 } else {
                     value(depth + 1, null)

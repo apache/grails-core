@@ -54,6 +54,19 @@ class GrailsBase implements DefaultFeature {
         return false
     }
 
+    /**
+     * @param micronaut whether the application has the Micronaut feature
+     * @param hibernate7 whether the application has Grails Data for Hibernate 7
+     * @return the artifact of the BOM of Grails such an application is generated with
+     * @since 9.0
+     */
+    static String bomArtifactId(boolean micronaut, boolean hibernate7) {
+        if (micronaut) {
+            return hibernate7 ? 'grails-hibernate7-micronaut-bom' : 'grails-micronaut-bom'
+        }
+        return hibernate7 ? 'grails-hibernate7-bom' : 'grails-bom'
+    }
+
     @Override
     void apply(GeneratorContext generatorContext) {
 
@@ -63,12 +76,7 @@ class GrailsBase implements DefaultFeature {
         // conflict with the default (Hibernate 5) grails-bom - see grails-core issue #15942.
         boolean useMicronautBom = generatorContext.isFeaturePresent(GrailsMicronaut)
         boolean useHibernate7Bom = generatorContext.isFeaturePresent(GrailsDataHibernate7)
-        String bomArtifactId
-        if (useMicronautBom) {
-            bomArtifactId = useHibernate7Bom ? 'grails-hibernate7-micronaut-bom' : 'grails-micronaut-bom'
-        } else {
-            bomArtifactId = useHibernate7Bom ? 'grails-hibernate7-bom' : 'grails-bom'
-        }
+        String bomArtifactId = bomArtifactId(useMicronautBom, useHibernate7Bom)
 
         generatorContext.addDependency(Dependency.builder()
                 .groupId('org.apache.grails')

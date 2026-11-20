@@ -23,6 +23,7 @@ import jakarta.annotation.Nonnull
 import org.apache.grails.forge.cli.pack.PackArtifactException
 import org.apache.grails.forge.cli.pack.PackArtifacts
 import org.apache.grails.forge.cli.pack.PackCatalogs
+import org.apache.grails.forge.core.bom.BomVersions
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
@@ -34,10 +35,12 @@ import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
-import org.grails.forge.build.dependencies.Coordinate
 import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.feature.database.GrailsDataHibernate7
+import org.grails.forge.feature.grails.GrailsBase
+import org.grails.forge.feature.micronaut.GrailsMicronaut
 import org.grails.forge.io.FileSystemOutputHandler
 import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.DevelopmentReloading
@@ -136,6 +139,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     private PackArtifacts packArtifacts
     private Selection selection
     private String notInCatalog = ''
+    private String bomOfCatalogPacks
 
     private final ApplicationType applicationType
     // what the Forge application has, asked of it when the command first needs it
@@ -226,7 +230,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 throw new PackArtifactException(catalogs.getUnread())
             }
             List<String> lines = catalogs.isEmpty() ? ['No feature catalog is read: --feature-catalog or GRAILS_FORGE_CATALOG names one'] :
-                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&isOfTheFramework, this.&managedVersion)
+                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&isOfTheFramework,
+                            "${BomVersions.GROUP}:${bomOfTheSelection()}", this.&managedIfKnown)
             saidOf(catalogs)
             for (String line : lines) {
                 out(line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
@@ -289,6 +294,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         } catch (FeatureSelectionException e) {
             throw mistake(e)
         }
+        heldToItsBom(context)
         List<String> warnings = []
         // a pack is not part of the framework: say which ones this application is made with, which are
         // the selected ones and those they require. What a descriptor says is not markup of this command
@@ -592,7 +598,8 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 }
                 PackCatalogs.Choice choice
                 try {
-                    choice = catalogs.choose(feature, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&managedVersion)
+                    choice = catalogs.choose(feature, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(),
+                            "${BomVersions.GROUP}:${bomOfTheSelection()}", this.&managedVersion)
                 } catch (IllegalArgumentException e) {
                     throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
                 }
@@ -609,6 +616,11 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 }
                 PackArtifacts.Coordinates coordinates = choice.version.coordinates
                 String from = choice.catalog.address
+                // the artifact a catalog has for a version can be another than the plugin it is listed under, and one that was already taken
+                if (packs.any { Pack pack -> pack.artifact != null && pack.artifact.coordinates == coordinates.toString() && pack.descriptor.name == name }) {
+                    names.put(feature, name)
+                    continue
+                }
                 String asPinned = digests.get(coordinates.toString())
                 if (asPinned != null && asPinned != choice.version.sha256) {
                     throw new PackArtifactException("The feature catalog ${from} records the SHA-256 ${choice.version.sha256} for ${coordinates}, " +
@@ -621,15 +633,23 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     where << choice.version.repository
                 }
                 // said before anything of the plugin is asked for: which plugin a catalog made of the name, and where it is looked for
-                out('@|blue ||@ ' + ("The feature ${name} is taken as ${coordinates}, which the feature catalog ${from} (sha256 ${choice.catalog.sha256}) " +
-                        "names for it, with the SHA-256 ${choice.version.sha256}. Asking ${where.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}" +
-                        "${where.size() > 4 ? " and ${where.size() - 4} more" : ''}").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+                boolean ofTheCatalog = featurePackRepositories.isEmpty() && choice.version.repository != null && where.last() == choice.version.repository &&
+                        !repositories.contains(choice.version.repository)
+                List<URI> ofTheUser = ofTheCatalog ? where.take(where.size() - 1) : where
+                boolean underOther = !coordinates.toString().startsWith(choice.plugin.coordinates + ':')
+                out('@|blue ||@ ' + ("The feature ${name} is taken as ${coordinates}, " +
+                        (underOther ? "the coordinates the catalog gives for version ${choice.version.version} of the plugin ${choice.plugin.coordinates}, " : '') +
+                        "which the feature catalog ${from} (sha256 ${choice.catalog.sha256}) " +
+                        "names for it, with the SHA-256 ${choice.version.sha256}. Asking ${ofTheUser.take(4).collect { URI each -> PackArtifacts.shownAddress(each) }.join(', ')}" +
+                        "${ofTheUser.size() > 4 ? " and ${ofTheUser.size() - 4} more" : ''}" +
+                        (ofTheCatalog ? "${ofTheUser.isEmpty() ? '' : ', and then '}${PackArtifacts.shownAddress(choice.version.repository)}, the repository the catalog names" : '')).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
                 Pack pack = packArtifacts().resolve(coordinates, where, choice.version.sha256)
                 if (pack.descriptor.name != choice.version.name) {
                     throw new PackArtifactException("The feature catalog ${from} says that ${coordinates} has the feature ${choice.version.name}, " +
                             "and the jar has the feature pack ${pack.descriptor.name}")
                 }
                 packs << pack.withArtifact(pack.artifact.withCatalog(choice.catalog.recordableAddress ?: choice.catalog.address, choice.catalog.sha256))
+                bomOfCatalogPacks = bomOfTheSelection()
                 names.put(feature, pack.descriptor.name)
             }
             // a name of Grails is the feature of Grails, whatever a catalog has under it
@@ -683,15 +703,62 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     }
 
     /**
-     * @return the version Forge has for a plugin in the applications it generates, or {@code null} for
-     * a plugin it has none for: what the features of Forge look the versions of their artifacts up in
+     * The BOM of Grails the application gets, as far as the command line says it: by the option for
+     * Grails Data and by the features of the framework it names, which are known before any catalog is
+     * read. A feature that another one requires can make it a different one, which
+     * {@link #heldToItsBom} finds once the features of the application are known.
+     *
+     * @return the artifact of the BOM
      */
-    private String managedVersion(String plugin) {
-        int colon = plugin.indexOf(':')
-        return contextFactory.getCoordinateResolver().resolve(plugin.substring(colon + 1))
-                .filter { Coordinate coordinate -> coordinate.getGroupId() == plugin.substring(0, colon) }
-                .map { Coordinate coordinate -> coordinate.getVersion() }
-                .orElse(null)
+    protected String bomOfTheSelection() {
+        List<String> selected = getSelectedFeatures()
+        return GrailsBase.bomArtifactId(selected.contains('grails-micronaut'), gormImpl == GormImpl.HIBERNATE7 || selected.contains(GormImpl.HIBERNATE7.getName()))
+    }
+
+    /**
+     * @return the version the BOM the application gets manages an artifact at, or {@code null} for one
+     * it does not manage
+     * @throws IllegalArgumentException when this Forge does not have the versions of that BOM: a name
+     * is then not made a version of, since the build of the application could have the plugin in another
+     */
+    private String managedVersion(String artifact) {
+        String bom = bomOfTheSelection()
+        BomVersions versions = bomVersions(bom)
+        if (versions == null) {
+            throw new IllegalArgumentException("A feature is not taken from a feature catalog for an application with ${BomVersions.GROUP}:${bom}: this Forge " +
+                    "does not have the versions that BOM manages (it has those of ${BomVersions.SHIPPED.collect { String each -> "${BomVersions.GROUP}:${each}" }.join(' and ')}), " +
+                    'and so cannot tell which version of the plugin the application would have. Give the plugin by its coordinates, group:artifact:version')
+        }
+        return versions.versionOf(artifact)
+    }
+
+    // for a list, which says what would be taken where that is known and does not fail where it is not
+    private String managedIfKnown(String artifact) {
+        return bomVersions(bomOfTheSelection())?.versionOf(artifact)
+    }
+
+    /**
+     * @param artifact the artifact of a BOM of Grails
+     * @return the versions it manages, or {@code null} when this Forge has none for it
+     */
+    protected BomVersions bomVersions(String artifact) {
+        return BomVersions.of(artifact)
+    }
+
+    /**
+     * Holds the packs that a catalog gave for names to the BOM they were chosen for. Which version of
+     * a plugin was taken depends on the BOM; the features of the application, once all are known, can
+     * give it another BOM than the command line said, and then the choice is not made again: the
+     * command says so and creates nothing.
+     */
+    private void heldToItsBom(GeneratorContext context) {
+        String actual = GrailsBase.bomArtifactId(context.isFeaturePresent(GrailsMicronaut), context.isFeaturePresent(GrailsDataHibernate7))
+        if (bomOfCatalogPacks != null && bomOfCatalogPacks != actual) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), 'The features that were found by their names in a feature catalog were chosen for an ' +
+                    "application with ${BomVersions.GROUP}:${bomOfCatalogPacks}, and with all its features the application gets ${BomVersions.GROUP}:${actual}, " +
+                    'which can manage their plugins at other versions. Name the feature that makes it so in --features, or the option for Grails Data, so that ' +
+                    'the versions are chosen for that BOM')
+        }
     }
 
     /**

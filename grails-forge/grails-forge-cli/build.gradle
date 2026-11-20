@@ -124,6 +124,11 @@ tasks.named('test', Test).configure { Test test ->
     // the specs name their catalogs themselves, whatever the environment of whoever runs them names; and a spec that
     // would ask another computer for anything fails with the address (NoNetworkExtension, in the test sources)
     test.environment('GRAILS_FORGE_CATALOG', 'none')
+    // -PpluginIndex=<file> has PluginIndexCatalogSpec read a whole copy of grails-plugins-index.json besides the part among the test resources:
+    // ./gradlew :grails-forge-cli:test --tests '*PluginIndexCatalogSpec' -PpluginIndex=/path/to/grails-plugins-index.json
+    if (providers.gradleProperty('pluginIndex').present) {
+        test.systemProperty('forge.pluginIndex', providers.gradleProperty('pluginIndex').get())
+    }
     // FormerCommandsSpec holds the guide to the table of the commands of earlier versions
     test.inputs.file(rootProject.layout.projectDirectory.file('../grails-doc/src/en/guide/commandLine.adoc'))
             .withPropertyName('commandLineGuide').withPathSensitivity(PathSensitivity.NONE)

@@ -254,16 +254,18 @@ final class PackCatalogs {
      * @param applicationType the type of the application, as a descriptor names it
      * @param grails the version of Grails the application is for
      * @param forge the version of this Forge
-     * @param managed gives the version Forge has for a plugin in the applications it generates, by its
-     * {@code group:artifact}, or {@code null} for a plugin it has none for. Of such a plugin that
-     * version is the one that is taken, release or not, and no other: a pack of another version would
-     * be read for a build that has the plugin in the version of Forge
+     * @param bom the BOM the application gets, as {@code group:artifact}, for a message
+     * @param managed gives the version that BOM manages an artifact at, by its {@code group:artifact},
+     * or {@code null} for one it does not manage. Of such an artifact that version is the one that is
+     * taken, release or not, and no other: a pack of another version would be read for a build that
+     * has the plugin in the version of the BOM. It can throw an {@link IllegalArgumentException} when
+     * the versions of the BOM are not known, which is then what this throws
      * @return what was chosen, or {@code null} when no catalog has a pack of that name
      * @throws IllegalArgumentException when plugins have it and none of them, or more than one, can be
      * chosen: one line of at most {@link #MAX_MESSAGE} characters
      * @throws PackArtifactException when a catalog cannot be read
      */
-    Choice choose(String feature, String applicationType, String grails, String forge, Function<String, String> managed) {
+    Choice choose(String feature, String applicationType, String grails, String forge, String bom, Function<String, String> managed) {
         String name = nameOf(feature)
         String only = pluginOf(feature)
         Map<String, Choice> chosen = new LinkedHashMap<>()
@@ -277,7 +279,7 @@ final class PackCatalogs {
             if (withIt.isEmpty()) {
                 continue
             }
-            Object result = of(plugin, withIt, applicationType, grails, forge, managed.apply(plugin.coordinates))
+            Object result = of(plugin, withIt, applicationType, grails, forge, bom, managed)
             if (result instanceof Version) {
                 chosen.put(plugin.coordinates, new Choice(each.catalog, plugin, (Version) result))
             } else {
@@ -327,12 +329,12 @@ final class PackCatalogs {
      * @param ofFramework whether a name is that of a feature of the framework, which no plugin has
      * @return the lines of the list, none of which is markup of the command
      */
-    List<String> listing(String applicationType, String grails, String forge, Predicate<String> ofFramework, Function<String, String> managed) {
+    List<String> listing(String applicationType, String grails, String forge, Predicate<String> ofFramework, String bom, Function<String, String> managed) {
         List<String> lines = []
         for (PackCatalog catalog : read()) {
             lines << "Feature catalog ${catalog.address}, sha256 ${catalog.sha256}".toString()
             if (catalog.withoutPacks) {
-                lines << '  the catalog is the plugin index without a format, which records no feature pack'
+                lines << '  the catalog records no feature pack'
             }
             List<List<String>> rows = []
             int notOffered = 0
@@ -344,12 +346,14 @@ final class PackCatalogs {
                     continue
                 }
                 for (String name : plugin.versions.findAll { Version version -> version.feature }*.name.unique()) {
-                    Object result = of(plugin, plugin.versions.findAll { Version version -> version.name == name && version.feature }, applicationType, grails, forge,
-                            managed.apply(plugin.coordinates))
+                    Object result = of(plugin, plugin.versions.findAll { Version version -> version.name == name && version.feature }, applicationType, grails, forge, bom, managed)
                     if (ofFramework.test(name)) {
                         shadowed++
                     } else if (result instanceof Version) {
-                        rows << [name, ((Version) result).coordinates.toString(), plugin.description ?: plugin.title ?: '']
+                        // a version that was published under other coordinates is listed as what would be fetched, and of which plugin it is
+                        Version taken = (Version) result
+                        rows << [name, taken.coordinates.toString() + (artifactOf(taken) == plugin.coordinates ? '' : " of ${plugin.coordinates}"),
+                                 plugin.description ?: plugin.title ?: '']
                     } else {
                         notOffered++
                     }
@@ -366,7 +370,7 @@ final class PackCatalogs {
             }
             if (notOffered > 0) {
                 lines << ("  ${notOffered} more ${notOffered == 1 ? 'is' : 'are'} not offered: of a deprecated plugin, without a release, not in the version " +
-                        "Forge has for it, or not for this application, Grails ${grails} and Forge ${forge}").toString()
+                        "${bom} manages it at, or not for this application, Grails ${grails} and Forge ${forge}").toString()
             }
             if (shadowed > 0) {
                 lines << ("  ${shadowed} more ${shadowed == 1 ? 'has' : 'have'} the name of a feature of the framework, which is the one that is " +
@@ -376,8 +380,8 @@ final class PackCatalogs {
                 lines << ("  ${ofAnEarlier} ${ofAnEarlier == 1 ? 'plugin is' : 'plugins are'} not looked at: a catalog that is named before this one lists " +
                         "${ofAnEarlier == 1 ? 'it' : 'them'}").toString()
             }
-            if (catalog.leftOut > 0) {
-                lines << "  ${catalog.leftOut} ${catalog.leftOut == 1 ? 'plugin is' : 'plugins are'} left out for what the catalog says of ${catalog.leftOut == 1 ? 'it' : 'them'}:".toString()
+            if (catalog.leftOut + catalog.versionsLeftOut > 0) {
+                lines << "  ${leftOutAs(catalog.leftOut, catalog.versionsLeftOut, true)}:".toString()
                 for (String problem : catalog.problems) {
                     lines << "    ${problem}".toString()
                 }
@@ -393,11 +397,24 @@ final class PackCatalogs {
     String searched() {
         List<PackCatalog> all = read()
         int leftOut = (all*.leftOut.sum() ?: 0) as int
+        int versionsLeftOut = (all*.versionsLeftOut.sum() ?: 0) as int
         return bounded("the feature ${all.size() == 1 ? 'catalog' : 'catalogs'} ${all*.address.take(MAX_REASONS).join(', ')}" +
                 (all.size() > MAX_REASONS ? " and ${all.size() - MAX_REASONS} more" : '') +
-                (all.any { PackCatalog catalog -> catalog.withoutPacks } ? ' (the plugin index without a format, which records no feature pack)' : '') +
-                (leftOut > 0 ? " (${leftOut} ${leftOut == 1 ? 'plugin' : 'plugins'} left out for what the catalog says of ${leftOut == 1 ? 'it' : 'them'}; " +
+                (all.every { PackCatalog catalog -> catalog.withoutPacks } ? ' (which records no feature pack)' : '') +
+                (leftOut + versionsLeftOut > 0 ? " (${leftOutAs(leftOut, versionsLeftOut, false)}; " +
                         "the first: ${all.collectMany { PackCatalog catalog -> catalog.problems }.first()})" : ''))
+    }
+
+    private static String leftOutAs(int plugins, int versions, boolean sentence) {
+        if (versions == 0) {
+            return "${plugins} ${plugins == 1 ? (sentence ? 'plugin is' : 'plugin') : (sentence ? 'plugins are' : 'plugins')} left out for what the catalog says of ${plugins == 1 ? 'it' : 'them'}"
+        }
+        String of = plugins == 0 ? '' : "${plugins} ${plugins == 1 ? 'plugin' : 'plugins'} and "
+        return "${of}${versions} ${versions == 1 ? 'version' : 'versions'} ${!sentence ? '' : plugins + versions == 1 ? 'is ' : 'are '}left out for what the catalog says of ${plugins + versions == 1 ? 'it' : 'them'}"
+    }
+
+    private static String artifactOf(Version version) {
+        return "${version.coordinates.group}:${version.coordinates.artifact}".toString()
     }
 
     /**
@@ -428,22 +445,28 @@ final class PackCatalogs {
     /**
      * @return the version of a plugin that is chosen of those that have the feature, or why none is
      */
-    private static Object of(Plugin plugin, List<Version> withIt, String applicationType, String grails, String forge, String managed) {
+    private static Object of(Plugin plugin, List<Version> withIt, String applicationType, String grails, String forge, String bom,
+                             Function<String, String> versionOfForge) {
         List<Version> releases = withIt.findAll { Version version -> PackCatalog.isRelease(version.version) }
         Version latest = latestOf(releases)
-        if (plugin.deprecated) {
-            return "${plugin.coordinates} is deprecated, and is used only by its coordinates, such as ${(latest ?: withIt.first()).coordinates}".toString()
+        if (plugin.deprecated != null) {
+            return ("${plugin.coordinates} is deprecated${plugin.deprecated.isEmpty() ? '' : " (${plugin.deprecated})"}, and is used only by its coordinates, " +
+                    "such as ${(latest ?: withIt.first()).coordinates}").toString()
         }
-        if (managed != null) {
-            Version ofForge = withIt.find { Version version -> version.version == managed }
+        // the version a BOM manages is that of an artifact: of the one that would be fetched, whichever plugin the catalog lists it under
+        String ofForgeArtifact = ([plugin.coordinates] + withIt.collect { Version version -> artifactOf(version) }).unique()
+                .find { String artifact -> versionOfForge.apply(artifact) != null }
+        if (ofForgeArtifact != null) {
+            String managed = versionOfForge.apply(ofForgeArtifact)
+            Version ofForge = withIt.find { Version version -> version.version == managed && artifactOf(version) == ofForgeArtifact }
             if (ofForge == null) {
-                return ("Forge has ${plugin.coordinates} in version ${managed} for the applications it generates, and the catalog has no pack for ${managed} (it has one for " +
+                return ("${bom}, which the application gets, manages ${ofForgeArtifact} at ${managed}, and the catalog has no pack for ${managed} (it has one for " +
                         "${withIt*.version.take(MAX_REASONS).join(', ')}${withIt.size() > MAX_REASONS ? " and ${withIt.size() - MAX_REASONS} more" : ''}); another version " +
                         "is used only by its coordinates, such as ${(latest ?: withIt.first()).coordinates}").toString()
             }
             if (!ofForge.readable || (ofForge.applicationTypes != null && !ofForge.applicationTypes.contains(applicationType)) ||
-                    !ofForge.grails.contains(grails) || !ofForge.forge.contains(forge)) {
-                return ("Forge has ${plugin.coordinates} in version ${managed} for the applications it generates, and the pack of ${managed} is not one this Forge reads for this " +
+                    !ofForge.isForGrails(grails) || !ofForge.forge.contains(forge)) {
+                return ("${bom}, which the application gets, manages ${ofForgeArtifact} at ${managed}, and the pack of ${managed} is not one this Forge reads for this " +
                         "application, Grails ${grails} and Forge ${forge}").toString()
             }
             return ofForge
@@ -453,7 +476,7 @@ final class PackCatalogs {
         }
         List<Version> usable = releases.findAll { Version version ->
             version.readable && (version.applicationTypes == null || version.applicationTypes.contains(applicationType)) &&
-                    version.grails.contains(grails) && version.forge.contains(forge)
+                    version.isForGrails(grails) && version.forge.contains(forge)
         }
         if (!usable.isEmpty()) {
             return latestOf(usable)
@@ -464,7 +487,8 @@ final class PackCatalogs {
         if (latest.applicationTypes != null && !latest.applicationTypes.contains(applicationType)) {
             return "${plugin.coordinates} has it for applications of type ${latest.applicationTypes.join(', ')}, and this is ${applicationType}".toString()
         }
-        return "${plugin.coordinates} has it in no version for Grails ${grails} and Forge ${forge} (${latest.version} is for Grails ${latest.grails} and Forge ${latest.forge})".toString()
+        return ("${plugin.coordinates} has it in no version for Grails ${grails} and Forge ${forge} (${latest.version} is for Grails ${latest.grails}" +
+                "${latest.grailsVersion == null ? '' : ", which the descriptor of the plugin gives as ${latest.grailsVersion}"} and Forge ${latest.forge})").toString()
     }
 
     private static Version latestOf(List<Version> releases) {
