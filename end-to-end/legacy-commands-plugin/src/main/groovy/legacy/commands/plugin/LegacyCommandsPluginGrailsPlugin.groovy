@@ -26,7 +26,6 @@ class LegacyCommandsPluginGrailsPlugin extends Plugin {
     def title = 'Legacy Commands Plugin'
     def author = 'Grails Team'
     def description = 'Exercises Grails 7 command plugin compatibility on Grails 8.'
-    def profiles = ['web']
     def license = 'APACHE'
 
 }

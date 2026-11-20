@@ -37,7 +37,6 @@ class GrailsTestExamplesViewsFunctionalTestsPluginGrailsPlugin extends Plugin {
     def description = '''\
 Brief summary/description of the plugin.
 '''
-    def profiles = ['web']
     def documentation = "https://grails.apache.org/plugins.html"
     def license = "APACHE"
 }

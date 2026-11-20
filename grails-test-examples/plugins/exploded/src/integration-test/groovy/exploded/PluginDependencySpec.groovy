@@ -93,7 +93,7 @@ class PluginDependencySpec extends Specification {
         def config = grailsApplication.config
 
         then: "plugin-specific config is accessible"
-        config.getProperty('grails.profile', String) == 'web-plugin'
+        config.getProperty('grails.codegen.defaultPackage', String) == 'exploded'
     }
 
     def "later plugins can override earlier plugin configuration"() {
@@ -148,16 +148,16 @@ class PluginDependencySpec extends Specification {
         services != null
     }
 
-    // ========== Plugin Profiles Tests ==========
+    // ========== Plugin Enablement Tests ==========
 
-    def "plugin profiles are configured"() {
+    def "plugin is enabled whatever Spring profiles are active"() {
         when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('exploded')
-        def instance = plugin?.instance
 
-        then: "profiles are set"
-        instance != null
-        instance.profiles?.contains('web')
+        then: "no profile has to be active for it"
+        plugin != null
+        plugin.isEnabled([] as String[])
+        plugin.isEnabled(['production'] as String[])
     }
 
     // ========== Multi-Plugin Interaction Tests ==========

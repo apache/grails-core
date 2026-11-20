@@ -64,7 +64,6 @@ class GormGraphqlGrailsPlugin extends Plugin {
     def issueManagement = [system: 'Github', url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
     def grailsVersion = '8.0.0-SNAPSHOT > *'
-    def profiles = ['web']
     def title = 'GORM GraphQL'
     def description = 'Generates a GraphQL schema based on entities in GORM'
     def documentation = 'https://grails.apache.org/docs/latest/grails-data/graphql/manual/'

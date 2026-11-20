@@ -121,14 +121,14 @@ class PluginLoadOrderSpec extends Specification {
         instance.grailsVersion != null
     }
 
-    def "plugin profiles are configured"() {
-        when: "getting plugin instance"
+    def "plugin is enabled whatever Spring profiles are active"() {
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadsecond')
-        def instance = plugin?.instance
 
-        then: "profiles are set"
-        instance != null
-        instance.profiles?.contains('web')
+        then: "no profile has to be active for it"
+        plugin != null
+        plugin.isEnabled([] as String[])
+        plugin.isEnabled(['production'] as String[])
     }
 
     // ========== Plugin State Tests ==========

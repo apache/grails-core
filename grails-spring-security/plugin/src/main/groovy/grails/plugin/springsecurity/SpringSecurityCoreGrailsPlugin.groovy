@@ -171,7 +171,6 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
     def organization = [name: 'Apache Grails', url: 'https://grails.apache.org']
     def issueManagement = [url: 'https://github.com/apache/grails-core/issues']
     def scm = [url: 'https://github.com/apache/grails-core']
-    def profiles = ['web']
 
     private beanTypeResolver
 

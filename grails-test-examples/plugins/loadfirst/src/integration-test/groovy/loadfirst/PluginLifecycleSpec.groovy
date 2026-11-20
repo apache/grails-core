@@ -118,14 +118,14 @@ class PluginLifecycleSpec extends Specification {
         instance?.title == 'Loadfirst'
     }
 
-    def "plugin profiles are configured"() {
-        when: "getting plugin instance"
+    def "plugin is enabled whatever Spring profiles are active"() {
+        when: "getting plugin"
         def plugin = pluginManager.getGrailsPlugin('loadfirst')
-        def instance = plugin?.instance
 
-        then: "profiles include web"
-        instance != null
-        'web' in instance.profiles
+        then: "no profile has to be active for it"
+        plugin != null
+        plugin.isEnabled([] as String[])
+        plugin.isEnabled(['production'] as String[])
     }
 
     def "plugin documentation URL is configured"() {

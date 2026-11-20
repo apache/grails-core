@@ -37,7 +37,6 @@ class LoadfirstGrailsPlugin extends Plugin {
     def description = '''\
 This plugin should be loaded before the loadsecond plugin because loadsecond expresses loadAfter=['loadfirst'].
 '''
-    def profiles = ['web']
 
     // URL to the plugin's documentation
     def documentation = "https://grails.apache.org/plugins.html"

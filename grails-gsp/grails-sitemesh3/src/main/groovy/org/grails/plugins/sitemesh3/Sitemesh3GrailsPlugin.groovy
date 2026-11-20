@@ -110,7 +110,6 @@ class Sitemesh3GrailsPlugin extends Plugin {
     def author = 'Apache Grails Team'
     def authorEmail = ''
     def description = 'Provides GSP layout decoration using SiteMesh 3'
-    def profiles = ['web']
 
     def license = 'APACHE'
 

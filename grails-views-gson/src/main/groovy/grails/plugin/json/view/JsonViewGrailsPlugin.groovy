@@ -42,7 +42,6 @@ class JsonViewGrailsPlugin extends Plugin {
     def author = 'Apache Grails Team'
     def authorEmail = ''
     def description = 'A plugin that allows rendering of JSON views'
-    def profiles = ['web']
 
     // URL to the plugin's documentation
     def documentation = 'https://grails.apache.org/docs/snapshot/guide/theWebLayer.html#gson'
