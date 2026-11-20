@@ -18,13 +18,16 @@
  */
 package org.grails.forge.cli
 
+import java.nio.file.Path
 import java.util.function.BiFunction
 import java.util.function.Supplier
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.ApplicationCommands
 import org.apache.grails.forge.cli.console.ConsoleCommands
+import org.apache.grails.forge.cli.console.ConsoleProject
+import org.apache.grails.forge.cli.console.EarlierGrailsProject
+import org.apache.grails.forge.cli.console.PlainOutput
 import org.springframework.context.ApplicationContext
-import org.springframework.context.ConfigurableApplicationContext
 import picocli.CommandLine
 import org.apache.grails.forge.cli.console.CommandCatalog
 import org.grails.forge.cli.command.AddPropertyCommand
@@ -46,11 +49,13 @@ import org.grails.forge.cli.command.CreateUnitTestCommand
 import org.grails.forge.cli.command.InstallTemplatesCommand
 import org.grails.forge.cli.command.HelpCommand
 import org.grails.forge.io.ConsoleOutput
+import org.grails.forge.io.FileSystemOutputHandler
 
 /**
- * Runs the Forge CLI against the Grails application {@link Application} starts: builds the picocli
- * command line from the command beans of the context and executes it, once for a one-shot
- * invocation or repeatedly for the interactive shell, on the same context.
+ * Runs the Forge CLI: builds the picocli command line and executes it, once for a one-shot
+ * invocation or repeatedly for the interactive shell. The Grails application {@link Application}
+ * starts, which generates, is not started for the command line: a command that needs it asks the
+ * {@link ForgeContext} for it, and the same one serves every command of the interactive shell.
  */
 @CompileStatic
 final class ForgeCli {
@@ -92,38 +97,119 @@ final class ForgeCli {
     }
 
     /**
-     * Starts the Grails application, runs the given command line on it, or the interactive shell
-     * when there is none, and closes the application again.
+     * Runs the given command line, or the interactive shell when there is none, as the program
+     * {@code grails-forge-cli}. The Grails application that generates is started when a command
+     * first needs it, see {@link ForgeContext}, and closed again.
      *
      * @param args the command line
      * @return the exit code
      */
     static int run(String... args) {
-        ConfigurableApplicationContext context = Application.builder().run()
+        return launch(new ForgeContext(), false, args)
+    }
+
+    /**
+     * Runs a command line as the program of the given name, which the help then shows.
+     *
+     * @param commandName the name the command line is started under
+     * @param consoleInProjectOnly whether, without a command, the interactive shell is started only
+     * in a Grails project and the help is shown elsewhere
+     * @param args the command line
+     * @return the exit code
+     */
+    static int launch(String commandName, boolean consoleInProjectOnly, String... args) {
+        ForgeContext context = new ForgeContext()
+        context.commandName = commandName
+        return launch(context, consoleInProjectOnly, args)
+    }
+
+    /**
+     * Runs a command line, or without a command the interactive shell, and closes the application
+     * when it was started. With {@code --non-interactive} the shell is not started: the help is
+     * shown, as it is outside a project when the shell is for projects only.
+     *
+     * @param context the application, which is started when a command first needs it
+     * @param consoleInProjectOnly whether, without a command, the interactive shell is started only
+     * in a Grails project and the help is shown elsewhere
+     * @param args the command line
+     * @return the exit code
+     */
+    static int launch(ForgeContext context, boolean consoleInProjectOnly, String... args) {
         try {
-            if (args.length == 0) {
-                interactive(context)
-                return 0
+            if (!args.every { String arg -> arg == PlainOutput.OPTION || arg == ForgeCommand.NON_INTERACTIVE }) {
+                return execute(context, args)
             }
-            return execute(context, args)
+            if (ForgeCommand.NON_INTERACTIVE in args || (consoleInProjectOnly && !inProject())) {
+                return execute(context, (args.toList() + ['--help']) as String[])
+            }
+            boolean plain = PlainOutput.OPTION in args
+            if (plain) {
+                PlainOutput.enter()
+            }
+            try {
+                interactive(context)
+            } finally {
+                if (plain) {
+                    PlainOutput.leave()
+                }
+            }
+            return 0
         }
         finally {
             context.close()
         }
     }
 
+    private static boolean inProject() {
+        try {
+            return ConsoleProject.find(FileSystemOutputHandler.getDefaultBaseDirectory().toPath()) != null
+        } catch (IOException ignored) {
+            return false
+        }
+    }
+
     /**
-     * Executes one command line on a running context, which stays open for the next one. The name
-     * of a command can be given in its short form, as {@code cA} for {@code create-app}: it is
-     * replaced by the name before the command line is read, see {@link CommandCatalog#expand}.
+     * Executes one command line on a running context, which stays open for the next one.
+     *
+     * @see #execute(ForgeContext, String[])
      */
     static int execute(ApplicationContext context, String... args) {
+        return execute(ForgeContext.of(context), args)
+    }
+
+    /**
+     * Executes one command line on a context, which stays as it is for the next one: started when
+     * the command needed it, and not started otherwise. The name of a command can be given in its
+     * short form, as {@code cA} for {@code create-app}: it is replaced by the name before the
+     * command line is read, see {@link CommandCatalog#expand}.
+     */
+    static int execute(ForgeContext context, String... args) {
         boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
         // What reading the record of the project has to say is held back until the command is known:
         // a short form is looked up among the commands of the project too, and may then be a command
         // that has nothing to do with the project.
         HeldBack held = new HeldBack()
-        return execute(createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, readsProject(args)), held, args)
+        boolean reads = readsProject(args)
+        CommandLine commandLine = createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, reads)
+        if (reads && !noOpConsole) {
+            advise(context, held)
+        }
+        return execute(commandLine, held, args)
+    }
+
+    // said once for a directory while the context lives, which in the interactive shell is once
+    private static void advise(ForgeContext context, HeldBack held) {
+        try {
+            Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
+            if (context.advised.add(current.toString())) {
+                String guidance = EarlierGrailsProject.guidance(current)
+                if (guidance != null) {
+                    held.warning(guidance)
+                }
+            }
+        } catch (IOException ignored) {
+            // without a current directory there is no project to say anything of
+        }
     }
 
     /**
@@ -135,6 +221,21 @@ final class ForgeCli {
     }
 
     private static int execute(CommandLine commandLine, HeldBack held, String... args) {
+        // before anything is written: what is held back, a refusal and the help are plain as well
+        boolean plain = PlainOutput.given(commandLine, args)
+        if (plain) {
+            PlainOutput.enter()
+        }
+        try {
+            return executePlainOrNot(commandLine, held, args)
+        } finally {
+            if (plain) {
+                PlainOutput.leave()
+            }
+        }
+    }
+
+    private static int executePlainOrNot(CommandLine commandLine, HeldBack held, String... args) {
         ConsoleOutput root = (ConsoleOutput) commandLine.getCommand()
         // for the commands that were added since the command line was put together as well
         commandLine.setUsageHelpWidth(USAGE_WIDTH)
@@ -194,6 +295,14 @@ final class ForgeCli {
      * Runs the interactive shell on a running context until the user leaves it.
      */
     static void interactive(ApplicationContext context) {
+        interactive(ForgeContext.of(context))
+    }
+
+    /**
+     * Runs the interactive shell until the user leaves it, on a context that is started when a
+     * command typed there first needs it.
+     */
+    static void interactive(ForgeContext context) {
         CommandLine commandLine = createCommandLine(context, true)
         // in the shell a command that starts an application returns to the prompt
         ConsoleCommands.setInteractive(true)
@@ -209,11 +318,23 @@ final class ForgeCli {
         return createCommandLine(context, noOpConsole, true)
     }
 
+    static CommandLine createCommandLine(ForgeContext context, boolean noOpConsole) {
+        return createCommandLine(context, noOpConsole, true)
+    }
+
     /**
      * @param readsProject whether the record of the project of the current directory is read, for
      * the code generation commands the project has
      */
     static CommandLine createCommandLine(ApplicationContext context, boolean noOpConsole, boolean readsProject) {
+        return createCommandLine(ForgeContext.of(context), noOpConsole, readsProject)
+    }
+
+    /**
+     * @param readsProject whether the record of the project of the current directory is read, for
+     * the code generation commands the project has
+     */
+    static CommandLine createCommandLine(ForgeContext context, boolean noOpConsole, boolean readsProject) {
         return createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : null, readsProject)
     }
 
@@ -223,12 +344,23 @@ final class ForgeCli {
      * A command that is registered in either way is found by its short form, shown by {@code help}
      * and described by {@code help --json} without anything else being done for it.
      *
+     * Nothing here starts the application: a command that generates asks for it when it runs.
+     *
      * @param console where reading the record of the project says what it has to say, or
      * {@code null} for the output of the command line
      */
-    private static CommandLine createCommandLine(ApplicationContext context, ConsoleOutput console, boolean readsProject) {
-        ForgeCommand root = context.getBean(ForgeCommand)
-        CommandLine commandLine = new CommandLine(root, new GrailsPicocliFactory(context))
+    private static CommandLine createCommandLine(ForgeContext context, ConsoleOutput console, boolean readsProject) {
+        GrailsPicocliFactory factory = new GrailsPicocliFactory(context)
+        ForgeCommand root = factory.create(ForgeCommand)
+        CommandLine commandLine = new CommandLine(root, factory)
+        if (context.commandName != null) {
+            commandLine.setCommandName(context.commandName)
+        }
+        // after a mistake the command is shown to be used without the features being listed, which only the generator can
+        CommandLine.IParameterExceptionHandler mistakes = commandLine.getParameterExceptionHandler()
+        commandLine.setParameterExceptionHandler({ CommandLine.ParameterException e, String[] given ->
+            context.withoutListing({ mistakes.handleParseException(e, given) } as Supplier<Integer>)
+        } as CommandLine.IParameterExceptionHandler)
         commandLine.executionExceptionHandler = { Exception ex, CommandLine failed, CommandLine.ParseResult parseResult ->
             EXCEPTION_HANDLER.apply(ex, failed)
         } as CommandLine.IExecutionExceptionHandler
@@ -250,6 +382,8 @@ final class ForgeCli {
         ConsoleCommands.addTo(commandLine, readsProject)
         // last: a command of the application does not take the name of a command that is there
         ApplicationCommands.addTo(commandLine, readsProject)
+        // everything after gradle is Gradle's, and everything after a command of the application is that command's
+        PlainOutput.notForWhatIsPassedOn(commandLine)
         // once every command is there: the width is given to the commands there are when it is set
         commandLine.setUsageHelpWidth(USAGE_WIDTH)
         return commandLine

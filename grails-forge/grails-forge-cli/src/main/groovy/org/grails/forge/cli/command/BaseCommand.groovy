@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.cli.CommonOptionsMixin
+import org.grails.forge.cli.ForgeCommand
 import org.grails.forge.io.ConsoleOutput
 import picocli.CommandLine
 
@@ -62,6 +63,15 @@ class BaseCommand implements ConsoleOutput {
 
     boolean verbose() {
         return commonOptions.verbose
+    }
+
+    /**
+     * @return whether the command line was given {@code --non-interactive}: nothing may then wait
+     * for what a user types
+     */
+    boolean nonInteractive() {
+        Object root = spec.root().userObject()
+        return root instanceof ForgeCommand && ((ForgeCommand) root).nonInteractive
     }
 
     @Nullable

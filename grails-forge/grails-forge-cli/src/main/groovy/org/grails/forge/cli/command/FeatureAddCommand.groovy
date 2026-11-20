@@ -29,13 +29,16 @@ import org.apache.grails.forge.core.change.ProjectChangeException
 import org.apache.grails.forge.core.state.ProjectState
 import org.apache.grails.forge.core.state.ProjectStateException
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 import picocli.CommandLine
 import java.nio.file.Path
 import java.util.concurrent.Callable
+import java.util.function.Supplier
 
 /**
  * Adds features to the application in the current directory, which has to have the state the
@@ -68,10 +71,17 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     @CommandLine.Option(names = ['--diff'], description = 'Show the changes that would be made to the files, as a diff, and change nothing.')
     boolean diff
 
-    private final ProjectGenerator projectGenerator
+    // asked of the Forge application when the command first needs it
+    private final Supplier<ProjectGenerator> projectGeneratorSource
 
+    @Autowired
     FeatureAddCommand(ProjectGenerator projectGenerator) {
-        this.projectGenerator = projectGenerator
+        this.projectGeneratorSource = { projectGenerator } as Supplier<ProjectGenerator>
+    }
+
+    /** On a Forge application that is started when the command first needs it. */
+    FeatureAddCommand(ForgeContext context) {
+        this.projectGeneratorSource = { context.get().getBean(ProjectGenerator) } as Supplier<ProjectGenerator>
     }
 
     @Override
@@ -90,7 +100,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 throw new ProjectStateException("There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
                         'Run the command in the directory of an application that Grails 9 created')
             }
-            FeatureAddition addition = new FeatureAddition(projectGenerator)
+            FeatureAddition addition = new FeatureAddition(projectGeneratorSource.get())
             for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
                 out("@|blue ||@ ${message}")
             }

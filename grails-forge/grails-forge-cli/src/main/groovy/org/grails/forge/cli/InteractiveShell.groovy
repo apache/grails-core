@@ -20,6 +20,7 @@ package org.grails.forge.cli
 
 import groovy.transform.CompileStatic
 import org.apache.grails.forge.cli.console.GradleRunner
+import org.apache.grails.forge.cli.console.PlainOutput
 import org.jline.reader.Candidate
 import org.jline.reader.Completer
 import org.jline.reader.EndOfFileException
@@ -198,7 +199,8 @@ class InteractiveShell {
      * <p>{@code NO_COLOR} still wins over both, since a user asking for no colour means it.</p>
      */
     private static CommandLine.Help.Ansi resolveAnsi(Terminal terminal) {
-        if (System.getenv('NO_COLOR') != null) {
+        // --plain-output says the same for one run
+        if (System.getenv('NO_COLOR') != null || PlainOutput.isOn()) {
             return CommandLine.Help.Ansi.OFF
         }
         if (AUTO.enabled()) {

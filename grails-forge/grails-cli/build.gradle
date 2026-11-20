@@ -81,6 +81,19 @@ dependencies {
     shadowCombined platform("org.apache.grails:grails-bom:$projectVersion")
     shadowCombined 'org.apache.groovy:groovy'
     shadowCombined files(rootProject.project(':grails-cli-shadow').tasks.named('shadowJar'))
+
+    // GrailsCli is compiled against ForgeCli, whose methods name picocli types; at run time picocli comes with grails-forge-cli
+    compileOnly "info.picocli:picocli:$picocliVersion"
+
+    // GrailsCliSpec: the entry point on the class path this artifact is published with
+    testImplementation 'org.spockframework:spock-core', {
+        exclude group: 'org.apache.groovy', module: 'groovy-all'
+    }
+    testImplementation 'org.apache.groovy:groovy-json'
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/test-config.gradle')
 }
 
 

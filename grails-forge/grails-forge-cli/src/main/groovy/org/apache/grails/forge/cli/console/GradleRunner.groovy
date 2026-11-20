@@ -268,6 +268,7 @@ final class GradleRunner {
             command.add('sh')
         }
         command.add(wrapper.toString())
+        command.addAll(PlainOutput.forGradle(arguments))
         command.addAll(arguments)
         return command
     }

@@ -47,6 +47,15 @@ class ShellCommand extends GradleEnvironmentCommand {
     boolean debugJvmOfShell
 
     @Override
+    Integer call() throws Exception {
+        if (nonInteractive()) {
+            throw new CommandLine.ParameterException(spec.commandLine(), 'shell reads what is typed until it is left, which --non-interactive rules out: ' +
+                    'run it without the option, or use run-script for a script')
+        }
+        return super.call()
+    }
+
+    @Override
     protected String defaultEnvironment() {
         return 'development'
     }

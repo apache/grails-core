@@ -97,7 +97,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then: 'a mistake in the command line, answered with how the command line is used'
         exit == 2
         err.toString().readLines()[0].startsWith("There is no command ${typed}")
-        err.toString().contains('Usage: grails-forge-cli [-hvVx] [COMMAND]')
+        err.toString().contains('Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
         out.toString().isEmpty()
         !new File(dir, 'grails-app').exists()
 
@@ -201,7 +201,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         exit == 2
         out.toString().isEmpty()
         err.toString().readLines()[0] == 'cA is short for more than one command: create-app, check-all, clean-all. Type more of the name of the one that is meant'
-        err.toString().contains('Usage: grails-forge-cli [-hvVx] [COMMAND]')
+        err.toString().contains('Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
         !new File(dir, 'three').exists()
 
         when: 'help is asked for them'
@@ -263,9 +263,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         what                           | args                         | message                                                              | usage
-        'a command there is not'       | ['help', 'craete-app']       | 'There is no command craete-app. Did you mean: create-app or '                                  | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'
-        'nothing like a command'       | ['help', 'zzz']              | 'There is no command zzz'                                            | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'
-        'a command feature has not'    | ['help', 'feature', 'remove'] | 'There is no command remove of feature'                             | 'Usage: grails-forge-cli feature [-hvVx] [COMMAND]'
+        'a command there is not'       | ['help', 'craete-app']       | 'There is no command craete-app. Did you mean: create-app or '                                  | 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        'nothing like a command'       | ['help', 'zzz']              | 'There is no command zzz'                                            | 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
+        'a command feature has not'    | ['help', 'feature', 'remove'] | 'There is no command remove of feature'                             | 'Usage: grails-forge-cli feature [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
         'a command and --json'         | ['help', '--json', 'create-app'] | '--json describes every command there is here: name no command with it' | 'Usage: grails-forge-cli help'
     }
 
@@ -285,7 +285,7 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 2
         err.toString().readLines()[0] == 'There is no command remove of feature'
-        err.toString().contains('Usage: grails-forge-cli feature [-hvVx] [COMMAND]')
+        err.toString().contains('Usage: grails-forge-cli feature [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
     }
 
     @Unroll
@@ -556,9 +556,9 @@ class CommandCatalogSpec extends CommandSpec implements CommandFixture {
 
         where:
         args                   | what          | shown                                         | expected
-        ['--help', 'bogus']    | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
-        ['-h', 'bogus', 'x']   | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
-        ['-xvh', 'bogus']      | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [COMMAND]'   | 0
+        ['--help', 'bogus']    | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'   | 0
+        ['-h', 'bogus', 'x']   | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'   | 0
+        ['-xvh', 'bogus']      | 'the help'    | 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'   | 0
         ['-V', 'bogus']        | 'the version' | 'Grails Version: '                            | 0
         ['--version', 'bogus'] | 'the version' | 'Grails Version: '                            | 0
     }

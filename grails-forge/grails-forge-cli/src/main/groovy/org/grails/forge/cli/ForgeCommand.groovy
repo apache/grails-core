@@ -70,6 +70,19 @@ import java.util.concurrent.Callable
 @CompileStatic
 class ForgeCommand extends BaseCommand implements Callable<Integer> {
 
+    /** The option that rules out everything that waits for what a user types. */
+    public static final String NON_INTERACTIVE = '--non-interactive'
+
+    // read before the command line is: see PlainOutput. Declared so that it is accepted, here and after the name of a command, and shown
+    @CommandLine.Option(names = ['--plain-output'], scope = CommandLine.ScopeType.INHERIT,
+            description = 'Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle.')
+    boolean plainOutput
+
+    @CommandLine.Option(names = ['--non-interactive'], scope = CommandLine.ScopeType.INHERIT,
+            description = 'Never wait for what a user types: without a command the help is shown and the interactive console is not started, ' +
+                    'and a command that reads what is typed is refused.')
+    boolean nonInteractive
+
     @Override
     Integer call() throws Exception {
         throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified')

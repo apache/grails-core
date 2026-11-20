@@ -247,6 +247,9 @@ The usage of every command is laid out for a width of 100 columns, and the list 
   "complete": true,
   "diagnostics": [],
   "projectDirectory": "/home/me/myapp",
+  "options": [
+    { "names": ["--plain-output"], "arity": "0", "label": null, "required": false, "description": "Write plain text for a program to read: no colour or other terminal markup, and no progress display of Gradle." }
+  ],
   "commands": [
     {
       "name": "create-controller",
@@ -279,6 +282,9 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | `projectDirectory`
 | The directory of the project the current directory is in, or `null` outside a project.
 
+| `options` of the document
+| The options the command line itself takes in front of a command, described like the options of a command: `--plain-output` and `--non-interactive` among them (see the next section).
+
 | `commands`
 | The commands, in the order `help` lists them. `name` is what is typed, `aliases` are other names of the command, `description` is one line of plain text, `project` says whether the command works on a project and cannot be used outside one, `origin` says where the command comes from (`built-in` for the commands of the Grails Forge CLI itself), and `commands` holds the commands of the command, described in the same way. The commands of the application and its plugins come after those of the Grails Forge CLI. Their `origin` is `application`, the coordinates `group:artifact:version` of the artifact the command comes from, or `file:` and the name of a jar; they also have `target`, which is `application` because the command runs in the application, and `registration`, as the build of the project says it (see xref:commandLine#creatingCustomCommands[Creating Custom Commands]).
 
@@ -291,6 +297,86 @@ The usage of every command is laid out for a width of 100 columns, and the list 
 | `arity`
 | How many values are taken, as text: one number (`"0"`, `"1"`), or a least and a most number with `..` between them (`"0..1"`), where `*` stands for any number (`"1..*"`).
 |===
+
+=== Output for a Program, and Running Without a User
+
+Two options belong to the command line itself and not to one command. They are given in front of the command, and are accepted after the name of a command too:
+
+[source,console]
+----
+$ grails -t forge --plain-output --non-interactive compile
+$ grails -t forge test-app --plain-output
+----
+
+[cols="1,3"]
+|===
+| Option | What it does
+
+| `--plain-output`
+| Everything is written as plain text, line by line: no colour and no other markup of a terminal, in the help, in the messages (`\| Error`, `\| Warning`) and in what a command reports. Gradle is run with `--console=plain`, so it shows no progress display and writes every line once; when the command line names a console itself, as in `gradle build --console=rich`, that one is used.
+
+| `--non-interactive`
+| Nothing waits for what a user types. Without a command the help is shown and the interactive console is not started, and `shell`, which reads what is typed until it is left, is refused with exit code 2.
+|===
+
+Without `--plain-output` the output is plain as well wherever it is not a terminal, such as a file or a pipe, and when the environment variable `NO_COLOR` is set. The option is for the cases in which that cannot be relied on: a program that reads the output through a terminal of its own.
+
+The options are not taken after `gradle`, after the name of a command of the application or of a plugin, or after `--`: everything there is given to Gradle or to the command as it was typed. `grails -t forge --plain-output gradle build` is the form for those.
+
+==== What a Command Starts
+
+The help, `help --json`, the version, the refusal of a command there is not or of a mistake in the command line, the commands that run the build of the project (`gradle`, `compile`, `clean`, `test-app`, `run-app` and the others) and the commands that create the classes of an application start nothing but the command line itself. Only the commands that generate from the features of Grails start the project generator, when they run: `create-app` and the other commands that create an application, their `--help` and `--list-features`, which list the features, and `feature add`. So the commands of the first kind answer at once, and they keep working when the generator cannot be started; a command that needs it then says so in one line and ends with exit code 1.
+
+After a mistake in the command line of a command that creates an application, the command is shown to be used without the list of features: `--list-features` and `--help` have it.
+
+`help --json` never lists the features in the description of `--features`, for the same reason: a tool asks `--list-features` for them.
+
+==== Starting the Command Line from a Tool
+
+An IDE, a script or a build that starts the Grails command line itself, without the `grails` script of the distribution, uses the artifact `org.apache.grails:grails-cli` of the version of Grails and its class `org.apache.grails.cli.GrailsCli`:
+
+As a program, the JVM ends with the exit code of the command:
+
+[source,console]
+----
+$ java -cp <the class path of org.apache.grails:grails-cli> org.apache.grails.cli.GrailsCli --plain-output --non-interactive help --json
+----
+
+In a JVM of your own, the exit code is returned:
+
+[source,groovy]
+----
+int exitCode = org.apache.grails.cli.GrailsCli.execute('--plain-output', 'create-app', 'com.example.myapp')
+----
+
+Started this way the command line is called `grails` in its help, and takes the commands of this chapter that are given with `grails -t forge` here. Without a command it starts the interactive console in a Grails project and shows the help elsewhere, and always the help with `--non-interactive`. `execute` runs one command line at a time, in the current directory of the JVM, and writes to the standard output and the standard error of the JVM.
+
+The exit code says what happened:
+
+[cols="1,4"]
+|===
+| Exit code | Meaning
+
+| `0`
+| The command did what it was asked to.
+
+| `2`
+| The command line was wrong: a command there is not, a short form of more than one command, an option or a value the command does not take, features that cannot be had together. The standard error says what was wrong and how the command is used.
+
+| `1`
+| Any other failure, with one line on the standard error that says why: a build that failed, a directory that is no project, a file that cannot be written, a generator that cannot be started.
+|===
+
+==== In a Project of an Earlier Version of Grails
+
+The commands write what Grails 9 has. In a project whose `gradle.properties` names an earlier major version as `grailsVersion`, and which has no `.grails` directory of this generator, every command that reads the project first warns of it:
+
+[source,console]
+----
+| Warning This project is on Grails 8.1.2 (gradle.properties), and this is the command line of Grails 9: what its commands create is written for Grails 9. Use the command line of Grails 8 for this project, or upgrade the project to Grails 9 first, as the upgrade notes of the Grails guide describe
+----
+
+The command is then run all the same; the commands that only run the build of the project, such as `gradle` and `compile`, do in such a project what they do in any other. In the interactive console the warning is given once. `help --json` has it in `diagnostics`.
 
 === Commands of the Application and its Plugins
 

@@ -19,9 +19,11 @@
 package org.apache.grails.forge.cli.console
 
 import java.nio.file.Path
+import java.util.function.Supplier
 import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import org.grails.build.parsing.ScriptNameResolver
+import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
 import picocli.CommandLine
@@ -218,6 +220,8 @@ final class CommandCatalog {
         document.put('complete', complete)
         document.put('diagnostics', new ArrayList<String>(diagnostics))
         document.put('projectDirectory', projectDirectory == null ? null : projectDirectory.toString())
+        // what the command line takes in front of a command
+        document.put('options', options(root.getCommandSpec()))
         document.put('commands', commands(root))
         return document
     }
@@ -237,20 +241,7 @@ final class CommandCatalog {
             each.put('description', text(spec.usageMessage().description()))
             each.put('project', spec.userObject() instanceof ProjectCommand)
             each.put('origin', BUILT_IN)
-            List<Map<String, Object>> options = []
-            for (CommandLine.Model.OptionSpec option : spec.options()) {
-                if (option.hidden()) {
-                    continue
-                }
-                Map<String, Object> entry = new LinkedHashMap<>()
-                entry.put('names', option.names().toList())
-                entry.put('arity', option.arity().toString())
-                entry.put('label', option.arity().max() > 0 ? option.paramLabel() : null)
-                entry.put('required', option.required())
-                entry.put('description', text(option.renderedDescription()))
-                options.add(entry)
-            }
-            each.put('options', options)
+            each.put('options', options(spec))
             List<Map<String, Object>> parameters = []
             for (CommandLine.Model.PositionalParamSpec parameter : spec.positionalParameters()) {
                 if (parameter.hidden()) {
@@ -267,6 +258,34 @@ final class CommandCatalog {
             described.add(each)
         }
         return described
+    }
+
+    private static List<Map<String, Object>> options(CommandLine.Model.CommandSpec spec) {
+        List<Map<String, Object>> options = []
+        for (CommandLine.Model.OptionSpec option : spec.options()) {
+            if (option.hidden()) {
+                continue
+            }
+            Map<String, Object> entry = new LinkedHashMap<>()
+            entry.put('names', option.names().toList())
+            entry.put('arity', option.arity().toString())
+            entry.put('label', option.arity().max() > 0 ? option.paramLabel() : null)
+            entry.put('required', option.required())
+            entry.put('description', description(option))
+            options.add(entry)
+        }
+        return options
+    }
+
+    // The values an option can have are part of its description, except those only the generator
+    // knows, the features: the document is written without the generator, and is the same whether
+    // or not something started it before.
+    private static String description(CommandLine.Model.OptionSpec option) {
+        Iterable<String> candidates = option.completionCandidates()
+        if (candidates instanceof ForgeContext.Candidates) {
+            return ((ForgeContext.Candidates) candidates).withoutListing({ text(option.renderedDescription()) } as Supplier<String>)
+        }
+        return text(option.renderedDescription())
     }
 
     // the commands the help lists, once each: a command is registered under every name it has

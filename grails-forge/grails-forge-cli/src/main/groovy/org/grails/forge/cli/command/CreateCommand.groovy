@@ -35,6 +35,7 @@ import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.build.dependencies.Coordinate
+import org.grails.forge.cli.ForgeContext
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
@@ -51,12 +52,11 @@ import picocli.CommandLine
 import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.Callable
+import java.util.function.Supplier
 import java.util.regex.Pattern
 
 @CompileStatic
 abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
-
-    protected final AvailableFeatures availableFeatures
 
     @CommandLine.Parameters(arity = '0..1', paramLabel = 'NAME', description = 'The name of the application to create.')
     String name
@@ -137,18 +137,47 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     private Selection selection
     private String notInCatalog = ''
 
-    private final ContextFactory contextFactory
     private final ApplicationType applicationType
-    private final ProjectGenerator projectGenerator
+    // what the Forge application has, asked of it when the command first needs it
+    private final Supplier<? extends AvailableFeatures> availableFeaturesSource
+    private final Supplier<ContextFactory> contextFactorySource
+    private final Supplier<ProjectGenerator> projectGeneratorSource
 
     CreateCommand(AvailableFeatures availableFeatures,
                          ContextFactory contextFactory,
                          ApplicationType applicationType,
                          ProjectGenerator projectGenerator) {
-        this.availableFeatures = availableFeatures
-        this.contextFactory = contextFactory
+        this.availableFeaturesSource = { availableFeatures } as Supplier<AvailableFeatures>
+        this.contextFactorySource = { contextFactory } as Supplier<ContextFactory>
         this.applicationType = applicationType
-        this.projectGenerator = projectGenerator
+        this.projectGeneratorSource = { projectGenerator } as Supplier<ProjectGenerator>
+    }
+
+    /**
+     * The command on a Forge application that is started when the command first needs it: when it
+     * creates an application or lists the features, and not when it is only put on the command line
+     * or says how it is used.
+     *
+     * @param context the Forge application
+     * @param featuresType the features an application of the type can have, as the application has them
+     */
+    protected CreateCommand(ForgeContext context, Class<? extends AvailableFeatures> featuresType, ApplicationType applicationType) {
+        this.availableFeaturesSource = { context.get().getBean(featuresType) } as Supplier<AvailableFeatures>
+        this.contextFactorySource = { context.get().getBean(ContextFactory) } as Supplier<ContextFactory>
+        this.applicationType = applicationType
+        this.projectGeneratorSource = { context.get().getBean(ProjectGenerator) } as Supplier<ProjectGenerator>
+    }
+
+    protected AvailableFeatures getAvailableFeatures() {
+        return availableFeaturesSource.get()
+    }
+
+    private ContextFactory getContextFactory() {
+        return contextFactorySource.get()
+    }
+
+    private ProjectGenerator getProjectGenerator() {
+        return projectGeneratorSource.get()
     }
 
     /**
