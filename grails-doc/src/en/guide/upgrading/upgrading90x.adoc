@@ -1617,7 +1617,7 @@ An application that Grails Forge generates (`create-app` and the other create co
 * *The `profile` dependency.* `build.gradle` has no `profile "org.apache.grails.profiles:<type>"` line. Nothing of the build or of the running application used that dependency; it told the Grails shell which profile's commands the project has. The commands of the Grails Forge CLI come with the command line and with the plugins of the application.
 * *`grails-forge-cli.yml`.* The file at the root of the project is not written. The `.grails` directory is the record of how the application was generated: `.grails/project.yml` has the application type, the default package, the options and the features that were asked for and excluded, and `.grails/forge.lock.yml` has every feature of the application, and for a feature pack that was taken by its coordinates the version, the SHA-256 and, for an `https` address, the repository. The name of the jar file of such a pack, which `grails-forge-cli.yml` had under `featurePacks`, is not recorded any more. `feature add` changes no `grails-forge-cli.yml` either. To see what the record says, run `project show` in the project: it lists the type, the options and the features, and its last line is the `create-` command that creates the same application again; `project regenerate --output <directory>` writes the application as it was generated to another directory, and `project regenerate --diff` names the files that are not as generated.
 
-Not changed: `grails.profile` and `grails.codegen.defaultPackage` are still written to `grails-app/conf/application.yml`, because the framework reads both when the application runs. Not changed either: the Grails Forge CLI still reads the `grails-forge-cli.yml` (or `grails-cli.yml`) of a project that an earlier version generated.
+Not changed: `grails.codegen.defaultPackage` is still written to `grails-app/conf/application.yml`, because the framework reads it when the application runs (`grails.profile` is not written any more: see the note on the profile at run time below). Not changed either: the Grails Forge CLI still reads the `grails-forge-cli.yml` (or `grails-cli.yml`) of a project that an earlier version generated.
 
 ===== Required Actions
 
@@ -1635,3 +1635,50 @@ Without the line the Grails Gradle plugin resolves the `web` profile for an appl
 * When the files of `.grails` cannot be used, because one was changed by hand or is missing, the `create-*` code generation commands of a newly generated application are not there until the directory is as it was: restore it from version control. An application that has a `grails-forge-cli.yml` goes by that file then, as before.
 * A feature pack of your own that writes a file named `grails-forge-cli.yml` or `grails-cli.yml` to the root of the application is refused when the application is generated, because the command line would read that file as the record of a project. Give the file another name.
 * An application that a snapshot of Grails 9 generated before this change cannot have a feature added with `feature add` by a later build of the same version: the command says that the application cannot be generated again as it was and names `build.gradle`. Add the dependencies and the configuration of the feature by hand, or generate the application again.
+
+==== 36. An Application Has No Profile at Run Time: `grails.profile` Is Not Read
+
+Until Grails 9 the framework read the `grails.profile` key of the configuration while an application started and added its value to the active Spring profiles, and `web` when the key was not there. A running application therefore reported a Spring profile named after the profile it was created from (`web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`, or a profile of your own), whether or not anything asked for one.
+
+The profile was added late: after the configuration files had been read, after the conditions of the configuration classes had been evaluated, and after the plugins had registered their beans. In Grails 8 it therefore did not select an `application-web.yml` file or a `spring.config.activate.on-profile: web` document, did not register a `@Profile('web')` bean of the application, and was not there for a plugin that asked the environment while it registered its beans. What it changed is the answer that code got when it asked the environment once the application was running.
+
+In Grails 9 nothing reads the key:
+
+* *No Spring profile is active by itself.* The active Spring profiles are the ones that were asked for, with `spring.profiles.active` or `spring.profiles.include` in whatever way Spring Boot takes them, and the name of the Grails environment (`development`, `test`, `production`, or one of your own), as before. `environment.activeProfiles` of a running application no longer has `web`, `rest-api` or another profile name at its end, and `environment.acceptsProfiles(Profiles.of('web'))` is `false` unless `web` was asked for. An application with the key and one without it behave the same.
+* *The key is configuration like any other.* It may stay in `application.yml` and may be deleted. Code of your own that reads it still gets the value that is written there. The configuration report (`config-report`) lists it among the other properties, without a description.
+* *Generated applications do not have it.* Grails Forge does not write `grails.profile`, the welcome page has no "Profile" row, and the `welcome.app.profile` message is not in the message bundles. `grails.codegen.defaultPackage` is written as before. The type of a generated application is in `.grails/project.yml`.
+* *The `profiles` property of a plugin descriptor is not read.* `def profiles = ['web']` in a plugin class was how a plugin said that it takes part only when one of the named profiles is active. Grails has not read the property since 7.1.0: a plugin is enabled whatever it declares, and that does not change. The plugins of the framework and a generated web plugin no longer declare it, and the constant `GrailsPlugin.PROFILES` is deprecated for removal.
+* *`grails.config.Settings.PROFILE` is removed.*
+
+===== Required Actions
+
+* *Code that asks the environment for the profile while the application runs.* Search the application and the plugins of your own for `acceptsProfiles`, `activeProfiles` and `getActiveProfiles` used with one of the profile names above: in a service, a controller, `BootStrap`, a tag library, or a bean that is created lazily or in a child context after startup. Such a check was `true` in every application of that type and is now `false`; a negated one, such as `!environment.acceptsProfiles(Profiles.of('web'))`, is now `true`. An application that had no `grails.profile` key reported `web`. Either remove the check, when what it guards belongs to the application in every case, or ask for the profile in the main document of `application.yml`:
++
+[source,yaml]
+----
+spring:
+    profiles:
+        include: web
+----
++
+`spring.profiles.active` does the same in `application.yml`, but a value given when the application is started (`--spring.profiles.active=...`, the `SPRING_PROFILES_ACTIVE` environment variable or the system property) takes its place, where `spring.profiles.include` is added to it. A profile that is asked for this way is a real one: unlike the profile the framework added, it also registers the `@Profile('web')` beans and reads the `application-web.yml` of the application, so check that the application has none it does not want.
+* *`@Profile('web')` beans, `application-web.yml`, `spring.config.activate.on-profile: web`.* Nothing to do for the upgrade: none of them was selected by the profile the framework added, and none is now. When you find one that was written in the belief that it applies to every web application, it never did: remove the condition to make it apply, or delete it.
+* *A plugin of your own with `def profiles = [...]`.* Delete the line: it has had no effect since Grails 7.1.0. A plugin that should contribute beans only for some Spring profile asks the environment, which answers with the profiles that were asked for:
++
+[source,groovy]
+----
+import org.springframework.core.env.Profiles
+
+Closure doWithSpring() {
+    boolean reporting = applicationContext.environment.acceptsProfiles(Profiles.of('reporting'))
+    return { ->
+        if (reporting) {
+            reportScheduler(ReportScheduler)
+        }
+    }
+}
+----
++
+A plugin that needs a web application to work says so with what it needs, such as `@ConditionalOnWebApplication` on its auto-configuration, not with a profile.
+* *The key.* Delete `grails.profile` from `application.yml` (or `application.groovy`) when nothing of your own reads it. A page or an endpoint of your own that shows it, such as the "Profile" row of a welcome page copied from an earlier version, shows nothing for an application without the key: remove the row.
+* *`Settings.PROFILE`.* Code that used the constant to read the key names the key itself, `'grails.profile'`.

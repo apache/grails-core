@@ -625,6 +625,26 @@ The line a GSP error names was wrong for many pages and is now the line of the p
 - What a page renders is not changed, but for an escaped expression `\${` about 64,000 characters after the last expression, scriptlet or tag, which was written with its backslash and is now written as `${`. Precompiled pages carry the lines, so they differ from those of Grails 8 and are compiled again by the build.
 - No action for an application. A test that asserts the earlier line of such an error asserts the line of the page instead. No setting restores the earlier numbers.
 
+## An Application Has No Profile at Run Time
+
+Grails 9 does not read `grails.profile`. Until Grails 9 its value, or `web` when the key was absent, was added to the active Spring profiles while the application started, so a running application reported a Spring profile named after the profile it was created from (`web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`). Now the only active Spring profiles are the ones asked for (`spring.profiles.active`, `spring.profiles.include`) and the name of the Grails environment. The key is ignored whether it is there or not, and nothing fails.
+
+The profile was added late, after configuration files were read and bean conditions evaluated. In Grails 8 it did not select `application-web.yml` or a `spring.config.activate.on-profile: web` document and did not register `@Profile('web')` beans; leave those as they are, they behave as before.
+
+- Search the application and its own plugins for `acceptsProfiles`, `activeProfiles` and `getActiveProfiles` used with one of those names in code that runs after startup (services, controllers, `BootStrap`, tag libraries, lazily created beans). Such a check was `true` and is now `false`; a negated one is now `true`. An application without the key reported `web`.
+- For each match, either remove the check, which keeps what the application did, or ask for the profile in the main document of `application.yml`:
+
+```yaml
+spring:
+    profiles:
+        include: web
+```
+
+  A profile asked for this way is a real one: it also registers `@Profile('web')` beans and reads `application-web.yml`, which the profile the framework added did not. Check that the application has none it does not want before adding it.
+- Delete `def profiles = [...]` from a plugin class of the project. Grails has not read the property since 7.1.0 and a plugin is enabled whatever it declares. A plugin that should contribute beans only for a Spring profile asks `applicationContext.environment.acceptsProfiles(Profiles.of('name'))` in `doWithSpring`; one that needs a web application uses a condition such as `@ConditionalOnWebApplication` on its auto-configuration.
+- Delete `grails.profile` from `application.yml` when nothing of the project reads it, and remove a "Profile" row from a welcome page that shows it. Replace `grails.config.Settings.PROFILE`, which is removed, with the literal `'grails.profile'` in code that still reads the key. `GrailsPlugin.PROFILES` is deprecated for removal.
+- Do not add `grails.profile` or a `profile` dependency to make something work: neither has an effect at run time.
+
 # After the Upgrade
 
 ## Verification Checklist
