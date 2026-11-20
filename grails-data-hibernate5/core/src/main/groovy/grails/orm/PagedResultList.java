@@ -27,10 +27,7 @@ import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 import org.hibernate.criterion.Projection;
-import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
-import org.hibernate.criterion.PropertyProjection;
-import org.hibernate.criterion.Restrictions;
 import org.hibernate.engine.spi.LoadQueryInfluencers;
 import org.hibernate.engine.spi.QueryParameters;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
@@ -116,27 +113,10 @@ public class PagedResultList extends grails.gorm.PagedResultList {
     }
 
     /**
-     * The number of groups of a grouped criteria. A projection that is one grouped property is counted by the database,
-     * as the distinct values of the property plus the group of its null values, which SQL groups but does not count as a
-     * value. Any other grouped projection is counted by the database as the rows of the grouped query.
+     * The number of groups of a grouped criteria, counted by the database as the rows of the grouped query, so a group
+     * whose values are all null is one group, whatever the number of columns of the grouped properties.
      */
     private int countGroups(Session session, CriteriaImpl impl, Projection projection) {
-        Projection only = projection;
-        if (projection instanceof ProjectionList && ((ProjectionList) projection).getLength() == 1) {
-            only = ((ProjectionList) projection).getProjection(0);
-        }
-        if (only instanceof PropertyProjection && ((PropertyProjection) only).isGrouped()) {
-            String property = ((PropertyProjection) only).getPropertyName();
-            Criteria distinct = totalCriteria(session, impl);
-            distinct.setProjection(Projections.countDistinct(property));
-            int groups = ((Number) distinct.uniqueResult()).intValue();
-
-            Criteria nulls = totalCriteria(session, impl);
-            nulls.add(Restrictions.isNull(property));
-            nulls.setProjection(Projections.rowCount());
-            return ((Number) nulls.uniqueResult()).longValue() > 0 ? groups + 1 : groups;
-        }
-        // several grouped properties: the database counts the rows of the grouped query
         CriteriaImpl grouped = (CriteriaImpl) totalCriteria(session, impl);
         grouped.setProjection(projection);
         SessionImplementor implementor = (SessionImplementor) session;

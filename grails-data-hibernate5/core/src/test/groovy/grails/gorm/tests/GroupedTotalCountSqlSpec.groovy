@@ -65,11 +65,10 @@ class GroupedTotalCountSqlSpec extends Specification {
         statements.clear()
         int total = page.totalCount
 
-        then: 'a, b, c and the group of the nulls, from queries that return one number each'
+        then: 'a, b, c and the group of the nulls, from one query that returns one number'
         total == 4
-        statements.size() == 2
-        statements.every { it.toLowerCase().startsWith('select count(') }
-        statements.any { it.toLowerCase().contains('count(distinct') }
+        statements.size() == 1
+        statements[0].toLowerCase().startsWith('select count(')
     }
 
     @Rollback
@@ -131,7 +130,18 @@ class GroupedTotalCountSqlSpec extends Specification {
         GroupedSqlOwner bob = new GroupedSqlOwner(label: 'bob').save(failOnError: true)
         [['a', 'x', ann, 1], ['a', 'x', bob, 2], ['a', 'y', ann, 3], ['b', 'x', ann, 4], [null, 'x', bob, 5], [null, null, bob, 6],
          [null, null, bob, 7]].each { List row ->
-            new GroupedSqlItem(city: row[0], name: row[1], owner: row[2], amount: row[3]).save(failOnError: true)
+            // the address follows the name: the street and the zip of a row without a name are both null
+            GroupedSqlItem item = new GroupedSqlItem(city: row[0], name: row[1], owner: row[2], amount: row[3])
+            if (row[1] == 'x' && row[0] == 'a') {
+                item.address = new GroupedSqlAddress(street: 'main', zip: '1')
+            }
+            else if (row[1] == 'y') {
+                item.address = new GroupedSqlAddress(street: 'main', zip: null)
+            }
+            else if (row[1] == 'x') {
+                item.address = new GroupedSqlAddress(street: null, zip: '2')
+            }
+            item.save(failOnError: true)
         }
         GroupedSqlItem.withSession { it.flush(); it.clear() }
 
@@ -141,10 +151,10 @@ class GroupedTotalCountSqlSpec extends Specification {
         statements.clear()
         int total = page.totalCount
 
-        then: 'the database counts the groups, in queries that return one number each: one for several properties, two for a single one'
+        then: 'the database counts the groups, in one query that returns one number'
         total == all.size()
         total == expected
-        statements.size() == (shape == 'the property of an association' ? 2 : 1)
+        statements.size() == 1
         statements.every { it.toLowerCase().startsWith('select count(') }
 
         where:
@@ -169,6 +179,12 @@ class GroupedTotalCountSqlSpec extends Specification {
             eq('city', 'none')
             projections { groupProperty('city'); groupProperty('name') }
         }
+        'an embedded value'                       | 4        | { -> projections { groupProperty('address') } }
+        'an embedded value and a property'        | 5        | { -> projections { groupProperty('address'); groupProperty('city') } }
+        'an embedded value under a condition'     | 3        | { ->
+            isNotNull('city')
+            projections { groupProperty('address') }
+        }
         'two properties that are all null'        | 1        | { ->
             isNull('city')
             isNull('name')
@@ -191,6 +207,16 @@ class GroupedTotalCountSqlSpec extends Specification {
     }
 }
 
+class GroupedSqlAddress {
+    String street
+    String zip
+
+    static constraints = {
+        street nullable: true
+        zip nullable: true
+    }
+}
+
 @Entity
 class GroupedSqlOwner {
     String label
@@ -202,10 +228,14 @@ class GroupedSqlItem {
     String city
     GroupedSqlOwner owner
     Integer amount
+    GroupedSqlAddress address
+
+    static embedded = ['address']
 
     static constraints = {
         name nullable: true
         owner nullable: true
+        address nullable: true
         amount nullable: true
         city nullable: true
     }
