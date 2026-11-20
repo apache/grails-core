@@ -64,12 +64,16 @@ dependentFeatures: []
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 +     testImplementation "org.testcontainers:testcontainers-spock"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
 +     grails:
 +       mongodb:
 +         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
 +     grails:
 +       mongodb:
 +         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   mongodb:
 +     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 
@@ -132,12 +136,16 @@ dependentFeatures: []
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 +     testImplementation "org.testcontainers:testcontainers-spock"
 == grails-app/conf/application.yml
+- grails.codegen.defaultPackage: example.grails
 +     grails:
 +       mongodb:
 +         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/devDb
 +     grails:
 +       mongodb:
 +         url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
 +   mongodb:
 +     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 
