@@ -1,0 +1,96 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# The record of the commands Grails 8 had: every command of the Grails shell (grails-shell-cli) and of its profiles
+# (grails-profiles), which Grails 9 does not have. It was written once, from the sources of the shell and of the
+# profiles as they were before they were removed, and is not regenerated: there is nothing left to read it from.
+# FormerCommandsSpec holds that each name is a command of the command line or has a line in the table of FormerCommands.
+#
+# The name of the command, a tab, and where it was:
+#   shell               a command class the shell registered (META-INF/services/org.grails.cli.profile.Command)
+#   shell-interactive   a word the interactive mode of the shell took besides commands
+#   profile:<profile>   a file commands/<name>.yml or commands/<name>.groovy of that profile
+#   profile:<profile>:synonym-of:<command>   another name the script of that command gave itself (synonyms)
+!	shell-interactive
+add-property	profile:base
+assemble	profile:base
+bug-report	profile:base
+clean	profile:base
+compile	profile:base
+console	profile:base
+create-app	shell
+create-command	profile:base
+create-command	profile:profile
+create-controller	profile:rest-api
+create-controller	profile:web
+create-creator-command	profile:profile
+create-domain-class	profile:base
+create-domain-resource	profile:rest-api
+create-feature	profile:profile
+create-functional-test	profile:rest-api
+create-generator-command	profile:profile
+create-gradle-command	profile:profile
+create-integration-test	profile:rest-api
+create-integration-test	profile:web
+create-interceptor	profile:rest-api
+create-interceptor	profile:web
+create-plugin	shell
+create-profile	shell
+create-restful-controller	profile:rest-api
+create-script	profile:base
+create-service	profile:rest-api
+create-service	profile:web
+create-taglib	profile:web
+create-template	profile:profile
+create-unit-test	profile:base
+create-web-plugin	shell
+dependency-report	profile:base
+exit	shell-interactive
+generate-all	profile:rest-api
+generate-controller	profile:rest-api
+generate-functional-test	profile:rest-api
+generate-resource-controller	profile:rest-api:synonym-of:generate-all
+generate-resource-controller	profile:rest-api:synonym-of:generate-controller
+generate-unit-test	profile:rest-api
+generate-views	profile:rest-api
+gradle	shell
+help	shell
+install	profile:plugin
+install	profile:profile
+list-plugins	profile:base
+list-profiles	shell
+open	shell
+package	profile:base
+package	profile:base:synonym-of:assemble
+package-plugin	profile:plugin
+plugin-info	profile:base
+profile-info	shell
+publish-plugin	profile:plugin
+quit	shell-interactive
+run	profile:base:synonym-of:run-app
+run	shell
+run-app	profile:base
+run-command	profile:base
+run-script	profile:base
+sh	profile:base:synonym-of:shell
+shell	profile:base
+stats	profile:base
+stop	profile:base:synonym-of:stop-app
+stop-app	profile:base
+test	profile:base:synonym-of:test-app
+test-app	profile:base
+war	profile:base:synonym-of:assemble

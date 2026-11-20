@@ -131,13 +131,6 @@ tasks.named('test', Test).configure { Test test ->
     // FormerCommandsSpec holds the guide to the table of the commands of earlier versions
     test.inputs.file(rootProject.layout.projectDirectory.file('../grails-doc/src/en/guide/commandLine.adoc'))
             .withPropertyName('commandLineGuide').withPathSensitivity(PathSensitivity.NONE)
-    // and the table to the commands the Grails shell and its profiles have, which it reads from their sources
-    test.inputs.files(rootProject.layout.projectDirectory.dir('../grails-profiles').asFileTree.matching { include '*/commands/*' })
-            .withPropertyName('profileCommands').withPathSensitivity(PathSensitivity.RELATIVE)
-    test.inputs.files(rootProject.layout.projectDirectory.dir('../grails-shell-cli/src/main').asFileTree.matching {
-        include 'resources/META-INF/services/org.grails.cli.profile.Command', 'groovy/org/grails/cli/GrailsCli.groovy', 'groovy/org/grails/cli/**/*Command.groovy',
-                'groovy/org/grails/cli/**/*Command.java'
-    }).withPropertyName('shellCommands').withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 apply {

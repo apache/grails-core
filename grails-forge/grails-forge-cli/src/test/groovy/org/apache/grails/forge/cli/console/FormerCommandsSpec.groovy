@@ -32,6 +32,7 @@ import spock.lang.Unroll
 class FormerCommandsSpec extends CommandSpec {
 
     static final String CLI = 'grails-forge-cli'
+    static final String RECORD = '/former-commands-grails-8.tsv'
     static final String MISSING = 'The commands of the application and its plugins are not listed yet. To list them: grails-forge-cli gradle grailsCommandCatalog'
     static final Map<String, List<String>> PROJECTS = [
             web        : ['create-app', 'example.web'],
@@ -368,39 +369,15 @@ class FormerCommandsSpec extends CommandSpec {
         (out.toString() + err.toString()).contains('Run: grails-forge-cli gradle publishToMavenLocal')
     }
 
-    void "every command of the Grails shell and of its profiles, read from their sources, is a command here or is in the table"() {
-        given: 'the names the sources of the shell and of the profiles of this repository give'
-        File repository = new File(previousUsrDir, '../..').canonicalFile
-        Set<String> ofShell = [] as Set
-        // the commands of the shell itself: the classes it registers, by the name each declares
-        File registered = new File(repository, 'grails-shell-cli/src/main/resources/META-INF/services/org.grails.cli.profile.Command')
-        registered.readLines('UTF-8').findAll { it.trim() && !it.startsWith('#') }.each { String className ->
-            String path = "grails-shell-cli/src/main/groovy/${className.trim().replace('.', '/')}"
-            File source = [new File(repository, path + '.groovy'), new File(repository, path + '.java')].find { it.isFile() }
-            def declared = source.getText('UTF-8') =~ /(?m)^\s*(?:public static final String [A-Z_]+|final String name)\s*=\s*['"]([a-z-]+)['"]/
-            assert declared.find(): "${source} names its command"
-            ofShell << declared.group(1)
-        }
-        // what its interactive mode takes besides commands
-        String interactive = new File(repository, 'grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy').getText('UTF-8')
-        ['!', 'exit', 'quit'].each { String word ->
-            assert interactive.contains("case '${word}':")
-            ofShell << word
-        }
-        // the commands of the profiles: one for each file, and the other names a script gives, which the shell reads
-        // from a script and not from where a YAML file has them
-        Map<String, String> ofProfiles = [:]
-        new File(repository, 'grails-profiles').eachDir { File profile ->
-            File commands = new File(profile, 'commands')
-            (commands.listFiles() ?: [] as File[]).findAll { it.name ==~ /[a-z0-9-]+\.(yml|groovy)/ }.each { File file ->
-                ofProfiles[file.name.replaceFirst(/\.(yml|groovy)$/, '')] = profile.name
-                if (file.name.endsWith('.groovy')) {
-                    (file.getText('UTF-8') =~ /(?m)^\s*synonyms\s+(.+)$/).each { List<String> found ->
-                        (found[1] =~ /'([a-z-]+)'/).each { List<String> name -> ofProfiles[name[1]] = profile.name }
-                    }
-                }
-            }
-        }
+    void "every command the Grails shell and its profiles had, as the record of them has it, is a command here or is in the table"() {
+        given: 'the record of the commands of Grails 8, written from the sources of the shell and of the profiles before they were removed'
+        List<List<String>> recorded = getClass().getResourceAsStream(RECORD).readLines('UTF-8')
+                .findAll { !it.startsWith('#') }
+                .collect { it.split('\t', -1) as List<String> }
+        // the commands of the shell itself, and what its interactive mode took besides commands
+        Set<String> ofShell = recorded.findAll { it[1] in ['shell', 'shell-interactive'] }*.first() as Set
+        // the commands of the profiles: one for each file, and the other names a script gave itself
+        Set<String> ofProfiles = recorded.findAll { it[1].startsWith('profile:') }*.first() as Set
 
         and: 'a project of each kind, and the directory above them'
         PROJECTS.each { String kind, List<String> create -> commandsIn(create) }
@@ -412,13 +389,16 @@ class FormerCommandsSpec extends CommandSpec {
             ForgeCli.execute(beanContext, 'help', name) == 0
         }
 
-        expect: 'the sources were found'
+        expect: 'the record is whole: every line a name and where the command was, and none lost'
+        recorded.size() == 69
+        recorded.every { it.size() == 2 && it[0] ==~ /[a-z0-9-]+|!/ && it[1] ==~ /shell|shell-interactive|profile:[a-z-]+(:synonym-of:[a-z-]+)?/ }
+        (recorded as Set).size() == recorded.size()
         ofShell == ['create-app', 'create-plugin', 'create-web-plugin', 'create-profile', 'open', 'help', 'list-profiles', 'profile-info', 'gradle', 'run', '!', 'exit', 'quit'] as Set
-        ofProfiles.keySet().containsAll(['run-app', 'run', 'stop', 'sh', 'war', 'test', 'create-controller', 'generate-all', 'create-feature', 'package-plugin'])
-        ofProfiles.size() > 40
+        ofProfiles.containsAll(['run-app', 'run', 'stop', 'sh', 'war', 'test', 'create-controller', 'generate-all', 'create-feature', 'package-plugin'])
+        ofProfiles.size() == 48
 
         and: 'none of them is typed without an answer: it is a command somewhere, or the table has a line for it'
-        (ofShell + ofProfiles.keySet()).findAll { String name ->
+        (ofShell + ofProfiles).findAll { String name ->
             FormerCommands.find(name) == null && !(['outside'] + PROJECTS.keySet()).any { String kind -> isCommand(kind, name) }
         } == [] as Set
 
