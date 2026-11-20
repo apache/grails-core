@@ -138,9 +138,19 @@ class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilte
             catch (URISyntaxException ignored) {
                 return false
             }
-            return request.requestURI == (form.rawPath ?: '/')
+            // the path the browser sends has no dot segments, so the configured one has none either
+            return request.requestURI == (form.normalize().rawPath ?: '/')
         }
-        request.requestURI == request.contextPath + withoutQueryAndFragment(loginFormUrl)
+        request.requestURI == request.contextPath + withoutDotSegments(withoutQueryAndFragment(loginFormUrl))
+    }
+
+    private static String withoutDotSegments(String path) {
+        try {
+            return new URI(path).normalize().rawPath ?: path
+        }
+        catch (URISyntaxException ignored) {
+            return path
+        }
     }
 
     private static String withoutQueryAndFragment(String url) {
