@@ -24,7 +24,6 @@ import spock.lang.*
 
 class FormTagLibResourceTests extends Specification implements UrlMappingsUnitTest<TestFormTagUrlMappings> {
 
-
     def testResourceSave() {
         when:
         def template = '<g:form resource="book" action="save"/>'
@@ -68,6 +67,27 @@ class FormTagLibResourceTests extends Specification implements UrlMappingsUnitTe
 
         then:
         output == '<form action="/books/1" method="post" ><input type="hidden" name="_method" value="PATCH" id="_method" /></form>'
+    }
+
+    // The POST route generated for a member URL when the hidden method filter is off reaches update, so it
+    // covers neither of these: the parameter is what says the form meant delete rather than update, and
+    // patch rather than update, and it is emitted for both whichever mode is in force.
+    def testResourceDelete() {
+        when:
+        def template = '<g:form resource="book" action="delete" id="1"/>'
+        String output = applyTemplate(template)
+
+        then:
+        output == '<form action="/books/1" method="post" ><input type="hidden" name="_method" value="DELETE" id="_method" /></form>'
+    }
+
+    def testResourceNestedDelete() {
+        when:
+        def template = '<g:form resource="book/author" action="delete" id="2" params="[bookId:1]"/>'
+        String output = applyTemplate(template)
+
+        then:
+        output == '<form action="/books/1/authors/2" method="post" ><input type="hidden" name="_method" value="DELETE" id="_method" /></form>'
     }
 
     def testResourceNestedSave() {
@@ -131,5 +151,4 @@ class TestFormTagUrlMappings {
     }
 
 }
-
 

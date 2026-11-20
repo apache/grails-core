@@ -29,7 +29,7 @@ import org.bson.Document
 class OneToOneIntegritySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [Person, Pet, Face, Nose]
+        manager.registerDomainClasses(Person, Pet, Face, Nose)
     }
 
     def "Test persist and retrieve unidirectional many-to-one"() {

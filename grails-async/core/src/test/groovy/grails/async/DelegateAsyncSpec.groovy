@@ -75,6 +75,92 @@ class DelegateAsyncSpec extends Specification {
         then: 'the decorator is applied to the value'
             val == 6
     }
+
+    void 'Delegate async transform preserves generic return type for static compilation'() {
+        when:
+        def result = new GroovyShell().evaluate('''
+            import grails.async.*
+            import groovy.transform.CompileStatic
+
+            class GenericService<T> {
+                T echo(T value) { value }
+            }
+
+            class AsyncStringService {
+                @DelegateAsync
+                GenericService<String> service = new GenericService<String>()
+            }
+
+            @CompileStatic
+            String test() {
+                Promise<String> p = new AsyncStringService().echo('hello')
+                p.get()
+            }
+
+            test()
+        ''')
+
+        then:
+        result == 'hello'
+    }
+
+    void 'Delegate async transform aligns generic return type from inherited interface method'() {
+        when:
+        def service = new AsyncStringHolderService()
+        def p = service.get()
+
+        then:
+        p instanceof Promise
+
+        and:
+        p.get() == 'hello'
+    }
+
+    void 'Delegate async transform preserves generic return type from inherited interface method for static compilation'() {
+        when:
+        def result = new GroovyShell().evaluate('''
+            import grails.async.*
+            import groovy.transform.CompileStatic
+
+            interface Holder<T> {
+                T get()
+            }
+
+            class StringHolder implements Holder<String> {
+                @Override
+                String get() {
+                    'hello'
+                }
+            }
+
+            @DelegateAsync(StringHolder)
+            class AsyncStringHolderService {
+            }
+
+            @CompileStatic
+            String test() {
+                Promise<String> p = new AsyncStringHolderService().get()
+                p.get()
+            }
+
+            test()
+        ''')
+
+        then:
+        result == 'hello'
+    }
+
+    void 'Delegate async transform aligns generic return type from parameterized interface field'() {
+        when:
+        def service = new AsyncParameterizedHolderService()
+        def p = service.get()
+
+        then:
+        p instanceof Promise
+
+        and:
+        p.get() == 'hello'
+    }
 }
 
 class MathService {
@@ -103,3 +189,22 @@ class AsyncMathService3 implements PromiseDecoratorProvider {
     ]
 }
 
+interface Holder<T> {
+    T get()
+}
+
+class StringHolder implements Holder<String> {
+    @Override
+    String get() {
+        'hello'
+    }
+}
+
+@DelegateAsync(StringHolder)
+class AsyncStringHolderService {
+}
+
+class AsyncParameterizedHolderService {
+    @DelegateAsync
+    Holder<String> holder = new StringHolder()
+}

@@ -19,30 +19,23 @@
 package org.grails.web.mapping;
 
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.Map;
 
-import jakarta.servlet.http.HttpServletRequest;
+import groovy.lang.Closure;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.util.Assert;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
-import org.springframework.web.multipart.MultipartResolver;
-import org.springframework.web.servlet.DispatcherServlet;
 
 import grails.core.GrailsApplication;
-import grails.util.GrailsNameUtils;
 import grails.web.CamelCaseUrlConverter;
 import grails.web.UrlConverter;
 import grails.web.mapping.UrlMapping;
 import grails.web.mapping.UrlMappingData;
 import grails.web.mapping.UrlMappingInfo;
 import grails.web.mapping.exceptions.UrlMappingException;
-import org.grails.web.servlet.mvc.GrailsWebRequest;
-import org.grails.web.util.WebUtils;
 
 /**
  * Holds information established from a matched URL.
@@ -52,8 +45,7 @@ import org.grails.web.util.WebUtils;
  */
 public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
-    private static final Log LOG = LogFactory.getLog(DefaultUrlMappingInfo.class);
-    private static final String SETTING_GRAILS_WEB_DISABLE_MULTIPART = "grails.web.disable.multipart";
+    private static final Logger LOG = LoggerFactory.getLogger(DefaultUrlMappingInfo.class);
     private static final String CONTROLLER_PREFIX = "controller:";
     private static final String ACTION_PREFIX = "action:";
     private static final String PLUGIN_PREFIX = "plugin:";
@@ -199,13 +191,34 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
     }
 
     public String getActionName() {
-        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest();
-
-        String name = webRequest == null ? null : checkDispatchAction(webRequest.getCurrentRequest());
-        if (name == null) {
-            name = evaluateNameForValue(actionName, webRequest);
-        }
+        String name = evaluateNameForValue(actionName);
         return urlConverter.toUrlElement(name);
+    }
+
+    @Override
+    public boolean hasWildcardCaptures() {
+        return controllerName instanceof Closure ||
+                actionName instanceof Closure ||
+                namespace instanceof Closure;
+    }
+
+    @Override
+    public boolean isNameResolutionRequestDependent() {
+        return isRequestDependent(controllerName) || isRequestDependent(actionName) ||
+                isRequestDependent(namespace) || isRequestDependent(viewName);
+    }
+
+    /**
+     * A name captured from the URI is held by this instance, so resolving it needs nothing from the
+     * request. A name computed by a closure the mapping supplied reads whatever that closure reaches
+     * for, which is typically the parameters of the current request. A name selected by HTTP method
+     * reads the method from the request directly, which configuring it does not affect.
+     *
+     * @param name The controller, action, namespace or view name held by this instance
+     * @return true if resolving the name needs the request to have been configured
+     */
+    private static boolean isRequestDependent(Object name) {
+        return name instanceof Closure && !(name instanceof RuntimeConstraintEvaluator);
     }
 
     public String getViewName() {
@@ -214,79 +227,6 @@ public class DefaultUrlMappingInfo extends AbstractUrlMappingInfo {
 
     public String getId() {
         return evaluateNameForValue(id);
-    }
-
-    /**
-     * @deprecated
-     * This method will be removed in a future grails version since the associated g:submitAction is being removed.
-     * Grails will no longer support redirecting to a different action name by adding a parameter with the prefix
-     * '_action'
-     */
-    @Deprecated(since = "7.0.0", forRemoval = true)
-    private String checkDispatchAction(HttpServletRequest request) {
-        if (request.getAttribute(WebUtils.EXCEPTION_ATTRIBUTE) != null || WebUtils.isForwardOrInclude(request)) {
-            return null;
-        }
-
-        String dispatchActionName = null;
-        Enumeration<String> paramNames = tryMultipartParams(request, request.getParameterNames());
-
-        while (paramNames.hasMoreElements()) {
-            String name = paramNames.nextElement();
-            if (name.startsWith(WebUtils.DISPATCH_ACTION_PARAMETER)) {
-                // remove .x suffix in case of submit image
-                if (name.endsWith(".x") || name.endsWith(".y")) {
-                    name = name.substring(0, name.length() - 2);
-                }
-                dispatchActionName = GrailsNameUtils.getPropertyNameRepresentation(name.substring((WebUtils.DISPATCH_ACTION_PARAMETER).length()));
-                break;
-            }
-        }
-
-        if (LOG.isWarnEnabled() && dispatchActionName != null) {
-            LOG.warn(String.format("Dispatch Action [%s] detected; Dispatch Actions will be removed in a future version of Grails. Use g: formActionSubmit instead.", dispatchActionName));
-        }
-
-        return dispatchActionName;
-    }
-
-    private Enumeration<String> tryMultipartParams(HttpServletRequest request, Enumeration<String> originalParams) {
-        Enumeration<String> paramNames = originalParams;
-        boolean disabled = isMultipartDisabled();
-        if (!disabled) {
-            MultipartResolver resolver = getMultipartResolver();
-            if (resolver != null && resolver.isMultipart(request)) {
-                MultipartHttpServletRequest resolvedMultipartRequest = getResolvedRequest(request, resolver);
-                paramNames = resolvedMultipartRequest.getParameterNames();
-            }
-        }
-        return paramNames;
-    }
-
-    private MultipartHttpServletRequest getResolvedRequest(HttpServletRequest request, MultipartResolver resolver) {
-        MultipartHttpServletRequest resolvedMultipartRequest = (MultipartHttpServletRequest) request.getAttribute(MultipartHttpServletRequest.class.getName());
-        if (resolvedMultipartRequest == null) {
-            resolvedMultipartRequest = resolver.resolveMultipart(request);
-            request.setAttribute(MultipartHttpServletRequest.class.getName(), resolvedMultipartRequest);
-        }
-        return resolvedMultipartRequest;
-    }
-
-    private boolean isMultipartDisabled() {
-        if (grailsApplication != null) {
-            return grailsApplication.getConfig().getProperty(SETTING_GRAILS_WEB_DISABLE_MULTIPART, Boolean.class, false);
-        }
-        return false;
-    }
-
-    private MultipartResolver getMultipartResolver() {
-        if (grailsApplication != null) {
-            ApplicationContext ctx = grailsApplication.getMainContext();
-            if (ctx != null) {
-                return (MultipartResolver) ctx.getBean(DispatcherServlet.MULTIPART_RESOLVER_BEAN_NAME);
-            }
-        }
-        return null;
     }
 
     public String getURI() {

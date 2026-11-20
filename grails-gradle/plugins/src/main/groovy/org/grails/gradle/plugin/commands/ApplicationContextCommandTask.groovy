@@ -21,6 +21,9 @@ package org.grails.gradle.plugin.commands
 import groovy.transform.CompileStatic
 
 import org.gradle.api.tasks.JavaExec
+import org.gradle.work.DisableCachingByDefault
+
+import javax.inject.Inject
 
 /**
  *
@@ -29,8 +32,10 @@ import org.gradle.api.tasks.JavaExec
  * @since 3.0
  */
 @CompileStatic
-class ApplicationContextCommandTask extends JavaExec {
+@DisableCachingByDefault(because = 'Application command tasks produce no cacheable output')
+abstract class ApplicationContextCommandTask extends JavaExec {
 
+    @Inject
     ApplicationContextCommandTask() {
         mainClass.set('grails.ui.command.GrailsApplicationContextCommandRunner')
         dependsOn('classes', 'findMainClass')

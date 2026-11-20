@@ -26,9 +26,11 @@ import jakarta.validation.ConstraintViolation
 import jakarta.validation.Validator
 import jakarta.validation.executable.ExecutableValidator
 
+import org.springframework.validation.Errors
 import org.springframework.validation.beanvalidation.SpringValidatorAdapter
 
 import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.gorm.validation.CascadingValidator
 
 /**
  * A validator adapter that applies translates the constraint errors into the Errors object of a GORM entity
@@ -37,7 +39,9 @@ import org.grails.datastore.gorm.GormValidateable
  * @since 6.1
  */
 @CompileStatic
-class GormValidatorAdapter extends SpringValidatorAdapter {
+class GormValidatorAdapter extends SpringValidatorAdapter implements CascadingValidator {
+
+    public static final ThreadLocal<Boolean> CASCADE_VALIDATION = new ThreadLocal<>()
 
     final Validator thisValidator
 
@@ -47,7 +51,17 @@ class GormValidatorAdapter extends SpringValidatorAdapter {
     }
 
     @Override
-    def <T> Set<ConstraintViolation<T>> validate(T object, Class<?>[] groups) {
+    void validate(Object obj, Errors errors, boolean cascade) {
+        CASCADE_VALIDATION.set(cascade)
+        try {
+            validate(obj, errors)
+        } finally {
+            CASCADE_VALIDATION.remove()
+        }
+    }
+
+    @Override
+    <T> Set<ConstraintViolation<T>> validate(T object, Class<?>[] groups) {
         def constraintViolations = super.validate(object, groups)
         if (object instanceof GormValidateable) {
             def errors = ((GormValidateable) object).getErrors()

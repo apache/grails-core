@@ -18,7 +18,7 @@
  */
 package org.grails.plugins.web.rest.render.hal
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import grails.rest.render.Renderer
 import grails.rest.render.hal.HalJsonRenderer
 import grails.util.GrailsWebUtil
@@ -33,7 +33,7 @@ import spock.lang.Shared
 class HalDomainClassJsonRendererSpec extends BaseDomainClassRendererSpec {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void 'Test that the HAL renderer renders domain objects with appropriate links'() {
         given: 'A HAL renderer'

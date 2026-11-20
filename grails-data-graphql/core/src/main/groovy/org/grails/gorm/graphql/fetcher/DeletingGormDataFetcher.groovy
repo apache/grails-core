@@ -29,7 +29,7 @@ import org.grails.gorm.graphql.response.delete.GraphQLDeleteResponseHandler
  * @since 1.0.0
  */
 @CompileStatic
-trait DeletingGormDataFetcher implements GormDataFetcher {
+trait DeletingGormDataFetcher<T> implements GormDataFetcher<T> {
 
     @Override
     boolean supports(GraphQLDataFetcherType type) {

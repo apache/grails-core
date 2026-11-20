@@ -18,14 +18,16 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Student, BooleanTest])
+        manager.registerDomainClasses(Student, BooleanTest)
     }
 
     void "test a new instance is dirty by default"() {
@@ -53,11 +55,13 @@ class GormDirtyCheckingSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> 
 
 @Entity
 class Student {
+
     String name
 }
 
 @Entity
 class BooleanTest {
+
     Boolean property1
     boolean property2
 }

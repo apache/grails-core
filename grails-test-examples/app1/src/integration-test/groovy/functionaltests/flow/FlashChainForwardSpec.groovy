@@ -64,17 +64,17 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
             // Not a redirect, parse body
             return response1
         }
-        
+
         // Follow redirect with session cookie
-        def redirectPath = location.startsWith('http') ? 
+        def redirectPath = location.startsWith('http') ?
                 new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') :
                 location
-        
+
         def headers = [:] as Map<String, String>
         if (sessionCookie) {
             headers.put('Cookie', sessionCookie)
         }
-        
+
         http(headers, redirectPath)
     }
 
@@ -86,35 +86,35 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         String currentPath = path
         int maxRedirects = 10
         int redirectCount = 0
-        
+
         while (redirectCount < maxRedirects) {
             //def request = HttpRequest.GET(currentPath)
             def headers = [:] as Map<String, String>
             if (sessionCookie) {
                 headers.put('Cookie', sessionCookie)
             }
-            
+
             def response = http(headers, currentPath, noRedirectClient)
-            
+
             // Update session cookie if new one provided
             def newCookie = response.headerValue('Set-Cookie')
             if (newCookie) {
                 sessionCookie = newCookie
             }
-            
+
             def location = response.headerValue('Location')
             if (!location) {
                 // No more redirects, return parsed body
                 return response
             }
-            
+
             // Follow to next location
-            currentPath = location.startsWith('http') ? 
-                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') : 
+            currentPath = location.startsWith('http') ?
+                new URL(location).path + (new URL(location).query ? "?${new URL(location).query}" : '') :
                 location
             redirectCount++
         }
-        
+
         throw new RuntimeException('Too many redirects following chain')
     }
 
@@ -127,7 +127,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         then: "flash values are available after redirect"
         response.assertJsonContains([
                 message: 'This is a flash message',
-                type: 'success'
+                type   : 'success'
         ])
     }
 
@@ -191,9 +191,9 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
         then: "all model values accumulated"
         response.assertJsonContains([
-                first: 'value1',
-                second: 'value2',
-                third: 'value3',
+                first     : 'value1',
+                second    : 'value2',
+                third     : 'value3',
                 totalSteps: 3
         ])
     }
@@ -204,7 +204,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
         then: "both chainModel and params available"
         response.assertJsonContains([
-                fromChain: true,
+                fromChain : true,
                 extraParam: 'extra'
         ])
     }
@@ -216,7 +216,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         then: "chain model available in target controller"
         response.assertJsonContains([
                 controller: 'flowTarget',
-                source: 'flowController'
+                source    : 'flowController'
         ])
     }
 
@@ -229,7 +229,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         then: "request attributes preserved"
         response.assertJsonContains(200, [
                 forwardedFrom: 'forwardToAction',
-                sameRequest: true
+                sameRequest  : true
         ])
     }
 
@@ -240,7 +240,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
         then: "both original and forwarded params available"
         response.assertJsonContains(200, [
                 forwarded: 'yes',
-                value: '123'
+                value    : '123'
         ])
     }
 
@@ -250,7 +250,7 @@ class FlashChainForwardSpec extends Specification implements HttpClientSupport {
 
         then: "forward reaches target controller"
         response.assertJsonContains(200, [
-                controller: 'flowTarget',
+                controller      : 'flowTarget',
                 sourceController: 'flow'
         ])
     }

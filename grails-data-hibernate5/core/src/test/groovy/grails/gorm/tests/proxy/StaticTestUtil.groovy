@@ -19,13 +19,9 @@
 package grails.gorm.tests.proxy
 
 import groovy.transform.CompileStatic
-
-import org.grails.datastore.gorm.GormEntity
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
 import org.hibernate.Hibernate
-
-import grails.gorm.tests.Club
-import grails.gorm.tests.Team
+import grails.gorm.tests.entities.Team
 
 @CompileStatic
 class StaticTestUtil {

@@ -35,7 +35,7 @@ class TestRoleGroup implements Serializable {
 	}
 
 	static constraints = {
-		name blank: false, unique: true
+		name blank: false, unique: true, nullable: false
 	}
 
 	static mapping = {

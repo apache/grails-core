@@ -19,7 +19,12 @@
 
 package org.demo.spock
 
+import java.lang.management.ManagementFactory
 import java.nio.file.Files
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 import spock.lang.Stepwise
 
@@ -45,9 +50,6 @@ class PerTestRecordingSpec extends ContainerGebSpec {
         when: 'visiting another page than the previous test'
         to(UploadPage)
 
-        and: 'pausing so we can see the page change in the video'
-        Thread.sleep(500)
-
         then: 'the page loads correctly'
         title == 'Upload Test'
     }
@@ -60,62 +62,96 @@ class PerTestRecordingSpec extends ContainerGebSpec {
                 'build/gebContainer/recordings'
         )
         def baseRecordingDir = new File(recordingDirectoryName)
-        
+
         then: 'the base recording directory exists'
         baseRecordingDir.exists()
 
-        when: 'getting the most recent recording directory'
-        // Find the timestamped recording directory (should be the most recent one)
-        File recordingDir = null
-        def timestampedDirs = baseRecordingDir.listFiles({ File dir ->
-            dir.isDirectory() && dir.name ==~ /^\d{8}_\d{6}$/
-        } as FileFilter)
-
-        if (timestampedDirs) {
-            // Get the most recent directory
-            recordingDir = timestampedDirs.sort { it.name }.last()
-        }
-
-        then: 'the recording directory should be found'
-        recordingDir != null
-
-        when: 'getting all video recording files (mp4 or flv) from the recording directory'
+        when: 'collecting the recordings this spec produced during this test run'
+        // The timestamped recording directory is created per JVM when the Geb
+        // extension starts, but the base directory accumulates directories from
+        // earlier runs and from sibling test JVMs. Selecting "the most recent"
+        // directory races with those, so instead every directory stamped after
+        // this JVM started is searched for recordings named after this spec —
+        // a spec runs in exactly one JVM, so the match is unambiguous.
         def minFileCount = 2 // At least 2 files for the first two test methods
-        def recordingFiles = waitForRecordingFiles(recordingDir, this.class.simpleName, minFileCount)
+        def recordingFiles = waitForRecordingFiles(baseRecordingDir, this.class.simpleName, minFileCount)
         def names = recordingFiles*.name.join('\n')
 
         then: 'recording files should exist for each test method'
-        recordingFiles.length >= minFileCount
+        recordingFiles.size() >= minFileCount
         names.contains('setup_running_a_test_to_create_a_recording')
         names.contains('setup_running_a_second_test_to_create_another')
 
+        when: 'finding the recording of each test method'
+        // The recordings are complete by now: GebRecordingTestListener saves each one
+        // synchronously when its iteration ends, and this spec is @Stepwise.
+        def firstRecording = recordingFiles.find { it.name.contains('setup_running_a_test_to_create_a_recording') }
+        def secondRecording = recordingFiles.find { it.name.contains('setup_running_a_second_test_to_create_another') }
+
+        then: 'each recording shows the screen, not just the black frames of a recorder that has not received it yet'
+        // WebDriverContainerHolder#restartVncRecordingContainer waits until the restarted VNC
+        // recorder has written the screen to the recording, so even a test as short as the ones
+        // above is recorded. Without that wait, a short test can be recorded as black frames
+        // only. Two such recordings can encode to identical bytes, which would fail the
+        // difference check below without saying why.
+        firstRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+        secondRecording.length() > MIN_MEANINGFUL_RECORDING_BYTES
+
         and: 'the recording files should have different content'
-        // Sort by last modified time to get the most recent files
-        def sortedFiles = recordingFiles.sort { it.lastModified() }
-        def secondLastFile = sortedFiles[sortedFiles.length - 2]
-        def lastFile = sortedFiles[sortedFiles.length - 1]
-        Files.mismatch(lastFile.toPath(), secondLastFile.toPath()) != -1
+        // Kept alongside the size check above rather than dropped in favor of it: the size
+        // check only rules out near-blank captures, it says nothing about two recordings
+        // accidentally being the *same* file (e.g. a future regression in how recording
+        // files are named or matched). The two checks guard against different failure modes.
+        Files.mismatch(firstRecording.toPath(), secondRecording.toPath()) != -1
     }
+
+    // A recording of black frames only is 2-3 kilobytes. A recording that shows the screen
+    // of the browser container is tens of kilobytes, as its first full frame alone is.
+    private static final long MIN_MEANINGFUL_RECORDING_BYTES = 5_000L
+
+    private static final DateTimeFormatter RECORDING_DIR_FORMAT = DateTimeFormatter.ofPattern('yyyyMMdd_HHmmss')
+
+    private static final LocalDateTime JVM_START = LocalDateTime.ofInstant(
+            Instant.ofEpochMilli(ManagementFactory.runtimeMXBean.startTime),
+            ZoneId.systemDefault()
+    ).withNano(0)
 
     private static boolean isVideoFile(File file) {
         file.isFile() && (file.name.endsWith('.mp4') || file.name.endsWith('.flv'))
     }
 
-    private static File[] waitForRecordingFiles(
-            File recordingDir,
+    /**
+     * The timestamped recording directories created by this test run — those
+     * whose directory-name timestamp is not before this JVM's start time.
+     * Directories left behind by previous runs are always older and excluded.
+     */
+    private static List<File> currentRunRecordingDirs(File baseRecordingDir) {
+        (baseRecordingDir.listFiles({ File dir ->
+            dir.isDirectory() && dir.name ==~ /^\d{8}_\d{6}$/
+        } as FileFilter) ?: new File[0]).findAll { File dir ->
+            !LocalDateTime.parse(dir.name, RECORDING_DIR_FORMAT).isBefore(JVM_START)
+        }
+    }
+
+    private static List<File> waitForRecordingFiles(
+            File baseRecordingDir,
             String testClassName,
             int minFileCount = 2,
             long timeoutMillis = 10_000L,
             long pollIntervalMillis = 500L
     ) {
         long deadline = System.currentTimeMillis() + timeoutMillis
-        File[] recordingFiles = []
+        List<File> recordingFiles = []
         while (System.currentTimeMillis() < deadline) {
-            recordingFiles = recordingDir.listFiles({ file ->
-                isVideoFile(file) && file.name.contains(testClassName)
-            } as FileFilter) ?: [] as File[]
+            // Re-scan on every poll: the directory and the files both appear
+            // asynchronously while the recording container flushes videos.
+            recordingFiles = currentRunRecordingDirs(baseRecordingDir).collectMany { File dir ->
+                (dir.listFiles({ File file ->
+                    isVideoFile(file) && file.name.contains(testClassName)
+                } as FileFilter) ?: new File[0]) as List<File>
+            }
 
-            if (recordingFiles.length >= minFileCount) {
+            if (recordingFiles.size() >= minFileCount) {
                 break
             }
             sleep(pollIntervalMillis)

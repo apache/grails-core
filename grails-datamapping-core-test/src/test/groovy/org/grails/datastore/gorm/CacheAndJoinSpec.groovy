@@ -18,14 +18,16 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class CacheAndJoinSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Author, Book])
+        manager.registerDomainClasses(Author, Book)
     }
 
     @Issue('GRAILS-8758')
@@ -48,6 +50,7 @@ class CacheAndJoinSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class Author {
+
     Long id
     String name
 

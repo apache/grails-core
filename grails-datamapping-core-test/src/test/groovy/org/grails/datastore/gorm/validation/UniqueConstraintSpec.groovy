@@ -18,6 +18,11 @@
  */
 package org.grails.datastore.gorm.validation
 
+import spock.lang.AutoCleanup
+import spock.lang.Specification
+
+import org.springframework.context.support.StaticMessageSource
+
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Transactional
 import org.grails.datastore.gorm.validation.constraints.MappingContextAwareConstraintFactory
@@ -25,14 +30,12 @@ import org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import org.springframework.context.support.StaticMessageSource
-import spock.lang.AutoCleanup
-import spock.lang.Specification
 
 @Transactional
 class UniqueConstraintSpec extends Specification {
 
-    @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
+    @AutoCleanup
+    SimpleMapDatastore datastore = new SimpleMapDatastore(
             Channel,
             DefaultChannel,
             ListChannel,
@@ -201,6 +204,7 @@ class OtherListChannel extends ListChannel {
 
 @Entity
 class Organization {
+
     String name
 
     DefaultChannel defaultChannel = new DefaultChannel()

@@ -157,6 +157,44 @@ Unlike the link:{domainClassesRef}save.html[save] method, the `delete` method do
 
 Using `flush: true` ensures the delete is executed immediately, so any errors are raised at that point.
 
+==== Deleting Every Instance
+
+`deleteAll()` deletes every persisted instance of a domain class and returns the number of rows removed:
+
+[source,groovy]
+----
+Number removed = Person.deleteAll()
+----
+
+An argument map may be supplied. It controls *how* the delete is executed — it does not narrow *what* is
+deleted. The supported argument is `flush`:
+
+[source,groovy]
+----
+Person.deleteAll(flush: true)
+----
+
+WARNING: `deleteAll()` and `deleteAll(Map)` remove every row for the domain class. There is no argument that
+turns them into a partial delete.
+
+To delete a subset, build a query and delete through it:
+
+[source,groovy]
+----
+Person.where { age < 18 }.deleteAll()
+----
+
+The other `deleteAll` overloads delete only the instances you hand them:
+
+[source,groovy]
+----
+def (fred, bob) = [Person.get(1), Person.get(2)]
+
+Person.deleteAll(fred, bob)              // varargs
+Person.deleteAll([fred, bob])            // any Iterable
+Person.deleteAll([flush: true], fred, bob)
+----
+
 === Querying
 
 To dynamically build queries based on optional parameters a common pattern is to use `DetachedCriteria` and progressively compose filters depending on the provided inputs.

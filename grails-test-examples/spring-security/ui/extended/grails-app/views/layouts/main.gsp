@@ -17,19 +17,39 @@
   ~  under the License.
   --%>
 <!doctype html>
-<html lang="en" class="no-js">
+<html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-		<meta http-equiv="x-ua-compatible" content="ie=edge">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<title><g:layoutTitle default="Grails"/></title>
 		<link rel="shortcut icon" href="${assetPath(src: 'favicon.ico')}" type="image/x-icon">
 		<asset:stylesheet src='application'/>
-		<asset:javascript src='application'/>
 		<g:layoutHead/>
 	</head>
 	<body>
+	<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+		<div class="container-lg">
+			<a class="navbar-brand" href="${request.contextPath}/">Home</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+					data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="mainNav">
+				<ul class="navbar-nav me-auto">
+					<%-- Navbar items contributed by the rendered page (e.g. the
+					     spring-security-ui screens) through a <content tag="nav"> block. --%>
+					<g:pageProperty name="page.nav"/>
+				</ul>
+				<ul class="navbar-nav ms-auto">
+					<g:pageProperty name="page.navActions"/>
+				</ul>
+			</div>
+		</div>
+	</nav>
+	<div class="container-lg py-4">
+		<g:flashMessages/>
 		<g:layoutBody/>
+	</div>
+	<asset:javascript src='application'/>
 	</body>
 </html>

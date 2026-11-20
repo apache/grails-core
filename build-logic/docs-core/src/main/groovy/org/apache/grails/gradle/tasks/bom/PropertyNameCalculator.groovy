@@ -84,10 +84,17 @@ class PropertyNameCalculator {
     }
 
     ExtractedDependencyConstraint calculate(String groupId, String artifactId, String version, boolean isPlatform) {
+        // a derived BOM re-declares the platforms it imports as plain constraints, which must carry
+        // the same property as the import so that overriding it moves both
+        String coordinates = "$groupId:$artifactId:$version"
+        if (!isPlatform && !definitions.containsKey(coordinates) && platformDefinitions.containsKey(coordinates)) {
+            return calculate(groupId, artifactId, version, true)
+        }
+
         Map<String, ExtractedDependencyConstraint> toSearch = isPlatform ? platformDefinitions : definitions as Map<String, ExtractedDependencyConstraint>
         Map<String, String> coordinateMapping = isPlatform ? keysToPlatformCoordinates : keysToCoordinates
 
-        ExtractedDependencyConstraint found = toSearch.get("$groupId:$artifactId:$version" as String)
+        ExtractedDependencyConstraint found = toSearch.get(coordinates)
         if (!found) {
             return null
         }
@@ -115,6 +122,21 @@ class PropertyNameCalculator {
 
             int lastIndex = possibleKey.lastIndexOf('-')
             possibleKey = lastIndex > 0 ? possibleKey.substring(0, lastIndex) : null
+        }
+
+        // Fallback: check if any existing version property is a prefix of the artifact key.
+        // This handles cases like 'derbyclient' matching 'derby.version' to align with
+        // Spring Boot's BOM property naming conventions.
+        String artifactKey = keyMappings[found.coordinates]
+        if (artifactKey) {
+            String match = versions.keySet()
+                .findAll { it.endsWith('.version') }
+                .collect { it - '.version' }
+                .findAll { artifactKey.startsWith(it) }
+                .max { it.length() }
+            if (match) {
+                return "${match}.version" as String
+            }
         }
 
         null

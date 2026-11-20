@@ -40,6 +40,17 @@ class DefaultTransactionServiceSpec extends Specification {
         getTransactionManager() >> transactionManager
     }
 
+    void 'getDatastore/setDatastore round-trip'() {
+        given:
+        Datastore datastore = Mock(Datastore)
+
+        when:
+        transactionService.setDatastore(datastore)
+
+        then:
+        transactionService.getDatastore().is(datastore)
+    }
+
     void 'withTransaction(Closure) executes the callable within a transaction'() {
         given:
         transactionService.datastore = transactionCapableDatastore

@@ -138,7 +138,12 @@ public class GrailsJobFactory extends AdaptableJobFactory implements Application
                     throw new UnableToInterruptJobException(e);
                 }
             } else {
-                throw new UnableToInterruptJobException(job.getClass().getName() + " doesn't support interruption");
+                throw new UnableToInterruptJobException(
+                        MessageFormat.format(
+                                "{0} does not declare an {1}() method, so it cannot be interrupted",
+                                job.getClass().getName(), GrailsJobClassConstants.INTERRUPT
+                        )
+                );
             }
         }
 

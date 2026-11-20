@@ -66,7 +66,7 @@ class DomainClassDeepValidationSpec extends Specification implements DataTest {
 class ExampleManyChild {
 
     static constraints = {
-        childName(minSize: 1)
+        childName(minSize: 1, nullable: false)
     }
 
     String childName
@@ -96,7 +96,7 @@ class ExampleParent {
 class ExampleSingleChild {
 
     static constraints = {
-        singleName(minSize: 1)
+        singleName(minSize: 1, nullable: false)
     }
 
     String singleName

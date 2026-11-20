@@ -18,6 +18,9 @@
  */
 package org.grails.encoder;
 
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+
 import groovy.json.StringEscapeUtils
 
 import org.grails.encoder.impl.HTMLEncoder
@@ -57,6 +60,28 @@ class ChainedEncodersSpec extends Specification {
         then:
             def resultStr = resultBuffer.toString()
             def unescapedStr = StringEscapeUtils.unescapeJavaScript(resultStr) 
+            resultStr != unescapedStr
+            unescapedStr == '&lt;1&gt; Hello World;'
+    }
+
+    def "chaining StreamingEncoders should be possible on a virtual thread"() {
+        given:
+            def encoders = [new HTMLEncoder(), new JavaScriptEncoder()]
+            def source = new StreamCharBuffer()
+            source.writer.write('<1> Hello World;')
+
+        when:
+            def resultStr = Executors.newVirtualThreadPerTaskExecutor().withCloseable { executor ->
+                executor.submit({
+                    def resultBuffer = new StreamCharBuffer()
+                    resultBuffer.setAllowSubBuffers(false)
+                    ChainedEncoders.chainEncode(source, resultBuffer.writer.encodedAppender, encoders)
+                    resultBuffer.toString()
+                } as Callable<String>).get()
+            }
+            def unescapedStr = StringEscapeUtils.unescapeJavaScript(resultStr)
+
+        then:
             resultStr != unescapedStr
             unescapedStr == '&lt;1&gt; Hello World;'
     }

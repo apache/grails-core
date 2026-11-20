@@ -29,8 +29,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.i18n.LocaleContext;
 import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.filter.RequestContextFilter;
 
 import grails.web.mvc.FlashScope;
 import org.grails.web.util.WebUtils;
@@ -41,7 +42,7 @@ import org.grails.web.util.WebUtils;
  * @author Graeme Rocher
  * @since 0.4
  */
-public class GrailsWebRequestFilter extends OncePerRequestFilter implements ApplicationContextAware {
+public class GrailsWebRequestFilter extends RequestContextFilter implements ApplicationContextAware {
     Collection<ParameterCreationListener> paramListenerBeans;
 
     /* (non-Javadoc)
@@ -52,6 +53,9 @@ public class GrailsWebRequestFilter extends OncePerRequestFilter implements Appl
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // Save and restore rather than clear, so a LocaleContext established by a filter outside Grails
+        // survives this filter, the way Spring's own RequestContextFilter behaves.
+        LocaleContext previousLocaleContext = LocaleContextHolder.getLocaleContext();
         LocaleContextHolder.setLocale(request.getLocale());
         response = new OutputAwareHttpServletResponse(response);
 
@@ -88,10 +92,13 @@ public class GrailsWebRequestFilter extends OncePerRequestFilter implements Appl
                 }
             }
             else {
-
                 WebUtils.clearGrailsWebRequest();
-                LocaleContextHolder.setLocale(null);
             }
+
+            // Restored on every invocation, not just the outermost: the locale is set unconditionally
+            // above, so an include or forward would otherwise leave the enclosing request with the locale
+            // it installed, and with a SimpleLocaleContext in place of any TimeZoneAwareLocaleContext.
+            LocaleContextHolder.setLocaleContext(previousLocaleContext);
             if (logger.isDebugEnabled()) {
                 logger.debug("Cleared Grails thread-bound request context: " + request);
             }

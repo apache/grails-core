@@ -50,9 +50,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 contentType: 'text/plain',
-                filename: 'test.txt',
-                size: content.bytes.length,
-                success: true
+                filename   : 'test.txt',
+                size       : content.bytes.length,
+                success    : true
         ])
     }
 
@@ -83,9 +83,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success    : true,
                 description: 'My test file',
-                category: 'documents'
+                category   : 'documents'
         ])
     }
 
@@ -169,7 +169,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success  : true,
                 validated: true
         ])
     }
@@ -185,7 +185,7 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success  : true,
                 validated: true,
                 extension: 'json'
         ])
@@ -203,8 +203,8 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                    success: true,
-                    extension :'csv'
+                success  : true,
+                extension: 'csv'
         ])
     }
 
@@ -223,10 +223,10 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 originalFilename: 'document.txt',
-                basename: 'document',
-                extension: 'txt',
-                size: content.bytes.length,
-                isEmpty: false
+                basename        : 'document',
+                extension       : 'txt',
+                size            : content.bytes.length,
+                isEmpty         : false
         ])
     }
 
@@ -242,8 +242,8 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 originalFilename: 'README',
-                basename: 'README',
-                extension: ''
+                basename        : 'README',
+                extension       : ''
         ])
     }
 
@@ -260,9 +260,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJsonContains(200, [
-                success: true,
+                success          : true,
                 accessedViaParams: true,
-                filename: 'params-test.txt'
+                filename         : 'params-test.txt'
         ])
     }
 
@@ -281,7 +281,38 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 success: true,
-                size: 1000
+                size   : 1000
+        ])
+    }
+
+    def "upload over the configured multipart max file size is rejected"() {
+        given:
+        def content = 'X' * (2 * 1024 + 1)
+        def body = MultipartBody.builder()
+                .addPart('file', 'over-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertStatus(413)
+    }
+
+    def "upload within the configured multipart max file size succeeds"() {
+        given:
+        def content = 'X' * 1536
+        def body = MultipartBody.builder()
+                .addPart('file', 'within-size-limit.txt', 'text/plain', content.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then:
+        response.assertJsonContains(200, [
+                success: true,
+                size   : content.bytes.length
         ])
     }
 
@@ -297,10 +328,60 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                success: true,
+                success : true,
                 filename: 'users.json',
-                content: jsonContent
+                content : jsonContent
         ])
+    }
+
+    def "upload exceeding the configured limit is reported through the application error pipeline"() {
+        given: 'a payload larger than the configured spring.servlet.multipart.maxRequestSize of 3KB'
+        def body = MultipartBody.builder()
+                .addPart('file', 'huge.txt', 'text/plain', ('X' * 200000).bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadSingle', body)
+
+        then: 'the error dispatch renders it, rather than the container serving its own error page'
+        response.assertStatus(413)
+        with(response.json()) {
+            status == 413
+            path == '/fileUploadTest/uploadSingle'
+        }
+    }
+
+    def "method override still applies to a multipart upload"() {
+        given: 'the form g:uploadForm(method: "PUT") produces - multipart plus _method'
+        def body = MultipartBody.builder()
+                .addPart('_method', 'PUT')
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'the action is declared allowedMethods PUT, so reaching it at all is the override doing its work'
+        response.assertJsonContains(200, [
+                success : true,
+                filename: 'override.txt'
+        ])
+
+        and: 'while the request reports the method it actually arrived as'
+        response.json().method == 'POST'
+    }
+
+    def "without the override the same POST is refused"() {
+        given: 'the same upload, with nothing asking for a different method'
+        def body = MultipartBody.builder()
+                .addPart('file', 'override.txt', 'text/plain', 'content'.bytes)
+                .build()
+
+        when:
+        def response = httpPostMultipart('/fileUploadTest/uploadWithMethodOverride', body)
+
+        then: 'allowedMethods rejects it, which is what makes the test above meaningful'
+        response.assertStatus(405)
     }
 
     def "upload xml file with content"() {
@@ -315,9 +396,9 @@ class FileUploadSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                success: true,
+                success : true,
                 filename: 'data.xml',
-                content: xmlContent
+                content : xmlContent
         ])
     }
 }

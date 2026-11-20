@@ -23,6 +23,7 @@ import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.bson.Document
+import org.bson.types.ObjectId
 
 /**
  * @author Noam Y. Tenne
@@ -30,7 +31,7 @@ import org.bson.Document
 class BrokenManyToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ReferencingEntity, ReferencedEntity])
+        manager.registerDomainClasses(ReferencingEntity, ReferencedEntity)
     }
 
     def 'Perform a cascading delete on a broken many-to-many relationship'() {
@@ -44,7 +45,7 @@ class BrokenManyToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataMongoT
         manager.session.clear()
 
         when: 'Low-level deleting 1 owned entity to simulate a broken relationship'
-        ReferencedEntity.collection.deleteOne(new Document('_id': ReferencedEntity.find {}.id))
+        ReferencedEntity.collection.deleteOne(new Document('_id': new ObjectId(ReferencedEntity.find {}.id)))
         manager.session.clear()
         referencing = ReferencingEntity.find {}
 

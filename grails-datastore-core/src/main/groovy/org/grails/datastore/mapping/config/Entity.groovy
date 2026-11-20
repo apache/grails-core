@@ -37,18 +37,6 @@ import org.grails.datastore.mapping.model.config.GormProperties
 class Entity<P extends Property> {
 
     /**
-     * @deprecated Use {@link ConnectionSource#DEFAULT} instead
-     */
-    @Deprecated
-    public static final String ALL_DATA_SOURCES = ConnectionSource.ALL
-
-    /**
-     * @deprecated Use {@link ConnectionSource#ALL} instead
-     */
-    @Deprecated
-    public static final String DEFAULT_DATA_SOURCE = ConnectionSource.DEFAULT
-
-    /**
      * The configuration for each property
      */
     protected Map<String, P> propertyConfigs = [:]
@@ -337,6 +325,9 @@ class Entity<P extends Property> {
             P globalConstraints = propertyConfigs.get('*')
             if (globalConstraints != null) {
                 pc = (P) globalConstraints.clone()
+                // Stored, as a new entry is below: the caller configures what is returned, and a clone held nowhere
+                // else would take that configuration with it.
+                propertyConfigs[name] = pc
             }
         }
         else {

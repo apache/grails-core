@@ -28,6 +28,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -38,15 +39,18 @@ dependencies {
     implementation platform(project(':grails-bom'))
 
     api project(':grails-core')
+    implementation 'com.github.ben-manes.caffeine:caffeine'
     api 'org.apache.groovy:groovy'
     api 'org.apache.groovy:groovy-json'
     api 'org.springframework:spring-web', {
         // HtmlUtils is used from spring-web
     }
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
@@ -56,10 +60,7 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

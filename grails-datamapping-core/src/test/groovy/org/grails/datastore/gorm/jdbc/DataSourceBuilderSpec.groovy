@@ -24,10 +24,12 @@ import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
 import org.springframework.jdbc.datasource.DriverManagerDataSource
+import spock.lang.PendingFeatureIf
 import spock.lang.Specification
 
 class DataSourceBuilderSpec extends Specification {
 
+    @PendingFeatureIf(value = { GroovySystem.version.startsWith('5.') }, reason = "Groovy 5's ConfigSlurper assigns a block by subscript, which for one named properties throws ReadOnlyPropertyException")
     def "documented HikariCP pool and driver properties bind from Groovy configuration"() {
         given:
         def config = new ConfigSlurper().parse('''

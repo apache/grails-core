@@ -18,14 +18,16 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class AutoLinkOneToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([AutoLinkListAuthor, AutoLinkListBook])
+        manager.registerDomainClasses(AutoLinkListAuthor, AutoLinkListBook)
     }
 
     @Issue('GRAILS-8815')
@@ -55,6 +57,7 @@ class AutoLinkOneToManyAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreT
 
 @Entity
 class AutoLinkListAuthor {
+
     Long id
     String firstName
     String lastName
@@ -67,6 +70,7 @@ class AutoLinkListAuthor {
 
 @Entity
 class AutoLinkListBook {
+
     Long id
     String title
     Date published

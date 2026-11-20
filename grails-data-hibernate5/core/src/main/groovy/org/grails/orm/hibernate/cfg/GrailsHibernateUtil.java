@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import org.grails.datastore.gorm.finders.DynamicFinder;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
 import org.grails.datastore.mapping.model.config.GormProperties;
@@ -116,7 +117,9 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
         if (argMap.containsKey(ARGUMENT_READ_ONLY)) {
             c.setReadOnly(ClassUtils.getBooleanFromMap(ARGUMENT_READ_ONLY, argMap));
         }
-        String orderParam = (String) argMap.get(ARGUMENT_ORDER);
+        // checked before looking at the sort key, so an invalid direction is rejected even when
+        // there is nothing to sort by rather than being silently ignored
+        final String orderParam = DynamicFinder.normalizeDirection((String) argMap.get(ARGUMENT_ORDER));
         Object fetchObj = argMap.get(ARGUMENT_FETCH);
         if (fetchObj instanceof Map) {
             Map fetch = (Map) fetchObj;
@@ -153,16 +156,20 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
             if (caseArg instanceof Boolean) {
                 ignoreCase = (Boolean) caseArg;
             }
+            PersistentEntity sortEntity = datastore == null || targetClass == null ? null :
+                    datastore.getMappingContext().getPersistentEntity(targetClass.getName());
             if (sortObj instanceof Map) {
                 Map sortMap = (Map) sortObj;
-                for (Object sort : sortMap.keySet()) {
-                    final String order = ORDER_DESC.equalsIgnoreCase((String) sortMap.get(sort)) ? ORDER_DESC : ORDER_ASC;
-                    addOrderPossiblyNested(datastore, c, targetClass, (String) sort, order, ignoreCase);
+                for (Object sortKey : sortMap.keySet()) {
+                    final String sort = (String) sortKey;
+                    DynamicFinder.validateSortProperty(sortEntity, sort);
+                    final String order = DynamicFinder.normalizeDirection((String) sortMap.get(sortKey));
+                    addOrderPossiblyNested(datastore, c, targetClass, sort, order, ignoreCase);
                 }
             } else {
                 final String sort = (String) sortObj;
-                final String order = ORDER_DESC.equalsIgnoreCase(orderParam) ? ORDER_DESC : ORDER_ASC;
-                addOrderPossiblyNested(datastore, c, targetClass, sort, order, ignoreCase);
+                DynamicFinder.validateSortProperty(sortEntity, sort);
+                addOrderPossiblyNested(datastore, c, targetClass, sort, orderParam, ignoreCase);
             }
         }
         else if (useDefaultMapping) {
@@ -180,7 +187,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     /**
      * @deprecated No replacement. Do not use.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static void setBinder(GrailsDomainBinder binder) {
     }
 
@@ -192,7 +199,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param argMap The arguments map
      *
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     @SuppressWarnings("rawtypes")
     public static void populateArgumentsForCriteria(Class<?> targetClass, Criteria c, Map argMap, ConversionService conversionService) {
         populateArgumentsForCriteria(null, targetClass, c, argMap, conversionService);
@@ -373,7 +380,7 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
      * @param target The GroovyObject
      * @param persistentClass The persistent class
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static void ensureCorrectGroovyMetaClass(Object target, Class<?> persistentClass) {
         if (target instanceof GroovyObject) {
             GroovyObject go = ((GroovyObject) target);
@@ -423,25 +430,25 @@ public class GrailsHibernateUtil extends HibernateRuntimeUtils {
     }
 
     /**
-     * @deprecated Use {@link  MultipleDataSourceSupport#getDefaultDataSource(PersistentEntity)} instead
+     * @deprecated Use {@link MultipleDataSourceSupport#getDefaultDataSource(PersistentEntity)} instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static String getDefaultDataSource(PersistentEntity domainClass) {
         return MultipleDataSourceSupport.getDefaultDataSource(domainClass);
     }
 
     /**
-     * @deprecated Use {@link  MultipleDataSourceSupport#getDatasourceNames(PersistentEntity)} instead
+     * @deprecated Use {@link MultipleDataSourceSupport#getDatasourceNames(PersistentEntity)} instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static List<String> getDatasourceNames(PersistentEntity domainClass) {
         return MultipleDataSourceSupport.getDatasourceNames(domainClass);
     }
 
     /**
-     * @deprecated Use {@link  MultipleDataSourceSupport#getDefaultDataSource(PersistentEntity)} instead
+     * @deprecated Use {@link MultipleDataSourceSupport#usesDatasource(PersistentEntity, String)} instead.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static boolean usesDatasource(PersistentEntity domainClass, String dataSourceName) {
         return MultipleDataSourceSupport.usesDatasource(domainClass, dataSourceName);
     }

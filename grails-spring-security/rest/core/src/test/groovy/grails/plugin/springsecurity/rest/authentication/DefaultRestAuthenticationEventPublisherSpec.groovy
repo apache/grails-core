@@ -18,15 +18,13 @@
  */
 package grails.plugin.springsecurity.rest.authentication
 
+import grails.plugin.springsecurity.rest.RestTokenCreationEvent
+import grails.plugin.springsecurity.rest.token.AccessToken
+import org.springframework.context.ApplicationEventPublisher
+import org.springframework.security.authentication.event.AuthenticationSuccessEvent
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Subject
-
-import org.springframework.context.ApplicationEventPublisher
-import org.springframework.security.authentication.event.AuthenticationSuccessEvent
-
-import grails.plugin.springsecurity.rest.RestTokenCreationEvent
-import grails.plugin.springsecurity.rest.token.AccessToken
 
 @Subject(DefaultRestAuthenticationEventPublisher)
 class DefaultRestAuthenticationEventPublisherSpec extends Specification {
@@ -82,6 +80,15 @@ class DefaultRestAuthenticationEventPublisherSpec extends Specification {
         new DefaultRestAuthenticationEventPublisher().publishTokenCreation(accessToken)
 
         then:
+        0 * eventPublisher.publishEvent(_)
+    }
+
+    void "should not execute parent publishEvent when publisher is not set"() {
+        when:
+        new DefaultRestAuthenticationEventPublisher().publishAuthenticationSuccess(accessToken)
+
+        then:
+        noExceptionThrown()
         0 * eventPublisher.publishEvent(_)
     }
 }

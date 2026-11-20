@@ -27,6 +27,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -55,7 +56,7 @@ dependencies {
     testImplementation "org.apache.groovy:groovy-test-junit5"
     testImplementation "org.apache.groovy:groovy-test"
     testImplementation "org.junit.jupiter:junit-jupiter-engine"
-    testImplementation "org.junit.platform:junit-platform-runner"
+    testImplementation "org.junit.platform:junit-platform-suite"
 
     testImplementation "org.junit.jupiter:junit-jupiter-api"
     testImplementation "org.spockframework:spock-core"

@@ -25,6 +25,7 @@ import grails.plugins.quartz.JobArtefactHandler
 import grails.plugins.quartz.listeners.ExceptionPrinterJobListener
 import grails.plugins.quartz.listeners.SessionBinderJobListener
 import grails.spring.BeanBuilder
+import grails.util.Metadata
 import org.grails.config.PropertySourcesConfig
 import org.quartz.Scheduler
 import org.quartz.impl.matchers.GroupMatcher
@@ -50,7 +51,41 @@ class QuartzGrailsPluginSpec extends Specification {
             !plugin.isPurgeQuartzTablesOnStartup()
             plugin.isWaitForJobsToCompleteOnShutdown()
             !plugin.isExposeSchedulerInRepository()
+            !plugin.isFailOnNeverFiringTriggers()
             plugin.getSchedulerInstanceName() == null
+    }
+
+    void 'the application name the jobs of the application are stamped with comes from the configuration'() {
+        given:
+            QuartzGrailsPlugin plugin = pluginFor('info.app.name': 'reporting')
+
+        expect:
+            plugin.getApplicationName() == 'reporting'
+    }
+
+    void 'an application which does not name itself falls back to the name of its metadata'() {
+        given:
+            QuartzGrailsPlugin plugin = pluginFor([:])
+
+        expect:
+            plugin.getApplicationName() == plugin.grailsApplication.metadata.getApplicationName()
+            plugin.getApplicationName()
+    }
+
+    void 'an application which names itself registers its jobs under a name of its own'() {
+        given:
+            QuartzGrailsPlugin plugin = pluginFor('info.app.name': 'reporting')
+
+        expect:
+            plugin.isApplicationNamed()
+    }
+
+    void 'an application named as every unnamed application is does not count as named'() {
+        given:
+            QuartzGrailsPlugin plugin = pluginFor('info.app.name': Metadata.DEFAULT_APPLICATION_NAME)
+
+        expect:
+            !plugin.isApplicationNamed()
     }
 
     void 'a quartz block that does not mention an option leaves that option at its default'() {
@@ -72,6 +107,7 @@ class QuartzGrailsPluginSpec extends Specification {
                     'quartz.purgeQuartzTablesOnStartup': true,
                     'quartz.waitForJobsToCompleteOnShutdown': false,
                     'quartz.exposeSchedulerInRepository': true,
+                    'quartz.failOnNeverFiringTriggers': true,
                     'quartz.scheduler.instanceName': 'reportScheduler')
 
         expect:
@@ -82,16 +118,21 @@ class QuartzGrailsPluginSpec extends Specification {
             plugin.isPurgeQuartzTablesOnStartup()
             !plugin.isWaitForJobsToCompleteOnShutdown()
             plugin.isExposeSchedulerInRepository()
+            plugin.isFailOnNeverFiringTriggers()
             plugin.getSchedulerInstanceName() == 'reportScheduler'
     }
 
     void 'options configured as strings are coerced to booleans'() {
         given:
-            QuartzGrailsPlugin plugin = pluginFor('quartz.pluginEnabled': 'false', 'quartz.jdbcStore': 'true')
+            QuartzGrailsPlugin plugin = pluginFor(
+                    'quartz.pluginEnabled': 'false',
+                    'quartz.jdbcStore': 'true',
+                    'quartz.failOnNeverFiringTriggers': 'true')
 
         expect:
             !plugin.isPluginEnabled()
             plugin.isJdbcStore()
+            plugin.isFailOnNeverFiringTriggers()
     }
 
     void 'the plugin registers a scheduler, a job factory and an exception listener'() {

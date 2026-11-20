@@ -20,6 +20,11 @@
  */
 package org.apache.grails.data.simple.core
 
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.util.StringUtils
+import org.springframework.validation.Errors
+import org.springframework.validation.Validator
+
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.grails.datastore.gorm.Birthday
 import org.grails.datastore.mapping.core.Session
@@ -31,10 +36,6 @@ import org.grails.datastore.mapping.query.Query.PropertyCriterion
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.grails.datastore.mapping.simple.query.SimpleMapQuery
 import org.grails.datastore.mapping.simple.query.SimpleMapResultList
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.util.StringUtils
-import org.springframework.validation.Errors
-import org.springframework.validation.Validator
 
 /**
  * @author graemerocher
@@ -48,6 +49,7 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         def simple = new SimpleMapDatastore(ctx)
 
         simple.mappingContext.mappingFactory.registerCustomType(new AbstractMappingAwareCustomTypeMarshaller<Birthday, Map, SimpleMapResultList>(Birthday) {
+
             @Override
             protected Object writeInternal(PersistentProperty property, String key, Birthday value, Map nativeTarget) {
                 if (value == null) {
@@ -68,8 +70,7 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
                     criterion.from = criterion.from.date.time
                     criterion.to = criterion.to.date.time
                     nativeQuery.results << handler?.call(criterion, property) ?: []
-                }
-                else {
+                } else {
                     criterion.value = criterion.value.date.time
                     nativeQuery.results << handler?.call(criterion, property) ?: []
                 }
@@ -89,7 +90,8 @@ class GrailsDataCoreTckManager extends GrailsDataTckManager {
         }
 
         PersistentEntity entity = simple.mappingContext.persistentEntities.find {
-            PersistentEntity e -> e.name.contains("TestEntity")}
+            PersistentEntity e -> e.name.contains("TestEntity")
+        }
 
         simple.mappingContext.addEntityValidator(entity, [
                 supports: { Class c -> true },

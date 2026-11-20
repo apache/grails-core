@@ -47,6 +47,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                     url = 'https://central.sonatype.com/repository/maven-snapshots'
                     content {
                         it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                        it.includeVersionByRegex('org[.]sitemesh.*', '.*', '.*-SNAPSHOT')
                     }
                     mavenContent {
                         it.snapshotsOnly()
@@ -71,6 +72,15 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                 if (System.getenv('GRAILS_INCLUDE_MAVEN_LOCAL')) {
                     repo.mavenLocal()
                 }
+                // Maven Central first. Gradle disables a repository for the rest of the build on a transport
+                // failure and fails resolution instead of trying the next repository, so the primary
+                // repository has to be the one expected to stay up. repo.grails.org stays below as the
+                // fallback for anything Central does not host.
+                repo.mavenCentral {
+                    mavenContent {
+                        it.releasesOnly()
+                    }
+                }
                 repo.maven {
                     url = 'https://repo.grails.org/grails/restricted'
                     mavenContent {
@@ -91,6 +101,7 @@ class GrailsRepoSettingsPlugin implements Plugin<Settings> {
                     url = 'https://central.sonatype.com/repository/maven-snapshots'
                     content {
                         it.includeVersionByRegex('cloud[.]wondrify.*', '.*', '.*-SNAPSHOT')
+                        it.includeVersionByRegex('org[.]sitemesh.*', '.*', '.*-SNAPSHOT')
                     }
                     mavenContent {
                         it.snapshotsOnly()

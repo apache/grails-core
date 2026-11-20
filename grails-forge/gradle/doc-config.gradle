@@ -19,19 +19,15 @@
 
 apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
-groovydocEnhancer {
-    javaVersionEnabled = false
-}
-
 dependencies {
-    documentation "org.codehaus.groovy:groovy-templates:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-dateutil:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-ant:$groovyVersion"
-    documentation "org.codehaus.groovy:groovy-groovydoc:$groovyVersion"
+    // the Groovy that runs Groovydoc, for the groovydoc plugin's documentation configuration
+    documentation platform("org.apache.grails:grails-bom:$projectVersion")
+    documentation 'org.apache.groovy:groovy-ant'
+    documentation 'org.apache.groovy:groovy-groovydoc'
+    documentation 'org.apache.groovy:groovy-templates'
 }
 
 tasks.withType(Groovydoc).configureEach { Groovydoc gdoc ->
-    gdoc.classpath += project.configurations.documentation
     gdoc.windowTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
     gdoc.docTitle = "${project.findProperty('pomArtifactId') ?: project.name} - $projectVersion"
 }

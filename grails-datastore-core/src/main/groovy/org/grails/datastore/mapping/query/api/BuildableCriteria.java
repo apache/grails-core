@@ -85,7 +85,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object list(@DelegatesTo(Criteria.class) Closure closure);
+    Object list(@DelegatesTo(Criteria.class) Closure<?> closure);
 
     /**
      * Defines and executes a list query in a single call. Example: Foo.createCriteria().list { }
@@ -95,7 +95,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object list(Map params, @DelegatesTo(Criteria.class) Closure closure);
+    Object list(Map<String, ?> params, @DelegatesTo(Criteria.class) Closure<?> closure);
 
     /**
      * Defines and executes a list distinct query in a single call. Example: Foo.createCriteria().listDistinct { }
@@ -103,7 +103,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return The result
      */
-    Object listDistinct(@DelegatesTo(Criteria.class) Closure closure);
+    Object listDistinct(@DelegatesTo(Criteria.class) Closure<?> closure);
 
     /**
      * Defines and executes a scroll query in a single call. Example: Foo.createCriteria().scroll { }
@@ -112,7 +112,7 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return A scrollable result set
      */
-    Object scroll(@DelegatesTo(Criteria.class) Closure closure);
+    Object scroll(@DelegatesTo(Criteria.class) Closure<?> closure);
 
     /**
      * Defines and executes a get query ( a single result) in a single call. Example: Foo.createCriteria().get { }
@@ -121,5 +121,5 @@ public interface BuildableCriteria extends Criteria {
      *
      * @return A single result
      */
-    Object get(@DelegatesTo(Criteria.class) Closure closure);
+    Object get(@DelegatesTo(Criteria.class) Closure<?> closure);
 }

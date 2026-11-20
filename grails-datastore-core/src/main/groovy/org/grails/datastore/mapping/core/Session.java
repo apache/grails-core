@@ -166,7 +166,7 @@ public interface Session extends QueryCreator {
     boolean contains(Object o);
 
     /**
-     * The flush mode, defaults to FlushModeType.COMMIT
+     * The flush mode, defaults to FlushModeType.AUTO
      *
      * @param flushMode The FlushModeType
      */
@@ -304,6 +304,18 @@ public interface Session extends QueryCreator {
     boolean hasTransaction();
 
     /**
+     * Whether the session holds inserts, updates or deletes that {@link #flush()} has not written yet.
+     * A datastore that writes through immediately rather than queueing operations until the next flush
+     * returns {@code false}.
+     *
+     * @return {@code true} if a flush would write something
+     * @since 8.0
+     */
+    default boolean hasPendingOperations() {
+        return false;
+    }
+
+    /**
      * The Datastore that created this Session
      * @return The Datastore instance
      */
@@ -329,4 +341,13 @@ public interface Session extends QueryCreator {
      * @param synchronizedWithTransaction True if it is
      */
     void setSynchronizedWithTransaction(boolean synchronizedWithTransaction);
+
+    /**
+     * New semantic for merging an entity
+     * @param  d
+     * @return Object
+     */
+    default Object merge(Object d) {
+        throw new org.grails.datastore.mapping.core.MethodNotImplementedException("merge(Object) is not implemented for this Session");
+    }
 }

@@ -1,0 +1,161 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate.support
+
+import groovy.transform.CompileStatic
+import org.codehaus.groovy.runtime.StringGroovyMethods
+
+import org.hibernate.Session
+import org.hibernate.SessionFactory
+
+import org.springframework.core.convert.ConversionService
+import org.springframework.validation.Errors
+import org.springframework.validation.FieldError
+
+import org.grails.datastore.gorm.GormValidateable
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.datastore.mapping.model.config.GormProperties
+import org.grails.datastore.mapping.model.types.Association
+import org.grails.datastore.mapping.model.types.OneToOne
+import org.grails.datastore.mapping.validation.ValidationErrors
+
+/**
+ * Utility methods used at runtime by the GORM for Hibernate implementation
+ *
+ * @author Graeme Rocher
+ * @since 4.0
+ */
+@CompileStatic
+class HibernateRuntimeUtils {
+
+    private static final String DYNAMIC_FILTER_ENABLER = 'dynamicFilterEnabler'
+
+    @SuppressWarnings('rawtypes')
+    static void enableDynamicFilterEnablerIfPresent(SessionFactory sessionFactory, Session session) {
+        if (sessionFactory != null && session != null) {
+            final Set definedFilterNames = sessionFactory.getDefinedFilterNames()
+            if (definedFilterNames != null && definedFilterNames.contains(DYNAMIC_FILTER_ENABLER)) {
+                session.enableFilter(DYNAMIC_FILTER_ENABLER) // work around for HHH-2624
+            }
+        }
+    }
+
+    /**
+     * Initializes the Errors property on target.  The target will be assigned a new
+     * Errors property.  If the target contains any binding errors, those binding
+     * errors will be copied in to the new Errors property.
+     *
+     * @param target object to initialize
+     * @return the new Errors object
+     */
+    static Errors setupErrorsProperty(Object target) {
+
+        MetaClass metaClass = GroovySystem.metaClassRegistry.getMetaClass(target.getClass())
+        boolean isGormValidateable = target instanceof GormValidateable
+
+        def errors = new ValidationErrors(target)
+
+        Errors originalErrors = isGormValidateable ? ((GormValidateable) target).getErrors() : (Errors) metaClass.getProperty(target, GormProperties.ERRORS)
+        for (Object o in originalErrors.fieldErrors) {
+            FieldError fe = (FieldError) o
+            if (fe.isBindingFailure()) {
+                errors.addError(new FieldError(fe.getObjectName(),
+                        fe.field,
+                        fe.rejectedValue,
+                        fe.bindingFailure,
+                        fe.codes,
+                        fe.arguments,
+                        fe.defaultMessage))
+            }
+        }
+
+        if (isGormValidateable) {
+            ((GormValidateable) target).setErrors(errors)
+        } else {
+            metaClass.setProperty(target, GormProperties.ERRORS, errors)
+        }
+        return errors
+    }
+
+    static void autoAssociateBidirectionalOneToOnes(PersistentEntity entity, Object target) {
+        def mappingContext = entity.mappingContext
+        for (Association association : entity.associations) {
+            if (!(association instanceof OneToOne) || !association.bidirectional || !association.owningSide) {
+                continue
+            }
+
+            def propertyName = association.name
+
+            def otherSide = association.inverseSide
+
+            if (otherSide == null) {
+                continue
+            }
+
+            def entityReflector = mappingContext.getEntityReflector(entity)
+            Object inverseObject = entityReflector.getProperty(target, propertyName)
+            if (inverseObject == null) {
+                continue
+            }
+
+            def otherSidePropertyName = otherSide.getName()
+
+            def associationReflector = mappingContext.getEntityReflector(association.associatedEntity)
+            def propertyValue = associationReflector.getProperty(inverseObject, otherSidePropertyName)
+            if (propertyValue == null) {
+                associationReflector.setProperty(inverseObject, otherSidePropertyName, target)
+            }
+        }
+    }
+
+    static Object convertValueToType(Object value, Class targetType, ConversionService conversionService) {
+        if (targetType != null && value != null && !targetType.isInstance(value)) {
+            if (value instanceof CharSequence) {
+                value = value.toString()
+                if (targetType.isInstance(value)) {
+                    return value
+                }
+            }
+            try {
+                if (value instanceof Number && (targetType == Long || targetType == Integer)) {
+                    if (targetType == Long) {
+                        value = ((Number) value).toLong()
+                    } else {
+                        value = ((Number) value).toInteger()
+                    }
+                } else if (value instanceof String && Number.isAssignableFrom(targetType)) {
+                    String strValue = value.trim()
+                    if (targetType == Long) {
+                        value = Long.parseLong(strValue)
+                    } else if (targetType == Integer) {
+                        value = Integer.parseInt(strValue)
+                    } else {
+                        value = StringGroovyMethods.asType(strValue, targetType as Class<Object>)
+                    }
+                } else {
+                    value = conversionService.convert(value, targetType)
+                }
+            }
+            catch (ignored) {
+                // ignore
+            }
+        }
+        return value
+    }
+}

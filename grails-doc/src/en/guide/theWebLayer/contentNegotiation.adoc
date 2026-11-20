@@ -23,14 +23,14 @@ Grails has built in support for https://en.wikipedia.org/wiki/Content_negotiatio
 ==== Configuring Mime Types
 
 
-Before you can start dealing with content negotiation you need to tell Grails what content types you wish to support. By default Grails comes configured with a number of different content types within `grails-app/conf/application.yml` using the `grails.mime.types` setting:
+Content negotiation works against a set of supported content types. As of Grails 8 these are provided by the framework as built-in defaults, so a newly generated application does **not** need to declare them in `grails-app/conf/application.yml`. The built-in defaults are equivalent to the following `grails.mime.types` setting:
 
 [source,yaml]
 ----
 grails:
     mime:
         types:
-            all: '*/*'
+            all: '*/*'  # 'all' maps to '*' or the first available format in withFormat
             atom: application/atom+xml
             css: text/css
             csv: text/csv
@@ -43,6 +43,7 @@ grails:
               - application/json
               - text/json
             multipartForm: multipart/form-data
+            pdf: application/pdf
             rss: application/rss+xml
             text: text/plain
             hal:
@@ -53,59 +54,35 @@ grails:
               - application/xml
 ----
 
-The setting can also be done in `grails-app/conf/application.groovy` as shown below:
+This is what allows Grails to detect the format of a request containing either the 'text/xml' or 'application/xml' media types as simply 'xml'. The first entry is the default format.
 
-[source,groovy]
-----
-grails.mime.types = [ // the first one is the default format
-    all:           '*/*', // 'all' maps to '*' or the first available format in withFormat
-    atom:          'application/atom+xml',
-    css:           'text/css',
-    csv:           'text/csv',
-    form:          'application/x-www-form-urlencoded',
-    html:          ['text/html','application/xhtml+xml'],
-    js:            'text/javascript',
-    json:          ['application/json', 'text/json'],
-    multipartForm: 'multipart/form-data',
-    rss:           'application/rss+xml',
-    text:          'text/plain',
-    hal:           ['application/hal+json','application/hal+xml'],
-    xml:           ['text/xml', 'application/xml']
-]
-----
-
-Or the equivalent in `grails-app/conf/application.yml`:
+You only need to add the `grails.mime.types` setting when you want a different set of content types from the defaults. As in earlier Grails versions, a declared `grails.mime.types` **replaces** the built-in defaults, so the map you declare is the complete, authoritative set (and the first entry is the default format). This is also how you restrict the negotiable types — declare only the ones you want and the rest are not recognised:
 
 [source,yaml]
 ----
 grails:
     mime:
         types:
-            all: '*/*'  # 'all' maps to '*' or the first available format in withFormat
-            atom: 'application/atom+xml'
-            css: 'text/css'
-            csv: 'text/csv'
-            form: 'application/x-www-form-urlencoded'
-            html:
-              - 'text/html'
-              - 'application/xhtml+xml'
-            js: 'text/javascript'
             json:
-              - 'application/json'
-              - 'text/json'
-            multipartForm: 'multipart/form-data'
-            rss: 'application/rss+xml'
-            text: 'text/plain'
-            hal:
-              - 'application/hal+json'
-              - 'application/hal+xml'
+              - application/json
+              - text/json
             xml:
-              - 'text/xml'
-              - 'application/xml'
+              - text/xml
+              - application/xml
 ----
 
-The above bit of configuration allows Grails to detect to format of a request containing either the 'text/xml' or 'application/xml' media types as simply 'xml'. You can add your own types by simply adding new entries into the map.
-The first one is the default format.
+If instead you want to **add to** the built-in defaults without re-declaring them, enable merging with `grails.mime.mergeDefaults`. Your declared entries are then merged over the defaults: an entry replaces the default for the matching extension, any extension you do not declare keeps its default, and your declared entries are ordered first (so your first declared type remains the default format):
+
+[source,yaml]
+----
+grails:
+    mime:
+        mergeDefaults: true
+        types:
+            custom: application/vnd.example+json
+----
+
+NOTE: To restrict what an individual endpoint serves (rather than the application-wide set of recognised types), use the `responseFormats` property on a controller or the `formats:` argument of `respond`, which is the recommended, scoped way to limit content negotiation for a given action.
 
 
 ==== Content Negotiation using the format Request Parameter
@@ -180,29 +157,30 @@ NOTE: When using link:{controllersRef}withFormat.html[withFormat] make sure it i
 ==== Using the Accept header
 
 
-Every incoming HTTP request has a special https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html[Accept] header that defines what media types (or mime types) a client can "accept". In older browsers this is typically:
-
-[source]
-----
-*/*
-----
-
-which simply means anything. However, newer browsers send more interesting values such as this one sent by Firefox:
-
-[source]
-----
-text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, \
-    text/plain;q=0.8, image/png, */*;q=0.5
-----
-
-This particular accept header is unhelpful because it indicates that XML is the preferred response format whereas the user is really expecting HTML. That's why Grails ignores the accept header by default for browsers. However, non-browser clients are typically more specific in their requirements and can send accept headers such as
+Every incoming HTTP request has a special https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html[Accept] header that defines what media types (or mime types) a client can "accept". A non-browser client such as a JavaScript `fetch` call or a REST client is typically specific about what it wants:
 
 [source,groovy]
 ----
 application/json
 ----
 
-As mentioned the default configuration in Grails is to ignore the accept header for browsers. This is done by the configuration setting `grails.mime.disable.accept.header.userAgents`, which is configured to detect the major rendering engines and ignore their ACCEPT headers. This allows Grails' content negotiation to continue to work for non-browser clients:
+and Grails honors that: it sets `format` to `json` as you'd expect, and this works with the `withFormat()` method in just the same way as when the `format` URL parameter is set (although the URL parameter takes precedence).
+
+By default Grails honors the `Accept` header for **every** client, including browsers. Modern browsers send a well-formed header that already prioritizes HTML, for example:
+
+[source]
+----
+text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8
+----
+
+Here `text/html` has the highest quality (`q=1.0` implicitly) and `application/xml` is explicitly lower at `q=0.9`, so content negotiation correctly resolves a browser navigation to HTML without any special handling.
+
+[NOTE]
+====
+This is a change from Grails 7 and earlier, which ignored the `Accept` header for browser user agents by default. That behavior was a workaround for very old browsers (such as Firefox 2 and 3) that sent headers like `text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,...`, ranking XML above HTML. Modern browsers no longer do this, and ignoring the header prevented browser-issued `fetch`/`XMLHttpRequest` calls that ask for `application/json` from receiving JSON.
+====
+
+If you need the legacy behavior — ignoring the `Accept` header for specific user agents — configure `grails.mime.disable.accept.header.userAgents` with the user-agent tokens to match (it is unset by default):
 
 [source,groovy]
 ----
@@ -221,7 +199,7 @@ grails:
                     userAgents: ['Gecko', 'WebKit', 'Presto', 'Trident']
 ----
 
-For example, if it sees the accept header above ('application/json') it will set `format` to `json` as you'd expect. And of course this works with the `withFormat()` method in just the same way as when the `format` URL parameter is set (although the URL parameter takes precedence).
+When this setting is active, `XMLHttpRequest`-style requests (those sending an `X-Requested-With: XMLHttpRequest` header) still honor the `Accept` header; set `grails.mime.disable.accept.header.userAgentsXhr` to `true` to subject those requests to the user-agent filter as well.
 
 An accept header of '\*/\*' results in a value of `all` for the `format` property.
 

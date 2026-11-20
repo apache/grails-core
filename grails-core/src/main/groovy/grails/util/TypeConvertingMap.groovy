@@ -111,4 +111,12 @@ class TypeConvertingMap extends AbstractTypeConvertingMap {
     Boolean 'boolean'(String name, Boolean defaultValue) {
         return getBoolean(name, defaultValue)
     }
+
+    String string(String name) {
+        return getString(name)
+    }
+
+    String string(String name, String defaultValue) {
+        return getString(name, defaultValue)
+    }
 }

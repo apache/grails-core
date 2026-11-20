@@ -85,6 +85,9 @@ class HibernateUpdateFromListenerSpec extends Specification {
             if (event.entityObject instanceof Person) {
                 Person person = (Person) event.entityObject
                 person.occupation = person.occupation + " listener"
+                if (event.entityAccess != null) {
+                    event.entityAccess.setProperty("occupation", person.occupation)
+                }
             }
             isExecuted = true
         }

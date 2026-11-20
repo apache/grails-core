@@ -88,7 +88,7 @@ public class GroovyPagesJspApplicationContext implements JspApplicationContext {
             if (ExpressionFactory.class.isAssignableFrom(cl)) {
                 LOG.info("Using " + className + " as implementation of " +
                         ExpressionFactory.class.getName());
-                return (ExpressionFactory) cl.newInstance();
+                return (ExpressionFactory) cl.getDeclaredConstructor().newInstance();
             }
             LOG.warn("Class " + className + " does not implement " +
                     ExpressionFactory.class.getName());

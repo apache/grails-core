@@ -39,7 +39,7 @@ class HibernateDatastoreSpec extends Specification {
     void "test configure via map"() {
         when:"The map constructor is used"
         def config = Collections.singletonMap(Settings.SETTING_DB_CREATE,  "create-drop")
-        HibernateDatastore datastore = new HibernateDatastore(config, Book)
+        datastore = new HibernateDatastore(config, Book)
 
         then:"GORM is configured correctly"
         Book.withNewSession {

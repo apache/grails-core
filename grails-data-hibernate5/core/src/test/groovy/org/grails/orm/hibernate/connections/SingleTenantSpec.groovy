@@ -32,6 +32,8 @@ import org.hibernate.Session
 import org.hibernate.dialect.H2Dialect
 import org.hibernate.resource.jdbc.spi.JdbcSessionOwner
 import spock.util.environment.RestoreSystemProperties
+import spock.lang.AutoCleanup
+import spock.lang.Shared
 import spock.lang.Specification
 
 import java.sql.Connection
@@ -42,9 +44,9 @@ import java.sql.Connection
 @RestoreSystemProperties
 class SingleTenantSpec extends Specification {
 
-    void "Test a database per tenant multi tenancy"() {
-        given:"A configuration for multiple data sources"
-        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
+    @AutoCleanup HibernateDatastore datastore
+
+    void setup() {
         Map config = [
                 "grails.gorm.multiTenancy.mode":"DATABASE",
                 "grails.gorm.multiTenancy.tenantResolverClass":SystemPropertyTenantResolver,
@@ -59,7 +61,12 @@ class SingleTenantSpec extends Specification {
                 'dataSources.moreBooks':[url:"jdbc:h2:mem:moreBooks;LOCK_TIMEOUT=10000"]
         ]
 
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, SingleTenantAuthor )
+        datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Book, SingleTenantAuthor )
+    }
+
+    void "Test a database per tenant multi tenancy"() {
+        given:"A configuration for multiple data sources"
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, "")
 
         when:"no tenant id is present"
         SingleTenantAuthor.list()

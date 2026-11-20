@@ -23,11 +23,11 @@ import groovy.transform.CompileStatic
 import jakarta.servlet.ServletContext
 
 import org.springframework.boot.web.servlet.ServletContextInitializer
-import org.springframework.core.io.Resource
 
 import grails.core.GrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
 import grails.plugins.GrailsPlugin
+import org.apache.grails.core.plugins.PluginDiscovery
 
 /**
  * @author Graeme Rocher
@@ -37,20 +37,8 @@ class GrailsWebPluginManager extends DefaultGrailsPluginManager {
 
     public static final String SERVLET_CONTEXT_INIT_METHOD = 'doWithServletContext'
 
-    GrailsWebPluginManager(String resourcePath, GrailsApplication application) {
-        super(resourcePath, application)
-    }
-
-    GrailsWebPluginManager(String[] pluginResources, GrailsApplication application) {
-        super(pluginResources, application)
-    }
-
-    GrailsWebPluginManager(Class<?>[] plugins, GrailsApplication application) {
-        super(plugins, application)
-    }
-
-    GrailsWebPluginManager(Resource[] pluginFiles, GrailsApplication application) {
-        super(pluginFiles, application)
+    GrailsWebPluginManager(GrailsApplication application, PluginDiscovery pluginDiscovery) {
+        super(application, pluginDiscovery)
     }
 
     void doWithServletContext(ServletContext servletContext) {

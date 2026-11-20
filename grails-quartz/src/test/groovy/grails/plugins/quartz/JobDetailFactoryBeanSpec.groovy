@@ -88,6 +88,31 @@ class JobDetailFactoryBeanSpec extends Specification {
             !jobDetail.requestsRecovery()
             jobDetail.description == null
     }
+
+    void 'the job carries the name of the application it was registered by'() {
+        setup:
+            factory.jobClass = new GrailsJobClassMock(fullName: JOB_NAME, group: JOB_GROUP, concurrent: true)
+            factory.applicationName = 'reporting'
+            factory.afterPropertiesSet()
+
+        when:
+            JobDetail jobDetail = factory.object
+
+        then:
+            jobDetail.jobDataMap.get(JobDetailFactoryBean.APPLICATION_NAME_PARAMETER) == 'reporting'
+    }
+
+    void 'a job registered without an application name carries none'() {
+        setup:
+            factory.jobClass = new GrailsJobClassMock(fullName: JOB_NAME, group: JOB_GROUP, concurrent: true)
+            factory.afterPropertiesSet()
+
+        when:
+            JobDetail jobDetail = factory.object
+
+        then:
+            !jobDetail.jobDataMap.containsKey(JobDetailFactoryBean.APPLICATION_NAME_PARAMETER)
+    }
 }
 
 class GrailsJobClassMock implements GrailsJobClass {

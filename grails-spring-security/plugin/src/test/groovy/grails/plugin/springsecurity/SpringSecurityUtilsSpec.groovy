@@ -18,12 +18,8 @@
  */
 package grails.plugin.springsecurity
 
-import jakarta.servlet.FilterChain
-import jakarta.servlet.ServletRequest
-import jakarta.servlet.ServletResponse
-
-import spock.lang.Unroll
-
+import grails.plugin.springsecurity.web.GrailsSecurityFilterChain
+import grails.plugin.springsecurity.web.SecurityRequestHolder
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl
 import org.springframework.security.config.http.SecurityFiltersMapper
 import org.springframework.security.core.GrantedAuthority
@@ -31,9 +27,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.web.FilterChainProxy
 import org.springframework.security.web.savedrequest.DefaultSavedRequest
 import org.springframework.web.filter.GenericFilterBean
+import spock.lang.Unroll
 
-import grails.plugin.springsecurity.web.GrailsSecurityFilterChain
-import grails.plugin.springsecurity.web.SecurityRequestHolder
+import jakarta.servlet.FilterChain
+import jakarta.servlet.ServletRequest
+import jakarta.servlet.ServletResponse
 
 /**
  * @author Burt Beckwith
@@ -70,10 +68,10 @@ class SpringSecurityUtilsSpec extends AbstractUnitSpec {
         SpringSecurityUtils.noFilterIsApplied([[pattern: chainMapPattern, filters: chainMapFilters]], pattern) == expected
 
         where:
-        chainMapPattern | chainMapFilters  | pattern      | expected
-        '/assets/**'    | 'JOINED_FILTERS' | '/assets/**' | false
-        '/assets/**'    | 'none'           | '/assets/**' | true
-        '/foo'          | 'none'           | '/assets/**' | false
+        chainMapPattern | chainMapFilters  | pattern  | expected
+        '/assets/**'    | 'JOINED_FILTERS'  | '/assets/**' | false
+        '/assets/**'    | 'none'            | '/assets/**'  | true
+        '/foo'          | 'none'            | '/assets/**'  | false
     }
 
     void 'should retain existing chainmap'() {
@@ -348,7 +346,7 @@ class SpringSecurityUtilsSpec extends AbstractUnitSpec {
 
     void 'SecurityFilterPosition order should match SecurityFilters'() {
         expect:
-        SecurityFilterPosition.SWITCH_USER_FILTER.order == SecurityFiltersMapper.SWITCH_USER_FILTER.order
+            SecurityFilterPosition.SWITCH_USER_FILTER.order == SecurityFiltersMapper.SWITCH_USER_FILTER.order
     }
 
     void 'private constructor'() {
@@ -432,7 +430,7 @@ class SpringSecurityUtilsSpec extends AbstractUnitSpec {
 
     private void initRoleHierarchy(String hierarchyString) {
         defineBeans {
-            roleHierarchy(RoleHierarchyImpl) {
+            roleHierarchy(MutableRoleHierarchy) {
                 hierarchy = hierarchyString
             }
         }
@@ -440,11 +438,9 @@ class SpringSecurityUtilsSpec extends AbstractUnitSpec {
 }
 
 class DummyFilter extends GenericFilterBean {
-
     void doFilter(ServletRequest req, ServletResponse res, FilterChain chain) {}
 }
 
 class FakeAuthority implements GrantedAuthority {
-
     String authority
 }

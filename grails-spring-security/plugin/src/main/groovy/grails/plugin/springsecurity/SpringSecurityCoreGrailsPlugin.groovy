@@ -18,20 +18,61 @@
  */
 package grails.plugin.springsecurity
 
+import grails.plugin.springsecurity.access.NullAfterInvocationProvider
+import grails.plugin.springsecurity.access.intercept.NullAfterInvocationManager
+import grails.plugin.springsecurity.access.vote.AuthenticatedVetoableDecisionManager
+import grails.plugin.springsecurity.access.vote.ClosureVoter
+import grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationProvider
+import grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher
+import grails.plugin.springsecurity.cache.SpringUserCacheFactoryBean
+import grails.plugin.springsecurity.componentbased.ComponentBasedConfigBlender
+import grails.plugin.springsecurity.userdetails.DefaultPostAuthenticationChecks
+import grails.plugin.springsecurity.userdetails.DefaultPreAuthenticationChecks
+import grails.plugin.springsecurity.userdetails.GormUserDetailsService
+import grails.plugin.springsecurity.userdetails.NoStackUsernameNotFoundException
+import grails.plugin.springsecurity.web.GrailsRedirectStrategy
+import grails.plugin.springsecurity.web.NullFilterChainValidator
+import grails.plugin.springsecurity.web.SecurityRequestHolderFilter
+import grails.plugin.springsecurity.web.UpdateRequestContextHolderExceptionTranslationFilter
+import grails.plugin.springsecurity.web.access.AjaxAwareAccessDeniedHandler
+import grails.plugin.springsecurity.web.access.DefaultThrowableAnalyzer
+import grails.plugin.springsecurity.web.access.GrailsWebInvocationPrivilegeEvaluator
+import grails.plugin.springsecurity.web.access.expression.WebExpressionVoter
+import grails.plugin.springsecurity.web.access.intercept.AnnotationFilterInvocationDefinition
+import grails.plugin.springsecurity.web.access.intercept.ChannelFilterInvocationSecurityMetadataSourceFactoryBean
+import grails.plugin.springsecurity.web.access.intercept.InterceptUrlMapFilterInvocationDefinition
+import grails.plugin.springsecurity.web.access.intercept.RequestmapFilterInvocationDefinition
+import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationEntryPoint
+import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationFailureHandler
+import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationSuccessHandler
+import grails.plugin.springsecurity.web.authentication.FilterProcessUrlRequestMatcher
+import grails.plugin.springsecurity.web.authentication.GrailsUsernamePasswordAuthenticationFilter
+import grails.plugin.springsecurity.web.authentication.logout.MutableLogoutFilter
+import grails.plugin.springsecurity.web.authentication.preauth.x509.ClosureX509PrincipalExtractor
+import grails.plugin.springsecurity.web.authentication.preauth.x509.NullAuthenticationFailureHandler
+import grails.plugin.springsecurity.web.authentication.preauth.x509.NullAuthenticationSuccessHandler
+import grails.plugin.springsecurity.web.authentication.rememberme.GormPersistentTokenRepository
+import grails.plugin.springsecurity.web.authentication.switchuser.NullSwitchUserAuthorityChanger
+import grails.plugin.springsecurity.web.filter.DebugFilter
+import grails.plugin.springsecurity.web.filter.GrailsAnonymousAuthenticationFilter
+
+import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFilter
+import grails.plugin.springsecurity.web.filter.IpAddressFilter
+import grails.plugin.springsecurity.web.filter.StartupGateFilter
+import grails.plugins.Plugin
 import groovy.util.logging.Slf4j
-
-import jakarta.servlet.DispatcherType
-
-import org.springframework.boot.autoconfigure.security.SecurityProperties
+import org.grails.web.config.http.GrailsFilters
+import org.grails.web.mime.HttpServletResponseExtension
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
 import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean
 import org.springframework.cache.jcache.JCacheCacheManager
 import org.springframework.core.Ordered
 import org.springframework.expression.spel.standard.SpelExpressionParser
-import org.springframework.security.access.event.LoggerListener
+import org.springframework.security.authentication.event.LoggerListener
 import org.springframework.security.access.expression.DenyAllPermissionEvaluator
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyAuthoritiesMapper
-import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl
 import org.springframework.security.access.intercept.AfterInvocationProviderManager
 import org.springframework.security.access.intercept.NullRunAsManager
 import org.springframework.security.access.vote.AuthenticatedVoter
@@ -45,6 +86,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent
 import org.springframework.security.core.context.SecurityContextHolder as SCH
 import org.springframework.security.core.userdetails.UserDetailsByNameServiceWrapper
+import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.cache.NullUserCache
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
@@ -94,49 +136,8 @@ import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter
 import org.springframework.security.web.session.HttpSessionEventPublisher
 import org.springframework.security.web.util.matcher.AnyRequestMatcher
-import org.springframework.web.filter.FormContentFilter
 
-import grails.plugin.springsecurity.access.NullAfterInvocationProvider
-import grails.plugin.springsecurity.access.intercept.NullAfterInvocationManager
-import grails.plugin.springsecurity.access.vote.AuthenticatedVetoableDecisionManager
-import grails.plugin.springsecurity.access.vote.ClosureVoter
-import grails.plugin.springsecurity.authentication.GrailsAnonymousAuthenticationProvider
-import grails.plugin.springsecurity.authentication.NullAuthenticationEventPublisher
-import grails.plugin.springsecurity.cache.SpringUserCacheFactoryBean
-import grails.plugin.springsecurity.userdetails.DefaultPostAuthenticationChecks
-import grails.plugin.springsecurity.userdetails.DefaultPreAuthenticationChecks
-import grails.plugin.springsecurity.userdetails.GormUserDetailsService
-import grails.plugin.springsecurity.userdetails.NoStackUsernameNotFoundException
-import grails.plugin.springsecurity.web.GrailsRedirectStrategy
-import grails.plugin.springsecurity.web.NullFilterChainValidator
-import grails.plugin.springsecurity.web.SecurityRequestHolderFilter
-import grails.plugin.springsecurity.web.UpdateRequestContextHolderExceptionTranslationFilter
-import grails.plugin.springsecurity.web.access.AjaxAwareAccessDeniedHandler
-import grails.plugin.springsecurity.web.access.DefaultThrowableAnalyzer
-import grails.plugin.springsecurity.web.access.GrailsWebInvocationPrivilegeEvaluator
-import grails.plugin.springsecurity.web.access.expression.WebExpressionVoter
-import grails.plugin.springsecurity.web.access.intercept.AnnotationFilterInvocationDefinition
-import grails.plugin.springsecurity.web.access.intercept.ChannelFilterInvocationSecurityMetadataSourceFactoryBean
-import grails.plugin.springsecurity.web.access.intercept.InterceptUrlMapFilterInvocationDefinition
-import grails.plugin.springsecurity.web.access.intercept.RequestmapFilterInvocationDefinition
-import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationEntryPoint
-import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationFailureHandler
-import grails.plugin.springsecurity.web.authentication.AjaxAwareAuthenticationSuccessHandler
-import grails.plugin.springsecurity.web.authentication.FilterProcessUrlRequestMatcher
-import grails.plugin.springsecurity.web.authentication.GrailsUsernamePasswordAuthenticationFilter
-import grails.plugin.springsecurity.web.authentication.logout.MutableLogoutFilter
-import grails.plugin.springsecurity.web.authentication.preauth.x509.ClosureX509PrincipalExtractor
-import grails.plugin.springsecurity.web.authentication.preauth.x509.NullAuthenticationFailureHandler
-import grails.plugin.springsecurity.web.authentication.preauth.x509.NullAuthenticationSuccessHandler
-import grails.plugin.springsecurity.web.authentication.rememberme.GormPersistentTokenRepository
-import grails.plugin.springsecurity.web.authentication.switchuser.NullSwitchUserAuthorityChanger
-import grails.plugin.springsecurity.web.filter.DebugFilter
-import grails.plugin.springsecurity.web.filter.GrailsAnonymousAuthenticationFilter
-import grails.plugin.springsecurity.web.filter.GrailsRememberMeAuthenticationFilter
-import grails.plugin.springsecurity.web.filter.IpAddressFilter
-import grails.plugin.springsecurity.web.filter.StartupGateFilter
-import grails.plugins.Plugin
-import org.grails.web.mime.HttpServletResponseExtension
+import jakarta.servlet.DispatcherType
 
 /**
  * @author Burt Beckwith
@@ -203,7 +204,8 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                     sb << '\t' << key << ': '
                     if (value instanceof Closure) {
                         sb << '(closure)'
-                    } else {
+                    }
+                    else {
                         try {
                             sb << value.toString() // eagerly convert to string to catch individual exceptions
                         }
@@ -242,12 +244,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             }
 
             // configure the filter and optionally the listener
-
             springSecurityFilterChainRegistrationBean(classFor('springSecurityFilterChainRegistrationBean', FilterRegistrationBean)) {
                 filter = ref('springSecurityFilterChain')
                 urlPatterns = ['/*']
                 dispatcherTypes = EnumSet.of(DispatcherType.ERROR, DispatcherType.REQUEST)
-                order = SecurityProperties.DEFAULT_FILTER_ORDER
+                order = GrailsFilters.SPRING_SECURITY_FILTER_CHAIN.order
             }
 
             if (conf.useHttpSessionEventPublisher) {
@@ -336,7 +337,8 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 }
 
                 tokenRepository(classFor('tokenRepository', GormPersistentTokenRepository))
-            } else {
+            }
+            else {
                 log.trace 'Configuring non-persistent remember-me'
                 rememberMeServices(classFor('rememberMeServices', TokenBasedRememberMeServices), conf.rememberMe.key, ref('userDetailsService')) {
                     cookieName = conf.rememberMe.cookieName
@@ -389,13 +391,11 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
             }
 
             // default 'authenticationEntryPoint'
-            authenticationEntryPoint(classFor('authenticationEntryPoint', AjaxAwareAuthenticationEntryPoint), conf.auth.loginFormUrl) {
-                // '/login/auth'
+            authenticationEntryPoint(classFor('authenticationEntryPoint', AjaxAwareAuthenticationEntryPoint), conf.auth.loginFormUrl) { // '/login/auth'
                 ajaxLoginFormUrl = conf.auth.ajaxLoginFormUrl // '/login/authAjax'
                 forceHttps = conf.auth.forceHttps // false
                 useForward = conf.auth.useForward // false
                 portMapper = ref('portMapper')
-                portResolver = ref('portResolver')
                 redirectStrategy = ref('redirectStrategy')
             }
 
@@ -407,7 +407,8 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                 afterInvocationManager(classFor('afterInvocationManager', AfterInvocationProviderManager)) {
                     providers = [new NullAfterInvocationProvider()] // will be replaced in doWithApplicationContext
                 }
-            } else {
+            }
+            else {
                 // register a lightweight impl so there's a bean in either case
                 afterInvocationManager(classFor('afterInvocationManager', NullAfterInvocationManager))
             }
@@ -432,18 +433,17 @@ class SpringSecurityCoreGrailsPlugin extends Plugin {
                     securityConfigType != 'InterceptUrlMap') {
 
                 String message = """
-ERROR: the 'securityConfigType' property must be one of
-'Annotation', 'Requestmap', or 'InterceptUrlMap' or left unspecified
-to default to 'Annotation'; setting value to 'Annotation'
-"""
+    ERROR: the 'securityConfigType' property must be one of
+    'Annotation', 'Requestmap', or 'InterceptUrlMap' or left unspecified
+    to default to 'Annotation'; setting value to 'Annotation'
+    """
                 println message
                 log.warn message
 
                 securityConfigType = 'Annotation'
             }
 
-            httpServletResponseExtension(classFor('httpServletResponseExtension', HttpServletResponseExtension))
-            // used to be responseMimeTypesApi
+            httpServletResponseExtension(classFor('httpServletResponseExtension', HttpServletResponseExtension)) // used to be responseMimeTypesApi
 
             if (securityConfigType == 'Annotation') {
                 objectDefinitionSource(classFor('objectDefinitionSource', AnnotationFilterInvocationDefinition)) {
@@ -454,13 +454,15 @@ to default to 'Annotation'; setting value to 'Annotation'
                         rejectIfNoRule = conf.rejectIfNoRule
                     }
                 }
-            } else if (securityConfigType == 'Requestmap') {
+            }
+            else if (securityConfigType == 'Requestmap') {
                 objectDefinitionSource(classFor('objectDefinitionSource', RequestmapFilterInvocationDefinition)) {
                     if (conf.rejectIfNoRule instanceof Boolean) {
                         rejectIfNoRule = conf.rejectIfNoRule
                     }
                 }
-            } else if (securityConfigType == 'InterceptUrlMap') {
+            }
+            else if (securityConfigType == 'InterceptUrlMap') {
                 objectDefinitionSource(classFor('objectDefinitionSource', InterceptUrlMapFilterInvocationDefinition)) {
                     if (conf.rejectIfNoRule instanceof Boolean) {
                         rejectIfNoRule = conf.rejectIfNoRule
@@ -488,8 +490,7 @@ to default to 'Annotation'; setting value to 'Annotation'
             preAuthenticationChecks(classFor('preAuthenticationChecks', DefaultPreAuthenticationChecks))
             postAuthenticationChecks(classFor('postAuthenticationChecks', DefaultPostAuthenticationChecks))
 
-            daoAuthenticationProvider(classFor('daoAuthenticationProvider', DaoAuthenticationProvider)) {
-                userDetailsService = ref('userDetailsService')
+            daoAuthenticationProvider(classFor('daoAuthenticationProvider', DaoAuthenticationProvider), ref('userDetailsService')) {
                 passwordEncoder = ref('passwordEncoder')
                 userCache = ref('userCache')
                 preAuthenticationChecks = ref('preAuthenticationChecks')
@@ -514,8 +515,7 @@ to default to 'Annotation'; setting value to 'Annotation'
 
             // port mappings for channel security, etc.
             portMapper(classFor('portMapper', PortMapperImpl)) {
-                portMappings = [(conf.portMapper.httpPort.toString()): conf.portMapper.httpsPort.toString()]
-                // 8080, 8443
+                portMappings = [(conf.portMapper.httpPort.toString()): conf.portMapper.httpsPort.toString()] // 8080, 8443
 
             }
             portResolver(classFor('portResolver', PortResolverImpl)) {
@@ -531,7 +531,8 @@ to default to 'Annotation'; setting value to 'Annotation'
                     additionalExceptionMappings =
                             ([(NoStackUsernameNotFoundException.name): AuthenticationFailureBadCredentialsEvent.name] as Properties)
                 }
-            } else {
+            }
+            else {
                 authenticationEventPublisher(classFor('authenticationEventPublisher', NullAuthenticationEventPublisher))
             }
 
@@ -567,12 +568,14 @@ to default to 'Annotation'; setting value to 'Annotation'
                     usernameParameter = conf.switchUser.usernameParameter // 'username'
                     if (conf.switchUser.targetUrl) {
                         targetUrl = conf.switchUser.targetUrl
-                    } else {
+                    }
+                    else {
                         successHandler = ref('authenticationSuccessHandler')
                     }
                     if (conf.switchUser.switchFailureUrl) {
                         switchFailureUrl = conf.switchUser.switchFailureUrl
-                    } else {
+                    }
+                    else {
                         failureHandler = ref('authenticationFailureHandler')
                     }
                     if (conf.switchUser.switchUserMatcher) {
@@ -616,7 +619,8 @@ to default to 'Annotation'; setting value to 'Annotation'
                     cacheName = 'userCache'
                 }
                 cacheManager(classFor('cacheManager', JCacheCacheManager))
-            } else {
+            }
+            else {
                 userCache(classFor('userCache', NullUserCache))
             }
 
@@ -638,8 +642,6 @@ to default to 'Annotation'; setting value to 'Annotation'
                 log.info message
                 println message
             }
-
-            formContentFilter(classFor('formContentFilter', FormContentFilter))
         }
     }
 
@@ -669,7 +671,8 @@ to default to 'Annotation'; setting value to 'Annotation'
             roleHierarchyEntryClass.withTransaction {
                 roleHierarchy = roleHierarchyEntryClass.list()*.entry.join('\n')
             }
-        } else {
+        }
+        else {
             roleHierarchy = conf.roleHierarchy
         }
 
@@ -699,7 +702,8 @@ to default to 'Annotation'; setting value to 'Annotation'
         def providerNames = []
         if (conf.providerNames) {
             providerNames.addAll conf.providerNames
-        } else {
+        }
+        else {
             providerNames.addAll SpringSecurityUtils.providerNames
             if (conf.useX509) {
                 providerNames << 'x509AuthenticationProvider'
@@ -707,6 +711,8 @@ to default to 'Annotation'; setting value to 'Annotation'
         }
         applicationContext.authenticationManager.providers = createBeanList(providerNames)
         log.trace 'AuthenticationProviders: {}', applicationContext.authenticationManager.providers
+
+        applyComponentBasedConfigBlending conf, applicationContext, securityFilterChains
 
         // build handlers list here to give dependent plugins a chance to register some
         def logoutHandlerNames = (conf.logout.handlerNames ?: SpringSecurityUtils.logoutHandlerNames) +
@@ -729,9 +735,9 @@ to default to 'Annotation'; setting value to 'Annotation'
 
         if (conf.useDigestAuth) {
             def passwordEncoder = applicationContext.passwordEncoder
-// TODO         if (passwordEncoder instanceof DigestAuthPasswordEncoder) {
-//              passwordEncoder.resetInitializing()
-//          }
+// TODO            if (passwordEncoder instanceof DigestAuthPasswordEncoder) {
+//                passwordEncoder.resetInitializing()
+//            }
         }
 
         if (conf.rejectRequestsDuringStartup) {
@@ -769,7 +775,8 @@ to default to 'Annotation'; setting value to 'Annotation'
         if (SpringSecurityUtils.securityConfigType == 'Annotation') {
             // might have changed controllerAnnotations.staticRules
             initializeFromAnnotations conf
-        } else if (SpringSecurityUtils.securityConfigType == 'InterceptUrlMap') {
+        }
+        else if (SpringSecurityUtils.securityConfigType == 'InterceptUrlMap') {
             event.ctx.objectDefinitionSource.reset()
         }
     }
@@ -784,6 +791,57 @@ to default to 'Annotation'; setting value to 'Annotation'
     private createRefList = { names -> names.collect { name -> ref(name) } }
 
     private createBeanList(names) { names.collect { name -> applicationContext.getBean(name) } }
+
+    private void applyComponentBasedConfigBlending(conf, applicationContext, securityFilterChains) {
+        def cb = conf.componentBased
+        boolean mergeFilterChains = cb?.containsKey('autoMergeSecurityFilterChain') ? cb.autoMergeSecurityFilterChain : true
+        boolean mergeProviders = cb?.containsKey('autoMergeAuthenticationProviders') ? cb.autoMergeAuthenticationProviders : true
+        boolean chainUds = cb?.containsKey('autoChainUserDetailsServices') ? cb.autoChainUserDetailsServices : true
+        boolean bridgeUserProps = cb?.containsKey('bridgeSpringSecurityUserProperties') ? cb.bridgeSpringSecurityUserProperties : true
+
+        if (mergeFilterChains) {
+            ComponentBasedConfigBlender.mergeUserSecurityFilterChains applicationContext, securityFilterChains
+        }
+
+        if (mergeProviders) {
+            ComponentBasedConfigBlender.mergeUserAuthenticationProviders applicationContext, applicationContext.authenticationManager
+        }
+
+        if (chainUds || bridgeUserProps) {
+            def primary = applicationContext.userDetailsService
+            List<UserDetailsService> additional = []
+
+            if (bridgeUserProps) {
+                def env = applicationContext.environment
+                String userName = env.getProperty('spring.security.user.name', String)
+                String userPassword = env.getProperty('spring.security.user.password', String)
+                List<String> userRoles = Binder.get(env).bind('spring.security.user.roles', Bindable.listOf(String)).orElse(null)
+                def bridged = ComponentBasedConfigBlender.bridgeSpringSecurityUserProperties(userName, userPassword, userRoles)
+                if (bridged != null) {
+                    additional << (UserDetailsService) bridged
+                }
+            }
+
+            if (chainUds) {
+                def others = applicationContext.getBeansOfType(UserDetailsService).values().findAll { it !== primary }
+                additional.addAll(others)
+            }
+
+            if (additional) {
+                def passwordEncoder = applicationContext.containsBean('passwordEncoder') ? applicationContext.passwordEncoder : null
+                List<DaoAuthenticationProvider> additionalProviders = additional.collect { UserDetailsService uds ->
+                    def provider = new DaoAuthenticationProvider(uds)
+                    if (passwordEncoder != null) {
+                        provider.passwordEncoder = passwordEncoder
+                    }
+                    provider
+                }
+                applicationContext.authenticationManager.providers.addAll additionalProviders
+                log.info 'Added {} DaoAuthenticationProvider(s) for additional UserDetailsService sources to authenticationManager (the plugin GORM-backed provider remains primary)',
+                        additionalProviders.size()
+            }
+        }
+    }
 
     private configureLogout = { conf ->
 
@@ -839,7 +897,8 @@ to default to 'Annotation'; setting value to 'Annotation'
 
         if (conf.digest.useCleartextPasswords) {
             passwordEncoder(classFor('passwordEncoder', DelegatingPasswordEncoder), ENCODING_ID_NOOP, idToPasswordEncoder(conf))
-        } else {
+        }
+        else {
             conf.digest.passwordAlreadyEncoded = true
             conf.dao.reflectionSaltSourceProperty = conf.userLookup.usernamePropertyName
             passwordEncoder(classFor('passwordEncoder', DigestAuthPasswordEncoder)) {
@@ -876,7 +935,7 @@ to default to 'Annotation'; setting value to 'Annotation'
 
         // the hierarchy string is set in doWithApplicationContext to support building
         // from the database using GORM if roleHierarchyEntryClassName is set
-        roleHierarchy(classFor('roleHierarchy', RoleHierarchyImpl))
+        roleHierarchy(classFor('roleHierarchy', MutableRoleHierarchy))
 
         roleVoter(classFor('roleVoter', RoleHierarchyVoter), ref('roleHierarchy'))
 
@@ -1002,7 +1061,8 @@ to default to 'Annotation'; setting value to 'Annotation'
                 migrateSessionAttributes = conf.sessionFixationPrevention.migrate // true
                 alwaysCreateSession = conf.sessionFixationPrevention.alwaysCreateSession // false
             }
-        } else {
+        }
+        else {
             sessionAuthenticationStrategy(classFor('sessionAuthenticationStrategy', NullAuthenticatedSessionStrategy))
         }
 
@@ -1049,7 +1109,6 @@ to default to 'Annotation'; setting value to 'Annotation'
         requestMatcher(classFor('requestMatcher', AnyRequestMatcher))
 
         requestCache(classFor('requestCache', HttpSessionRequestCache)) {
-            portResolver = ref('portResolver')
             createSessionAllowed = conf.requestCache.createSession // true
             requestMatcher = ref('requestMatcher')
         }
@@ -1082,14 +1141,14 @@ to default to 'Annotation'; setting value to 'Annotation'
             authenticationSuccessHandler = ref('x509AuthenticationSuccessHandler')
             principalExtractor = ref('x509PrincipalExtractor')
             checkForPrincipalChanges = conf.x509.checkForPrincipalChanges // false
-            continueFilterChainOnUnsuccessfulAuthentication = conf.x509.continueFilterChainOnUnsuccessfulAuthentication
-            // true
+            continueFilterChainOnUnsuccessfulAuthentication = conf.x509.continueFilterChainOnUnsuccessfulAuthentication // true
             invalidateSessionOnPrincipalChange = conf.x509.invalidateSessionOnPrincipalChange // true
         }
 
         if (conf.x509.subjectDnClosure) {
             x509PrincipalExtractor(classFor('x509PrincipalExtractor', ClosureX509PrincipalExtractor))
-        } else {
+        }
+        else {
             x509PrincipalExtractor(classFor('x509PrincipalExtractor', SubjectDnX509PrincipalExtractor)) {
                 subjectDnRegex = conf.x509.subjectDnRegex // 'CN=(.*?)(?:,|$)'
             }
@@ -1123,18 +1182,16 @@ to default to 'Annotation'; setting value to 'Annotation'
         messageDigestPasswordEncoderSHA256.iterations = conf.password.hash.iterations // 10000
 
         int strength = conf.password.bcrypt.logrounds
-        [
-                (ENCODING_ID_BCRYPT): new BCryptPasswordEncoder(strength),
-                (ENCODING_ID_LDAP): new LdapShaPasswordEncoder(),
-                (ENCODING_ID_MD4): new Md4PasswordEncoder(),
-                (ENCODING_ID_MD5): messageDigestPasswordEncoderMD5,
-                (ENCODING_ID_NOOP): NoOpPasswordEncoder.getInstance(),
-                (ENCODING_ID_PBKDF2): Pbkdf2PasswordEncoder.defaultsForSpringSecurity_v5_8(),
-                (ENCODING_ID_SCRYPT): SCryptPasswordEncoder.defaultsForSpringSecurity_v5_8(),
-                (ENCODING_ID_ARGON2): Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8(),
-                (ENCODING_ID_SHA1): messageDigestPasswordEncoderSHA1,
-                (ENCODING_IDSHA256): messageDigestPasswordEncoderSHA256,
-                'sha256': new StandardPasswordEncoder()
-        ]
+        [(ENCODING_ID_BCRYPT): new BCryptPasswordEncoder(strength),
+         (ENCODING_ID_LDAP): new LdapShaPasswordEncoder(),
+         (ENCODING_ID_MD4): new Md4PasswordEncoder(),
+         (ENCODING_ID_MD5): messageDigestPasswordEncoderMD5,
+         (ENCODING_ID_NOOP): NoOpPasswordEncoder.getInstance(),
+         (ENCODING_ID_PBKDF2): Pbkdf2PasswordEncoder.defaultsForSpringSecurity_v5_8(),
+         (ENCODING_ID_SCRYPT): SCryptPasswordEncoder.defaultsForSpringSecurity_v5_8(),
+         (ENCODING_ID_ARGON2): Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8(),
+         (ENCODING_ID_SHA1): messageDigestPasswordEncoderSHA1,
+         (ENCODING_IDSHA256): messageDigestPasswordEncoderSHA256,
+         'sha256': new StandardPasswordEncoder()]
     }
 }

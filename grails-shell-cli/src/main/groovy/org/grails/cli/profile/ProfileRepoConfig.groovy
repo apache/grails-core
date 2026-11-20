@@ -52,17 +52,13 @@ class ProfileRepoConfig {
             }
         }
 
-        // If the repo url from the wrapper is set, then the wrapper has been configured for a local install, so honor it as a valid source
-        String repoUrl = System.getProperty('grails.repo.url') ?: System.getenv('GRAILS_REPO_URL')
-        if (repoUrl) {
-            List<String> overrideRepos = Arrays.stream(repoUrl.split(';'))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList()
-            for (String overrideUrl : overrideRepos) {
-                System.out.println("Grails repo url override detected, including repo: ${overrideUrl}")
-                repos << new ProfileRepoConfig(name: 'grails-override-repo', url: fixRepoUrl(overrideUrl), snapshots: Environment.grailsVersion.endsWith('SNAPSHOT'))
-            }
+        // If the repo url from the wrapper is set, then the wrapper has been configured for a local install, so honor it as a valid source.
+        // Overrides are validated the same way as in the wrapper and forge: local repositories pass, remote repositories must use HTTPS.
+        for (String overrideUrl : GrailsRepositoryOverrides.configuredOverrides) {
+            System.out.println("Grails repo url override detected, including repo: ${overrideUrl}")
+            // profiles resolve artifacts directly, so the Gradle aliases are resolved to the locations they stand for
+            String resolvedUrl = GrailsRepositoryOverrides.resolveRepositoryAlias(overrideUrl)
+            repos << new ProfileRepoConfig(name: 'grails-override-repo', url: fixRepoUrl(resolvedUrl), snapshots: Environment.grailsVersion.endsWith('SNAPSHOT'))
         }
 
         return repos
@@ -74,7 +70,7 @@ class ProfileRepoConfig {
             if (uri.getScheme() != null) {
                 return repoUrl
             }
-        } catch (URISyntaxException e) {
+        } catch (URISyntaxException ignored) {
             // Not a valid URI, fall through to file conversion
         }
 

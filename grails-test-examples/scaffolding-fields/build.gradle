@@ -36,7 +36,6 @@ dependencies {
 
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
-    implementation 'org.apache.grails:grails-layout'
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-scaffolding'
     implementation 'org.apache.grails:grails-fields'
@@ -52,9 +51,9 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console 'org.apache.grails:grails-console'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

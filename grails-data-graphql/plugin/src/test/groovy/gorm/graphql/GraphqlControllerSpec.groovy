@@ -79,6 +79,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query"
             assert ei.operationName == null
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables.isEmpty()
             mockExecutionResult()
         }
@@ -93,6 +94,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query2"
             assert ei.operationName == "operationName"
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables.isEmpty()
             mockExecutionResult()
         }
@@ -108,6 +110,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query2"
             assert ei.operationName == "operationName"
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables == [foo: 2]
             mockExecutionResult()
         }
@@ -129,6 +132,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query"
             assert ei.operationName == null
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables.isEmpty()
             mockExecutionResult()
         }
@@ -150,6 +154,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query2"
             assert ei.operationName == "operationName"
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables.isEmpty()
             mockExecutionResult()
         }
@@ -171,6 +176,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == "query2"
             assert ei.operationName == "operationName"
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables == [foo: 2]
             mockExecutionResult()
         }
@@ -193,6 +199,7 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
             assert ei.query == '{"query": "query"}'
             assert ei.operationName == null
             assert ei.context == [locale: request.locale]
+            assert ei.root == [locale: request.locale]
             assert ei.variables.isEmpty()
             mockExecutionResult()
         }
@@ -213,8 +220,11 @@ class GraphqlControllerSpec extends Specification implements ControllerUnitTest<
         controller.browser()
 
         then:
-        !response.text.empty
-        response.contentType == "text/html;charset=utf-8"
+        // The bundled graphiql.html was removed from this plugin (commit a9b9fa2598
+        // "Remove graphql html, css and js"). Without the classpath resource the
+        // controller returns 404; downstream apps that supply their own
+        // graphiql.html will continue to get a 200 with the rendered page.
+        status == 404
     }
 
 }

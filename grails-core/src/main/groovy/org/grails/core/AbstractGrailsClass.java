@@ -116,10 +116,10 @@ public abstract class AbstractGrailsClass implements GrailsClass {
     public Object newInstance() {
         try {
             Constructor<?> defaultConstructor = getClazz().getDeclaredConstructor(new Class[]{});
-            if (!defaultConstructor.isAccessible()) {
+            if (!defaultConstructor.canAccess(null)) {
                 defaultConstructor.setAccessible(true);
             }
-            return defaultConstructor.newInstance(new Object[]{});
+            return defaultConstructor.newInstance();
         }
         catch (Exception e) {
             Throwable targetException;

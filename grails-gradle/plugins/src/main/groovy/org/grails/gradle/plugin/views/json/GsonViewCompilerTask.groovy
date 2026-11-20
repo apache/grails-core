@@ -36,7 +36,7 @@ import org.grails.gradle.plugin.views.AbstractGroovyTemplateCompileTask
  */
 @CompileStatic
 @CacheableTask
-class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
+abstract class GsonViewCompilerTask extends AbstractGroovyTemplateCompileTask {
 
     @Inject
     GsonViewCompilerTask(ExecOperations execOperations, ObjectFactory objectFactory) {

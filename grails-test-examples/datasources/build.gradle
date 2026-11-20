@@ -34,14 +34,14 @@ dependencies {
     implementation 'org.apache.grails:grails-dependencies-starter-web'
     implementation 'com.h2database:h2'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
 
     implementation 'org.apache.grails:grails-data-hibernate5'
+    implementation 'org.apache.grails:grails-async'
     implementation 'org.apache.grails:grails-cache'
 
     runtimeOnly 'org.apache.grails:grails-scaffolding'
@@ -51,9 +51,9 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    console 'org.apache.grails:grails-console'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {

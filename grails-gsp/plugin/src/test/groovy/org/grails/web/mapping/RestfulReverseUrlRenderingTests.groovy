@@ -20,7 +20,6 @@ package org.grails.web.mapping
 
 import grails.artefact.Artefact
 import grails.testing.web.UrlMappingsUnitTest
-import org.grails.core.artefact.UrlMappingsArtefactHandler
 import spock.lang.Specification
 
 /**
@@ -29,27 +28,6 @@ import spock.lang.Specification
  * @since 1.0
  */
 class RestfulReverseUrlRenderingTests extends Specification implements UrlMappingsUnitTest<RestfulReverseUrlMappings> {
-
-    def setup() {
-        // Access config to ensure grailsApplication is initialized and Holders is populated.
-        // This is necessary before accessing grailsApplication properties.
-        assert config != null
-        
-        // Reset URL mappings to prevent test environment pollution - clear any mappings from previous tests
-        // and re-register this test's URL mappings with a fresh holder bean
-        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
-            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
-        }
-        // Re-register this test's URL mappings and recreate the holder bean
-        mockArtefact(RestfulReverseUrlMappings)
-    }
-
-    def cleanup() {
-        // Clear URL mappings artefacts added by this test to prevent test environment pollution
-        if (grailsApplication instanceof grails.core.DefaultGrailsApplication) {
-            grailsApplication.@artefactInfo.remove(UrlMappingsArtefactHandler.TYPE)
-        }
-    }
 
     def testLinkTagRendering() {
         when:

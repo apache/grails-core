@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class QueryNonIndexedPropertySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Company, CompanyAddress])
+        manager.registerDomainClasses(Company, CompanyAddress)
     }
 
     def "Test that we can query a property that has no indices specified"() {
@@ -53,6 +53,7 @@ class QueryNonIndexedPropertySpec extends GrailsDataTckSpec<GrailsDataCoreTckMan
 
 @Entity
 class Company {
+
     Long id
     String name
     CompanyAddress address
@@ -60,6 +61,7 @@ class Company {
 
 @Entity
 class CompanyAddress {
+
     Long id
     String postCode
 }

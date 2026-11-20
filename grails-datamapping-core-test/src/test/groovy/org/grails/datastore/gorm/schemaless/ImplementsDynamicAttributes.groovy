@@ -54,7 +54,9 @@ class DynamicDomainSpec extends Specification {
 }
 
 class DynamicEntity implements DynamicAttributes {
+
     String name
+
     String getFoo() {
         'foo'
     }

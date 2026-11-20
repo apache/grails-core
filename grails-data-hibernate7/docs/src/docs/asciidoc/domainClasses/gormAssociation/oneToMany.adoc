@@ -1,0 +1,91 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+[[gormAssociation-oneToMany]]
+== One-to-Many Associations
+
+A one-to-many association is declared using `hasMany`. It represents a collection of associated domain objects.
+
+=== Bidirectional One-to-Many
+
+When both sides declare the relationship, GORM manages the foreign key on the many side's table:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]  // <1>
+}
+
+class Book {
+    String title
+    Author author                   // <2>
+    static belongsTo = [author: Author]
+}
+----
+<1> `Author` owns a collection of `Book` objects.
+<2> `Book` declares the back-reference. `belongsTo` also enables cascade delete.
+
+With `belongsTo`, deleting an `Author` will cascade-delete all of its `books`.
+
+=== Unidirectional One-to-Many
+
+Without `belongsTo` on the other side, GORM uses a join table to maintain the relationship:
+
+[source,groovy]
+----
+class Author {
+    String name
+    static hasMany = [books: Book]
+}
+
+class Book {
+    String title
+    // no belongsTo or author property
+}
+----
+
+The join table name defaults to `author_books` and can be customised — see xref:ormdsl-tableAndColumnNames[Table and Column Names].
+
+An owner may declare several unidirectional one-to-many associations, such as `static hasMany = [roles: Role, tags: Tag]`. Each one is written to its own join table, including two associations to the same class that map different tables with `joinTable`. Two associations to the same class share one join table by default, with a key column each (`item_role` with `item_roles_id` and `item_deny_roles_id` for `static hasMany = [roles: Role, denyRoles: Role]`), and so do associations that `joinTable` maps onto one table. Each association keeps its rows unique by its own key column and the element, through a unique key per association, or on Oracle and Db2 for Linux, UNIX and Windows one unique key over both key columns and the element. Two lists or two maps sharing a join table are kept unique the same way by their key and index columns, so a position or a map key is taken once while an element may repeat. Two lists or two maps that share both the foreign-key and element columns isolate their rows by their respective index columns; two sets sharing a join table cannot share both the key and element columns because unindexed collections require at least one distinct column to distinguish row membership.
+
+=== Sorting
+
+You can define a default sort order for the collection:
+
+[source,groovy]
+----
+class Author {
+    static hasMany = [books: Book]
+    static mapping = {
+        books sort: 'title', order: 'asc'
+    }
+}
+----
+
+=== Adding and Removing Items
+
+[source,groovy]
+----
+def author = Author.get(1)
+author.addToBooks(new Book(title: 'Groovy in Action'))
+author.save()
+
+author.removeFromBooks(author.books.first())
+author.save()
+----

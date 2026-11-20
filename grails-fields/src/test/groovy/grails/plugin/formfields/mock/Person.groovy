@@ -21,13 +21,14 @@ package grails.plugin.formfields.mock
 import java.time.Instant
 import java.time.LocalDate
 
-import grails.gorm.annotation.AutoTimestamp
+import grails.gorm.annotation.CreatedDate
+import grails.gorm.annotation.LastModifiedDate
 import grails.persistence.Entity
 
 @Entity
 class Cyborg extends Person {
-	@AutoTimestamp(AutoTimestamp.EventType.CREATED) Date created
-	@AutoTimestamp Date modified
+	@CreatedDate Date created
+	@LastModifiedDate Date modified
 	Instant timestamp
 	LocalDate birthDate
 }
@@ -57,7 +58,7 @@ class Person {
 
 	static constraints = {
         salutation nullable: true
-		name blank: false
+		name blank: false, nullable: false
 		dateOfBirth nullable: true
 		address nullable: true
 		excludedProperty nullable: true
@@ -67,6 +68,9 @@ class Person {
 		anotherPicture nullable: true
 		password password: true
 		biography nullable: true, widget: 'textarea'
+		// declared last so it keeps sorting after the explicitly-ordered properties (preserving
+		// field-enumeration order); explicit now that properties are nullable by default
+		gender nullable: false
 	}
 
 	static scaffold = [exclude: ['excludedProperty']]

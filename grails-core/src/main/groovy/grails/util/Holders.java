@@ -18,6 +18,7 @@
  */
 package grails.util;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -220,17 +221,9 @@ public class Holders {
     private static void createServletContextsHolder() {
         try {
             Class<?> clazz = Holders.class.getClassLoader().loadClass("grails.web.context.WebRequestServletHolder");
-            servletContexts = (Holder) clazz.newInstance();
+            servletContexts = (Holder) clazz.getDeclaredConstructor().newInstance();
         }
-        catch (ClassNotFoundException e) {
-            // shouldn't happen
-            LOG.debug("Error initializing servlet context holder, not running in Servlet environment: " + e.getMessage(), e);
-        }
-        catch (InstantiationException e) {
-            // shouldn't happen
-            LOG.debug("Error initializing servlet context holder, not running in Servlet environment: " + e.getMessage(), e);
-        }
-        catch (IllegalAccessException e) {
+        catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             // shouldn't happen
             LOG.debug("Error initializing servlet context holder, not running in Servlet environment: " + e.getMessage(), e);
         }

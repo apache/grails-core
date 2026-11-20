@@ -35,6 +35,7 @@ class ForwardUrlMappingInfo extends AbstractUrlMappingInfo {
     String actionName
     String pluginName
     String namespace
+    boolean namespaceSpecified
     String viewName
     String URI
     String id

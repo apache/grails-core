@@ -31,6 +31,7 @@ class GrailsDataMongoTckManagerSpec extends Specification {
     void 'cleanup removes the documents but keeps the collections so the next feature does not recreate them'() {
         given:
         def manager = new GrailsDataMongoTckManager()
+        manager.registerDomainClasses(Book)
         manager.setupSpec()
 
         when:
@@ -60,6 +61,7 @@ class GrailsDataMongoTckManagerSpec extends Specification {
     void 'cleanup drops collections that do not support deletes'() {
         given:
         def manager = new GrailsDataMongoTckManager()
+        manager.registerDomainClasses(Book)
         manager.setupSpec()
         manager.setup(DataServiceConnectionRoutingSpec)
         def database = manager.mongoClient.getDatabase('test')

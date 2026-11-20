@@ -20,7 +20,6 @@ package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
-import org.grails.datastore.mapping.reflect.EntityReflector
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
 import spock.lang.Issue

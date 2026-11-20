@@ -34,6 +34,6 @@ class ClassWithNoArgBeforeValidate implements Serializable {
     }
 
     static constraints = {
-        name(blank: false)
+        name(blank: false, nullable: false)
     }
 }

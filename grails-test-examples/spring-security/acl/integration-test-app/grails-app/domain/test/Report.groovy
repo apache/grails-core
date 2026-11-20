@@ -35,4 +35,8 @@ class Report {
 	String toString() {
 		"Report $id $name"
 	}
+
+	static constraints = {
+		name nullable: false
+	}
 }

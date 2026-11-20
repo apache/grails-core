@@ -56,10 +56,10 @@ class TestClassAnnotatedServiceSpec extends AbstractAclSpec {
 		testClassAnnotatedService.notAnnotated()
 
 		then:
-		notThrown()
+		noExceptionThrown()
 	}
 
-	void 'check that the userAnnotated method overides the class annotation and requires ROLE_USER'() {
+	void 'check that the userAnnotated method overides the class annotation and requires authentication'() {
 		given:
 		buildReports()
 
@@ -69,18 +69,29 @@ class TestClassAnnotatedServiceSpec extends AbstractAclSpec {
 		then:
 		thrown AuthenticationCredentialsNotFoundException
 
-		when:
+	}
+
+	void 'check that the userAnnotated method overrides the class annotation and denies ROLE_ADMIN'() {
+		given:
+		buildReports()
 		authenticateAsAdmin()
+
+		when:
 		testClassAnnotatedService.userAnnotated()
 
 		then:
 		thrown AccessDeniedException
+	}
+
+	void 'check that the userAnnotated method overrides the class annotation and allows ROLE_USER'() {
+		given:
+		buildReports()
+		authenticateAsUser()
 
 		when:
-		authenticateAsUser()
 		testClassAnnotatedService.userAnnotated()
 
 		then:
-		notThrown()
+		noExceptionThrown()
 	}
 }

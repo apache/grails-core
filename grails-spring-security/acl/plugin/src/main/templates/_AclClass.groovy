@@ -34,6 +34,6 @@ class AclClass {
     }
 
     static constraints = {
-        className unique: true, blank: false
+        className unique: true, blank: false, nullable: false
     }
 }

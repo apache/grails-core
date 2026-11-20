@@ -39,7 +39,7 @@ import static org.grails.datastore.mapping.model.config.GormProperties.VERSION
  */
 @CompileStatic
 @InheritConstructors
-class UpdateEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements BindingGormDataFetcher {
+class UpdateEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements BindingGormDataFetcher<T> {
 
     GraphQLDataBinder dataBinder
 

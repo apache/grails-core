@@ -24,7 +24,6 @@ import java.util.List;
 /**
  * Implemented by collections that store the inverse association keys to perform a lookup
  *
- * @author Graeme
  * @since 6.0
  */
 public interface RxUnidirectionalCollection {

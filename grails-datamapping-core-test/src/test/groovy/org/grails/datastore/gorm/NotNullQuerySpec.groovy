@@ -23,9 +23,11 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([NullMe, NullOther])
+        manager.registerDomainClasses(NullMe, NullOther)
     }
+
 
     void "Test query of null value with dynamic finder"() {
         given:
@@ -66,6 +68,7 @@ class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
         results.size() == 1
         results[0].name == "Bob"
     }
+
 
     void "Test query of null value with dynamic finder on association"() {
         given:
@@ -110,6 +113,7 @@ class NotNullQuerySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class NullMe {
+
     Long id
     String name
     String job
@@ -127,6 +131,7 @@ class NullMe {
 
 @Entity
 class NullOther {
+
     Long id
     String name
 

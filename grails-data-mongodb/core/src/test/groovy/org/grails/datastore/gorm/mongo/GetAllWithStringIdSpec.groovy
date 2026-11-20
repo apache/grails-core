@@ -28,7 +28,7 @@ import spock.lang.Issue
  */
 class GetAllWithStringIdSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([GetItem])
+        manager.registerDomainClasses(GetItem)
     }
 
     @Issue('GPMONGODB-278')

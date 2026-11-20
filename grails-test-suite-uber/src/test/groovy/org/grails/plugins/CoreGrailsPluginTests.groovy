@@ -19,12 +19,19 @@
 
 package org.grails.plugins
 
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.core.env.StandardEnvironment
+
+import static org.junit.jupiter.api.Assertions.assertEquals
+import grails.core.support.proxy.DefaultProxyHandler
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.web.servlet.plugins.GrailsWebPluginManager
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.grails.config.PropertySourcesConfig
-import org.grails.plugins.DefaultGrailsPlugin
-import org.grails.plugins.MockGrailsPluginManager
 import org.grails.spring.aop.autoproxy.GroovyAwareAspectJAwareAdvisorAutoProxyCreator
 import org.grails.spring.aop.autoproxy.GroovyAwareInfrastructureAdvisorAutoProxyCreator
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
@@ -32,58 +39,63 @@ import org.grails.commons.test.AbstractGrailsMockTests
 import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.beans.factory.config.RuntimeBeanReference
 
+/**
+ * Covers what {@code CoreGrailsPlugin} contributes through {@code beanRegistrar()}. The beans it
+ * contributes through its {@code beans} DSL are covered by {@code CoreAutoConfigurationSpec}, and
+ * the {@code grails.spring.bean.packages} scan by {@code SpringBeanPackagesSpec}.
+ */
 class CoreGrailsPluginTests extends AbstractGrailsMockTests {
 
-    void testComponentScan() {
-        def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
-
-        def plugin = new DefaultGrailsPlugin(pluginClass, ga)
-        def pluginManager = new MockGrailsPluginManager()
-        ctx.registerMockBean(GrailsPluginManager.BEAN_NAME, pluginManager)
-        ga.config.grails.spring.bean.packages = ['org.grails.plugins.test']
-
-        def springConfig = new WebRuntimeSpringConfiguration(ctx)
-        springConfig.servletContext = createMockServletContext()
-
-        plugin.doWithRuntimeConfiguration(springConfig)
-
-        def appCtx = springConfig.getApplicationContext()
-
-    }
+    @Test
     void testCorePlugin() {
-        def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
-
-        def plugin = new DefaultGrailsPlugin(pluginClass, ga)
+        def plugin = corePlugin()
 
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
         springConfig.servletContext = createMockServletContext()
 
-        plugin.doWithRuntimeConfiguration(springConfig)
+        def appCtx = configure(plugin, springConfig)
 
-        def appCtx = springConfig.getApplicationContext()
-
-        assert appCtx.containsBean("classLoader")
         assert appCtx.containsBean("customEditors")
+        assert appCtx.getBean("proxyHandler") instanceof DefaultProxyHandler
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareAspectJAwareAdvisorAutoProxyCreator
     }
 
+    @Test
     void testDisableAspectj() {
-        def pluginClass = gcl.loadClass("org.grails.plugins.CoreGrailsPlugin")
-
-        def plugin = new DefaultGrailsPlugin(pluginClass, ga)
+        def plugin = corePlugin()
 
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
         springConfig.servletContext = createMockServletContext()
         ga.config.grails.spring.disable.aspectj.autoweaving=true
         ga.configChanged()
-        plugin.doWithRuntimeConfiguration(springConfig)
 
-        def appCtx = springConfig.getApplicationContext()
+        def appCtx = configure(plugin, springConfig)
 
-        assert appCtx.containsBean("classLoader")
         assert appCtx.containsBean("customEditors")
         assert appCtx.getBean("org.springframework.aop.config.internalAutoProxyCreator") instanceof GroovyAwareInfrastructureAdvisorAutoProxyCreator
+    }
 
+    private DefaultGrailsPlugin corePlugin() {
+        new DefaultGrailsPlugin(gcl.loadClass("org.grails.plugins.CoreGrailsPlugin"), ga)
+    }
+
+    /**
+     * Runs both halves of a plugin's Spring contribution in the order the runtime does: the
+     * deprecated {@code doWithSpring} DSL drains first, then the registrar, so registrar beans
+     * win any name conflict.
+     */
+    private static configure(DefaultGrailsPlugin plugin, WebRuntimeSpringConfiguration springConfig) {
+        plugin.doWithRuntimeConfiguration(springConfig)
+        applyBeanRegistrar(plugin, springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext)
+        springConfig.getApplicationContext()
+    }
+
+    private static void applyBeanRegistrar(DefaultGrailsPlugin plugin, GenericApplicationContext context) {
+        BeanRegistrar registrar = plugin.beanRegistrar
+        if (registrar != null) {
+            new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
+                    .register(registrar)
+        }
     }
 
     protected void onSetUp() {
@@ -105,6 +117,7 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
      *
      * @author Luke Daley
      */
+    @Test
     void testBeanPropertyOverride() {
         def co = new ConfigSlurper().parse('''
             dataSource {
@@ -137,12 +150,21 @@ class CoreGrailsPluginTests extends AbstractGrailsMockTests {
         springConfig.servletContext = createMockServletContext()
 
         corePlugin.doWithRuntimeConfiguration(springConfig)
-        dataSourcePlugin.manager = new GrailsWebPluginManager([corePluginClass] as Class[], ga)
+        def discovery = new DefaultPluginDiscovery([corePluginClass] as Class[])
+        discovery.init(new StandardEnvironment())
+        dataSourcePlugin.manager = new GrailsWebPluginManager(ga, discovery)
         dataSourcePlugin.doWithRuntimeConfiguration(springConfig)
 
         def pluginClass = gcl.loadClass("org.grails.plugins.services.ServicesGrailsPlugin")
         def plugin = new DefaultGrailsPlugin(pluginClass, ga)
         plugin.doWithRuntimeConfiguration(springConfig)
+
+        // the configurer that applies the beans {} config block comes from the core registrar,
+        // the dataSource bean and the service beans from the registrars of their plugins
+        def context = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
+        applyBeanRegistrar(corePlugin, context)
+        applyBeanRegistrar(dataSourcePlugin, context)
+        applyBeanRegistrar(plugin, context)
 
         def appCtx = springConfig.getApplicationContext()
 

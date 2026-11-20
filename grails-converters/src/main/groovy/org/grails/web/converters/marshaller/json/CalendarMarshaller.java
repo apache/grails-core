@@ -20,38 +20,37 @@ package org.grails.web.converters.marshaller.json;
 
 import java.text.Format;
 import java.util.Calendar;
-import java.util.Locale;
-import java.util.TimeZone;
-
-import org.apache.commons.lang3.time.FastDateFormat;
 
 import grails.converters.JSON;
 import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.json.JSONException;
+import org.grails.web.json.JsonDateFormat;
 
 /**
- * JSON ObjectMarshaller which converts a Calendar Object to ISO-8601 format with Z suffix.
+ * JSON ObjectMarshaller which converts a Calendar Object to an RFC 3339 / ISO 8601
+ * UTC instant string with millisecond precision (e.g. {@code 2024-06-15T14:30:45.123Z}),
+ * the same as Spring Boot's default Jackson rendering. See {@link JsonDateFormat}.
  *
  * @since 7.0
  */
 public class CalendarMarshaller implements ObjectMarshaller<JSON> {
 
-    private final Format formatter;
+    private final Format legacyFormatter;
 
     /**
      * Constructor with a custom formatter.
      * @param formatter the formatter
      */
     public CalendarMarshaller(Format formatter) {
-        this.formatter = formatter;
+        this.legacyFormatter = formatter;
     }
 
     /**
-     * Default constructor.
+     * Default constructor — uses {@link JsonDateFormat}.
      */
     public CalendarMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone("GMT"), Locale.US));
+        this(null);
     }
 
     public boolean supports(Object object) {
@@ -61,7 +60,10 @@ public class CalendarMarshaller implements ObjectMarshaller<JSON> {
     public void marshalObject(Object object, JSON converter) throws ConverterException {
         try {
             Calendar calendar = (Calendar) object;
-            converter.getWriter().value(formatter.format(calendar.getTime()));
+            String formatted = legacyFormatter != null ?
+                    legacyFormatter.format(calendar.getTime()) :
+                    JsonDateFormat.format(calendar.getTimeInMillis());
+            converter.getWriter().value(formatted);
         }
         catch (JSONException e) {
             throw new ConverterException(e);

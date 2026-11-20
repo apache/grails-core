@@ -1,0 +1,325 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate.query
+
+import grails.persistence.Entity
+import org.grails.datastore.mapping.model.PersistentEntity
+import org.grails.orm.hibernate.HibernateDatastore
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+import spock.lang.Specification
+import spock.lang.Unroll
+
+class HqlQueryContextSpec extends Specification {
+
+    @Shared @AutoCleanup HibernateDatastore datastore
+    @Shared PersistentEntity bookEntity
+
+    void setupSpec() {
+        datastore = new HibernateDatastore(HqlQueryContextSpecBook)
+        bookEntity = datastore.mappingContext.getPersistentEntity(HqlQueryContextSpecBook.name)
+    }
+
+    void "prepare with plain HQL string"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, "from HqlQueryContextSpecBook where title = :t", [t: "Test"], null, [max: 10], [:], false, false)
+
+        then:
+        ctx.hql() == "from HqlQueryContextSpecBook where title = :t"
+        ctx.namedParams() == [t: "Test"]
+        ctx.positionalParams() == []
+        ctx.querySettings() == [max: 10]
+        !ctx.isUpdate()
+        !ctx.isNative()
+        ctx.targetClass() == HqlQueryContextSpecBook
+    }
+
+    void "prepare with empty HQL defaults to from Entity"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, "", [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == "from ${HqlQueryContextSpecBook.name}"
+    }
+
+    void "prepare expands GString into named parameters"() {
+        given:
+        String t = "The Hobbit"
+        int p = 300
+        GString gq = "from HqlQueryContextSpecBook where title = ${t} and pages > ${p}"
+
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == "from HqlQueryContextSpecBook where title = :p0 and pages > :p1"
+        ctx.namedParams() == [p0: "The Hobbit", p1: 300]
+    }
+
+    void "prepare expands GString into positional parameters when explicitly requested"() {
+        given:
+        String t = "The Hobbit"
+        GString gq = "from HqlQueryContextSpecBook where title = ${t}"
+
+        when:
+        // Currently, if positionalParams is empty, it still defaults to named parameters
+        // because positionalParamsCopy.isEmpty() is true initially.
+        def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], [], [:], [:], false, false)
+
+        then:
+        ctx.hql() == "from HqlQueryContextSpecBook where title = :p0"
+        ctx.namedParams() == [p0: "The Hobbit"]
+    }
+
+    @Unroll
+    void "getTarget for '#hql' should be #expected"() {
+        expect:
+        HqlQueryContext.getTarget(hql, HqlQueryContextSpecBook) == expected
+
+        where:
+        hql                                                     | expected
+        "from Book"                                             | HqlQueryContextSpecBook
+        "select b from Book b"                                  | HqlQueryContextSpecBook
+        "select b.title from Book b"                            | Object
+        "select b.title, b.pages from Book b"                   | Object[]
+        "select count(b.id) from Book b"                        | null
+        "select sum(b.pages) from Book b"                       | null
+        "select avg(b.pages) from Book b"                       | null
+        "select new map(b.title as title) from Book b"          | Object
+        "select distinct b.author from Book b"                  | Object
+        "select Book from Book"                                 | HqlQueryContextSpecBook
+        "select b from Book as b"                               | HqlQueryContextSpecBook
+        "select b from Book b join b.author a"                  | HqlQueryContextSpecBook
+        "select a from Book b join b.author a"                  | Object
+        "select distinct a from Book b join b.author a"         | Object
+        "select a from Book b, Author a where a = b.author"     | Object
+        "select current_date from Book b"                       | Object
+        "select new map(title as title) from Book"              | Object
+    }
+
+    void "prepare defaults a blank query of every kind to from Entity, and passes a native query or an update on untrimmed"() {
+        expect:
+        HqlQueryContext.prepare(bookEntity, text, [:], null, [:], [:], isNative, isUpdate).hql() == expected
+
+        where:
+        text           | isNative | isUpdate || expected
+        '   '          | false    | false    || 'from ' + HqlQueryContextSpecBook.name
+        '   '          | true     | false    || 'from ' + HqlQueryContextSpecBook.name
+        '   '          | false    | true     || 'from ' + HqlQueryContextSpecBook.name
+        ' select 1 '   | true     | false    || ' select 1 '
+        ' delete Book ' | false   | true     || ' delete Book '
+    }
+
+    void "prepare targets the entity for a native query whatever its select clause"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, sql, [:], null, [:], [:], true, false)
+
+        then: "and the SQL is not read as HQL: it runs as written, whatever its literals lowercase to"
+        ctx.targetClass() == HqlQueryContextSpecBook
+        ctx.hql() == sql
+
+        where:
+        sql << ['select * from hql_query_context_spec_book order by title',
+                'select b.* from hql_query_context_spec_book b',
+                'select * from hql_query_context_spec_book b where b.title = :title',
+                "select b.*, 'İİ' from hql_query_context_spec_book b"]
+    }
+
+    @Unroll
+    void "normalizeNonAliasedSelect: '#hql' -> '#expected'"() {
+        expect:
+        HqlQueryContext.normalizeNonAliasedSelect(hql) == expected
+
+        where:
+        hql                                         | expected
+        "select title from Book"                    | "select e.title from Book e"
+        "select Book from Book"                     | "select e from Book e"
+        "select b.title from Book b"                | "select b.title from Book b"
+        "select count(title) from Book"             | "select count(title) from Book e"
+        "select distinct title from Book"           | "select distinct e.title from Book e"
+    }
+
+    @Unroll
+    void "prepare reads the select and from of the query itself in '#hql'"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, hql, [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == expectedHql
+        ctx.targetClass() == expectedTarget
+
+        where:
+        hql                                                     | expectedHql                                               | expectedTarget
+        "from Book where id in (select id from Author)"         | "from Book where id in (select id from Author)"           | HqlQueryContextSpecBook
+        "from Book b where b.id in (select a.id from Author a)" | "from Book b where b.id in (select a.id from Author a)"   | HqlQueryContextSpecBook
+        "from Book where title = 'select name from Author'"     | "from Book where title = 'select name from Author'"       | HqlQueryContextSpecBook
+        "select title, (select count(*) from Author) from Book" | "select title, (select count(*) from Author) from Book e" | Object[]
+        "/* the book's (title) */ select title from Book"       | "/* the book's (title) */ select e.title from Book e"     | Object
+        "SELECT DISTINCT title FROM Book"                       | "select distinct e.title from Book e"                     | Object
+    }
+
+    @Unroll
+    void "prepare runs an update as written: '#hql'"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, hql, [:], null, [:], [:], false, true)
+
+        then:
+        ctx.hql() == hql
+        ctx.isUpdate()
+
+        where:
+        hql << ["delete from Book where title in (select name from Author)",
+                "update Book set pages = 1 where title in (select name from Author)",
+                "insert into Book (title) select name from Author"]
+    }
+
+    void "GString expansion adds spaces if needed"() {
+        given:
+        String val = "value"
+        // No space before interpolation
+        GString gq = "from Book where title=${val}"
+
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, gq, [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == "from Book where title= :p0"
+    }
+
+    void "normalizeMultiLineQueryString replaces newlines with spaces"() {
+        given:
+        String hql = "from Book\nwhere title = :t\norder by id"
+
+        when:
+        def resolved = HqlQueryContext.normalizeMultiLineQueryString(hql)
+
+        then:
+        resolved == "from Book where title = :t order by id"
+    }
+
+    @Unroll
+    void "getCommas: '#input' -> #expected"() {
+        expect:
+        HqlQueryContext.getCommas(input) == expected
+
+        where:
+        input                               | expected
+        "a, b"                              | 1
+        "a, b, c"                           | 2
+        "func(a, b), c"                     | 1
+        "'a, b', c"                         | 1
+        "\"a, b\", c"                       | 1
+        "`a, b`, c"                         | 1
+        "a /* , */, b"                      | 1
+        "a -- ,\n, b"                       | 2 // HQL has no line comments: the double minus is a subtraction
+        "a"                                 | 0
+    }
+
+    @Unroll
+    void "countHqlProjections: '#hql' -> #expected"() {
+        expect:
+        HqlQueryContext.countHqlProjections(hql) == expected
+
+        where:
+        hql                                 | expected
+        "select a from Book"                | 1
+        "select a, b from Book"             | 2
+        "from Book"                         | 0
+        "select distinct a from Book"       | 1
+        "select count(a) from Book"         | 1
+    }
+
+    @Unroll
+    void "isHasAlias: '#hql', cur=#cur, end=#end -> #expected"() {
+        expect:
+        HqlQueryContext.isHasAlias(hql, cur, end) == expected
+
+        where:
+        hql                             | cur | end | expected
+        "from Book b where"             | 10  | 11  | true  // 'b' is alias
+        "from Book where"               | 10  | 15  | false // 'where' is keyword
+        "from Book join"                | 10  | 14  | false // 'join' is keyword
+    }
+
+    @Unroll
+    void "a keyword inside a longer word is not the select of the query: #hql"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, hql, [:], null, [:], [:], false, false)
+
+        then: "the query is kept as written and returns entities"
+        ctx.hql() == hql
+        ctx.targetClass() == HqlQueryContextSpecBook
+
+        where:
+        hql << [
+            "from HqlQueryContextSpecBook where preselect = 1",
+            "from HqlQueryContextSpecBook where title = 'a' and autoselect is null",
+            "from HqlQueryContextSpecBook where fromselect = 1"
+        ]
+    }
+
+    void "an escaped quote does not end a string literal that holds a select"() {
+        given:
+        String hql = "from HqlQueryContextSpecBook where title = 'it''s select x from y'"
+
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity, hql, [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == hql
+        ctx.targetClass() == HqlQueryContextSpecBook
+    }
+
+    void "what precedes the select, such as a with clause, is kept"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity,
+                "with recent as (select b from HqlQueryContextSpecBook b) select title from HqlQueryContextSpecBook",
+                [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == "with recent as (select b from HqlQueryContextSpecBook b) select e.title from HqlQueryContextSpecBook e"
+        ctx.targetClass() == Object
+    }
+
+    void "a select after the from clause is the select of the query"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity,
+                "from HqlQueryContextSpecBook b select b.title", [:], null, [:], [:], false, false)
+
+        then:
+        ctx.hql() == "from HqlQueryContextSpecBook b select b.title"
+        ctx.targetClass() == Object
+    }
+
+    void "a subquery in the where clause of a query that selects the root alias returns entities"() {
+        when:
+        def ctx = HqlQueryContext.prepare(bookEntity,
+                "select b from HqlQueryContextSpecBook b where b.pages in (select max(c.pages) from HqlQueryContextSpecBook c)",
+                [:], null, [:], [:], false, false)
+
+        then:
+        ctx.targetClass() == HqlQueryContextSpecBook
+    }
+}
+
+@Entity
+class HqlQueryContextSpecBook {
+    String title
+    Integer pages
+}

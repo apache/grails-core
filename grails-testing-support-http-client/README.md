@@ -70,7 +70,7 @@ Supported named options mirror the `JsonSlurper` settings exposed by `JsonUtils.
 ### Custom XML Parsing
 
 Response XML parsing uses a secure default `XmlSlurper` configuration. It is namespace-aware, non-validating,
-allows inline `DOCTYPE` declarations, and disables external entity expansion plus external DTD loading.
+rejects `DOCTYPE` declarations, and disables external entity expansion plus external DTD loading.
 
 When a test needs different XML parsing behavior, override it fluently on the response wrapper:
 
@@ -107,9 +107,6 @@ rendering details such as null handling, field exclusions, converters, and date 
 
 ```groovy
 import groovy.json.JsonGenerator
-import java.time.LocalDate
-import java.time.ZoneOffset
-import java.util.Date
 
 def jsonGenerator = new JsonGenerator.Options()
     .excludeNulls()
@@ -119,12 +116,22 @@ def jsonGenerator = new JsonGenerator.Options()
 httpPutJson('/products/1', jsonGenerator, [
     name: 'Widget',
     discontinuedAt: null,
-    releaseDate: Date.from(LocalDate.parse('2026-03-18').atStartOfDay(ZoneOffset.UTC).toInstant())
+    releaseDate: new Date()
 ])
 ```
 
 The same `JsonGenerator` overload pattern is available on `httpPostJson(...)`, `httpPutJson(...)`, and
 `httpPatchJson(...)`, including the variants that accept request headers and an explicit `HttpClient`.
+
+### Form data
+
+`httpPostForm(...)` sends `application/x-www-form-urlencoded` request bodies. Pass a `Map` of form fields and the
+helper will URL-encode each entry using UTF-8. Scalar values are encoded once, while `Collection` and array values are
+encoded as repeated keys in insertion order:
+
+```groovy
+httpPostForm('/search', [query: 'grails core', tag: ['web', 'testing']])
+```
 
 ### XML formatting
 
@@ -198,4 +205,3 @@ def payload = XmlUtils.toXml(omitNullAttributes: true, spaceInEmptyElements: fal
 
 httpPost('/products', payload, 'application/xml')
 ```
-

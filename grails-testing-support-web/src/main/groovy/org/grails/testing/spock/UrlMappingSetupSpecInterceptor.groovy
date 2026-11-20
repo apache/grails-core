@@ -26,12 +26,26 @@ import org.spockframework.runtime.extension.IMethodInvocation
 
 import grails.testing.web.UrlMappingsUnitTest
 
+/**
+ * Wires up controllers and URL mappings for {@link UrlMappingsUnitTest}-based specs.
+ *
+ * Acts as both a {@code setupSpec} interceptor (mocking declared controllers once per spec
+ * class) and a {@code setup} interceptor (re-registering this spec's URL mappings before
+ * every feature method). The per-feature pass guarantees that a spec running after another
+ * spec in the same JVM sees only its own URL mappings, regardless of what the previous spec
+ * did to the artefact registry or the {@code grailsUrlMappingsHolder} bean.
+ */
 @CompileStatic
 class UrlMappingSetupSpecInterceptor implements IMethodInterceptor {
 
     @Override
     void intercept(IMethodInvocation invocation) throws Throwable {
-        ((UrlMappingsUnitTest) invocation.instance).configuredMockedControllers()
+        UrlMappingsUnitTest spec = (UrlMappingsUnitTest) invocation.instance
+        if (invocation.method.kind.isSpecScopedFixtureMethod()) {
+            spec.configuredMockedControllers()
+        } else {
+            spec.resetUrlMappingsForFeature()
+        }
         invocation.proceed()
     }
 }

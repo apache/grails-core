@@ -40,6 +40,8 @@ import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.runtime.IOGroovyMethods;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -62,7 +64,6 @@ import grails.config.Config;
 import grails.config.Settings;
 import grails.core.GrailsApplication;
 import grails.core.GrailsClass;
-import grails.io.IOUtils;
 import grails.util.CacheEntry;
 import grails.util.Environment;
 import grails.util.GrailsUtil;
@@ -107,6 +108,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     private ConcurrentMap<String, CacheEntry<GroovyPageMetaInfo>> pageCache = new ConcurrentHashMap<>();
     private ClassLoader classLoader;
     private AtomicInteger scriptNameCount = new AtomicInteger(0);
+
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     private GroovyPageLocator groovyPageLocator = new DefaultGroovyPageLocator();
 
@@ -481,6 +484,19 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
     }
 
     protected GroovyPageMetaInfo buildPageMetaInfo(Resource resource, String pageName) throws IOException {
+        if (this.observationRegistry.isNoop()) {
+            return doBuildPageMetaInfo(resource, pageName);
+        }
+        // Compilation only happens on a template cache miss, so the count of this observation is
+        // effectively the GSP compile (cache-miss) rate; its timer is the compile latency.
+        var resourceName = (pageName != null && !pageName.isEmpty()) ? pageName : "unknown";
+        var observation = Observation.createNotStarted("gsp.compile", this.observationRegistry)
+                .contextualName("gsp.compile " + resourceName)
+                .highCardinalityKeyValue("gsp.name", resourceName);
+        return observation.observeChecked(() -> doBuildPageMetaInfo(resource, pageName));
+    }
+
+    private GroovyPageMetaInfo doBuildPageMetaInfo(Resource resource, String pageName) throws IOException {
         InputStream inputStream = resource.getInputStream();
         try {
             return buildPageMetaInfo(inputStream, resource, pageName);
@@ -566,8 +582,13 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
         GroovyPageParser parser;
         String path = getPathForResource(res);
+        // Buffer the raw bytes rather than decoding straight off the stream, so the page can be checksummed
+        // exactly as it is stored. The checksum has to be taken over the stored bytes, not over gspSource or
+        // the decorated source below, because the runtime re-reads the resource raw when checking staleness.
+        byte[] gspBytes;
         try {
-            String gspSource = IOUtils.toString(inputStream, getGspEncoding());
+            gspBytes = inputStream.readAllBytes();
+            String gspSource = new String(gspBytes, getGspEncoding());
             parser = new GroovyPageParser(name, path, path, decorateGroovyPageSource(new StringBuilder(gspSource)).toString(),
                     grailsApplication != null ? grailsApplication.getConfig() : null);
         }
@@ -579,7 +600,9 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
 
         // Make a new metaInfo
         GroovyPageMetaInfo metaInfo = createPageMetaInfo(parser, in);
-        metaInfo.applyLastModifiedFromResource(res);
+        // A page compiled at runtime is checked for staleness the same way a precompiled one is. It costs
+        // nothing extra -- the bytes are already in hand.
+        metaInfo.setSourceChecksum(GroovyPageParser.checksumOf(gspBytes));
         try {
             metaInfo.setPageClass(compileGroovyPage(in, name, path, metaInfo));
             metaInfo.setHtmlParts(parser.getHtmlPartsArray());
@@ -754,6 +777,8 @@ public class GroovyPagesTemplateEngine extends ResourceAwareTemplateEngine imple
             Config config = grailsApplication.getConfig();
             this.gspEncoding = config.getProperty(GroovyPageParser.CONFIG_PROPERTY_GSP_ENCODING, System.getProperty("file.encoding", GroovyPageParser.DEFAULT_ENCODING));
         }
+        this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry.class)
+                .getIfAvailable(() -> ObservationRegistry.NOOP);
     }
 
     /**

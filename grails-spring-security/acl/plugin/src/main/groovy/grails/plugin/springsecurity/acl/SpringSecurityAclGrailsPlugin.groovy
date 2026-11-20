@@ -329,6 +329,7 @@ class SpringSecurityAclGrailsPlugin extends Plugin {
         def metadataSources = [
                 ref('prePostAnnotationSecurityMetadataSource'),
                 ref('springSecuredAnnotationSecurityMetadataSource'),
+                ref('grailsSecuredAnnotationSecurityMetadataSource'),
                 ref('serviceStaticMethodSecurityMetadataSource')]
         aclSecurityMetadataSource(ProxyAwareDelegatingMethodSecurityMetadataSource) {
             methodSecurityMetadataSources = metadataSources

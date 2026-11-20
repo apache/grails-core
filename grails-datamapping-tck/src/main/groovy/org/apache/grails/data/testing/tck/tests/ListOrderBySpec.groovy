@@ -27,6 +27,11 @@ import org.apache.grails.data.testing.tck.domains.TestEntity
  */
 class ListOrderBySpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     void 'Test listOrderBy property name method'() {
         given:
         def child = new ChildEntity(name: 'Child')
@@ -51,5 +56,27 @@ class ListOrderBySpec extends GrailsDataTckSpec {
         results[2].name == 'Jack'
         results[1].name == 'Bob'
         results[0].name == 'Fred'
+    }
+
+    void 'Test listOrderBy normalizes the order direction and rejects any value other than asc or desc'() {
+        given:
+        def child = new ChildEntity(name: 'Child')
+        new TestEntity(age: 30, name: 'Bob', child: child).save()
+        new TestEntity(age: 55, name: 'Fred', child: child).save(flush: true)
+
+        when:
+        def descending = TestEntity.listOrderByAge(order: ' DESC ')
+        def ascending = TestEntity.listOrderByAge(order: 'Asc')
+
+        then:
+        descending*.name == ['Fred', 'Bob']
+        ascending*.name == ['Bob', 'Fred']
+
+        when:
+        TestEntity.listOrderByAge(order: 'sideways')
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Invalid sort direction'
     }
 }

@@ -24,15 +24,20 @@ import page.LifecyclePage
 
 class RegistrationCodeEditPage extends EditPage {
 
-	static url = 'registrationCode/edit'
-	static typeName = { 'RegistrationCode' }
-	static content = {
-		token { $(name: 'token').module(TextInput) }
-		username { $('#username').module(TextInput) }
-	}
+    static url = 'registrationCode/edit'
+    static typeName = { 'RegistrationCode' }
 
-	def <T extends LifecyclePage> T  submitEdit(RegistrationCodeForm formData = null, Class<T> expectedPageType) {
-		formData?.applyTo(this)
-		super.submitEdit(expectedPageType)
-	}
+    String convertToPath(Object[] args) {
+        args ? "/${args[0]}" : ''
+    }
+
+    static content = {
+        token { $(name: 'token').module(TextInput) }
+        username { $('#username').module(TextInput) }
+    }
+
+    def <T extends LifecyclePage> T  submitEdit(RegistrationCodeForm formData = null, Class<T> expectedPageType) {
+        formData?.applyTo(this)
+        super.submitEdit(expectedPageType)
+    }
 }

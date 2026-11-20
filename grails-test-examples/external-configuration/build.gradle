@@ -23,7 +23,6 @@ plugins {
     id 'org.apache.grails.buildsrc.vulnerability-scan'
 }
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 version = '0.1'
@@ -40,11 +39,10 @@ dependencies {
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-scaffolding'
@@ -57,7 +55,6 @@ dependencies {
 
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'

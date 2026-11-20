@@ -43,7 +43,7 @@ extensions.configure(CodeNarcExtension) {
 }
 ----
 
-NOTE: Use the `-groovy-4.0` variant of CodeNarc for Grails 7 projects (which use Groovy 4.x). The plain artifact without a `-groovy-4.0` suffix is built for Groovy 3.x and will not work correctly.
+NOTE: Use the `-groovy-4.0` variant of CodeNarc for Grails {grailsMajorVersion} projects (which use Groovy 4.x). The plain artifact without a `-groovy-4.0` suffix is built for Groovy 3.x and will not work correctly.
 
 You can then run CodeNarc with:
 

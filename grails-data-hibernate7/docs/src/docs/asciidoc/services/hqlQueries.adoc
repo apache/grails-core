@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+If you need even more flexibility, then HQL queries can be used via the `@Query` annotation:
+
+[source,groovy]
+----
+@Query("from $Book as book where book.title like $pattern")
+Book searchByTitle(String pattern)
+----
+
+Note that in the example above, if you misspell the `pattern` parameter passed to the query a compilation error will occur.
+
+However, if you were to incorrectly input the `title` property no error would occur since it is part of the String and not a variable.
+
+You can resolve this by declaring the value of `book` within the passed GString:
+
+[source,groovy]
+----
+@Query("from ${Book book} where ${book.title} like $pattern")
+Book searchByTitle(String pattern)
+----
+
+In the above example if you misspell the `title` property then a compilation error will occur. This is extremely powerful as it gives you the ability to type check HQL queries, which has always been one of the disadvantages of using them in comparison to criteria.
+
+This support for type checked queries extends to joins. For example consider this query:
+
+[source,groovy]
+----
+@Query("""
+ from ${Book book} <1>
+ inner join ${Author author = book.author} <2>
+ where $book.title = $title and $author.name = $author""") <3>
+Book find(String title, String author)
+----
+
+<1> Using `from` to define the root query
+<2> Use inner join and a declaration to define the association to join on
+<3> Apply any conditions in the `where` clause

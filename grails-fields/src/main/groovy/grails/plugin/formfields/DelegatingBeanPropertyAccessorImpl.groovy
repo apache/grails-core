@@ -25,7 +25,6 @@ import groovy.transform.ToString
 
 import org.springframework.validation.FieldError
 
-import grails.core.GrailsDomainClass
 import grails.util.GrailsNameUtils
 import grails.validation.Validateable
 import org.grails.datastore.gorm.GormValidateable
@@ -72,12 +71,6 @@ class DelegatingBeanPropertyAccessorImpl implements BeanPropertyAccessor {
     @Override
     String getPathFromRoot() {
         pathFromRoot
-    }
-
-    @Override
-    @Deprecated
-    GrailsDomainClass getBeanClass() {
-        throw new UnsupportedOperationException()
     }
 
     @Override

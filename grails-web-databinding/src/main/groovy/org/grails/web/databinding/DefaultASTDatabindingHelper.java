@@ -60,10 +60,11 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     public static final String BINDABLE_CONSTRAINT_NAME = "bindable";
 
     public static final String DEFAULT_DATABINDING_WHITELIST = "$defaultDatabindingWhiteList";
+    public static final String LEGACY_DATABINDING_WHITELIST = "$legacyDatabindingWhiteList";
     public static final String NO_BINDABLE_PROPERTIES = "$_NO_BINDABLE_PROPERTIES_$";
-
     /** Node metadata keys of the names computed for a class of the compilation unit. */
     private static final String WHITE_LIST_PROPERTY_NAMES = DefaultASTDatabindingHelper.class.getName() + ".whiteListPropertyNames";
+    private static final String LEGACY_WHITE_LIST_PROPERTY_NAMES = DefaultASTDatabindingHelper.class.getName() + ".legacyWhiteListPropertyNames";
     private static final String EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES = DefaultASTDatabindingHelper.class.getName() + ".explicitlyBindableSpecialPropertyNames";
     private static final String WARNED = DefaultASTDatabindingHelper.class.getName() + ".warned";
     private static final String TRANSIENTS_FIELD_NAME = "transients";
@@ -105,19 +106,19 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
 
     public void injectDatabindingCode(final SourceUnit source, final GeneratorContext context, final ClassNode classNode) {
         if (!classNode.isPrimaryClassNode()) {
-            warnAboutCompiledClassWithoutWhiteList(source, classNode);
+            warnAboutCompiledClassWithoutWhiteLists(source, classNode);
             return;
         }
-        addDefaultDatabindingWhitelistField(source, classNode, false);
+        addDefaultDatabindingWhitelistFields(source, classNode, false);
     }
 
     /**
      * A class that is not in this compilation unit, as the parameter type of an action is when a plugin or another
-     * module compiled it, cannot be given a white list here: a field added to its class node never reaches its
-     * bytecode. It is left as it was compiled. When it has binding rules but no white list, so that the binder
+     * module compiled it, cannot be given white lists here: fields added to its class node never reach its
+     * bytecode. It is left as it was compiled. When it has binding rules but no white lists, so that the binder
      * binds it without restriction, a warning, once per class, says to recompile it.
      */
-    private static void warnAboutCompiledClassWithoutWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
+    private static void warnAboutCompiledClassWithoutWhiteLists(final SourceUnit sourceUnit, final ClassNode classNode) {
         if (sourceUnit == null || hasWhiteListField(classNode) || !classNode.getAnnotations(GENERATED_WHITE_LIST_TYPE).isEmpty() ||
                 !hasBindingRules(classNode) || classNode.getNodeMetaData(WARNED) != null) {
             return;
@@ -131,160 +132,63 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     /**
-     * Gives a class that got no white list field when the artefacts of its compilation unit were processed one, with
-     * a record of the names in it: a base class that is neither a domain class nor an action parameter, a command
-     * object compiled apart from its controller, or a class that only inherits its binding rules. Called after
-     * canonicalization, so the setters that transformations such as {@code @Delegate} add to the class are in the
-     * list. If a subclass of the compilation unit already computed the names it inherits from this class, those
-     * names are kept, so that the class and its subclass agree.
+     * Gives a class that got no white list fields when the artefacts of its compilation unit were processed them,
+     * with a record of the names in them: a base class that is neither a domain class nor an action parameter, a
+     * command object compiled apart from its controller, or a class that only inherits its binding rules. Called
+     * after canonicalization, so the setters that transformations such as {@code @Delegate} add to the class are in
+     * the lists. If a subclass of the compilation unit already computed the names it inherits from this class,
+     * those names are kept, so that the class and its subclass agree.
      */
-    void addDefaultDatabindingWhitelistField(final SourceUnit sourceUnit, final ClassNode classNode) {
+    void addDefaultDatabindingWhitelistFields(final SourceUnit sourceUnit, final ClassNode classNode) {
         if (hasWhiteListField(classNode)) {
-            recordDeclaredWhiteList(classNode);
+            recordDeclaredWhiteLists(classNode);
             return;
         }
-        addDefaultDatabindingWhitelistField(sourceUnit, classNode, true);
+        addDefaultDatabindingWhitelistFields(sourceUnit, classNode, true);
     }
 
     /**
-     * Records the white list a class declares itself, so that a subclass compiled against the compiled class reads
-     * it as it reads a generated list. The list is the class's own, written by its author or standing in for one an
-     * earlier Grails generated, and is left as it is. A list declared other than as a list of names is not
+     * Records the white lists a class declares itself, so that a subclass compiled against the compiled class reads
+     * them as it reads generated lists. The lists are the class's own, written by its author or standing in for ones
+     * an earlier Grails generated, and are left as they are. A list declared other than as a list of names is not
      * recorded, and a subclass compiled against the class is then warned about, as it is about a class an earlier
-     * Grails compiled. A subclass of the compilation unit may have read the declared list into the class's metadata
-     * already; the record is written all the same.
+     * Grails compiled. A subclass of the compilation unit may have read the declared lists into the class's
+     * metadata already; the record is written all the same.
      */
-    private void recordDeclaredWhiteList(final ClassNode classNode) {
+    private void recordDeclaredWhiteLists(final ClassNode classNode) {
         if (!classNode.getAnnotations(GENERATED_WHITE_LIST_TYPE).isEmpty()) {
             return;
         }
-        if (readDeclaredWhiteList(classNode)) {
-            recordWhiteList(classNode);
+        if (readDeclaredWhiteLists(classNode)) {
+            recordWhiteLists(classNode);
         }
     }
 
-    private void addDefaultDatabindingWhitelistField(final SourceUnit sourceUnit, final ClassNode classNode, final boolean keepComputedNames) {
-        final FieldNode defaultWhitelistField = classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST);
-        if (defaultWhitelistField != null) {
-            return;
-        }
-
-        Set<String> propertyNamesToIncludeInWhiteList = keepComputedNames ? classNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES) : null;
-        if (propertyNamesToIncludeInWhiteList == null) {
-            propertyNamesToIncludeInWhiteList = getPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
-        }
-
-        final ListExpression listExpression = new ListExpression();
-        if (propertyNamesToIncludeInWhiteList.size() > 0) {
-            for (String propertyName : propertyNamesToIncludeInWhiteList) {
-                listExpression.addExpression(new ConstantExpression(propertyName));
-
-                final FieldNode declaredField = getDeclaredFieldInInheritanceHierarchy(classNode, propertyName);
-                boolean isSimpleType = false;
-                if (declaredField != null) {
-                    final ClassNode type = declaredField.getType();
-                    if (type != null) {
-                        isSimpleType = SIMPLE_TYPES.contains(type);
-                    }
-                }
-                if (!isSimpleType) {
-                    listExpression.addExpression(new ConstantExpression(propertyName + "_*"));
-                    listExpression.addExpression(new ConstantExpression(propertyName + ".*"));
-                }
+    private void addDefaultDatabindingWhitelistFields(final SourceUnit sourceUnit, final ClassNode classNode, final boolean keepComputedNames) {
+        if (classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST) == null) {
+            Set<String> propertyNamesToIncludeInWhiteList = keepComputedNames ? classNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES) : null;
+            if (propertyNamesToIncludeInWhiteList == null) {
+                propertyNamesToIncludeInWhiteList = getPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
             }
-        } else {
-            listExpression.addExpression(new ConstantExpression(NO_BINDABLE_PROPERTIES));
+            addWhitelistField(classNode, DEFAULT_DATABINDING_WHITELIST, propertyNamesToIncludeInWhiteList, true);
         }
 
-        classNode.addField(DEFAULT_DATABINDING_WHITELIST,
-                Modifier.STATIC | Modifier.PUBLIC | Modifier.FINAL, new ClassNode(List.class),
-                listExpression);
-        recordWhiteList(classNode);
-    }
-
-    private FieldNode getDeclaredFieldInInheritanceHierarchy(final ClassNode classNode, String propertyName) {
-        FieldNode fieldNode = classNode.getDeclaredField(propertyName);
-        if (fieldNode == null) {
-            if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
-                return getDeclaredFieldInInheritanceHierarchy(classNode.getSuperClass(), propertyName);
+        if (classNode.getDeclaredField(LEGACY_DATABINDING_WHITELIST) == null) {
+            Set<String> legacyPropertyNamesToIncludeInWhiteList = keepComputedNames ? classNode.getNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES) : null;
+            if (legacyPropertyNamesToIncludeInWhiteList == null) {
+                legacyPropertyNamesToIncludeInWhiteList = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, classNode);
             }
+            addWhitelistField(classNode, LEGACY_DATABINDING_WHITELIST, legacyPropertyNamesToIncludeInWhiteList, true);
         }
-        return fieldNode;
-    }
-
-    /**
-     * The names a subclass inherits from its parent: those computed for the parent in this compilation unit, or
-     * those recorded on the parent when it was compiled, in another module, in a plugin or in an earlier build.
-     * The bytecode of a compiled parent has no constraints closure and no transients list, so recomputing from it
-     * would make what the parent declared transient or {@code bindable: false} bindable in the subclass, and
-     * would lose what the parent made bindable by constraint.
-     *
-     * @param compiledClassNode the class of the compilation unit whose white list is being computed, of which the
-     *                          parent may be a distant ancestor
-     */
-    private Set<String> getPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
-        Set<String> propertyNames = parentClassNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES);
-        if (propertyNames == null) {
-            propertyNames = getRecordedNamesForParentClass(sourceUnit, compiledClassNode, parentClassNode, "value", WHITE_LIST_PROPERTY_NAMES);
-        }
-        if (propertyNames == null && readDeclaredWhiteList(parentClassNode)) {
-            propertyNames = parentClassNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES);
-        }
-        if (propertyNames == null) {
-            propertyNames = getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode, compiledClassNode);
-        }
-        return propertyNames;
-    }
-
-    private Set<String> getExplicitlyBindableSpecialPropertyNamesForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
-        Set<String> explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
-        if (explicitlyBindable == null) {
-            explicitlyBindable = getRecordedNamesForParentClass(sourceUnit, compiledClassNode, parentClassNode, "explicitlyBindable", EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
-        }
-        if (explicitlyBindable == null && readDeclaredWhiteList(parentClassNode)) {
-            explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
-        }
-        if (explicitlyBindable == null) {
-            getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode, compiledClassNode);
-            explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
-        }
-        return explicitlyBindable != null ? explicitlyBindable : new HashSet<>();
-    }
-
-    /**
-     * The names a member of the record on a compiled parent holds, or {@code null} when the parent is in this
-     * compilation unit or has no record. A parent with binding rules but no record is recomputed from its bytecode
-     * with a warning, once per parent, that names the class being compiled. A parent without rules, as a Java class
-     * or a plain base class is, is recomputed from its bytecode as it always was.
-     */
-    private static Set<String> getRecordedNamesForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode, final String member, final String key) {
-        if (parentClassNode.isPrimaryClassNode()) {
-            return null;
-        }
-        final Set<String> recorded = getRecordedNames(parentClassNode, member);
-        if (recorded != null) {
-            parentClassNode.putNodeMetaData(key, recorded);
-            return recorded;
-        }
-        if (sourceUnit != null && (hasWhiteListField(parentClassNode) || hasBindingRules(parentClassNode)) &&
-                parentClassNode.getNodeMetaData(WARNED) == null) {
-            parentClassNode.putNodeMetaData(WARNED, Boolean.TRUE);
-            GrailsASTUtils.warning(sourceUnit, compiledClassNode, "The data binding white list of [" + compiledClassNode.getName() +
-                    "] is derived from the bytecode of [" + parentClassNode.getName() + "], which was compiled without " +
-                    "a record of its own white list: properties the parent declares transient or bindable: false may " +
-                    "be bindable. Recompile the parent with a Grails that records the white list and with " +
-                    "grails-web-databinding on its compile classpath.");
-        }
-        return null;
+        recordWhiteLists(classNode);
     }
 
     /**
      * Whether a class is bound by rules that must outlive its compilation: it declares constraints or transients, it
      * is a command object, which implements {@code grails.validation.Validateable}, or it extends a class that does
-     * or that already has a white list or a record of one. Such a class gets a white list field even when nothing
+     * or that already has white lists or a record of them. Such a class gets white list fields even when nothing
      * in its compilation unit binds it: for the binder, and for a subclass compiled against it. An instance
-     * property named {@code constraints} or {@code transients} is not a rule, and a white list the class declares
-     * itself is not one either: that list is the class's own, and is left as it is.
+     * property named {@code constraints} or {@code transients} is not a rule.
      */
     static boolean hasBindingRules(final ClassNode classNode) {
         if (classNode.implementsInterface(VALIDATEABLE_TYPE) || declaresBindingRules(classNode)) {
@@ -303,7 +207,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     static boolean hasWhiteListField(final ClassNode classNode) {
-        return classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST) != null;
+        return classNode.getDeclaredField(DEFAULT_DATABINDING_WHITELIST) != null || classNode.getDeclaredField(LEGACY_DATABINDING_WHITELIST) != null;
     }
 
     private static boolean hasStaticField(final ClassNode classNode, final String fieldName) {
@@ -312,19 +216,25 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     /**
-     * Reads the white list a class of this compilation unit declares itself, as a class that writes its own
-     * {@code $defaultDatabindingWhiteList} does, into the class's node metadata, and says whether it declares one.
-     * The list is the author's own, so a subclass inherits it as it would inherit the list Grails generates; the
-     * special properties it names are the ones the author made bindable. A list declared other than as a list of
-     * names, and the field of a compiled class, whose initial value is not in its bytecode, are not read.
+     * Reads the white lists a class of this compilation unit declares itself, as a class that writes its own
+     * {@code $defaultDatabindingWhiteList} does, into the class's node metadata, and says whether it declares any.
+     * The lists are the author's own, so a subclass inherits them as it would inherit the lists Grails generates. A
+     * class that writes only {@code $defaultDatabindingWhiteList} writes the one list Grails 7 has, which is the
+     * legacy list; the special properties it names are then all that is known of its deny-by-default list, as for
+     * a class Grails 7 compiled. A list declared other than as a list of names, and the field of a compiled class,
+     * whose initial value is not in its bytecode, are not read.
      */
-    private static boolean readDeclaredWhiteList(final ClassNode classNode) {
-        final Set<String> names = getDeclaredWhiteListNames(classNode, DEFAULT_DATABINDING_WHITELIST);
-        if (names == null) {
+    private static boolean readDeclaredWhiteLists(final ClassNode classNode) {
+        final Set<String> defaultNames = getDeclaredWhiteListNames(classNode, DEFAULT_DATABINDING_WHITELIST);
+        final Set<String> legacyNames = getDeclaredWhiteListNames(classNode, LEGACY_DATABINDING_WHITELIST);
+        if (defaultNames == null && legacyNames == null) {
             return false;
         }
-        classNode.putNodeMetaData(WHITE_LIST_PROPERTY_NAMES, names);
-        classNode.putNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES, specialPropertyNamesIn(names));
+        final Set<String> legacy = legacyNames != null ? legacyNames : defaultNames;
+        final Set<String> denyByDefault = legacyNames != null && defaultNames != null ? defaultNames : specialPropertyNamesIn(legacy);
+        classNode.putNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES, legacy);
+        classNode.putNodeMetaData(WHITE_LIST_PROPERTY_NAMES, denyByDefault);
+        classNode.putNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES, specialPropertyNamesIn(denyByDefault));
         return true;
     }
 
@@ -355,17 +265,20 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
 
     /**
      * Records the names computed for the class on it, so that a subclass compiled against the compiled class reads
-     * them instead of recomputing them from bytecode.
+     * them instead of recomputing them from bytecode. Nothing is recorded for a class that declares a white list
+     * field itself, because its names were not computed.
      */
-    private void recordWhiteList(final ClassNode classNode) {
+    private void recordWhiteLists(final ClassNode classNode) {
         final Set<String> propertyNames = classNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES);
+        final Set<String> legacyPropertyNames = classNode.getNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES);
         final Set<String> explicitlyBindableSpecialPropertyNames = classNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
-        if (propertyNames == null || explicitlyBindableSpecialPropertyNames == null ||
+        if (propertyNames == null || legacyPropertyNames == null || explicitlyBindableSpecialPropertyNames == null ||
                 !classNode.getAnnotations(GENERATED_WHITE_LIST_TYPE).isEmpty()) {
             return;
         }
         final AnnotationNode annotation = new AnnotationNode(GENERATED_WHITE_LIST_TYPE);
-        annotation.setMember("value", namesExpression(propertyNames));
+        annotation.setMember("value", namesExpression(legacyPropertyNames));
+        annotation.setMember("denyByDefault", namesExpression(propertyNames));
         annotation.setMember("explicitlyBindable", namesExpression(explicitlyBindableSpecialPropertyNames));
         classNode.addAnnotation(annotation);
     }
@@ -379,17 +292,11 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
     }
 
     /**
-     * The names a member of the record on a compiled class holds, or {@code null} when the class has no record. A
-     * member the record leaves out holds its default, no names: an annotation read from bytecode does not fill in
-     * defaults, and what the record does hold must not give way to a recomputation from bytecode.
+     * The names a member of a record holds; none when the member was not recorded.
      */
-    private static Set<String> getRecordedNames(final ClassNode classNode, final String member) {
-        final List<AnnotationNode> annotations = classNode.getAnnotations(GENERATED_WHITE_LIST_TYPE);
-        if (annotations.isEmpty()) {
-            return null;
-        }
+    private static Set<String> getRecordedNames(final AnnotationNode record, final String member) {
         final Set<String> names = new HashSet<>();
-        final Expression value = annotations.get(0).getMember(member);
+        final Expression value = record.getMember(member);
         if (value == null) {
             return names;
         }
@@ -400,6 +307,48 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             }
         }
         return names;
+    }
+
+    /**
+     * Reads the record on a compiled parent, in another module, in a plugin or in an earlier build, into the
+     * parent's node metadata, all of it at once, and says whether there was one. The bytecode of a compiled parent
+     * has no constraints closure and no transients list, so recomputing from it would make what the parent declared
+     * transient or {@code bindable: false} bindable in the subclass. The legacy names are {@code value}. The
+     * deny-by-default names are {@code denyByDefault} together with the special properties {@code explicitlyBindable}
+     * holds, which an explicit {@code bindable: true} puts in that list too: a parent compiled by Grails 7 recorded
+     * no {@code denyByDefault}, and those special properties are all its record tells of that list. A parent in
+     * this compilation unit has no record to read. A parent with binding rules but no record is recomputed from
+     * its bytecode with a warning, once per parent, that names the class being compiled. A parent without rules,
+     * as a Java class or a plain base class is, is recomputed from its bytecode as it always was.
+     *
+     * @param compiledClassNode the class of the compilation unit whose white lists are being computed, of which
+     *                          the parent may be a distant ancestor
+     */
+    private static boolean readRecordOfParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
+        if (parentClassNode.isPrimaryClassNode()) {
+            return false;
+        }
+        final List<AnnotationNode> annotations = parentClassNode.getAnnotations(GENERATED_WHITE_LIST_TYPE);
+        if (annotations.isEmpty()) {
+            if (sourceUnit != null && (hasWhiteListField(parentClassNode) || hasBindingRules(parentClassNode)) &&
+                    parentClassNode.getNodeMetaData(WARNED) == null) {
+                parentClassNode.putNodeMetaData(WARNED, Boolean.TRUE);
+                GrailsASTUtils.warning(sourceUnit, compiledClassNode, "The data binding white list of [" + compiledClassNode.getName() +
+                        "] is derived from the bytecode of [" + parentClassNode.getName() + "], which was compiled without " +
+                        "a record of its own white list: properties the parent declares transient or bindable: false may " +
+                        "be bindable. Recompile the parent with a Grails that records the white list and with " +
+                        "grails-web-databinding on its compile classpath.");
+            }
+            return false;
+        }
+        final AnnotationNode record = annotations.get(0);
+        final Set<String> explicitlyBindable = getRecordedNames(record, "explicitlyBindable");
+        final Set<String> denyByDefault = getRecordedNames(record, "denyByDefault");
+        denyByDefault.addAll(explicitlyBindable);
+        parentClassNode.putNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES, getRecordedNames(record, "value"));
+        parentClassNode.putNodeMetaData(WHITE_LIST_PROPERTY_NAMES, denyByDefault);
+        parentClassNode.putNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES, explicitlyBindable);
+        return true;
     }
 
     /**
@@ -458,6 +407,73 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             // validation result at runtime whatever the white list says
             return false;
         }
+    }
+
+    private void addWhitelistField(final ClassNode classNode, final String fieldName, final Set<String> propertyNamesToIncludeInWhiteList, final boolean denyWhenEmpty) {
+        final ListExpression listExpression = new ListExpression();
+        if (propertyNamesToIncludeInWhiteList.size() > 0) {
+            for (String propertyName : propertyNamesToIncludeInWhiteList) {
+                listExpression.addExpression(new ConstantExpression(propertyName));
+
+                final FieldNode declaredField = getDeclaredFieldInInheritanceHierarchy(classNode, propertyName);
+                boolean isSimpleType = false;
+                if (declaredField != null) {
+                    final ClassNode type = declaredField.getType();
+                    if (type != null) {
+                        isSimpleType = SIMPLE_TYPES.contains(type);
+                    }
+                }
+                if (!isSimpleType) {
+                    listExpression.addExpression(new ConstantExpression(propertyName + "_*"));
+                    listExpression.addExpression(new ConstantExpression(propertyName + ".*"));
+                }
+            }
+        } else if (denyWhenEmpty) {
+            listExpression.addExpression(new ConstantExpression(NO_BINDABLE_PROPERTIES));
+        }
+
+        classNode.addField(fieldName,
+                Modifier.STATIC | Modifier.PUBLIC | Modifier.FINAL, new ClassNode(List.class),
+                listExpression);
+    }
+
+    private FieldNode getDeclaredFieldInInheritanceHierarchy(final ClassNode classNode, String propertyName) {
+        FieldNode fieldNode = classNode.getDeclaredField(propertyName);
+        if (fieldNode == null) {
+            if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
+                return getDeclaredFieldInInheritanceHierarchy(classNode.getSuperClass(), propertyName);
+            }
+        }
+        return fieldNode;
+    }
+
+    /**
+     * The deny-by-default names a subclass inherits from its parent: those computed for the parent in this
+     * compilation unit, those recorded on the parent when it was compiled, or else those recomputed from its bytecode.
+     */
+    private Set<String> getPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
+        Set<String> propertyNames = parentClassNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES);
+        if (propertyNames == null && (readRecordOfParentClass(sourceUnit, compiledClassNode, parentClassNode) ||
+                readDeclaredWhiteLists(parentClassNode))) {
+            propertyNames = parentClassNode.getNodeMetaData(WHITE_LIST_PROPERTY_NAMES);
+        }
+        if (propertyNames == null) {
+            propertyNames = getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode, compiledClassNode);
+        }
+        return propertyNames;
+    }
+
+    private Set<String> getExplicitlyBindableSpecialPropertyNamesForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
+        Set<String> explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
+        if (explicitlyBindable == null && (readRecordOfParentClass(sourceUnit, compiledClassNode, parentClassNode) ||
+                readDeclaredWhiteLists(parentClassNode))) {
+            explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
+        }
+        if (explicitlyBindable == null) {
+            getPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode, compiledClassNode);
+            explicitlyBindable = parentClassNode.getNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES);
+        }
+        return explicitlyBindable != null ? explicitlyBindable : new HashSet<>();
     }
 
     private Set<String> getPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
@@ -539,6 +555,100 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
             }
         }
 
+        propertyNamesToIncludeInWhiteList.addAll(bindablePropertyNames);
+        classNode.putNodeMetaData(WHITE_LIST_PROPERTY_NAMES, propertyNamesToIncludeInWhiteList);
+        classNode.putNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES, explicitlyBindableSpecialPropertyNames);
+        return propertyNamesToIncludeInWhiteList;
+    }
+
+    /**
+     * The legacy names a subclass inherits from its parent: those computed for the parent in this compilation unit,
+     * those recorded on the parent when it was compiled, or else those recomputed from its bytecode.
+     */
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteListForParentClass(final SourceUnit sourceUnit, final ClassNode compiledClassNode, final ClassNode parentClassNode) {
+        Set<String> propertyNames = parentClassNode.getNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES);
+        if (propertyNames == null && (readRecordOfParentClass(sourceUnit, compiledClassNode, parentClassNode) ||
+                readDeclaredWhiteLists(parentClassNode))) {
+            propertyNames = parentClassNode.getNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES);
+        }
+        if (propertyNames == null) {
+            propertyNames = getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, parentClassNode, compiledClassNode);
+        }
+        return propertyNames;
+    }
+
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode) {
+        return getLegacyPropertyNamesToIncludeInWhiteList(sourceUnit, classNode, classNode);
+    }
+
+    /**
+     * @param compiledClassNode the class of the compilation unit the names serve: {@code classNode} itself, or a
+     *                          subclass of it when {@code classNode} is a compiled parent recomputed from bytecode
+     */
+    private Set<String> getLegacyPropertyNamesToIncludeInWhiteList(final SourceUnit sourceUnit, final ClassNode classNode, final ClassNode compiledClassNode) {
+        final Set<String> propertyNamesToIncludeInWhiteList = new HashSet<>();
+        final Set<String> unbindablePropertyNames = new HashSet<>();
+        final Set<String> bindablePropertyNames = new HashSet<>();
+
+        final Set<String> explicitlyBindableSpecialPropertyNames = new HashSet<>();
+        final boolean isDomainClass = GrailsASTUtils.isDomainClass(classNode, sourceUnit);
+        if (!classNode.getSuperClass().equals(new ClassNode(Object.class))) {
+            final Set<String> parentClassPropertyNames = getLegacyPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, compiledClassNode, classNode.getSuperClass());
+            final Set<String> parentExplicitlyBindableSpecialPropertyNames = getExplicitlyBindableSpecialPropertyNamesForParentClass(sourceUnit, compiledClassNode, classNode.getSuperClass());
+            explicitlyBindableSpecialPropertyNames.addAll(parentExplicitlyBindableSpecialPropertyNames);
+            for (final String parentPropertyName : parentClassPropertyNames) {
+                if (isDomainClass && DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(parentPropertyName) &&
+                        !parentExplicitlyBindableSpecialPropertyNames.contains(parentPropertyName)) {
+                    continue;
+                }
+                bindablePropertyNames.add(parentPropertyName);
+            }
+        }
+
+        final FieldNode constraintsFieldNode = classNode.getDeclaredField(CONSTRAINTS_FIELD_NAME);
+        if (constraintsFieldNode != null && constraintsFieldNode.hasInitialExpression()) {
+            final Expression constraintsInitialExpression = constraintsFieldNode.getInitialExpression();
+            if (constraintsInitialExpression instanceof ClosureExpression) {
+
+                final Map<String, Map<String, Expression>> constraintsInfo = GrailsASTUtils.getConstraintMetadata((ClosureExpression) constraintsInitialExpression);
+
+                for (Entry<String, Map<String, Expression>> constraintConfig : constraintsInfo.entrySet()) {
+                    final String propertyName = constraintConfig.getKey();
+                    final Map<String, Expression> mapEntryExpressions = constraintConfig.getValue();
+                    for (Entry<String, Expression> entry : mapEntryExpressions.entrySet()) {
+                        final String constraintName = entry.getKey();
+                        if (BINDABLE_CONSTRAINT_NAME.equals(constraintName)) {
+                            final Expression valueExpression = entry.getValue();
+                            Boolean bindableValue = null;
+                            if (valueExpression instanceof ConstantExpression) {
+                                final Object constantValue = ((ConstantExpression) valueExpression).getValue();
+                                if (constantValue instanceof Boolean) {
+                                    bindableValue = (Boolean) constantValue;
+                                }
+                            }
+                            if (bindableValue != null) {
+                                if (Boolean.TRUE.equals(bindableValue)) {
+                                    unbindablePropertyNames.remove(propertyName);
+                                    bindablePropertyNames.add(propertyName);
+                                    if (DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) {
+                                        explicitlyBindableSpecialPropertyNames.add(propertyName);
+                                    }
+                                } else {
+                                    bindablePropertyNames.remove(propertyName);
+                                    unbindablePropertyNames.add(propertyName);
+                                    explicitlyBindableSpecialPropertyNames.remove(propertyName);
+                                }
+                            } else {
+                                GrailsASTUtils.warning(sourceUnit, valueExpression, "The bindable constraint for property [" +
+                                        propertyName + "] in class [" + classNode.getName() +
+                                        "] has a value which is not a boolean literal and will be ignored.");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         final Set<String> fieldsInTransientsList = getPropertyNamesExpressedInTransientsList(classNode);
         final Set<String> traitFieldPrefixes = getTraitFieldPrefixes(classNode);
 
@@ -566,9 +676,9 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                             final String restOfMethodName = methodName.substring(3);
                             final String propertyName = GrailsNameUtils.getPropertyName(restOfMethodName);
                             if (!unbindablePropertyNames.contains(propertyName) &&
-                                (!isDomainClass || !DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) &&
-                                (bindablePropertyNames.contains(propertyName) ||
-                                        setsBindableProperty(sourceUnit, classNode, compiledClassNode, value, propertyName, fieldsInTransientsList, isDomainClass))) {
+                                    (!isDomainClass || !DOMAIN_CLASS_PROPERTIES_TO_EXCLUDE_BY_DEFAULT.contains(propertyName)) &&
+                                    (bindablePropertyNames.contains(propertyName) ||
+                                            setsBindableProperty(sourceUnit, classNode, compiledClassNode, value, propertyName, fieldsInTransientsList, isDomainClass))) {
                                 propertyNamesToIncludeInWhiteList.add(propertyName);
                             }
                         }
@@ -576,8 +686,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
                 }
             }
         }
-        classNode.putNodeMetaData(WHITE_LIST_PROPERTY_NAMES, propertyNamesToIncludeInWhiteList);
-        classNode.putNodeMetaData(EXPLICITLY_BINDABLE_SPECIAL_PROPERTY_NAMES, explicitlyBindableSpecialPropertyNames);
+        classNode.putNodeMetaData(LEGACY_WHITE_LIST_PROPERTY_NAMES, propertyNamesToIncludeInWhiteList);
         Map<String, ClassNode> allAssociationMap = GrailsASTUtils.getAllAssociationMap(classNode);
         for (String associationName : allAssociationMap.keySet()) {
             if (!propertyNamesToIncludeInWhiteList.contains(associationName) && !unbindablePropertyNames.contains(associationName)) {
@@ -605,7 +714,7 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         }
         final ClassNode delegateType = getDelegateTypeDeclaring(classNode, propertyName);
         if (delegateType != null) {
-            return getPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, compiledClassNode, delegateType).contains(propertyName);
+            return getLegacyPropertyNamesToIncludeInWhiteListForParentClass(sourceUnit, compiledClassNode, delegateType).contains(propertyName);
         }
         return true;
     }
@@ -667,4 +776,5 @@ public class DefaultASTDatabindingHelper implements ASTDatabindingHelper {
         }
         return transientFields;
     }
+
 }

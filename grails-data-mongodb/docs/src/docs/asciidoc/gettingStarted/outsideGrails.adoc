@@ -44,6 +44,18 @@ def datastore = new MongoDatastore(Person)
 println Person.count()
 ----
 
+You can also supply your own `com.mongodb.client.MongoClient` if you need to configure the driver directly:
+
+[source,groovy]
+----
+MongoClient mongoClient = MongoClients.create("mongodb://localhost/mydb")
+def datastore = new MongoDatastore(mongoClient, Person)
+
+println Person.count()
+----
+
+NOTE: When you supply your own `MongoClient`, GORM does not close it when the datastore shuts down — the client is owned by whoever created it, so you are responsible for closing it. When GORM creates the client itself (for example `new MongoDatastore(Person)`), it closes it for you.
+
 For configuration you can either pass a map or an instance of the `org.springframework.core.env.PropertyResolver` interface:
 
 [source,groovy]

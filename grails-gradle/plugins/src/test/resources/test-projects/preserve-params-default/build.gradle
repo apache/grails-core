@@ -1,0 +1,12 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+tasks.register('inspectPreserveParam') {
+    def paramsEnabled = providers.provider {
+        tasks.withType(GroovyCompile).every { it.groovyOptions.parameters }
+    }
+    doLast {
+        println "HAS_PRESERVE_PARAM_ENABLED=${paramsEnabled.get()}"
+    }
+}

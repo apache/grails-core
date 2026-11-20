@@ -79,6 +79,26 @@ class YamlTocStrategySpec extends Specification {
         toc.children[1].children[1].parent == toc.children[1]
         !(toc.children[0].children[1].parent == toc)
     }
+
+    def "substitutes configured properties in titles"() {
+      given: "A YAML loader with documentation properties"
+        def loader = new YamlTocStrategy(new MockResourceChecker([
+                "intro.gdoc",
+                "intro/whatsNew.gdoc",
+                "history.gdoc"]), '.gdoc', [grailsMajorVersion: '8'])
+
+      when: "A test YAML document with property placeholders is loaded"
+        def toc = loader.load("""\
+                intro:
+                  title: Introduction
+                  whatsNew: What's new in Grails {grailsMajorVersion}?
+                history: History for Grails {unknownVersion}
+                """.stripIndent())
+
+      then: "Known properties are substituted and unknown properties are preserved"
+        toc.children[0].children[0].title == "What's new in Grails 8?"
+        toc.children[1].title == "History for Grails {unknownVersion}"
+    }
 }
 
 class MockResourceChecker {

@@ -16,6 +16,7 @@
 
 package grails.plugins.quartz;
 
+import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 
 import org.springframework.beans.factory.FactoryBean;
@@ -34,14 +35,31 @@ import static org.quartz.JobBuilder.newJob;
 public class JobDetailFactoryBean implements FactoryBean<JobDetail>, InitializingBean {
     public static final transient String JOB_NAME_PARAMETER = "org.grails.plugins.quartz.grailsJobName";
 
+    /**
+     * The job data entry naming the application a job was registered by. It is what tells the jobs of one
+     * application apart from the jobs of another when both share a job store.
+     */
+    public static final transient String APPLICATION_NAME_PARAMETER = "org.apache.grails.quartz.applicationName";
+
     // Properties
     private GrailsJobClass jobClass;
+    private String applicationName;
 
     // Returned object
     private JobDetail jobDetail;
 
     public void setJobClass(GrailsJobClass jobClass) {
         this.jobClass = jobClass;
+    }
+
+    /**
+     * Sets the name of the application the job belongs to. The job carries it as job data, so that the
+     * application can recognise its own jobs in a job store it shares with other applications.
+     *
+     * @param applicationName the name of the application registering the job
+     */
+    public void setApplicationName(String applicationName) {
+        this.applicationName = applicationName;
     }
 
     /**
@@ -65,14 +83,19 @@ public class JobDetailFactoryBean implements FactoryBean<JobDetail>, Initializin
                 jobClass.isConcurrent() ? GrailsJobFactory.GrailsJob.class : GrailsJobFactory.StatefulGrailsJob.class;
 
         // Build JobDetail instance.
-        jobDetail =
+        JobBuilder builder =
                 newJob(clazz)
                         .withIdentity(name, group)
                         .storeDurably(jobClass.isDurability())
                         .requestRecovery(jobClass.isRequestsRecovery())
                         .usingJobData(JOB_NAME_PARAMETER, name)
-                        .withDescription(jobClass.getDescription())
-                        .build();
+                        .withDescription(jobClass.getDescription());
+
+        if (applicationName != null) {
+            builder.usingJobData(APPLICATION_NAME_PARAMETER, applicationName);
+        }
+
+        jobDetail = builder.build();
     }
 
     /**

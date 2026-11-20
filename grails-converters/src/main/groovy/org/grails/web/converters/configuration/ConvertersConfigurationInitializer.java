@@ -18,10 +18,24 @@
  */
 package org.grails.web.converters.configuration;
 
+import java.sql.Time;
+import java.time.Duration;
+import java.time.LocalTime;
+import java.time.MonthDay;
+import java.time.OffsetTime;
+import java.time.Period;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TimeZone;
 
+import javax.xml.datatype.XMLGregorianCalendar;
+
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -36,10 +50,12 @@ import grails.core.GrailsApplication;
 import grails.core.support.GrailsApplicationAware;
 import grails.core.support.proxy.DefaultProxyHandler;
 import grails.core.support.proxy.ProxyHandler;
+import org.apache.grails.converters.internal.json.SimpleTypeMarshaller;
 import org.grails.config.PropertySourcesConfig;
 import org.grails.web.converters.Converter;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 import org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller;
+import org.grails.web.json.JsonDateFormat;
 
 /**
  * @author Siegfried Puchbauer
@@ -78,6 +94,10 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         if (LOG.isDebugEnabled()) {
             LOG.debug("Initializing Converters Default Configurations...");
         }
+        if (applicationContext != null) {
+            ConvertersConfigurationHolder.setObservationRegistry(
+                    applicationContext.getBeanProvider(ObservationRegistry.class).getIfAvailable(() -> ObservationRegistry.NOOP));
+        }
         initJSONConfiguration();
         initXMLConfiguration();
         initDeepJSONConfiguration();
@@ -95,16 +115,9 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.json.ByteArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.MapMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
 
         Config grailsConfig = getGrailsConfig();
-
-        // Register enum marshaller - defaults to legacy for backward compatibility (will change in Grails 8.0)
-        String jsonEnumFormat = grailsConfig.getProperty("grails.converters.json.enum.format", String.class, "default");
-        if ("simple".equals(jsonEnumFormat)) {
-            marshallers.add(new org.grails.web.converters.marshaller.json.SimpleEnumMarshaller());
-        } else {
-            marshallers.add(new org.grails.web.converters.marshaller.json.EnumMarshaller());
-        }
 
         marshallers.add(new org.grails.web.converters.marshaller.ProxyUnwrappingMarshaller<>());
 
@@ -118,14 +131,28 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Using default JSON Date Marshaller");
             }
+            // ahead of DateMarshaller, which also supports java.sql.Time
+            marshallers.add(new SimpleTypeMarshaller<>(Time.class, Time::toString));
             marshallers.add(new org.grails.web.converters.marshaller.json.DateMarshaller());
         }
         marshallers.add(new org.grails.web.converters.marshaller.json.CalendarMarshaller());
+        marshallers.add(new SimpleTypeMarshaller<>(XMLGregorianCalendar.class,
+                calendar -> JsonDateFormat.format(calendar.toGregorianCalendar().getTimeInMillis())));
         marshallers.add(new org.grails.web.converters.marshaller.json.InstantMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.json.LocalDateTimeMarshaller());
+        marshallers.add(new SimpleTypeMarshaller<>(LocalTime.class, DateTimeFormatter.ISO_LOCAL_TIME::format));
         marshallers.add(new org.grails.web.converters.marshaller.json.OffsetDateTimeMarshaller());
+        marshallers.add(new SimpleTypeMarshaller<>(OffsetTime.class, DateTimeFormatter.ISO_OFFSET_TIME::format));
         marshallers.add(new org.grails.web.converters.marshaller.json.ZonedDateTimeMarshaller());
+        marshallers.add(new SimpleTypeMarshaller<>(Year.class, Year::getValue));
+        marshallers.add(new SimpleTypeMarshaller<>(YearMonth.class, YearMonth::toString));
+        marshallers.add(new SimpleTypeMarshaller<>(MonthDay.class, MonthDay::toString));
+        marshallers.add(new SimpleTypeMarshaller<>(Duration.class, Duration::toString));
+        marshallers.add(new SimpleTypeMarshaller<>(Period.class, Period::toString));
+        marshallers.add(new SimpleTypeMarshaller<>(ZoneId.class, ZoneId::getId));
+        marshallers.add(new SimpleTypeMarshaller<>(TimeZone.class, TimeZone::getID));
+        marshallers.add(new SimpleTypeMarshaller<>(javax.xml.datatype.Duration.class, javax.xml.datatype.Duration::toString));
         marshallers.add(new org.grails.web.converters.marshaller.json.ToStringBeanMarshaller());
 
         boolean includeDomainVersion = includeDomainVersionProperty(grailsConfig, "json");
@@ -185,16 +212,9 @@ public class ConvertersConfigurationInitializer implements ApplicationContextAwa
         marshallers.add(new org.grails.web.converters.marshaller.xml.ArrayMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.CollectionMarshaller());
         marshallers.add(new org.grails.web.converters.marshaller.xml.MapMarshaller());
+        marshallers.add(new org.grails.web.converters.marshaller.xml.SimpleEnumMarshaller());
 
         Config grailsConfig = getGrailsConfig();
-
-        // Register enum marshaller - defaults to legacy for backward compatibility (will change in Grails 8.0)
-        String xmlEnumFormat = grailsConfig.getProperty("grails.converters.xml.enum.format", String.class, "default");
-        if ("simple".equals(xmlEnumFormat)) {
-            marshallers.add(new org.grails.web.converters.marshaller.xml.SimpleEnumMarshaller());
-        } else {
-            marshallers.add(new org.grails.web.converters.marshaller.xml.EnumMarshaller());
-        }
 
         marshallers.add(new org.grails.web.converters.marshaller.xml.DateMarshaller());
         marshallers.add(new ProxyUnwrappingMarshaller<>());

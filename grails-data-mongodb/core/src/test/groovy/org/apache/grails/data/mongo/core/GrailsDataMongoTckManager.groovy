@@ -18,47 +18,39 @@
  */
 package org.apache.grails.data.mongo.core
 
-import groovy.util.logging.Slf4j
-
-import com.github.dockerjava.api.model.Ulimit
 import com.mongodb.BasicDBObject
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoDatabase
-import org.bson.Document
-import org.slf4j.LoggerFactory
-import org.testcontainers.containers.MongoDBContainer
-import org.testcontainers.containers.output.Slf4jLogConsumer
-
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.validation.Validator
-
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.gorm.validation.PersistentEntityValidator
+import groovy.util.logging.Slf4j
 import org.apache.grails.data.testing.tck.base.GrailsDataTckManager
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.bson.Document
 import org.grails.datastore.bson.query.BsonQuery
 import org.grails.datastore.gorm.GormEnhancer
 import org.grails.datastore.gorm.mongo.Birthday
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
-import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.core.Session
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
+import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.engine.types.AbstractMappingAwareCustomTypeMarshaller
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.datastore.mapping.model.PersistentEntity
 import org.grails.datastore.mapping.model.PersistentProperty
+import org.grails.datastore.mapping.core.DatastoreUtils
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoSettings
-import org.grails.datastore.mapping.multitenancy.MultiTenancySettings
-import org.grails.datastore.mapping.multitenancy.resolvers.SystemPropertyTenantResolver
 import org.grails.datastore.mapping.query.Query
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.validation.Validator
+import org.testcontainers.containers.MongoDBContainer
 
 @Slf4j
 class GrailsDataMongoTckManager extends GrailsDataTckManager {
-
-    private static final long MONGOD_OPEN_FILES_LIMIT = 65536L
 
     MongoDBContainer mongoDBContainer
 
@@ -74,14 +66,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void setupSpec() {
         super.setupSpec()
-        // Docker's default soft limit of 1024 open files is easily exhausted by WiredTiger, and a crashed
-        // mongod leaves the test worker waiting for server selection indefinitely
-        mongoDBContainer = new MongoDBContainer(AbstractMongoGrailsExtension.desiredMongoDockerName)
-                .withCreateContainerCmdModifier { cmd ->
-                    cmd.hostConfig.withUlimits([new Ulimit('nofile', MONGOD_OPEN_FILES_LIMIT, MONGOD_OPEN_FILES_LIMIT)])
-                }
-        mongoDBContainer.start()
-        mongoDBContainer.followOutput(new Slf4jLogConsumer(LoggerFactory.getLogger("testcontainers")))
+        mongoDBContainer = MongoContainers.shared()
 
         configuration = [
                 (MongoSettings.SETTING_DATABASE_NAME): 'test',
@@ -94,12 +79,13 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
     @Override
     void cleanupSpec() {
         super.cleanupSpec()
-        mongoDBContainer.stop()
+        // the container is shared by the specs of this JVM, so the next one finds the server empty
+        MongoContainers.dropUserDatabases(mongoDBContainer)
     }
 
     @Override
     Session createSession() {
-        def allClasses = getDomainClasses() as Class[]
+        def allClasses = domainClasses
         def ctx = new GenericApplicationContext()
         ctx.refresh()
 
@@ -135,7 +121,7 @@ class GrailsDataMongoTckManager extends GrailsDataTckManager {
                 return null
             }
         })
-        mappingContext.addPersistentEntities(allClasses as Class[])
+        mappingContext.addPersistentEntities(allClasses)
         mongoClient = mongoDatastore.getMongoClient()
 
         grailsApplication = new DefaultGrailsApplication(allClasses, getClass().getClassLoader())

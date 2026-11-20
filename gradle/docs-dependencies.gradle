@@ -20,14 +20,18 @@ apply plugin: 'org.apache.grails.buildsrc.groovydoc'
 
 dependencies {
     add('documentation', platform(project(':grails-bom')))
-    add('documentation', 'org.fusesource.jansi:jansi')
-    add('documentation', 'jline:jline')
     add('documentation', 'com.github.javaparser:javaparser-core')
     add('documentation', 'org.apache.groovy:groovy')
     add('documentation', 'org.apache.groovy:groovy-groovydoc')
     add('documentation', 'org.apache.groovy:groovy-ant')
     add('documentation', 'org.apache.groovy:groovy-docgenerator')
     add('documentation', 'org.apache.groovy:groovy-templates')
+
+    // Groovydoc resolves referenced types with Class.forName, which runs their static
+    // initialisers; any that touch LoggerFactory make slf4j-api warn that it found no
+    // provider. In the daemon the Ant class loader's parent supplied Gradle's binding - a
+    // forked JVM has no such parent, so bring a no-op one.
+    add('documentation', 'org.slf4j:slf4j-nop')
 }
 
 String resolveProjectVersion(String artifact) {
@@ -51,6 +55,12 @@ List<Map<String, String>> resolveGroovydocLinks() {
     // specific org.springframework.boot. entry must come before the broader
     // org.springframework. entry or every Boot class link resolves against the
     // Framework javadocs instead, where the Boot classes don't exist.
+    // Spring AI shares the org.springframework. prefix as well, so its entry has to precede the
+    // Framework one for the same reason.
+    def springAiVersion = resolveProjectVersion('spring-ai-model')
+    if (springAiVersion) {
+        links << [packages: 'org.springframework.ai.', href: "https://docs.spring.io/spring-ai/docs/${springAiVersion}/api/"]
+    }
     def springBootVersion = resolveProjectVersion('spring-boot')
     if (springBootVersion) {
         // Boot 3.4 retired the older docs.spring.io/spring-boot/docs/<version>/api/ layout.

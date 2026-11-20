@@ -18,7 +18,9 @@
  */
 package grails.plugin.json.view
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
+import grails.plugin.json.view.expand.Player
+import grails.plugin.json.view.expand.Team
 import grails.plugin.json.view.test.JsonRenderResult
 import grails.plugin.json.view.test.JsonViewTest
 import org.grails.datastore.mapping.core.Session
@@ -29,7 +31,7 @@ import spock.lang.Specification
 class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
     @Shared
-    ObjectMapper objectMapper = new ObjectMapper()
+    JsonMapper objectMapper = JsonMapper.builder().build()
 
     void setup() {
         mappingContext.addPersistentEntities(Team, Player)
@@ -45,10 +47,10 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         def player = new Player(name: 'Cantona', team: teamProxy)
 
         def templateText = '''
-            import grails.plugin.json.view.*
-            
+            import grails.plugin.json.view.expand.Player
+
             @Field Player player
-            
+
             json g.render(player)
         '''
 
@@ -89,10 +91,8 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
         def player = new Player(name: 'Cantona', team: teamProxy)
         def templateText = '''
-            import grails.plugin.json.view.*
-            
             @Field Map map
-            
+
             json g.render(map)
         '''
 
@@ -125,7 +125,7 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
         def player = new Player(name: 'Cantona', team: teamProxy)
 
         def templateText = '''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.expand.Player
             model {
                 Player player
             }
@@ -192,11 +192,11 @@ class ExpandSpec extends Specification implements JsonViewTest, GrailsUnitTest {
 
         when: 'The domain is rendered with expand parameters'
         JsonRenderResult result = render('''
-            import grails.plugin.json.view.*
+            import grails.plugin.json.view.expand.Player
             model {
                 Player player
             }
-            
+
             json jsonapi.render(player, [expand: 'team'])
         ''', [player: player])
 

@@ -18,26 +18,30 @@
  */
 package grails.gorm.services
 
+import groovy.json.DefaultJsonGenerator
+import groovy.json.JsonGenerator
+
+import spock.lang.AutoCleanup
+import spock.lang.Issue
+import spock.lang.Specification
+
+import org.springframework.context.support.StaticMessageSource
+
 import grails.gorm.annotation.Entity
 import grails.gorm.validation.PersistentEntityValidator
 import grails.validation.ValidationException
-import groovy.json.DefaultJsonGenerator
-import groovy.json.JsonGenerator
 import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultValidatorRegistry
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
-import org.springframework.context.support.StaticMessageSource
-import spock.lang.AutoCleanup
-import spock.lang.Issue
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 06/02/2017.
  */
 class ServiceImplSpec extends Specification {
 
-    @AutoCleanup SimpleMapDatastore datastore = new SimpleMapDatastore(
+    @AutoCleanup
+    SimpleMapDatastore datastore = new SimpleMapDatastore(
             Product
     )
 
@@ -47,8 +51,8 @@ class ServiceImplSpec extends Specification {
 
     void "test inter service interaction"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         AnotherProductService productService = datastore.getService(AnotherProductService)
 
         expect:
@@ -58,12 +62,12 @@ class ServiceImplSpec extends Specification {
 
     void "test list products"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         ProductService productService = datastore.getService(ProductService)
 
         expect:
-        productService.listWithArgs(max:1).size() == 1
+        productService.listWithArgs(max: 1).size() == 1
         productService.listProducts().size() == 2
         productService.listMoreProducts().length == 2
         productService.findEvenMoreProducts().iterator().hasNext()
@@ -80,14 +84,24 @@ class ServiceImplSpec extends Specification {
         productService.get(100) == null
         productService.find("Apple", "Fruit") != null
         productService.find("Orange", "Fruit").name == "Orange"
-        productService.find("Apple", "Fruit", [max:2]) != null
+        productService.find("Apple", "Fruit", [max: 2]) != null
         productService.find("Apple", "Device") == null
+    }
+
+    void "test find all by finder on simple map datastore"() {
+        given:
+        new Product(name: "Apple", type: "Fruit").save(flush: true)
+        new Product(name: "Orange", type: "Fruit").save(flush: true)
+
+        expect:
+        Product.findAllByName("Apple").size() == 1
+        Product.findAllByTypeLike("Fruit").size() == 2
     }
 
     void "test delete by id implementation"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         ProductService productService = datastore.getService(ProductService)
 
         when:
@@ -107,8 +121,8 @@ class ServiceImplSpec extends Specification {
 
     void "test delete by parameter query implementation"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         ProductService productService = datastore.getService(ProductService)
 
         when:
@@ -128,8 +142,8 @@ class ServiceImplSpec extends Specification {
 
     void "test delete all implementation"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         ProductService productService = datastore.getService(ProductService)
 
         when:
@@ -149,8 +163,8 @@ class ServiceImplSpec extends Specification {
 
     void "test delete with void return type"() {
         given:
-        Product p1 = new Product(name: "Apple", type:"Fruit").save(flush:true)
-        Product p2 = new Product(name: "Orange", type:"Fruit").save(flush:true)
+        Product p1 = new Product(name: "Apple", type: "Fruit").save(flush: true)
+        Product p2 = new Product(name: "Orange", type: "Fruit").save(flush: true)
         ProductService productService = datastore.getService(ProductService)
 
         when:
@@ -199,7 +213,7 @@ class ServiceImplSpec extends Specification {
 
     void "test abstract class service impl"() {
         given:
-        AnotherProductService productService = (AnotherProductService)datastore.getService(AnotherProductInterface)
+        AnotherProductService productService = (AnotherProductService) datastore.getService(AnotherProductInterface)
 
         when:
         Product p = productService.saveProduct("Apple", "Fruit")
@@ -236,18 +250,18 @@ class ServiceImplSpec extends Specification {
         productService.find("Tomato", "Vegetable") == null
         productService.find("Tomato", "Fruit") != null
 
-        when:"An update is attempted with invalid parameters"
+        when: "An update is attempted with invalid parameters"
         product = productService.updateProduct(product.id, "")
 
-        then:"The errors are available on the object"
+        then: "The errors are available on the object"
         def e = thrown(ValidationException)
         e.errors != null
         e.errors.hasFieldErrors('type')
 
-        when:"An update is attempted on a non-existent object"
+        when: "An update is attempted on a non-existent object"
         product = productService.updateProduct(999, "blah")
 
-        then:"The result is null"
+        then: "The result is null"
         product == null
 
     }
@@ -336,7 +350,7 @@ class ServiceImplSpec extends Specification {
         productService.saveProduct("Tomato", "Fruit")
 
         ProductInfo info = productService.findProductInfo("Pumpkin", "Vegetable")
-        List<ProductInfo> infos = productService.findProductInfos( "Vegetable")
+        List<ProductInfo> infos = productService.findProductInfos("Vegetable")
 
         // groovy4 will include the generated methods in output of json, which recursively refer to themselves
         def result = new DefaultJsonGenerator(new JsonGenerator.Options().excludeFieldsByName("\$target")).toJson(info)
@@ -348,8 +362,8 @@ class ServiceImplSpec extends Specification {
         info.name == "Pumpkin"
         productService.searchProductInfoByName("Pump%") != null
         productService.findByTypeLike("Veg%") != null
-        productService.findByTypeLike("Jun%")  == null
-        productService.findAllByTypeLike( "Vege%").size() == 2
+        productService.findByTypeLike("Jun%") == null
+        productService.findAllByTypeLike("Vege%").size() == 2
 
         when:
         productService.searchProductInfo("Pum%").name == "Pumpkin"
@@ -373,11 +387,11 @@ class ServiceImplSpec extends Specification {
         new Product(name: "Pineapple", type: "Fruit")
                 .addToAttributes(name: 'Spikey')
                 .addToAttributes(name: 'Yellow')
-                .save(flush:true)
+                .save(flush: true)
         new Product(name: "Apple", type: "Fruit")
                 .addToAttributes(name: 'Round')
                 .addToAttributes(name: 'Green')
-                .save(flush:true)
+                .save(flush: true)
 
         expect:
         productService.findWithAttr('Spikey').name == 'Pineapple'
@@ -387,42 +401,46 @@ class ServiceImplSpec extends Specification {
 }
 
 interface ProductInfo {
+
     String getName()
 }
 
 @Entity
 class Product {
+
     String name
     String type
 
-    static hasMany = [attributes:Attribute]
+    static hasMany = [attributes: Attribute]
 
     static constraints = {
-        name blank:false
+        name blank: false
         type blank: false
     }
 }
 
 @Entity
 class Attribute {
+
     String name
 }
 
 interface AnotherProductInterface {
+
     Product saveProduct(String name, String type)
 
     Number delete(Serializable id)
 }
 
 @Service(Product)
-abstract class AnotherProductService implements AnotherProductInterface{
+abstract class AnotherProductService implements AnotherProductInterface {
 
     ProductService originalProductService
 
     abstract Product get(Serializable id)
 
     Product getByName(String name) {
-        return new Product(name:name.toUpperCase())
+        return new Product(name: name.toUpperCase())
     }
 
     ProductInfo findProductInfo(String name, String type) {
@@ -432,6 +450,7 @@ abstract class AnotherProductService implements AnotherProductInterface{
 
 @Service(Product)
 interface ProductService {
+
     List<ProductInfo> findProductInfos(String type)
 
     List<ProductInfo> findAllByTypeLike(String type)
@@ -488,6 +507,7 @@ interface ProductService {
 
     @Where({ type == type })
     Number deleteSomeProducts(String type)
+
     Product delete(String name)
 
     Number remove(Serializable id)

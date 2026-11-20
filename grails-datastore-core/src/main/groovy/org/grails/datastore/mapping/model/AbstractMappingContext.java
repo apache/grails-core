@@ -109,6 +109,7 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
             AbstractGormMappingFactory gormMappingFactory = (AbstractGormMappingFactory) mappingFactory;
             gormMappingFactory.setDefaultConstraints(settings.getDefault().getConstraints());
             gormMappingFactory.setDefaultMapping(settings.getDefault().getMapping());
+            gormMappingFactory.setDefaultNullable(settings.getDefault().isNullable());
         }
     }
 
@@ -436,7 +437,7 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
         return null;
     }
 
-    protected abstract PersistentEntity createPersistentEntity(Class javaClass);
+    protected abstract PersistentEntity createPersistentEntity(Class<?> javaClass);
 
     protected Object resolveMappingStrategy(Class javaClass) {
         try {
@@ -451,7 +452,7 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
         return null;
     }
 
-    protected boolean isValidMappingStrategy(Class javaClass, Object mappingStrategy) {
+    protected boolean isValidMappingStrategy(Class<?> javaClass, Object mappingStrategy) {
         if (mappingStrategy == null) {
             return true;
         }
@@ -465,11 +466,11 @@ public abstract class AbstractMappingContext implements MappingContext, Initiali
         return false;
     }
 
-    protected PersistentEntity createPersistentEntity(Class javaClass, boolean external) {
+    protected PersistentEntity createPersistentEntity(Class<?> javaClass, boolean external) {
         return createPersistentEntity(javaClass);
     }
 
-    public PersistentEntity createEmbeddedEntity(Class type) {
+    public PersistentEntity createEmbeddedEntity(Class<?> type) {
         EmbeddedPersistentEntity embedded = new EmbeddedPersistentEntity(type, this);
         embedded.initialize();
         return embedded;

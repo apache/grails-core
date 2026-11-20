@@ -229,6 +229,31 @@ public class GrailsPageResponseWrapper extends HttpServletResponseWrapper {
         }
     }
 
+    /**
+     * Prevent {@code reset()} from clearing the content type and buffer activation state
+     * while we are actively buffering content for layout decoration. Tomcat 11 may call
+     * {@code reset()} during forward dispatch processing.
+     */
+    @Override
+    public void reset() {
+        if (!parseablePage) {
+            super.reset();
+        }
+    }
+
+    /**
+     * Prevent the underlying response buffer from being cleared while we are buffering
+     * content for layout decoration. Our content is captured in {@link GrailsBuffer}, not
+     * in the servlet container's response buffer, so the container's resetBuffer() call
+     * during forward dispatch should not affect our captured content.
+     */
+    @Override
+    public void resetBuffer() {
+        if (!parseablePage) {
+            super.resetBuffer();
+        }
+    }
+
     @Override
     public ServletOutputStream getOutputStream() {
         return routableServletOutputStream;

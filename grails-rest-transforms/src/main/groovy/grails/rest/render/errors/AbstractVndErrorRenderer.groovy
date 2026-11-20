@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TypeCheckingMode
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.MessageSource
 import org.springframework.validation.Errors
 import org.springframework.validation.ObjectError
@@ -48,6 +49,7 @@ abstract class AbstractVndErrorRenderer  implements ContainerRenderer<Errors, Ob
     public static final String RESOURCE_ATTRIBUTE = 'resource'
     public static final String HREF_ATTRIBUTE = 'href'
 
+    @Value('${grails.converters.encoding:UTF-8}')
     String encoding = GrailsWebUtil.DEFAULT_ENCODING
     boolean absoluteLinks = true
     boolean prettyPrint = Environment.isDevelopmentMode()

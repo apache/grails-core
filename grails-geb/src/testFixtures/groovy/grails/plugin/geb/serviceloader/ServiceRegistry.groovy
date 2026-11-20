@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
  * A service registry that loads and caches different service types using the Java
  * {@link java.util.ServiceLoader}, while allowing overriding which instance to return.
  * <p>
- * This class provides thread-safe service loading and caching, supporting parallel test execution.
+ * This class provides thread-safe service loading and caching to prevent test environment pollution.
  * It provides both automatic service discovery through {@link java.util.ServiceLoader}
  * and explicit replacement of the returned service instance for customization.
  * </p>

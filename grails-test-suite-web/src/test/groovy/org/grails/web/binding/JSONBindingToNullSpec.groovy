@@ -18,13 +18,14 @@
  */
 package org.grails.web.binding
 
+import groovy.json.JsonBuilder
+
 import grails.artefact.Artefact
 import grails.converters.JSON
 import grails.converters.XML
 import grails.persistence.Entity
 import grails.testing.gorm.DomainUnitTest
 import grails.testing.web.controllers.ControllerUnitTest
-import grails.web.JSONBuilder
 import org.grails.web.mime.HttpServletResponseExtension
 import spock.lang.Specification
 
@@ -67,9 +68,9 @@ class JSONBindingToNullTests extends Specification implements ControllerUnitTest
         when:
         def pebbles = new User(username:"pebbles", password:"letmein", firstName:"Pebbles", lastName:"Flintstone", middleName:"T", phone:"555-555-5555", email:'pebbles@flintstone.com', activationDate:new Date(), logonFailureCount:0, deactivationDate:null).save(flush:true)
 
-        def builder = new JSONBuilder()
+        def builder = new JsonBuilder()
         request.method = 'PUT'
-        request.json = builder.build { user = pebbles }
+        request.json = builder.build { user pebbles }
         response.format = "json"
         params.id = pebbles.id
 

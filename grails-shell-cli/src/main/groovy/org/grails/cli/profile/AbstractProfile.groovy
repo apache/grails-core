@@ -19,8 +19,8 @@ package org.grails.cli.profile
 import groovy.transform.CompileStatic
 import groovy.transform.ToString
 
-import jline.console.completer.ArgumentCompleter
-import jline.console.completer.Completer
+import org.jline.reader.Completer
+import org.jline.reader.impl.completer.ArgumentCompleter
 import org.eclipse.aether.artifact.DefaultArtifact
 import org.eclipse.aether.graph.Dependency
 import org.eclipse.aether.graph.Exclusion
@@ -36,6 +36,7 @@ import org.grails.build.parsing.ScriptNameResolver
 import org.grails.cli.interactive.completers.StringsCompleter
 import org.grails.cli.profile.commands.CommandRegistry
 import org.grails.cli.profile.commands.DefaultMultiStepCommand
+import org.grails.cli.profile.commands.factory.ApplicationContextCommandFactory
 import org.grails.cli.profile.commands.script.GroovyScriptCommand
 import org.grails.config.NavigableMap
 import org.grails.io.support.Resource
@@ -484,7 +485,8 @@ abstract class AbstractProfile implements Profile {
                 return cmd.handle(context)
             }
             else {
-                context.console.error("Command not found ${context.commandLine.commandName}")
+                context.console.error(ApplicationContextCommandFactory.unknownCommandMessage(
+                        context.commandLine.commandName))
                 def mostSimilar = CosineSimilarity.mostSimilar(commandName, commandsByName.keySet())
                 List<String> topMatches = mostSimilar.subList(0, Math.min(3, mostSimilar.size()))
                 if (topMatches) {

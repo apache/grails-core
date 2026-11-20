@@ -18,13 +18,21 @@
  */
 package org.grails.web.pages;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.grails.gradle.plugin.views.RecordingForkedCompiler;
 
 /**
  * Stands in for grails-web-gsp's forked page compiler, by its name, which {@code GroovyPageForkCompileTask}
- * starts; see {@link RecordingForkedCompiler}.
+ * starts; see {@link RecordingForkedCompiler}. Records as well the directories of generated pages
+ * compiled with the source, the pages the task says it may leave out, and the encoding the pages
+ * are read in. How the real compiler treats a generated page is tested in grails-web-gsp.
  */
 public final class GroovyPageForkedCompiler {
 
@@ -32,6 +40,16 @@ public final class GroovyPageForkedCompiler {
     }
 
     public static void main(String[] args) throws IOException {
-        RecordingForkedCompiler.record(args[0], args[1]);
+        List<String> optional = new ArrayList<>();
+        String lists = System.getProperty("grails.views.gsp.optionalPages");
+        if (lists != null) {
+            for (String list : lists.split(File.pathSeparator)) {
+                optional.addAll(Files.readAllLines(Paths.get(list), StandardCharsets.UTF_8));
+            }
+        }
+        RecordingForkedCompiler.record(args[0], args[1],
+                "generatedViews=" + System.getProperty("grails.views.gsp.generatedViewDirectories"),
+                "optionalPages=" + String.join(",", optional),
+                "encoding=" + args[7]);
     }
 }

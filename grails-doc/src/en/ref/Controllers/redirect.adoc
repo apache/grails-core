@@ -61,7 +61,7 @@ redirect(action: "foo", permanent: true, moved: false)
 
 === Description
 
-Redirects the current action to another action, optionally passing parameters and/or errors. When issuing a redirect from a namespaced controller, the namespace for the target controller is implied to be that of the controller initiating the redirect. To issue a redirect from a namespaced controller to a controller that is not in a namespace, the namespace must be explicitly specified with a value of `null` as shown below.  By default, the redirect code will be MOVED_TEMPORARILY (302).
+Redirects the current action to another action, optionally passing parameters and/or errors. When `namespace` is omitted, Grails resolves the target controller namespace automatically. If the target is the current controller, Grails uses the current request namespace. If exactly one controller has the target name, Grails uses that controller's namespace, whether the controller is namespaced or not. You only need to set `namespace` when more than one controller shares the same name. To issue a redirect from a namespaced controller to a controller that is not in a namespace, specify `namespace: null` as shown below. By default, the redirect code will be MOVED_TEMPORARILY (302).
 
 [source,groovy]
 ----
@@ -81,7 +81,7 @@ class SomeController {
 
 * `action` (optional) - the name of the action to use in the link, if not specified the default action will be linked
 * `controller` (optional) - the name of the controller to use in the link, if not specified the current controller will be linked
-* `namespace` (optional) - the namespace of the controller to redirect to
+* `namespace` (optional) - the namespace of the controller to redirect to. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace: null` to target a non-namespaced controller.
 * `plugin` (optional) - the name of the plugin which provides the controller
 * `id` (optional) - the id to use in the link
 * `fragment` (optional) - The link fragment (often called anchor tag) to use

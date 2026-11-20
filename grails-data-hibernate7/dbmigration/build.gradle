@@ -1,0 +1,146 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+plugins {
+    id 'org.apache.grails.buildsrc.properties'
+    id 'org.apache.grails.buildsrc.dependency-validator'
+    id 'org.apache.grails.gradle.grails-plugin'
+    id 'org.apache.grails.gradle.grails-plugin-cli'
+    id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
+    id 'org.apache.grails.buildsrc.publish'
+    id 'org.apache.grails.buildsrc.sbom'
+    id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
+}
+
+version = projectVersion
+group = 'org.apache.grails'
+
+cliArtifact {
+    automaticModuleName = 'org.apache.grails.data.hibernate7.dbmigration.cli'
+    // this framework module wires its cli dependencies with project dependencies below
+    defaultDependencies = false
+}
+
+ext {
+    gormApiDocs = true
+    pomTitle = 'Grails Database Migration Plugin for Hibernate 7'
+    pomDescription = 'The Database Migration plugin helps you manage database changes, via Liquibase, while developing Grails applications for Hibernate 7'
+}
+
+configurations {
+    enversRuntime.extendsFrom(testImplementation)
+}
+
+dependencies {
+    implementation platform(project(':grails-hibernate7-bom'))
+
+    implementation("org.liquibase:liquibase-core")
+    implementation("org.hibernate.models:hibernate-models")
+    implementation project(':grails-data-hibernate7-dbmigration-core')
+    testImplementation testFixtures(project(':grails-data-hibernate7-dbmigration-core'))
+    implementation project(':grails-data-hibernate7')
+    implementation project(':grails-data-hibernate7-spring-orm')
+    compileOnly("org.hibernate.orm:hibernate-envers")
+    testCompileOnly("org.hibernate.orm:hibernate-envers")
+
+    compileOnly "org.projectlombok:lombok"
+    annotationProcessor platform(project(':grails-hibernate7-bom'))
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly "org.projectlombok:lombok"
+    testAnnotationProcessor platform(project(':grails-hibernate7-bom'))
+    testAnnotationProcessor "org.projectlombok:lombok"
+
+    // the cli tier — published separately as org.apache.grails:grails-data-hibernate7-dbmigration-cli;
+    // the dbm-* commands and their CLI-only dependencies (grails-shell-cli) stay off the
+    // application runtime classpath entirely
+    cliImplementation platform(project(':grails-hibernate7-bom'))
+    cliApi project(project.path)
+    cliApi(project(':grails-core')) {
+        capabilities {
+            requireCapability('org.apache.grails:grails-core-cli')
+        }
+    }
+    cliImplementation 'org.liquibase:liquibase-core'
+    cliImplementation project(':grails-data-hibernate7-dbmigration-core')
+    cliImplementation project(':grails-data-hibernate7')
+    cliCompileOnly 'org.apache.groovy:groovy-sql'
+    cliCompileOnly 'org.apache.groovy:groovy-xml'
+    cliCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+    cliImplementation(project(':grails-shell-cli')) {
+        exclude group: 'org.slf4j', module: 'slf4j-simple'
+
+        // Keep legacy org.codehaus.groovy artifacts off this plugin's Groovy 5 classpath.
+        exclude group: 'org.codehaus.groovy'
+    }
+
+    compileOnly 'org.springframework.boot:spring-boot-starter-logging'
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly project(':grails-data-hibernate7')
+    compileOnly project(':grails-core')
+    compileOnly 'org.apache.groovy:groovy-sql'
+    compileOnly 'org.apache.groovy:groovy-xml'
+
+    compileOnly 'org.springframework:spring-jdbc'
+    compileOnly 'org.springframework:spring-beans'
+    compileOnly 'org.springframework:spring-context'
+    compileOnly 'org.springframework:spring-orm'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-tomcat'
+    testImplementation project(':grails-data-hibernate7-core')
+    testImplementation project(':grails-data-hibernate7')
+    testImplementation project(':grails-core')
+    testImplementation project(':grails-testing-support-datamapping')
+    testImplementation project(':grails-testing-support-web')
+
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers-spock'
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.hsqldb:hsqldb'
+    testImplementation 'org.postgresql:postgresql'
+    testImplementation('org.liquibase:liquibase-test-harness') {
+        exclude group: 'org.liquibase', module: 'liquibase-commercial'
+    }
+    enversRuntime("org.hibernate.orm:hibernate-envers")
+
+    // Liquibase uses JUL for logging -> redirect it to SLF4J to reliably capture its output
+    testRuntimeOnly 'org.slf4j:jul-to-slf4j'
+}
+
+tasks.named('test', Test) {
+    systemProperty("java.util.logging.config.file", "src/test/resources/logging.properties")
+    classpath += configurations.enversRuntime
+}
+
+tasks.named('testCli', Test) {
+    systemProperty("java.util.logging.config.file", "src/test-cli/resources/logging.properties")
+    classpath += configurations.enversRuntime
+}
+
+tasks.named('jar', Jar) {
+    exclude('testapp/**/**')
+}
+
+apply {
+    from rootProject.layout.projectDirectory.file('gradle/hibernate7-test-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/docs-config.gradle')
+    from rootProject.layout.projectDirectory.file('gradle/grails-extension-gradle-config.gradle')
+}

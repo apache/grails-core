@@ -44,7 +44,7 @@ Once you have the JAR resolved you need to get familiar with how Grails manages 
 * `readOnly` - If `true` makes the DataSource read-only, which results in the connection pool calling `setReadOnly(true)` on each `Connection`
 * `transactional` - If `false` leaves the DataSource's transactionManager bean outside the chained BE1PC transaction manager implementation. This only applies to additional datasources.
 * `persistenceInterceptor` - The default datasource is automatically wired up to the persistence interceptor, other datasources are not wired up automatically unless this is set to `true`
-* `properties` - Extra properties to set on the DataSource bean. The supported properties depend on the connection pool implementation. See the https://github.com/brettwooldridge/HikariCP#gear-configuration-knobs-baby[HikariCP configuration documentation] for HikariCP, or the https://tomcat.apache.org/tomcat-10.1-doc/jdbc-pool.html#Common_Attributes[Tomcat JDBC Pool documentation] for Tomcat JDBC Pool.
+* `properties` - Extra properties to set on the DataSource bean. The supported properties depend on the connection pool implementation. See the https://github.com/brettwooldridge/HikariCP#gear-configuration-knobs-baby[HikariCP configuration documentation] for HikariCP, or the https://tomcat.apache.org/tomcat-11.0-doc/jdbc-pool.html#Common_Attributes[Tomcat JDBC Pool documentation] for Tomcat JDBC Pool.
 * `jmxExport` - If `true`, registers JMX MBeans for Tomcat JDBC Pool DataSources with `jmxEnabled = true` in their properties (defaults to false). For HikariCP, use `properties.registerMbeans = true` instead.
 * `type` - The connection pool class if you want to force Grails to use it when there are more than one available.
 
@@ -72,6 +72,17 @@ dataSource {
         transactionIsolation = "TRANSACTION_READ_COMMITTED"
     }
 }
+----
+
+When GORM for Hibernate is applied, it always creates a default data source, and that data source is available as the `dataSource` bean, to inject by name or by type, even when the application has no `dataSource` block. Without a `dataSource` block, it connects to the in-memory H2 database `jdbc:h2:mem:grailsDB`, which requires the H2 driver on the classpath.
+
+To run without this default data source, exclude GORM for Hibernate by its plugin name, `hibernate`, with the `grails.plugin.excludes` setting. None of its beans, such as `hibernateDatastore`, `sessionFactory` and `transactionManager`, are registered then, and the application has a `dataSource` bean only when it has a `dataSource` block:
+
+[source,yaml]
+----
+grails:
+    plugin:
+        excludes: hibernate
 ----
 
 WARNING: When configuring the DataSource do not include the type or the def keyword before any of the configuration settings as Groovy will treat these as local variable definitions and they will not be processed. For example the following is invalid:
@@ -132,3 +143,5 @@ Hibernate can automatically create the database tables required for your domain 
 * any other value - does nothing
 
 Setting the `dbCreate` setting to "none" is recommended once your schema is relatively stable and definitely when your application and database are deployed in production. Database changes are then managed through proper migrations, either with SQL scripts or a migration tool like https://www.red-gate.com/products/flyway/community/[Flyway] or https://www.liquibase.com/community[Liquibase]. The  link:{hibernate5Guide}#databaseMigration[Database Migration] plugin uses Liquibase.
+
+NOTE: If you are migrating from Hibernate 5 to Hibernate 7, some column types change in generated DDL (for example `char` now maps to `varchar(1)`, and timestamp precision changes on some databases). Review the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide before enabling `dbCreate = 'update'` against an existing database.

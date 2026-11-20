@@ -60,6 +60,11 @@ def unreleasedBooks = Book.findAllWhere(releaseDate: null)
 === Description
 
 
+`findAllWhere` returns all matching instances. A `null` value in the argument map matches rows where that property is `null`.
+
+Only domain class property names may be used as keys in the argument map. Invalid property names are rejected instead of being interpolated into the generated query.
+
 Parameters:
 
 * `queryParams` - A Map of key/value pairs to be used in the query
+* `args` - Optional query arguments such as `max`, `offset`, `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`

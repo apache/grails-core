@@ -115,6 +115,64 @@ class NavigableMapSpec extends Specification {
         output['rabbitmq.connections']['foo'].password == 'guest'
     }
 
+    def "consecutive subscripts are collapsed to nested lists"() {
+        given:
+        Map input = [
+                'groups[0][0]': 'a',
+                'groups[0][1]': 'b',
+                'groups[1][0]': 'c',
+                'deep[0][0][0]': 'x',
+        ]
+
+        when:
+        Map output = new NavigableMap()
+        output.merge(input)
+
+        then:
+        output['groups'] == [['a', 'b'], ['c']]
+        output['deep'] == [[['x']]]
+
+        and: "each element stays readable under its indexed name"
+        output['groups[0][1]'] == 'b'
+        output['deep[0][0][0]'] == 'x'
+    }
+
+    def "consecutive subscripts followed by a property are collapsed to a map in a nested list"() {
+        given:
+        Map input = [
+                'items[0][1].name': 'n',
+                'items[0][1].host': 'h',
+                'routes[api][0]': '/a',
+                'routes[api][1]': '/b',
+        ]
+
+        when:
+        Map output = new NavigableMap()
+        output.merge(input)
+
+        then:
+        output['items'] == [[null, [name: 'n', host: 'h']]]
+        output['routes'] == [api: ['/a', '/b']]
+    }
+
+    def "dotted keys with consecutive subscripts are collapsed to nested lists"() {
+        given:
+        Map input = [
+                'app.groups[0][0]': 'a',
+                'app.groups[0][1]': 'b',
+                'app.groups[1][0]': 'c',
+        ]
+
+        when:
+        NavigableMap output = new NavigableMap()
+        output.merge(input, true)
+
+        then:
+        output['app.groups'] == [['a', 'b'], ['c']]
+        output['app.groups[1][0]'] == 'c'
+        output.navigate('app', 'groups') == [['a', 'b'], ['c']]
+    }
+
     def "an indexed key with a property after the index builds the list in the nested map, written #description"() {
         given:
         NavigableMap output = new NavigableMap()
@@ -311,14 +369,14 @@ class NavigableMapSpec extends Specification {
         when:
         output.merge([(key): 'x'], true)
 
-        then: 'the nested map holds no container, and the flat key holds the value under the first subscript, as before'
+        then: 'the nested map holds no container, and the flat key holds the containers the subscripts wrote, as before'
         output.navigate('a', 'grid') == null
-        output.get('a.grid')[first].values() as List == ['x']
+        output.get('a.grid') == written
 
         where:
-        key                  | first
-        'a.grid[0][1].name'  | 0
-        'a.grid[k][1].name'  | 'k'
+        key                  | written
+        'a.grid[0][1].name'  | [[null, [name: 'x']]]
+        'a.grid[k][1].name'  | [k: [null, [name: 'x']]]
     }
 
     def "an indexed key with a property after the index writes a map over a value of a list that is not a map"() {

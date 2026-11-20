@@ -138,10 +138,14 @@ class GrailsViewBufferingResponseSpec extends Specification {
         target.errorMessage == null
     }
 
-    void 'sendError delegates status and message when the response is uncommitted'() {
-        given:
+    void 'sendError is skipped because the buffering response always reports itself committed'() {
+        given: 'the response says it is committed so that JSP views are included rather than forwarded'
         def target = new MockHttpServletResponse()
         def response = new GrailsViewBufferingResponse(new MockHttpServletRequest(), target)
+
+        expect:
+        response.committed
+        !target.committed
 
         when:
         if (message == null) {
@@ -151,9 +155,9 @@ class GrailsViewBufferingResponseSpec extends Specification {
         }
 
         then:
-        target.status == 404
-        target.errorMessage == message
-        target.committed
+        target.status == 200
+        target.errorMessage == null
+        !target.committed
 
         where:
         message << [null, 'Missing']

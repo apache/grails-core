@@ -61,6 +61,11 @@ public class ResponseCodeMappingData implements UrlMappingData {
         return false;
     }
 
+    @Override
+    public boolean hasGreedyExtensionParam() {
+        return false;
+    }
+
     public int getResponseCode() {
         return responseCode;
     }

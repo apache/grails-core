@@ -22,10 +22,11 @@ import grails.mongodb.MongoEntity
 import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.bson.types.ObjectId
 
 class EmbeddedWithNonEmbeddedCollectionsSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Ship, Crew, Sailor, Captain])
+        manager.registerDomainClasses(Ship, Crew, Sailor, Captain)
     }
 
     void "Test that embedded collections can have non-embedded collections"() {
@@ -51,12 +52,14 @@ class EmbeddedWithNonEmbeddedCollectionsSpec extends GrailsDataTckSpec<GrailsDat
         then: "It is correctly defined"
         shipDbo.name == "The Float"
         shipDbo.crew != null
-        shipDbo.crew.firstMate == firstMate.id
+        // References are written in the target's stored _id type, which since 8.0.0 is
+        // ObjectId for a String-id domain -- the domain property stays the hex String.
+        shipDbo.crew.firstMate == new ObjectId(firstMate.id)
         shipDbo.crew.sailors.size() == 2
-        shipDbo.crew.sailors == [fred.id, joe.id]
+        shipDbo.crew.sailors == [new ObjectId(fred.id), new ObjectId(joe.id)]
         shipDbo.crew.reserves.size() == 2
         shipDbo.crew.reserves[0] instanceof Map
-        shipDbo.crew.reserves[0].$id == Sailor.findByName('Tristan').id
+        shipDbo.crew.reserves[0].$id == new ObjectId(Sailor.findByName('Tristan').id)
         shipDbo.crew.reserves[0].$ref == 'sailor'
 
         when: "The domain model is queried"

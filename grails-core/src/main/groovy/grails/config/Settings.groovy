@@ -51,6 +51,20 @@ interface Settings {
     String SPRING_TRANSACTION_MANAGEMENT = 'grails.spring.transactionManagement.proxies'
 
     /**
+     * Whether the application context allows a bean definition to override another registered under the
+     * same name. Maps to the Spring Boot {@code spring.main.allow-bean-definition-overriding} property;
+     * Grails defaults it to {@code true} (Spring Boot defaults it to {@code false}).
+     */
+    String SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING = 'spring.main.allow-bean-definition-overriding'
+
+    /**
+     * Whether the application context allows circular references between beans. Maps to the Spring Boot
+     * {@code spring.main.allow-circular-references} property; Grails defaults it to {@code true}
+     * (Spring Boot defaults it to {@code false}).
+     */
+    String SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES = 'spring.main.allow-circular-references'
+
+    /**
      * Which plugins to include in the plugin manager
      */
     String PLUGIN_INCLUDES = 'grails.plugin.includes'
@@ -65,6 +79,62 @@ interface Settings {
     String GRAILS_VIEWS_ENABLE_JSESSIONID = 'grails.views.enable.jsessionid'
 
     String VIEWS_FILTERING_CODEC_FOR_CONTENT_TYPE = 'grails.views.filteringCodecForContentType'
+
+    /**
+     * Default CSS class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS = 'grails.views.gsp.flashMessages.messageClass'
+
+    /**
+     * Default icon class for {@code flash.message} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON = 'grails.views.gsp.flashMessages.messageIcon'
+
+    /**
+     * Default CSS class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS = 'grails.views.gsp.flashMessages.errorClass'
+
+    /**
+     * Default icon class for {@code flash.error} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON = 'grails.views.gsp.flashMessages.errorIcon'
+
+    /**
+     * Default CSS class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS = 'grails.views.gsp.flashMessages.warningClass'
+
+    /**
+     * Default icon class for {@code flash.warning} alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON = 'grails.views.gsp.flashMessages.warningIcon'
+
+    /**
+     * Default ARIA role for alerts rendered by {@code <g:flashMessages />}.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_ROLE = 'grails.views.gsp.flashMessages.role'
+
+    /**
+     * Whether alerts rendered by {@code <g:flashMessages />} are dismissible by default.
+     *
+     * @since 7.1
+     */
+    String VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE = 'grails.views.gsp.flashMessages.dismissible'
 
     /**
      * Whether to disable caching of resources in GSP
@@ -96,6 +166,11 @@ interface Settings {
     String GORM_DEFAULT_CONSTRAINTS = 'grails.gorm.default.constraints'
 
     /**
+     * Whether an unconstrained persistent property is nullable by default
+     */
+    String GORM_DEFAULT_NULLABLE = 'grails.gorm.default.nullable'
+
+    /**
      * Whether to autowire instances
      */
     String GORM_AUTOWIRE_INSTANCES = 'grails.gorm.autowire'
@@ -108,6 +183,12 @@ interface Settings {
      * The configured mime types
      */
     String MIME_TYPES = 'grails.mime.types'
+    /**
+     * Whether a configured {@code grails.mime.types} map is merged over the built-in defaults
+     * (adding any extension it does not declare) rather than replacing them. Defaults to {@code false},
+     * preserving the historical behaviour where a declared map fully replaces the defaults.
+     */
+    String MIME_TYPES_MERGE_DEFAULTS = 'grails.mime.mergeDefaults'
     /**
      * Whether to use the accept header for content negotiation
      */
@@ -129,26 +210,6 @@ interface Settings {
     String CONTROLLERS_DEFAULT_SCOPE = 'grails.controllers.defaultScope'
 
     /**
-     * The upload directory for controllers, defaults to java.tmp.dir
-     */
-    String CONTROLLERS_UPLOAD_LOCATION = 'grails.controllers.upload.location'
-
-    /**
-     * The maximum file size
-     */
-    String CONTROLLERS_UPLOAD_MAX_FILE_SIZE = 'grails.controllers.upload.maxFileSize'
-
-    /**
-     * The maximum request size
-     */
-    String CONTROLLERS_UPLOAD_MAX_REQUEST_SIZE = 'grails.controllers.upload.maxRequestSize'
-
-    /**
-     * The file size threshold
-     */
-    String CONTROLLERS_UPLOAD_FILE_SIZE_THRESHOLD = 'grails.controllers.upload.fileSizeThreshold'
-
-    /**
      * The encoding to use for filters, default to UTF-8
      */
     String FILTER_ENCODING = 'grails.filter.encoding'
@@ -164,6 +225,16 @@ interface Settings {
     String WEB_URL_CONVERTER = 'grails.web.url.converter'
 
     /**
+     * Whether to validate wildcard-captured URL mapping variables ($controller, $action, $namespace)
+     * against registered controller artefacts. When enabled, a wildcard capture that does not match
+     * a registered controller or action will cause the mapping to be skipped, allowing the next
+     * mapping to be tried. Defaults to {@code true}.
+     *
+     * @since 7.1
+     */
+    String URL_MAPPING_VALIDATE_WILDCARDS = 'grails.urlmapping.validateWildcards'
+
+    /**
      * Whether to cache links generated by the link generator
      */
     String WEB_LINK_GENERATOR_USE_CACHE = 'grails.web.linkGenerator.useCache'
@@ -172,6 +243,31 @@ interface Settings {
      * The path to the Grails servlet. Defaults to '/'
      */
     String WEB_SERVLET_PATH = 'grails.web.servlet.path'
+
+    /**
+     * Whether to remove Spring Boot's {@code defaultViewResolver} bean so Grails' own view
+     * resolution is used. Defaults to true
+     */
+    String WEB_REMOVE_DEFAULT_VIEW_RESOLVER_BEAN = 'grails.web.removeDefaultViewResolverBean'
+
+    /**
+     * Whether to remove Spring Boot's welcome-page handler mappings so Grails' own URL mappings
+     * own the root path ('/') rather than a static {@code index.html} being served for it.
+     * Defaults to true
+     */
+    String WEB_REMOVE_WELCOME_PAGE_MAPPING = 'grails.web.removeWelcomePageMapping'
+
+    /**
+     * Whether to register Grails' hidden HTTP method filter, which rewrites a {@code POST} carrying a
+     * {@code _method} parameter or an {@code X-HTTP-Method-Override} header before the request reaches the
+     * dispatcher. Defaults to false as of Grails 8: the filter reads a request parameter ahead of the
+     * dispatcher, which forces the servlet container to parse a {@code multipart/form-data} body before the
+     * request has been routed or authenticated. Browser forms are unaffected -- the {@code _method}
+     * parameter is resolved inside the dispatcher instead. Set to true to restore the filter
+     *
+     * @since 8.0
+     */
+    String WEB_HIDDEN_METHOD_FILTER_ENABLED = 'grails.web.hiddenmethod.filter.enabled'
 
     /**
      * The URL of the server
@@ -227,6 +323,41 @@ interface Settings {
      */
     String SETTING_EXCEPTION_RESOLVER_PARAM_EXCLUDES = 'grails.exceptionresolver.params.exclude'
     /**
+     * Whether the exception resolver should also emit the exception on the separate
+     * {@code StackTrace} logger in addition to its own request-context log entry.
+     * Defaults to {@code false}; set to {@code true} to restore the historical two-logger
+     * behaviour, which allows routing the trace to a separate appender via logback config.
+     */
+    String SETTING_LOG_FULL_STACKTRACE = 'grails.exceptionresolver.logFullStackTrace'
+    /**
+     * Whether the exception resolver should append the current auditor (resolved via a
+     * registered {@code org.grails.datastore.gorm.timestamp.AuditorAware} bean) to the
+     * exception log line. Defaults to {@code true}; set to {@code false} to keep user
+     * identifiers out of exception logs. When no {@code AuditorAware} bean is registered
+     * the log line is unchanged regardless of this setting.
+     */
+    String SETTING_LOG_AUDITOR = 'grails.exceptionresolver.logAuditor'
+    /**
+     * Whether the exception resolver should append the remote client address
+     * ({@link jakarta.servlet.http.HttpServletRequest#getRemoteAddr()}) to the exception
+     * log line. Defaults to {@code false}; set to {@code true} to include client addresses
+     * in exception logs. Behind a reverse proxy, configure the servlet container
+     * (for example Spring Boot's {@code server.forward-headers-strategy}) so that
+     * {@code remoteAddr} reflects the real client IP.
+     */
+    String SETTING_LOG_REMOTE_ADDR = 'grails.exceptionresolver.logRemoteAddr'
+    /**
+     * Whether {@link org.grails.exceptions.reporting.DefaultStackTraceFilterer#filter(Throwable)}
+     * should emit the unfiltered stack trace to the dedicated {@code StackTrace} logger as a
+     * side effect, before trimming the trace in place. Defaults to {@code true} to preserve
+     * historical behaviour — non-resolver callers (for example {@code GrailsUtil.sanitizeRootCause},
+     * {@code GroovyPageView.deepSanitize}, custom plugin code) that previously relied on this
+     * side-effect emission continue to produce {@code StackTrace} entries. Set to {@code false}
+     * to disable the side-effect emission and rely solely on {@link #SETTING_LOG_FULL_STACKTRACE}
+     * for resolver-driven emission.
+     */
+    String SETTING_LOG_FULL_STACKTRACE_ON_FILTER = 'grails.exceptionresolver.logFullStackTraceOnFilter'
+    /**
      * The class to use for stacktrace filtering. Should be an instanceof {@link org.grails.exceptions.reporting.StackTraceFilterer}
      */
     String SETTING_LOGGING_STACKTRACE_FILTER_CLASS = 'grails.logging.stackTraceFiltererClass'
@@ -253,7 +384,34 @@ interface Settings {
 
     String DATE_LENIENT_PARSING = 'grails.databinding.dateParsingLenient'
 
+    String DATABINDING_DENY_BY_DEFAULT = 'grails.databinding.denyByDefault'
+
+    /**
+     * Whether message bundles contributed by plugins participate, both in message resolution and in
+     * the locales offered by a language selector. Defaults to {@code true}.
+     *
+     * <p>Bundle caching, encoding and locale fallback are Spring Boot's {@code spring.messages.*}
+     * properties.</p>
+     */
+    String I18N_INCLUDE_PLUGIN_BUNDLES = 'grails.i18n.include-plugin-bundles'
+
+    /**
+     * How long, in seconds, resolved message bundles are cached.
+     *
+     * <p>Still honoured as a temporary upgrade aid, and — as before — only when reload is enabled.
+     * It is translated into {@code spring.messages.cache-duration}, which an application that sets it
+     * explicitly always wins with.</p>
+     *
+     * @deprecated since 8.0, for removal. Spring Boot owns the message source; configure
+     * {@code spring.messages.cache-duration} instead.
+     */
+    @Deprecated(since = '8.0', forRemoval = true)
     String I18N_CACHE_SECONDS = 'grails.i18n.cache.seconds'
 
-    String I18N_FILE_CACHE_SECONDS = 'grails.i18n.filecache.seconds'
+    /**
+     * The locale resolution strategy: {@code session} (default), {@code cookie},
+     * {@code acceptHeader} or {@code fixed}. The {@code acceptHeader} and {@code fixed}
+     * resolvers are read-only, so the {@code ?lang=} switch is disabled for them.
+     */
+    String I18N_LOCALE_RESOLVER = 'grails.i18n.localeResolver'
 }

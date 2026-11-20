@@ -27,23 +27,25 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.CompilerConfiguration
 
-import org.springframework.boot.ResourceBanner
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.context.ApplicationPidFileWriter
-import org.springframework.boot.web.context.WebServerApplicationContext
+import org.springframework.boot.web.server.context.WebServerApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.ConfigurableEnvironment
-import org.springframework.core.io.ClassPathResource
 import org.springframework.core.io.ResourceLoader
 
+import grails.boot.config.GrailsEarlyPluginRegistrationPostProcessor
 import grails.compiler.ast.ClassInjector
+import grails.config.Settings
 import grails.core.GrailsApplication
+import grails.core.GrailsApplicationClass
 import grails.io.IOUtils
 import grails.plugins.GrailsPlugin
 import grails.plugins.GrailsPluginManager
 import grails.util.BuildSettings
 import grails.util.Environment
 import org.grails.boot.internal.JavaCompiler
+import org.grails.boot.internal.RedefinedClassWatch
 import org.grails.compiler.injection.AbstractGrailsArtefactTransformer
 import org.grails.compiler.injection.GrailsAwareInjectionOperation
 import org.grails.core.util.BeanCreationProfilingPostProcessor
@@ -62,7 +64,6 @@ import org.grails.plugins.support.WatchPattern
 @CompileStatic
 class GrailsApp extends SpringApplication {
 
-    private static final String GRAILS_BANNER = 'grails-banner.txt'
     private static final String SPRING_PROFILES = 'spring.profiles.active'
 
     /**
@@ -79,6 +80,22 @@ class GrailsApp extends SpringApplication {
 
     boolean enableBeanCreationProfiler = false
     ConfigurableEnvironment configuredEnvironment
+
+    /**
+     * Whether this application is one context of a parent/child hierarchy, as {@link GrailsAppBuilder}
+     * builds with {@code child()}, {@code parent()} and {@code sibling()}.
+     *
+     * <p>A standalone {@code GrailsApp} runs the Grails plugin lifecycle whatever its sources are. A
+     * hierarchy member runs it only when one of its sources is a Grails application class, that is a
+     * {@link GrailsApplicationClass} such as a {@code GrailsAutoConfiguration} subclass, so the
+     * other contexts of the hierarchy stay plain Spring contexts and share the Grails beans through
+     * their parent rather than each starting a plugin manager of its own. A member that skips the
+     * lifecycle says so in its log. The builder sets this on every application it places in a
+     * hierarchy; an application assembling a hierarchy by hand sets it itself.</p>
+     *
+     * @since 8.1
+     */
+    boolean contextHierarchyMember = false
 
     /**
      * Create a new {@link GrailsApp} instance. The application context will load
@@ -105,7 +122,7 @@ class GrailsApp extends SpringApplication {
      */
     GrailsApp(ResourceLoader resourceLoader, Class<?>... sources) {
         super(resourceLoader, sources)
-        banner = new ResourceBanner(new ClassPathResource(GRAILS_BANNER))
+        banner = new GrailsBanner()
     }
 
     @Override
@@ -118,7 +135,9 @@ class GrailsApp extends SpringApplication {
         log.debug('Application directory discovered as: {}', IOUtils.findApplicationDirectory())
         log.debug('Current base directory is [{}]. Reloading base directory is [{}]', new File('.'), BuildSettings.BASE_DIR)
 
-        if (environment.isReloadEnabled()) {
+        // the watch recompiles into the context that owns the plugin manager; in a hierarchy that is
+        // the one Grails application, and the plain contexts around it have nothing to watch
+        if (environment.isReloadEnabled() && applicationContext.containsLocalBean(GrailsPluginManager.BEAN_NAME)) {
             log.debug('Reloading status: {}', environment.isReloadEnabled())
             enableDevelopmentModeWatch(environment, applicationContext)
             environment.isDevtoolsRestart()
@@ -144,10 +163,62 @@ class GrailsApp extends SpringApplication {
         }
     }
 
+    /**
+     * Stashes the application source classes as a well-known singleton so that
+     * {@code GrailsEarlyPluginRegistrationPostProcessor} can perform artefact discovery before
+     * Spring Boot auto-configuration is processed. Runs before the context initializers are
+     * applied, so the singleton is available by the time the early registration phase executes.
+     *
+     * <p>The stash is also what marks the context as launched by Grails, which is what selects the
+     * plugin lifecycle for a context whose sources are plain configuration classes. A
+     * {@link #isContextHierarchyMember() hierarchy member} stashes its sources only when one of them
+     * is a Grails application class, leaving the plain contexts of the hierarchy without the
+     * lifecycle, and logs that it did so.</p>
+     */
+    @Override
+    protected void postProcessApplicationContext(ConfigurableApplicationContext applicationContext) {
+        super.postProcessApplicationContext(applicationContext)
+        ClassLoader loader = getClassLoader() ?: Thread.currentThread().contextClassLoader
+        List<Class<?>> sourceClasses = []
+        for (Object source in getAllSources()) {
+            if (source instanceof Class) {
+                sourceClasses.add((Class<?>) source)
+            }
+            else if (source instanceof String) {
+                try {
+                    // sources may be supplied as class names (spring.main.sources); resolve them so a
+                    // String-specified application class is still available for early artefact discovery
+                    sourceClasses.add(Class.forName((String) source, false, loader))
+                }
+                catch (ClassNotFoundException | LinkageError ignored) {
+                    // a String source that is not a resolvable class (e.g. a resource location) is not
+                    // an application class, so there is nothing to stash for it
+                }
+            }
+        }
+        if (contextHierarchyMember && !containsApplicationClass(sourceClasses)) {
+            // said out loud, because the same sources standing alone would run the lifecycle, and a
+            // context missing its plugin beans is otherwise hard to trace back to this decision
+            log.info('Context hierarchy member with sources {} has no Grails application class, so it starts as a plain ' +
+                    'Spring context and leaves the plugin lifecycle to the context of the hierarchy that has one',
+                    sourceClasses*.name)
+            return
+        }
+        if (!sourceClasses.isEmpty()) {
+            applicationContext.beanFactory.registerSingleton(
+                    GrailsEarlyPluginRegistrationPostProcessor.APPLICATION_SOURCE_CLASSES_BEAN_NAME,
+                    sourceClasses.toArray(new Class<?>[0]))
+        }
+    }
+
+    private static boolean containsApplicationClass(Collection<Class<?>> sources) {
+        return sources.any { Class<?> source -> GrailsApplicationClass.isAssignableFrom(source) }
+    }
+
     @Override
     protected ConfigurableApplicationContext createApplicationContext() {
-        setAllowBeanDefinitionOverriding(true)
-        setAllowCircularReferences(true)
+        setAllowBeanDefinitionOverriding(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING, Boolean, Boolean.TRUE))
+        setAllowCircularReferences(configuredEnvironment.getProperty(Settings.SPRING_MAIN_ALLOW_CIRCULAR_REFERENCES, Boolean, Boolean.TRUE))
         ConfigurableApplicationContext applicationContext = super.createApplicationContext()
 
         if (enableBeanCreationProfiler) {
@@ -262,12 +333,19 @@ class GrailsApp extends SpringApplication {
                 }
             }
 
+            // an agent that redefines classes in place does so after the plugins are told of a recompiled class
+            def redefinedClasses = new RedefinedClassWatch(applicationContext.getBean(GrailsApplication).classLoader)
             developmentModeActive = true
             Thread.start {
                 CompilerConfiguration compilerConfig = new CompilerConfiguration()
                 compilerConfig.setTargetDirectory(new File(location, BuildSettings.BUILD_CLASSES_PATH))
 
                 while (isDevelopmentModeActive()) {
+                    for (File redefined in redefinedClasses.redefined()) {
+                        log.debug('The class compiled from [{}] was redefined after the plugins were told of it, telling them again', redefined)
+                        pluginManager.informOfFileChange(redefined)
+                    }
+
                     // Workaround for some IDE / OS combos - 2 events (new + update) for the same file
                     def uniqueChangedFiles = changedFiles as Set<File>
 
@@ -280,7 +358,7 @@ class GrailsApp extends SpringApplication {
                                 if (newFiles.contains(f)) {
                                     newFiles.remove(f)
                                 }
-                                pluginManager.informOfFileChange(f)
+                                redefinedClasses.tell(f) { pluginManager.informOfFileChange(f) }
                                 sleep(1000)
                             }
                         } else if (i == 1) {
@@ -296,7 +374,7 @@ class GrailsApp extends SpringApplication {
                                 if (newFiles.contains(changedFile)) {
                                     newFiles.remove(changedFile)
                                 }
-                                pluginManager.informOfFileChange(changedFile)
+                                redefinedClasses.tell(changedFile) { pluginManager.informOfFileChange(changedFile) }
                             }
                         }
 
@@ -394,15 +472,16 @@ class GrailsApp extends SpringApplication {
     }
 
     protected printRunStatus(ConfigurableApplicationContext applicationContext) {
+        if (!(applicationContext instanceof WebServerApplicationContext)) {
+            // nothing is listening: a context without a web server, such as the parent of a hierarchy
+            return
+        }
         try {
             GrailsApplication app = applicationContext.getBean(GrailsApplication)
             String protocol = app.config.getProperty('server.ssl.key-store') ? 'https' : 'http'
             String contextPath = app.config.getProperty('server.servlet.context-path', '')
             String hostName = app.config.getProperty('server.address', 'localhost')
-            int port
-            if (applicationContext instanceof WebServerApplicationContext) {
-                port = applicationContext.webServer.port
-            }
+            int port = ((WebServerApplicationContext) applicationContext).webServer.port
             println("Grails application running at ${protocol}://${hostName}:${port}${contextPath} in environment: ${Environment.current.name}")
 
         } catch (ignore) {

@@ -38,7 +38,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-jetty'
     implementation 'org.apache.grails:grails-web-boot'
-    implementation 'org.apache.grails:grails-layout'
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
+    }
     implementation 'org.apache.grails:grails-logging'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-databinding'
@@ -52,9 +56,9 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    runtimeOnly 'org.fusesource.jansi:jansi'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 apply {

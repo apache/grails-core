@@ -1,0 +1,3 @@
+moduleName=criteria-extension
+moduleVersion=1.0
+extensionClasses=example.extensions.CriteriaBuilderExtensions,org.grails.orm.hibernate.query.HibernateCriteriaBuilderExtensions

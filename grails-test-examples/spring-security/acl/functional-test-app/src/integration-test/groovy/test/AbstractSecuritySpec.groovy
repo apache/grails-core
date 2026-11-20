@@ -16,31 +16,32 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package test
+
+import pages.IndexPage
+import pages.ResetDataPage
 
 import grails.gorm.transactions.Rollback
 import grails.plugin.geb.ContainerGebSpec
-import grails.testing.mixin.integration.Integration
 import pages.LoginPage
+import pages.LogoutPage
 import spock.lang.Shared
 
 @Rollback
-@Integration
 abstract class AbstractSecuritySpec extends ContainerGebSpec {
 
 	@Shared boolean reset = false
 
 	void setup() {
 		if (!reset) {
-			go('testData/reset')
+			to(ResetDataPage)
 			reset = true
 		}
 		logout()
 	}
 
 	protected void login(String user) {
-		to(LoginPage).with {
+		via(LoginPage).with {
 			username = user
 			password = 'password'
 			loginButton.click()
@@ -48,10 +49,12 @@ abstract class AbstractSecuritySpec extends ContainerGebSpec {
 		// Wait for the post-login redirect to settle before the test navigates, otherwise the
 		// redirect can land after the test's own `go(...)` and leave the browser on the home page.
 		waitFor { !currentUrl.contains('/login/') }
+		at(IndexPage)
 	}
 
 	protected void logout() {
-		go('logout')
+		via(LogoutPage)
+		at(IndexPage)
 		clearCookies()
 	}
 }

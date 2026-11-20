@@ -25,29 +25,6 @@ info:
         grailsVersion: '@info.app.grailsVersion@'
 ---
 grails:
-    mime:
-        types:
-            all: '*/*'
-            atom: application/atom+xml
-            css: text/css
-            csv: text/csv
-            form: application/x-www-form-urlencoded
-            html: 
-              - text/html
-              - application/xhtml+xml
-            js: text/javascript
-            json:
-              - application/json
-              - text/json
-            multipartForm: multipart/form-data
-            rss: application/rss+xml
-            text: text/plain
-            hal: 
-              - application/hal+json
-              - application/hal+xml
-            xml:
-              - text/xml
-              - application/xml
     hibernate:
         cache:
             queries: false
@@ -97,3 +74,9 @@ environments:
                 testOnReturn: false
                 jdbcInterceptors: ConnectionState
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
+
+---
+grails:
+    gorm:
+        default:
+            nullable: false

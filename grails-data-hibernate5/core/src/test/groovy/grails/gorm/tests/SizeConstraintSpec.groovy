@@ -19,7 +19,6 @@
 package grails.gorm.tests
 
 import grails.gorm.annotation.Entity
-import org.apache.grails.data.testing.tck.domains.TestEntity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.DataIntegrityViolationException
@@ -30,7 +29,7 @@ import spock.lang.Issue
  */
 class SizeConstraintSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([SizeConstrainedUser])
+        manager.registerDomainClasses(SizeConstrainedUser)
     }
 
     @Issue('https://github.com/apache/grails-data-mapping/issues/846')

@@ -18,17 +18,18 @@
  */
 package grails.gorm.tests
 
-import org.apache.grails.data.testing.tck.domains.Person
 import grails.gorm.transactions.Transactional
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.apache.grails.data.testing.tck.domains.Person
 
 /**
  * Created by graemerocher on 05/01/2017.
  */
 class TransactionalTransformOnServiceSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([Person])
+        manager.registerDomainClasses(Person)
     }
 
     void "test transaction manager lookup with @Transactional and unassigned transaction manager"() {
@@ -39,6 +40,7 @@ class TransactionalTransformOnServiceSpec extends GrailsDataTckSpec<GrailsDataCo
 
 
 }
+
 @Transactional
 class TestService {
 
@@ -46,6 +48,7 @@ class TestService {
         return transactionStatus != null
     }
 }
+
 abstract class ParentService {
 
     @Transactional
@@ -53,6 +56,7 @@ abstract class ParentService {
         "parent $arg"
     }
 }
+
 class ChildService extends ParentService {
 
 

@@ -26,7 +26,6 @@ plugins {
 version = projectVersion
 group = 'examples'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 
 dependencies {
@@ -43,6 +42,8 @@ dependencies {
     implementation 'org.apache.grails:grails-spring-security-rest'
     implementation 'org.apache.grails:grails-views-gson'
 
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-events'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
@@ -51,7 +52,7 @@ dependencies {
 
     integrationTestImplementation 'org.apache.grails:grails-testing-support-datamapping'
     integrationTestImplementation 'org.spockframework:spock-core'
-    implementation 'org.testcontainers:mongodb'
+    implementation 'org.testcontainers:testcontainers-mongodb'
 }
 
 apply {

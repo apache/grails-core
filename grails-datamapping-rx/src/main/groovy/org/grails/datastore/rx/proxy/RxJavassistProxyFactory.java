@@ -18,18 +18,6 @@
  */
 package org.grails.datastore.rx.proxy;
 
-import grails.gorm.rx.proxy.ObservableProxy;
-import groovy.lang.GroovyObject;
-import javassist.util.proxy.MethodFilter;
-import javassist.util.proxy.MethodHandler;
-import javassist.util.proxy.ProxyObject;
-import org.grails.datastore.mapping.core.Session;
-import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
-import org.grails.datastore.mapping.query.Query;
-import org.grails.datastore.mapping.reflect.ReflectionUtils;
-import org.grails.datastore.rx.RxDatastoreClient;
-import org.grails.datastore.rx.query.QueryState;
-
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -38,14 +26,27 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import groovy.lang.GroovyObject;
+
+import javassist.util.proxy.MethodFilter;
+import javassist.util.proxy.MethodHandler;
+import javassist.util.proxy.ProxyObject;
+
+import grails.gorm.rx.proxy.ObservableProxy;
+import org.grails.datastore.mapping.core.Session;
+import org.grails.datastore.mapping.engine.AssociationQueryExecutor;
+import org.grails.datastore.mapping.query.Query;
+import org.grails.datastore.mapping.reflect.ReflectionUtils;
+import org.grails.datastore.rx.RxDatastoreClient;
+import org.grails.datastore.rx.query.QueryState;
+
 /**
  * Creates observable proxy instances using Javassist
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datastore.mapping.proxy.ProxyFactory {
-    private static final Map<Class, Class > PROXY_FACTORIES = new ConcurrentHashMap<Class, Class >();
+    private static final Map<Class, Class> PROXY_FACTORIES = new ConcurrentHashMap<Class, Class>();
     private static final Set<String> EXCLUDES = new HashSet(Arrays.asList("$getStaticMetaClass"));
     private static final Class[] EMPTY_CLASS_ARRAY = {};
 
@@ -54,8 +55,8 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
         Class proxyClass = getProxyClass(type);
         MethodHandler mi = createMethodHandler(client, type, proxyClass, key, queryState);
         Object proxy = ReflectionUtils.instantiate(proxyClass);
-        ((ProxyObject)proxy).setHandler(mi);
-        return (T)proxy;
+        ((ProxyObject) proxy).setHandler(mi);
+        return (T) proxy;
     }
 
     @Override
@@ -63,7 +64,7 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
         Class proxyClass = getProxyClass(query.getEntity().getJavaClass());
         MethodHandler mi = createMethodHandler(proxyClass, client, query, queryState);
         Object proxy = ReflectionUtils.instantiate(proxyClass);
-        ((ProxyObject)proxy).setHandler(mi);
+        ((ProxyObject) proxy).setHandler(mi);
         return (ObservableProxy) proxy;
     }
 
@@ -82,30 +83,30 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
 
     @Override
     public boolean isInitialized(Object object) {
-        return !isProxy(object) || ((ObservableProxy)object).isInitialized();
+        return !isProxy(object) || ((ObservableProxy) object).isInitialized();
     }
 
     @Override
     public boolean isInitialized(Object object, String associationName) {
-        return !isProxy(object) || ((ObservableProxy)object).isInitialized();
+        return !isProxy(object) || ((ObservableProxy) object).isInitialized();
     }
 
     @Override
     public Object unwrap(Object object) {
-        return isProxy(object) ? ((ObservableProxy)object).getTarget() : object;
+        return isProxy(object) ? ((ObservableProxy) object).getTarget() : object;
     }
 
     @Override
     public Serializable getIdentifier(Object o) {
-        if(isProxy(o)) {
-            return ((ObservableProxy)o).getProxyKey();
+        if (isProxy(o)) {
+            return ((ObservableProxy) o).getProxyKey();
         }
         return null;
     }
 
     @Override
     public Class<?> getProxiedClass(Object o) {
-        if(isProxy(o)) {
+        if (isProxy(o)) {
             return o.getClass().getSuperclass();
         }
         return o.getClass();
@@ -114,11 +115,10 @@ public class RxJavassistProxyFactory implements ProxyFactory, org.grails.datasto
 
     @Override
     public void initialize(Object o) {
-        if(isProxy(o)) {
-            ((ObservableProxy)o).initialize();
+        if (isProxy(o)) {
+            ((ObservableProxy) o).initialize();
         }
     }
-
 
     protected <T> Class<T> getProxyClass(Class<T> type) {
 

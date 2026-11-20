@@ -41,7 +41,7 @@ class PersistenceEventListenerSpec extends GrailsDataTckSpec {
     SpecPersistenceListener listener
 
     void setupSpec() {
-        manager.domainClasses.addAll([Simples])
+        manager.registerDomainClasses(Simples)
     }
 
     def setup() {
@@ -262,7 +262,9 @@ class SpecPersistenceListener extends AbstractPersistenceEventListener {
     PreLoadCount,
     PostLoadCount,
     SaveOrUpdateCount,
-    ValidationCount
+    ValidationCount,
+    MergeCount,
+    PersistCount
 
     @Override
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {

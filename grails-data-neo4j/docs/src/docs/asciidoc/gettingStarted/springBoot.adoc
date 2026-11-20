@@ -21,7 +21,7 @@ To use GORM for Neo4j in Spring Boot add the necessary dependencies to your Boot
 
 [source,groovy,subs="attributes"]
 ----
-compile("org.grails:gorm-neo4j-spring-boot:{version}")
+implementation("org.apache.grails:grails-data-neo4j-spring-boot:{version}")
 ----
 
 Ensure your Boot `Application` class is annotated with `ComponentScan`, example:

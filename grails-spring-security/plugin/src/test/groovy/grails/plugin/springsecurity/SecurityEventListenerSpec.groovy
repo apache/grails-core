@@ -18,7 +18,8 @@
  */
 package grails.plugin.springsecurity
 
-import org.springframework.security.access.event.AbstractAuthorizationEvent
+import org.springframework.security.authorization.AuthorizationDecision
+import org.springframework.security.authorization.event.AuthorizationEvent
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.authentication.TestingAuthenticationToken
 import org.springframework.security.authentication.event.AuthenticationFailureBadCredentialsEvent
@@ -77,12 +78,12 @@ class SecurityEventListenerSpec extends AbstractUnitSpec {
         called
     }
 
-    void 'Test handling AbstractAuthorizationEvent'() {
+    void 'Test handling AuthorizationEvent'() {
         when:
         boolean called = false
         closures.onAuthorizationEvent = { e, appCtx -> called = true }
 
-        listener.onApplicationEvent new AbstractAuthorizationEvent(42) {}
+        listener.onApplicationEvent new AuthorizationEvent({ new TestingAuthenticationToken('', '') }, 42, new AuthorizationDecision(true))
 
         then:
         called

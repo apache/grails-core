@@ -24,5 +24,6 @@ import grails.gorm.annotation.Entity
 
 @Entity
 class Book implements MultiTenant<Book> {
+
     String title
 }

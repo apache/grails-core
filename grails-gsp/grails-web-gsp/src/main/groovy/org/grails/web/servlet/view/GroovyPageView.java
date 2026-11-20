@@ -26,6 +26,8 @@ import groovy.text.Template;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -41,6 +43,7 @@ import org.grails.gsp.GroovyPagesException;
 import org.grails.gsp.GroovyPagesTemplateEngine;
 import org.grails.web.pages.GSPResponseWriter;
 import org.grails.web.servlet.mvc.GrailsWebRequest;
+import org.grails.web.util.WebUtils;
 
 /**
  * A Spring View that renders Groovy Server Pages to the response. It requires an instance
@@ -68,15 +71,33 @@ public class GroovyPageView extends AbstractGrailsView {
     public static final String EXCEPTION_MODEL_KEY = "exception";
     private static boolean developmentMode = Environment.isDevelopmentMode();
 
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+
     @Override
     protected void renderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
+            HttpServletResponse response) {
+        if (this.observationRegistry.isNoop()) {
+            doRenderTemplate(model, webRequest, request, response);
+            return;
+        }
+        String url = getUrl();
+        String resource = (url != null && !url.isEmpty()) ? url : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.view", this.observationRegistry)
+                .contextualName("gsp.view " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
+        observation.observe(() -> doRenderTemplate(model, webRequest, request, response));
+    }
+
+    protected void doRenderTemplate(Map<String, Object> model, GrailsWebRequest webRequest, HttpServletRequest request,
             HttpServletResponse response) {
         request.setAttribute(GroovyPagesUriService.RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
         GSPResponseWriter out = null;
         try {
             out = createResponseWriter(webRequest, response);
             final GroovyPageWritable writable = template.make(model);
-            writable.setShowSource(developmentMode && request.getParameter("showSource") != null);
+            // Read tolerantly: the view may be an error page rendered for a multipart request whose body
+            // the container refused to parse, where any parameter read fails - see WebUtils.readParameter.
+            writable.setShowSource(developmentMode && WebUtils.readParameter(request, "showSource") != null);
             writable.writeTo(out);
         }
         catch (Exception e) {
@@ -154,6 +175,15 @@ public class GroovyPageView extends AbstractGrailsView {
 
     public void setTemplateEngine(GroovyPagesTemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP view rendering. Defaults to
+     * {@link ObservationRegistry#NOOP}, in which case rendering is not observed.
+     * @param observationRegistry the registry, or {@code null} for no-op
+     */
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     public boolean isExpired() {

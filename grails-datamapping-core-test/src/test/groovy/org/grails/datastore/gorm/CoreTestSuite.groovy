@@ -18,9 +18,11 @@
  */
 package org.grails.datastore.gorm
 
-import org.apache.grails.data.testing.tck.tests.NotInListSpec
 import org.junit.platform.suite.api.SelectClasses
 import org.junit.platform.suite.api.Suite
+
+import org.apache.grails.data.testing.tck.tests.FindByExampleSpec
+import org.apache.grails.data.testing.tck.tests.NotInListSpec
 
 /**
  * Use this class to run tck classes against the current implementation.
@@ -28,6 +30,6 @@ import org.junit.platform.suite.api.Suite
  * @author graemerocher
  */
 @Suite
-@SelectClasses([NotInListSpec])
+@SelectClasses([NotInListSpec, FindByExampleSpec])
 class CoreTestSuite {
 }

@@ -28,12 +28,15 @@ grails war
 
 This will produce a WAR file under the `build/libs` directory which can then be deployed as per your container's instructions.
 
-Note that by default Grails will include an embeddable version of Tomcat inside the WAR file, this can cause problems if you deploy to a different version of Tomcat. If you don't intend to use the embedded container then you should change the scope of the Tomcat dependencies to `testImplementation` (or `provided` if using Grails 4.x) prior to deploying to your production container in `build.gradle`:
+Note that by default Grails will include an embeddable version of Tomcat inside the WAR file, this can cause problems if you deploy to a different version of Tomcat. If you don't intend to use the embedded container, replace `spring-boot-starter-tomcat` with `spring-boot-starter-tomcat-runtime` in `build.gradle`:
 
 [source,groovy]
 ----
-testImplementation "org.springframework.boot:spring-boot-starter-tomcat"
+providedRuntime "org.springframework.boot:spring-boot-starter-tomcat-runtime"
 ----
+
+The `-runtime` variant was introduced in Spring Boot 4.
+It contributes only the integration classes Spring Boot needs to start in an external Servlet container, without bundling the embedded Tomcat distribution into the WAR.
 
 If you are building a WAR file to deploy on Tomcat 7 then in addition you will need to change the target Tomcat version in the build. Grails is built against Tomcat 8 APIs by default.
 To target a Tomcat 7 container, insert a line to `build.gradle` above the `dependencies { }` section:

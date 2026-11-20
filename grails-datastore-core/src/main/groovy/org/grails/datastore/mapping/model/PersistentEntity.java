@@ -18,6 +18,7 @@
  */
 package org.grails.datastore.mapping.model;
 
+import java.io.Serializable;
 import java.util.List;
 
 import org.grails.datastore.mapping.model.lifecycle.Initializable;
@@ -26,6 +27,7 @@ import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.model.types.TenantId;
 import org.grails.datastore.mapping.reflect.EntityReflector;
 
+
 /**
  * Represents a persistent entity.
  *
@@ -33,7 +35,7 @@ import org.grails.datastore.mapping.reflect.EntityReflector;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public interface PersistentEntity extends Initializable {
+public interface PersistentEntity extends Initializable, Serializable {
 
     /**
      * The entity name including any package prefix
@@ -126,7 +128,7 @@ public interface PersistentEntity extends Initializable {
     /**
      * @return The underlying Java class for this entity
      */
-    Class getJavaClass();
+    Class<?> getJavaClass();
 
     /**
      * Tests whether the given instance is an instance of this persistent entity
@@ -143,6 +145,14 @@ public interface PersistentEntity extends Initializable {
      * @return The ClassMapping instance
      */
     ClassMapping getMapping();
+
+    /**
+     * @return The mapped form of the entity
+     */
+    default org.grails.datastore.mapping.config.Entity getMappedForm() {
+        ClassMapping mapping = getMapping();
+        return mapping != null ? mapping.getMappedForm() : null;
+    }
 
     /**
      * Constructs a new instance
@@ -226,4 +236,5 @@ public interface PersistentEntity extends Initializable {
      * @return True if the operation was successful
      */
     boolean addOwner(Class type);
+
 }

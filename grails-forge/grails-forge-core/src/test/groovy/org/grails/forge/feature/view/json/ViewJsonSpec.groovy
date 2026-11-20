@@ -101,24 +101,11 @@ class ViewJsonSpec extends ApplicationContextSpec implements CommandOutputFixtur
         applicationType << [ApplicationType.WEB, ApplicationType.WEB_PLUGIN, ApplicationType.PLUGIN]
     }
 
-    void "test mime configurations"() {
+    void "test mime types are not written to config as they are now framework defaults"() {
         when:
         final GeneratorContext ctx = buildGeneratorContext(["views-json"], new Options(null), ApplicationType.REST_API)
 
-        then:
-        ctx.getConfiguration().get("grails.mime.types.json") == Arrays.asList("application/json", "text/json")
-        ctx.getConfiguration().get("grails.mime.types.hal") == Arrays.asList("application/hal+json", "application/hal+xml")
-        ctx.getConfiguration().get("grails.mime.types.xml") == Arrays.asList("text/xml", "application/xml")
-        ctx.getConfiguration().get("grails.mime.types.atom") == "application/atom+xml"
-        ctx.getConfiguration().get("grails.mime.types.css") == "text/css"
-        ctx.getConfiguration().get("grails.mime.types.csv") == "text/csv"
-        ctx.getConfiguration().get("grails.mime.types.js") == "text/javascript"
-        ctx.getConfiguration().get("grails.mime.types.rss") == "application/rss+xml"
-        ctx.getConfiguration().get("grails.mime.types.text") == "text/plain"
-        ctx.getConfiguration().get("grails.mime.types.all") == "*/*"
-        !ctx.getConfiguration().containsKey("grails.mime.types.multipartForm")
-        !ctx.getConfiguration().containsKey("grails.mime.types.form")
-        !ctx.getConfiguration().containsKey("grails.mime.types.html")
-        !ctx.getConfiguration().containsKey("grails.mime.types.pdf")
+        then: "the generated application relies on the framework provided MimeType defaults"
+        ctx.getConfiguration().keySet().every { !it.toString().startsWith("grails.mime.types") }
     }
 }

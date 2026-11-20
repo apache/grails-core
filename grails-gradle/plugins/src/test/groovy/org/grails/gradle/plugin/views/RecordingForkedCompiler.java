@@ -34,10 +34,10 @@ import java.util.stream.Stream;
  * what a compile task starts it with - the directory of the views, the views it finds beneath it
  * with their sizes, as the real compilers find them by the directory whatever the task's filters,
  * the environment it is told to compile for and the one it would otherwise have inherited - to
- * {@code compiler.txt} in the destination directory. Leaves that file alone where it is already
- * there, as the real page compiler leaves a page alone whose class is newer than its source, and
- * appends what each run found to {@code runs.txt}. Each compiler's class names its {@code main} at
- * this.
+ * {@code compiler.txt} in the destination directory, with whatever else the stand-in records of the
+ * run. Leaves that file alone where it is already there, as the real page compiler leaves a page
+ * alone whose class is newer than its source, and appends what each run found to {@code runs.txt}.
+ * Each compiler's class names its {@code main} at this.
  */
 public final class RecordingForkedCompiler {
 
@@ -49,19 +49,22 @@ public final class RecordingForkedCompiler {
      *
      * @param source the directory of the views, as the task passes it
      * @param destination the destination directory, as the task passes it
+     * @param recorded further {@code name=value} lines the stand-in records of what it was started with
      */
-    public static void record(String source, String destination) throws IOException {
+    public static void record(String source, String destination, String... recorded) throws IOException {
         Path target = Paths.get(destination);
         Files.createDirectories(target);
         Path compiled = target.resolve("compiler.txt");
         String environment = System.getProperty("grails.env");
         boolean keptEarlier = Files.exists(compiled);
         if (!keptEarlier) {
-            Files.write(compiled, List.of(
+            List<String> lines = new ArrayList<>(List.of(
                     "source=" + source,
                     "pages=" + String.join(",", pagesBeneath(Paths.get(source))),
                     "grailsEnvironment=" + environment,
-                    "inheritedEnvironment=" + System.getenv("GRAILS_ENV")), StandardCharsets.UTF_8);
+                    "inheritedEnvironment=" + System.getenv("GRAILS_ENV")));
+            lines.addAll(List.of(recorded));
+            Files.write(compiled, lines, StandardCharsets.UTF_8);
         }
         Files.write(target.resolve("runs.txt"),
                 List.of("grailsEnvironment=" + environment + " keptEarlier=" + keptEarlier),

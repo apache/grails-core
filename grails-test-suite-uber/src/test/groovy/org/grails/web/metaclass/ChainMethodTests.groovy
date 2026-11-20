@@ -79,5 +79,9 @@ class TestChainController {
 @Entity
 class TestChainBook {
     String title
+
+    static constraints = {
+        title nullable: false
+    }
 }
 

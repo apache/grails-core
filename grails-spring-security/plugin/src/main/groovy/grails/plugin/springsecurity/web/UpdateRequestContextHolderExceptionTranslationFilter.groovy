@@ -73,21 +73,21 @@ class UpdateRequestContextHolderExceptionTranslationFilter extends ExceptionTran
 @CompileStatic
 class DelegatingGrailsWebRequest extends GrailsWebRequest {
 
-    @Delegate
     GrailsWebRequest current
 
     DelegatingGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, GrailsWebRequest current) {
         super(request, response, current.attributes)
+        this.current = current
     }
 }
 
 @CompileStatic
 class DelegatingAsyncGrailsWebRequest extends AsyncGrailsWebRequest {
 
-    @Delegate
     AsyncGrailsWebRequest current
 
     DelegatingAsyncGrailsWebRequest(HttpServletRequest request, HttpServletResponse response, AsyncGrailsWebRequest current) {
         super(request, response, current.attributes)
+        this.current = current
     }
 }

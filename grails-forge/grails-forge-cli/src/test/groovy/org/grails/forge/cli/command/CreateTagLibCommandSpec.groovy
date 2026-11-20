@@ -19,7 +19,6 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.context.ApplicationContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
@@ -29,17 +28,6 @@ import spock.lang.AutoCleanup
 import spock.lang.Shared
 
 class CreateTagLibCommandSpec extends CommandSpec implements CommandFixture {
-
-    ApplicationContext beanContext
-
-    void setup() {
-        beanContext = ApplicationContext.run()
-    }
-
-    void cleanup() {
-        beanContext.close()
-        beanContext = null
-    }
 
     void "test creating a taglib"() {
 

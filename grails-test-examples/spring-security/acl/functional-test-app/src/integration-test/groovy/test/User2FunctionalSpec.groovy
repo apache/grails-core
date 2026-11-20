@@ -16,17 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package test
 
-import grails.testing.mixin.integration.Integration
-import org.springframework.security.acls.domain.BasePermission
+import pages.AccessDeniedPage
+import pages.DeleteReportPage
 import pages.EditReportPage
+import pages.ListReportPage
 import pages.ReportGrantPage
 import pages.ShowReportPage
-import spock.lang.Stepwise
+import spock.lang.Unroll
 
-@Stepwise
+import grails.testing.mixin.integration.Integration
+
+import static org.springframework.security.acls.domain.BasePermission.WRITE
+
 @Integration
 class User2FunctionalSpec extends AbstractSecuritySpec {
 
@@ -36,120 +39,118 @@ class User2FunctionalSpec extends AbstractSecuritySpec {
 		login('user2')
 	}
 
+	@Unroll
 	void 'view all (1-5)'() {
 		when:
-		go("report/show?number=$i")
+		def page = to(ShowReportPage, 1)
 
 		then:
-		pageSource.contains("report$i")
+		page.name == 'report1'
 
 		where:
 		i << (1..5)
 	}
 
+	@Unroll
 	void 'view all (6-100)'() {
 		when:
-		go("report/show?number=$i")
+		via(ShowReportPage, i)
 
 		then:
-		pageSource.contains('Access Denied')
+		at(AccessDeniedPage)
 
 		where:
 		i << (6..100)
 	}
 
 	void 'edit report 11'() {
-
 		when:
-		go('report/edit?number=11')
+		via(EditReportPage, 11)
 
 		then:
-		pageSource.contains('Access Denied')
+		at(AccessDeniedPage)
 	}
 
 	void 'delete report 1'() {
 		when:
-		go('report/delete?number=1')
+		via(DeleteReportPage, 1)
 
 		then:
-		pageSource.contains('Access Denied')
+		at(AccessDeniedPage)
 	}
 
 	void 'grant edit 2'() {
 		when:
-		go('report/grant?number=2')
-		def grantPage = at(ReportGrantPage)
+		def page = to(ReportGrantPage, 2)
 
 		then:
-		pageSource.contains('Grant permission for report2')
+		page.heading == 'Grant permission for report2'
 
 		when:
-		recipient = 'user1'
-		permission = BasePermission.WRITE.mask.toString()
-		grantPage.grantButton.click()
+		page.grantPermission('user1', WRITE)
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		at(AccessDeniedPage)
 	}
 
 	void 'edit report 5'() {
 		when:
-		go('report/edit?number=5')
-		def editPage = at(EditReportPage)
+		def page = to(EditReportPage, 5)
 
 		then:
-		$('form').name == 'report5'
+		page.nameField.text == 'report5'
 
 		when:
-		name = 'report5_new'
-		editPage.updateButton.click()
+		page.nameField.text = 'report5_new'
+		page.updateButton.click()
+		page = at(ShowReportPage)
 
 		then:
-		at(ShowReportPage)
-		pageSource.contains('report5_new')
+		page.name == 'report5_new'
 	}
 
 	void 'list is filtered'() {
-
 		when:
-		go('report/list')
+		def page = to(ListReportPage)
 
 		then:
-		pageSource.contains('report1')
-		!pageSource.contains('report6')
+		page.reportRows[0].name == 'report1'
+		page.reportRows.every {it.name != 'report6' }
 
 		when:
-		go('report/list?offset=80&max=10')
+		to(ListReportPage, [offset: 80, max: 10])
 
 		then:
-		pageSource.contains('Next')
-		!pageSource.contains('report85')
+		page.nextLink.displayed
+		page.reportRows.every {it.name != 'report85' }
 	}
 
 	void 'check tags'() {
 		when:
-		go('tagLibTest/test')
+		go('/tagLibTest/test')
 
 		then:
-		pageSource.contains('test 1 true 1')
-		pageSource.contains('test 2 true 1')
-		pageSource.contains('test 3 true 1')
-		pageSource.contains('test 4 true 1')
-		pageSource.contains('test 5 true 1')
-		pageSource.contains('test 6 true 1')
+		with(pageSource) {
+			contains('test 1 true 1')
+			contains('test 2 true 1')
+			contains('test 3 true 1')
+			contains('test 4 true 1')
+			contains('test 5 true 1')
+			contains('test 6 true 1')
 
-		pageSource.contains('test 1 false 13')
-		pageSource.contains('test 2 false 13')
-		pageSource.contains('test 3 false 13')
-		pageSource.contains('test 4 false 13')
-		pageSource.contains('test 5 false 13')
-		pageSource.contains('test 6 false 13')
+			contains('test 1 false 13')
+			contains('test 2 false 13')
+			contains('test 3 false 13')
+			contains('test 4 false 13')
+			contains('test 5 false 13')
+			contains('test 6 false 13')
 
-		pageSource.contains('test 1 false 80')
-		pageSource.contains('test 2 false 80')
-		pageSource.contains('test 3 false 80')
-		pageSource.contains('test 4 false 80')
-		pageSource.contains('test 5 false 80')
-		pageSource.contains('test 6 false 80')
+			contains('test 1 false 80')
+			contains('test 2 false 80')
+			contains('test 3 false 80')
+			contains('test 4 false 80')
+			contains('test 5 false 80')
+			contains('test 6 false 80')
+		}
 	}
 }

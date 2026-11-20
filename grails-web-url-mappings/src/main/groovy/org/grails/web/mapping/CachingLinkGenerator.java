@@ -18,7 +18,6 @@
  */
 package org.grails.web.mapping;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
@@ -27,7 +26,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 
 import grails.util.GrailsMetaClassUtils;
-import grails.util.GrailsStringUtils;
 import grails.web.mapping.LinkGenerator;
 import grails.web.mapping.UrlMapping;
 import grails.web.servlet.mvc.GrailsParameterMap;
@@ -71,13 +69,24 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
             return super.link(attrs, encoding);
         }
 
-        final String key = makeKey(LINK_PREFIX, attrs);
+        // The encoding decides how the link's parameters are escaped, so a link is cached per encoding.
+        final String key = linkKey(attrs) + "encoding[" + encoding + "]";
         Object resourceLink = linkCache.getIfPresent(key);
         if (resourceLink == null) {
             resourceLink = super.link(attrs, encoding);
             linkCache.put(key, resourceLink);
         }
         return resourceLink.toString();
+    }
+
+    /**
+     * The key a link is cached under: its attributes, as {@link #makeKey} renders them, and what it resolves
+     * to, which can depend on the request it is generated in. The resolution is appended here rather than in
+     * {@code makeKey}, so a subclass that overrides {@code makeKey}, as the asset pipeline plugin's
+     * {@code AssetSupportingCachingLinkGenerator} does, still keys each link on it.
+     */
+    String linkKey(Map attrs) {
+        return makeKey(LINK_PREFIX, attrs) + resolvedLinkKey(attrs);
     }
 
     protected boolean isCacheable(Map attrs) {
@@ -102,21 +111,8 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
             buffer.append(OPENING_BRACKET);
         } else {
             buffer.append(OPENING_BRACKET);
-            Map map = new LinkedHashMap<>(params);
-            final String requestControllerName = getRequestStateLookupStrategy().getControllerName();
-            if (map.get(UrlMapping.ACTION) != null && map.get(UrlMapping.CONTROLLER) == null && map.get(RESOURCE_PREFIX) == null) {
-                Object action = map.remove(UrlMapping.ACTION);
-                map.put(UrlMapping.CONTROLLER, requestControllerName);
-                map.put(UrlMapping.ACTION, action);
-            }
-            if (map.get(UrlMapping.NAMESPACE) == null && map.get(UrlMapping.CONTROLLER) == requestControllerName) {
-                String namespace = getRequestStateLookupStrategy().getControllerNamespace();
-                if (GrailsStringUtils.isNotEmpty(namespace)) {
-                    map.put(UrlMapping.NAMESPACE, namespace);
-                }
-            }
             boolean first = true;
-            for (Object o : map.entrySet()) {
+            for (Object o : params.entrySet()) {
                 Map.Entry entry = (Map.Entry) o;
                 Object value = entry.getValue();
                 if (value == null) continue;
@@ -125,7 +121,7 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
                 if (RESOURCE_PREFIX.equals(key)) {
                     value = getCacheKeyValueForResource(value);
                 }
-                appendKeyValue(buffer, map, key, value);
+                appendKeyValue(buffer, params, key, value);
             }
         }
         buffer.append(CLOSING_BRACKET);
@@ -198,5 +194,6 @@ public class CachingLinkGenerator extends DefaultLinkGenerator {
 
     public void clearCache() {
         linkCache.invalidateAll();
+        resetControllerNamespaceCache();
     }
 }

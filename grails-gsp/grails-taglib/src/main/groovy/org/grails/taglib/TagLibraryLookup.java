@@ -201,6 +201,18 @@ public class TagLibraryLookup implements ApplicationContextAware, GrailsApplicat
         return namespaceDispatchers.keySet();
     }
 
+    /**
+     * Clears all internal tag library caches. This should be called during
+     * test cleanup to prevent stale tag library references from leaking
+     * between test contexts.
+     */
+    public void clear() {
+        tagNamespaces.clear();
+        namespaceDispatchers.clear();
+        tagsThatReturnObjectForNamespace.clear();
+        encodeAsForTagNamespaces.clear();
+    }
+
     public Set<String> getAvailableTags(String namespace) {
         Map<String, Object> tags = tagNamespaces.get(namespace);
         if (tags == null) {

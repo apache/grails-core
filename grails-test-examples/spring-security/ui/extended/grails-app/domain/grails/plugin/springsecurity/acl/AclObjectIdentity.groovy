@@ -45,8 +45,10 @@ class AclObjectIdentity {
 	}
 
 	static constraints = {
-		objectId unique: 'aclClass'
+		objectId unique: 'aclClass', nullable: false
 		parent nullable: true
 		owner nullable: true
+		aclClass nullable: false
+		entriesInheriting nullable: false
 	}
 }

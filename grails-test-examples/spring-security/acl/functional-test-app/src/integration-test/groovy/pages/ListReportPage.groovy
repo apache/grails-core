@@ -23,24 +23,44 @@ import geb.Module
 
 class ListReportPage extends ScaffoldPage {
 
-	static url = 'report/list?max=1000'
+	static url = 'report/list'
 
 	static at = {
 		title ==~ /Report List/
 	}
 
+	String convertToPath(Object[] args) {
+		if (!args) {
+			return ''
+		}
+
+		def params = args[0] as Map
+		if (!params) {
+			return ''
+		}
+
+		if (!params.containsKey('max')) {
+			params.max = 1000
+		}
+
+		'?' + params.collect { key, value ->
+			"${URLEncoder.encode(key.toString(), 'UTF-8')}=" +
+					"${URLEncoder.encode(value?.toString() ?: '', 'UTF-8')}"
+		}.join('&')
+	}
 	static content = {
+		message { $('div.message').text() }
+		nextLink { $('.nextLink') }
 		reportTable { $('div.list table', 0) }
-		reportRow { i -> module ReportRow, reportRows[i] }
-		reportRows(required: false) { reportTable.find('tbody').find('tr') }
+		reportRows { reportTable.find('tbody tr').moduleList(ReportRow) }
 	}
 }
 
 class ReportRow extends Module {
 	static content = {
-		cell { i -> $('td', i) }
-		cellText { i -> cell(i).text() }
-		cellHrefText{ i -> cell(i).find('a').text() }
+		cell { int i -> $('td', i) }
+		cellText { int i -> cell(i).text() }
+		cellHrefText { int i -> cell(i).find('a').text() }
 		name { cellText(1) }
 		showLink(to: ShowReportPage) { cell(0).find('a') }
 		grantLink(to: ReportGrantPage) { cell(2).find('a') }

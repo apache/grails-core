@@ -98,8 +98,7 @@ class EnumType extends AbstractMappingAwareCustomTypeMarshaller<Object, Document
         try {
             Object values = type.getMethod('values').invoke(type)
             return Array.get(values, value.intValue())
-        } catch (Exception e) {
-            // ignore
+        } catch (Exception ignored) {
         }
         return value
     }

@@ -18,6 +18,8 @@
  */
 package grails.gorm.tests
 
+import grails.gorm.tests.entities.Club
+import grails.gorm.tests.entities.Team
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.grails.orm.hibernate.proxy.HibernateProxyHandler
@@ -27,22 +29,22 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler
  */
 class ToOneProxySpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([Team, Club])
+        manager.registerDomainClasses(Team, Club)
     }
 
     void "test that a proxy is not initialized on get"() {
         given:
         Team t = new Team(name: "First Team", club: new Club(name: "Manchester United").save())
-        t.save(flush:true)
+        t.save(flush: true)
         manager.session.clear()
 
 
-        when:"An object is retrieved and the session is flushed"
+        when: "An object is retrieved and the session is flushed"
         t = Team.get(t.id)
         manager.session.flush()
 
         def proxyHandler = new HibernateProxyHandler()
-        then:"The association was not initialized"
+        then: "The association was not initialized"
         proxyHandler.getAssociationProxy(t, "club") != null
         !proxyHandler.isInitialized(t, "club")
 

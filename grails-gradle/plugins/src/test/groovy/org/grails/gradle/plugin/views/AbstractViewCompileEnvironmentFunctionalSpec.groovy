@@ -158,8 +158,8 @@ abstract class AbstractViewCompileEnvironmentFunctionalSpec extends GradleSpecif
         projectWithViews()
         configureTask("doFirst { grailsEnvironment = 'uat' }")
 
-        when:
-        BuildResult result = failToCompileViews()
+        when: 'the build runs without the configuration cache, which restores the property as a plain value the guard no longer covers'
+        BuildResult result = failToCompileViews([:], ['--no-configuration-cache'])
 
         then:
         result.output.contains('is final and cannot be changed any further')

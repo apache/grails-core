@@ -20,5 +20,9 @@
 apply plugin:'java'
 
 subprojects {
-    task hello << {println 'Hello World!'}
+    tasks.register('hello') {
+        doLast {
+            println 'Hello World!'
+        }
+    }
 }

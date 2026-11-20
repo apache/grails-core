@@ -25,6 +25,8 @@ import test.Profile
 import test.ProfileService
 import test.User
 
+import spock.lang.Stepwise
+
 import grails.gorm.transactions.Rollback
 import grails.testing.mixin.integration.Integration
 

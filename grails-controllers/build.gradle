@@ -28,6 +28,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -45,24 +46,38 @@ dependencies {
 
     api 'org.apache.groovy:groovy'
     api 'org.springframework.boot:spring-boot-autoconfigure'
+    // Spring Boot 4 modularized spring-boot-autoconfigure into domain-specific modules.
+    // WebMvc auto-configuration classes used by ControllersAutoConfiguration moved to spring-boot-webmvc.
+    api 'org.springframework.boot:spring-boot-webmvc'
+    api 'org.springframework.boot:spring-boot-servlet'
     compileOnlyApi 'jakarta.servlet:jakarta.servlet-api'
 
     runtimeOnly project(':grails-i18n')
 
-    testRuntimeOnly 'jline:jline'
-    testRuntimeOnly 'org.fusesource.jansi:jansi'
+    testRuntimeOnly 'org.jline:jline'
 
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
-    compileOnly 'org.springframework:spring-test', {
-        // MockHttpServletRequest/Response/Context used in many classes
-    }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
+    testImplementation testFixtures(project(':grails-web-common'))
+    // LogCapture (Logback) for asserting the security headers filter's configuration warnings
+    testImplementation testFixtures(project(':grails-core'))
     testImplementation 'jakarta.servlet:jakarta.servlet-api'
     testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.boot:spring-boot-test'
+    // Test-only: lets GrailsSecurityHeadersAutoConfigurationSpec verify that the
+    // security headers filter coexists with Spring Security's HeaderWriterFilter.
+    // Not a main/runtime dependency - grails-controllers has no compile-time
+    // dependency on Spring Security.
+    testImplementation 'org.springframework.security:spring-security-web'
+    // Test-only: GrailsSecurityHeadersFilterTomcatSpec runs the security headers filter
+    // in a real servlet container, whose commit behavior the Spring mocks do not model.
+    testImplementation 'org.apache.tomcat.embed:tomcat-embed-core'
+    testRuntimeOnly 'org.assertj:assertj-core'
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
@@ -71,11 +86,7 @@ dependencies {
     api 'org.slf4j:jcl-over-slf4j'
 
     // Testing
-    testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

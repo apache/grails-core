@@ -19,13 +19,22 @@
 
 package pages
 
+import geb.module.TextInput
+
 class EditReportPage extends ScaffoldPage {
 
+	static url = '/report/edit'
+
 	static at = {
-		heading.text() == 'Edit Report'
+		heading == 'Edit Report'
+	}
+
+	String convertToPath(Object[] args) {
+		args ? "?number=${args[0]}" : ''
 	}
 
 	static content = {
+		nameField { $('input', name: 'name').module(TextInput) }
 		updateButton { $('input', value: 'Update') }
 	}
 }

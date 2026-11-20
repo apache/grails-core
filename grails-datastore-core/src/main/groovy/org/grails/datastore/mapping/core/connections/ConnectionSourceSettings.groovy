@@ -75,6 +75,17 @@ class ConnectionSourceSettings implements Settings {
     Boolean markDirty
 
     /**
+     * Whether to cache auto-timestamp annotation metadata (defaults to true for production, false for development)
+     */
+    Boolean cacheAutoTimestampAnnotations
+
+    /**
+     * The identity type to use when a portable, precompiled domain declares
+     * {@code Serializable id}. Accepted values are {@code long} and {@code native}.
+     */
+    String defaultIdType = 'long'
+
+    /**
      * Package names that should fail on error
      */
     List<String> failOnErrorPackages = Collections.emptyList()
@@ -119,6 +130,12 @@ class ConnectionSourceSettings implements Settings {
          * The default constraints
          */
         Closure constraints
+
+        /**
+         * Whether an unconstrained persistent property is nullable by default (Grails 8 default: true).
+         * Set {@code grails.gorm.default.nullable = false} to restore the legacy required-by-default behaviour.
+         */
+        boolean nullable = true
     }
 
     /**
@@ -132,4 +149,3 @@ class ConnectionSourceSettings implements Settings {
         List<CustomTypeMarshaller> types = []
     }
 }
-

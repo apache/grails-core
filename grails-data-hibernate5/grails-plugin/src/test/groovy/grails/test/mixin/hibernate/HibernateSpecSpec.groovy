@@ -73,7 +73,7 @@ class Person {
     Integer age
     String phone
     static constraints = {
-        age min: 18, max: 65
+        age min: 18, max: 65, nullable: false
         name blank: false
         phone nullable: true
     }

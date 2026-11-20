@@ -19,10 +19,17 @@
 
 package pages.user
 
+import geb.module.Checkbox
+import geb.module.PasswordInput
+import geb.module.TextInput
 import pages.CreatePage
 
 class CreateUserPage extends CreatePage {
-	static content = {
-		createButton(to: ShowUserPage) { create() }
-	}
+
+    static content = {
+        usernameField { $('input', name: 'username').module(TextInput) }
+        passwordField { $('input', name: 'password').module(PasswordInput) }
+        enabledCheckbox { $('input', id: 'enabled').module(Checkbox) }
+        createButton(to: ShowUserPage) { $('input', name: 'create') }
+    }
 }

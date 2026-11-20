@@ -21,24 +21,23 @@ package org.grails.cli.interactive.completers;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Objects;
 
-import jline.console.completer.Completer;
-
-import static jline.internal.Preconditions.checkNotNull;
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
+import org.jline.reader.LineReader;
+import org.jline.reader.ParsedLine;
 
 /**
- * Copied from jline AggregateCompleter
+ * An aggregate completer that sorts completion candidates.
  *
- * sorts aggregated completions
- *
+ * @author Graeme Rocher
+ * @since 3.0
  */
-public class SortedAggregateCompleter
-    implements Completer
-{
+public class SortedAggregateCompleter implements Completer {
+    
     private final List<Completer> completers = new ArrayList<>();
 
     public SortedAggregateCompleter() {
@@ -52,7 +51,7 @@ public class SortedAggregateCompleter
      * @param completers the collection of completers
      */
     public SortedAggregateCompleter(final Collection<Completer> completers) {
-        checkNotNull(completers);
+        Objects.requireNonNull(completers);
         this.completers.addAll(completers);
     }
 
@@ -77,40 +76,24 @@ public class SortedAggregateCompleter
 
     /**
      * Perform a completion operation across all aggregated completers.
-     *
-     * @see Completer#complete(String, int, java.util.List)
-     * @return the highest completion return value from all completers
      */
-    public int complete(final String buffer, final int cursor, final List<CharSequence> candidates) {
-        // buffer could be null
-        checkNotNull(candidates);
+    @Override
+    public void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        Objects.requireNonNull(candidates);
 
-        List<Completion> completions = new ArrayList<>(completers.size());
+        List<Candidate> allCandidates = new ArrayList<>();
 
-        // Run each completer, saving its completion results
-        int max = -1;
+        // Run each completer, collecting candidates
         for (Completer completer : completers) {
-            Completion completion = new Completion(candidates);
-            completion.complete(completer, buffer, cursor);
-
-            // Compute the max cursor position
-            max = Math.max(max, completion.cursor);
-
-            completions.add(completion);
+            List<Candidate> completerCandidates = new ArrayList<>();
+            completer.complete(reader, line, completerCandidates);
+            allCandidates.addAll(completerCandidates);
         }
 
-        SortedSet<CharSequence> allCandidates = new TreeSet<>();
-
-        // Append candidates from completions which have the same cursor position as max
-        for (Completion completion : completions) {
-            if (completion.cursor == max) {
-                allCandidates.addAll(completion.candidates);
-            }
-        }
+        // Sort the candidates by their value
+        allCandidates.sort(Comparator.comparing(Candidate::value));
 
         candidates.addAll(allCandidates);
-
-        return max;
     }
 
     /**
@@ -121,22 +104,5 @@ public class SortedAggregateCompleter
         return getClass().getSimpleName() + "{" +
             "completers=" + completers +
             '}';
-    }
-
-    private class Completion
-    {
-        public final List<CharSequence> candidates;
-
-        public int cursor;
-
-        public Completion(final List<CharSequence> candidates) {
-            checkNotNull(candidates);
-            this.candidates = new LinkedList<>(candidates);
-        }
-
-        public void complete(final Completer completer, final String buffer, final int cursor) {
-            checkNotNull(completer);
-            this.cursor = completer.complete(buffer, cursor, candidates);
-        }
     }
 }

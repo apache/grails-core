@@ -22,11 +22,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
 
+import io.micrometer.observation.Observation
+import io.micrometer.observation.ObservationRegistry
+import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
+import org.springframework.web.context.request.async.WebAsyncManager
+import org.springframework.web.context.request.async.WebAsyncUtils
 import org.springframework.web.servlet.HandlerAdapter
 import org.springframework.web.servlet.ModelAndView
 import org.springframework.web.servlet.view.InternalResourceView
@@ -56,11 +61,14 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
     protected Collection<ActionResultTransformer> actionResultTransformers = Collections.emptyList()
     protected Map<String, Object> controllerCache = new ConcurrentHashMap<>()
     protected ResponseRedirector redirector
+    protected ObservationRegistry observationRegistry = ObservationRegistry.NOOP
 
     void setApplicationContext(ApplicationContext applicationContext) {
         this.actionResultTransformers = applicationContext.getBeansOfType(ActionResultTransformer).values()
         this.applicationContext = applicationContext
         this.redirector = new ResponseRedirector(applicationContext.getBean(LinkGenerator))
+        this.observationRegistry = applicationContext.getBeanProvider(ObservationRegistry)
+                .getIfAvailable({ -> ObservationRegistry.NOOP })
     }
 
     @Override
@@ -73,11 +81,27 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
 
         GrailsWebRequest webRequest = GrailsWebRequest.lookup(request)
 
-        boolean isAsyncRequest = WebUtils.isAsync(request) && !WebUtils.isError(request)
+        // the dispatch that returns the result of asynchronous processing, not a forward or include made during it,
+        // which carries the same request attributes
+        boolean isAsyncRequest = request.dispatcherType == DispatcherType.ASYNC && !WebUtils.isError(request)
         if (isAsyncRequest) {
             Object modelAndView = request.getAttribute(GrailsApplicationAttributes.MODEL_AND_VIEW)
-            if (modelAndView instanceof ModelAndView) {
-                return (ModelAndView) modelAndView
+            if (modelAndView instanceof ModelAndView resolvedModelAndView) {
+                return resolvedModelAndView
+            }
+            WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request)
+            if (asyncManager.hasConcurrentResult()) {
+                Object asyncResult = asyncManager.concurrentResult
+                asyncManager.clearConcurrentResult()
+                if (asyncResult instanceof Exception exception) {
+                    throw exception
+                }
+                if (asyncResult instanceof Throwable failure) {
+                    throw new IllegalStateException('Asynchronous controller action failed', failure)
+                }
+                if (asyncResult instanceof ModelAndView resolvedModelAndView) {
+                    return resolvedModelAndView
+                }
             }
         }
         else {
@@ -107,7 +131,32 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
                 }
                 webRequest.controllerNamespace = controllerClass.namespace
                 request.setAttribute(GrailsApplicationAttributes.CONTROLLER, controller)
-                def result = controllerClass.invoke(controller, action)
+                Object result = null
+                def obsRegistry = this.observationRegistry
+                if (obsRegistry == null || obsRegistry.isNoop()) {
+                    result = controllerClass.invoke(controller, action)
+                }
+                else {
+                    // scope open across invoke so the action's DB/cache spans nest under this span
+                    def controllerName = controllerClass.logicalPropertyName ?: 'unknown'
+                    def observation = Observation.createNotStarted('grails.controller', obsRegistry)
+                            .contextualName('grails.controller ' + controllerName)
+                            .lowCardinalityKeyValue('grails.controller', controllerName)
+                            .lowCardinalityKeyValue('grails.action', action ? action.toString() : 'unknown')
+                            .start()
+                    def observationScope = observation.openScope()
+                    try {
+                        result = controllerClass.invoke(controller, action)
+                    }
+                    catch (Throwable t) {
+                        observation.error(t)
+                        throw t
+                    }
+                    finally {
+                        observationScope.close()
+                        observation.stop()
+                    }
+                }
 
                 if (actionResultTransformers) {
                     for (transformer in actionResultTransformers) {
@@ -158,6 +207,4 @@ class UrlMappingsInfoHandlerAdapter implements HandlerAdapter, ApplicationContex
         return null
     }
 
-    @Override
-    long getLastModified(HttpServletRequest request, Object handler) { -1 }
 }

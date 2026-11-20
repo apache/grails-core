@@ -18,18 +18,24 @@
  */
 package grails.gorm.services
 
+import grails.gorm.multitenancy.CurrentTenantHolder
 import grails.gorm.multitenancy.TenantService
 import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.TransactionService
 import grails.gorm.transactions.Transactional
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.implementers.FindAllImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneImplementer
 import org.grails.datastore.gorm.services.implementers.FindOneInterfaceProjectionImplementer
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.services.DefaultServiceRegistry
 import org.grails.datastore.mapping.services.ServiceRegistry
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
+import org.springframework.transaction.PlatformTransactionManager
+import spock.lang.Issue
 import spock.lang.Specification
 
 /**
@@ -181,6 +187,59 @@ return BookService
         impl.getMethod("find", Serializable).getAnnotation(Implemented).by() == FindOneImplementer
     }
 
+    @Issue('https://github.com/apache/grails-core/issues/16801')
+    void 'the transaction manager of a data service is the one of the tenant bound for its datastore while another datastore has a different tenant'() {
+        given:
+        var service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.Service
+import grails.gorm.annotation.Entity
+
+@Service(TenantBook)
+interface TenantBookService {
+
+    TenantBook find(Serializable id)
+}
+
+@Entity
+class TenantBook {
+
+    String title
+}
+''')
+        var instance = service.classLoader.loadClass('$TenantBookServiceImplementation').getDeclaredConstructor().newInstance()
+        var serviceTransactionManager = Stub(PlatformTransactionManager)
+        var tenantTransactionManager = Stub(PlatformTransactionManager)
+        var defaultDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> Stub(PlatformTransactionManager)
+        }
+        var serviceDatastore = Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> serviceTransactionManager
+        }
+        GormRegistry.instance.initializeDatastore(defaultDatastore)
+        GormRegistry.instance.registerEntityDatastore(service.classLoader.loadClass('TenantBook').name, ConnectionSource.DEFAULT, serviceDatastore)
+        GormRegistry.instance.registerDatastore('ds1', Stub(TransactionCapableDatastore) {
+            getTransactionManager() >> tenantTransactionManager
+        })
+
+        expect: 'the datastore of the service is not the default one'
+        instance.datastore.is(serviceDatastore)
+
+        and:
+        CurrentTenantHolder.withTenant(serviceDatastore, 'ds1') {
+            CurrentTenantHolder.withTenant(defaultDatastore, 'ds2') {
+                instance.transactionManager
+            }
+        } == tenantTransactionManager
+
+        and: 'a tenant bound for the default datastore only does not count'
+        CurrentTenantHolder.withTenant(defaultDatastore, 'ds1') {
+            instance.transactionManager
+        } == serviceTransactionManager
+
+        cleanup:
+        GormRegistry.instance.reset()
+    }
+
     void "test service transform on abstract protected methods"() {
         when:"The service transform is applied to an abstract class"
         Class service = new GroovyClassLoader().parseClass('''
@@ -225,7 +284,7 @@ class Foo {
 
         then:"The impl is valid - protected methods should have no transaction"
         impl.getMethod("readFoo", Serializable).getAnnotation(ReadOnly) != null
-        impl.getMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
+        impl.getDeclaredMethod("findFoo", Serializable).getAnnotation(ReadOnly) == null
         org.grails.datastore.mapping.services.Service.isAssignableFrom(impl)
 
     }
@@ -555,9 +614,8 @@ class Foo {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.normalize().contains '''[Static type checking] - The variable [wrong] is undeclared.
- @ line 8, column 48.
-   $Foo as f where f.title like $wrong")'''
+        // Note: The exact format of the source context in error messages may vary between Groovy versions
+        e.message.contains('[Static type checking] - The variable [wrong] is undeclared.')
     }
 
     void "test @Query invalid domain"() {
@@ -584,6 +642,50 @@ class Foo {
  @ line 8, column 19.
        @Query("from $String as f where f.title like $pattern") 
                      ^'''
+    }
+
+    void "test @Query constant string containing the literal substring 'wrong' compiles successfully"() {
+        when:"a constant (non-GString) @Query value happens to contain the substring 'wrong'"
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.*
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface MyService {
+
+    @Query('from Foo as f where f.title = wrong and f.price > $5')
+    Foo searchByTitle()
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:"no compilation error occurs"
+        service.isInterface()
+    }
+
+    void "test @Query constant string containing the literal substring 'java.lang.String' compiles successfully"() {
+        when:"a constant (non-GString) @Query value happens to contain the substring 'java.lang.String'"
+        Class service = new GroovyClassLoader().parseClass('''
+import grails.gorm.services.*
+import grails.gorm.annotation.Entity
+
+@Service(Foo)
+interface MyService {
+
+    @Query('from Foo as f where f.notes = java.lang.String and f.price > $5')
+    Foo searchByTitle()
+}
+@Entity
+class Foo {
+    String title
+}
+''')
+
+        then:"no compilation error occurs"
+        service.isInterface()
     }
 
     void "test simple @Query annotation"() {
@@ -987,10 +1089,9 @@ interface MyService {
 
         then:"A compilation error occurred"
         def e = thrown(MultipleCompilationErrorsException)
-        e.message.normalize().contains '''No implementations possible for method 'void foo()'. Please use an abstract class instead and provide an implementation.
- @ line 6, column 5.
-       void foo()
-       ^'''
+        e.message.contains('No implementations possible for method') &&
+        (e.message.contains("'void foo()'") || e.message.contains("'foo():void'")) &&
+        e.message.contains('Please use an abstract class instead and provide an implementation')
     }
 
     void "test service transform applied with a dynamic finder for a non-existent property"() {

@@ -46,11 +46,9 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-logging"
     implementation "org.springframework.boot:spring-boot-starter-tomcat"
     implementation "org.springframework.boot:spring-boot-starter-validation"
-    console "org.apache.grails:grails-console"
     runtimeOnly "cloud.wondrify:asset-pipeline-grails"
     runtimeOnly "com.h2database:h2"
     runtimeOnly "com.zaxxer:HikariCP"
-    runtimeOnly "org.fusesource.jansi:jansi"
     integrationTestImplementation testFixtures("org.apache.grails:grails-geb")
     testImplementation "org.apache.grails:grails-testing-support-datamapping"
     testImplementation "org.apache.grails:grails-testing-support-web"
@@ -58,15 +56,45 @@ dependencies {
 }
 ----
 
-Note that version numbers are not present in the majority of the dependencies.
+Note that version numbers are not present in the majority of the dependencies. This is thanks to the Grails Gradle Plugin, which adds `grails-bom` as a managed dependency platform. The BOM defines the default versions for most commonly used Grails dependencies and plugins.
 
-This is thanks to the Spring dependency management plugin which automatically configures `grails-bom` as a Maven BOM via the Grails Gradle Plugin.  This defines the default dependency versions for most commonly used dependencies and plugins.
+The platform is contributed lazily to eligible declarable configurations when their dependencies are observed, for example through resolution, publication, or `incoming.dependencies`. It therefore does not interfere with configurations populated on demand through `defaultDependencies`, such as the Grails `profile` configuration. Dedicated tool and annotation-processor classpaths, including the `jacoco` plugin's `jacocoAgent` and `jacocoAnt` configurations, are excluded so the application BOM does not change their transitive dependency versions.
 
-For a Grails App, applying `org.apache.grails.gradle.grails-web` will automatically configure the `grails-bom`.  No other steps required.
+==== Overriding Managed Versions
 
-For Plugins and Projects which do not use `org.apache.grails.gradle.grails-web`, you can apply the `grails-bom` in one of the following two ways.
+To override a managed version, set the corresponding property in `build.gradle`:
 
-build.gradle, using Gradle Platforms:
+[source,groovy]
+----
+ext['slf4j.version'] = '1.7.36'
+----
+
+The same override can be set in `gradle.properties` (note: `gradle.properties` only supports the `name=value` form, not the `ext[...]` syntax):
+
+[source,properties]
+----
+slf4j.version=1.7.36
+----
+
+The property override mechanism is a feature of the **Grails BOM Property Overrides Gradle plugin** (`org.apache.grails.gradle.bom-property-overrides`); standalone Gradle does not natively read `<properties>` from BOM POMs (see https://github.com/gradle/gradle/issues/9160[Gradle issue #9160]). The plugin parses the BOM POM (following `<scope>import</scope>` BOMs), determines which managed versions change when your overrides are applied, and applies each change as a strict dependency constraint.
+
+[NOTE]
+====
+Each property override is applied as a *strict* dependency constraint, so it wins over the `require` constraints contributed by `platform(grails-bom)` - in both directions. Setting `slf4j.version` to a value *lower* than the BOM default therefore actually downgrades `slf4j-api`, matching the legacy Spring Dependency Management plugin (a plain resolution rule would lose to Gradle's highest-version-wins conflict resolution).
+
+This strict behaviour applies to *explicit overrides only*. The BOM's default (non-overridden) managed versions are contributed by a regular `platform()` and still participate in Gradle's standard highest-version-wins conflict resolution, so a transitive dependency can pull a non-overridden managed version higher than the BOM default. To make the BOM's default versions win unconditionally as well, declare `enforcedPlatform(grails-bom)` on the relevant configuration.
+
+Overriding a property that selects an imported BOM's version (for example `spring-boot.version`, which selects the `spring-boot-dependencies` BOM that `grails-bom` imports) re-imports that BOM at the overridden version and applies its updated managed set.
+
+Where `grails-bom` overrides a version that Spring Boot also manages, it declares the override under Spring Boot's own property name, so one property sets the version in both BOMs. For example, `jackson-bom.version` moves both the Jackson 3 artifacts `grails-bom` pins and the rest of the Jackson 3 family that Spring Boot's imported `jackson-bom` manages. Use the property names from the Spring Boot documentation for these.
+====
+
+==== Applying the BOM in Different Project Types
+
+For a Grails App, applying `org.apache.grails.gradle.grails-web` will automatically configure the `grails-bom` _and_ apply the `bom-property-overrides` plugin. No other steps required.
+
+For Plugins and Projects which do not use `org.apache.grails.gradle.grails-web`, you can apply the `grails-bom` using Gradle Platforms:
+
 [source,groovy]
 ----
 dependencies {
@@ -75,13 +103,44 @@ dependencies {
 }
 ----
 
-build.gradle, using Spring dependency management plugin:
+==== Using `bom-property-overrides` Outside a Grails App
+
+The property-override mechanism is BOM-agnostic and can be applied to any project that consumes a BOM with `<properties>` references. Apply the plugin directly when you want the same `gradle.properties` / `ext['…']` override workflow without applying the full Grails web plugin:
+
 [source,groovy]
 ----
-dependencyManagement {
-    imports {
-        mavenBom 'org.apache.grails:grails-bom:{GrailsVersion}'
-    }
-    applyMavenExclusions false
+plugins {
+    id 'java-library'
+    id 'org.apache.grails.gradle.bom-property-overrides' version '{GrailsVersion}'
+}
+
+dependencies {
+    implementation platform('com.example:my-bom:1.0.0')
+}
+
+// In build.gradle
+ext['slf4j.version'] = '2.0.13'
+----
+
+The same override can also be set in `gradle.properties` (note: `gradle.properties` only supports the `name=value` form, not the `ext[...]` syntax):
+
+[source,properties]
+----
+slf4j.version=2.0.13
+----
+
+By default, the plugin auto-detects every `platform()` and `enforcedPlatform()` dependency declared on the project's configurations and registers each one for property-override processing. You can disable auto-detection or register additional BOMs explicitly via the `bomPropertyOverrides` extension:
+
+[source,groovy]
+----
+bomPropertyOverrides {
+    // Disable scanning declared platforms (default: true)
+    autoDetect = false
+
+    // Register specific BOMs (e.g. ones referenced indirectly)
+    bom 'com.example:my-bom:1.0.0'
+    bom 'com.example:other-bom:2.0.0'
 }
 ----
+
+In Grails applications, `autoDetect = false` also disables automatic property-override processing of the lazily contributed Grails BOM unless you register it explicitly with `bom`. It does not disable the platform itself; use `grails { bom = null }` to opt out of automatic platform application.

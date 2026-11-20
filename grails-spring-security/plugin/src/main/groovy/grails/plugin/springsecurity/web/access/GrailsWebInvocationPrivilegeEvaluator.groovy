@@ -32,11 +32,11 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 
 import org.springframework.security.access.AccessDeniedException
-import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.intercept.AbstractSecurityInterceptor
 import org.springframework.security.core.Authentication
 import org.springframework.security.web.FilterInvocation
 import org.springframework.security.web.access.DefaultWebInvocationPrivilegeEvaluator
+import org.springframework.security.web.access.intercept.FilterInvocationSecurityMetadataSource
 
 import grails.util.GrailsUtil
 
@@ -83,7 +83,8 @@ class GrailsWebInvocationPrivilegeEvaluator extends DefaultWebInvocationPrivileg
         log.trace "isAllowed: contextPath '{}' uri '{}' method '{}' Authentication {} FilterInvocation {}",
                 contextPath, uri, method, authentication, fi
 
-        Collection<ConfigAttribute> attrs = interceptor.obtainSecurityMetadataSource().getAttributes(fi)
+        def metadataSource = interceptor.obtainSecurityMetadataSource() as FilterInvocationSecurityMetadataSource
+        def attrs = metadataSource.getAttributes(fi)
         if (attrs == null) {
             log.trace 'No ConfigAttributes found'
             return !interceptor.rejectPublicInvocations

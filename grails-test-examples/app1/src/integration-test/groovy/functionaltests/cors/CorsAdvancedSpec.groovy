@@ -27,7 +27,7 @@ import org.apache.grails.testing.http.client.HttpClientSupport
 /**
  * Integration tests for CORS (Cross-Origin Resource Sharing) functionality.
  * Tests preflight requests, CORS headers, and cross-origin scenarios.
- * 
+ *
  * Note: CORS is enabled for /api/** in application.yml
  */
 @Integration
@@ -129,7 +129,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 created: true,
-                method: 'POST'
+                method : 'POST'
         ])
     }
 
@@ -144,8 +144,8 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 updated: true,
-                id: '42',
-                method: 'PUT'
+                id     : '42',
+                method : 'PUT'
         ])
     }
 
@@ -159,8 +159,8 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 deleted: true,
-                id: '99',
-                method: 'DELETE'
+                id     : '99',
+                method : 'DELETE'
         ])
     }
 
@@ -173,7 +173,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, 'X-Custom-Response': 'custom-value', [
                 customHeadersSet: true,
-                message: 'Response with custom headers'
+                message         : 'Response with custom headers'
         ])
     }
 
@@ -183,7 +183,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                message: 'Origin header received',
+                message       : 'Origin header received',
                 receivedOrigin: 'http://my-app.example.com'
         ])
     }
@@ -201,8 +201,8 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 authenticated: true,
-                authType: 'Bearer',
-                message: 'Credentials received'
+                authType     : 'Bearer',
+                message      : 'Credentials received'
         ])
     }
 
@@ -212,9 +212,9 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                authType: null,
+                authType     : null,
                 authenticated: false,
-                message: 'No credentials'
+                message      : 'No credentials'
         ])
     }
 
@@ -227,7 +227,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 message: 'CORS test endpoint',
-                path: '/api/corsTest'
+                path   : '/api/corsTest'
         ])
     }
 
@@ -238,7 +238,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 message: 'CORS test endpoint',
-                path: '/api/corsTest'
+                path   : '/api/corsTest'
         ])
     }
 
@@ -249,7 +249,7 @@ class CorsAdvancedSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJson(200, [
                 message: 'CORS test endpoint',
-                path: '/api/corsTest'
+                path   : '/api/corsTest'
         ])
     }
 }

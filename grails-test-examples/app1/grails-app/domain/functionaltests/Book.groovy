@@ -26,5 +26,6 @@ class Book {
     Date dateCreated
 
     static constraints = {
+        title nullable: false
     }
 }

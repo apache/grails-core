@@ -18,7 +18,6 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
-import spock.lang.PendingFeatureIf
 import spock.util.concurrent.PollingConditions
 
 import org.springframework.context.ApplicationEvent
@@ -37,7 +36,7 @@ import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([TestPlayer])
+        manager.registerDomainClasses(TestPlayer)
     }
 
     TestSaveOrUpdateEventListener listener
@@ -54,7 +53,6 @@ class DirtyCheckingAfterListenerSpec extends GrailsDataTckSpec {
         }
     }
 
-    @PendingFeatureIf({ !Boolean.getBoolean('hibernate5.gorm.suite') && !Boolean.getBoolean('hibernate6.gorm.suite') && !Boolean.getBoolean('mongodb.gorm.suite') })
     void 'test state change from listener update the object'() {
 
         when:
@@ -87,6 +85,9 @@ class TestSaveOrUpdateEventListener extends AbstractPersistenceEventListener {
     protected void onPersistenceEvent(AbstractPersistenceEvent event) {
         TestPlayer player = (TestPlayer) event.entityObject
         player.attributes = ['test0', 'test1', 'test2']
+        if (event.getEntityAccess() != null) {
+            event.getEntityAccess().setProperty('attributes', player.attributes)
+        }
         isExecuted = true
     }
 

@@ -19,139 +19,488 @@ under the License.
 
 ### Bump up Grails Version
 
-You will need to upgrade your Grails version defined in `gradle.properties` as:
+You will need to upgrade your Grails version defined in `gradle.properties`.
+
+Grails 3 app's `gradle.properties`
+
+[source, properties]
+.gradle.properties
+----
+...
+grailsVersion=3.3.8
+...
+----
+
+Grails 4 app's `gradle.properties`
 
 [source,groovy,subs="attributes"]
 .gradle.properties
 ----
 ...
-grailsVersion=5.2.0
-...
-----
-
-### Apache Groovy 3.0.7
-
-Grails 5.1.1 provide support for Groovy 3. We would recommend you to please check the https://groovy-lang.org/releasenotes/groovy-3.0.html[Release notes for Groovy 3] to update your application in case you are using a specific feature which might not work in Groovy 3.
-
-Define groovyVersion in `gradle.properties` to force the application to use Groovy 3.
-
-Grails 5.1 app's `gradle.properties`
-
-[source, properties]
-.gradle.properties
-----
-...
-groovyVersion=3.0.7
+grailsVersion=4.0.4
 ...
 ----
 
 ### Bump up GORM Version
 
-If you were using link:{gormWebsite}[GORM], you will need to update the version defined in `gradle.properties` as:
+If you were using link:{gormWebsite}[GORM], you will need to update the version defined in `gradle.properties`.
+
+Grails 3 app's `gradle.properties`
 
 [source, properties]
 .gradle.properties
 ----
 ...
-gormVersion=7.2.0
+gormVersion=6.1.10.RELEASE
 ...
 ----
 
-### Bump up gradle version
-
-Grails 5.2.x uses gradle 7.2
+Grails 4 app's `gradle.properties`
 
 [source, properties]
-.gradle-wrapper.properties
+.gradle.properties
 ----
 ...
-distributionUrl=https\://services.gradle.org/distributions/gradle-7.2-bin.zip
+gormVersion=7.0.4
 ...
 ----
 
-Also you can run this command
+### Move GORM DSL Entries to runtime.groovy
 
-[source, properties]
+GORM DSL entries should be move to `runtime.groovy`. For instance, using following GORM configuration in the `application.groovy` is not supported and will break the application:
+
+[source, groovy]
 ----
-./gradlew wrapper --gradle-version 7.2
-----
-
-### GORM for MonogDB Sync Driver
-
-The GORM for MongoDB is updated to support latest mongodb-driver-sync. If you are using GORM for MongoDB and doing something specific to MongoDB Driver or low level Mongo API then you might want to take a look at https://mongodb.github.io/mongo-java-driver/4.0/upgrading/[Upgrading to the 4.0 Driver]
-
-### Bump up Asset Pipeline plugin version
-
-The previous version of asset-pipeline is not supported with Grails 5.0 as it is compiled with a version of Groovy which is binary incompatible with Groovy 3. So, please update the plugin version to 3.2.4.
-
-### Disabled StringCharArrayAccessor by default
-
-The previous version of Grails use the `StringCharArrayAccessor` which is enabled by default and provides optimized access to `java.lang.String` internals. In Grails 5.0 it is disabled by default but you can enable it by setting a system property with name `stringchararrayaccessor.disabled` and value `false`.
-
-NOTE: Enabling StringCharArrayAccessor would show IllegalReflectiveAccess warnings as it uses reflection to do the optimizations.
-
-### Changes in profile.yml and feature.yml files in Grails Profiles
-
-The format of how dependencies are defined in features and profiles has been changed. See the section on link:profiles.html[Application Profiles] for more information.
-
-### Deprecation of dot navigation of Grails configuration
-
-In order to reduce complexity, improve performance, and increase maintainability, accessing configuration through dot notation (config.a.b.c) has been deprecated. This functionality will be removed in a future release.
-
-Also, you would see a warning message if you are accessing configuration through the dot notation.
-
-The recommended way to access configuration is:
-
-[source,groovy]
-----
-grailsApplication.config.getProperty("hola", String.class)
+grails.gorm.default.mapping = {
+    id generator: 'identity'
+}
 ----
 
-### Deprecated Classes
+### Spring 5 and Spring Boot 2.1
 
-* link:{api}org/grails/config/NavigableMap.html[org.grails.config.NavigableMap]
-* link:{api}org/grails/config/NavigableMapConfig.html[org.grails.config.NavigableMapConfig]
-* link:{api}org/grails/config/NavigableMapPropertySource.html[org.grails.config.NavigableMapPropertySource]
+Grails 4.0 is built on Spring 5 and Spring Boot 2.1. See the https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.0-Migration-Guide[migration guide] and https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.1-Release-Notes[release notes] if you are using Spring specific features.
 
-### Spring 5.3
+### Hibernate 5.4 and GORM 7.x
 
-Grails 5.0.0.RC1 is built on Spring 5.3.2 See the https://github.com/spring-projects/spring-framework/wiki/Upgrading-to-Spring-Framework-5.x#upgrading-to-version-53[Upgrading to Spring 5.3]  if you are using Spring specific features.
+Grails 4.x supports a minimum version of Hibernate 5.4 and GORM 7.x. Several changes have been made to GORM to support the newer version of Hibernate and simplify GORM itself.
 
-### Spring Boot 2.4
+The details of these changes are covered in the  link:{hibernate5Guide}index.html#upgradeNotes[GORM upgrade documentation].
 
-Grails 5.1.1 updates to Spring Boot 2.6. Please check https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-2.6-Release-Notes[Spring Boot 2.6 Release Notes] for more information.
+### Spring Boot 2.1 Actuator
 
-### Micronaut 3.2.0
+Please check the https://docs.spring.io/spring-boot/docs/current/reference/html/production-ready-endpoints.html[Spring Boot Actuator] documentation since it has changed substantially from Spring Boot 1.5 the version Grails 3.x used.
 
-Grails 5.1.1 is shipped with Micronaut 3.2.0. Please check the https://micronaut-projects.github.io/micronaut-docs-mn3/3.2.0/guide/#upgrading[Upgrading to Micronaut 3.x] if you are using a specific feature.
+If you had configuration such as:
 
-### Micronaut for Spring 4.0.1
+[source, yml]
+.grails-app/conf/application.yml - Grails 3.3.x
+----
+endpoints:
+    enabled: false
+    jmx:
+        enabled: true
+        unique-names: true
+----
 
-Grails 5.1.1 is updated to Micronaut for Spring 4.0.1, please check out https://github.com/micronaut-projects/micronaut-spring/releases/tag/v4.0.1[release notes] for more information.
+replace it with:
 
-### Gradle 7.x
+[source, yml]
+.grails-app/conf/application.yml - Grails 4.x
+----
+spring:
+    jmx:
+        unique-names: true
+management:
+    endpoints:
+        enabled-by-default: false
+----
 
-#### Compile dependency configuration as well as others have been removed from Gradle 7.x. In previous version they were deprecated.
+### Spring Boot Developer Tools and Spring Loaded
 
-Replace configurations:
-[source, properties]
+Previous versions of Grails used a reloading agent called https://github.com/spring-projects/spring-loaded[Spring Loaded]. Since this library is no longer maintained and does not support Java 11 support for Spring Loaded has been removed.
+
+As a replacement, Grails 4 applications include https://docs.spring.io/spring-boot/docs/current/reference/html/using-boot-devtools.html[Spring Boot Developer Tools] dependencies in the `build.gradle` build script. If you are migrating a Grails 3.x app, please include the following set of dependencies:
+
+[source, groovy]
 .build.gradle
 ----
+.
+..
 ...
- compile -> implementation
- testCompile -> testImplementation
- runtime -> runtimeOnly
+configurations {
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
+}
+
+dependencies {
+	developmentOnly("org.springframework.boot:spring-boot-devtools")
+	...
+	..
+}
 ...
+..
+.
 ----
 
-NOTE: More information in Gradle upgrade docs https://docs.gradle.org/current/userguide/upgrading_version_6.html#sec:configuration_removal[Gradle upgrade docs]
+Also you should configure the necessary excludes for Spring Developer Tools in `application.yml`:
 
-#### Plugins in multi-project setup
+[source,yaml]
+----
+spring:
+    devtools:
+        restart:
+            exclude:
+                - grails-app/views/**
+                - grails-app/i18n/**
+                - grails-app/conf/**
+----
 
-If you have grails plugins as part of multi-project builds you should also replace the `compile` with `implementation` configuration.
+The above configuration prevents the server from restarting when views or message bundles are changed.
 
-Additionally if your main application relied on the dependencies declared by the plugin you need to apply further changes.
+NOTE: You can use Spring Developer Tools in combination with a browser extension such as the https://chromewebstore.google.com/detail/livereload/jnihajbhpnppcggbcgedagnkighmdlei[Chrome LiveReload extension] to get automatic browser
+refresh when you change anything in your Grails application.
 
-To make the dependencies available again you have to declare them with `api` configuration. You also have to apply the `java-library` gradle plugin in your plugin project.
+### Spring Boot Gradle Plugin Changes
 
-NOTE: More information https://docs.gradle.org/current/userguide/java_library_plugin.html[gradle java-library-plugin]
+Grails 4 is built on top of Spring Boot 2.1. Grails 3 apps were built on top of Spring Boot 1.x.
+
+Your Grails 3 app's `build.gradle` may have such configuration:
+
+[source, groovy]
+.build.gradle
+----
+bootRun {
+    addResources = true
+    ...
+}
+----
+
+Grails 4 apps are built on top of Spring Boot 2.1. Starting from Spring Boot 2.0, the `addResources` property no longer exists. Instead, you need to set the sourceResources property to the source set that you want to use. Typically that’s `sourceSets.main`. This is described in the https://docs.spring.io/spring-boot/docs/2.0.0.M3//gradle-plugin/reference/html/#running-your-application-reloading-resources[Spring Boot Gradle plugin’s documentation].
+
+Your Grails 4 app's `build.gradle` can be configured:
+
+[source, groovy]
+.build.gradle
+----
+bootRun {
+	sourceResources sourceSets.main
+    ...
+}
+----
+
+
+### Building executable jars for Grails Plugins
+
+https://spring.io/blog/2017/04/05/spring-boot-s-new-gradle-plugin[Spring Boot's new Gradle Plugin]:
+
+> The bootRepackage task has been replaced with bootJar and bootWar tasks for building executable jars and wars respectively. Both tasks extend their equivalent standard Gradle jar or war task, giving you access to all of the usual configuration options and behaviour.
+
+If you had configuration such as:
+
+[source, groovy]
+.build.gradle | Grails 3
+----
+// enable if you wish to package this plugin as a standalone application
+bootRepackage.enabled = false
+----
+
+replace it with:
+
+[source, groovy]
+.build.gradle | Grails 4
+----
+// enable if you wish to package this plugin as a standalone application
+bootJar.enabled = false
+----
+
+### Upgrading to Gradle 5
+
+Grails 3 apps by default used https://gradle.org[Gradle] 3.5. Grails 4 apps use Gradle 5.
+
+To upgrade to Gradle 5 execute: 
+
+[source, bash]
+----
+./gradlew wrapper --gradle-version 5.0
+----
+
+Due to changes in Gradle 5, https://docs.gradle.org/current/userguide/upgrading_version_4.html#rel5.0:pom_compile_runtime_separation[transitive dependencies are no longer resolved] for plugins. If your project makes use of a plugin that has transitive dependencies, you will need to add those explicitly to your `build.gradle` file.
+
+If you customized your app's build, other migrations may be necessary. Please check
+https://docs.gradle.org/current/userguide/upgrading_version_4.html[Gradle Upgrading your build] documentation. Especially notice, that default Gradle daemon now starts with 512MB of heap instead of 1GB. Please check https://docs.gradle.org/current/userguide/upgrading_version_4.html#rel5.0:default_memory_settings[Default memory settings changed] documentation.
+
+### Groovy language update to 2.5.6
+
+Keep in mind, that with grails 4.0.x there is a minor groovy language upgrade (e.g. 3.3.9. used groovy 2.4.x), which requires a couple of changes, that are immediately obvious when trying to compile your source code. However there are also issues with changed implementations of core linkedlist functions! Check an overview of the breaking changes here: https://groovy-lang.org/releasenotes/groovy-2.5.html#Groovy2.5releasenotes-Breakingchanges[Breaking changes of Groovy 2.5]
+
+#### Removed date helper functions
+
+Most common issue is that date util functions have been moved to individual project, e.g new Date().format("ddMMyyyy") no longer works without adding:
+
+[source, groovy]
+.build.gradle
+----
+dependencies {
+    implementation "org.codehaus.groovy:groovy-dateutil:3.0.4"
+}
+----
+
+#### Changed linked list method implementations
+
+Check whether you are using the groovy version of linkedlist implementations:
+
+* `[].pop()` - will no longer remove the last, but the first element of the list. Replace it with `[].removeLast()` is recommended.
+* `[].push(..)` - will no longer add to the end, but to the beginning of the list. Replace it with `[].add(..)` is recommended.
+
+### H2 Web Console
+
+Spring Boot 2.1 includes native support for the H2 database web console. Since this is already included in Spring Boot the equivalent feature has been removed from Grails. The H2 console is therefore now available at `/h2-console` instead of the previous URI of `/dbconsole`. See https://docs.spring.io/spring-boot/docs/current/reference/htmlsingle/#boot-features-sql-h2-console[Using H2’s Web Console] in the Spring Boot documentation for more information.
+
+### Upgrade Hibernate
+
+If you were using GORM for Hibernate implementation in your Grails 3 app, you will need to upgrade to Hibernate 5.4.
+
+A Grails 3 `build.gradle` such as:
+
+[source, groovy]
+.build.gradle
+----
+dependencies {
+...
+  implementation "org.grails.plugins:hibernate5"
+  implementation "org.hibernate:hibernate-core:5.1.5.Final"
+}
+----
+
+will be in Grails 4:
+
+[source, groovy]
+.build.gradle
+----
+dependencies {
+...
+  implementation "org.grails.plugins:hibernate5"
+  implementation "org.hibernate:hibernate-core:5.4.0.Final"
+}
+----
+
+
+
+### Migrating to Geb 2.3
+
+Geb 1.1.x (a JDK 1.7 compatible version) was the version shipped by default with Grails 3. Grails 4 is no longer compatible with Java 1.7. You should migrate to Geb 2.3.
+
+In Grails 3, if your build.gradle looks like:
+
+[source, groovy]
+.build.gradle
+----
+dependencies {
+ testCompile "org.grails.plugins:geb:1.1.2"
+ testRuntime "org.seleniumhq.selenium:selenium-htmlunit-driver:2.47.1"
+ testRuntime "net.sourceforge.htmlunit:htmlunit:2.18"
+}
+----
+
+In Grails 4, you should replace it with:
+
+[source, groovy]
+.build.gradle
+----
+buildscript {
+    repositories {
+       ...
+    }
+    dependencies {
+        ...
+        classpath "gradle.plugin.com.energizedwork.webdriver-binaries:webdriver-binaries-gradle-plugin:$webdriverBinariesVersion" // <1>
+    }
+}
+...
+..
+
+repositories {
+  ...
+}
+
+apply plugin:"idea"
+...
+...
+apply plugin:"com.energizedwork.webdriver-binaries" // <1>
+
+
+dependencies {
+...
+    testCompile "org.grails.plugins:geb" // <4>
+    testRuntime "org.seleniumhq.selenium:selenium-chrome-driver:$seleniumVersion"  // <5>
+    testRuntime "org.seleniumhq.selenium:selenium-firefox-driver:$seleniumVersion" // <5>
+    testRuntime "org.seleniumhq.selenium:selenium-safari-driver:$seleniumSafariDriverVersion" // <5>
+
+    testCompile "org.seleniumhq.selenium:selenium-remote-driver:$seleniumVersion" // <5>
+    testCompile "org.seleniumhq.selenium:selenium-api:$seleniumVersion" // <5>
+    testCompile "org.seleniumhq.selenium:selenium-support:$seleniumVersion" // <5>
+}
+
+webdriverBinaries {
+    chromedriver "$chromeDriverVersion" // <2>
+    geckodriver "$geckodriverVersion" // <3>
+}
+
+tasks.withType(Test) {
+    systemProperty "geb.env", System.getProperty('geb.env')
+    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
+    systemProperty "webdriver.chrome.driver", System.getProperty('webdriver.chrome.driver')
+    systemProperty "webdriver.gecko.driver", System.getProperty('webdriver.gecko.driver')
+}
+----
+
+[source,properties]
+.gradle.properties
+----
+gebVersion=2.3
+seleniumVersion=3.12.0
+webdriverBinariesVersion=1.4
+hibernateCoreVersion=5.1.5.Final
+chromeDriverVersion=2.44 // <2>
+geckodriverVersion=0.23.0 // <3>
+seleniumSafariDriverVersion=3.14.0
+----
+
+<1> Includes https://plugins.gradle.org/plugin/com.energizedwork.webdriver-binaries[Webdriver binaries Gradle plugin].
+<2> Set the appropriate https://chromedriver.chromium.org[Webdriver for Chrome version].
+<3> Set the appropriate https://github.com/mozilla/geckodriver/releases[Webdriver for Firefox version].
+<4> Includes the https://github.com/apache/grails-geb[Grails Geb Plugin dependency] which has a transitive dependency to `geb-spock`. This is the dependency necessary to work with https://groovy.apache.org/geb/[Geb] and Spock.
+<5> Selenium and different driver dependencies.
+
+Create also a https://groovy.apache.org/geb/manual/current/#configuration[Geb Configuration] file at `src/integration-test/resources/GebConfig.groovy`.
+
+[source, groovy]
+.src/integration-test/resources/GebConfig.groovy
+----
+import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.chrome.ChromeOptions
+import org.openqa.selenium.firefox.FirefoxDriver
+import org.openqa.selenium.firefox.FirefoxOptions
+import org.openqa.selenium.safari.SafariDriver
+
+environments {
+
+    // You need to configure in Safari -> Develop -> Allowed Remote Automation
+    safari {
+        driver = { new SafariDriver() }
+    }
+
+    // run via “./gradlew -Dgeb.env=chrome iT”
+    chrome {
+        driver = { new ChromeDriver() }
+    }
+
+    // run via “./gradlew -Dgeb.env=chromeHeadless iT”
+    chromeHeadless {
+        driver = {
+            ChromeOptions o = new ChromeOptions()
+            o.addArguments('headless')
+            new ChromeDriver(o)
+        }
+    }
+
+    // run via “./gradlew -Dgeb.env=firefoxHeadless iT”
+    firefoxHeadless {
+        driver = {
+            FirefoxOptions o = new FirefoxOptions()
+            o.addArguments('-headless')
+            new FirefoxDriver(o)
+        }
+    }
+
+    // run via “./gradlew -Dgeb.env=firefox iT”
+    firefox {
+        driver = { new FirefoxDriver() }
+    }
+}
+----
+
+
+
+### Deprecated classes
+
+
+The following classes, which were deprecated in Grails 3.x, have been removed in Grails 4. Please, check the list below to find a suitable replacement:
+
+|===
+| Removed Class | Alternative
+| `org.grails.datastore.gorm.validation.constraints.UniqueConstraint` |
+`org.grails.datastore.gorm.validation.constraints.builtin.UniqueConstraint`
+| `grails.util.BuildScope` |
+| `grails.transaction.GrailsTransactionTemplate` | `grails.gorm.transactions.GrailsTransactionTemplate`
+| `org.grails.transaction.transform.RollbackTransform` | `org.grails.datastore.gorm.transactions.transform.RollbackTransform`
+| `grails.transaction.NotTransactional` | `grails.gorm.transactions.NotTransactional`
+| `grails.transaction.Rollback` | `grails.gorm.transactions.Rollback`
+| `grails.transaction.Transactional` | `grails.gorm.transactions.Transactional`
+| `org.grails.config.FlatConfig` |
+| `org.grails.core.metaclass.MetaClassEnhancer` | Use traits instead.
+| `org.grails.core.util.ClassPropertyFetcher` | `org.grails.datastore.mapping.reflect.ClassPropertyFetcher`
+| `org.grails.transaction.transform.TransactionalTransform` | `org.grails.datastore.gorm.transactions.transform.TransactionalTransform`
+| `grails.core.ComponentCapableDomainClass` |
+| `grails.core.GrailsDomainClassProperty` | Use the `org.grails.datastore.mapping.model.MappingContext` API instead
+| `org.grails.core.DefaultGrailsDomainClassProperty` |
+| `org.grails.core.MetaGrailsDomainClassProperty` |
+| `org.grails.core.support.GrailsDomainConfigurationUtil` | Use the `org.grails.datastore.mapping.model.MappingContext` and `org.grails.datastore.mapping.model.MappingFactory` APIs instead
+| `org.grails.plugins.domain.DomainClassPluginSupport` |
+| `org.grails.plugins.domain.support.GormApiSupport` |
+| `org.grails.plugins.domain.support.GrailsDomainClassCleaner` | Handled by `org.grails.datastore.mapping.model.MappingContext` now
+| `grails.validation.AbstractConstraint` | Use `org.grails.datastore.gorm.validation.constraints.AbstractConstraint` instead
+| `grails.validation.AbstractVetoingConstraint` | `org.grails.datastore.gorm.validation.constraints.AbstractVetoingConstraint`
+| `grails.validation.CascadingValidator` | `grails.gorm.validation.CascadingValidator`
+| `grails.validation.ConstrainedProperty` | `grails.gorm.validation.ConstrainedProperty`
+| `grails.validation.Constraint` | `grails.gorm.validation.Constraint`
+| `grails.validation.ConstraintFactory` | `org.grails.datastore.gorm.validation.constraints.factory.ConstraintFactory`
+| `grails.validation.VetoingConstraint` | `grails.gorm.validation.VetoingConstraint`
+| `grails.validation.ConstraintException` |
+| `org.grails.validation.BlankConstraint` | `org.grails.datastore.gorm.validation.constraints.BlankConstraint`
+| `org.grails.validation.ConstrainedPropertyBuilder` | `org.grails.datastore.gorm.validation.constraints.builder.ConstrainedPropertyBuilder`
+| `org.grails.validation.ConstraintDelegate` |
+| `org.grails.validation.ConstraintsEvaluatorFactoryBean` | `org.grails.datastore.gorm.validation.constraints.eval.ConstraintsEvaluator`
+| `org.grails.validation.CreditCardConstraint` | `org.grails.datastore.gorm.validation.constraints.CreditCardConstraint`
+| `org.grails.validation.DefaultConstraintEvaluator` | `org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEvaluator`
+| `org.grails.validation.DomainClassPropertyComparator` |
+| `org.grails.validation.EmailConstraint` | `org.grails.datastore.gorm.validation.constraints.EmailConstraint`
+| `org.grails.validation.GrailsDomainClassValidator` | `grails.gorm.validation.PersistentEntityValidator`
+| `org.grails.validation.InListConstraint` | `org.grails.datastore.gorm.validation.constraints.InListConstraint`
+| `org.grails.validation.MatchesConstraint` | `org.grails.datastore.gorm.validation.constraints.MatchesConstraint`
+| `org.grails.validation.MaxConstraint` | `org.grails.datastore.gorm.validation.constraints.MaxConstraint`
+| `org.grails.validation.MaxSizeConstraint` | `org.grails.datastore.gorm.validation.constraints.MaxSizeConstraint`
+| `org.grails.validation.MinConstraint` | `org.grails.datastore.gorm.validation.constraints.MinConstraint`
+| `org.grails.validation.MinSizeConstraint` | `org.grails.datastore.gorm.validation.constraints.MinSizeConstraint`
+| `org.grails.validation.NotEqualConstraint` | `org.grails.datastore.gorm.validation.constraints.NotEqualConstraint`
+| `org.grails.validation.NullableConstraint` | `org.grails.datastore.gorm.validation.constraints.NullableConstraint`
+| `org.grails.validation.RangeConstraint` | `org.grails.datastore.gorm.validation.constraints.RangeConstraint`
+| `org.grails.validation.ScaleConstraint` | `org.grails.datastore.gorm.validation.constraints.ScaleConstraint`
+| `org.grails.validation.SizeConstraint` | `org.grails.datastore.gorm.validation.constraints.SizeConstraint`
+| `org.grails.validation.UrlConstraint` | `org.grails.datastore.gorm.validation.constraints.UrlConstraint`
+| `org.grails.validation.ValidatorConstraint` | `org.grails.datastore.gorm.validation.constraints.ValidatorConstraint`
+| `org.grails.validation.routines.DomainValidator` | Replaced by newer version of commons-validation
+| `org.grails.validation.routines.InetAddressValidator` | Replaced by newer version of commons-validation
+| `org.grails.validation.routines.RegexValidator` | Replaced by newer version of commons-validation
+| `org.grails.validation.routines.ResultPair` | Replaced by newer version of commons-validation
+| `org.grails.validation.routines.UrlValidator` | Replaced by newer version of commons-validation
+| `grails.web.JSONBuilder`| `groovy.json.StreamingJsonBuilder`
+|===
+
+### Grails-Java8
+
+For those who have added a dependency on the `grails-java8` plugin, all you should need to do is simply remove the dependency. All of the classes in the plugin have been moved out to their respective projects.
+
+### Profiles Deprecation
+
+A few of the profiles supported in Grails 3.x will no longer be maintained going forward and as a result it is no longer possible to create applications when them in the shorthand form. When upgrading existing projects, it will be necessary to supply the version for these profiles.
+
+* `org.grails.profiles:angularjs` -> `org.grails.profiles:angularjs:1.1.2`
+* `org.grails.profiles:webpack` -> `org.grails.profiles:webpack:1.1.6`
+* `org.grails.profiles:react-webpack` -> `org.grails.profiles:react-webpack:1.0.8`
+
+### Scheduled Methods
+
+In Grails 3 no configuration or additional changes were necessary to use the Spring `@Scheduled` annotation. In Grails 4 you must apply the `@EnableScheduling` annotation to your application class in order for scheduling to work.

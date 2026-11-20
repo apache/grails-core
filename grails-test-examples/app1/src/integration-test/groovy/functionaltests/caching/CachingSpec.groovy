@@ -46,7 +46,8 @@ and only recomputed when necessary.
 @Tag('http-client')
 class CachingSpec extends Specification implements HttpClientSupport {
 
-    @Autowired CacheTestService cacheTestService
+    @Autowired
+    CacheTestService cacheTestService
 
     def setup() {
         // Evict all caches before each test to ensure clean state

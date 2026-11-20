@@ -138,6 +138,10 @@ trait GormValidateable {
      */
     @Generated
     private GormValidationApi currentGormValidationApi() {
-        GormEnhancer.findValidationApi(getClass())
+        GormValidationApi api = GormRegistry.instance.findValidationApi(getClass())
+        if (api == null) {
+            throw new IllegalStateException("No GORM implementation configured for class [${getClass().name}]. Ensure GORM has been initialized correctly")
+        }
+        api
     }
 }

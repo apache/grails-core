@@ -37,30 +37,43 @@ trait QuartzJob implements GrailsApplicationAware {
     GrailsApplication grailsApplication
 
     static triggerNow(Map params = null) {
+        assertScheduled this.getName()
         internalScheduler.triggerJob(new JobKey(this.getName(), internalJobArtefact.group), params ? new JobDataMap(params) : null)
     }
 
     @CompileDynamic
     static schedule(Long repeatInterval, Integer repeatCount = SimpleTrigger.REPEAT_INDEFINITELY, Map params = null) {
+        assertScheduled this.getName()
+        Assert.notNull repeatInterval, missingScheduleArgumentMessage(this.getName(), 'repeat interval')
+        Assert.notNull repeatCount, missingScheduleArgumentMessage(this.getName(), 'repeat count')
         internalScheduleTrigger(TriggerUtils.buildSimpleTrigger(this.getName(), internalJobArtefact.group, repeatInterval, repeatCount), params)
     }
 
     @CompileDynamic
     static schedule(Date scheduleDate, Map params = null) {
+        assertScheduled this.getName()
+        Assert.notNull scheduleDate, missingScheduleArgumentMessage(this.getName(), 'schedule date')
         internalScheduleTrigger(TriggerUtils.buildDateTrigger(this.getName(), internalJobArtefact.group, scheduleDate), params)
     }
 
     @CompileDynamic
     static schedule(String cronExpression, Map params = null) {
+        assertScheduled this.getName()
+        Assert.notNull cronExpression, missingScheduleArgumentMessage(this.getName(), 'cron expression')
         internalScheduleTrigger(TriggerUtils.buildCronTrigger(this.getName(), internalJobArtefact.group, cronExpression), params)
     }
 
     static schedule(Trigger trigger, Map params = null) {
-        def jobKey = new JobKey(this.getName(), internalJobArtefact.group)
+        assertScheduled this.getName()
+        Assert.notNull trigger, missingScheduleArgumentMessage(this.getName(), 'trigger')
+
+        JobKey jobKey = new JobKey(this.getName(), internalJobArtefact.group)
         Assert.isTrue trigger.jobKey == jobKey || (trigger instanceof MutableTrigger),
                 'The trigger job key is not equal to the job key or the trigger is immutable'
 
-        ((MutableTrigger)trigger).jobKey = jobKey
+        if (trigger instanceof MutableTrigger) {
+            ((MutableTrigger) trigger).jobKey = jobKey
+        }
 
         if (params) {
             trigger.jobDataMap.putAll(params)
@@ -69,15 +82,20 @@ trait QuartzJob implements GrailsApplicationAware {
     }
 
     static removeJob() {
+        assertScheduled this.getName()
         internalScheduler.deleteJob(new JobKey(this.getName(), internalJobArtefact.group))
     }
 
     static reschedule(Trigger trigger, Map params = null) {
+        assertScheduled this.getName()
+        Assert.notNull trigger, missingArgumentMessage(this.getName(), 'trigger')
         if (params) trigger.jobDataMap.putAll(params)
         internalScheduler.rescheduleJob(trigger.key, trigger)
     }
 
     static unschedule(String triggerName, String triggerGroup = GrailsJobClassConstants.DEFAULT_TRIGGERS_GROUP) {
+        assertScheduled this.getName()
+        Assert.notNull triggerName, missingArgumentMessage(this.getName(), 'trigger name')
         internalScheduler.unscheduleJob(TriggerKey.triggerKey(triggerName, triggerGroup))
     }
 
@@ -86,6 +104,44 @@ trait QuartzJob implements GrailsApplicationAware {
             trigger.jobDataMap.putAll(params)
         }
         internalScheduler.scheduleJob(trigger)
+    }
+
+    /**
+     * Verifies that the job class has been associated with a scheduler, which the plugin does for
+     * every enabled job artefact while the application starts.
+     *
+     * @param jobClassName the name of the job class the method was called on
+     */
+    private static void assertScheduled(String jobClassName) {
+        Assert.state internalScheduler != null && internalJobArtefact != null,
+                "The job [${jobClassName}] is not registered with a Quartz scheduler. Only enabled job " +
+                        'artefacts of a running application are registered, so check that the plugin is enabled ' +
+                        '(quartz.pluginEnabled), that the job is enabled (its jobEnabled property) and that the ' +
+                        'class is a job artefact of the application.' as String
+    }
+
+    /**
+     * Builds the message reported when a method is called with a null argument.
+     *
+     * @param jobClassName the name of the job class the method was called on
+     * @param argumentName the name of the argument that is null
+     */
+    private static String missingArgumentMessage(String jobClassName, String argumentName) {
+        "The ${argumentName} passed for the job [${jobClassName}] is null." as String
+    }
+
+    /**
+     * Builds the message reported when one of the schedule methods is called with a null argument. Such a
+     * call resolves to {@link #schedule(Trigger, Map)} unless the caller is statically compiled, because the
+     * runtime type of null carries no information, hence the hint about the arguments of the other methods.
+     *
+     * @param jobClassName the name of the job class the method was called on
+     * @param argumentName the name of the argument that is null
+     */
+    private static String missingScheduleArgumentMessage(String jobClassName, String argumentName) {
+        missingArgumentMessage(jobClassName, argumentName) + ' A null argument of any of the scheduling ' +
+                'methods resolves to the one taking a trigger, so also check the repeat interval, repeat ' +
+                'count, cron expression and date arguments of the method you called.'
     }
 
     static setScheduler(Scheduler scheduler) {

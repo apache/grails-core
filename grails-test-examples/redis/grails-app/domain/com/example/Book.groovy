@@ -32,6 +32,11 @@ class Book {
     LocalDate createDate = LocalDate.now()
     static transients = ['redisService']
 
+    static constraints = {
+        title nullable: false
+        createDate nullable: false
+    }
+
     static mapping = {
         autowire true
     }

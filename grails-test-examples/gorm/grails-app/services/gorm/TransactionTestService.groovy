@@ -23,6 +23,7 @@ import grails.gorm.transactions.ReadOnly
 import grails.gorm.transactions.Transactional
 
 import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Service for testing various transaction behaviors and propagation modes.
@@ -150,6 +151,21 @@ class TransactionTestService {
     @NotTransactional
     def nonTransactionalOperation() {
         return "No transaction here"
+    }
+
+    /**
+     * Opted out of the class-level @Transactional, so no transaction must be active here.
+     */
+    @NotTransactional
+    boolean transactionActiveWithoutTransaction() {
+        TransactionSynchronizationManager.isActualTransactionActive()
+    }
+
+    /**
+     * Decorated by the class-level @Transactional, so a transaction must be active here.
+     */
+    boolean transactionActiveWithTransaction() {
+        TransactionSynchronizationManager.isActualTransactionActive()
     }
 
     /**

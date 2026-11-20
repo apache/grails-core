@@ -59,23 +59,21 @@ class PartitionedMultiTenancyWithoutIdSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'alice')
 
         expect: 'a resolved tenant id is a tenant id'
-        !Tenants.isWithoutId()
         !Tenants.isWithoutId(datastore)
 
         and: 'inside withoutId there is no tenant id, also inside withCurrent there'
-        Tenants.withoutId(datastore) { Tenants.isWithoutId() }
         Tenants.withoutId(datastore) { Tenants.isWithoutId(datastore) }
-        Tenants.withoutId(datastore) { Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId() } }
+        Tenants.withoutId(datastore) { Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId(datastore) } }
 
         and: 'withId binds a tenant id, also inside withoutId, and withoutId applies again afterwards'
-        !Tenants.withId(datastore, 'alice') { Tenants.isWithoutId() }
+        !Tenants.withId(datastore, 'alice') { Tenants.isWithoutId(datastore) }
         Tenants.withoutId(datastore) {
-            [Tenants.withId(datastore, 'alice') { Tenants.isWithoutId() }, Tenants.isWithoutId()]
+            [Tenants.withId(datastore, 'alice') { Tenants.isWithoutId(datastore) }, Tenants.isWithoutId(datastore)]
         } == [false, true]
 
         and: 'the name of the default connection source is a tenant id like any other'
-        !Tenants.withId(datastore, ConnectionSource.DEFAULT) { Tenants.isWithoutId() }
-        !Tenants.withId(datastore, new String(ConnectionSource.DEFAULT)) { Tenants.isWithoutId() }
+        !Tenants.withId(datastore, ConnectionSource.DEFAULT) { Tenants.isWithoutId(datastore) }
+        !Tenants.withId(datastore, new String(ConnectionSource.DEFAULT)) { Tenants.isWithoutId(datastore) }
     }
 
     void 'inside withoutId the current tenant id is DEFAULT, and binding it again is a tenant id like any other'() {
@@ -87,13 +85,27 @@ class PartitionedMultiTenancyWithoutIdSpec extends Specification {
 
         then:
         captured == ConnectionSource.DEFAULT
-        !Tenants.withId(datastore, captured) { Tenants.isWithoutId() }
+        !Tenants.withId(datastore, captured) { Tenants.isWithoutId(datastore) }
 
         when: 'a resolver returns it later'
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, captured as String)
 
         then:
-        !Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId() }
+        !Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId(datastore) }
+    }
+
+    void 'an instance saved inside withoutId without a tenant id gets DEFAULT, and binding it again is a tenant id like any other'() {
+        given:
+        System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, 'bob')
+
+        when:
+        final Voucher voucher = Tenants.withoutId(datastore) {
+            Voucher.withNewSession { new Voucher(number: 'M-1').save(flush: true) }
+        }
+
+        then:
+        voucher.tenantId == ConnectionSource.DEFAULT
+        !Tenants.withId(datastore, voucher.tenantId) { Tenants.isWithoutId(datastore) }
     }
 
     void 'withCurrent inside withoutId stays without a tenant id and passes DEFAULT as the tenant id'() {
@@ -102,7 +114,7 @@ class PartitionedMultiTenancyWithoutIdSpec extends Specification {
 
         expect:
         Tenants.withoutId(datastore) {
-            Tenants.withCurrent(datastore.getClass()) { Serializable tenantId -> [tenantId, Tenants.isWithoutId()] }
+            Tenants.withCurrent(datastore.getClass()) { Serializable tenantId -> [tenantId, Tenants.isWithoutId(datastore)] }
         } == [ConnectionSource.DEFAULT, true]
     }
 
@@ -112,8 +124,8 @@ class PartitionedMultiTenancyWithoutIdSpec extends Specification {
         System.setProperty(SystemPropertyTenantResolver.PROPERTY_NAME, resolved)
 
         expect:
-        !Tenants.isWithoutId()
-        !Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId() }
+        !Tenants.isWithoutId(datastore)
+        !Tenants.withCurrent(datastore.getClass()) { Tenants.isWithoutId(datastore) }
 
         where:
         description                                             | resolved

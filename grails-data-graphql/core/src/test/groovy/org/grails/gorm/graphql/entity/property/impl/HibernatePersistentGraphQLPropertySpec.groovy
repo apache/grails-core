@@ -359,8 +359,8 @@ class HibernatePersistentGraphQLPropertySpec extends HibernateSpec {
         'order8'     | 8 //specified via mapping
         'order0'     | 0 //specified as 0
         'orderNeg'   | -21 //specified as -10
-        'orderNullc' | 6 //not specified, gorm supplied
-        'orderNulld' | 7 //not specified, gorm supplied
+        'orderNullc' | 5 //not specified, gorm supplied
+        'orderNulld' | 6 //not specified, gorm supplied
     }
 
     void "test deprecation with foo property"() {
@@ -467,8 +467,18 @@ class Book {
     static hasMany = [authors: Author, tags: Tag, basics: String, otherBookTypes: BookType]
 
     static constraints = {
-        description nullable: true
-        nullBookType nullable: true
+        title nullable: false
+        metadata nullable: false
+        bookType nullable: false
+
+        otherMetadata nullable: false
+        otherMetadata2 nullable: false
+        someOtherMetadata nullable: false
+
+        authors nullable: false
+        tags nullable: false
+        basics nullable: false
+        otherBookTypes nullable: false
     }
 
     static embedded = ['otherMetadata2', 'someOtherMetadata']
@@ -485,6 +495,10 @@ class Book2 implements Serializable {
 
     static mapping = {
         id composite: ['title', 'description']
+        title nullable: false
+        description nullable: false
+        metadata nullable: false
+        bookType nullable: false
     }
 
     int hashCode() {

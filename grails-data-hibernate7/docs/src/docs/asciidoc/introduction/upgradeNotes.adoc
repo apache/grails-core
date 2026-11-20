@@ -1,0 +1,71 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+[[upgrade-notes]]
+== Upgrade Notes
+
+=== Grails {grailsMajorVersion} / Hibernate 7
+
+==== Query API — Injection Safety
+
+The Grails {grailsMajorVersion} / Hibernate 7 query API keeps the Hibernate 5 calling conventions while making the idiomatic Groovy query form injection-safe by default. There is no breaking change here: the methods that accepted a plain `String` on Hibernate 5 still do.
+
+===== Single-argument HQL overloads
+
+The single-argument overloads continue to accept a plain `String`, exactly as on Hibernate 5:
+
+* `find(CharSequence)`
+* `findAll(CharSequence)`
+* `executeQuery(CharSequence)`
+* `executeUpdate(CharSequence)`
+
+When a Groovy `GString` is passed instead, GORM extracts every `${value}` interpolation and binds it as a named parameter rather than interpolating it into the query text, so the idiomatic interpolated form is injection-safe by binding:
+
+[source,groovy]
+----
+// Plain String — executed as written (no params map required)
+Book.findAll("from Book where active = true")
+
+// GString — ${params.title} is bound as :p0, never interpolated (injection-safe)
+Book.findAll("from Book where title = ${params.title}")
+
+// Named parameters with a plain String
+Book.findAll("from Book where title = :title", [title: params.title])
+
+// Positional parameters
+Book.executeQuery("from Book where title like ?1", [params.title + '%'])
+----
+
+As in any ORM, manually concatenating untrusted input into a plain `String` (for example `"... where title = '" + userInput + "'"`) remains an injection risk and should be avoided in favour of the GString or parameterized forms above.
+
+===== SQL query helpers
+
+[source,groovy]
+----
+Book.findWithSql("select * from book where id = ${params.id}")
+Book.findAllWithSql("select * from book where ...")
+----
+
+==== Schema-per-Tenant — Schema Names Are Now Quoted
+
+`DefaultSchemaHandler` now quotes schema names using the JDBC identifier quote character (`connection.metaData.identifierQuoteString`) before executing `SET SCHEMA` and `CREATE SCHEMA` DDL statements. This prevents SQL injection via tenant identifiers.
+
+Embedded quote characters are stripped from the schema name before quoting. If the JDBC driver does not support identifier quoting (returns `" "` or empty), the name is used unquoted as before — no behaviour change for such drivers.
+
+No application changes are required unless your tenant resolver intentionally produces schema names containing the database's identifier quote character (typically `"` or `` ` ``), in which case those characters will be stripped.

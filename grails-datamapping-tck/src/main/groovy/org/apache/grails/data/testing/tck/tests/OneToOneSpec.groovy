@@ -18,6 +18,7 @@
  */
 package org.apache.grails.data.testing.tck.tests
 
+import grails.persistence.Entity
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.Face
 import org.apache.grails.data.testing.tck.domains.Nose
@@ -26,6 +27,11 @@ import org.apache.grails.data.testing.tck.domains.Pet
 import org.grails.datastore.mapping.model.types.OneToOne
 
 class OneToOneSpec extends GrailsDataTckSpec {
+
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(Face, Nose, Person, Pet, OwnerEntity, OwnedEntity)
+    }
 
     def 'Test persist and retrieve unidirectional many-to-one'() {
         given: 'A domain model with a many-to-one'
@@ -45,7 +51,23 @@ class OneToOneSpec extends GrailsDataTckSpec {
         pet.owner.firstName == 'Fred'
     }
 
-    def 'Test persist and retrieve one-to-one with inverse key'() {
+    def 'Test persist and retrieve local unidirectional many-to-one'() {
+        given: 'a domain model with a many-to-one'
+        def owner = new OwnerEntity()
+        def owned = new OwnedEntity(owner: owner)
+        owner.save()
+        owned.save(flush: true)
+        manager.session.clear()
+
+        when: 'the association is queried'
+        owned = OwnedEntity.list()[0]
+
+        then: 'the domain model is valid'
+        owned != null
+        owned.owner.id == owner.id
+    }
+
+    def "Test persist and retrieve one-to-one with inverse key"() {
         given: 'A domain model with a one-to-one'
         def face = new Face(name: 'Joe')
         def nose = new Nose(hasFreckles: true, face: face)
@@ -76,4 +98,17 @@ class OneToOneSpec extends GrailsDataTckSpec {
         nose.face != null
         nose.face.name == 'Joe'
     }
+}
+
+@Entity
+class OwnerEntity {
+
+}
+
+@Entity
+class OwnedEntity {
+
+    OwnerEntity owner
+
+    static belongsTo = [owner: OwnerEntity]
 }

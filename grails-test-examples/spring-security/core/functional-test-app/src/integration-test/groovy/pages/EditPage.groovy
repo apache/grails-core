@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages
 
 class EditPage extends ScaffoldPage {
-	static at = {
-		heading.text() ==~ /Edit.+/
-	}
+
+    static at = {
+        heading ==~ /Edit.+/
+    }
 }

@@ -36,6 +36,13 @@ dependencies {
     implementation 'org.apache.grails:grails-data-hibernate5-spring-boot'
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly('org.springframework.boot:spring-boot-hibernate') {
+        // Only HibernateJpaAutoConfiguration is referenced, to disable it. Its Hibernate 7 transitive
+        // dependency conflicts with the Hibernate 5 implementation this example exercises.
+        exclude group: 'org.hibernate.orm', module: 'hibernate-core'
+    }
+
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.zaxxer:HikariCP'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'

@@ -23,7 +23,6 @@ import java.beans.Introspector;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +49,6 @@ import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
-import org.codehaus.groovy.ast.tools.GenericsUtils;
 import org.codehaus.groovy.control.CompilePhase;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.transform.ASTTransformation;
@@ -163,7 +161,7 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
                     }
                     MethodCallExpression delegateMethodCall = new MethodCallExpression(new VariableExpression(fieldName), candidate.getName(), arguments);
                     promiseBody.addStatement(new ExpressionStatement(delegateMethodCall));
-                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC, promiseNode, parameters, null, methodBody);
+                    MethodNode newMethodNode = new MethodNode(candidate.getName(), Modifier.PUBLIC, promiseNode, parameters, ClassNode.EMPTY_ARRAY, methodBody);
                     markAsGenerated(classNode, newMethodNode);
                     classNode.addMethod(newMethodNode);
                 }
@@ -180,32 +178,6 @@ public class DelegateAsyncTransformation implements ASTTransformation, Transform
             }
         }
         return names;
-    }
-
-    private static ClassNode alignReturnType(final ClassNode receiver, final ClassNode originalReturnType) {
-        ClassNode copiedReturnType = originalReturnType.getPlainNodeReference();
-
-        ClassNode actualReceiver = receiver;
-        List<GenericsType> redirectTypes = new ArrayList<>();
-        if (actualReceiver.redirect().getGenericsTypes() != null) {
-            Collections.addAll(redirectTypes, actualReceiver.redirect().getGenericsTypes());
-        }
-        if (!redirectTypes.isEmpty()) {
-            GenericsType[] redirectReceiverTypes = redirectTypes.toArray(new GenericsType[redirectTypes.size()]);
-
-            GenericsType[] receiverParameterizedTypes = actualReceiver.getGenericsTypes();
-            if (receiverParameterizedTypes == null) {
-                receiverParameterizedTypes = redirectReceiverTypes;
-            }
-
-            if (originalReturnType.isUsingGenerics()) {
-                GenericsType[] alignmentTypes = originalReturnType.getGenericsTypes();
-                GenericsType[] genericsTypes = GenericsUtils.alignGenericTypes(redirectReceiverTypes, receiverParameterizedTypes, alignmentTypes);
-                copiedReturnType.setGenericsTypes(genericsTypes);
-            }
-        }
-
-        return copiedReturnType;
     }
 
     private static boolean isCandidateMethod(MethodNode declaredMethod) {

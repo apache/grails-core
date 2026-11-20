@@ -19,27 +19,30 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.configuration.picocli.PicocliRunner
-import io.micronaut.context.ApplicationContext
-import io.micronaut.context.env.Environment
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.WebAvailableFeatures
 import org.grails.forge.cli.CodeGenConfig
+import org.grails.forge.cli.CliRunner
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
+import org.grails.forge.cli.GrailsPicocliFactory
 import org.grails.forge.io.ConsoleOutput
-import spock.lang.AutoCleanup
-import spock.lang.Shared
+import picocli.CommandLine
 
 class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
 
-    @Shared
-    @AutoCleanup
-    ApplicationContext ctx = ApplicationContext.run(Environment.CLI)
+    PrintStream originalOut
+    PrintStream originalErr
 
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
+    void setup() {
+        originalOut = System.out
+        originalErr = System.err
+    }
+
+    void cleanup() {
+        System.setOut(originalOut)
+        System.setErr(originalErr)
+    }
 
     void "test creating project with defaults"() {
         given:
@@ -47,7 +50,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setOut(new PrintStream(out))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "foobar")
+        CliRunner.run(CreateAppCommand, beanContext, "foobar")
 
         then:
         noExceptionThrown()
@@ -60,17 +63,94 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         System.setErr(new PrintStream(baos))
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp",  "--gorm", "xyz")
+        CliRunner.run(CreateAppCommand, beanContext, "temp",  "--gorm", "xyz")
 
         then:
         noExceptionThrown()
-        baos.toString().contains("Invalid GORM implementation selection: xyz")
+        baos.toString().contains("Invalid Grails Data implementation selection: xyz")
+    }
+
+    void "test creating a project with the data switch"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, "dataswitch", "--data", "hibernate7")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the -d short alias"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, "dshort", "-d", "hibernate7")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the legacy -g short alias"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, "gshort", "-g", "hibernate5")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the legacy hibernate gorm value"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, "legacygorm", "--gorm", "hibernate")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "test creating a project with the hibernate5 gorm value"() {
+        given:
+        ByteArrayOutputStream out = new ByteArrayOutputStream()
+        System.setOut(new PrintStream(out))
+
+        when:
+        CliRunner.run(CreateAppCommand, beanContext, "hib5gorm", "--gorm", "hibernate5")
+
+        then:
+        noExceptionThrown()
+        out.toString().contains("Application created")
+    }
+
+    void "the --features completion candidates are listed in name order"() {
+        when:
+        List<String> candidates = new CommandLine(CreateAppCommand, new GrailsPicocliFactory(beanContext))
+                .commandSpec
+                .findOption('--features')
+                .completionCandidates()
+                .toList()
+
+        then:
+        candidates
+        candidates == candidates.toSorted()
     }
 
     void "community and preview features are labelled as such"() {
         given:
         ByteArrayOutputStream baos = new ByteArrayOutputStream()
-        PrintStream old = System.out
         System.setOut(new PrintStream(baos))
 
         and:
@@ -79,7 +159,7 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         }
 
         when:
-        PicocliRunner.run(CreateAppCommand, ctx, "temp", "--list-features")
+        CliRunner.run(CreateAppCommand, beanContext, "temp", "--list-features")
 
         then:
         noExceptionThrown()
@@ -87,8 +167,5 @@ class CreateAppCommandSpec extends CommandSpec implements CommandFixture {
         //baos.toString().contains("$previewFeature.name [PREVIEW]")
         communityFeature == null
         //baos.toString().contains("$communityFeature.name [COMMUNITY]")
-
-        cleanup:
-        System.setOut(old)
     }
 }

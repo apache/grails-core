@@ -18,12 +18,7 @@
  */
 package grails.util;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -35,11 +30,34 @@ import groovy.lang.GroovyObjectSupport;
 import org.codehaus.groovy.runtime.DefaultGroovyMethods;
 import org.codehaus.groovy.util.HashCodeHelper;
 
+import org.apache.grails.core.internal.util.TypeConverters;
+
 /**
  * AbstractTypeConvertingMap is a Map with type conversion capabilities.
  *
  * Type converting maps have no inherent ordering. Two maps with identical entries
  * but arranged in a different order internally are considered equal.
+ *
+ * <h2>Subclasses must not declare JavaBean accessors</h2>
+ *
+ * A subclass must not declare a no-argument {@code getX()} or {@code isX()} method, because this
+ * class implements {@link Map} and Groovy resolves a JavaBean accessor ahead of the map entry of
+ * the same name. Such an accessor makes the entry {@code x} unreadable through
+ * {@code map.x} and {@code map['x']}, and makes assignment to it fail with
+ * {@code ReadOnlyPropertyException}. It applies to statically compiled callers too: the static
+ * compiler binds to the declared accessor and never reaches {@code getProperty}/{@code setProperty},
+ * so the collision cannot be worked around at runtime.
+ *
+ * Expose such a value under a name that is not a JavaBean accessor - for example
+ * {@code GrailsParameterMap.request()} - or under a method that takes an argument.
+ *
+ * A setter is a weaker case and is allowed: it leaves reads addressing the map, but dotted
+ * assignment to that one name invokes the setter instead of storing an entry, so such an entry
+ * must be written with {@link Map#put} or by subscript. Subscript assignment stores an entry only
+ * where the class declares a {@code putAt(String, Object)} that calls {@link Map#put}: Groovy 6
+ * routes it through {@link Map#put} on its own, but Groovy 5 invokes the setter.
+ * {@code GroovyPageAttributes.setGspTagSyntaxCall(boolean)} is the only one, and that class
+ * declares {@code putAt}.
  *
  * @author Graeme Rocher
  * @author Lari Hotari
@@ -47,7 +65,6 @@ import org.codehaus.groovy.util.HashCodeHelper;
  */
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport implements Map, Cloneable {
-    private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
     protected Map wrappedMap;
 
     public AbstractTypeConvertingMap() {
@@ -120,29 +137,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The integer value or null if there isn't one
      */
     public Byte getByte(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).byteValue();
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null && string.length() > 0) {
-                    return Byte.parseByte(string);
-                }
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toByte(get(name));
     }
 
     public Byte getByte(String name, Integer defaultValue) {
-        Byte value = getByte(name);
-        if (value == null && defaultValue != null) {
-            value = (byte) defaultValue.intValue();
-        }
-        return value;
+        return TypeConverters.toByte(get(name), defaultValue);
     }
 
     /**
@@ -151,26 +150,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The Character value or null if there isn't one
      */
     public Character getChar(String name) {
-        Object o = get(name);
-        if (o instanceof Character) {
-            return (Character) o;
-        }
-
-        if (o != null) {
-            String string = o.toString();
-            if (string != null && string.length() == 1) {
-                return string.charAt(0);
-            }
-        }
-        return null;
+        return TypeConverters.toCharacter(get(name));
     }
 
     public Character getChar(String name, Integer defaultValue) {
-        Character value = getChar(name);
-        if (value == null && defaultValue != null) {
-            value = (char) defaultValue.intValue();
-        }
-        return value;
+        return TypeConverters.toCharacter(get(name), defaultValue);
     }
 
     /**
@@ -179,29 +163,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The integer value or null if there isn't one
      */
     public Integer getInt(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).intValue();
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null) {
-                    return Integer.parseInt(string);
-                }
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toInteger(get(name));
     }
 
     public Integer getInt(String name, Integer defaultValue) {
-        Integer value = getInt(name);
-        if (value == null) {
-            value = defaultValue;
-        }
-        return value;
+        return TypeConverters.toInteger(get(name), defaultValue);
     }
 
     /**
@@ -210,26 +176,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The long value or null if there isn't one
      */
     public Long getLong(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).longValue();
-        }
-
-        if (o != null) {
-            try {
-                return Long.parseLong(o.toString());
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toLong(get(name));
     }
 
     public Long getLong(String name, Long defaultValue) {
-        Long value = getLong(name);
-        if (value == null) {
-            value = defaultValue;
-        }
-        return value;
+        return TypeConverters.toLong(get(name), defaultValue);
     }
 
     /**
@@ -238,29 +189,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     * @return The short value or null if there isn't one
     */
     public Short getShort(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).shortValue();
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null) {
-                    return Short.parseShort(string);
-                }
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toShort(get(name));
     }
 
     public Short getShort(String name, Integer defaultValue) {
-        Short value = getShort(name);
-        if (value == null && defaultValue != null) {
-            value = defaultValue.shortValue();
-        }
-        return value;
+        return TypeConverters.toShort(get(name), defaultValue);
     }
 
     /**
@@ -269,29 +202,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     * @return The double value or null if there isn't one
     */
     public Double getDouble(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).doubleValue();
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null) {
-                    return Double.parseDouble(string);
-                }
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toDouble(get(name));
     }
 
     public Double getDouble(String name, Double defaultValue) {
-        Double value = getDouble(name);
-        if (value == null) {
-            value = defaultValue;
-        }
-        return value;
+        return TypeConverters.toDouble(get(name), defaultValue);
     }
 
     /**
@@ -300,29 +215,11 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The double value or null if there isn't one
      */
     public Float getFloat(String name) {
-        Object o = get(name);
-        if (o instanceof Number) {
-            return ((Number) o).floatValue();
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null) {
-                    return Float.parseFloat(string);
-                }
-            }
-            catch (NumberFormatException e) {}
-        }
-        return null;
+        return TypeConverters.toFloat(get(name));
     }
 
     public Float getFloat(String name, Float defaultValue) {
-        Float value = getFloat(name);
-        if (value == null) {
-            value = defaultValue;
-        }
-        return value;
+        return TypeConverters.toFloat(get(name), defaultValue);
     }
 
     /**
@@ -331,21 +228,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The boolean value or null if there isn't one
      */
     public Boolean getBoolean(String name) {
-        Object o = get(name);
-        if (o instanceof Boolean) {
-            return (Boolean) o;
-        }
-
-        if (o != null) {
-            try {
-                String string = o.toString();
-                if (string != null) {
-                    return GrailsStringUtils.toBoolean(string);
-                }
-            }
-            catch (Exception e) {}
-        }
-        return null;
+        return TypeConverters.toBoolean(get(name));
     }
 
     public Boolean getBoolean(String name, Boolean defaultValue) {
@@ -359,12 +242,25 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     /**
+     * Helper method for obtaining a String value from a parameter
+     * @param name The name of the parameter
+     * @return The String value or null if there isn't one
+     */
+    public String getString(String name) {
+        return TypeConverters.toStringValue(get(name));
+    }
+
+    public String getString(String name, String defaultValue) {
+        return TypeConverters.toStringValue(get(name), defaultValue);
+    }
+
+    /**
      * Obtains a date for the parameter name using the default format
      * @param name
-     * @return The date (in the {@link DEFAULT_DATE_FORMAT}) or null
+     * @return The date or null
      */
     public Date getDate(String name) {
-        return getDate(name, DEFAULT_DATE_FORMAT);
+        return TypeConverters.toDate(get(name));
     }
 
     /**
@@ -374,19 +270,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return The date or null
      */
     public Date getDate(String name, String format) {
-        Object value = get(name);
-        if (value instanceof Date) {
-            return (Date) value;
-        }
-
-        if (value != null) {
-            try {
-                return new SimpleDateFormat(format).parse(value.toString());
-            } catch (ParseException e) {
-                // ignore
-            }
-        }
-        return null;
+        return TypeConverters.toDate(get(name), format);
     }
 
     /**
@@ -422,11 +306,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
     }
 
     private Date getDate(String name, Collection<String> formats) {
-        for (String format : formats) {
-            Date date = getDate(name, format);
-            if (date != null) return date;
-        }
-        return null;
+        return TypeConverters.toDate(get(name), formats);
     }
 
     /**
@@ -435,17 +315,7 @@ public abstract class AbstractTypeConvertingMap extends GroovyObjectSupport impl
      * @return A list of values
      */
     public List getList(String name) {
-        Object paramValues = get(name);
-        if (paramValues == null) {
-            return Collections.emptyList();
-        }
-        if (paramValues.getClass().isArray()) {
-            return Arrays.asList((Object[]) paramValues);
-        }
-        if (paramValues instanceof Collection) {
-            return new ArrayList((Collection) paramValues);
-        }
-        return Collections.singletonList(paramValues);
+        return TypeConverters.toList(get(name));
     }
 
     public List list(String name) {

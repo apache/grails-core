@@ -61,9 +61,12 @@ Attributes
 * `name` - The name of the layout
 * `template` - (optional) The template to apply the layout to
 * `url` - (optional) The URL to retrieve the content from and apply a layout to
+* `action` - (optional) The action whose output to include and apply a layout to, used together with `controller`
+* `controller` - (optional) The controller whose action output to include and apply a layout to
 * `contentType` (optional) - The content type to use, default is "text/html"
 * `encoding` (optional) - The encoding to use
-* `params` (optional) - The params to pass onto the page object (retrievable with the xref:pageProperty.html[pageProperty] tag)
+* `params` (optional) - The params to pass onto the page object (retrievable with the xref:pageProperty.html[pageProperty] tag); for `action`/`controller` content they are also passed as request parameters to the include
 * `model` (optional) - The model (as java.util.Map) to pass to the view and layout templates
+* `parse` (optional) - If `true`, forces the content to be parsed for head, title and body sections instead of reusing an already captured page
 
 

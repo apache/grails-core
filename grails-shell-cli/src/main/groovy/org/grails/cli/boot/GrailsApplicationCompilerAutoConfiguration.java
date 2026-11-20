@@ -127,13 +127,13 @@ public class GrailsApplicationCompilerAutoConfiguration extends CompilerAutoConf
         ClassNode applicationClassNode = new ClassNode("Application", Modifier.PUBLIC, ClassHelper.make("grails.boot.config.GrailsAutoConfiguration"));
         AnnotationNode enableAutoAnnotation = new AnnotationNode(ENABLE_AUTO_CONFIGURATION_CLASS_NODE);
         try {
-            enableAutoAnnotation.addMember("exclude", new ClassExpression(ClassHelper.make("org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration")));
+            enableAutoAnnotation.addMember("exclude", new ClassExpression(ClassHelper.make("org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration")));
         } catch (Throwable e) {
             // ignore
         }
         applicationClassNode.addAnnotation(enableAutoAnnotation);
         applicationClassNode.setModule(source.getAST());
-        applicationClassNode.addMethod("shouldScanDefaultPackage", Modifier.PUBLIC, ClassHelper.Boolean_TYPE, new Parameter[0], null, new ReturnStatement(new ConstantExpression(Boolean.TRUE)));
+        applicationClassNode.addMethod("shouldScanDefaultPackage", Modifier.PUBLIC, ClassHelper.Boolean_TYPE, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, new ReturnStatement(new ConstantExpression(Boolean.TRUE)));
         source.getAST().getClasses().add(0, applicationClassNode);
         classNode.addAnnotation(new AnnotationNode(ClassHelper.make("org.grails.boot.internal.EnableAutoConfiguration")));
     }

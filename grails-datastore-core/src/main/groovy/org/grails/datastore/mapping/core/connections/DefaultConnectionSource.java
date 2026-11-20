@@ -33,12 +33,40 @@ public class DefaultConnectionSource<T, S extends ConnectionSourceSettings> impl
     protected final String name;
     protected final T source;
     protected final S settings;
+    protected final boolean closeable;
     protected boolean closed = false;
 
     public DefaultConnectionSource(String name, T source, S settings) {
+        this(name, source, settings, true);
+    }
+
+    /**
+     * Creates a connection source, optionally taking ownership of the underlying source.
+     *
+     * @param name the name of the connection source
+     * @param source the underlying native source (for example a {@code MongoClient} or {@code DataSource})
+     * @param settings the settings
+     * @param closeable whether {@link #close()} should close the underlying {@code source}. Pass
+     *                  {@code false} when the source is externally managed and its lifecycle is owned
+     *                  by the provider (for example a Spring-managed {@code MongoClient} bean), so that
+     *                  GORM does not close a source it did not create.
+     * @since 8.0
+     */
+    public DefaultConnectionSource(String name, T source, S settings, boolean closeable) {
         this.name = name;
         this.source = source;
         this.settings = settings;
+        this.closeable = closeable;
+    }
+
+    /**
+     * @return whether {@link #close()} will close the underlying {@link #getSource() source}. When
+     * {@code false} the source is externally managed and its lifecycle is owned by the provider, so
+     * GORM will not close it.
+     * @since 8.0
+     */
+    public boolean isCloseable() {
+        return this.closeable;
     }
 
     @Override
@@ -58,6 +86,10 @@ public class DefaultConnectionSource<T, S extends ConnectionSourceSettings> impl
 
     @Override
     public void close() throws IOException {
+        if (!closeable) {
+            this.closed = true;
+            return;
+        }
         if (source instanceof Closeable) {
             try {
                 ((Closeable) source).close();

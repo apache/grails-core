@@ -16,14 +16,17 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages.requestmap
 
+import geb.module.TextInput
 import pages.EditPage
 
 class EditRequestmapPage extends EditPage {
-	static content = {
-		updateButton(to: ShowRequestmapPage) { $('input', value: 'Update') }
-		deleteButton(to: ListRequestmapPage) { $('input', value: 'Delete') }
-	}
+
+    static content = {
+        urlField { $('input', name: 'url').module(TextInput) }
+        configAttributeField { $('input', name: 'configAttribute').module(TextInput) }
+        updateButton(to: ShowRequestmapPage) { $('input', value: 'Update') }
+        deleteButton(to: ListRequestmapPage) { $('input', value: 'Delete') }
+    }
 }

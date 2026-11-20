@@ -65,11 +65,12 @@ import org.springframework.jdbc.datasource.DataSourceUtils;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.jdbc.support.SQLErrorCodeSQLExceptionTranslator;
 import org.springframework.jdbc.support.SQLExceptionTranslator;
-import org.springframework.orm.hibernate5.SessionFactoryUtils;
-import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
+
+import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils;
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder;
 
 public class GrailsHibernateTemplate implements IHibernateTemplate {
 
@@ -168,9 +169,15 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
             // if there are already bound holders, unbind them so they can be restored later
             if (sessionHolder != null) {
                 TransactionSynchronizationManager.unbindResource(sessionFactory);
-                if (previousConnectionHolder != null) {
-                    TransactionSynchronizationManager.unbindResource(dataSource);
-                }
+            }
+            // Unbind any pre-existing connection holder independently of the session holder: a
+            // DataSource binding can exist without a matching SessionFactory binding when, for
+            // example, Spring's SQLErrorCodesFactory eagerly acquires a connection via
+            // DataSourceUtils during SQLErrorCodeSQLExceptionTranslator initialisation while a
+            // parent-transaction synchronisation is already active.  Leaving it bound causes
+            // HibernateTransactionManager.doBegin to throw "Already value bound" at line 565.
+            if (previousConnectionHolder != null) {
+                TransactionSynchronizationManager.unbindResource(dataSource);
             }
 
             // create and bind a new session holder for the new session
@@ -220,9 +227,12 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
                 // now restore any previous state
                 if (previousHolder != null) {
                     TransactionSynchronizationManager.bindResource(sessionFactory, previousHolder);
-                    if (previousConnectionHolder != null) {
-                        TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
-                    }
+                }
+                // Restore the connection holder independently of the session holder so that
+                // the parent-transaction's ConnectionSynchronization (re-registered above) can
+                // still release it when the outer transaction completes.
+                if (previousConnectionHolder != null) {
+                    TransactionSynchronizationManager.bindResource(dataSource, previousConnectionHolder);
                 }
 
             }
@@ -357,7 +367,7 @@ public class GrailsHibernateTemplate implements IHibernateTemplate {
         return sessionHolder != null && sessionHolder.getSession() == session;
     }
 
-    protected Session getSession() {
+    public Session getSession() {
         try {
             return sessionFactory.getCurrentSession();
         } catch (HibernateException ex) {

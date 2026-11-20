@@ -45,4 +45,31 @@ class MiscFunctionalSpec extends ContainerGebSpec {
         expect:
         to(PlaceHolderConfigPage)
     }
+
+    void 'Test method-defined taglibs render expected output end to end'() {
+        when:
+        go('/misc/tagMethods')
+
+        then:
+        pageSource.contains('duh - implicit')
+        pageSource.contains('duh2 - typed')
+        pageSource.contains('hello-world')
+        pageSource.contains('attrs-duh3')
+        pageSource.contains('closure-xyz')
+        pageSource.contains('before-abc-after')
+        pageSource.contains('legacy-legacy')
+        pageSource.contains('method-1')
+        pageSource.contains('closure-2')
+    }
+
+    void 'Test method tag discovery does not expose helper methods'() {
+        when:
+        go('/misc/tagMethodNames')
+
+        then:
+        pageSource.contains('typedTag')
+        pageSource.contains('attrsMapTag')
+        !pageSource.contains('formatDate')
+        !pageSource.contains('buildInternalUrl')
+    }
 }

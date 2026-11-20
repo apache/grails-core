@@ -1,3 +1,3 @@
 moduleName=grails-web-servlets-module
 moduleVersion=1.0
-extensionClasses=org.grails.web.servlet.HttpServletRequestExtension,org.grails.web.servlet.HttpServletResponseExtension,org.grails.web.servlet.HttpSessionExtension,org.grails.web.servlet.ServletContextExtension
+extensionClasses=org.grails.web.servlet.HttpServletRequestExtension,org.grails.web.servlet.HttpServletResponseExtension,org.grails.web.servlet.HttpSessionExtension,org.grails.web.servlet.ServletContextExtension,org.grails.web.servlet.FlashScopeExtension

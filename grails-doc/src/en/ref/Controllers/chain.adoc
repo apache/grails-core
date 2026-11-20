@@ -52,13 +52,15 @@ Arguments:
 
 * `uri` - The full uri to redirect to (example /book/list, book/show/2)
 * `controller` (optional) - The controller to redirect to; defaults to the current controller if not specified
-* `namespace` (optional) - the namespace of the controller to chain to
+* `namespace` (optional) - the namespace of the controller to chain to. If omitted, the namespace is inferred from the target controller; you only need to set it when more than one controller shares the name. Use `namespace: null` to target a non-namespaced controller.
 * `action` - The action to redirect to, either a string name or a reference to an action within the current controller
 * `id` (optional) - The id to use in redirection
 * `model` - The model to chain to the next action
 * `params` (optional) - Parameters to pass to the action chained to.
 
 The chain method stores the passed model in flash scope and then performs an HTTP redirect. The model is then restored for the next request. The model that will eventually be passed to the view will be created by starting with the model that was passed to the chain method and then adding to that all of the data that is in the model returned by the next action, which may replace some of the data that was in the model originally passed to the chain method. For example:
+
+When `namespace` is omitted, `chain` uses the same namespace inference rules as `redirect`.
 
 [source,groovy]
 ----

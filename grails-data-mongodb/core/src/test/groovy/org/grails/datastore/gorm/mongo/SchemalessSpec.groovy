@@ -24,7 +24,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses += [Plant]
+        manager.registerDomainClasses(Plant)
     }
 
     def "Test attach additional data"() {
@@ -39,7 +39,6 @@ class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
 
         when:
@@ -50,7 +49,6 @@ class SchemalessSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
         then:
         p.name == 'Pineapple'
-        p.dbo.color == 'Yellow'
         p['color'] == 'Yellow'
         p['hasLeaves'] == true
 

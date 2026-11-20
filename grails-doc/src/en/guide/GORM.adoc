@@ -21,6 +21,17 @@ Domain classes are core to any business application. They hold state about busin
 
 GORM is Grails' object relational mapping (ORM) implementation. Under the hood it uses Hibernate (a very popular and flexible open source ORM solution) and thanks to the dynamic nature of Groovy with its static and dynamic typing, along with the convention of Grails, there is far less configuration involved in creating Grails domain classes.
 
+=== Hibernate Versions
+
+GORM for Hibernate is available against two Hibernate ORM versions:
+
+* *Hibernate 5.6* is the *default*. The standard `grails-bom` and `grails-hibernate5` dependencies provide the long-standing, battle-tested integration, and existing applications continue to work without changes.
+* *Hibernate 7.4* is the *future*. Hibernate 7 is the actively developed line of Hibernate ORM and the recommended target for new applications. Grails provides a drop-in `grails-hibernate7` integration (with `grails-hibernate7-bom`), so most applications can switch with only a build-file change.
+
+NOTE: Hibernate 5.6 remains the default so that existing applications keep working out of the box. Hibernate 7.4 is the strategic direction: new applications are encouraged to adopt it, and existing applications should plan to migrate.
+
+To switch an application to Hibernate 7 - and for the full list of Hibernate 5 to Hibernate 7 breaking changes and their workarounds - see the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide.
+
 You can also write Grails domain classes in Java. See the section on Hibernate Integration for how to write domain classes in Java but still use dynamic persistent methods. Below is a preview of GORM in action:
 
 [source,groovy]

@@ -26,7 +26,6 @@ plugins {
 version = projectVersion
 group = 'examples'
 
-apply plugin: 'groovy'
 apply plugin: 'org.apache.grails.gradle.grails-web'
 apply plugin: 'cloud.wondrify.asset-pipeline'
 
@@ -38,19 +37,18 @@ dependencies {
     implementation 'org.apache.grails:grails-core'
     implementation 'org.apache.grails:grails-rest-transforms'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
+        implementation 'org.apache.grails:grails-layout'
+    } else {
         implementation 'org.apache.grails:grails-sitemesh3'
     }
-    else {
-        implementation 'org.apache.grails:grails-layout'
-    }
     implementation 'org.apache.grails:grails-gsp'
+    implementation 'org.apache.grails:grails-async'
 
     testAndDevelopmentOnly platform(project(':grails-bom'))
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'org.apache.grails:grails-url-mappings'
     runtimeOnly 'org.apache.grails:grails-scaffolding'
     runtimeOnly 'org.springframework.boot:spring-boot-autoconfigure'
@@ -66,6 +64,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+    integrationTestImplementation project(':grails-testing-support-http-client')
 }
 
 apply {

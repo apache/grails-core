@@ -25,8 +25,6 @@ import org.grails.forge.options.DevelopmentReloading
 import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.TestFramework
 
-import java.util.stream.Collectors
-
 class TestContainersSpec extends ApplicationContextSpec {
 
     void "test mysql dependency is present for gradle"() {
@@ -36,7 +34,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mysql"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mysql"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -47,7 +45,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:postgresql"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-postgresql"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -58,7 +56,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mssqlserver"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mssqlserver"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -69,7 +67,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -80,7 +78,7 @@ class TestContainersSpec extends ApplicationContextSpec {
                 .render()
 
         then:
-        template.contains('testImplementation "org.testcontainers:mongodb"')
+        template.contains('testImplementation "org.testcontainers:testcontainers-mongodb"')
         template.contains('testImplementation "org.testcontainers:testcontainers"')
     }
 
@@ -118,8 +116,6 @@ class TestContainersSpec extends ApplicationContextSpec {
         gradleTemplate.contains("org.testcontainers")
 
         where:
-        driverFeature <<  beanContext.streamOfType(DatabaseDriverFeature)
-                .filter({ f ->  !f.embedded() })
-                .collect(Collectors.toList())
+        driverFeature << beanContext.getBeansOfType(DatabaseDriverFeature).values().findAll { !it.embedded() }
     }
 }

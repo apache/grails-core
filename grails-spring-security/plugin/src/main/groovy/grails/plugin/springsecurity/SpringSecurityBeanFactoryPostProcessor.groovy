@@ -37,7 +37,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean
 @CompileStatic
 class SpringSecurityBeanFactoryPostProcessor implements BeanFactoryPostProcessor {
 
-    protected static final String AUTOCONFIG_NAME = 'org.springframework.boot.autoconfigure.security.SecurityFilterAutoConfiguration'
+    protected static final String AUTOCONFIG_NAME = 'org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration'
     protected static final String SECURITY_PROPERTIES_NAME = 'securityProperties'
 
     void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {

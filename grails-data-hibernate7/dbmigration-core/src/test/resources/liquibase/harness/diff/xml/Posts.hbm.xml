@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+	"-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+	"http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="liquibase.harness.diff">
+
+	<class name="Posts" table="posts">
+		<comment>details about posts</comment>
+		
+		<id name="id">
+			<generator class="native"/>
+		</id>
+
+		<property name="authorId" column="author_id" not-null="true"/>
+		<property name="title" column="title" not-null="true"/>
+		<property name="description" column="description" not-null="true"/>
+		<property name="content" column="content" not-null="true"/>
+		<property name="insertedDate" column="inserted_date"/>
+
+	</class>
+	
+</hibernate-mapping>

@@ -42,7 +42,7 @@ public class TransactionManagementCompilerAutoConfiguration extends CompilerAuto
     @Override
     public void applyDependencies(DependencyCustomizer dependencies) {
         dependencies.ifAnyMissingClasses("org.springframework.transaction.annotation.Transactional")
-            .add("spring-tx", "spring-boot-starter-aop");
+            .add("spring-tx", "spring-boot-starter-aspectj");
     }
 
     @Override

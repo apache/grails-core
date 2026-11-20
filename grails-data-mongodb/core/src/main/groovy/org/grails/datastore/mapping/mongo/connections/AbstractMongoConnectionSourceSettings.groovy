@@ -81,11 +81,54 @@ abstract class AbstractMongoConnectionSourceSettings extends ConnectionSourceSet
     boolean stateless = false
 
     /**
+     * Whether GORM should use real MongoDB multi-document transactions (a server-side
+     * {@code ClientSession}) for transactional operations. Requires a replica set or sharded
+     * cluster. When {@code false} (the default) a GORM transaction remains a client-side flush
+     * boundary, preserving the historical behavior. Bound from {@code grails.mongodb.transactional}.
+     *
+     * @since 8.0
+     */
+    boolean transactional = false
+
+    /**
      * Whether to use the decimal128 type for BigDecimal values
      *
      * @see org.bson.types.Decimal128
      */
     boolean decimalType = true
+
+    /**
+     * Whether GORM creates and reconciles the indexes declared in domain class mapping blocks by
+     * itself when the datastore starts. When {@code false} the indexes on the server are left exactly
+     * as they are and GORM issues no {@code createIndex} or {@code collMod} command of its own until
+     * the application calls {@code MongoDatastore.buildIndex()}; queries are unaffected and continue to
+     * use whatever indexes already exist. Bound from {@code grails.mongodb.buildIndexes}.
+     *
+     * @since 8.0
+     */
+    boolean buildIndexes = true
+
+    /**
+     * Whether index builds run on a background thread instead of blocking the thread that starts them:
+     * the startup build, and any started with {@code MongoDatastore.buildIndex()}, whatever
+     * {@link #buildIndexes} says. MongoDB answers a {@code createIndex} command only once the index has
+     * been built, so with the default {@code false} an application waits at startup for every declared
+     * index. Bound from {@code grails.mongodb.buildIndexesAsync}.
+     *
+     * @since 8.0
+     */
+    boolean buildIndexesAsync = false
+
+    /**
+     * Nested settings for domains with {@code String id}. Holds the global default
+     * {@code defaultStoredAs} switch plus any future string-id configuration.
+     *
+     * <p>Exposes the property path {@code grails.mongodb.stringIds.defaultStoredAs},
+     * aligned with the Spring-style hierarchical namespace convention.
+     *
+     * @since 7.1.1
+     */
+    StringIdSettings stringIds = new StringIdSettings()
 
     /**
      * The collection name to use to resolve connections when using {@link MongoConnectionSources}

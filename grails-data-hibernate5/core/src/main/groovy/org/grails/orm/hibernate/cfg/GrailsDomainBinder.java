@@ -18,6 +18,7 @@
  */
 package org.grails.orm.hibernate.cfg;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -254,7 +255,11 @@ public class GrailsDomainBinder implements MetadataContributor {
             namingStrategy = (NamingStrategy) strategy;
         }
         else {
-            namingStrategy = (NamingStrategy) namingStrategyClass.newInstance();
+            try {
+                namingStrategy = (NamingStrategy) namingStrategyClass.getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException | InvocationTargetException e) {
+                throw new InstantiationException("Failed to instantiate naming strategy [" + strategy + "]: " + e.getMessage());
+            }
         }
 
         NAMING_STRATEGIES.put(datasourceName, namingStrategy);
@@ -505,7 +510,8 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
         } else {
             if (hasJoinKeyMapping(propConfig)) {
-                bindSimpleValue("long", key, false, propConfig.getJoinTable().getKey().getName(), mappings);
+                var keys = propConfig.getJoinTable().getKeys();
+                bindSimpleValue("long", key, false, keys.getFirst().getName(), mappings);
             } else {
                 bindDependentKeyValue(property, key, mappings, sessionFactoryBeanName);
             }
@@ -2473,7 +2479,9 @@ public class GrailsDomainBinder implements MetadataContributor {
                     final ColumnConfig columnConfig = new ColumnConfig();
                     columnConfig.setName(namingStrategy.propertyToColumnName(property.getName()) +
                             UNDERSCORE + FOREIGN_KEY_SUFFIX);
-                    jt.setKey(columnConfig);
+                    var keys = new ArrayList<ColumnConfig>();
+                    keys.add(columnConfig);
+                    jt.setKeys(keys);
                     pc.setJoinTable(jt);
                 }
                 bindSimpleValue(property, manyToOne, path, pc, sessionFactoryBeanName);
@@ -3229,7 +3237,7 @@ public class GrailsDomainBinder implements MetadataContributor {
                 PropertyConfig c = m.getPropertyConfig(grailsProp.getName());
 
                 if (supportsJoinColumnMapping(grailsProp) && hasJoinKeyMapping(c)) {
-                    columnName = c.getJoinTable().getKey().getName();
+                    columnName = c.getJoinTable().getKeys().getFirst().getName();
                 }
                 else if (c != null && c.getColumn() != null) {
                     columnName = c.getColumn();
@@ -3240,7 +3248,7 @@ public class GrailsDomainBinder implements MetadataContributor {
             if (supportsJoinColumnMapping(grailsProp)) {
                 PropertyConfig pc = getPropertyConfig(grailsProp);
                 if (hasJoinKeyMapping(pc)) {
-                    columnName = pc.getJoinTable().getKey().getName();
+                    columnName = pc.getJoinTable().getKeys().getFirst().getName();
                 }
                 else {
                     columnName = cc.getName();
@@ -3263,7 +3271,7 @@ public class GrailsDomainBinder implements MetadataContributor {
     }
 
     protected boolean hasJoinKeyMapping(PropertyConfig c) {
-        return c != null && c.getJoinTable() != null && c.getJoinTable().getKey() != null;
+        return c != null && c.getJoinTable() != null && c.getJoinTable().getKeys() != null && !c.getJoinTable().getKeys().isEmpty();
     }
 
     protected boolean supportsJoinColumnMapping(PersistentProperty grailsProp) {

@@ -19,7 +19,7 @@
 
 package org.grails.forge.feature.spring
 
-import org.grails.forge.BeanContextSpec
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
@@ -27,11 +27,11 @@ import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.TestFramework
 
-class SpringBootVirtualThreadsSpec extends BeanContextSpec implements CommandOutputFixture {
+class SpringBootVirtualThreadsSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
-    void "test spring boot virtual threads not enabled for JDK 17, when optional feature selected"() {
+    void "test spring boot virtual threads not enabled for JDK 21, when optional feature selected"() {
         when:
-        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(DevelopmentReloading.DEFAULT_OPTION, JdkVersion.JDK_17))
+        GeneratorContext commandContext = buildGeneratorContext(['spring-boot-virtual-threads'], new Options(DevelopmentReloading.DEFAULT_OPTION, JdkVersion.JDK_21))
 
         then:
         commandContext.configuration.get('spring.threads.virtual.enabled'.toString()) == false

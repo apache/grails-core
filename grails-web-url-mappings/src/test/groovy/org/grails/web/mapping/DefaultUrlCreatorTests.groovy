@@ -54,6 +54,18 @@ class DefaultUrlCreatorTests {
         assertEquals "/foo/index", creator.createURL(null, "utf-8")
     }
 
+    @Test
+    void testCreateUrlControllerOnly() {
+        def webRequest = GrailsWebMockUtil.bindMockWebRequest()
+        webRequest.currentRequest.characterEncoding = "utf-8"
+
+        def creator = new DefaultUrlCreator("foo", null)
+
+        assertEquals "/foo", creator.createURL(null, "utf-8")
+        assertEquals "/foo", creator.createRelativeURL("foo", null, [:], "utf-8")
+        assertEquals "/1", creator.createURL(id: 1, "utf-8")
+    }
+
     @AfterEach
     void tearDown() {
         RequestContextHolder.resetRequestAttributes()

@@ -17,7 +17,6 @@
  *  under the License.
  */
 plugins {
-    id 'groovy'
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
@@ -44,11 +43,10 @@ dependencies {
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-web-boot'
     implementation 'org.apache.grails:grails-gsp'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-scaffolding'
@@ -66,7 +64,6 @@ dependencies {
     runtimeOnly 'cloud.wondrify:asset-pipeline-grails'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
-    runtimeOnly 'org.fusesource.jansi:jansi'
 
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
     testImplementation 'org.apache.grails:grails-testing-support-web'
@@ -77,15 +74,15 @@ dependencies {
 
 tasks.withType(Test).configureEach {
     systemProperty('grails.geb.recording.mode', 'RECORD_ALL')
+    File baseDir = file(System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings'))
     doLast {
         // Delete all but the two most recent recording directories to save space
-        def baseDir = file(System.getProperty('grails.geb.recording.directory', 'build/gebContainer/recordings'))
         if (!baseDir.isDirectory()) return
         def dirs = (baseDir.listFiles() ?: [])
                 .findAll { it.directory && it.name ==~ /^\d{8}_\d{6}$/ }
                 .sort { it.name }
         if (dirs.size() > 2) {
-            delete(dirs.dropRight(2)) // keep the two most recent
+            dirs.dropRight(2).each { it.deleteDir() } // keep the two most recent
         }
     }
 }

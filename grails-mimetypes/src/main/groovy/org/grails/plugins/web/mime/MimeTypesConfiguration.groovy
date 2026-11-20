@@ -65,13 +65,23 @@ class MimeTypesConfiguration {
     MimeType[] mimeTypes() {
         final Config config = grailsApplication.getConfig()
         final Map<CharSequence, Object> mimeConfig = getMimeConfig(config)
-        MimeType[] mimeTypes
+
+        List<MimeType> mimes = new ArrayList<>()
         if (mimeConfig == null || mimeConfig.isEmpty()) {
-            mimeTypes = MimeType.createDefaults()
-        } else {
-            List<MimeType> mimes = new ArrayList<>()
+            // No user configuration: fall back to the built-in framework defaults
+            for (MimeType defaultMimeType : MimeType.createDefaults()) {
+                mimes.add(defaultMimeType)
+            }
+        }
+        else {
+            // A declared grails.mime.types replaces the defaults by default (the historical behaviour),
+            // keeping its declared order so the first entry remains the default format. Set
+            // grails.mime.mergeDefaults=true to instead merge the declared types over the defaults.
+            final boolean mergeDefaults = config.getProperty(Settings.MIME_TYPES_MERGE_DEFAULTS, Boolean, false)
+            Set<String> declaredExtensions = new HashSet<>()
             for (Map.Entry<CharSequence, Object> entry : mimeConfig.entrySet()) {
                 final String key = entry.getKey().toString()
+                declaredExtensions.add(key)
                 final Object v = entry.getValue()
                 if (v instanceof List) {
                     List list = (List) v
@@ -82,16 +92,22 @@ class MimeTypesConfiguration {
                 else {
                     mimes.add(new MimeType(v.toString(), key))
                 }
-
             }
-
-            final List<MimeTypeProvider> mimeTypeProviders = this.mimeTypeProviders
-            processProviders(mimes, mimeTypeProviders)
-            final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
-            processProviders(mimes, childTypes.values())
-            mimeTypes = mimes.toArray(new MimeType[0])
+            if (mergeDefaults) {
+                // Append the framework defaults for any extension the user did not declare
+                for (MimeType defaultMimeType : MimeType.createDefaults()) {
+                    if (!declaredExtensions.contains(defaultMimeType.extension)) {
+                        mimes.add(defaultMimeType)
+                    }
+                }
+            }
         }
-        return mimeTypes
+
+        processProviders(mimes, this.mimeTypeProviders)
+        final Map<String, MimeTypeProvider> childTypes = grailsApplication.mainContext.getBeansOfType(MimeTypeProvider)
+        processProviders(mimes, childTypes.values())
+
+        return mimes.toArray(new MimeType[0])
     }
 
     @Bean('grailsMimeUtility')

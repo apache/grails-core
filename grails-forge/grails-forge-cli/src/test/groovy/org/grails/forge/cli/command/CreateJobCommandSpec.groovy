@@ -19,22 +19,14 @@
 
 package org.grails.forge.cli.command
 
-import io.micronaut.context.ApplicationContext
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.cli.CodeGenConfig
 import org.grails.forge.cli.CommandFixture
 import org.grails.forge.cli.CommandSpec
 import org.grails.forge.feature.other.GrailsQuartz
 import org.grails.forge.io.ConsoleOutput
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 
 class CreateJobCommandSpec extends CommandSpec implements CommandFixture {
-
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
-
 
     void "test creating a job"() {
 

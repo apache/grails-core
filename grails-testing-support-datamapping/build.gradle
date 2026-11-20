@@ -27,6 +27,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -77,7 +78,7 @@ dependencies {
             exclude group: 'org.spockframework', module: 'spock-core'
             exclude group: 'org.apache.groovy', module: 'groovy-test-junit5'
             exclude group: 'org.junit.jupiter', module: 'junit-jupiter-api'
-            exclude group: 'org.junit.platform', module: 'junit-platform-runner'
+            exclude group: 'org.junit.platform', module: 'junit-platform-suite'
         }
     }
     api 'org.springframework:spring-context', {
@@ -138,6 +139,9 @@ dependencies {
     compileOnly 'org.apache.groovy:groovy', {
         // comp: CompileStatic, CompileDynamic, TypeCheckingMode
     }
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
+
+    testImplementation project(':grails-validation')
 }
 
 apply {

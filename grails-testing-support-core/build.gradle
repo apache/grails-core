@@ -28,10 +28,16 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
 group = 'org.apache.grails.testing'
+
+grailsCodeAnalysis {
+    // PMD baseline is clean for this module; keep it blocking.
+    enablePmd()
+}
 
 ext {
     pomDescription = 'Support for writing concise expressive tests for Grails artifacts'
@@ -52,14 +58,19 @@ dependencies {
     api project(':grails-datamapping-core')
     api project(':grails-test-core')
     api 'org.springframework.boot:spring-boot-test'
+    api 'org.springframework:spring-webmvc'
     api('org.spockframework:spock-spring') { transitive = false }
     api 'org.junit.jupiter:junit-jupiter-api'
-    api 'org.junit.platform:junit-platform-runner'
+    api 'org.junit.platform:junit-platform-suite'
     runtimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    compileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testImplementation 'org.apache.groovy:groovy-test-junit5'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.junit.platform:junit-platform-runner'
+    testImplementation 'org.junit.platform:junit-platform-suite'
+    // GrailsUnitTest boots the data-binding plugin, whose web binding sources need the servlet API
+    testRuntimeOnly 'jakarta.servlet:jakarta.servlet-api'
 
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
@@ -69,10 +80,7 @@ dependencies {
 
     // Testing
     testImplementation 'org.slf4j:slf4j-simple'
-    testImplementation('org.spockframework:spock-core') { transitive = false }
-    // Required by Spock's Mocking
-    testRuntimeOnly 'net.bytebuddy:byte-buddy'
-    testImplementation 'org.objenesis:objenesis'
+    testImplementation 'org.spockframework:spock-core'
 }
 
 apply {

@@ -28,7 +28,6 @@ import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.grails.orm.hibernate.HibernateDatastore
 import org.hibernate.Session
-import org.hibernate.engine.spi.SessionImplementor
 import org.springframework.context.ApplicationEvent
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup

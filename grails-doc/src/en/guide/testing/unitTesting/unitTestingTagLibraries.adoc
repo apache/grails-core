@@ -39,7 +39,7 @@ Adding the `TagLibUnitTest` trait to a test causes a new `tagLib` field to be
 automatically created for the TagLib class under test.  The `tagLib` property can
 be used to test calling tags as function calls. The return value of a function
 call is either a `org.grails.buffer,StreamCharBuffer`
-instance or the object returned from the tag closure when
+instance or the object returned from the tag handler when
 `returnObjectForTags` feature is used.
 
 To test a tag which accepts parameters, specify the parameter values as named
@@ -92,6 +92,12 @@ quotes.  `'<demo:renderSomeNumber value="${x + y}"/>'` works.
 In order to test a tag library which invokes tags from another tag library,
 the second tag library needs to be explicitly mocked by invoking the
 `mockTagLib` method.
+
+NOTE: Mocked tag libraries are cleared after each feature method as part of the
+web test cleanup lifecycle. Call `mockTagLib` in `setup()` rather than
+`setupSpec()` to ensure the mock is active for every feature. Tests that
+implement `TagLibUnitTest` handle this automatically, but tests that use
+`GrailsWebUnitTest` directly must re-mock in each feature or in `setup()`.
 
 [source,groovy]
 .grails-app/taglib/demo/FirstTagLib.groovy

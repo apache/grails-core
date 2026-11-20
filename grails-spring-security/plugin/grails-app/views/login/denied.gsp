@@ -17,16 +17,21 @@
   ~  under the License.
   --%>
 <html>
-
 <head>
-<meta name="layout" content="${gspLayout ?: 'main'}"/>
-<title><g:message code='springSecurity.denied.title' /></title>
+    <meta name="layout" content="${gspLayout ?: 'main'}"/>
+    <title><g:message code='springSecurity.denied.title'/></title>
 </head>
 
 <body>
-<div class="body">
-	<div class="errors"><g:message code='springSecurity.denied.message' /></div>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-11 col-sm-10 col-md-8 col-lg-6">
+            <div class="alert alert-danger shadow-sm mb-0" role="alert">
+                <h1 class="h5 alert-heading"><g:message code='springSecurity.denied.title'/></h1>
+                <p class="mb-0"><g:message code='springSecurity.denied.message'/></p>
+            </div>
+        </div>
+    </div>
 </div>
 </body>
-
 </html>

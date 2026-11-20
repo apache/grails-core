@@ -16,114 +16,105 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package specs
 
-import grails.testing.mixin.integration.Integration
 import pages.user.CreateUserPage
 import pages.user.EditUserPage
 import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
+import spock.lang.Stepwise
 
+import grails.testing.mixin.integration.Integration
+
+@Stepwise
 @Integration
 @IgnoreIf({ !(
-		System.getProperty('TESTCONFIG') == 'annotation' ||
-				System.getProperty('TESTCONFIG') == 'basic' ||
-				System.getProperty('TESTCONFIG') == 'basicCacheUsers' ||
-				System.getProperty('TESTCONFIG') == 'requestmap' ||
-				System.getProperty('TESTCONFIG') == 'static')
+        System.getProperty('TESTCONFIG') == 'annotation' ||
+        System.getProperty('TESTCONFIG') == 'basic' ||
+        System.getProperty('TESTCONFIG') == 'basicCacheUsers' ||
+        System.getProperty('TESTCONFIG') == 'requestmap' ||
+        System.getProperty('TESTCONFIG') == 'static')
 })
 class UserSpec extends AbstractSecuritySpec {
 
-	void 'there are no users initially'() {
-		when:
-		to ListUserPage
+    void 'there are no users initially'() {
+        when:
+        def page = to(ListUserPage)
 
-		then:
-		userRows.size() == 0
-	}
+        then:
+        page.userRows.size() == 0
+    }
 
-	void 'add a user'() {
-		when:
-		to ListUserPage
-		newUserButton.click()
+    void 'add a user'() {
+        when:
+        def page = to(ListUserPage)
+        page.newUserButton.click()
 
-		then:
-		at CreateUserPage
+        and:
+        page = at(CreateUserPage)
+        page.usernameField.text = 'new_user'
+        page.passwordField.text = 'p4ssw0rd'
+        page.enabledCheckbox.check()
+        page.createButton.click()
+        page = at(ShowUserPage)
 
-		when:
-		username = 'new_user'
-		password = 'p4ssw0rd'
-		$('#enabled').click()
-		createButton.click()
+        then:
+        page.username == 'new_user'
+        page.userEnabled == true
+    }
 
-		then:
-		at ShowUserPage
-		username == 'new_user'
-		userEnabled == true
-	}
+    void 'edit the details'() {
+        when:
+        def page = to(ListUserPage)
+        page.userRow(0).showLink.click()
 
-	void 'edit the details'() {
-		when:
-		to ListUserPage
-		userRow(0).showLink.click()
+        and:
+        page = at(ShowUserPage)
+        page.editButton.click()
+        page = at(EditUserPage)
 
-		then:
-		at ShowUserPage
+        and:
+        page.usernameField.text = 'new_user2'
+        page.passwordField.text = 'p4ssw0rd2'
+        page.enabledCheckbox.uncheck()
+        page.updateButton.click()
 
-		when:
-		editButton.click()
+        then:
+        at(ShowUserPage)
 
-		then:
-		at EditUserPage
+        when:
+        page = to(ListUserPage)
 
-		when:
-		username = 'new_user2'
-		password = 'p4ssw0rd2'
-		$('#enabled').click()
+        then:
+        page.userRows.size() == 1
+        def row = page.userRow(0)
+        row.username == 'new_user2'
+        !row.userEnabled
+    }
 
-		updateButton.click()
+    void 'show user'() {
+        when:
+        def page = to(ListUserPage)
+        page.userRow(0).showLink.click()
 
-		then:
-		at ShowUserPage
+        then:
+        at(ShowUserPage)
+    }
 
-		when:
-		to ListUserPage
+    void 'delete user'() {
+        when:
+        def page = to(ListUserPage)
+        page.userRow(0).showLink.click()
+        def deletedId = page.id
+        page = at(ShowUserPage)
 
-		then:
-		userRows.size() == 1
+        and:
+        withConfirm { page.deleteButton.click() }
+        page = at(ListUserPage)
 
-		def row = userRow(0)
-		row.username == 'new_user2'
-		!row.userEnabled
-	}
-
-	void 'show user'() {
-		when:
-		to ListUserPage
-		userRow(0).showLink.click()
-
-		then:
-		at ShowUserPage
-	}
-
-	void 'delete user'() {
-		when:
-		to ListUserPage
-		userRow(0).showLink.click()
-		def deletedId = id
-
-		then:
-		at ShowUserPage
-
-		when:
-		withConfirm { deleteButton.click() }
-
-		then:
-		at ListUserPage
-
-		message == "TestUser $deletedId deleted."
-		userRows.size() == 0
-	}
+        then:
+        page.message == "TestUser $deletedId deleted."
+        page.userRows.size() == 0
+    }
 }

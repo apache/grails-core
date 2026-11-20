@@ -19,7 +19,7 @@ limitations under the License.
 [![Documentation](https://img.shields.io/badge/Documentation-595959)](https://grails.apache.org/docs/)
 [![Develocity](https://img.shields.io/badge/Develocity-06A0CE?logo=Gradle&labelColor=06A0CE)](https://develocity.apache.org/scans)
 [![CI](https://github.com/apache/grails-core/actions/workflows/gradle.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/gradle.yml)
-[![Groovy Joint Validation Build](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-joint-workflow.yml)
+[![Groovy Snapshot Canary Build](https://github.com/apache/grails-core/actions/workflows/groovy-snapshot-canary.yml/badge.svg?event=push)](https://github.com/apache/grails-core/actions/workflows/groovy-snapshot-canary.yml)
 [![Users Mailing List](https://img.shields.io/badge/Users_Mailing_List-feb571)](https://lists.apache.org/list.html?users@grails.apache.org)
 [![Dev Mailing List](https://img.shields.io/badge/Dev_Mailing_List-feb571)](https://lists.apache.org/list.html?dev@grails.apache.org)
 [![Slack](https://img.shields.io/badge/Join_Slack-e01d5a)](https://slack.grails.org/)
@@ -96,9 +96,9 @@ release page. You can use the command `./grails-forge-cli --help` to see what's 
 ### SDKMAN
 
 If managing multiple, local copies of the Grails CLI, it is recommended to use [SDKMAN!](https://sdkman.io/). Assuming
-SDKMAN is installed, this command would install the `7.0.0-M4` version:
+SDKMAN is installed, this command installs the latest available version:
 
-     sdk install grails 7.0.0-M4
+     sdk install grails
 
 Apache Grails versions installed via SDKMAN! include the following commands `grails`, `grails-shell-cli`, &
 `grails-forge-cli`. The grails command simply delegates to forge or the legacy shell. For further information on SDKMAN,

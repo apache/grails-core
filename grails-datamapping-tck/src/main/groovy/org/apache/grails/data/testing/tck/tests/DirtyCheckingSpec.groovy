@@ -34,7 +34,7 @@ import org.grails.datastore.mapping.proxy.ProxyHandler
 class DirtyCheckingSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Person, TestBook, TestAuthor, Card, CardProfile])
+        manager.registerDomainClasses(Person, TestBook, TestAuthor, Card, CardProfile)
     }
 
     ProxyHandler proxyHandler

@@ -26,4 +26,8 @@ import grails.rest.Resource
 @Secured('ROLE_ADMIN')
 class Thing {
 	String name
+
+	static constraints = {
+		name nullable: false
+	}
 }

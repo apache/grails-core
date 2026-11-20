@@ -73,7 +73,7 @@ public class ConverterUtil {
 
     public static <T> T createConverter(Class<T> converterClass, Object target, ApplicationContext applicationContext) throws ConverterException {
         try {
-            T converter = converterClass.newInstance();
+            T converter = converterClass.getDeclaredConstructor().newInstance();
             if (converter instanceof ApplicationContextAware && applicationContext != null) {
                 ((ApplicationContextAware) converter).setApplicationContext(applicationContext);
             }

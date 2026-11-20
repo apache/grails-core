@@ -24,6 +24,7 @@ class Car {
     String color
 
     static constraints = {
+        color nullable: false
     }
 
     static mapping = {

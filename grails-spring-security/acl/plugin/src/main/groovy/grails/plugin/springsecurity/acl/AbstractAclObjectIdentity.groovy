@@ -40,7 +40,9 @@ abstract class AbstractAclObjectIdentity implements Serializable {
     boolean entriesInheriting
 
     static constraints = {
+        aclClass nullable: false
         parent nullable: true
         owner nullable: true
+        entriesInheriting nullable: false
     }
 }

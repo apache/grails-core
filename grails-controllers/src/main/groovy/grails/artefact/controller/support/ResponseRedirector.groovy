@@ -151,8 +151,9 @@ trait ResponseRedirector implements WebAttributes {
     void chain(Map args) {
         String controller = (args.controller ?: GrailsNameUtils.getLogicalPropertyName(getClass().name, ControllerArtefactHandler.TYPE)).toString()
         String action = args.action?.toString()
-        String namespace = args.remove('namespace')
         String plugin = args.remove('plugin')?.toString()
+        String namespace = getGrailsLinkGenerator().resolveNamespace(controller, plugin, args)
+        args.remove('namespace')
         def id = args.id
         def params = CollectionUtils.getOrCreateChildMap(args, 'params')
         def model = CollectionUtils.getOrCreateChildMap(args, 'model')
@@ -183,7 +184,7 @@ trait ResponseRedirector implements WebAttributes {
         String url = creator.createURL(controller, action, namespace, plugin, params, 'utf-8')
 
         if (requestDataValueProcessor) {
-            HttpServletRequest request = currentWebRequest.getCurrentRequest()
+            HttpServletRequest request = currentWebRequest.getRequest()
             url = response.encodeRedirectURL(requestDataValueProcessor.processUrl(request, url))
         } else {
             url = response.encodeRedirectURL(url)

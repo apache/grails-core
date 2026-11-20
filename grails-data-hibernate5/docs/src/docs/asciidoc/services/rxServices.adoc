@@ -53,6 +53,19 @@ interface BookService {
 }
 ----
 
+The same applies to a projection: a `rx.Single` of the projected type returns one value, and a `rx.Observable` of the projected type emits every value:
+
+[source,groovy]
+----
+import rx.*
+
+@Service(Book)
+interface BookService {
+   Single<Date> findBookReleaseDate(String title)
+   Observable<String> findBookAuthor(String publisher)
+}
+----
+
 For regular GORM entities, GORM will by default execute the persistence operation using RxJava's https://reactivex.io/RxJava/1.x/javadoc/rx/schedulers/Schedulers.html#io()[IO Scheduler].
 
 NOTE: For RxGORM entities where the underlying database supports non-blocking access the database driver will schedule the operation accordingly.

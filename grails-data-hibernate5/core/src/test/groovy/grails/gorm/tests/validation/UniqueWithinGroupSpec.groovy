@@ -19,35 +19,28 @@
 package grails.gorm.tests.validation
 
 import grails.gorm.annotation.Entity
+import grails.gorm.tests.HibernateGormDatastoreSpec
 import grails.gorm.transactions.Rollback
 import groovy.transform.EqualsAndHashCode
-import org.grails.orm.hibernate.HibernateDatastore
-import org.hibernate.SessionFactory
 import org.springframework.dao.DuplicateKeyException
-import spock.lang.AutoCleanup
 import spock.lang.Issue
-import spock.lang.Shared
-import spock.lang.Specification
 
 /**
  * Created by graemerocher on 29/05/2017.
  */
 @Issue('https://github.com/grails/grails-data-hibernate5/issues/36')
-class UniqueWithinGroupSpec extends Specification {
+class UniqueWithinGroupSpec extends HibernateGormDatastoreSpec {
 
-    @AutoCleanup
-    @Shared
-    HibernateDatastore hibernateDatastore = new HibernateDatastore(getClass().getPackage())
-
-    @Shared
-    SessionFactory sessionFactory = hibernateDatastore.sessionFactory
+    def setupSpec() {
+        manager.registerDomainClasses(Thing)
+    }
 
     @Rollback
     void "test insert"() {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2)
         thing1.insert(flush: true)
-        sessionFactory.currentSession.flush()
+        manager.sessionFactory.currentSession.flush()
         Thing thing2 = new Thing(hello: 1, world: 2)
         thing2.insert(flush: true)
 
@@ -63,7 +56,7 @@ class UniqueWithinGroupSpec extends Specification {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2)
         thing1.save(insert: true, flush: true)
-        sessionFactory.currentSession.flush()
+        manager.sessionFactory.currentSession.flush()
         Thing thing2 = new Thing(hello: 1, world: 2)
         thing2.save(insert: true, flush: true)
 
@@ -78,7 +71,7 @@ class UniqueWithinGroupSpec extends Specification {
     void "test validate"() {
         when:
         Thing thing1 = new Thing(hello: 1, world: 2).save(insert: true, flush: true)
-        sessionFactory.currentSession.flush()
+        manager.sessionFactory.currentSession.flush()
         Thing thing2 = new Thing(hello: 1, world: 2)
 
         then:

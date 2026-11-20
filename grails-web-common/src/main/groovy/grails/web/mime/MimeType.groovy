@@ -149,17 +149,33 @@ class MimeType {
     }
 
     /**
-     * Creates the default MimeType configuration if none exists in Config.groovy
+     * Creates the default MimeType configuration used when none is supplied via the
+     * {@code grails.mime.types} setting. The defaults mirror the full set of MIME types that new
+     * Grails applications have historically declared in {@code application.yml}, so content
+     * negotiation works out of the box without any configuration. User supplied configuration is
+     * merged over these defaults, overriding them per extension.
      */
     static MimeType[] createDefaults() {
-        def mimes = []
-        mimes << XHTML
-        mimes << HTML
-        mimes << XML
-        mimes << TEXT_XML
-        mimes << JSON
-        mimes << TEXT_JSON
-        mimes as MimeType[]
+        [
+            new MimeType('*/*', 'all'),
+            new MimeType('application/atom+xml', 'atom'),
+            new MimeType('text/css', 'css'),
+            new MimeType('text/csv', 'csv'),
+            new MimeType('application/x-www-form-urlencoded', 'form'),
+            new MimeType('text/html', 'html'),
+            new MimeType('application/xhtml+xml', 'html'),
+            new MimeType('text/javascript', 'js'),
+            new MimeType('application/json', 'json'),
+            new MimeType('text/json', 'json'),
+            new MimeType('multipart/form-data', 'multipartForm'),
+            new MimeType('application/pdf', 'pdf'),
+            new MimeType('application/rss+xml', 'rss'),
+            new MimeType('text/plain', 'text'),
+            new MimeType('application/hal+json', 'hal'),
+            new MimeType('application/hal+xml', 'hal'),
+            new MimeType('text/xml', 'xml'),
+            new MimeType('application/xml', 'xml')
+        ] as MimeType[]
     }
 
     private BigDecimal getOrConvertQualityParameterToBigDecimal(MimeType mt) {

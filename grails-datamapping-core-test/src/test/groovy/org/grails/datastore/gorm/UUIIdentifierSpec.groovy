@@ -23,8 +23,9 @@ import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 
 class UUIIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
     void setupSpec() {
-        manager.domainClasses.addAll([DocumentModel])
+        manager.registerDomainClasses(DocumentModel)
     }
 
     void "Test that a UUID identifier is correctly generated"() {
@@ -45,6 +46,7 @@ class UUIIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
 @Entity
 class DocumentModel {
+
     static final SCORE = 40
 
     String id // UUID , for replications / optimization

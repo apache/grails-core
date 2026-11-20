@@ -23,7 +23,7 @@ class ${className}Controller {
         respond ${propertyName}Service.list(params), model:[${propertyName}Count: ${propertyName}Service.count()]
     }
 
-    def show(Long id) {
+    def show(Serializable id) {
         respond ${propertyName}Service.get(id)
     }
 
@@ -72,7 +72,7 @@ class ${className}Controller {
     }
 
     @Transactional
-    def delete(Long id) {
+    def delete(Serializable id) {
         if (id == null || ${propertyName}Service.delete(id) == null) {
             render status: NOT_FOUND
             return

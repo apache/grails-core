@@ -19,13 +19,31 @@
 
 package pages
 
+import geb.module.TextInput
+
+import org.springframework.security.acls.model.Permission
+
 class ReportGrantPage extends ScaffoldPage {
 
+	static url = '/report/grant'
+
 	static at = {
-		heading.text() ==~ /Grant permission for.+/
+		heading ==~ /Grant permission for.+/
+	}
+
+	String convertToPath(Object[] args) {
+		args ? "?number=${args[0]}" : ''
 	}
 
 	static content = {
 		grantButton { $('input', value: 'Grant') }
+		permissionInput { $('input', name: 'permission').module(TextInput) }
+		recipientInput { $('input', name: 'recipient').module(TextInput) }
+	}
+
+	void grantPermission(String recipient, Permission permission) {
+		recipientInput.value(recipient)
+		permissionInput.value(permission.mask)
+		grantButton.click()
 	}
 }

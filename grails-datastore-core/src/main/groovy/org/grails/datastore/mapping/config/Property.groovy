@@ -34,7 +34,6 @@ import org.springframework.validation.DataBinder
 /**
  * Base class for classes returned from {@link org.grails.datastore.mapping.model.PropertyMapping#getMappedForm()}
  *
- * @author Graeme Rocher
  * @since 1.0
  */
 @CompileStatic
@@ -49,6 +48,7 @@ class Property implements Cloneable {
      * @return Whether the property is nullable
      */
     boolean nullable = false
+    private boolean nullableConfigured = false
 
     /**
      * @return Whether this property is a database reference such as a foreign key
@@ -79,6 +79,20 @@ class Property implements Cloneable {
      * @param generator name or class
      */
     String generator
+    /**
+     * Override the storage type used to persist this property independent of its declared Java type.
+     *
+     * <p>The primary use case is on identifiers: a domain may declare {@code String id} for
+     * ergonomic reasons (clean JSON, no native-type dance in controllers) while the underlying
+     * document stores {@code _id} as a native type such as {@code ObjectId}. Backends that
+     * support this (currently MongoDB GORM) coerce between the declared Groovy type and the
+     * native storage type on write, read, and query.
+     *
+     * <p>A {@code null} value means "use the declared Java type" (default / current behavior).
+     *
+     * @return The native storage class, or {@code null} to use the declared property type.
+     */
+    Class<?> storedAs
     /**
      * @return The maximum size
      */
@@ -137,6 +151,11 @@ class Property implements Cloneable {
     private List<String> uniquenessGroup = new ArrayList<String>()
     private String propertyName
     private EnumType enumType
+    /**
+     * The audit metadata type for this property, cached to avoid repeated reflection calls.
+     * Indicates whether this property is annotated for auditing (timestamps or auditor tracking).
+     */
+    AuditMetadataType auditMetadataType
 
     protected void setUniquenessGroup(List<String> uniquenessGroup) {
         this.uniquenessGroup = uniquenessGroup
@@ -150,6 +169,15 @@ class Property implements Cloneable {
         return lazy == Boolean.TRUE
     }
 
+    void setNullable(boolean nullable) {
+        this.nullable = nullable
+        this.nullableConfigured = true
+    }
+
+    boolean isNullableConfigured() {
+        return nullableConfigured
+    }
+
     void setLazy(Boolean lazy) {
         this.lazy = lazy
     }
@@ -161,6 +189,7 @@ class Property implements Cloneable {
         if (inList != null) {
             cloned.inList = new ArrayList<>(inList)
         }
+        cloned.auditMetadataType = this.auditMetadataType
 
         return cloned
     }

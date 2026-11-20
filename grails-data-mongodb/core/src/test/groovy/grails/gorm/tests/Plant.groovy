@@ -28,6 +28,10 @@ class Plant implements Serializable, MongoEntity<Plant> {
     boolean goesInPatch
     String name
 
+    static constraints = {
+        name nullable: false
+    }
+
     static mapping = {
         name index:true
         goesInPatch index:true

@@ -30,11 +30,11 @@ import org.gradle.api.attributes.Usage
 import org.gradle.api.component.SoftwareComponentFactory
 import org.gradle.api.file.CopySpec
 import org.gradle.api.file.Directory
-import org.gradle.api.file.SyncSpec
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaLibraryPlugin
+import org.gradle.api.tasks.Sync
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.bundling.Jar
 
@@ -87,9 +87,12 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
         project.configurations.named('runtimeElements')
                 .configure { it.extendsFrom(runtimeOnlyConfiguration.get()) }
 
-        TaskProvider<Task> processProfileResourcesTask = project.tasks.register('processProfileResources')
-        processProfileResourcesTask.configure { Task task ->
+        TaskProvider<Sync> processProfileResourcesTask = project.tasks.register('processProfileResources', Sync)
+        processProfileResourcesTask.configure { Sync task ->
             task.group = 'build'
+
+            // Declare explicit inputs with skipWhenEmpty so the task is skipped when directories are absent,
+            // preserving the same up-to-date behavior as the original doLast-based implementation.
             task.inputs.dir(project.provider {
                 def directory = project.layout.projectDirectory.dir('commands')
                 directory.asFile.exists() ? directory : null
@@ -107,28 +110,24 @@ class GrailsProfileGradlePlugin implements Plugin<Project> {
                 directory.asFile.exists() ? directory : null
             }).optional().skipWhenEmpty()
 
-            task.doLast {
-                project.sync { SyncSpec sync ->
-                    sync.from(project.layout.projectDirectory.dir('commands')) { CopySpec s ->
-                        s.exclude('*.groovy')
-                        s.into('commands')
-                    }
-
-                    sync.from(project.layout.projectDirectory.dir('templates')) { CopySpec s ->
-                        s.into('templates')
-                    }
-
-                    sync.from(project.layout.projectDirectory.dir('features')) { CopySpec s ->
-                        s.into('features')
-                    }
-
-                    sync.from(project.layout.projectDirectory.dir('skeleton')) { CopySpec s ->
-                        s.into('skeleton')
-                    }
-
-                    sync.into(project.layout.buildDirectory.dir('resources/profile/META-INF/grails-profile'))
-                }
+            task.from(project.layout.projectDirectory.dir('commands')) { CopySpec s ->
+                s.exclude('*.groovy')
+                s.into('commands')
             }
+
+            task.from(project.layout.projectDirectory.dir('templates')) { CopySpec s ->
+                s.into('templates')
+            }
+
+            task.from(project.layout.projectDirectory.dir('features')) { CopySpec s ->
+                s.into('features')
+            }
+
+            task.from(project.layout.projectDirectory.dir('skeleton')) { CopySpec s ->
+                s.into('skeleton')
+            }
+
+            task.into(project.layout.buildDirectory.dir('resources/profile/META-INF/grails-profile'))
         }
 
         TaskProvider<ProfileCompilerTask> compileTask = project.tasks.register('compileProfile', ProfileCompilerTask)

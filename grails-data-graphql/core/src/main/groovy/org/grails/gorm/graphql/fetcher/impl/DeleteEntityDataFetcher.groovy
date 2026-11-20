@@ -36,7 +36,7 @@ import org.grails.gorm.graphql.response.delete.GraphQLDeleteResponseHandler
  */
 @CompileStatic
 @InheritConstructors
-class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements DeletingGormDataFetcher {
+class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements DeletingGormDataFetcher<T> {
 
     GraphQLDeleteResponseHandler responseHandler
 
@@ -48,11 +48,15 @@ class DeleteEntityDataFetcher<T> extends DefaultGormDataFetcher<T> implements De
     }
 
     protected void deleteInstance(GormEntity instance) {
-        instance.delete(failOnError: true)
+        instance.delete()
     }
 
     @Override
     T get(DataFetchingEnvironment environment) {
+        // Only the delete runs inside the try. The response is built afterwards so that a
+        // failure in the (user-replaceable) response handler propagates as a GraphQL error
+        // instead of being caught and reported to the client as a failed delete when the
+        // row has in fact already been removed.
         boolean success = false
         Exception exception
         try {

@@ -1,0 +1,199 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+A Grails application has two test phases by default: `unit` (the standard `test` source set) and `integration` (added automatically by the Grails Gradle plugin). You can define additional test phases – such as `functional`, `smoke`, or `performance` – by using the `testPhases` extension in your `build.gradle`.
+
+==== How Test Phases Work
+
+Each test phase is a self-contained Gradle source set with its own:
+
+* **Source directory** - e.g. `src/functional-test/groovy`
+* **Dependency configurations** - e.g. `functionalTestImplementation`, `functionalTestRuntimeOnly` (extending the test configurations)
+* **Gradle `Test` task** - e.g. `./gradlew functionalTest`
+* **System property** - e.g. `is.grails.functional.test` (set to `true` at runtime)
+
+The `integrationTest` phase that Grails has always provided is now implemented on top of the same mechanism, so all customization options described here apply to it as well.
+
+
+==== Adding a Custom Test Phase
+
+To add a new test phase, declare it in the `testPhases` block in your `build.gradle`:
+
+[source,groovy]
+----
+testPhases {
+    functionalTest { }
+}
+----
+
+This single declaration creates:
+
+* A `functionalTest` source set reading from `src/functional-test/groovy` (and `src/functional-test/java`)
+* `functionalTestImplementation` and `functionalTestRuntimeOnly` configurations that extend from the test configurations
+* A `functionalTest` Gradle task wired into the `check` lifecycle
+* IntelliJ IDEA integration marking the source folder as test sources
+
+You can then add dependencies specific to that phase:
+
+[source,groovy]
+----
+dependencies {
+    functionalTestImplementation testFixtures('org.apache.grails:grails-geb')
+    functionalTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+}
+----
+
+And place your test classes under `src/functional-test/groovy`:
+
+[source,groovy]
+----
+// src/functional-test/groovy/com/example/HomeFunctionalSpec.groovy
+package com.example
+
+import grails.plugin.geb.ContainerGebSpec
+import grails.testing.mixin.integration.Integration
+
+@Integration
+class HomeFunctionalSpec extends ContainerGebSpec {
+
+    void "test home page renders"() {
+        when:
+        go('/')
+
+        then:
+        pageSource.contains('Welcome')
+    }
+}
+----
+
+
+==== Customizing a Test Phase
+
+Each phase supports the following configurable properties:
+
+[cols="2,3,2"]
+|===
+| Property | Description | Default
+
+| `sourceFolderName`
+| Path to the source directory
+| `src/<phase-script-name>` (e.g. `src/functional-test`)
+
+| `systemPropertyName`
+| System property set to `true` when this phase runs
+| `is.grails.<phase>.test` (e.g. `is.grails.functional.test`)
+
+| `ideaIntegration`
+| Whether to register source dirs with IntelliJ IDEA
+| `true`
+|===
+
+Example with overrides:
+
+[source,groovy]
+----
+testPhases {
+    smokeTest {
+        sourceFolderName = 'src/smoke-tests'
+        systemPropertyName = 'is.smoke.test'
+    }
+}
+----
+
+
+==== Detecting the Current Test Phase
+
+Each test phase sets a system property that your test code (or application code running under test) can read to determine which phase is active:
+
+[cols="2,2"]
+|===
+| Phase | System Property
+
+| `integrationTest`
+| `is.grails.integration.test`
+
+| `functionalTest`
+| `is.grails.functional.test`
+
+| Custom phase
+| Configurable via `systemPropertyName` (see above)
+|===
+
+You can check these properties in your tests or in application code:
+
+[source,groovy]
+----
+if (System.getProperty('is.grails.functional.test')) {
+    // running inside the functionalTest phase
+}
+----
+
+This is useful when shared code needs to behave differently depending on the test phase -- for example, configuring different data sources, disabling certain interceptors, or adjusting timeouts.
+
+
+==== Running Custom Test Phases
+
+Custom test phases are run the same way as the built-in phases:
+
+[source,shell]
+----
+# Run only functional tests
+./gradlew functionalTest
+
+# Run only integration tests
+./gradlew integrationTest
+
+# Run all test phases (unit + integration + functional + any others)
+./gradlew check
+
+# Target specific tests within a phase
+./gradlew functionalTest --tests "com.example.HomeFunctionalSpec"
+----
+
+
+==== Multiple Test Phases Example
+
+A `build.gradle` that defines both integration and functional test phases:
+
+[source,groovy]
+----
+plugins {
+    id 'org.apache.grails.gradle.grails-web'
+}
+
+// integrationTest is already registered by grails-web.
+// Add a functionalTest phase:
+testPhases {
+    functionalTest { }
+}
+
+dependencies {
+    // Unit test dependencies
+    testImplementation 'org.apache.grails:grails-testing-support-web'
+
+    // Integration test dependencies
+    integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
+
+    // Functional test dependencies
+    functionalTestImplementation testFixtures('org.apache.grails:grails-geb')
+    functionalTestImplementation 'org.apache.grails:grails-testing-support-http-client'
+}
+----
+
+With this setup, `./gradlew check` will execute the `test`, `integrationTest`, and `functionalTest` tasks in order, and the merged test report will include results from all phases.

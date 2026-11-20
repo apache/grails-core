@@ -64,7 +64,7 @@ dependencies {
         // api: ArtefactHandlerAdapter, GrailsApplication, GrailsClass, PersistenceContextInterceptor, Plugin
         // impl: AbstractGrailsClass, GrailsASTUtils, GrailsClassUtils, GrailsUtil, TraitInjector
     }
-    compileOnly 'org.apache.grails.gradle:grails-gradle-model' // GrailsResourceUtils
+    compileOnly 'org.apache.grails.gradle:grails-gradle-model' // GrailsResourceUtils, Metadata
     compileOnly 'org.apache.groovy:groovy' // Provided as this is a Grails plugin
     compileOnly 'org.apache.groovy:groovy-sql' // groovy.sql.Sql (JdbcCleanup)
     compileOnly 'jakarta.annotation:jakarta.annotation-api' // @PostConstruct

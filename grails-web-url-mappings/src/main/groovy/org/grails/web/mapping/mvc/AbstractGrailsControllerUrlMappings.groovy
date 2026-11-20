@@ -22,9 +22,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 
 import org.springframework.http.HttpMethod
 
+import grails.config.Settings
 import grails.core.GrailsApplication
 import grails.core.GrailsClass
 import grails.core.GrailsControllerClass
@@ -45,34 +47,46 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
  * @since 3.0
  */
 @CompileStatic
+@Slf4j
 abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
     UrlMappings urlMappingsHolderDelegate
     UrlConverter urlConverter
+    boolean validateWildcardMappings
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> mappingsToGrailsControllerMap = new ConcurrentHashMap<>()
     ConcurrentHashMap<ControllerKey, GrailsControllerClass> deferredMappings = new ConcurrentHashMap<>()
+    private final Map<String, GrailsControllerClass> registeredControllers = new LinkedHashMap<>()
+    private boolean initialized
 
     AbstractGrailsControllerUrlMappings(GrailsApplication grailsApplication, UrlMappings urlMappingsHolderDelegate, UrlConverter urlConverter = null) {
         this.urlMappingsHolderDelegate = urlMappingsHolderDelegate
         this.urlConverter = urlConverter
+        this.validateWildcardMappings = grailsApplication.config.getProperty(
+                Settings.URL_MAPPING_VALIDATE_WILDCARDS, Boolean, true)
         def controllerArtefacts = grailsApplication.getArtefacts(ControllerArtefactHandler.TYPE)
         for (GrailsClass gc in controllerArtefacts) {
             registerController((GrailsControllerClass) gc)
         }
+        mergeDeferred(mappingsToGrailsControllerMap, deferredMappings)
+        initialized = true
+    }
 
-        for (Map.Entry<ControllerKey, GrailsControllerClass> entry: deferredMappings.entrySet()) {
+    private static void mergeDeferred(Map<ControllerKey, GrailsControllerClass> mappings, Map<ControllerKey, GrailsControllerClass> deferred) {
+        for (Map.Entry<ControllerKey, GrailsControllerClass> entry : deferred.entrySet()) {
             ControllerKey key = entry.key
             GrailsControllerClass deferredController = entry.value
-            GrailsControllerClass existingController = mappingsToGrailsControllerMap.get(key)
+            GrailsControllerClass existingController = mappings.get(key)
 
-            if (existingController == null) {
-                mappingsToGrailsControllerMap.put(key, deferredController)
-            } else if (key.namespace == null && deferredController.namespace == null && existingController.namespace != null) {
-                // A non-namespaced controller is a better match for a null-namespace key
-                // than a namespaced controller that registered here as a fallback
-                mappingsToGrailsControllerMap.put(key, deferredController)
+            if (existingController == null || prefersDeferred(key, deferredController, existingController)) {
+                mappings.put(key, deferredController)
             }
         }
+    }
+
+    private static boolean prefersDeferred(ControllerKey key, GrailsControllerClass deferredController, GrailsControllerClass existingController) {
+        // A non-namespaced controller is a better match for a null-namespace key
+        // than a namespaced controller that registered here as a fallback
+        key.namespace == null && deferredController.namespace == null && existingController.namespace != null
     }
 
     Collection<UrlMapping> addMappings(Closure mappings) {
@@ -144,11 +158,49 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         return collectControllerMapping(urlMappingsHolderDelegate.matchStatusCode(responseCode, e))
     }
 
+    /**
+     * Registers a controller. A controller registered after the mappings are built, such as one whose class was
+     * reloaded or one added while the application runs, rebuilds them as the constructor builds them, from every
+     * controller registered so far in the order each was first registered, so a key goes to the controller it would
+     * go to at startup. A controller with the class name of one registered earlier takes its place in that order.
+     */
     void registerController(GrailsControllerClass controller) {
-        boolean hasUrlConverter = urlConverter != null
-        if (hasUrlConverter) {
+        if (urlConverter != null) {
             controller.registerUrlConverter(urlConverter)
         }
+        log.debug('Registering controller: namespace={}, name={}, plugin={}, actions={}', controller.namespace, controller.logicalPropertyName, controller.pluginName, controller.actions)
+        synchronized (registeredControllers) {
+            registeredControllers.put(controller.fullName, controller)
+            if (initialized) {
+                rebuild()
+            } else {
+                addKeys(controller, mappingsToGrailsControllerMap, deferredMappings)
+            }
+        }
+    }
+
+    private void rebuild() {
+        Map<ControllerKey, GrailsControllerClass> mappings = [:]
+        Map<ControllerKey, GrailsControllerClass> deferred = [:]
+        for (GrailsControllerClass controller : registeredControllers.values()) {
+            addKeys(controller, mappings, deferred)
+        }
+        mergeDeferred(mappings, deferred)
+        replaceEntries(mappingsToGrailsControllerMap, mappings)
+        replaceEntries(deferredMappings, deferred)
+    }
+
+    /**
+     * Puts the rebuilt entries before removing the keys left over, so a request matched while the mappings are
+     * rebuilt never misses a key that both the old and the new mappings have.
+     */
+    private static void replaceEntries(Map<ControllerKey, GrailsControllerClass> live, Map<ControllerKey, GrailsControllerClass> rebuilt) {
+        live.putAll(rebuilt)
+        live.keySet().retainAll(rebuilt.keySet())
+    }
+
+    private void addKeys(GrailsControllerClass controller, Map<ControllerKey, GrailsControllerClass> mappings, Map<ControllerKey, GrailsControllerClass> deferred) {
+        boolean hasUrlConverter = urlConverter != null
         def namespace = hasUrlConverter ? urlConverter.toUrlElement(controller.namespace) : controller.namespace
         def plugin = hasUrlConverter ? urlConverter.toUrlElement(controller.pluginName) : controller.pluginName
         final boolean hasNamespace = namespace != null
@@ -159,10 +211,10 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
 
         def defaultActionKey = new ControllerKey(namespace, controllerName, null, pluginNameToRegister)
 
-        mappingsToGrailsControllerMap.put(defaultActionKey, controller)
+        mappings.put(defaultActionKey, controller)
 
         //Plugins should override others. Application controllers defaults should be deferred to ensure the right controller/action is chosen due to order being non deterministic
-        Map<ControllerKey, GrailsControllerClass> mapToUse = plugin ? mappingsToGrailsControllerMap : deferredMappings
+        Map<ControllerKey, GrailsControllerClass> mapToUse = plugin ? mappings : deferred
 
         if (hasNamespace) {
             def noNamespaceDefaultActionKey = new ControllerKey(null, controllerName, null, pluginNameToRegister)
@@ -181,7 +233,7 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
             action = hasUrlConverter ? urlConverter.toUrlElement(action) : action
             def withPluginKey = new ControllerKey(namespace, controllerName, action, pluginNameToRegister)
 
-            mappingsToGrailsControllerMap.put(withPluginKey, controller)
+            mappings.put(withPluginKey, controller)
             if (hasNamespace) {
                 def withPluginKeyWithoutNamespaceKey = new ControllerKey(null, controllerName, action, pluginNameToRegister)
 
@@ -199,24 +251,65 @@ abstract class AbstractGrailsControllerUrlMappings implements UrlMappings {
         }
     }
 
+    private static final Set<String> ROUTING_PARAMS = ['controller', 'action', 'namespace', 'plugin', 'format', 'id', 'version'] as Set
+
     protected UrlMappingInfo[] collectControllerMappings(UrlMappingInfo[] infos) {
         def webRequest = GrailsWebRequest.lookup()
-        infos.collect({ UrlMappingInfo info ->
+        List<UrlMappingInfo> matches = []
+        for (UrlMappingInfo info : infos) {
             if (info.redirectInfo) {
-                return info
+                matches.add(info)
+                continue
             }
-            if (webRequest != null) {
+            // Names captured from the URI resolve from the match itself, so the candidate can be
+            // identified without touching the request. Only a mapping that computes a name from
+            // request state needs its parameters built first, and only that mapping pays for it -
+            // the winner's parameters are built once, by UrlMappingsHandlerMapping.
+            if (webRequest != null && info.isNameResolutionRequestDependent()) {
                 webRequest.resetParams()
                 info.configure(webRequest)
             }
             ControllerKey controllerKey = new ControllerKey(info.namespace, info.controllerName, info.actionName, info.pluginName)
             GrailsControllerClass controllerClass = info ? mappingsToGrailsControllerMap.get(controllerKey) : null
             if (controllerClass) {
-                return new GrailsControllerUrlMappingInfo(controllerClass, info)
-            } else {
-                return info
+                matches.add(new GrailsControllerUrlMappingInfo(controllerClass, info))
+            } else if (!validateWildcardMappings || !info.hasWildcardCaptures()) {
+                matches.add(info)
             }
-        }) as UrlMappingInfo[]
+            // else: wildcard-captured values didn't match a registered controller/action — skip
+        }
+        // When wildcard validation is enabled, promote validated wildcard matches
+        // (e.g., $action? resolving to a real action) only when they are strictly more specific.
+        // Specificity is determined first by literal URL token count (more literals = more specific),
+        // then by non-routing param count (fewer free captures = more specific).
+        // A route with more literal path segments always beats one with fewer, regardless of
+        // whether either has wildcard captures ($action/$controller/$namespace).
+        // Same wildcard status: preserve URL matcher's original order (stable sort).
+        // When validation is disabled, preserve original URL matcher order entirely.
+        if (validateWildcardMappings) {
+            matches.sort(true) { a, b ->
+                if (a.hasWildcardCaptures() == b.hasWildcardCaptures()) return 0
+                // Primary: more literal URL tokens wins
+                int literalDiff = literalTokenCount(b) - literalTokenCount(a)
+                if (literalDiff != 0) return literalDiff
+                // Secondary: fewer non-routing captures wins (promotes more specific wildcard routes)
+                int paramDiff = nonRoutingParamCount(a) - nonRoutingParamCount(b)
+                if (a.hasWildcardCaptures() && paramDiff < 0) return -1
+                if (b.hasWildcardCaptures() && paramDiff < 0) return 1
+                0  // preserve original order
+            }
+        }
+        matches as UrlMappingInfo[]
+    }
+
+    private static int literalTokenCount(UrlMappingInfo info) {
+        String[] tokens = info.urlData?.tokens
+        tokens == null ? 0 : (int) tokens.count { String t -> !t.contains('*') }
+    }
+
+    private static int nonRoutingParamCount(UrlMappingInfo info) {
+        def params = info.parameters
+        params == null ? 0 : (int) params.keySet().count { !(it in ROUTING_PARAMS) }
     }
 
     protected UrlMappingInfo collectControllerMapping(UrlMappingInfo info) {

@@ -24,7 +24,6 @@ import rx.Subscription;
  * Common interface for persistent related observables to implement such as collections and proxies
  *
  * @since 6.0
- * @author Graeme Rocher
  */
 public interface PersistentObservable<T> {
 

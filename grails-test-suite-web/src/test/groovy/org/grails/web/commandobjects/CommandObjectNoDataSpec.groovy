@@ -31,9 +31,6 @@ import spock.lang.Specification
  */
 class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest {
 
-    // Cache the static field helper interface for performance
-    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
-
     Closure doWithConfig() {{ config ->
         config['grails.gorm.default.constraints'] = {
             isProg inList: ['Emerson', 'Lake', 'Palmer']
@@ -42,48 +39,22 @@ class CommandObjectNoDataSpec extends Specification implements GrailsWebUnitTest
 
     /**
      * Clear the static constraints cache for Artist class.
-     * This is necessary because the Validateable trait caches constraints in a static field,
-     * and when tests run sequentially within a fork, the constraints may be evaluated before
-     * doWithConfig() has registered the shared constraint 'isProg'.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before doWithConfig()
+     * has registered the shared constraint 'isProg'.
      *
      * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
-     * globally. When tests run sequentially, another test's config may have been cached,
+     * globally. Without this cleanup, another test's config may have been cached,
      * causing the 'isProg' shared constraint to not be found.
-     *
-     * IMPORTANT: We access 'config' first to ensure GrailsApplication is initialized
-     * and Holders.grailsApplication is set. This triggers doWithConfig() which registers
-     * the 'isProg' shared constraint. We then clear the caches so they will be repopulated
-     * from the freshly-configured application when validate() is called.
      */
     def setup() {
-        // Access config to ensure grailsApplication is initialized and Holders is populated
-        // This triggers doWithConfig() which registers the 'isProg' shared constraint
-        assert config != null
-        
-        // Now clear the caches so they will be repopulated from the fresh config
         ConstraintEvalUtils.clearDefaultConstraints()
-        clearConstraintsMapCache(Artist)
+        Artist.clearConstraintsMapCache()
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        clearConstraintsMapCache(Artist)
-    }
-
-    /**
-     * Clears the private static constraintsMapInternal field in the Validateable trait.
-     * In Groovy 4, static fields in traits are accessed via the Validateable$Trait$StaticFieldHelper
-     * interface which implementing classes implement. This method uses that interface to clear the cache.
-     * This is used for test isolation until a public API is available in Grails 7.1.
-     */
-    private static void clearConstraintsMapCache(Class<?> clazz) {
-        // In Groovy 4, classes implementing a trait with static fields also implement
-        // the TraitName$Trait$StaticFieldHelper interface with getter/setter methods
-        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
-            // The setter method name follows the pattern: traitFQN__fieldName$set
-            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
-            setterMethod.invoke(null, (Map) null)
-        }
+        Artist.clearConstraintsMapCache()
     }
 
     void "test shared constraint"() {

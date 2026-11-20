@@ -38,10 +38,10 @@ import org.grails.web.databinding.GeneratedDatabindingWhiteList
 
 /**
  * A class whose parent is already compiled, as a parent in another module, in a plugin, or in an incremental build
- * is, must get the generated white list it gets when it is compiled together with its parent. The compiled parent
+ * is, must get the generated white lists it gets when it is compiled together with its parent. The compiled parent
  * has no constraints closure and no transients list to read, so what the parent declared transient or
  * {@code bindable: false} must not become bindable in the subclass; and what the parent gets from a transformation
- * such as {@code @Delegate} must stay bindable. A class bound by rules, its own or inherited, gets a white list
+ * such as {@code @Delegate} must stay bindable. A class bound by rules, its own or inherited, gets its white lists
  * wherever it is compiled, so a command object compiled apart from the controller that binds it is bound by the
  * rules it declares all the same.
  */
@@ -62,6 +62,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
 
             static transients = ['secret']
             static constraints = {
+                name bindable: true
                 dateCreated bindable: true
                 admin bindable: false
             }
@@ -84,7 +85,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         }
     '''
 
-    /** The base class of command objects is not an action parameter itself, so no controller gives it a white list. */
+    /** The base class of command objects is not an action parameter itself, so no controller gives it white lists. */
     private static final String COMMAND_PARENT = '''
         import grails.validation.Validateable
 
@@ -138,10 +139,11 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         }
     '''
 
-    /** A class that writes its white list itself. */
+    /** A class that writes its white lists itself. */
     private static final String DECLARED_PARENT = '''
         abstract class Account {
             public static final List $defaultDatabindingWhiteList = ['name']
+            public static final List $legacyDatabindingWhiteList = ['name']
 
             String name
             String secret
@@ -201,7 +203,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         """
     }
 
-    void 'a domain class compiled against its compiled parent gets the white list it gets when compiled with it'() {
+    void 'a domain class compiled against its compiled parent gets the white lists it gets when compiled with it'() {
         given: 'the parent compiled on its own, as a module or a plugin is'
         File parentClasses = compile([Account: PARENT], new File(tempDir, 'parent'))
 
@@ -212,17 +214,20 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File togetherClasses = compile([Account: PARENT, Customer: CHILD], new File(tempDir, 'together'))
 
         when:
-        Set<String> together = whiteList(togetherClasses, 'Customer')
-        Set<String> separate = whiteList(childClasses, 'Customer', parentClasses)
+        Map<String, Set<String>> together = whiteLists(togetherClasses, 'Customer')
+        Map<String, Set<String>> separate = whiteLists(childClasses, 'Customer', parentClasses)
 
         then: 'the declared and inherited properties are bindable, including one the parent makes bindable by constraint'
-        together.containsAll(['name', 'email', 'dateCreated'])
+        together.legacy.containsAll(['name', 'email', 'dateCreated'])
+
+        and: 'under deny by default, only the properties the parent constrains bindable: true are'
+        together.denyByDefault == ['name', 'dateCreated'] as Set
 
         and: "the parent's transient, its non-bindable property and Groovy's metaClass are not"
-        together.intersect(['secret', 'admin', 'metaClass']).empty
-        separate.intersect(['secret', 'admin', 'metaClass']).empty
+        together.legacy.intersect(['secret', 'admin', 'metaClass']).empty
+        separate.legacy.intersect(['secret', 'admin', 'metaClass']).empty
 
-        and: 'the subclass gets the same white list either way'
+        and: 'the subclass gets the same white lists either way'
         separate == together
 
         and: 'binding through the public API preserves those rules'
@@ -246,16 +251,17 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
                 new File(tempDir, 'together'))
 
         when:
-        Set<String> together = whiteList(togetherClasses, 'CustomerCommand')
-        Set<String> separate = whiteList(commandClasses, 'CustomerCommand', parentClasses)
+        Map<String, Set<String>> together = whiteLists(togetherClasses, 'CustomerCommand')
+        Map<String, Set<String>> separate = whiteLists(commandClasses, 'CustomerCommand', parentClasses)
 
         then: "the command object's own properties, its parent's, and those its parent delegates are bindable"
-        separate.containsAll(['email', 'note', 'contact', 'name', 'phone'])
+        separate.legacy.containsAll(['email', 'note', 'contact', 'name', 'phone'])
 
         and: "Groovy's metaClass is not"
-        !separate.contains('metaClass')
+        !separate.legacy.contains('metaClass')
+        !separate.denyByDefault.contains('metaClass')
 
-        and: 'the command object gets the same white list either way'
+        and: 'the command object gets the same white lists either way'
         separate == together
 
         and: 'a parent compiled with its record is nothing to warn about'
@@ -284,14 +290,14 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         isArtefact(togetherClasses, 'CustomerController')
 
         when:
-        Set<String> separate = whiteList(commandClasses, 'CustomerCommand', parentClasses)
-        Set<String> together = whiteList(togetherClasses, 'CustomerCommand')
+        Set<String> separate = whiteLists(commandClasses, 'CustomerCommand', parentClasses).legacy
+        Set<String> together = whiteLists(togetherClasses, 'CustomerCommand').legacy
 
         then: "compiled against the compiled parent, the command object binds the parent's properties and those it delegates"
         separate.containsAll(['email', 'note', 'contact', 'name', 'phone'])
         !separate.contains('metaClass')
 
-        and: "compiled with the parent, its white list is computed before the parent's @Delegate adds the setters, as it always was: the delegated properties are reached through the delegate"
+        and: "compiled with the parent, its white lists are computed before the parent's @Delegate adds the setters, as it always was: the delegated properties are reached through the delegate"
         together.containsAll(['email', 'note', 'contact'])
         together.intersect(['name', 'phone']).empty
     }
@@ -305,17 +311,18 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         String warnings = warningsOf {
             compile([Customer: CHILD], childClasses, parentClasses)
         }
-        Set<String> separate = whiteList(childClasses, 'Customer', parentClasses)
+        Map<String, Set<String>> separate = whiteLists(childClasses, 'Customer', parentClasses)
 
         then: 'the compilation warns, naming the child and the parent'
         warnings.contains('white list of [Customer]')
         warnings.contains('bytecode of [Account]')
 
         and: 'the declared and inherited properties are bindable'
-        separate.containsAll(['name', 'email'])
+        separate.legacy.containsAll(['name', 'email'])
 
         and: "Groovy's metaClass is not"
-        !separate.contains('metaClass')
+        !separate.legacy.contains('metaClass')
+        !separate.denyByDefault.contains('metaClass')
 
         where:
         kind     | annotation
@@ -343,8 +350,32 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         !warnings.contains('white list of [IntermediateAccount]')
     }
 
+    void 'a domain class compiled against a parent Grails 7 recorded keeps what the parent makes bindable, with asmResolving=#asmResolving'() {
+        given: 'the parent compiled as Grails 7 compiles it: its record names the one white list Grails 7 has, but no deny-by-default list'
+        File parentClasses = compileAsGrails7([Account: PARENT], new File(tempDir, 'parent'))
+
+        when: 'the child is compiled against those classes'
+        File childClasses = new File(tempDir, 'child')
+        String warnings = warningsOf {
+            compile([Customer: CHILD], childClasses, [parentClasses], null, asmResolving)
+        }
+        Map<String, Set<String>> separate = whiteLists(childClasses, 'Customer', parentClasses)
+
+        then: 'a parent with a record is nothing to warn about'
+        !warnings.contains('Account')
+
+        and: "the legacy list is the parent's, with the child's own property, and keeps the timestamp the parent makes bindable"
+        separate.legacy == ['name', 'email', 'dateCreated'] as Set
+
+        and: 'under deny by default, that timestamp is all the record tells of the parent'
+        separate.denyByDefault == ['dateCreated'] as Set
+
+        where:
+        asmResolving << [true, false]
+    }
+
     void 'a record that leaves a member out is read as recording nothing for it, not recomputed from bytecode'() {
-        given: 'the parent compiled with a record that holds the names but not the explicitly bindable properties'
+        given: 'the parent compiled with a record that holds the names of both lists but not the explicitly bindable properties'
         File parentClasses = compileWithRecordEdited([Account: PARENT], new File(tempDir, 'parent'), { ClassNode classNode ->
             classNode.annotations.find { AnnotationNode annotation -> isRecord(annotation) }.members.remove('explicitlyBindable')
         })
@@ -354,15 +385,16 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         String warnings = warningsOf {
             compile([Customer: CHILD], childClasses, parentClasses)
         }
-        Set<String> separate = whiteList(childClasses, 'Customer', parentClasses)
+        Map<String, Set<String>> separate = whiteLists(childClasses, 'Customer', parentClasses)
 
         then: 'nothing is recomputed, so nothing is warned about, and the recorded rules hold'
         !warnings.contains('white list of')
-        separate.containsAll(['name', 'email'])
-        separate.intersect(['secret', 'admin', 'metaClass']).empty
+        separate.legacy.containsAll(['name', 'email'])
+        separate.legacy.intersect(['secret', 'admin', 'metaClass']).empty
+        separate.denyByDefault == ['name'] as Set
 
         and: 'the member left out recorded nothing: the timestamp the parent made bindable by constraint is not inherited'
-        !separate.contains('dateCreated')
+        !separate.legacy.contains('dateCreated')
     }
 
     void 'a #kind base preserves its binding declarations with asmResolving=#asmResolving'() {
@@ -399,7 +431,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
     }
 
     void 'a #kind compiled against a base with only a transient property keeps it out of the white list, as when compiled with it'() {
-        given: 'the base compiled on its own: with nothing to record, it gets no white list, and a subclass reads its bytecode'
+        given: 'the base compiled on its own: with nothing to record, it gets no white lists, and a subclass reads its bytecode'
         File parentClasses = compile([Contact: CONTACT, Account: TRANSIENT_PARENT], new File(tempDir, 'parent'))
 
         and: 'a subclass compiled against those classes, and one compiled with them'
@@ -411,11 +443,11 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File togetherClasses = compile([Contact: CONTACT, Account: TRANSIENT_PARENT] + childSources, new File(tempDir, 'together'))
 
         expect:
-        !fieldNames(parentClasses, 'Account').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        !fieldNames(parentClasses, 'Account').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
 
         when:
-        List<String> separate = includeList(childClasses, 'Customer', parentClasses)
-        List<String> together = includeList(togetherClasses, 'Customer')
+        List<String> separate = legacyIncludeList(childClasses, 'Customer', parentClasses)
+        List<String> together = legacyIncludeList(togetherClasses, 'Customer')
 
         then: 'neither the transient properties nor the patterns that would let a request reach into the typed one are in the list'
         !separate.any { String name -> name.startsWith('token') || name.startsWith('helper') }
@@ -502,7 +534,8 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
                                        : compile([Account: CONSTRAINED_PARENT, Customer: childSource], new File(tempDir, 'child'))
         File[] classpath = separately ? [parentClasses] as File[] : [] as File[]
 
-        expect: 'the subclass gets a white list of its own'
+        expect: 'the subclass gets white lists of its own'
+        fieldNames(childClasses, 'Customer', classpath).contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
         fieldNames(childClasses, 'Customer', classpath).contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
 
         and: "the base's rule holds when the subclass is bound"
@@ -515,20 +548,20 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         'with'       | false
     }
 
-    void 'a class that declares its white list itself keeps it, and a subclass compiled with it inherits it'() {
+    void 'a class that declares its white lists itself keeps them, and a subclass compiled with it inherits them'() {
         given: 'the parent compiled with a subclass that declares nothing'
         File classes = compile([Account: DECLARED_PARENT, Customer: CHILD.replace('@Entity', '')], new File(tempDir, 'declared'))
 
-        expect: 'the parent keeps the list it declares'
-        whiteList(classes, 'Account') == ['name'] as Set
+        expect: 'the parent keeps the lists it declares'
+        whiteLists(classes, 'Account') == [legacy: ['name'] as Set, denyByDefault: ['name'] as Set]
 
-        and: "the subclass is bound by the parent's list and its own properties"
-        whiteList(classes, 'Customer') == ['name', 'email'] as Set
+        and: "the subclass is bound by the parent's lists and its own properties"
+        whiteLists(classes, 'Customer') == [legacy: ['name', 'email'] as Set, denyByDefault: ['name'] as Set]
         Map<String, Object> values = [name: 'Sample', email: 'sample@example.invalid', secret: 'submitted']
         bindValues(classes, 'Customer', values) == values + [secret: null]
     }
 
-    void 'a class that declares its white list itself gives a subclass compiled against it that list'() {
+    void 'a class that declares its white lists itself gives a subclass compiled against it those lists'() {
         given: 'the class compiled on its own'
         File parentClasses = compile([Account: DECLARED_PARENT], new File(tempDir, 'parent'))
 
@@ -538,22 +571,22 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
             compile([Customer: CHILD.replace('@Entity', '')], childClasses, parentClasses)
         }
 
-        then: 'the list the class declares is read from the compiled class, as a generated list is, and nothing is warned about'
+        then: 'the lists the class declares are read from the compiled class, as generated lists are, and nothing is warned about'
         !warnings.contains('white list of')
-        whiteList(childClasses, 'Customer', parentClasses) == ['name', 'email'] as Set
+        whiteLists(childClasses, 'Customer', parentClasses) == [legacy: ['name', 'email'] as Set, denyByDefault: ['name'] as Set]
         Map<String, Object> values = [name: 'Sample', email: 'sample@example.invalid', secret: 'submitted']
         bindValues(childClasses, 'Customer', values, parentClasses) == values + [secret: null]
     }
 
-    void 'a class that declares its white list itself is recorded however it is compiled with a subclass, #how'() {
+    void 'a class that declares its white lists itself is recorded however it is compiled with a subclass, #how'() {
         given: 'the class compiled with a subclass'
         File parentClasses = compile(sources, new File(tempDir, 'parent'))
 
         when: 'another subclass is compiled against the result'
         File otherClasses = compile([Other: 'class Other extends Account { String phone }'], new File(tempDir, 'other'), parentClasses)
 
-        then: 'it reads the list the class declares'
-        whiteList(otherClasses, 'Other', parentClasses) == ['name', 'phone'] as Set
+        then: 'it reads the lists the class declares'
+        whiteLists(otherClasses, 'Other', parentClasses).legacy == ['name', 'phone'] as Set
 
         where:
         how                                            | sources
@@ -563,22 +596,22 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
                                                           AccountController: CONTROLLER.replace('CustomerCommand', 'AccountCommand')]
     }
 
-    void 'a subclass compiled without the transformation is bound by the white list of its parent'() {
-        given: 'a parent with rules, compiled with its white list'
+    void 'a subclass compiled without the transformation is bound by the white lists of its parent'() {
+        given: 'a parent with rules, compiled with its white lists'
         File parentClasses = compile([Account: PARENT], new File(tempDir, 'parent'))
 
         and: 'a subclass compiled against it without the transformation, as a module without the data binding library compiles it'
         File childClasses = compileWithoutTransformation([Customer: CHILD.replace('@Entity', '')], new File(tempDir, 'child'), parentClasses)
 
-        expect: 'the subclass got no white list of its own'
-        !fieldNames(childClasses, 'Customer', parentClasses).contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        expect: 'the subclass got no white lists of its own'
+        !fieldNames(childClasses, 'Customer', parentClasses).contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
 
         and: "it is bound by its parent's list, which keeps the parent's rules and knows nothing of the subclass's own properties"
         Map<String, Object> values = [name: 'Sample', email: 'sample@example.invalid', admin: true, secret: 'submitted']
         bindValues(childClasses, 'Customer', values, parentClasses) == values + [email: null, admin: false, secret: null]
     }
 
-    void 'an action parameter compiled without a white list is warned about'() {
+    void 'an action parameter compiled without white lists is warned about'() {
         given: 'a command object compiled without the transformation, as a plugin built without the data binding library compiles it'
         File commandClasses = compileWithoutTransformation([CustomerCommand: standaloneCommand('static constraints = { admin bindable: false }')],
                 new File(tempDir, 'command'))
@@ -593,7 +626,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         warnings.contains('[CustomerCommand] has binding rules but was compiled without a data binding white list')
 
         and: 'the command object is left as it was compiled'
-        !fieldNames(commandClasses, 'CustomerCommand').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        !fieldNames(commandClasses, 'CustomerCommand').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
     }
 
     void 'a property the delegate keeps out of binding stays out when reached through the delegating class, compiled #how'() {
@@ -604,7 +637,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File[] classpath = together ? [] as File[] : [delegateClasses] as File[]
 
         when:
-        Set<String> whiteList = whiteList(commandClasses, 'DelegatingCommand', classpath)
+        Set<String> whiteList = whiteLists(commandClasses, 'DelegatingCommand', classpath).legacy
         Object target = bind(commandClasses, 'DelegatingCommand', [city: 'Lund', verified: true], classpath)
 
         then: "the delegate's property is bindable through the delegating class, and what the delegate keeps out is not"
@@ -635,12 +668,12 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File childClasses = compile(childSources, new File(tempDir, 'child'), baseClasses)
         File togetherClasses = compile([DelegatedAddress: DELEGATED_ADDRESS, DelegatingBase: baseSource] + childSources, new File(tempDir, 'together'))
 
-        expect: 'the base got no white list of its own'
-        !fieldNames(baseClasses, 'DelegatingBase').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        expect: 'the base got no white lists of its own'
+        !fieldNames(baseClasses, 'DelegatingBase').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
 
         when:
-        Set<String> separate = whiteList(childClasses, 'Customer', baseClasses)
-        Set<String> together = whiteList(togetherClasses, 'Customer')
+        Set<String> separate = whiteLists(childClasses, 'Customer', baseClasses).legacy
+        Set<String> together = whiteLists(togetherClasses, 'Customer').legacy
 
         then: "the delegate's property is bindable, what the delegate keeps out is not, and the subclass gets the same list either way"
         separate.containsAll(['note', 'address', 'city', 'email'])
@@ -664,8 +697,8 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File togetherClasses = compile([Account: baseSource] + childSources, new File(tempDir, 'together'))
 
         expect: 'the setter the base declares binds, whichever way the subclass is compiled'
-        whiteList(togetherClasses, 'Customer').contains('token')
-        whiteList(childClasses, 'Customer', parentClasses) == whiteList(togetherClasses, 'Customer')
+        whiteLists(togetherClasses, 'Customer').legacy.contains('token')
+        whiteLists(childClasses, 'Customer', parentClasses) == whiteLists(togetherClasses, 'Customer')
     }
 
     void 'a property named like a binding rule is not one'() {
@@ -678,7 +711,8 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
             }
         '''], new File(tempDir, 'report'))
 
-        expect: 'it gets no white list, and is bound as it always was'
+        expect: 'it gets no white lists, and is bound as it always was'
+        !fieldNames(classes, 'Report').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
         !fieldNames(classes, 'Report').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
         bindValues(classes, 'Report', [name: 'Sample']) == [name: 'Sample']
     }
@@ -701,7 +735,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         '''], new File(tempDir, 'forms'))
 
         expect:
-        fieldNames(classes, 'Forms$SignUp').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
+        fieldNames(classes, 'Forms$SignUp').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
         bindValues(classes, 'Forms$SignUp', [name: 'Sample', admin: true]) == [name: 'Sample', admin: false]
     }
 
@@ -726,7 +760,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         '''], new File(tempDir, 'command'), partialClasses)
 
         then: 'the compilation succeeds, and the property is bindable like any other'
-        whiteList(commandClasses, 'CustomerCommand', typeClasses).containsAll(['name', 'special'])
+        whiteLists(commandClasses, 'CustomerCommand', typeClasses).legacy.containsAll(['name', 'special'])
         bindValues(commandClasses, 'CustomerCommand', [name: 'Sample'], typeClasses) == [name: 'Sample']
     }
 
@@ -743,9 +777,10 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         Map<String, Object> separate = bindValues(commandClasses, 'CustomerCommand', values)
         Map<String, Object> together = bindValues(togetherClasses, 'CustomerCommand', values)
 
-        then: 'the command object gets the same white list field whether or not a controller binds it'
+        then: 'the command object gets the same white list fields whether or not a controller binds it'
+        fieldNames(commandClasses, 'CustomerCommand').contains(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST)
         fieldNames(commandClasses, 'CustomerCommand').contains(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)
-        whiteList(commandClasses, 'CustomerCommand') == whiteList(togetherClasses, 'CustomerCommand')
+        whiteLists(commandClasses, 'CustomerCommand') == whiteLists(togetherClasses, 'CustomerCommand')
 
         and: 'what the command object declares transient or non-bindable is not bound either way'
         together == values + unbound
@@ -766,7 +801,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         File classes = compile(sources, new File(tempDir, 'command'))
 
         expect: "the white list names its property and the trait's, and nothing of the traits' own"
-        whiteList(classes, 'CustomerCommand') == ['email', 'name'] as Set
+        whiteLists(classes, 'CustomerCommand').legacy == ['email', 'name'] as Set
 
         when: "input names the traits' own fields and the validation result along with the properties"
         Object target = bind(classes, 'CustomerCommand', [name: 'Sample', email: 'sample@example.invalid', Named__hidden: 'submitted',
@@ -792,12 +827,22 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
     }
 
     /**
-     * Compiles as a Grails before the record did: the class gets its generated white list, but not the record of
-     * the names in it.
+     * Compiles as a Grails before the record did: the class gets its generated white lists, but not the record of
+     * the names in them.
      */
     private File compileWithoutRecord(Map<String, String> sources, File target, File... classpath) {
         compileWithRecordEdited(sources, target, { ClassNode classNode ->
             classNode.annotations.removeIf { AnnotationNode annotation -> isRecord(annotation) }
+        }, classpath)
+    }
+
+    /**
+     * Compiles as Grails 7 does: the record names the one white list Grails 7 has and the explicitly bindable
+     * special properties, but no deny-by-default list.
+     */
+    private File compileAsGrails7(Map<String, String> sources, File target, File... classpath) {
+        compileWithRecordEdited(sources, target, { ClassNode classNode ->
+            classNode.annotations.findAll { AnnotationNode annotation -> isRecord(annotation) }*.members*.remove('denyByDefault')
         }, classpath)
     }
 
@@ -806,7 +851,7 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         compile(sources, target, classpath.toList(), edit)
     }
 
-    /** Compiles as a module without the data binding library does: no class gets a white list from the transformation. */
+    /** Compiles as a module without the data binding library does: no class gets white lists from the transformation. */
     private File compileWithoutTransformation(Map<String, String> sources, File target, File... classpath) {
         compile(sources, target, classpath.toList(), null, true, false)
     }
@@ -877,16 +922,25 @@ class DefaultASTDatabindingHelperCompiledParentSpec extends Specification {
         new URLClassLoader(urls, getClass().classLoader).withCloseable(work)
     }
 
-    /** The generated white list as the binder reads it, patterns included. */
-    private List<String> includeList(File classes, String className, File... more) {
+    /** The property names in both generated white lists, without the patterns. */
+    private Map<String, Set<String>> whiteLists(File classes, String className, File... more) {
         withClasses(classes, more) { ClassLoader loader ->
-            loader.loadClass(className).getField(DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST).get(null) as List<String>
+            Class<?> type = loader.loadClass(className)
+            [legacy       : names(type, DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST),
+             denyByDefault: names(type, DefaultASTDatabindingHelper.DEFAULT_DATABINDING_WHITELIST)]
         }
     }
 
-    /** The property names in the generated white list, without the patterns. */
-    private Set<String> whiteList(File classes, String className, File... more) {
-        includeList(classes, className, more).findAll { String name -> !name.endsWith('_*') && !name.endsWith('.*') } as Set
+    private static Set<String> names(Class<?> type, String field) {
+        List names = type.getField(field).get(null)
+        names.findAll { String name -> !name.endsWith('_*') && !name.endsWith('.*') } as Set
+    }
+
+    /** The generated legacy white list as the binder reads it, patterns included. */
+    private List<String> legacyIncludeList(File classes, String className, File... more) {
+        withClasses(classes, more) { ClassLoader loader ->
+            loader.loadClass(className).getField(DefaultASTDatabindingHelper.LEGACY_DATABINDING_WHITELIST).get(null) as List<String>
+        }
     }
 
     private List<String> fieldNames(File classes, String className, File... more) {

@@ -18,10 +18,11 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Shared
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Shared
 
 class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
@@ -29,7 +30,7 @@ class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
     Date now = new Date()
 
     void setupSpec() {
-        manager.domainClasses.addAll([Individual, Address])
+        manager.registerDomainClasses(Individual, Address)
     }
 
     void "Test persistence of embedded entities"() {
@@ -53,6 +54,7 @@ class EmbeddedAssociationSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager
 
 @Entity
 class Individual {
+
     Long id
     String name
     Address address
@@ -67,11 +69,13 @@ class Individual {
 
 @Entity
 class Address {
+
     Long id
     String postCode
 }
 
 // Test embedded associations with custom types
 class Bio {
+
     Birthday birthday
 }

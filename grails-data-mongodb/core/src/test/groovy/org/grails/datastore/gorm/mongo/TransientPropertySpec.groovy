@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class TransientPropertySpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Cow])
+        manager.registerDomainClasses(Cow)
     }
 
     void "Test that transient properties are not saved to mongodb"() {

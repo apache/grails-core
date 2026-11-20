@@ -34,9 +34,10 @@ class PersistentLogin implements Serializable {
 	Date lastUsed
 
 	static constraints = {
-		series maxSize: 64
-		token maxSize: 64
-		username maxSize: 64
+		series maxSize: 64, nullable: false
+		token maxSize: 64, nullable: false
+		username maxSize: 64, nullable: false
+		lastUsed nullable: false
 	}
 
 	static mapping = {

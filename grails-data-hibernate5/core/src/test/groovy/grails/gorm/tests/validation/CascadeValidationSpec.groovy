@@ -23,7 +23,6 @@ import grails.gorm.annotation.Entity
 import grails.gorm.transactions.Rollback
 import org.grails.orm.hibernate.HibernateDatastore
 import spock.lang.AutoCleanup
-import spock.lang.Ignore
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -62,6 +61,9 @@ class Business {
             people: Person
     ]
 
+    static constraints = {
+        name nullable: false
+    }
 }
 @Entity
 abstract class Person {

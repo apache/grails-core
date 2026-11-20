@@ -16,13 +16,16 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages.requestmap
 
+import geb.module.TextInput
 import pages.CreatePage
 
 class CreateRequestmapPage extends CreatePage {
-	static content = {
-		createButton(to: ShowRequestmapPage) { create() }
-	}
+
+    static content = {
+        urlField { $('input', name: 'url').module(TextInput) }
+        configAttributeField { $('input', name: 'configAttribute').module(TextInput) }
+        createButton(to: ShowRequestmapPage) { $('input', type: 'submit') }
+    }
 }

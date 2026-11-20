@@ -23,6 +23,7 @@ import grails.artefact.Artefact
 import grails.testing.gorm.DataTest
 import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.Validateable
+import grails.web.databinding.BindAllowed
 import org.grails.validation.ConstraintEvalUtils
 import spock.lang.Issue
 import spock.lang.Specification
@@ -35,9 +36,6 @@ import spock.lang.Specification
  */
 class CommandObjectsSpec extends Specification implements ControllerUnitTest<TestController>, DataTest {
 
-    // Cache the static field helper interface for performance
-    private static final Class<?> STATIC_FIELD_HELPER = Class.forName('grails.validation.Validateable$Trait$StaticFieldHelper')
-
     Closure doWithSpring() {{ ->
         theAnswer(Integer, 42)
     }}
@@ -49,51 +47,25 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
     }}
 
     /**
-     * Clear the static constraints cache for classes that use constraints.
-     * This is necessary because the Validateable trait caches constraints in a static field,
-     * and when tests run sequentially within a fork, the constraints may be evaluated with
-     * a different ApplicationContext, causing stale cached data.
+     * Clear the static constraints cache for classes that use shared constraints.
+     * This prevents test environment pollution because the Validateable trait caches
+     * constraints in a static field, and constraints may be evaluated before doWithConfig()
+     * has registered the shared constraint 'isProg'.
      *
      * Also clear ConstraintEvalUtils.defaultConstraintsMap which caches shared constraints
-     * globally. When tests run sequentially, another test's config may have been cached,
+     * globally. Without this cleanup, another test's config may have been cached,
      * causing the 'isProg' shared constraint to not be found.
-     *
-     * IMPORTANT: We access 'config' first to ensure GrailsApplication is initialized
-     * and Holders.grailsApplication is set. This triggers doWithConfig() which registers
-     * the 'isProg' shared constraint. We then clear the caches so they will be repopulated
-     * from the freshly-configured application when validate() is called.
      */
     def setup() {
-        // Access config to ensure grailsApplication is initialized and Holders is populated
-        // This triggers doWithConfig() which registers the 'isProg' shared constraint
-        assert config != null
-        
-        // Now clear the caches so they will be repopulated from the fresh config
         ConstraintEvalUtils.clearDefaultConstraints()
-        clearConstraintsMapCache(Artist)
-        clearConstraintsMapCache(ArtistSubclass)
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
     }
 
     def cleanup() {
         ConstraintEvalUtils.clearDefaultConstraints()
-        clearConstraintsMapCache(Artist)
-        clearConstraintsMapCache(ArtistSubclass)
-    }
-
-    /**
-     * Clears the private static constraintsMapInternal field in the Validateable trait.
-     * In Groovy 4, static fields in traits are accessed via the Validateable$Trait$StaticFieldHelper
-     * interface which implementing classes implement. This method uses that interface to clear the cache.
-     * This is used for test isolation until a public API is available in Grails 7.1.
-     */
-    private static void clearConstraintsMapCache(Class<?> clazz) {
-        // In Groovy 4, classes implementing a trait with static fields also implement
-        // the TraitName$Trait$StaticFieldHelper interface with getter/setter methods
-        if (STATIC_FIELD_HELPER.isAssignableFrom(clazz)) {
-            // The setter method name follows the pattern: traitFQN__fieldName$set
-            def setterMethod = clazz.getMethod('grails_validation_Validateable__constraintsMapInternal$set', Map)
-            setterMethod.invoke(null, (Map) null)
-        }
+        Artist.clearConstraintsMapCache()
+        ArtistSubclass.clearConstraintsMapCache()
     }
 
     void "Test command object with date binding"() {
@@ -411,10 +383,28 @@ class CommandObjectsSpec extends Specification implements ControllerUnitTest<Tes
         then:
         commandObject.testId == 1
     }
+
+    void '@BindAllowed on a command object action parameter only binds listed fields'() {
+        given:
+        params.displayName = 'Grace Hopper'
+        params.admin = true
+        params.role = 'admin'
+
+        when:
+        def model = controller.methodActionWithBindAllowedUser()
+        def commandObject = model.commandObject
+
+        then:
+        commandObject.displayName == 'Grace Hopper'
+        !commandObject.admin
+        commandObject.role == null
+    }
 }
 
 @Artefact('Controller')
 class TestController {
+    static final String USER_ALLOWED_FIELD = 'displayName'
+
     def methodAction(Person p) {
         [person: p]
     }
@@ -476,6 +466,10 @@ class TestController {
 
     def methodTakingParent(ParentCommand command) {
         [commandObject: command, pId: 2]
+    }
+
+    def methodActionWithBindAllowedUser(@BindAllowed([USER_ALLOWED_FIELD]) UserCommand command) {
+        [commandObject: command]
     }
 }
 
@@ -561,4 +555,10 @@ abstract class WithGeneric<G> implements Validateable {
 }
 
 class ConcreteGenericBased extends WithGeneric<String> {
+}
+
+class UserCommand implements Validateable {
+    String displayName
+    boolean admin
+    String role
 }

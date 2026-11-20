@@ -76,7 +76,15 @@ Account.executeQuery("select distinct a.number from Account a",
 
 // modify the FlushMode of the Query (default is `FlushMode.AUTO`)
 Account.executeQuery("select distinct a.number from Account a",
-                     null, [flushMode: FlushMode.MANUAL])
+                      null, [flushMode: FlushMode.MANUAL])
+
+// enable the query cache when Hibernate query caching is configured
+Account.executeQuery("select distinct a.number from Account a",
+                     null, [cache: true])
+
+// request a pessimistic write lock; locked queries are not query-cacheable
+Account.executeQuery("from Account a where a.branch = :branch",
+                     [branch: 'London'], [lock: true])
 ----
 
 
@@ -99,4 +107,4 @@ Parameters:
 * `query` - An HQL query
 * `positionalParams` - A `List` of parameters for a positional parameterized query
 * `namedParams` - A `Map` of named parameters for a named parameterized query
-* `metaParams` - A `Map` of pagination parameters `max` or/and `offset`, as well as Hibernate query parameters `readOnly`, `fetchSize`, `timeout`, and `flushMode`
+* `metaParams` - A `Map` of pagination parameters `max` and/or `offset`, as well as Hibernate query parameters `readOnly`, `fetchSize`, `timeout`, `flushMode`, `cache`, and `lock`

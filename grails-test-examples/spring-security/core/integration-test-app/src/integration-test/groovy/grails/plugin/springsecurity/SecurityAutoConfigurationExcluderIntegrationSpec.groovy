@@ -21,7 +21,8 @@ package grails.plugin.springsecurity
 import spock.lang.Specification
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.ApplicationContext
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.web.SecurityFilterChain
 
@@ -31,7 +32,7 @@ import grails.testing.mixin.integration.Integration
 class SecurityAutoConfigurationExcluderIntegrationSpec extends Specification {
 
     @Autowired
-    ApplicationContext applicationContext
+    ConfigurableApplicationContext applicationContext
 
     void "SecurityAutoConfigurationExcluder class is on the classpath"() {
         expect:
@@ -40,44 +41,41 @@ class SecurityAutoConfigurationExcluderIntegrationSpec extends Specification {
         )
     }
 
-    void "SecurityAutoConfiguration bean is not registered"() {
-        given:
-        def secAutoConfig = Class.forName(
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration'
-        )
+    void "no Spring Boot SecurityFilterChain bean is registered alongside the plugin"() {
+        given: 'the application context bean factory'
+        ConfigurableListableBeanFactory beanFactory = applicationContext.beanFactory
 
-        expect:
-        applicationContext
-                .getBeanNamesForType(secAutoConfig).length == 0
+        and: 'all SecurityFilterChain beans visible to the application context'
+        def filterChainBeans = applicationContext.getBeanNamesForType(SecurityFilterChain)
+
+        expect: 'none come from Spring Boot security auto-configurations'
+        filterChainBeans.every { name ->
+            !beanFactory.getBeanDefinition(name).beanClassName?.startsWith('org.springframework.boot.security.')
+        }
+
+        and: 'none of the excluded auto-configuration class names are registered as beans'
+        SecurityAutoConfigurationExcluder.excludedAutoConfigurations.each { className ->
+            assert !beanFactory.containsBeanDefinition(className) :
+                    "Spring Boot auto-configuration ${className} should be excluded by SecurityAutoConfigurationExcluder"
+        }
     }
 
-    void "SecurityFilterAutoConfiguration bean is not registered"() {
-        given:
-        def secFilterAutoConfig = Class.forName(
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration'
-        )
+    void "no Spring Boot in-memory UserDetailsService is registered alongside the plugin"() {
+        given: 'the application context bean factory'
+        ConfigurableListableBeanFactory beanFactory = applicationContext.beanFactory
 
-        expect:
-        applicationContext
-                .getBeanNamesForType(secFilterAutoConfig).length == 0
-    }
+        and: 'all UserDetailsService beans visible to the application context'
+        def udsBeans = applicationContext.getBeanNamesForType(UserDetailsService)
 
-    void "no duplicate SecurityFilterChain beans from auto-configuration"() {
-        given:
-        def filterChainBeans = applicationContext
-                .getBeanNamesForType(SecurityFilterChain)
-
-        expect:
-        filterChainBeans.length <= 1
-    }
-
-    void "only the plugin UserDetailsService is registered"() {
-        given:
-        def udsBeans = applicationContext
-                .getBeanNamesForType(UserDetailsService)
-
-        expect:
+        expect: 'at least one (the plugin one) exists'
         udsBeans.length >= 1
-        udsBeans.any { it.contains('userDetailsService') }
+
+        and: 'none come from Spring Boot security auto-configurations'
+        udsBeans.every { name ->
+            !beanFactory.getBeanDefinition(name).beanClassName?.startsWith('org.springframework.boot.security.')
+        }
+
+        and: "Boot's in-memory UserDetailsService is not present"
+        !udsBeans.any { it == 'inMemoryUserDetailsManager' }
     }
 }

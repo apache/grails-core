@@ -18,12 +18,29 @@
  */
 package org.grails.cli;
 
-import jline.TerminalSupport;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
 
-public class TestTerminal extends TerminalSupport {
-    public TestTerminal() {
-        super(true);
-        setAnsiSupported(false);
-        setEchoEnabled(false);
+import java.io.IOException;
+
+/**
+ * A terminal for testing purposes that creates a dumb terminal.
+ */
+public class TestTerminal {
+    
+    private final Terminal terminal;
+    
+    public TestTerminal() throws IOException {
+        this.terminal = TerminalBuilder.builder()
+                .dumb(true)
+                .build();
+    }
+    
+    public Terminal getTerminal() {
+        return terminal;
+    }
+    
+    public void close() throws IOException {
+        terminal.close();
     }
 }

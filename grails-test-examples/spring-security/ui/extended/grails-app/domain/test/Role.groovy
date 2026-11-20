@@ -36,7 +36,7 @@ class Role implements Serializable {
 	}
 
 	static constraints = {
-		authority unique: true
+		authority unique: true, nullable: false
 	}
 
 	static mapping = {

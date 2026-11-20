@@ -53,7 +53,7 @@ public class GSPWriter extends PrintWriter {
     }
 
     public void printlnToResponse(String outVarName, String s) {
-        if (GrailsStringUtils.isEmpty(s)) {
+        if (!GrailsStringUtils.hasLength(s)) {
             return;
         }
 

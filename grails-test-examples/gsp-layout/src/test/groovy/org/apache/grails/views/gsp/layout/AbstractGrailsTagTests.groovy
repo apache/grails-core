@@ -19,7 +19,41 @@
 
 package org.apache.grails.views.gsp.layout
 
+import javax.xml.parsers.DocumentBuilder
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.xpath.XPath
+import javax.xml.xpath.XPathConstants
+import javax.xml.xpath.XPathFactory
+
+import jakarta.servlet.ServletContext
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+
 import com.opensymphony.module.sitemesh.RequestConstants
+
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.w3c.dom.Document
+
+import org.springframework.beans.factory.BeanRegistrar
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.beans.factory.support.BeanRegistryAdapter
+import org.springframework.beans.factory.support.RootBeanDefinition
+import org.springframework.context.ApplicationContext
+import org.springframework.context.MessageSource
+import org.springframework.context.support.GenericApplicationContext
+import org.springframework.context.support.StaticMessageSource
+import org.springframework.core.convert.support.DefaultConversionService
+import org.springframework.core.io.Resource
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockServletContext
+import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.boot.web.server.servlet.context.AnnotationConfigServletWebServerApplicationContext
+import org.springframework.web.servlet.DispatcherServlet
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
+
 import grails.build.support.MetaClassRegistryCleaner
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -29,9 +63,9 @@ import grails.util.GrailsWebMockUtil
 import grails.util.Holders
 import grails.util.Metadata
 import grails.web.pages.GroovyPagesUriService
-import jakarta.servlet.ServletContext
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
+import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
+import org.apache.grails.web.layout.GrailsHTMLPageParser
+import org.apache.grails.web.layout.GSPGrailsLayoutPage
 import org.grails.buffer.FastStringWriter
 import org.grails.config.PropertySourcesConfig
 import org.grails.core.artefact.ControllerArtefactHandler
@@ -44,6 +78,7 @@ import org.grails.gsp.GroovyPagesTemplateEngine
 import org.grails.gsp.compiler.GrailsLayoutPreprocessor
 import org.grails.plugins.DefaultGrailsPlugin
 import org.grails.plugins.MockGrailsPluginManager
+import org.grails.plugins.codecs.DefaultCodecLookup
 import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagOutput
 import org.grails.taglib.encoder.OutputContextLookupHelper
@@ -55,39 +90,7 @@ import org.grails.web.pages.DefaultGroovyPagesUriService
 import org.grails.web.pages.GSPResponseWriter
 import org.grails.web.servlet.context.support.WebRuntimeSpringConfiguration
 import org.grails.web.servlet.mvc.GrailsWebRequest
-import org.apache.grails.web.layout.GSPGrailsLayoutPage
-import org.apache.grails.web.layout.GrailsHTMLPageParser
-import org.apache.grails.web.layout.EmbeddedGrailsLayoutView
 import org.grails.web.util.GrailsApplicationAttributes
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.BeforeEach
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory
-import org.springframework.beans.factory.support.RootBeanDefinition
-import org.springframework.boot.web.servlet.context.AnnotationConfigServletWebServerApplicationContext
-import org.springframework.context.ApplicationContext
-import org.springframework.context.MessageSource
-import org.springframework.context.support.StaticMessageSource
-import org.springframework.core.convert.support.DefaultConversionService
-import org.springframework.core.io.Resource
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.mock.web.MockServletContext
-import org.springframework.ui.context.Theme
-import org.springframework.ui.context.ThemeSource
-import org.springframework.ui.context.support.SimpleTheme
-import org.springframework.web.context.WebApplicationContext
-import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.servlet.DispatcherServlet
-import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver
-import org.springframework.web.servlet.support.JstlUtils
-import org.springframework.web.servlet.theme.SessionThemeResolver
-import org.w3c.dom.Document
-
-import javax.xml.parsers.DocumentBuilder
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.xpath.XPath
-import javax.xml.xpath.XPathConstants
-import javax.xml.xpath.XPathFactory
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertFalse
@@ -234,7 +237,7 @@ abstract class AbstractGrailsTagTests {
         return result
     }
 
-    private void outputTagResult(Writer taglibWriter, boolean returnsObject, Object tagresult) {
+    protected void outputTagResult(Writer taglibWriter, boolean returnsObject, Object tagresult) {
         if (returnsObject && tagresult != null && !(tagresult instanceof Writer)) {
             taglibWriter.print(tagresult)
         }
@@ -323,14 +326,12 @@ abstract class AbstractGrailsTagTests {
         }
         mockManager.registerProvidedArtefacts(grailsApplication)
         def springConfig = new WebRuntimeSpringConfiguration(ctx)
+        // Legacy harness: boots from the plugin pipeline, not Spring Boot auto-config,
+        // so CodecsConfiguration (the normal codecLookup source) is never processed here.
+        springConfig.addSingletonBean('codecLookup', DefaultCodecLookup)
 
         webRequest = GrailsWebMockUtil.bindMockWebRequest(ctx)
         onInit()
-        try {
-            JstlUtils.exposeLocalizationContext(webRequest.getRequest(), null)
-        } catch (Throwable ignore) {
-            // ignore
-        }
 
         servletContext = webRequest.servletContext
         Holders.servletContext = servletContext
@@ -340,7 +341,10 @@ abstract class AbstractGrailsTagTests {
 
         dependentPlugins*.doWithRuntimeConfiguration(springConfig)
 
-        grailsApplication.mainContext = springConfig.getUnrefreshedApplicationContext()
+        GenericApplicationContext unrefreshedContext = springConfig.getUnrefreshedApplicationContext() as GenericApplicationContext
+        applyPluginBeanRegistrars(dependentPlugins, unrefreshedContext)
+
+        grailsApplication.mainContext = unrefreshedContext
         appCtx = springConfig.getApplicationContext()
 
         ctx.servletContext.setAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT, appCtx)
@@ -357,16 +361,26 @@ abstract class AbstractGrailsTagTests {
         }
     }
 
-    private initRequestAndResponse() {
-        request = webRequest.currentRequest
-        initThemeSource(request, messageSource)
-        request.characterEncoding = 'utf-8'
-        response = webRequest.currentResponse
+    /**
+     * Applies each plugin's {@link BeanRegistrar} to the unrefreshed context, the second half of
+     * what the runtime does for a plugin: {@code doWithRuntimeConfiguration} drains the deprecated
+     * {@code doWithSpring} DSL, then the registrars run. A harness that only does the former sees
+     * none of the beans a plugin contributes through {@code beanRegistrar()}.
+     */
+    private static void applyPluginBeanRegistrars(List<DefaultGrailsPlugin> plugins, GenericApplicationContext context) {
+        for (DefaultGrailsPlugin plugin in plugins) {
+            BeanRegistrar registrar = plugin.beanRegistrar
+            if (registrar != null) {
+                new BeanRegistryAdapter(context, context.beanFactory, context.environment, registrar.getClass())
+                        .register(registrar)
+            }
+        }
     }
 
-    private void initThemeSource(request, MessageSource messageSource) {
-        request.setAttribute(DispatcherServlet.THEME_SOURCE_ATTRIBUTE, new MockThemeSource(messageSource))
-        request.setAttribute(DispatcherServlet.THEME_RESOLVER_ATTRIBUTE, new SessionThemeResolver())
+    private initRequestAndResponse() {
+        request = webRequest.currentRequest
+        request.characterEncoding = 'utf-8'
+        response = webRequest.currentResponse
     }
 
     @AfterEach
@@ -568,15 +582,4 @@ abstract class AbstractGrailsTagTests {
     protected final void assertXPathNotExists(Document doc, String expr) {
         assertFalse xpath.evaluate(expr, doc, XPathConstants.BOOLEAN)
     }
-}
-
-class MockThemeSource implements ThemeSource {
-
-    private messageSource
-
-    MockThemeSource(MessageSource messageSource) {
-        this.messageSource = messageSource
-    }
-
-    Theme getTheme(String themeName) { new SimpleTheme(themeName, messageSource) }
 }

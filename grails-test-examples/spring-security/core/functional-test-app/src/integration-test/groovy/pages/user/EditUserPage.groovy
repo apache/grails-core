@@ -16,14 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages.user
 
+import geb.module.Checkbox
+import geb.module.PasswordInput
+import geb.module.TextInput
 import pages.EditPage
 
 class EditUserPage extends EditPage {
-	static content = {
-		updateButton(to: ShowUserPage) { $('input', value: 'Update') }
-		deleteButton(to: ListUserPage) { $('input', value: 'Delete') }
-	}
+
+    static content = {
+        usernameField { $('input', name: 'username').module(TextInput) }
+        passwordField { $('input', name: 'password').module(PasswordInput) }
+        enabledCheckbox { $('input', id: 'enabled').module(Checkbox) }
+        updateButton { $('input', value: 'Update') }
+        deleteButton { $('input', value: 'Delete') }
+    }
 }

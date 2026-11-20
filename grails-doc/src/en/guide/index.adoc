@@ -28,7 +28,7 @@ Puneet Behl, Graeme Rocher, Peter Ledbrook, Marc Palmer, Jeff Brown, Luke Daley,
 include::introduction.adoc[]
 
 [[whatsNew]]
-=== What's new in Grails 7?
+=== What's new in Grails {grailsMajorVersion}?
 
 include::introduction/whatsNew.adoc[]
 
@@ -164,6 +164,11 @@ include::conf/config/logging/loggerName.adoc[]
 ===== Masking Request Parameters From Stacktrace Logs
 
 include::conf/config/logging/maskingRequestParametersFromStacktraceLogs.adoc[]
+
+[[loggingFullStackTraces]]
+===== Logging Full Stack Traces
+
+include::conf/config/logging/loggingFullStackTraces.adoc[]
 
 [[externalLoggingConfiguration]]
 ===== External Logging Configuration
@@ -1005,6 +1010,11 @@ include::testing/integrationTesting.adoc[]
 
 include::testing/functionalTesting.adoc[]
 
+[[testPhases]]
+=== Custom Test Phases
+
+include::testing/testPhases.adoc[]
+
 [[i18n]]
 == Internationalization
 
@@ -1064,11 +1074,6 @@ include::security/securityPlugins.adoc[]
 ==== Spring Security
 
 include::security/securityPlugins/springSecurity.adoc[]
-
-[[shiro]]
-==== Shiro
-
-include::security/securityPlugins/shiro.adoc[]
 
 [[mail]]
 == Mail
@@ -1328,17 +1333,32 @@ include::deployment.adoc[]
 [[deploymentStandalone]]
 === Standalone
 
-include::deployment/deploymentStandalone.adoc[]
+include::deployment/deploymentStandalone.adoc[leveloffset=+2]
 
 [[deploymentContainer]]
-=== Container Deployment (e.g. Tomcat)
+=== External Servlet Container Deployment
 
-include::deployment/deploymentContainer.adoc[]
+include::deployment/deploymentContainer.adoc[leveloffset=+2]
+
+[[deploymentLayeredBuilds]]
+=== OCI Images and Layered Builds
+
+include::deployment/deploymentLayeredBuilds.adoc[leveloffset=+2]
 
 [[deploymentTasks]]
-=== Deployment Configuration Tasks
+=== Production Configuration
 
-include::deployment/deploymentTasks.adoc[]
+include::deployment/deploymentTasks.adoc[leveloffset=+2]
+
+[[deploymentAot]]
+=== Ahead-of-Time Processing
+
+include::deployment/deploymentAot.adoc[leveloffset=+1]
+
+[[deploymentAotCache]]
+=== Ahead-of-Time Caching
+
+include::deployment/deploymentAotCache.adoc[leveloffset=+1]
 
 [[contributing]]
 == Contributing to Grails
@@ -1890,10 +1910,10 @@ include::ref/Database Mapping/table.adoc[]
 
 include::ref/Database Mapping/type.adoc[]
 
-[[ref-database-mapping-updateable]]
-==== updateable
+[[ref-database-mapping-updatable]]
+==== updatable
 
-include::ref/Database Mapping/updateable.adoc[]
+include::ref/Database Mapping/updatable.adoc[]
 
 [[ref-database-mapping-version]]
 ==== version

@@ -55,7 +55,7 @@ class DefaultSchemaHandler implements SchemaHandler {
 
     @Override
     void useSchema(Connection connection, String name) {
-        String useStatement = String.format(useSchemaStatement, name)
+        String useStatement = String.format(useSchemaStatement, quoteName(connection, name))
         log.debug('Executing SQL Set Schema Statement: {}', useStatement)
         connection
                 .createStatement()
@@ -69,11 +69,29 @@ class DefaultSchemaHandler implements SchemaHandler {
 
     @Override
     void createSchema(Connection connection, String name) {
-        String schemaCreateStatement = String.format(createSchemaStatement, name)
+        String schemaCreateStatement = String.format(createSchemaStatement, quoteName(connection, name))
         log.debug('Executing SQL Create Schema Statement: {}', schemaCreateStatement)
         connection
                 .createStatement()
                 .execute(schemaCreateStatement)
+    }
+
+    /**
+     * Quotes a schema/catalog identifier using the JDBC-reported identifier quote character so
+     * that schema names are never spliced as raw SQL tokens.  Any embedded occurrences of the
+     * quote character itself are stripped from the name to prevent escaping the enclosure.
+     * <p>
+     * If the driver reports {@code " "} (space) as the quote string — meaning identifier quoting
+     * is not supported — the name is returned as-is (preserving existing behaviour).
+     */
+    protected static String quoteName(Connection connection, String name) {
+        String q = connection.metaData.identifierQuoteString
+        if (q == null || q.trim().isEmpty()) {
+            return name
+        }
+        // Remove every occurrence of the quote char inside the name to prevent breakout
+        String sanitized = name.replace(q, '')
+        return "${q}${sanitized}${q}"
     }
 
     @Override

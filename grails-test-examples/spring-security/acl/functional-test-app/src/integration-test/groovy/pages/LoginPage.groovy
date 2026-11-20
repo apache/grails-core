@@ -23,7 +23,7 @@ import geb.Page
 
 class LoginPage extends Page {
 
-	static url = 'login/auth'
+	static url = '/login/auth'
 
 	static at = { title == 'Login' }
 
@@ -31,6 +31,6 @@ class LoginPage extends Page {
 		loginForm { $('form') }
 		username { $('input', type: 'text',     name: 'username') }
 		password { $('input', type: 'password', name: 'password') }
-		loginButton { $('input', type: 'submit', value: 'Login') }
+		loginButton { $('#submit') }
 	}
 }

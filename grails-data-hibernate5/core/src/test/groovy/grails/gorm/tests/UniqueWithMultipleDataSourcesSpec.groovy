@@ -36,20 +36,24 @@ import spock.lang.Specification
  */
 class UniqueWithMultipleDataSourcesSpec extends Specification {
 
-    @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-            'dataSource.dbCreate': 'update',
-            'dataSource.dialect': H2Dialect.name,
-            'dataSource.formatSql': 'true',
-            'hibernate.flush.mode': 'COMMIT',
+    @Shared
+    Map config = [
+            'dataSource.url'        : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.dbCreate'   : 'update',
+            'dataSource.dialect'    : H2Dialect.name,
+            'dataSource.formatSql'  : 'true',
+            'hibernate.flush.mode'  : 'COMMIT',
             'hibernate.cache.queries': 'true',
-            'hibernate.cache':['use_second_level_cache':true,'region.factory_class':'org.hibernate.cache.ehcache.EhCacheRegionFactory'],
+            'hibernate.cache'       : ['use_second_level_cache': true, 'region.factory_class': 'org.hibernate.cache.ehcache.EhCacheRegionFactory'],
             'hibernate.hbm2ddl.auto': 'create',
-            'dataSources.second':[url:"jdbc:h2:mem:second;LOCK_TIMEOUT=10000"],
+            'dataSources.second'    : [url: "jdbc:h2:mem:second;LOCK_TIMEOUT=10000"],
     ]
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),Abc)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
+    @Shared
+    @AutoCleanup
+    HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), Abc)
+    @Shared
+    PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
     @Ignore
@@ -60,7 +64,7 @@ class UniqueWithMultipleDataSourcesSpec extends Specification {
         abc.save()
 
         Abc abc1 = new Abc(temp: "testing")
-        Abc.second.withNewSession{
+        Abc.second.withNewSession {
             abc1.second.save()
         }
 

@@ -87,6 +87,7 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
 class HibernateEntityTransformation implements ASTTransformation, CompilationUnitAware, TransformWithPriority {
 
     private static final ClassNode MY_TYPE = new ClassNode(grails.gorm.hibernate.annotation.ManagedEntity)
+    private static final Object HIBERNATE_TRANSFORM_APPLIED_MARKER = new Object()
     private static final Object APPLIED_MARKER = new Object()
 
 //    final boolean available = ClassUtils.isPresent("org.hibernate.SessionFactory") && Boolean.valueOf(System.getProperty("hibernate.enhance", "true"))
@@ -111,7 +112,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
     }
 
     void visit(ClassNode classNode, SourceUnit sourceUnit) {
-        if (classNode.getNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER) == APPLIED_MARKER) {
+        if (classNode.getNodeMetaData(HIBERNATE_TRANSFORM_APPLIED_MARKER) == APPLIED_MARKER) {
             return
         }
 
@@ -165,8 +166,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getInterceptor',
                 Modifier.PUBLIC,
                 persistentAttributeInterceptorClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(interceptorField))
         )
         classNode.addMethod(getInterceptorMethod)
@@ -180,7 +181,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(p1),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(interceptorField), varX(p1))
         )
         classNode.addMethod(setInterceptorMethod)
@@ -192,8 +193,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getEntityInstance',
                 Modifier.PUBLIC,
                 ClassHelper.OBJECT_TYPE,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX('this'))
         )
         classNode.addMethod(getEntityInstanceMethod)
@@ -205,8 +206,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getEntityEntry',
                 Modifier.PUBLIC,
                 entityEntryClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(entityEntryHolderField))
         )
         classNode.addMethod(getEntityEntryMethod)
@@ -220,7 +221,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(entityEntryParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(entityEntryHolderField), varX(entityEntryParam))
         )
         classNode.addMethod(setEntityEntryMethod)
@@ -232,8 +233,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getPreviousManagedEntity',
                 Modifier.PUBLIC,
                 managedEntityClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(previousManagedEntityField))
         )
         classNode.addMethod(getPreviousManagedEntityMethod)
@@ -245,8 +246,8 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 '$$_hibernate_getNextManagedEntity',
                 Modifier.PUBLIC,
                 managedEntityClassNode,
-                AstUtils.ZERO_PARAMETERS,
-                null,
+                Parameter.EMPTY_ARRAY,
+                ClassNode.EMPTY_ARRAY,
                 returnS(varX(nextManagedEntityField))
         )
         classNode.addMethod(getNextManagedEntityMethod)
@@ -260,7 +261,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(previousParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(previousManagedEntityField), varX(previousParam))
         )
         classNode.addMethod(setPreviousManagedEntityMethod)
@@ -274,7 +275,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
                 Modifier.PUBLIC,
                 ClassHelper.VOID_TYPE,
                 params(nextParam),
-                null,
+                ClassNode.EMPTY_ARRAY,
                 assignS(varX(nextManagedEntityField), varX(nextParam))
         )
         classNode.addMethod(setNextManagedEntityMethod)
@@ -337,7 +338,7 @@ class HibernateEntityTransformation implements ASTTransformation, CompilationUni
             }
         }
 
-        classNode.putNodeMetaData(AstUtils.TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
+        classNode.putNodeMetaData(HIBERNATE_TRANSFORM_APPLIED_MARKER, APPLIED_MARKER)
     }
 
     @Override

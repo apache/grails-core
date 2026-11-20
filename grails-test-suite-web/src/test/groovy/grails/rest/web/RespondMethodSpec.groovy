@@ -292,10 +292,11 @@ class BookController {
 }
 @Entity
 class Book {
+    Long id
     String title
 
     static constraints = {
-        title blank:false
+        title blank:false, nullable: false
     }
 }
 

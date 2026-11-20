@@ -49,6 +49,9 @@ class MultiTenancySpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
+        // Clear singleton GormRegistry state leaked by prior specs so this datastore is the one
+        // resolved for the shared multi-tenant entities.
+        org.grails.datastore.gorm.GormRegistry.reset()
         Map config = [
                 "grails.gorm.multiTenancy.mode"               :"DISCRIMINATOR",
                 "grails.gorm.multiTenancy.tenantResolverClass": MyResolver,

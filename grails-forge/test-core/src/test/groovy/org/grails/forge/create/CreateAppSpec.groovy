@@ -21,6 +21,9 @@ package org.grails.forge.create
 
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
+import org.grails.forge.options.DevelopmentReloading
+import org.grails.forge.options.GormImpl
+import org.grails.forge.options.JdkVersion
 import org.grails.forge.utils.CommandSpec
 
 class CreateAppSpec extends CommandSpec {
@@ -44,10 +47,42 @@ class CreateAppSpec extends CommandSpec {
             dependencies are included for OperatingSystem.MACOS_ARCH64 and this
             causes the integrationTest task to fail.
         */
-        final String output = executeGradle("build -x iT").getOutput()
+        final String output = executeGradle("build -x integrationTest").getOutput()
 
         then:
         output.contains('BUILD SUCCESSFUL')
+    }
+
+    void "test create-app with grails-compile-static compiles statically"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-compile-static'])
+
+        when:
+        final String output = executeGradle('compileGroovyPages').getOutput()
+
+        then:
+        output.contains('BUILD SUCCESSFUL')
+    }
+
+    void "grails-compile-static compiles the artefacts that #features generate for a #applicationType application with #gormImpl"() {
+        given:
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-compile-static'] + features, applicationType,
+                DevelopmentReloading.DEFAULT_OPTION, JdkVersion.DEFAULT_OPTION, gormImpl)
+
+        when:
+        final String output = executeGradle(tasks as String[]).getOutput()
+
+        then:
+        output.contains('BUILD SUCCESSFUL')
+
+        where:
+        features                         | applicationType          | gormImpl            | tasks
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE5 | ['compileGroovy', 'compileGroovyPages']
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        ['spring-boot-starter-security'] | ApplicationType.WEB      | GormImpl.MONGODB    | ['compileGroovy', 'compileGroovyPages']
+        ['grails-spring-security']       | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        ['grails-spring-security-ui']    | ApplicationType.WEB      | GormImpl.HIBERNATE7 | ['compileGroovy', 'compileGroovyPages']
+        []                               | ApplicationType.REST_API | GormImpl.HIBERNATE7 | ['compileGroovy']
     }
 
     void "test create-app contains i18n files"() {
@@ -84,14 +119,17 @@ class CreateAppSpec extends CommandSpec {
 
     void "test create-app with micronaut feature"() {
         given:
-        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-micronaut'], ApplicationType.WEB)
+        // Micronaut features require JDK 25+ because micronaut-core's ScopedValues
+        // references java.lang.ScopedValue.CallableOp (JEP 506, finalized in JDK 25).
+        generateProject(OperatingSystem.MACOS_ARCH64, ['grails-micronaut'], ApplicationType.WEB,
+                DevelopmentReloading.DEFAULT_OPTION, JdkVersion.JDK_25)
 
         def gradleProperties = new File(dir, 'gradle.properties')
         def gradleBuildFile = new File(dir, 'build.gradle')
 
         expect:
         gradleProperties.exists()
-        gradleProperties.text.contains('micronautPlatformVersion=4.10.1')
+        gradleProperties.text.contains('micronautPlatformVersion=4.10.16')
         gradleBuildFile.exists()
         gradleBuildFile.text.contains('implementation "org.apache.grails:grails-micronaut"')
     }

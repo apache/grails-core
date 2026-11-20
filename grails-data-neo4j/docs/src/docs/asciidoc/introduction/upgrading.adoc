@@ -17,6 +17,10 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+==== Operations Inside `withConnection` Use Its Connection
+
+Inside a `withConnection` block, a static method called on the class, such as `Book.list()`, and an instance method such as `book.save()` now use the block's connection. Previously they used the default connection, and only the methods called without naming the class, such as `list()`, used the block's. The same now holds inside a session or transaction opened through a connection, such as `Book.moreBooks.withTransaction { }`, and inside a method annotated `@Transactional(connection = 'moreBooks')` for a class that declares that connection. Code that relied on reaching the default connection from inside such a block this way should name it, as in ``Book.'default'.list()``.
+
 ==== Dependency Upgrades
 
 GORM 7.1 supports Apache Groovy 3, Java 14, Neo4J Driver 4.3 and Spring 5.3.x.

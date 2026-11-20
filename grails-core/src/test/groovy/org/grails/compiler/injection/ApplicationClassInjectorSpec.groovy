@@ -32,9 +32,9 @@ class ApplicationClassInjectorSpec extends Specification {
 
         where:
         className << [
-            'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
-            'org.springframework.boot.autoconfigure.reactor.ReactorAutoConfiguration',
-            'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration'
+            'org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration',
+            'org.springframework.boot.reactor.autoconfigure.ReactorAutoConfiguration',
+            'org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration'
         ]
     }
 
@@ -53,7 +53,7 @@ class ApplicationClassInjectorSpec extends Specification {
         where:
         expected << [
             [
-                    excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
+                    excludeClass: 'org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration',
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
                     systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]

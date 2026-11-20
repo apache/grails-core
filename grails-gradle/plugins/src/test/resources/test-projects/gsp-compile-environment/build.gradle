@@ -8,9 +8,3 @@ plugins {
 dependencies {
     implementation files('compiler')
 }
-
-// the servlet API the plugin adds for the page compiler is of no use to the stand-in, and
-// resolving it would need a repository
-configurations.named('gspCompile') {
-    withDependencies { it.clear() }
-}

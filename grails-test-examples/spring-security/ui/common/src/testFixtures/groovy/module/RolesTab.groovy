@@ -27,12 +27,15 @@ import geb.navigator.Navigator
 class RolesTab extends Module {
 
     static content = {
-        tab { $('a', href: '#tab-roles') }
+        tab {
+            // Needs to be dynamic to ensure not becoming stale
+            $('button', 'data-bs-target': '#tab-roles', dynamic: true)
+        }
     }
 
     void select() {
         tab.click()
-        waitFor { $('li', 'aria-controls': 'tab-roles', 'aria-selected': 'true') }
+        waitFor { $('button', 'aria-controls': 'tab-roles', 'aria-selected': 'true') }
     }
 
     int totalRoles() {

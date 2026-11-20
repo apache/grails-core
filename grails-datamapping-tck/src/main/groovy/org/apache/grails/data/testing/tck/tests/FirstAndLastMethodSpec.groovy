@@ -28,7 +28,7 @@ import org.apache.grails.data.testing.tck.domains.SimpleWidgetWithNonStandardId
 class FirstAndLastMethodSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId])
+        manager.registerDomainClasses(SimpleWidget, PersonWithCompositeKey, SimpleWidgetWithNonStandardId)
     }
 
     void "Test first and last method with empty datastore"() {
@@ -171,7 +171,7 @@ class FirstAndLastMethodSpec extends GrailsDataTckSpec {
         assert new PersonWithCompositeKey(firstName: 'Steve', lastName: 'Harris', age: 56).save()
         assert new PersonWithCompositeKey(firstName: 'Dave', lastName: 'Murray', age: 54).save()
         assert new PersonWithCompositeKey(firstName: 'Adrian', lastName: 'Smith', age: 55).save()
-        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save()
+        assert new PersonWithCompositeKey(firstName: 'Bruce', lastName: 'Dickinson', age: 53).save(flush: true)
         assert PersonWithCompositeKey.count() == 4
 
         when:

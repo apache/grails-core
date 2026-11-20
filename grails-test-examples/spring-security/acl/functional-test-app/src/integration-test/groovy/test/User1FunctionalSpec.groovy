@@ -16,19 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package test
 
-import grails.testing.mixin.integration.Integration
-import org.springframework.security.acls.domain.BasePermission
-
+import pages.AccessDeniedPage
+import pages.DeleteReportPage
 import pages.EditReportPage
 import pages.ListReportPage
 import pages.ReportGrantPage
 import pages.ShowReportPage
-import spock.lang.Stepwise
+import spock.lang.Unroll
 
-@Stepwise
+import grails.testing.mixin.integration.Integration
+
+import static org.springframework.security.acls.domain.BasePermission.READ
+import static org.springframework.security.acls.domain.BasePermission.WRITE
+
 @Integration
 class User1FunctionalSpec extends AbstractSecuritySpec {
 
@@ -40,144 +42,137 @@ class User1FunctionalSpec extends AbstractSecuritySpec {
 
 	void 'check tags'() {
 		when:
-		go('tagLibTest/test')
+		go('/tagLibTest/test')
 
 		then:
-		pageSource.contains('test 1 true 1')
-		pageSource.contains('test 2 true 1')
-		pageSource.contains('test 3 true 1')
-		pageSource.contains('test 4 true 1')
-		pageSource.contains('test 5 true 1')
-		pageSource.contains('test 6 true 1')
+		with(pageSource) {
+			contains('test 1 true 1')
+			contains('test 2 true 1')
+			contains('test 3 true 1')
+			contains('test 4 true 1')
+			contains('test 5 true 1')
+			contains('test 6 true 1')
 
-		pageSource.contains('test 1 true 13')
-		pageSource.contains('test 2 true 13')
-		pageSource.contains('test 3 true 13')
-		pageSource.contains('test 4 true 13')
-		pageSource.contains('test 5 true 13')
-		pageSource.contains('test 6 true 13')
+			contains('test 1 true 13')
+			contains('test 2 true 13')
+			contains('test 3 true 13')
+			contains('test 4 true 13')
+			contains('test 5 true 13')
+			contains('test 6 true 13')
 
-		pageSource.contains('test 1 false 80')
-		pageSource.contains('test 2 false 80')
-		pageSource.contains('test 3 false 80')
-		pageSource.contains('test 4 false 80')
-		pageSource.contains('test 5 false 80')
-		pageSource.contains('test 6 false 80')
+			contains('test 1 false 80')
+			contains('test 2 false 80')
+			contains('test 3 false 80')
+			contains('test 4 false 80')
+			contains('test 5 false 80')
+			contains('test 6 false 80')
+		}
 	}
 
+	@Unroll
 	void 'view all (1-67)'() {
 		when:
-		go("report/show?number=$i")
+		def page = to(ShowReportPage, i)
 
 		then:
-		pageSource.contains("report$i")
+		page.name == "report$i"
 
 		where:
 		i << (1..67)
 	}
 
+	@Unroll
 	void 'view all (68-100)'() {
 		when:
-		go("report/show?number=$i")
+		via(ShowReportPage, i)
 
 		then:
-		pageSource.contains('Access Denied')
+		at(AccessDeniedPage)
 
 		where:
-		i << (68..100)
+		i << (68..69)
 	}
 
 	void 'edit report 11'() {
 		when:
-		go('report/edit?number=11')
-		def editPage = at(EditReportPage)
+		def page = to(EditReportPage, 11)
 
 		then:
-		$('form').name == 'report11'
+		page.nameField.text == 'report11'
 
 		when:
-		name = 'report11_new'
-		editPage.updateButton.click()
+		page.nameField.text = 'report11_new'
+		page.updateButton.click()
+		page = at(ShowReportPage)
 
 		then:
-		at(ShowReportPage)
-		pageSource.contains('report11_new')
+		page.name == 'report11_new'
 	}
 
 	void 'delete report 11'() {
 		when:
-		go('report/delete?number=11')
-		def listPage = at(ListReportPage)
+		via(DeleteReportPage, 11)
+		def page = at(ListReportPage)
 
 		then:
-		message == 'Report 11 deleted'
-		listPage.reportRows.size() == 66
+		page.message == 'Report 11 deleted'
+		page.reportRows.size() == 66
 	}
 
 	void 'grant edit 12'() {
 		when:
-		go('report/grant?number=12')
-		def grantPage = at(ReportGrantPage)
+		def page = to(ReportGrantPage, 12)
 
 		then:
-		pageSource.contains('Grant permission for report12')
+		page.heading == 'Grant permission for report12'
 
 		when:
-		recipient = 'user2'
-		permission = BasePermission.READ.mask.toString()
-		grantPage.grantButton.click()
+		page.grantPermission('user2', READ)
+		page = at(ShowReportPage)
+
+		then:
+		page.message == "Permission $READ.mask granted on Report 12 to user2"
+
+		when:
+		page = to(ReportGrantPage, 12)
+
+		then:
+		page.heading == 'Grant permission for report12'
+
+		when:
+		page.grantPermission('user2', WRITE)
 
 		then:
 		at(ShowReportPage)
-		pageSource.contains("Permission $BasePermission.READ.mask granted on Report 12 to user2")
-
-		when:
-		go('report/grant?number=12')
-		grantPage = at(ReportGrantPage)
-
-		then:
-		pageSource.contains('Grant permission for report12')
-
-		when:
-		recipient = 'user2'
-		permission = BasePermission.WRITE.mask.toString()
-		grantPage.grantButton.click()
-
-		then:
-		at(ShowReportPage)
-		pageSource.contains("Permission $BasePermission.WRITE.mask granted on Report 12 to user2")
+		page.message == "Permission $WRITE.mask granted on Report 12 to user2"
 	}
 
 	void 'grant edit 13'() {
 		when:
-		go('report/grant?number=13')
-		def grantPage = at(ReportGrantPage)
+		def page = to(ReportGrantPage, 13)
 
 		then:
-		pageSource.contains('Grant permission for report13')
+		page.heading == 'Grant permission for report13'
 
 		when:
-		recipient = 'user2'
-		permission = BasePermission.WRITE.mask.toString()
-		grantPage.grantButton.click()
+		page.grantPermission('user2', WRITE)
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		at(AccessDeniedPage)
 	}
 
 	void 'edit report 20'() {
 		when:
-		go('report/edit?number=20')
-		def editPage = at(EditReportPage)
+		def page = to(EditReportPage, 20)
 
 		then:
-		$('form').name == 'report20'
+		page.nameField.text == 'report20'
 
 		when:
-		name = 'report20_new'
-		editPage.updateButton.click()
+		page.nameField.text = 'report20_new'
+		page.updateButton.click()
 
 		then:
-		waitFor { pageSource.contains('Access Denied') }
+		at(AccessDeniedPage)
 	}
 }

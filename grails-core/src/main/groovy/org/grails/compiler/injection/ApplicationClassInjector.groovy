@@ -24,6 +24,7 @@ import org.apache.groovy.ast.tools.AnnotatedNodeUtils
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
+import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.ListExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
@@ -62,9 +63,9 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
 
     public static final String EXCLUDE_MEMBER = 'exclude'
     public static final List<String> EXCLUDED_AUTO_CONFIGURE_CLASSES = [
-            'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
-            'org.springframework.boot.autoconfigure.reactor.ReactorAutoConfiguration',
-            'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration'
+            'org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration',
+            'org.springframework.boot.reactor.autoconfigure.ReactorAutoConfiguration',
+            'org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration'
     ]
 
     /**
@@ -83,7 +84,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
     static final List<Map<String, String>> CONDITIONAL_EXCLUSIONS = [
             [
                     pluginClass: 'org.grails.plugins.databasemigration.DatabaseMigrationGrailsPlugin',
-                    excludeClass: 'org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration',
+                    excludeClass: 'org.springframework.boot.liquibase.autoconfigure.LiquibaseAutoConfiguration',
                     systemProperty: 'grails.autoconfigure.exclude.liquibase'
             ]
     ]
@@ -120,7 +121,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 ]
                 classNode.addStaticInitializerStatements(statements, true)
 
-                def packageNamesMethod = classNode.getMethod('packageNames', GrailsASTUtils.ZERO_PARAMETERS)
+                def packageNamesMethod = classNode.getMethod('packageNames', Parameter.EMPTY_ARRAY)
 
                 if (packageNamesMethod == null || packageNamesMethod.declaringClass != classNode) {
                     def collectionClassNode = GrailsASTUtils.replaceGenericsPlaceholders(ClassHelper.make(Collection), [E: ClassHelper.make(String)])
@@ -135,7 +136,7 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                             GrailsASTUtils.error(source, classNode, "Do not place Groovy sources in common package names such as 'org', 'com', 'io' or 'net' as this can result in performance degradation of classpath scanning")
                         }
                         packageNamesBody.addStatement(new ReturnStatement(new ExpressionStatement(new ListExpression(packageNames.toList()))))
-                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod('packageNames', Modifier.PUBLIC, collectionClassNode, ZERO_PARAMETERS, null, packageNamesBody))
+                        AnnotatedNodeUtils.markAsGenerated(classNode, classNode.addMethod('packageNames', Modifier.PUBLIC, collectionClassNode, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY, packageNamesBody))
                     }
                 }
 
@@ -143,7 +144,6 @@ class ApplicationClassInjector implements GrailsArtefactClassInjector {
                 addAnnotation('org.springframework.boot.SpringBootConfiguration', classNode)?.with {
                     GrailsASTUtils.addExpressionToAnnotationMember(it, 'proxyBeanMethods', constX(false))
                 }
-                addAnnotation('org.springframework.web.servlet.config.annotation.EnableWebMvc', classNode, 'jakarta.servlet.ServletContext')
                 addAnnotation('org.springframework.boot.autoconfigure.EnableAutoConfiguration', classNode)?.with { annotation ->
                     EXCLUDED_AUTO_CONFIGURE_CLASSES.each {
                         GrailsASTUtils.addExpressionToAnnotationMember(

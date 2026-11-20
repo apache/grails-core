@@ -32,7 +32,7 @@ import static grails.mongodb.mapping.MappingBuilder.document
 class WriteConcernSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([SafeWrite, UnacknowledgedWrite])
+        manager.registerDomainClasses(SafeWrite, UnacknowledgedWrite)
     }
 
     void "Test that the correct WriteConcern is used to save entities"() {

@@ -36,7 +36,7 @@ class AclSid implements Serializable {
 	}
 
 	static constraints = {
-		principal unique: 'sid'
-		sid size: 1..255
+		principal unique: 'sid', nullable: false
+		sid size: 1..255, nullable: false
 	}
 }

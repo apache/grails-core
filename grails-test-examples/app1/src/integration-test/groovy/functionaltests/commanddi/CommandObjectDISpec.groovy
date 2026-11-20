@@ -42,7 +42,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
         then: "service is injected"
         response.assertJson(200, [
                 serviceInjected: true,
-                serviceId: 'ValidationHelperService-v1'
+                serviceId      : 'ValidationHelperService-v1'
         ])
     }
 
@@ -52,10 +52,10 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
         then: "both services are injected"
         response.assertJson(200, [
-                pricingServiceInjected: true,
+                pricingServiceInjected     : true,
                 notificationServiceInjected: true,
-                pricingServiceId: 'PricingService-v1',
-                notificationServiceId: 'NotificationService-v1'
+                pricingServiceId           : 'PricingService-v1',
+                notificationServiceId      : 'NotificationService-v1'
         ])
     }
 
@@ -66,7 +66,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
         then: "service is injected via @Autowired"
         response.assertJson(200, [
                 serviceInjected: true,
-                serviceId: 'ValidationHelperService-v1'
+                serviceId      : 'ValidationHelperService-v1'
         ])
     }
 
@@ -269,7 +269,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
         then: "service remains available after multiple validations"
         response.assertJsonContains(200, [
-                serviceAfterFirst: true,
+                serviceAfterFirst : true,
                 serviceAfterSecond: true
         ])
     }
@@ -295,7 +295,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
         then: "validation passes and shows current tax rate"
         response.assertJsonContains(200, [
-                valid: true,
+                valid         : true,
                 currentTaxRate: 0.08
         ])
     }
@@ -317,7 +317,7 @@ class CommandObjectDISpec extends Specification implements HttpClientSupport {
 
         then: "validation fails"
         response.assertJsonContains(200, [
-                valid: false,
+                valid            : false,
                 usernameAvailable: false
         ])
 

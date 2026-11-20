@@ -20,12 +20,8 @@ package grails.gorm.hibernate.mapping
 
 import org.grails.orm.hibernate.cfg.CompositeIdentity
 import org.grails.orm.hibernate.cfg.HibernateMappingBuilder
-
-/**
- * Created by graemerocher on 01/02/2017.
- */
-
 import org.grails.orm.hibernate.cfg.PropertyConfig
+
 import org.hibernate.FetchMode
 import org.junit.jupiter.api.Test
 
@@ -384,7 +380,7 @@ class HibernateMappingBuilderTests {
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
         assertEquals "foo", property.joinTable.name
-        assertEquals "foo_id", property.joinTable.key.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
         assertEquals "bar_id", property.joinTable.column.name
     }
 
@@ -412,7 +408,7 @@ class HibernateMappingBuilderTests {
         property = mapping.getPropertyConfig('things')
         assert property?.joinTable
         assertEquals "foo", property.joinTable.name
-        assertEquals "foo_id", property.joinTable.key.name
+        assertEquals "foo_id", property.joinTable.keys[0].name
         assertEquals "bar_id", property.joinTable.column.name
     }
 
@@ -842,7 +838,7 @@ class HibernateMappingBuilderTests {
     }
 
     @Test
-    void testUpdatablePropertyConfig() {
+    void testUpdateablePropertyConfig() {
         def builder = new HibernateMappingBuilder("Foo")
         def mapping = builder.evaluate {
             firstName updateable:true
@@ -850,6 +846,17 @@ class HibernateMappingBuilderTests {
         }
         assertTrue mapping.getPropertyConfig('firstName').updateable
         assertFalse mapping.getPropertyConfig('lastName').updateable
+    }
+
+    @Test
+    void testUpdatablePropertyConfig() {
+        def builder = new HibernateMappingBuilder("Foo")
+        def mapping = builder.evaluate {
+            firstName updatable: true
+            lastName updatable: false
+        }
+        assertTrue mapping.getPropertyConfig('firstName').updatable
+        assertFalse mapping.getPropertyConfig('lastName').updatable
     }
 
     @Test

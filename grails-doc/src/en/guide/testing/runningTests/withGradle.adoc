@@ -111,6 +111,13 @@ For "integration" tests, you would run:
 ./gradlew integrationTest
 ----
 
+If you have defined additional test phases using the `testPhases` extension (see <<testPhases>>), run them by their phase name:
+
+[source,shell]
+----
+./gradlew functionalTest
+----
+
 === Targeting Tests When Using Phases
 
 You can combine test and phase targeting:

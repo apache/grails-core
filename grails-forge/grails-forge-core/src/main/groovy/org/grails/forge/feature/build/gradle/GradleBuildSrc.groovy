@@ -1,0 +1,77 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.forge.feature.build.gradle
+
+import groovy.transform.CompileStatic
+import org.grails.forge.application.ApplicationType
+import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.CoordinateResolver
+import org.grails.forge.build.gradle.GradleBuild
+import org.grails.forge.build.gradle.GradleBuildCreator
+import org.grails.forge.options.BuildTool
+import org.grails.forge.util.VersionInfo
+import org.grails.forge.template.GspTemplate
+import org.grails.forge.template.GspView
+import org.springframework.stereotype.Component
+
+@Component
+@CompileStatic
+class GradleBuildSrc implements GradleBuildSrcFeature {
+
+    private final GradleBuildCreator dependencyResolver
+    private final CoordinateResolver resolver
+
+    GradleBuildSrc(GradleBuildCreator dependencyResolver, CoordinateResolver resolver) {
+        this.dependencyResolver = dependencyResolver
+        this.resolver = resolver
+    }
+
+    @Override
+    String getName() {
+        return 'gradle-build-src'
+    }
+
+    @Override
+    String getTitle() {
+        return 'Gradle buildSrc'
+    }
+
+    @Override
+    String getDescription() {
+        return 'Add a Gradle buildSrc/build.gradle file instead of the buildscript block in the main build.gradle.'
+    }
+
+    @Override
+    boolean isVisible() {
+        return true
+    }
+
+    @Override
+    void apply(GeneratorContext generatorContext) {
+        BuildTool buildTool = BuildTool.DEFAULT_OPTION
+        GradleBuild build = dependencyResolver.create(generatorContext)
+
+        generatorContext.addTemplate('buildSrc/build', new GspTemplate('buildSrc/' + buildTool.getBuildFileName(), GspView.of('/forge/feature/build/gradle/templates/buildSrcBuildGradle.gsp', [applicationType: generatorContext.getApplicationType(), project: generatorContext.getProject(), features: generatorContext.getFeatures(), gradleBuild: build, grailsVersion: VersionInfo.getGrailsVersion()])))
+    }
+
+    @Override
+    boolean supports(ApplicationType applicationType) {
+        return true
+    }
+}

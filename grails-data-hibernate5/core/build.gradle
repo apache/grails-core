@@ -23,10 +23,12 @@ plugins {
     id 'org.apache.grails.buildsrc.properties'
     id 'org.apache.grails.buildsrc.dependency-validator'
     id 'org.apache.grails.buildsrc.compile'
+    id 'org.apache.grails.buildsrc.configuration-metadata'
     id 'org.apache.grails.buildsrc.publish'
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -34,8 +36,8 @@ group = 'org.apache.grails.data'
 
 ext {
     gormApiDocs = true
-    pomTitle = 'Grails GORM'
-    pomDescription = 'GORM - Grails Data Access Framework'
+    pomTitle = 'Grails GORM Hibernate 5'
+    pomDescription = 'GORM - Grails Data Access Framework - Hibernate 5'
 }
 
 dependencies {
@@ -44,9 +46,15 @@ dependencies {
 
     api 'org.slf4j:slf4j-api'
 
+    // ByteBuddy is used directly to wrap Hibernate's proxy class so getMetaClass() can answer
+    // before the interceptor is assigned; the version is managed by the Spring Boot BOM
+    implementation 'net.bytebuddy:byte-buddy'
+
     api 'org.apache.groovy:groovy'
     api project(':grails-datamapping-core')
+    api project(':grails-data-hibernate5-spring-orm')
     api 'org.springframework:spring-orm'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
     api 'org.hibernate:hibernate-core-jakarta', {
         exclude group:'commons-logging', module:'commons-logging'
         exclude group:'com.h2database', module:'h2'
@@ -54,7 +62,6 @@ dependencies {
         exclude group:'org.slf4j', module:'jcl-over-slf4j'
         exclude group:'org.slf4j', module:'slf4j-api'
         exclude group:'org.slf4j', module:'slf4j-log4j12'
-        exclude group:'xml-apis', module:'xml-apis'
     }
     api 'org.hibernate.validator:hibernate-validator', {
         exclude group:'commons-logging', module:'commons-logging'
@@ -71,12 +78,9 @@ dependencies {
     testImplementation 'org.apache.groovy:groovy-json'
     testImplementation 'org.apache.tomcat:tomcat-jdbc'
     testImplementation 'org.spockframework:spock-core'
-    testImplementation 'org.yakworks:hibernate-groovy-proxy', {
-        // groovy proxy fixes bytebuddy to be a bit smarter when it comes to groovy metaClass
-        exclude group: 'org.codehaus.groovy', module: 'groovy'
-        // exclude javax variant of hibernate-core 5.6
-        exclude group: 'org.hibernate', module: 'hibernate-core'
-    }
+
+    testCompileOnly 'org.junit.platform:junit-platform-launcher' // TestExecutionListener, for GrailsDataTckManagerSpec
+    testCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 
     testRuntimeOnly 'org.hibernate:hibernate-ehcache', {
         // exclude javax variant of hibernate-core 5.6

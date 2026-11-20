@@ -20,6 +20,12 @@ package org.grails.web.servlet
 
 import groovy.transform.CompileStatic
 
+import org.apache.grails.core.internal.util.TypeConverters
+import org.springframework.util.ClassUtils
+import org.springframework.util.MultiValueMap
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.multipart.MultipartHttpServletRequest
+
 import jakarta.servlet.http.HttpServletRequest
 
 import org.grails.web.util.WebUtils
@@ -27,17 +33,58 @@ import org.grails.web.util.WebUtils
 /**
  * An extension that adds methods to the {@link HttpServletRequest} object
  *
- * 
+ *
  * @author Jeff Brown
  * @author Graeme Rocher
  * @since 3.0
- * 
+ *
  */
 @CompileStatic
 class HttpServletRequestExtension {
 
     static String getForwardURI(HttpServletRequest request) {
         WebUtils.getForwardURI(request)
+    }
+
+    /**
+     * File upload accessors, delegating to the resolved multipart request found in this request's wrapper
+     * chain. Each throws {@link IllegalStateException} when the request is not a resolved multipart request,
+     * matching how these methods previously failed when the request was not a {@code MultipartHttpServletRequest}.
+     */
+    static MultipartFile getFile(HttpServletRequest request, String name) {
+        multipartRequest(request).getFile(name)
+    }
+
+    static List<MultipartFile> getFiles(HttpServletRequest request, String name) {
+        multipartRequest(request).getFiles(name)
+    }
+
+    static Iterator<String> getFileNames(HttpServletRequest request) {
+        multipartRequest(request).fileNames
+    }
+
+    static Map<String, MultipartFile> getFileMap(HttpServletRequest request) {
+        multipartRequest(request).fileMap
+    }
+
+    static MultiValueMap<String, MultipartFile> getMultiFileMap(HttpServletRequest request) {
+        multipartRequest(request).multiFileMap
+    }
+
+    static String getMultipartContentType(HttpServletRequest request, String name) {
+        multipartRequest(request).getMultipartContentType(name)
+    }
+
+    private static MultipartHttpServletRequest multipartRequest(HttpServletRequest request) {
+        MultipartHttpServletRequest multipartRequest = WebUtils.resolveMultipartRequest(request)
+        if (multipartRequest == null) {
+            throw new IllegalStateException(
+                    "Not a resolved multipart request. Content-Type is [${request.contentType}]. " +
+                    'If this is a file upload, check that multipart support is enabled ' +
+                    '(spring.servlet.multipart.enabled) and that any application-supplied MultipartFilter ' +
+                    'is ordered before the Grails request filter.')
+        }
+        multipartRequest
     }
 
     static getProperty(HttpServletRequest request, String name) {
@@ -154,5 +201,121 @@ class HttpServletRequestExtension {
 
     static boolean isPost(HttpServletRequest request) {
         request.method == 'POST'
+    }
+
+    static Byte 'byte'(HttpServletRequest request, String name) {
+        TypeConverters.toByte(request.getAttribute(name))
+    }
+
+    static Byte 'byte'(HttpServletRequest request, String name, Integer defaultValue) {
+        TypeConverters.toByte(request.getAttribute(name), defaultValue)
+    }
+
+    static Character 'char'(HttpServletRequest request, String name) {
+        TypeConverters.toCharacter(request.getAttribute(name))
+    }
+
+    static Character 'char'(HttpServletRequest request, String name, Character defaultValue) {
+        TypeConverters.toCharacter(request.getAttribute(name), defaultValue)
+    }
+
+    static Character 'char'(HttpServletRequest request, String name, Integer defaultValue) {
+        TypeConverters.toCharacter(request.getAttribute(name), defaultValue)
+    }
+
+    static Short 'short'(HttpServletRequest request, String name) {
+        TypeConverters.toShort(request.getAttribute(name))
+    }
+
+    static Short 'short'(HttpServletRequest request, String name, Integer defaultValue) {
+        TypeConverters.toShort(request.getAttribute(name), defaultValue)
+    }
+
+    static Integer 'int'(HttpServletRequest request, String name) {
+        TypeConverters.toInteger(request.getAttribute(name))
+    }
+
+    static Integer 'int'(HttpServletRequest request, String name, Integer defaultValue) {
+        TypeConverters.toInteger(request.getAttribute(name), defaultValue)
+    }
+
+    static Long 'long'(HttpServletRequest request, String name) {
+        TypeConverters.toLong(request.getAttribute(name))
+    }
+
+    static Long 'long'(HttpServletRequest request, String name, Long defaultValue) {
+        TypeConverters.toLong(request.getAttribute(name), defaultValue)
+    }
+
+    static Double 'double'(HttpServletRequest request, String name) {
+        TypeConverters.toDouble(request.getAttribute(name))
+    }
+
+    static Double 'double'(HttpServletRequest request, String name, Double defaultValue) {
+        TypeConverters.toDouble(request.getAttribute(name), defaultValue)
+    }
+
+    static Float 'float'(HttpServletRequest request, String name) {
+        TypeConverters.toFloat(request.getAttribute(name))
+    }
+
+    static Float 'float'(HttpServletRequest request, String name, Float defaultValue) {
+        TypeConverters.toFloat(request.getAttribute(name), defaultValue)
+    }
+
+    static Boolean 'boolean'(HttpServletRequest request, String name) {
+        TypeConverters.toBoolean(request.getAttribute(name))
+    }
+
+    // boolean default is presence-based (attribute set), which cannot be expressed from the value alone
+    static Boolean 'boolean'(HttpServletRequest request, String name, Boolean defaultValue) {
+        Object value = request.getAttribute(name)
+        value != null ? TypeConverters.toBoolean(value) : defaultValue
+    }
+
+    static String string(HttpServletRequest request, String name) {
+        TypeConverters.toStringValue(request.getAttribute(name))
+    }
+
+    static String string(HttpServletRequest request, String name, String defaultValue) {
+        TypeConverters.toStringValue(request.getAttribute(name), defaultValue)
+    }
+
+    static List list(HttpServletRequest request, String name) {
+        TypeConverters.toList(request.getAttribute(name))
+    }
+
+    static Date date(HttpServletRequest request, String name) {
+        TypeConverters.toDate(request.getAttribute(name))
+    }
+
+    static Date date(HttpServletRequest request, String name, String format) {
+        TypeConverters.toDate(request.getAttribute(name), format)
+    }
+
+    static Date date(HttpServletRequest request, String name, Collection<String> formats) {
+        TypeConverters.toDate(request.getAttribute(name), formats)
+    }
+    /**
+     * Null-safe, typed read of an attribute. Returns the attribute when it is an
+     * instance of {@code type}; otherwise {@code null}. No coercion is attempted —
+     * use the named converters ({@code string}, {@code int}, ...) for type conversion.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type) {
+        if (type == null) {
+            throw new IllegalArgumentException('type must not be null - use getAttribute(name) for an untyped read')
+        }
+        Object value = request.getAttribute(name)
+        Class<T> resolvedType = (Class<T>) ClassUtils.resolvePrimitiveIfNecessary(type)
+        resolvedType.isInstance(value) ? resolvedType.cast(value) : null
+    }
+
+    /**
+     * Null-safe, typed read of an attribute with a default. Returns {@code defaultValue}
+     * when the attribute is absent or is not an instance of {@code type}.
+     */
+    static <T> T getAttribute(HttpServletRequest request, String name, Class<T> type, T defaultValue) {
+        T value = getAttribute(request, name, type)
+        value != null ? value : defaultValue
     }
 }

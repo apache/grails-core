@@ -18,9 +18,6 @@
  */
 package org.grails.plugins;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -33,20 +30,17 @@ import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.PropertySource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.util.Assert;
 
 import grails.config.Config;
 import grails.core.GrailsApplication;
-import grails.io.IOUtils;
 import grails.plugins.GrailsPlugin;
 import grails.plugins.GrailsPluginManager;
 import grails.util.GrailsNameUtils;
-import org.grails.config.yaml.YamlPropertySourceLoader;
+import org.apache.grails.core.plugins.PluginUtils;
 import org.grails.core.AbstractGrailsClass;
-import org.grails.core.cfg.GroovyConfigPropertySourceLoader;
 import org.grails.plugins.support.WatchPattern;
 
 /**
@@ -57,13 +51,11 @@ import org.grails.plugins.support.WatchPattern;
 public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implements GrailsPlugin {
     private static final Logger LOG = LoggerFactory.getLogger(AbstractGrailsPlugin.class);
 
-    public static final String PLUGIN_YML = "plugin.yml";
-    public static final String PLUGIN_YML_PATH = "/" + PLUGIN_YML;
-    public static final String PLUGIN_GROOVY = "plugin.groovy";
-    public static final String PLUGIN_GROOVY_PATH = "/" + PLUGIN_GROOVY;
-    private static final List<String> DEFAULT_CONFIG_IGNORE_LIST = Arrays.asList("dataSource", "hibernate");
-    private static Resource basePluginResource = null;
-    protected PropertySource<?> propertySource;
+    public static final String PLUGIN_YML = PluginUtils.PLUGIN_YML_CONFIG;
+    public static final String PLUGIN_YML_PATH = PluginUtils.PLUGIN_YML_CONFIG_PATH;
+    public static final String PLUGIN_GROOVY = PluginUtils.PLUGIN_GROOVY_CONFIG;
+    public static final String PLUGIN_GROOVY_PATH = PluginUtils.PLUGIN_GROOVY_CONFIG_PATH;
+
     protected GrailsApplication grailsApplication;
     protected boolean isBase = false;
     protected String version = "1.0";
@@ -93,32 +85,42 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
                         "] is not a Grails plugin (class name must end with 'GrailsPlugin')");
         this.grailsApplication = application;
         this.pluginClass = pluginClass;
-        Resource resource = readPluginConfiguration(pluginClass);
-
-        if (resource != null && resource.exists()) {
-            final String filename = resource.getFilename();
-            try {
-                if (filename.equals(PLUGIN_YML)) {
-                    YamlPropertySourceLoader propertySourceLoader = new YamlPropertySourceLoader();
-                    this.propertySource = propertySourceLoader.load(GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin") + "-" + PLUGIN_YML, resource, DEFAULT_CONFIG_IGNORE_LIST).stream().findFirst().orElse(null);
-                } else if (filename.equals(PLUGIN_GROOVY)) {
-                    GroovyConfigPropertySourceLoader propertySourceLoader = new GroovyConfigPropertySourceLoader();
-                    this.propertySource = propertySourceLoader.load(GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin") + "-" + PLUGIN_GROOVY, resource, DEFAULT_CONFIG_IGNORE_LIST).stream().findFirst().orElse(null);
-                }
-            } catch (IOException e) {
-                LOG.warn("Error loading " + filename + " for plugin: " + pluginClass.getName() + ": " + e.getMessage(), e);
-            }
-        }
     }
 
+    /**
+     * Retrieves the plugin's property source from the Spring {@link ConfigurableEnvironment}.
+     *
+     * <p>Plugin configuration files ({@code plugin.yml} or {@code plugin.groovy}) are loaded
+     * early in the application lifecycle by
+     * {@link grails.boot.config.GrailsEnvironmentPostProcessor} and registered as named
+     * property sources in the environment. This method looks up the property source by the
+     * expected name ({@code "<pluginName>-plugin.yml"} or {@code "<pluginName>-plugin.groovy"}).</p>
+     *
+     * @return the plugin's property source, or {@code null} if no configuration was loaded
+     *         or the application context is not yet available
+     */
     @Override
     public PropertySource<?> getPropertySource() {
-        return propertySource;
+        ApplicationContext mainContext = grailsApplication != null ? grailsApplication.getMainContext() : null;
+        if (mainContext == null) {
+            return null;
+        }
+        var environment = mainContext.getEnvironment();
+        if (environment instanceof ConfigurableEnvironment configurableEnv) {
+            var propertySources = configurableEnv.getPropertySources();
+            String pluginName = GrailsNameUtils.getLogicalPropertyName(pluginClass.getSimpleName(), "GrailsPlugin");
+            PropertySource<?> ps = propertySources.get(pluginName + "-" + PluginUtils.PLUGIN_YML_CONFIG);
+            if (ps != null) {
+                return ps;
+            }
+            return propertySources.get(pluginName + "-" + PluginUtils.PLUGIN_GROOVY_CONFIG);
+        }
+        return null;
     }
 
     /* (non-Javadoc)
-                 * @see grails.plugins.GrailsPlugin#refresh()
-                 */
+     * @see grails.plugins.GrailsPlugin#refresh()
+     */
     public void refresh() {
         // do nothing
     }
@@ -126,29 +128,6 @@ public abstract class AbstractGrailsPlugin extends GroovyObjectSupport implement
     @Override
     public boolean isEnabled(String[] profiles) {
         return true;
-    }
-
-    protected Resource readPluginConfiguration(Class<?> pluginClass) {
-        Resource ymlResource = getConfigurationResource(pluginClass, PLUGIN_YML_PATH);
-        Resource groovyResource = getConfigurationResource(pluginClass, PLUGIN_GROOVY_PATH);
-
-        Boolean groovyResourceExists = groovyResource != null && groovyResource.exists();
-
-        if (ymlResource != null && ymlResource.exists()) {
-            if (groovyResourceExists) {
-                throw new RuntimeException("A plugin [" + pluginClass.getName() + "] may define a plugin.yml or a plugin.groovy, but not both");
-            }
-            return ymlResource;
-        }
-        if (groovyResourceExists) {
-            return groovyResource;
-        }
-        return null;
-    }
-
-    protected Resource getConfigurationResource(Class<?> pluginClass, String path) {
-        final URL urlToConfig = IOUtils.findResourceRelativeToClass(pluginClass, path);
-        return urlToConfig != null ? new UrlResource(urlToConfig) : null;
     }
 
     public String getFileSystemName() {

@@ -66,7 +66,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr view The name of the view. Cannot be specified in combination with controller/action/id
      * @attr model A model to pass onto the included controller in the request
      */
-    Closure include = { Map attrs, body ->
+    def include(Map attrs, Closure body) {
         if (attrs.action && !attrs.controller) {
             def controller = request?.getAttribute(GrailsApplicationAttributes.CONTROLLER)
             def controllerName = ((GroovyObject) controller)?.getProperty('controllerName')
@@ -80,8 +80,10 @@ class UrlMappingTagLib implements TagLibrary {
                 id: attrs.id as String,
                 params: attrs.params as Map)
 
-            if (attrs.namespace != null) {
-                mapping.namespace = attrs.namespace as String
+            mapping.namespaceSpecified = attrs.containsKey(LinkGenerator.ATTRIBUTE_NAMESPACE)
+            String namespace = linkGenerator.resolveNamespace(attrs.controller as String, attrs.plugin as String, attrs)
+            if (namespace != null) {
+                mapping.namespace = namespace
             }
             if (attrs.plugin != null) {
                 mapping.pluginName = attrs.plugin as String
@@ -90,8 +92,18 @@ class UrlMappingTagLib implements TagLibrary {
         }
     }
 
-    Map appendClass(Map attrs, String cssClass) {
-        attrs['class'] = [attrs['class'] ?: '', cssClass].join(' ').trim()
+    /**
+     * Joins CSS classes, encoding each one that is not encoded yet, and marks the result as encoded, so that a class
+     * the caller has already encoded is written once when the tag adds a class of its own.
+     */
+    private static String joinEncodedClasses(Encoder htmlEncoder, Object... cssClasses) {
+        String joined = cssClasses.findAll { it }.collect { htmlEncoder.encode(it) }.join(' ')
+        htmlEncoder.markEncoded(joined)
+        joined
+    }
+
+    private static Map appendEncodedClass(Map attrs, String cssClass, Encoder htmlEncoder) {
+        attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], cssClass)
         attrs
     }
 
@@ -119,9 +131,10 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr fragment The link fragment (often called anchor tag) to use
      */
-    Closure paginate = { Map attrsMap ->
-        TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
+    def paginate(Map attrs) {
+        attrs = (TypeConvertingMap) attrs
         def writer = out
+        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
         }
@@ -184,14 +197,14 @@ class UrlMappingTagLib implements TagLibrary {
         // display previous link when not on firststep unless omitPrev is true
         if (currentstep > firststep && !attrs.boolean('omitPrev')) {
             linkParams.offset = offset - max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'prevLink')) {
+            writer << callLink(appendEncodedClass(new LinkedHashMap(linkTagAttrs), 'prevLink', htmlEncoder)) {
                 (attrs.prev ?: messageSource.getMessage('paginate.prev', null, messageSource.getMessage('default.paginate.prev', null, 'Previous', locale), locale))
             }
         }
 
         // display steps when steps are enabled and laststep is not firststep
         if (steps && laststep > firststep) {
-            Map stepAttrs = appendClass((Map) linkTagAttrs.clone(), 'step')
+            Map stepAttrs = appendEncodedClass(new LinkedHashMap(linkTagAttrs), 'step', htmlEncoder)
 
             // determine begin and endstep paging variables
             int beginstep = currentstep - (Math.round(maxsteps / 2.0d) as int) + (maxsteps % 2)
@@ -212,7 +225,7 @@ class UrlMappingTagLib implements TagLibrary {
             // display firststep link when beginstep is not firststep
             if (beginstep > firststep && !attrs.boolean('omitFirst')) {
                 linkParams.offset = 0
-                writer << callLink((Map) stepAttrs.clone()) { firststep.toString() }
+                writer << callLink(new LinkedHashMap(stepAttrs)) { firststep.toString() }
             }
             //show a gap if beginstep isn't immediately after firststep, and if were not omitting first or rev
             if (beginstep > firststep + 1 && (!attrs.boolean('omitFirst') || !attrs.boolean('omitPrev'))) {
@@ -220,13 +233,14 @@ class UrlMappingTagLib implements TagLibrary {
             }
 
             // display paginate steps
+            String currentStepClass = joinEncodedClasses(htmlEncoder, attrs.get('class'), activeClass)
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
-                    writer << "<span class=\"${[attrs.get('class') ?: '', activeClass].join(' ').trim()}\">${i}</span>"
+                    writer << "<span class=\"${currentStepClass}\">${i}</span>"
                 }
                 else {
                     linkParams.offset = (i - 1) * max
-                    writer << callLink((Map) stepAttrs.clone()) { i.toString() }
+                    writer << callLink(new LinkedHashMap(stepAttrs)) { i.toString() }
                 }
             }
 
@@ -237,14 +251,14 @@ class UrlMappingTagLib implements TagLibrary {
             // display laststep link when endstep is not laststep
             if (endstep < laststep && !attrs.boolean('omitLast')) {
                 linkParams.offset = (laststep - 1) * max
-                writer << callLink((Map) stepAttrs.clone()) { laststep.toString() }
+                writer << callLink(new LinkedHashMap(stepAttrs)) { laststep.toString() }
             }
         }
 
         // display next link when not on laststep unless omitNext is true
         if (currentstep < laststep && !attrs.boolean('omitNext')) {
             linkParams.offset = offset + max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'nextLink')) {
+            writer << callLink(appendEncodedClass(new LinkedHashMap(linkTagAttrs), 'nextLink', htmlEncoder)) {
                 (attrs.next ? attrs.next : messageSource.getMessage('paginate.next', null, messageSource.getMessage('default.paginate.next', null, 'Next', locale), locale))
             }
         }
@@ -277,7 +291,7 @@ class UrlMappingTagLib implements TagLibrary {
      * @attr params A map containing URL query parameters
      * @attr class CSS class name
      */
-    Closure sortableColumn = { Map attrs ->
+    def sortableColumn(Map attrs) {
         def writer = out
         if (!attrs.property) {
             throwTagError('Tag [sortableColumn] is missing required attribute [property]')
@@ -289,6 +303,9 @@ class UrlMappingTagLib implements TagLibrary {
 
         def property = attrs.remove('property')
         def action = attrs.action ? attrs.remove('action') : (actionName ?: 'list')
+        // Only forward namespace when the tag actually supplied one, so that an omitted namespace
+        // lets the link generator infer the current controller's namespace.
+        boolean hasNamespace = attrs.containsKey('namespace')
         def namespace = attrs.remove('namespace')
 
         def defaultOrder = attrs.remove('defaultOrder')
@@ -302,7 +319,7 @@ class UrlMappingTagLib implements TagLibrary {
         Map linkParams = [:]
         if (params.id) linkParams.put('id', params.id)
         def paramsAttr = attrs.remove('params')
-        if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr)
+        if (paramsAttr instanceof Map) linkParams.putAll(paramsAttr as Map)
         linkParams.sort = property
 
         // propagate "max" and "offset" standard params
@@ -310,9 +327,10 @@ class UrlMappingTagLib implements TagLibrary {
         if (params.offset) linkParams.offset = params.offset
 
         // determine and add sorting order for this column to link params
-        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : 'sortable')
+        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
+        attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], 'sortable')
         if (property == sort) {
-            attrs['class'] = (attrs['class'] as String) + ' sorted ' + order
+            attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], 'sorted', order)
             if (order == 'asc') {
                 linkParams.order = 'desc'
             }
@@ -324,20 +342,21 @@ class UrlMappingTagLib implements TagLibrary {
             linkParams.order = defaultOrder
         }
 
-        // determine column title
-        String title = attrs.remove('title') as String
+        // determine column title: the title attribute is encoded, as the attributes of the tag are, and a text from
+        // the message source is written as the message source returns it
+        Object titleAttribute = attrs.remove('title')
         String titleKey = attrs.remove('titleKey') as String
         Object mapping = attrs.remove('mapping')
+        Object title = titleAttribute != null ? htmlEncoder.encode(titleAttribute) : null
         if (titleKey) {
-            if (!title) title = titleKey
             def messageSource = grailsAttributes.messageSource
             def locale = RequestContextUtils.getLocale(request)
-            title = messageSource.getMessage(titleKey, null, title, locale)
+            String message = messageSource.getMessage(titleKey, null, null, locale)
+            title = message != null ? message : (title ?: htmlEncoder.encode(titleKey))
         }
 
         writer << '<th '
         // process remaining attributes
-        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         attrs.each { k, v ->
             writer << k
             writer << '="'
@@ -352,7 +371,9 @@ class UrlMappingTagLib implements TagLibrary {
         }
 
         linkAttrs.action = action
-        linkAttrs.namespace = namespace
+        if (hasNamespace) {
+            linkAttrs.namespace = namespace
+        }
 
         writer << callLink((Map) linkAttrs) {
             title

@@ -16,11 +16,11 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages
 
 class ShowPage extends ScaffoldPage {
-	static at = {
-		heading.text() ==~ /Show .+/
-	}
+
+    static at = {
+        heading ==~ /Show .+/
+    }
 }

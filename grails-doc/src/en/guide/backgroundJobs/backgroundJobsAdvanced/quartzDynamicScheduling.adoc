@@ -79,3 +79,13 @@ class MyController {
 When a trigger is passed directly to `schedule`, its job key is rewritten to point at the job class, so the trigger must be mutable — that is, an instance of `org.quartz.spi.MutableTrigger`, which every trigger implementation shipped with Quartz is. A trigger that is neither mutable nor already keyed to the job is rejected.
 
 The default trigger group used by `unschedule` is `GRAILS_TRIGGERS`.
+
+These methods only work on a job that the plugin has registered with the scheduler, which it does for every enabled job artefact while the application starts. Calling them on a job that is turned off with `jobEnabled = false`, or on a class the application does not manage as a job artefact, throws an `IllegalStateException` reporting that the job is not registered with a scheduler.
+
+A null argument is rejected with an `IllegalArgumentException` that names the argument which is missing. Since the runtime type of `null` carries no information, a null passed by a caller that is not statically compiled always resolves to `schedule(Trigger)`, whichever method the caller meant to reach:
+
+[source,groovy]
+----
+// reports a null trigger, even though the interval read from the configuration is what is null
+MyJob.schedule(grailsApplication.config.getProperty('my.job.repeatInterval', Long))
+----

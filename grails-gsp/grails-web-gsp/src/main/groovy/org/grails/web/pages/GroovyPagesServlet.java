@@ -117,7 +117,7 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
         context.setAttribute(SERVLET_INSTANCE, this);
 
         final WebApplicationContext webApplicationContext = getWebApplicationContext();
-        grailsAttributes = GrailsFactoriesLoader.loadFactoriesWithArguments(GrailsApplicationAttributes.class, getClass().getClassLoader(), new Object[]{context}).get(0);
+        grailsAttributes = GrailsFactoriesLoader.loadFactoriesWithArguments(GrailsApplicationAttributes.class, Thread.currentThread().getContextClassLoader(), new Object[]{context}).get(0);
         final AutowireCapableBeanFactory autowireCapableBeanFactory = webApplicationContext.getAutowireCapableBeanFactory();
         if (autowireCapableBeanFactory != null) {
             autowireCapableBeanFactory.autowireBeanProperties(this, AutowireCapableBeanFactory.AUTOWIRE_BY_TYPE, false);
@@ -218,18 +218,17 @@ public class GroovyPagesServlet extends FrameworkServlet implements PluginManage
     protected void renderPageWithEngine(GroovyPagesTemplateEngine engine, HttpServletRequest request,
                                         HttpServletResponse response, GroovyPageScriptSource scriptSource) throws Exception {
         request.setAttribute(GroovyPagesUriService.RENDERING_VIEW_ATTRIBUTE, Boolean.TRUE);
-        GSPResponseWriter out = createResponseWriter(response);
-        try {
-            Template template = engine.createTemplate(scriptSource);
-            if (template instanceof GroovyPageTemplate) {
-                ((GroovyPageTemplate) template).setAllowSettingContentType(true);
+        try (GSPResponseWriter out = createResponseWriter(response)) {
+            try {
+                Template template = engine.createTemplate(scriptSource);
+                if (template instanceof GroovyPageTemplate) {
+                    ((GroovyPageTemplate) template).setAllowSettingContentType(true);
+                }
+                template.make().writeTo(out);
+            } catch (Exception e) {
+                out.setError();
+                throw e;
             }
-            template.make().writeTo(out);
-        } catch (Exception e) {
-            out.setError();
-            throw e;
-        } finally {
-            if (out != null) out.close();
         }
     }
 

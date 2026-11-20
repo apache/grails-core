@@ -25,36 +25,51 @@ import grails.plugins.GrailsPlugin
 import grails.plugins.Plugin
 import groovy.transform.CompileStatic
 import org.grails.core.artefact.DomainClassArtefactHandler
-import org.grails.datastore.gorm.neo4j.converters.*
+import org.grails.datastore.gorm.neo4j.converters.InstantToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.LocalDateTimeToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.LocalDateToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.LocalTimeToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToInstantConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToLocalDateConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToLocalDateTimeConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToLocalTimeConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToOffsetDateTimeConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToOffsetTimeConverter
+import org.grails.datastore.gorm.neo4j.converters.LongToZonedDateTimeConverter
+import org.grails.datastore.gorm.neo4j.converters.OffsetDateTimeToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.OffsetTimeToLongConverter
+import org.grails.datastore.gorm.neo4j.converters.PeriodToStringConverter
+import org.grails.datastore.gorm.neo4j.converters.StringToPeriodConverter
+import org.grails.datastore.gorm.neo4j.converters.ZonedDateTimeToLongConverter
+import org.grails.datastore.gorm.plugin.support.ConfigSupport
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
-import org.grails.datastore.gorm.plugin.support.*
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.core.env.PropertyResolver
 
 class Neo4jGrailsPlugin extends Plugin {
 
-    def license = "Apache 2.0 License"
-    def organization = [ name: "Grails", url: "https://grails.apache.org/" ]
-    def issueManagement = [ system: "JIRA", url: "https://github.com/apache/grails-core/issues" ]
-    def scm = [ url: "https://github.com/apache/grails-core" ]
+    def license = 'Apache 2.0 License'
+    def organization = [ name: 'Grails', url: 'https://grails.apache.org/' ]
+    def issueManagement = [ system: 'Github', url: 'https://github.com/apache/grails-core/issues' ]
+    def scm = [ url: 'https://github.com/apache/grails-core' ]
 
-    def grailsVersion = "3.3.0 > *"
+    def grailsVersion = '3.3.0 > *'
     def loadAfter = ['domainClass', 'hibernate', 'services', 'converters']
     //def loadBefore = ['dataSource']
     def observe = ['services', 'domainClass']
 
     def author = 'Apache Grails Team'
-    def authorEmail = ""
-    def title = "Neo4j GORM"
+    def authorEmail = ''
+    def title = 'Neo4j GORM'
     def description = 'A plugin that integrates the Neo4j graph database into Grails, providing a GORM API onto it'
 
-    def documentation = "https://gorm.grails.org/latest/neo4j/manual/"
+    def documentation = 'https://gorm.grails.org/latest/neo4j/manual/'
 
     def dependsOn = [:]
     // resources that are excluded from plugin packaging
 
     def pluginExcludes = [
-            "grails-app/views/error.gsp"
+            'grails-app/views/error.gsp'
     ]
 
     @Override
@@ -62,14 +77,13 @@ class Neo4jGrailsPlugin extends Plugin {
     Closure doWithSpring() {
         ConfigSupport.prepareConfig(config, (ConfigurableApplicationContext) applicationContext)
         def initializer = new Neo4jDataStoreSpringInitializer((PropertyResolver) config, grailsApplication.getArtefacts(DomainClassArtefactHandler.TYPE).collect() { GrailsClass cls -> cls.clazz })
-        initializer.registerApplicationIfNotPresent = false
         initializer.setSecondaryDatastore(hasHibernatePlugin())
         return initializer.getBeanDefinitions((BeanDefinitionRegistry)applicationContext)
     }
 
     @CompileStatic
     protected boolean hasHibernatePlugin() {
-        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/}
+        manager.allPlugins.any() { GrailsPlugin plugin -> plugin.name ==~ /hibernate\d*/ }
     }
 
     @Override

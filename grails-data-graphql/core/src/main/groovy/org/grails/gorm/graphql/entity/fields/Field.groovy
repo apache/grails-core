@@ -40,32 +40,32 @@ import org.grails.gorm.graphql.types.GraphQLTypeManager
 @CompileStatic
 abstract class Field<T> implements Named<T>, Describable<T>, Deprecatable<T>, Nullable<T> {
 
-	Object defaultValue
-	boolean input = true
-	boolean output = true
+    Object defaultValue
+    boolean input = true
+    boolean output = true
 
-	T defaultValue(Object defaultValue) {
-		this.defaultValue = defaultValue
-		(T)this
-	}
+    T defaultValue(Object defaultValue) {
+        this.defaultValue = defaultValue
+        (T) this
+    }
 
-	T input(boolean input) {
-		this.input = input
-		(T)this
-	}
+    T input(boolean input) {
+        this.input = input
+        (T) this
+    }
 
-	T output(boolean output) {
-		this.output = output
-		(T)this
-	}
+    T output(boolean output) {
+        this.output = output
+        (T) this
+    }
 
-	abstract GraphQLOutputType getType(GraphQLTypeManager typeManager, MappingContext mappingContext)
+    abstract GraphQLOutputType getType(GraphQLTypeManager typeManager, MappingContext mappingContext)
 
-	abstract GraphQLInputType getInputType(GraphQLTypeManager typeManager, MappingContext mappingContext)
+    abstract GraphQLInputType getInputType(GraphQLTypeManager typeManager, MappingContext mappingContext)
 
-	void validate() {
-		if (name == null) {
+    void validate() {
+        if (name == null) {
             throw new IllegalArgumentException('A name is required for a custom field')
         }
-	}
+    }
 }

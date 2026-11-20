@@ -20,6 +20,7 @@ package org.grails.compiler.injection;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,7 @@ import org.springframework.asm.AnnotationVisitor;
 import org.springframework.asm.ClassReader;
 import org.springframework.asm.ClassVisitor;
 import org.springframework.asm.Opcodes;
+import org.springframework.core.OrderComparator;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.util.ClassUtils;
 
@@ -55,7 +57,7 @@ import org.grails.io.support.Resource;
  * @author Graeme Rocher
  * @since 0.6
  */
-public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassNodeOperation {
+public class GrailsAwareInjectionOperation implements CompilationUnit.IPrimaryClassNodeOperation {
 
     private static final String INJECTOR_SCAN_PACKAGE = "org.grails.compiler";
     private static final String INJECTOR_CODEHAUS_SCAN_PACKAGE = "org.codehaus.groovy.grails.compiler";
@@ -136,14 +138,14 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
                                     if (ClassInjector.class.isAssignableFrom(injectorClass)) {
 
                                         injectorClasses.add(injectorClass);
-                                        ClassInjector classInjector = (ClassInjector) injectorClass.newInstance();
+                                        ClassInjector classInjector = (ClassInjector) injectorClass.getDeclaredConstructor().newInstance();
                                         injectors.add(classInjector);
                                         if (GlobalClassInjector.class.isAssignableFrom(injectorClass)) {
                                             globalInjectors.add(classInjector);
                                         }
                                     }
                                 }
-                            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
                                 // ignore
                             }
                             return super.visitAnnotation(desc, visible);
@@ -163,6 +165,7 @@ public class GrailsAwareInjectionOperation extends CompilationUnit.PrimaryClassN
                 }
                 return 0;
             });
+            OrderComparator.sort(injectors);
             classInjectors = injectors.toArray(new ClassInjector[0]);
             globalClassInjectors = globalInjectors.toArray(new ClassInjector[0]);
         } catch (IOException e) {

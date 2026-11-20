@@ -43,11 +43,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-logging'
     implementation 'org.apache.grails:grails-rest-transforms'
@@ -65,7 +64,6 @@ dependencies {
     testAndDevelopmentOnly 'org.webjars.npm:bootstrap'
     testAndDevelopmentOnly 'org.webjars.npm:jquery'
 
-    console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:web'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
@@ -75,7 +73,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
     integrationTestImplementation testFixtures('org.apache.grails:grails-geb')
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 tasks.named('assetCompile').configure {

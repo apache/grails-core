@@ -1,0 +1,74 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+[[ormdsl-customNamingStrategy]]
+== Custom Naming Strategy
+
+By default GORM uses Hibernate's snake_case physical naming strategy (`PhysicalNamingStrategySnakeCaseImpl`), which converts camelCase class and property names to `snake_case` table and column names (e.g., `BookAuthor` → `book_author`, `firstName` → `first_name`).
+
+=== Configuring a Custom Strategy
+
+You can replace this with any Hibernate `PhysicalNamingStrategy` implementation via application configuration:
+
+[source,yaml]
+----
+hibernate:
+    physicalNamingStrategy: com.example.MyCustomNamingStrategy
+----
+
+Or set it per datasource:
+
+[source,yaml]
+----
+dataSources:
+    reporting:
+        hibernate:
+            physicalNamingStrategy: com.example.LegacyNamingStrategy
+----
+
+=== Implementing a Custom Strategy
+
+Implement Hibernate's `org.hibernate.boot.model.naming.PhysicalNamingStrategy` interface:
+
+[source,groovy]
+----
+import org.hibernate.boot.model.naming.Identifier
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+
+class UpperCaseNamingStrategy implements PhysicalNamingStrategy {
+
+    @Override
+    Identifier toPhysicalTableName(Identifier name, JdbcEnvironment jdbcEnvironment) {
+        return Identifier.toIdentifier(name.text.toUpperCase())
+    }
+
+    @Override
+    Identifier toPhysicalColumnName(Identifier name, JdbcEnvironment jdbcEnvironment) {
+        return Identifier.toIdentifier(name.text.toUpperCase())
+    }
+
+    // ... other required method overrides ...
+}
+----
+
+TIP: Individual column or table names set explicitly in the `mapping` block always take precedence over what the naming strategy would produce.
+
+For a *unidirectional* `hasMany` (a collection with no `belongsTo` or reciprocal `hasMany` on the other side), the default foreign-key column that references the associated entity is derived from that entity's physical table name. Consequently, a custom strategy that changes a domain table name also changes that column. For example, given `static hasMany = [books: TBook]`, if the strategy maps `TBook` to the table `book`, the default foreign-key column is `book_id`, not `tbook_id`.
+
+This does not apply to a *bidirectional* many-to-many association: both of its join-table foreign-key columns are still derived from the class names, regardless of any `table` mapping or naming strategy. Applications upgrading from an earlier GORM version should account for the unidirectional case's schema change, or configure the join-table columns explicitly in the `mapping` block. See https://grails.apache.org/docs/latest/guide/single.html#_join_table_foreign_key_column_names[Join-Table Foreign-Key Column Names] in the upgrade guide for details and a migration example.

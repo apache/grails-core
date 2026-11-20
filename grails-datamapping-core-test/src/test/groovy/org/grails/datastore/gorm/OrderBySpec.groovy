@@ -27,6 +27,12 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
  * @author Daniel Wiell
  */
 class OrderBySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
+
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
+
     def setup() {
         def age = 40
         ["Bob", "Fred", "Barney", "Frank", "Joe", "Ernie"].each {

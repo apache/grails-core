@@ -18,19 +18,25 @@
  */
 package org.grails.gorm.graphql.entity;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import graphql.execution.MergedField;
 import graphql.language.Field;
 import graphql.language.Selection;
 import graphql.language.SelectionSet;
 import graphql.schema.DataFetchingEnvironment;
+
 import org.grails.datastore.gorm.GormEnhancer;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.ToMany;
 import org.grails.datastore.mapping.model.types.ToOne;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Helper class to determine which properties should be eagerly
@@ -41,10 +47,10 @@ import java.util.stream.Collectors;
  */
 public class EntityFetchOptions {
 
-    private Map<String, Association> associations = new LinkedHashMap<>();
-    protected PersistentEntity entity;
-    protected Set<String> associationNames;
-    protected String propertyName;
+    private final Map<String, Association<?>> associations = new LinkedHashMap<>();
+    protected final PersistentEntity entity;
+    protected final Set<String> associationNames;
+    protected final String propertyName;
 
     private static final String JOIN = "join";
     private static final String FETCH = "fetch";
@@ -63,7 +69,7 @@ public class EntityFetchOptions {
 
     /**
      * Designed for use when a projection query is used. The fetch arguments
-     * need prepended with the projection property name.
+     * need to be prepended with the projection property name.
      *
      * @param entity The {@link PersistentEntity} being queried
      * @param projectionName The name of the property being projected
@@ -75,7 +81,7 @@ public class EntityFetchOptions {
 
         this.entity = entity;
         this.propertyName = projectionName;
-        for (Association association : entity.getAssociations()) {
+        for (Association<?> association : entity.getAssociations()) {
             associations.put(association.getName(), association);
         }
 
@@ -86,12 +92,12 @@ public class EntityFetchOptions {
      * @return The associations of the {@link PersistentEntity}. The key
      * is the property name and the value is the association.
      */
-    public Map<String, Association> getAssociations() {
+    public Map<String, Association<?>> getAssociations() {
         return associations;
     }
 
-    protected boolean isForeignKeyInChild(Association association) {
-        return association instanceof ToOne && ((ToOne) association).isForeignKeyInChild() || association instanceof ToMany;
+    protected boolean isForeignKeyInChild(Association<?> association) {
+        return association instanceof ToOne<?> toOne && toOne.isForeignKeyInChild() || association instanceof ToMany;
     }
 
     protected void handleField(String parentName, Field selectedField, Set<String> joinProperties) {
@@ -103,7 +109,7 @@ public class EntityFetchOptions {
             resolvedName = selectedField.getName();
         }
 
-        Association association = associations.get(selectedField.getName());
+        Association<?> association = associations.get(selectedField.getName());
 
         PersistentEntity entity = association.getAssociatedEntity();
 
@@ -113,14 +119,16 @@ public class EntityFetchOptions {
         }
 
         final SelectionSet set = selectedField.getSelectionSet();
+        // SelectionSet#getSelections() is declared to return a raw List<Selection> in graphql-java itself,
+        // so there's no parameterized type available to hold its result without an unchecked cast.
+        @SuppressWarnings("rawtypes")
         List<Selection> selections = (set == null ? new ArrayList<>() : set.getSelections());
 
         if (!association.isEmbedded()) {
             if (isForeignKeyInChild(association)) {
                 joinProperties.add(resolvedName);
             }
-            else if (selections.size() == 1 && selections.get(0) instanceof Field) {
-                Field field = (Field) selections.get(0);
+            else if (selections.size() == 1 && selections.getFirst() instanceof Field field) {
                 if (!entity.isIdentityName(field.getName())) {
                     joinProperties.add(resolvedName);
                 }
@@ -157,7 +165,6 @@ public class EntityFetchOptions {
 
         joinProperties.addAll(new EntityFetchOptions(entity, resolvedName).getJoinProperties(fields));
     }
-
 
     public Set<String> getJoinProperties(List<Field> fields) {
         return getJoinProperties(fields, false);
@@ -204,10 +211,13 @@ public class EntityFetchOptions {
      * @return The list of properties to eagerly fetch
      */
     public Set<String> getJoinProperties(DataFetchingEnvironment environment, boolean skipCollections) {
-        List<Field> fields = new ArrayList<>();
         MergedField environmentMergedField = environment.getMergedField();
 
-        if (environmentMergedField != null) {
+        List<Field> fields;
+        if (environmentMergedField == null) {
+            fields = new ArrayList<>();
+        }
+        else {
             fields = environmentMergedField
                     .getFields()
                     .stream()
@@ -227,11 +237,11 @@ public class EntityFetchOptions {
      * @param properties The properties to fetch
      * @return The fetch argument
      */
-    public Map<String, Map> getFetchArgument(Set<String> properties) {
+    public Map<String, Map<String, String>> getFetchArgument(Set<String> properties) {
         if (properties.isEmpty()) {
             return new LinkedHashMap<>();
         }
-        Map<String, Map> arguments = new LinkedHashMap<>(1);
+        Map<String, Map<String, String>> arguments = new LinkedHashMap<>(1);
         Map<String, String> joins = new LinkedHashMap<>(properties.size());
 
         for (String prop: properties) {
@@ -241,8 +251,7 @@ public class EntityFetchOptions {
         return arguments;
     }
 
-
-    public Map<String, Map> getFetchArgument(DataFetchingEnvironment environment) {
+    public Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment) {
         return getFetchArgument(environment, false);
     }
 
@@ -256,7 +265,7 @@ public class EntityFetchOptions {
      * @param skipCollections Whether to exclude associations that are collections
      * @return The fetch argument
      */
-    public Map<String, Map> getFetchArgument(DataFetchingEnvironment environment, boolean skipCollections) {
+    public Map<String, Map<String, String>> getFetchArgument(DataFetchingEnvironment environment, boolean skipCollections) {
         return getFetchArgument(getJoinProperties(environment, skipCollections));
     }
 }

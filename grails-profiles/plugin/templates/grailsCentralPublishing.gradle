@@ -7,7 +7,7 @@ publishing {
 
                 // simply remove dependencies without a version
                 // version-less dependencies are handled with dependencyManagement
-                // see https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/8 for more complete solutions
+                // remove version-less dependencies since versions are managed by the Grails BOM platform
                 pomNode.dependencies.dependency.findAll {
                     it.version.text().isEmpty()
                 }.each {

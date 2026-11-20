@@ -33,24 +33,14 @@
             </g:hasErrors>
              <s2ui:formContainer type='update' beanType='profile' focus='myQuestion1'>
                 <s2ui:form useToken="true">
-                    <div class="dialog">
-                        <br/>
-                        <table>
-                            <tbody>
-                                
-                                    <s2ui:textFieldRow name='myQuestion1' size='50' labelCodeDefault='myQuestion1'/>
-                                        <s2ui:textFieldRow name='myAnswer1' size='50' labelCodeDefault='myAnswer1'/>
-                                
-                                    <s2ui:textFieldRow name='myQuestion2' size='50' labelCodeDefault='myQuestion2'/>
-                                        <s2ui:textFieldRow name='myAnswer2' size='50' labelCodeDefault='myAnswer2'/>
-                                
-                                <s2ui:selectRow name='user.id' from='${users}' labelCodeDefault='user' optionValue='${lookupProp}' />
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style='float:left; margin-top: 10px;'>
+                    <s2ui:textFieldRow name='myQuestion1' size='50' labelCodeDefault='myQuestion1'/>
+                    <s2ui:textFieldRow name='myAnswer1' size='50' labelCodeDefault='myAnswer1'/>
+                    <s2ui:textFieldRow name='myQuestion2' size='50' labelCodeDefault='myQuestion2'/>
+                    <s2ui:textFieldRow name='myAnswer2' size='50' labelCodeDefault='myAnswer2'/>
+                    <s2ui:selectRow name='user.id' from='${users}' labelCodeDefault='user' optionValue='${lookupProp}' />
+                    <div class="mt-3 d-flex gap-2">
                         <s2ui:submitButton/>
-                            <s2ui:deleteButton/>
+                        <s2ui:deleteButton/>
                     </div>
                 </s2ui:form>
             </s2ui:formContainer>

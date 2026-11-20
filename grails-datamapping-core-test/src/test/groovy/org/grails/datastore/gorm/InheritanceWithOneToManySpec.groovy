@@ -18,15 +18,16 @@
  */
 package org.grails.datastore.gorm
 
+import spock.lang.Issue
+
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
-import spock.lang.Issue
 
 class InheritanceWithOneToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Group, Member, SubMember])
+        manager.registerDomainClasses(Group, Member, SubMember)
     }
 
     @Issue('GRAILS-9010')
@@ -46,6 +47,7 @@ class InheritanceWithOneToManySpec extends GrailsDataTckSpec<GrailsDataCoreTckMa
 
 @Entity
 class Group {
+
     Long id
     String name
     static hasMany = [members: Member]
@@ -54,6 +56,7 @@ class Group {
 
 @Entity
 class Member {
+
     Long id
     String name
     String externalId
@@ -61,5 +64,6 @@ class Member {
 
 @Entity
 class SubMember extends Member {
+
     String extraName
 }

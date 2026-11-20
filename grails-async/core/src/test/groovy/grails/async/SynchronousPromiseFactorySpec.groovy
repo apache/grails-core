@@ -164,4 +164,27 @@ class SynchronousPromiseFactorySpec extends Specification {
         then: 'the closure is executed twice'
             2 * callable.call()
     }
+
+    void 'createPromise with a null closures list returns a completed empty-list promise'() {
+
+        given: 'a factory and a decorator list'
+            def factory = Promises.promiseFactory
+            def decorators = [{ Closure c -> c } as PromiseDecorator]
+
+        when: 'createPromise is called with a null closures list'
+            def promise = factory.createPromise((List<Closure<Object>>) null, decorators)
+
+        then: 'the returned promise is already done and resolves to an empty list'
+            promise.isDone()
+            promise.get() == []
+
+        when: 'onComplete is registered on the resulting promise'
+            def callbackResult = null
+            def callbackInvoked = false
+            promise.onComplete { value -> callbackInvoked = true; callbackResult = value }
+
+        then: 'the callback is invoked synchronously with an empty list rather than busy-waiting'
+            callbackInvoked
+            callbackResult == []
+    }
 }

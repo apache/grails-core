@@ -16,7 +16,9 @@ class ${oAuthIDClassName} implements Serializable {
     static belongsTo = [user: ${userClassName}]
 
     static constraints = {
-        accessToken unique: true
+        accessToken unique: true, nullable: false
+        provider nullable: false
+        user nullable: false
     }
 
     static mapping = {

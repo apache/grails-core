@@ -31,8 +31,6 @@ import org.junit.jupiter.api.BeforeEach
  *
  * @see org.junit.jupiter.api.BeforeEach
  * @see grails.testing.spock.RunOnce
- * @deprecated Use Spock native setup/cleanup/…​ fixture methods instead.
  */
-@Deprecated
 @AnnotationCollector([BeforeEach, RunOnce])
 @interface OnceBefore {}

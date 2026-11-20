@@ -46,8 +46,10 @@ import grails.gorm.validation.exceptions.ValidationConfigurationException;
 import org.grails.datastore.gorm.validation.constraints.builder.ConstrainedPropertyBuilder;
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
+import org.grails.datastore.mapping.config.AuditMetadataType;
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
+import org.grails.datastore.mapping.model.AuditMetadataUtils;
 import org.grails.datastore.mapping.model.MappingContext;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -69,31 +71,43 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     protected final ConstraintRegistry constraintRegistry;
     protected final MappingContext mappingContext;
     protected final Map<String, Object> defaultConstraints;
+    protected final boolean cacheAutoTimestampAnnotations;
+    protected final boolean defaultNullable;
 
     public DefaultConstraintEvaluator() {
-        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(Map<String, Object> defaultConstraints) {
-        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), defaultConstraints);
+        this(new DefaultConstraintRegistry(new StaticMessageSource()), new KeyValueMappingContext("default"), defaultConstraints, true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource, MappingContext mappingContext) {
-        this(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(messageSource), mappingContext, Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource, MappingContext mappingContext, Map<String, Object> defaultConstraints) {
-        this(new DefaultConstraintRegistry(messageSource), mappingContext, defaultConstraints);
+        this(new DefaultConstraintRegistry(messageSource), mappingContext, defaultConstraints, true);
     }
 
     public DefaultConstraintEvaluator(MessageSource messageSource) {
-        this(new DefaultConstraintRegistry(messageSource), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap());
+        this(new DefaultConstraintRegistry(messageSource), new KeyValueMappingContext("default"), Collections.<String, Object>emptyMap(), true);
     }
 
     public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints) {
+        this(constraintRegistry, mappingContext, defaultConstraints, true);
+    }
+
+    public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints, boolean cacheAutoTimestampAnnotations) {
+        this(constraintRegistry, mappingContext, defaultConstraints, cacheAutoTimestampAnnotations, true);
+    }
+
+    public DefaultConstraintEvaluator(ConstraintRegistry constraintRegistry, MappingContext mappingContext, Map<String, Object> defaultConstraints, boolean cacheAutoTimestampAnnotations, boolean defaultNullable) {
         this.constraintRegistry = constraintRegistry;
         this.mappingContext = mappingContext;
         this.defaultConstraints = defaultConstraints;
+        this.cacheAutoTimestampAnnotations = cacheAutoTimestampAnnotations;
+        this.defaultNullable = defaultNullable;
     }
 
     @Override
@@ -210,7 +224,7 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     }
 
     public ConstrainedPropertyBuilder newConstrainedPropertyBuilder(Class<?> theClass) {
-        return new ConstrainedPropertyBuilder(this.mappingContext, this.constraintRegistry, theClass, defaultConstraints);
+        return new ConstrainedPropertyBuilder(this.mappingContext, this.constraintRegistry, theClass, defaultConstraints, this);
     }
 
     protected void applySharedConstraints(
@@ -262,7 +276,14 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
     }
 
     protected void applyDefaultNullableConstraint(PersistentProperty p, ConstrainedProperty cp) {
-        applyDefaultNullableConstraint(cp, false);
+        // Grails 8: persistent properties are nullable by default, aligning Grails with the rest of
+        // the JVM persistence/validation ecosystem (JPA/Hibernate, Spring Data, Micronaut Data and
+        // Jakarta Bean Validation are all "nullable unless you say otherwise"). To restore the
+        // legacy required-by-default behavior, either set the boolean flag:
+        //     grails.gorm.default.nullable = false
+        // or apply a wildcard default constraint:
+        //     grails.gorm.default.constraints = { '*'(nullable: false) }
+        applyDefaultNullableConstraint(cp, defaultNullable);
     }
 
     protected void applyDefaultNullableConstraint(ConstrainedProperty cp, boolean defaultNullable) {
@@ -305,6 +326,14 @@ public class DefaultConstraintEvaluator implements ConstraintsEvaluator {
             return NameUtils.isNotConfigurational(propertyName);
         }
         else {
+            // Check if property has @CreatedDate or @LastModifiedDate annotations
+            // Note: We only exclude timestamp date fields (CREATED/UPDATED), not auditor fields (CREATED_BY/UPDATED_BY)
+            // because auditor fields can have various types and should support constraints (e.g., maxSize for String)
+            AuditMetadataType auditMetadataType = AuditMetadataUtils.getAuditMetadataType(persistentProperty, cacheAutoTimestampAnnotations);
+            if (auditMetadataType == AuditMetadataType.CREATED || auditMetadataType == AuditMetadataType.UPDATED) {
+                return false;
+            }
+
             return !propertyName.equals(GormProperties.VERSION) &&
                     !propertyName.equals(GormProperties.DATE_CREATED) &&
                     !propertyName.equals(GormProperties.LAST_UPDATED) &&

@@ -21,8 +21,12 @@ package org.grails.web.converters.configuration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 
 import org.grails.core.lifecycle.ShutdownOperations;
 import org.grails.web.converters.Converter;
@@ -39,6 +43,13 @@ import org.grails.web.converters.marshaller.ObjectMarshaller;
 public class ConvertersConfigurationHolder {
 
     public static final String CONVERTERS_DEFAULT_ENCODING = "UTF-8";
+
+    private static volatile ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
+
+    @FunctionalInterface
+    public interface ConverterAction {
+        void run() throws ConverterException;
+    }
 
     static {
         ShutdownOperations.addOperation(new Runnable() {
@@ -59,11 +70,7 @@ public class ConvertersConfigurationHolder {
     private ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> threadLocalConfiguration = createThreadLocalConfiguration();
 
     protected static ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> createThreadLocalConfiguration() {
-        return new ThreadLocal<>() {
-            protected Map<java.lang.Class<? extends Converter>, ConverterConfiguration> initialValue() {
-                return new HashMap<>();
-            }
-        };
+        return new ThreadLocal<>();
     }
 
     private ConvertersConfigurationHolder() {
@@ -75,6 +82,47 @@ public class ConvertersConfigurationHolder {
         configurationHolder.defaultConfiguration.clear();
         configurationHolder.namedConfigurations.clear();
         configurationHolder.threadLocalConfiguration = createThreadLocalConfiguration();
+        observationRegistry = ObservationRegistry.NOOP;
+    }
+
+    /**
+     * Runs converter rendering with observability instrumentation when available.
+     *
+     * @param format the converter format, for example {@code json} or {@code xml}
+     * @param action the rendering action to invoke
+     * @throws ConverterException when the rendering action fails with a converter exception
+     */
+    public static void withConverterObservation(String format, ConverterAction action) throws ConverterException {
+        Objects.requireNonNull(format, "format cannot be null");
+        Objects.requireNonNull(action, "action cannot be null");
+
+        var registry = observationRegistry;
+        if (registry == null || registry.isNoop()) {
+            action.run();
+            return;
+        }
+
+        var observation = Observation.createNotStarted("grails.convert", registry)
+                .contextualName("grails.convert " + format)
+                .lowCardinalityKeyValue("grails.convert.format", format)
+                .start();
+
+        var scope = observation.openScope();
+        try {
+            action.run();
+        }
+        catch (Throwable t) {
+            observation.error(t);
+            throw t;
+        }
+        finally {
+            scope.close();
+            observation.stop();
+        }
+    }
+
+    static void setObservationRegistry(ObservationRegistry registry) {
+        observationRegistry = (registry != null) ? registry : ObservationRegistry.NOOP;
     }
 
     public static <C extends Converter> void setDefaultConfiguration(Class<C> c, ConverterConfiguration<C> cfg) {
@@ -110,11 +158,33 @@ public class ConvertersConfigurationHolder {
     }
 
     public static <C extends Converter> ConverterConfiguration<C> getThreadLocalConverterConfiguration(Class<C> converterClass) throws ConverterException {
-        return getInstance().threadLocalConfiguration.get().get(converterClass);
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = getThreadLocalConverterConfigurations(false);
+        return configurations != null ? configurations.get(converterClass) : null;
     }
 
     public static <C extends Converter> void setThreadLocalConverterConfiguration(Class<C> converterClass, ConverterConfiguration<C> cfg) throws ConverterException {
-        getInstance().threadLocalConfiguration.get().put(converterClass, cfg);
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = getThreadLocalConverterConfigurations(cfg != null);
+        if (cfg == null) {
+            if (configurations != null) {
+                configurations.remove(converterClass);
+                if (configurations.isEmpty()) {
+                    getInstance().threadLocalConfiguration.remove();
+                }
+            }
+        }
+        else {
+            configurations.put(converterClass, cfg);
+        }
+    }
+
+    private static Map<Class<? extends Converter>, ConverterConfiguration> getThreadLocalConverterConfigurations(boolean create) {
+        ThreadLocal<Map<Class<? extends Converter>, ConverterConfiguration>> threadLocalConfiguration = getInstance().threadLocalConfiguration;
+        Map<Class<? extends Converter>, ConverterConfiguration> configurations = threadLocalConfiguration.get();
+        if (configurations == null && create) {
+            configurations = new HashMap<>();
+            threadLocalConfiguration.set(configurations);
+        }
+        return configurations;
     }
 
     public static <C extends Converter> void setNamedConverterConfiguration(Class<C> converterClass, String name, ConverterConfiguration<C> cfg) throws ConverterException {

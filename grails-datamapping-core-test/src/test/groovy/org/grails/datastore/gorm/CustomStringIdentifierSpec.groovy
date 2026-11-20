@@ -25,7 +25,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class CustomStringIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([Product, Description])
+        manager.registerDomainClasses(Product, Description)
     }
 
     void "test basic crud operations with string id"() {
@@ -80,12 +80,14 @@ class CustomStringIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckMana
 
 @Entity
 class Description {
+
     Integer id
     String name
 }
 
 @Entity
 class Product {
+
     String name
     Date dateCreated
 

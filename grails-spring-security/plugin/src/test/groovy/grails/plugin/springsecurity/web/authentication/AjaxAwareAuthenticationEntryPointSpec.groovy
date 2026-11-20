@@ -22,6 +22,7 @@ import grails.plugin.springsecurity.AbstractUnitSpec
 import grails.plugin.springsecurity.ReflectionUtils
 import grails.plugin.springsecurity.SpringSecurityUtils
 import grails.plugin.springsecurity.web.SecurityRequestHolder
+import org.springframework.security.web.RedirectStrategy
 
 /**
  * Unit tests for WithAjaxAuthenticationProcessingFilterEntryPoint.
@@ -58,6 +59,23 @@ class AjaxAwareAuthenticationEntryPointSpec extends AbstractUnitSpec {
 
         then:
         ajaxLoginFormUrl == response.forwardedUrl
+    }
+
+    void 'commence() redirects without legacy portResolver wiring'() {
+        given:
+        entryPoint.useForward = false
+        String redirectedUrl
+        entryPoint.redirectStrategy = Stub(RedirectStrategy) {
+            sendRedirect(_, _, _) >> { requestArg, responseArg, url ->
+                redirectedUrl = url as String
+            }
+        }
+
+        when:
+        entryPoint.commence request, response, null
+
+        then:
+        loginFormUrl == redirectedUrl
     }
 
     void 'setAjaxLoginFormUrl'() {

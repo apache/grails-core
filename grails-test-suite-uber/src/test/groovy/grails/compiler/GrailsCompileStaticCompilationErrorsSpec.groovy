@@ -417,7 +417,52 @@ class GrailsCompileStaticCompilationErrorsSpec extends Specification {
         then: 'no errors are thrown'
         c
     }
-    
+
+    void 'Test compiling a class which invokes a chained createCriteria() terminal on a domain class'() {
+        given:
+        def gcl = new GroovyClassLoader()
+
+        when: 'the criteria builder closure is the argument to a terminal chained directly on createCriteria()'
+        def c = gcl.parseClass('''
+            package grails.compiler
+
+            @GrailsCompileStatic
+            class SomeClass {
+
+                def someMethod() {
+                    Person.createCriteria().list {
+                        cache true
+                        eq 'name', 'Anakin'
+                    }
+
+                    Person.createCriteria().list(max: 4, offset: 2) {
+                        cache true
+                        eq 'name', 'Anakin'
+                    }
+
+                    Person.createCriteria().listDistinct {
+                        eq 'name', 'Anakin'
+                    }
+
+                    Person.createCriteria().get {
+                        eq 'name', 'Anakin'
+                    }
+
+                    Person.createCriteria().count {
+                        eq 'name', 'Anakin'
+                    }
+
+                    Person.createCriteria().scroll {
+                        eq 'name', 'Anakin'
+                    }
+                }
+            }
+        '''.stripIndent())
+
+        then: 'no errors are thrown'
+        c
+    }
+
     void 'Test compiling a domain class with a mapping block'() {
         given:
         def gcl = new GroovyClassLoader()

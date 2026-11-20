@@ -16,12 +16,8 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package specs
 
-import spock.lang.Stepwise
-
-import grails.testing.mixin.integration.Integration
 import pages.LoginPage
 import pages.role.CreateRolePage
 import pages.role.ListRolePage
@@ -30,328 +26,331 @@ import pages.user.CreateUserPage
 import pages.user.ListUserPage
 import pages.user.ShowUserPage
 import spock.lang.IgnoreIf
+import spock.lang.Stepwise
+
+import grails.testing.mixin.integration.Integration
 
 @Integration
 @Stepwise
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'basic' })
 class BasicAuthSecuritySpec extends AbstractSecuritySpec {
 
-	private HttpURLConnection connection
+    private HttpURLConnection connection
 
-	void 'create roles'() {
-		when:
-		def listRolePage = to(ListRolePage)
+    void 'create roles'() {
+        when:
+        def listRolePage = to(ListRolePage)
 
-		then:
-		listRolePage.roleRows.size() == 0
+        then:
+        listRolePage.roleRows.size() == 0
 
-		when:
-		listRolePage.newRoleButton.click()
+        when:
+        listRolePage.newRoleButton.click()
 
-		then:
-		at(CreateRolePage)
+        then:
+        at(CreateRolePage)
 
-		when:
-		authority = 'ROLE_ADMIN'
-		createButton.click()
+        when:
+        authority = 'ROLE_ADMIN'
+        createButton.click()
 
-		then:
-		at(ShowRolePage)
+        then:
+        at(ShowRolePage)
 
-		when:
-		listRolePage = to(ListRolePage)
+        when:
+        listRolePage = to(ListRolePage)
 
-		then:
-		listRolePage.roleRows.size() == 1
+        then:
+        listRolePage.roleRows.size() == 1
 
-		when:
-		listRolePage.newRoleButton.click()
+        when:
+        listRolePage.newRoleButton.click()
 
-		then:
-		at(CreateRolePage)
+        then:
+        at(CreateRolePage)
 
-		when:
-		authority = 'ROLE_ADMIN2'
-		createButton.click()
+        when:
+        authority = 'ROLE_ADMIN2'
+        createButton.click()
 
-		then:
-		at(ShowRolePage)
+        then:
+        at(ShowRolePage)
 
-		when:
-		listRolePage = to(ListRolePage)
+        when:
+        listRolePage = to(ListRolePage)
 
-		then:
-		listRolePage.roleRows.size() == 2
-	}
+        then:
+        listRolePage.roleRows.size() == 2
+    }
 
-	void 'create users'() {
+    void 'create users'() {
 
-		when:
-		def listUserPage = to(ListUserPage)
+        when:
+        def listUserPage = to(ListUserPage)
 
-		then:
-		listUserPage.userRows.size() == 0
+        then:
+        listUserPage.userRows.size() == 0
 
-		when:
-		listUserPage.newUserButton.click()
+        when:
+        listUserPage.newUserButton.click()
 
-		then:
-		at(CreateUserPage)
+        then:
+        at(CreateUserPage)
 
-		when:
-		username = 'admin1'
-		password = 'password1'
-		$('#enabled').click()
-		$('#ROLE_ADMIN').click()
-		createButton.click()
+        when:
+        username = 'admin1'
+        password = 'password1'
+        $('#enabled').click()
+        $('#ROLE_ADMIN').click()
+        createButton.click()
 
-		then:
-		at(ShowUserPage)
+        then:
+        at(ShowUserPage)
 
-		when:
-		listUserPage = to(ListUserPage)
+        when:
+        listUserPage = to(ListUserPage)
 
-		then:
-		listUserPage.userRows.size() == 1
+        then:
+        listUserPage.userRows.size() == 1
 
-		when:
-		listUserPage.newUserButton.click()
+        when:
+        listUserPage.newUserButton.click()
 
-		then:
-		at(CreateUserPage)
+        then:
+        at(CreateUserPage)
 
-		when:
-		username = 'admin2'
-		password = 'password2'
-		$('#enabled').click()
-		$('#ROLE_ADMIN').click()
-		$('#ROLE_ADMIN2').click()
-		createButton.click()
+        when:
+        username = 'admin2'
+        password = 'password2'
+        $('#enabled').click()
+        $('#ROLE_ADMIN').click()
+        $('#ROLE_ADMIN2').click()
+        createButton.click()
 
-		then:
-		at(ShowUserPage)
+        then:
+        at(ShowUserPage)
 
-		when:
-		listUserPage = to(ListUserPage)
+        when:
+        listUserPage = to(ListUserPage)
 
-		then:
-		listUserPage.userRows.size() == 2
-	}
+        then:
+        listUserPage.userRows.size() == 2
+    }
 
-	void 'secured urls not visible without login'() {
+    void 'secured urls not visible without login'() {
 
-		// secureClassAnnotated is Basic auth, everything else is form auth
+        // secureClassAnnotated is Basic auth, everything else is form auth
 
-		when:
-		go('secureAnnotated')
+        when:
+        go('secureAnnotated')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		go('secureAnnotated/index')
+        when:
+        go('secureAnnotated/index')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		go('secureAnnotated/adminEither')
+        when:
+        go('secureAnnotated/adminEither')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		getWithoutAuth('secureClassAnnotated')
+        when:
+        getWithoutAuth('secureClassAnnotated')
 
-		then:
-		401 == connection.responseCode
+        then:
+        401 == connection.responseCode
 
-		when:
-		getWithoutAuth('secureClassAnnotated/index')
+        when:
+        getWithoutAuth('secureClassAnnotated/index')
 
-		then:
-		401 == connection.responseCode
+        then:
+        401 == connection.responseCode
 
-		when:
-		getWithoutAuth('secureClassAnnotated/otherAction')
+        when:
+        getWithoutAuth('secureClassAnnotated/otherAction')
 
-		then:
-		401 == connection.responseCode
+        then:
+        401 == connection.responseCode
 
-		when:
-		getWithoutAuth('secureClassAnnotated/admin2')
+        when:
+        getWithoutAuth('secureClassAnnotated/admin2')
 
-		then:
-		401 == connection.responseCode
+        then:
+        401 == connection.responseCode
 
-		when:
-		getWithoutAuth('secureClassAnnotated/admin2.xml')
+        when:
+        getWithoutAuth('secureClassAnnotated/admin2.xml')
 
-		then:
-		401 == connection.responseCode
+        then:
+        401 == connection.responseCode
 
-		when:
-		getWithoutAuth('secureClassAnnotated/admin2;jsessionid=5514B068198CC7DBF372713326E14C12')
+        when:
+        getWithoutAuth('secureClassAnnotated/admin2;jsessionid=5514B068198CC7DBF372713326E14C12')
 
-		then:
-		401 == connection.responseCode
-	}
+        then:
+        401 == connection.responseCode
+    }
 
-	void 'check allowed for admin1'() {
+    void 'check allowed for admin1'() {
 
-		// Check with admin1 auth, some @Secure actions are accessible
+        // Check with admin1 auth, some @Secure actions are accessible
 
-		when:
-		go('secureAnnotated')
+        when:
+        go('secureAnnotated')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin1', 'password1')
+        when:
+        login('admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		go('secureAnnotated/index')
+        when:
+        logout()
+        go('secureAnnotated/index')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin1', 'password1')
+        when:
+        login('admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		go('secureAnnotated/adminEither')
+        when:
+        logout()
+        go('secureAnnotated/adminEither')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin1', 'password1')
+        when:
+        login('admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated', 'admin1', 'password1')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated', 'admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/index', 'admin1', 'password1')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/index', 'admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/otherAction', 'admin1', 'password1')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/otherAction', 'admin1', 'password1')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/admin2', 'admin1', 'password1')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/admin2', 'admin1', 'password1')
 
-		then:
-		pageSource.contains('Error 403 Forbidden')
-	}
+        then:
+        waitFor { pageSource.contains('Error 403 Forbidden') }
+    }
 
-	void 'check allowed for admin2'() {
+    void 'check allowed for admin2'() {
 
-		// Check that with admin2 auth, some @Secure actions are accessible
+        // Check that with admin2 auth, some @Secure actions are accessible
 
-		when:
-		go('secureAnnotated')
+        when:
+        go('secureAnnotated')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin2', 'password2')
+        when:
+        login('admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		go('secureAnnotated/index')
+        when:
+        logout()
+        go('secureAnnotated/index')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin2', 'password2')
+        when:
+        login('admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		go('secureAnnotated/adminEither')
+        when:
+        logout()
+        go('secureAnnotated/adminEither')
 
-		then:
-		at(LoginPage)
+        then:
+        at(LoginPage)
 
-		when:
-		login('admin2', 'password2')
+        when:
+        login('admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated', 'admin2', 'password2')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated', 'admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/index', 'admin2', 'password2')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/index', 'admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/otherAction', 'admin2', 'password2')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/otherAction', 'admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
 
-		when:
-		logout()
-		getWithAuth('secureClassAnnotated/admin2', 'admin2', 'password2')
+        when:
+        logout()
+        getWithAuth('secureClassAnnotated/admin2', 'admin2', 'password2')
 
-		then:
-		pageSource.contains('you have ROLE_ADMIN')
-	}
+        then:
+        waitFor { pageSource.contains('you have ROLE_ADMIN') }
+    }
 
-	protected void logout() {
-		super.logout()
-		// cheesy, but the 'Authentication' header from basic auth
-		// isn't cleared, so this forces an invalid header
-		getWithAuth('', 'not_a_valid_username', '')
-	}
+    protected void logout() {
+        super.logout()
+        // cheesy, but the 'Authentication' header from basic auth
+        // isn't cleared, so this forces an invalid header
+        getWithAuth('', 'not_a_valid_username', '')
+    }
 
-	private void getWithAuth(String path, String username, String password) {
-		String uri = new URI(browser.baseUrl).resolve(new URI(path))
-		go(uri.replace('http://', "http://$username:$password@"))
-	}
+    private void getWithAuth(String path, String username, String password) {
+        String uri = new URI(browser.baseUrl).resolve(new URI(path))
+        go(uri.replace('http://', "http://$username:$password@"))
+    }
 
-	private void getWithoutAuth(String uri) {
-		connection = download("/$uri")
-	}
+    private void getWithoutAuth(String uri) {
+        connection = download("/$uri")
+    }
 }

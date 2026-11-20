@@ -24,7 +24,7 @@ import spock.lang.Specification
 
 class FirstTagLibSpec extends Specification implements TagLibUnitTest<FirstTagLib> {
 
-    void setupSpec() {
+    void setup() {
         mockTagLib SecondTagLib
     }
 

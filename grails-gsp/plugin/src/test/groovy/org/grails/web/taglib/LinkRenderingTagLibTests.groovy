@@ -24,7 +24,6 @@ import spock.lang.Specification
 
 class LinkRenderingTagLibTests extends Specification implements UrlMappingsUnitTest<LinkRenderingTestUrlMappings> {
 
-
     def testMappingsWhichSpecifyAPlugin() {
         when:
         def template = '<g:link controller="first" action="index" plugin="firstUtil">click</g:link>'

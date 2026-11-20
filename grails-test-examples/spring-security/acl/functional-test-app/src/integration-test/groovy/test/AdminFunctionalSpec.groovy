@@ -16,20 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package test
 
-import grails.testing.mixin.integration.Integration
-import org.springframework.security.acls.domain.BasePermission
-
+import pages.DeleteReportPage
 import pages.EditReportPage
 import pages.IndexPage
 import pages.ListReportPage
 import pages.ReportGrantPage
 import pages.ShowReportPage
-import spock.lang.Stepwise
+import spock.lang.Unroll
 
-@Stepwise
+import grails.testing.mixin.integration.Integration
+
+import static org.springframework.security.acls.domain.BasePermission.READ
+
 @Integration
 class AdminFunctionalSpec extends AbstractSecuritySpec {
 
@@ -41,54 +41,55 @@ class AdminFunctionalSpec extends AbstractSecuritySpec {
 
 	void 'check tags'() {
 		when:
-		go('tagLibTest/test')
+		go('/tagLibTest/test')
 
 		then:
-		pageSource.contains('test 1 true 1')
-		pageSource.contains('test 2 true 1')
-		pageSource.contains('test 3 true 1')
-		pageSource.contains('test 4 true 1')
-		pageSource.contains('test 5 true 1')
-		pageSource.contains('test 6 true 1')
+		with(pageSource) {
+			contains('test 1 true 1')
+			contains('test 2 true 1')
+			contains('test 3 true 1')
+			contains('test 4 true 1')
+			contains('test 5 true 1')
+			contains('test 6 true 1')
 
-		pageSource.contains('test 1 true 13')
-		pageSource.contains('test 2 true 13')
-		pageSource.contains('test 3 true 13')
-		pageSource.contains('test 4 true 13')
-		pageSource.contains('test 5 true 13')
-		pageSource.contains('test 6 true 13')
+			contains('test 1 true 13')
+			contains('test 2 true 13')
+			contains('test 3 true 13')
+			contains('test 4 true 13')
+			contains('test 5 true 13')
+			contains('test 6 true 13')
 
-		pageSource.contains('test 1 true 80')
-		pageSource.contains('test 2 true 80')
-		pageSource.contains('test 3 true 80')
-		pageSource.contains('test 4 true 80')
-		pageSource.contains('test 5 true 80')
-		pageSource.contains('test 6 true 80')
+			contains('test 1 true 80')
+			contains('test 2 true 80')
+			contains('test 3 true 80')
+			contains('test 4 true 80')
+			contains('test 5 true 80')
+			contains('test 6 true 80')
+		}
 	}
 
+	@Unroll
 	void 'view all'() {
 		when:
-		go("report/show?number=$i")
+		def page = to(ShowReportPage, i)
 
 		then:
-		pageSource.contains("report$i")
+		page.name == "report$i"
 
 		where:
 		i << (1..100)
 	}
 
 	void 'edit report 15'() {
-
 		when:
-		go('report/edit?number=15')
+		def page = to(EditReportPage, 15)
 
 		then:
-		at(EditReportPage)
-		$('form').name == 'report15'
+		page.nameField.text == 'report15'
 
 		when:
-		name = 'report15_new'
-		updateButton.click()
+		page.nameField = 'report15_new'
+		page.updateButton.click()
 
 		then:
 		at(ShowReportPage)
@@ -97,34 +98,33 @@ class AdminFunctionalSpec extends AbstractSecuritySpec {
 
 	void 'delete report 15'() {
 		when:
-		go('report/delete?number=15')
-		def listReportPage = at(ListReportPage)
+		via(DeleteReportPage, 15)
 
 		then:
-		message == 'Report 15 deleted'
-		listReportPage.reportRows.size() == 99
+		def page = at(ListReportPage)
+
+		and:
+		page.message == 'Report 15 deleted'
+		page.reportRows.size() == 99
 	}
 
 	void 'grant edit 16'() {
 		when:
-		go('report/grant?number=16')
-		def reportGrantPage = at(ReportGrantPage)
+		def page = to(ReportGrantPage, 16)
 
 		then:
-		pageSource.contains('Grant permission for report16')
+		page.heading == 'Grant permission for report16'
 
 		when:
-		recipient = 'user2'
-		permission = BasePermission.READ.mask.toString()
-		reportGrantPage.grantButton.click()
-		at(ShowReportPage)
+		page.grantPermission('user2', READ)
+		page = at(ShowReportPage)
 
 		then:
-		pageSource.contains("Permission $BasePermission.READ.mask granted on Report 16 to user2")
+		page.message == "Permission $READ.mask granted on Report 16 to user2"
 
 		// login as user2 and verify the grant
 		when:
-		go('logout')
+		logout()
 
 		then:
 		at(IndexPage)
@@ -132,13 +132,10 @@ class AdminFunctionalSpec extends AbstractSecuritySpec {
 		when:
 		login('user2')
 
-		then:
-		at(IndexPage)
-
-		when:
-		go('report/show?number=16')
+		and:
+		page = to(ShowReportPage, 16)
 
 		then:
-		pageSource.contains('report16')
+		page.name == 'report16'
 	}
 }

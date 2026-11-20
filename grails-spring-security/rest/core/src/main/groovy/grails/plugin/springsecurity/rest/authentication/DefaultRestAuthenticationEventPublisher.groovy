@@ -35,13 +35,13 @@ class DefaultRestAuthenticationEventPublisher extends DefaultAuthenticationEvent
 
     private ApplicationEventPublisher applicationEventPublisher
 
-    public DefaultRestAuthenticationEventPublisher() {
-        this(null)
+    DefaultRestAuthenticationEventPublisher() {
+        super()
     }
 
-    public DefaultRestAuthenticationEventPublisher(ApplicationEventPublisher publisher) {
+    DefaultRestAuthenticationEventPublisher(ApplicationEventPublisher publisher) {
         super(publisher)
-        this.setApplicationEventPublisher(publisher)
+        this.applicationEventPublisher = publisher
     }
 
     void setApplicationEventPublisher(ApplicationEventPublisher publisher) {

@@ -19,8 +19,9 @@
 
 package functional.tests
 
-import grails.plugin.json.builder.JsonGenerator
+import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
+
 import org.springframework.core.Ordered
 
 /**

@@ -18,16 +18,34 @@
  */
 package org.grails.databinding.converters
 
-import org.grails.plugins.databinding.AbstractDataBindingGrailsPlugin
 import spock.lang.Shared
 import spock.lang.Specification
 
 import java.time.*
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 class Jsr310ConvertersConfigurationSpec extends Specification {
 
+    private static final String DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ"
+    private static final String DEFAULT_JSR310_OFFSET_TIME_FORMAT = 'HH:mm:ssZ'
+    private static final String DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT = "yyyy-MM-dd'T'HH:mm:ss"
+    private static final String DEFAULT_JSR310_LOCAL_DATE_FORMAT = 'yyyy-MM-dd'
+    private static final String DEFAULT_JSR310_LOCAL_TIME_FORMAT = 'HH:mm:ss'
+    private static final List<String> DEFAULT_DATE_FORMATS = [
+            'yyyy-MM-dd HH:mm:ss.S',
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            'yyyy-MM-dd HH:mm:ss.S z',
+            "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+            DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_OFFSET_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT,
+            DEFAULT_JSR310_LOCAL_DATE_FORMAT,
+            DEFAULT_JSR310_LOCAL_TIME_FORMAT
+    ]
+
     @Shared
-    Jsr310ConvertersConfiguration config = new Jsr310ConvertersConfiguration(formatStrings: AbstractDataBindingGrailsPlugin.DEFAULT_DATE_FORMATS)
+    Jsr310ConvertersConfiguration config = new Jsr310ConvertersConfiguration(formatStrings: DEFAULT_DATE_FORMATS)
 
     @Shared
     Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
@@ -42,7 +60,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalDateTime
-        converter.convert("1941-01-05T08:00:00", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT) instanceof LocalDateTime
+        converter.convert("1941-01-05T08:00:00", DEFAULT_JSR310_LOCAL_DATE_TIME_FORMAT) instanceof LocalDateTime
     }
 
     void "localDateTimeValueConverter"() {
@@ -75,7 +93,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalDate
-        converter.convert("1941-01-05", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_DATE_FORMAT) instanceof LocalDate
+        converter.convert("1941-01-05", DEFAULT_JSR310_LOCAL_DATE_FORMAT) instanceof LocalDate
     }
 
     void "localDateValueConverter"() {
@@ -105,7 +123,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == LocalTime
-        converter.convert("08:00:00", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_LOCAL_TIME_FORMAT) instanceof LocalTime
+        converter.convert("08:00:00", DEFAULT_JSR310_LOCAL_TIME_FORMAT) instanceof LocalTime
     }
 
     void "localTimeValueConverter"() {
@@ -135,7 +153,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == OffsetTime
-        converter.convert("08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_TIME_FORMAT) instanceof OffsetTime
+        converter.convert("08:00:00+0000", DEFAULT_JSR310_OFFSET_TIME_FORMAT) instanceof OffsetTime
     }
 
     void "offsetTimeValueConverter"() {
@@ -165,7 +183,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == OffsetDateTime
-        converter.convert("1941-01-05T08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof OffsetDateTime
+        converter.convert("1941-01-05T08:00:00+0000", DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof OffsetDateTime
     }
 
     void "offsetDateTimeValueConverter"() {
@@ -198,7 +216,7 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
 
         expect:
         converter.targetType == ZonedDateTime
-        converter.convert("1941-01-05T08:00:00+0000", AbstractDataBindingGrailsPlugin.DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof ZonedDateTime
+        converter.convert("1941-01-05T08:00:00+0000", DEFAULT_JSR310_OFFSET_ZONED_DATE_TIME_FORMAT) instanceof ZonedDateTime
     }
 
     void "zonedDateTimeValueConverter"() {
@@ -223,6 +241,27 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         date.hour == 8
         date.minute == 0
         date.second == 0
+    }
+
+    void "value converters read #value as ISO 8601 writes a #type.simpleName, as Grails renders it"() {
+        expect:
+        converter.call(config).convert(value) == type.parse(value)
+
+        where:
+        type           | value                               | converter
+        OffsetDateTime | '2024-05-01T10:00:00Z'              | { it.offsetDateTimeValueConverter() }
+        OffsetDateTime | '2024-05-01T10:00:00+02:00'         | { it.offsetDateTimeValueConverter() }
+        ZonedDateTime  | '2024-05-01T10:00:00+02:00'         | { it.zonedDateTimeValueConverter() }
+        LocalDateTime  | '2024-05-01T10:00:00.250'           | { it.localDateTimeValueConverter() }
+        OffsetTime     | '10:00:00+02:00'                    | { it.offsetTimeValueConverter() }
+        LocalTime      | '10:00:00.5'                        | { it.localTimeValueConverter() }
+        LocalDate      | '2024-05-01'                        | { it.localDateValueConverter() }
+    }
+
+    void "value converters still read the configured date formats"() {
+        expect: 'a form ISO 8601 does not write, which a configured format reads'
+        config.offsetDateTimeValueConverter().convert('1941-01-05T08:00:00+0000') ==
+                OffsetDateTime.parse('1941-01-05T08:00:00Z')
     }
 
     void "periodValueConverter"() {
@@ -255,5 +294,63 @@ class Jsr310ConvertersConfigurationSpec extends Specification {
         converter.canConvert(2)
         !converter.canConvert("23")
         converter.convert(1) instanceof Instant
+    }
+
+    void "monthValueConverter binds a month number, as Spring Boot renders a Month"() {
+        def converter = config.monthValueConverter()
+
+        expect:
+        converter.targetType == Month
+        converter.canConvert(9)
+        converter.canConvert('9')
+        !converter.canConvert('SEPTEMBER')
+        converter.convert(1) == Month.JANUARY
+        converter.convert(9) == Month.SEPTEMBER
+        converter.convert(9.0) == Month.SEPTEMBER
+        converter.convert(' 12 ') == Month.DECEMBER
+    }
+
+    void "monthValueConverter rejects #value, as it rejects a number out of range"() {
+        when:
+        config.monthValueConverter().convert(value)
+
+        then:
+        thrown(RuntimeException)
+
+        where:
+        value << [9.7, 9.7d, 9.5f, Double.NaN, 13, 0]
+    }
+
+    void "a Jsr310DateValueConverter subclass written for Grails 7, calling convert(value, callable) with the format pattern, reads only the configured formats"() {
+        given:
+        def converter = new FormatsOnlyLocalTimeConverter(config)
+
+        expect:
+        converter.convert('10:00:00') == LocalTime.of(10, 0)
+
+        when: 'a value that only ISO 8601 reads'
+        converter.convert('10:00:00.5')
+
+        then:
+        thrown(DateTimeParseException)
+    }
+}
+
+class FormatsOnlyLocalTimeConverter extends Jsr310ConvertersConfiguration.Jsr310DateValueConverter<LocalTime> {
+
+    FormatsOnlyLocalTimeConverter(Jsr310ConvertersConfiguration configuration) {
+        super(configuration)
+    }
+
+    @Override
+    LocalTime convert(Object value) {
+        convert(value) { String format ->
+            LocalTime.parse((CharSequence) value, DateTimeFormatter.ofPattern(format))
+        }
+    }
+
+    @Override
+    Class<?> getTargetType() {
+        LocalTime
     }
 }

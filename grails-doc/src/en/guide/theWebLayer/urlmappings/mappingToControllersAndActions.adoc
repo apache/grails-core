@@ -64,6 +64,45 @@ group "/store", {
 }
 ----
 
+==== Group Defaults
+
+Groups can specify default mapping parameters that are inherited by all child mappings. This avoids repeating the same `controller`, `namespace`, or `plugin` on every mapping within the group:
+
+[source,groovy]
+----
+group "/internal/community", namespace: 'community', controller: 'communitySearch', {
+    "/search"(action: 'internalSearch')
+    "/find-user"(action: 'internalFindUser')
+    "/user-activity"(action: 'internalUserActivity')
+}
+----
+
+This is equivalent to specifying `namespace` and `controller` on each mapping individually. Child mappings can override any default by specifying the parameter explicitly:
+
+[source,groovy]
+----
+group "/api", namespace: 'api', controller: 'defaultCtrl', {
+    "/special"(controller: 'specialCtrl', action: 'handle')  // overrides controller
+    "/normal"(action: 'index')                                // inherits controller
+}
+----
+
+Nested groups merge defaults — inner groups inherit and can extend or override outer group defaults:
+
+[source,groovy]
+----
+group "/community", namespace: 'community', {
+    group "/topics", controller: 'topic', {
+        "/gallery"(action: 'gallery')   // inherits namespace and controller
+        "/create"(action: 'create')
+    }
+    group "/members", controller: 'member', {
+        "/index"(action: 'index')       // inherits namespace, different controller
+    }
+}
+----
+
+The supported default parameters are: `controller`, `action`, `namespace`, `plugin`, `view`, and `method`.
 
 To rewrite one URI onto another explicit URI (rather than a controller/action pair) do something like this:
 

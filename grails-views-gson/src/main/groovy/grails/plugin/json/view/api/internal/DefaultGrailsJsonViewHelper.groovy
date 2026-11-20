@@ -16,21 +16,20 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.plugin.json.view.api.internal
 
 import java.beans.PropertyDescriptor
+import java.lang.reflect.Field
 
+import groovy.json.JsonGenerator
+import groovy.json.StreamingJsonBuilder
 import groovy.text.Template
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 
 import grails.core.support.proxy.ProxyHandler
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.builder.JsonOutput
-import grails.plugin.json.builder.StreamingJsonBuilder
-import grails.plugin.json.builder.StreamingJsonBuilder.StreamingJsonDelegate
 import grails.plugin.json.view.api.GrailsJsonViewHelper
 import grails.plugin.json.view.api.JsonView
 import grails.plugin.json.view.template.JsonViewTemplate
@@ -74,11 +73,12 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
     public static final String PROCESSED_OBJECT_VARIABLE = 'org.json.views.RENDER_PROCESSED_OBJECTS'
 
     @Override
-    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonDelegate) Closure customizer) {
+    JsonOutput.JsonWritable render(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
         render(object, Collections.emptyMap(), customizer)
     }
 
-    void inline(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonDelegate) Closure customizer = null, StreamingJsonDelegate jsonDelegate) {
+    @Override
+    void inline(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer = null, StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate) {
         JsonView jsonView = (JsonView) view
         Map<Object, JsonOutput.JsonWritable> processedObjects = initializeProcessedObjects(jsonView.binding)
         boolean isDeep = ViewUtils.getBooleanFromMap(DEEP, arguments)
@@ -103,30 +103,27 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
     }
 
     @Override
-    void inline(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonDelegate) Closure customizer = null) {
-        def jsonDelegate = new StreamingJsonDelegate(view.out, true)
+    void inline(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer = null) {
+        def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(view.out, true)
         inline(object, arguments, customizer, jsonDelegate)
     }
 
     @Override
-    void inline(Object object, @DelegatesTo(StreamingJsonDelegate) Closure customizer) {
+    void inline(Object object, @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer) {
         inline(object, Collections.emptyMap(), customizer)
     }
 
     private JsonOutput.JsonWritable preProcessedOutput(Object object, Map<Object, JsonOutput.JsonWritable> processedObjects) {
         JsonView jsonView = (JsonView) view
-        boolean rootRender = processedObjects.isEmpty()
         object = jsonView.proxyHandler?.unwrapIfProxy(object) ?: object
         if (object == null) {
             return NULL_OUTPUT
         }
-
-        if (!rootRender && processedObjects.containsKey(object)) {
-            def existingOutput = processedObjects.get(object)
-            if (!NULL_OUTPUT.equals(existingOutput)) {
-                return existingOutput
-            }
-        }
+        // Each occurrence of an entity in the object graph must be rendered fresh in its own
+        // context so it gets its own id (a previously cached JsonWritable is bound to the first
+        // occurrence's delegate/path/deep state and would drop the id or render an empty object
+        // for siblings or proxy-loaded instances). True cyclic associations are broken earlier
+        // by the circular-association handling in process(), so this never recurses infinitely.
         return null
     }
 
@@ -204,7 +201,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                     if (entity != null) {
 
                         if (inline) {
-                            StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, first)
+                            def jsonDelegate = new StreamingJsonBuilder.StreamingJsonDelegate(out, first)
                             if (beforeClosure != null) {
                                 beforeClosure.setDelegate(jsonDelegate)
                                 beforeClosure.call()
@@ -219,7 +216,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
                             StreamingJsonBuilder builder = new StreamingJsonBuilder(out, generator)
                             builder.call {
-                                StreamingJsonDelegate jsonDelegate = (StreamingJsonDelegate) getDelegate()
+                                StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                                 if (beforeClosure != null) {
                                     beforeClosure.setDelegate(jsonDelegate)
                                     beforeClosure.call(object)
@@ -246,7 +243,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
                             StreamingJsonBuilder builder = new StreamingJsonBuilder(out, generator)
                             builder.call {
-                                StreamingJsonDelegate jsonDelegate = (StreamingJsonDelegate) getDelegate()
+                                StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate = (StreamingJsonBuilder.StreamingJsonDelegate) getDelegate()
                                 if (beforeClosure != null) {
                                     beforeClosure.setDelegate(jsonDelegate)
                                     beforeClosure.call(object)
@@ -264,7 +261,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                 } finally {
 
                     if (rootRender) {
-                        binding.variables.remove(PROCESSED_OBJECT_VARIABLE)
+                        ((Binding) binding).variables.remove(PROCESSED_OBJECT_VARIABLE)
                     }
                 }
             }
@@ -312,20 +309,21 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
                 out.append(JsonOutput.OPEN_BRACE)
                 for (entry in map.entrySet()) {
-                    if (!simpleIncludeExcludeSupport.shouldInclude(incs, excs, entry.key.toString())) {
+                    String key = formatMapKey(entry.key)
+                    if (!simpleIncludeExcludeSupport.shouldInclude(incs, excs, key)) {
                         continue
                     }
 
                     if (entryRendered) {
                         out.append(JsonOutput.COMMA)
                     }
-                    out.append(JsonOutput.toJson(entry.key.toString()))
+                    out.append(JsonOutput.toJson(key))
                     out.append(JsonOutput.COLON)
                     def value = entry.value
                     if (value instanceof Iterable) {
-                        getIterableWritable(value, arguments, customizer, processedObjects, entry.key.toString() + '.').writeTo(out)
+                        getIterableWritable(value, arguments, customizer, processedObjects, key + '.').writeTo(out)
                     } else {
-                        handleValue(value, out, arguments, customizer, processedObjects, entry.key.toString() + '.')
+                        handleValue(value, out, arguments, customizer, processedObjects, key + '.')
                     }
                     entryRendered = true
                 }
@@ -345,7 +343,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
     }
 
     @Override
-    JsonOutput.JsonWritable render(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonDelegate) Closure customizer = null) {
+    JsonOutput.JsonWritable render(Object object, Map arguments = Collections.emptyMap(), @DelegatesTo(StreamingJsonBuilder.StreamingJsonDelegate) Closure customizer = null) {
 
         JsonView jsonView = (JsonView) view
         def binding = jsonView.getBinding()
@@ -434,11 +432,11 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                                             out.append(o.toString())
                                         }
                                         else if (isSimpleType(o.class, o)) {
-                                            out.append(JsonOutput.toJson((Object) o))
+                                            out.append(getGenerator().toJson((Object) o))
                                         }
                                         else {
                                             out.append(JsonOutput.OPEN_BRACE)
-                                            processSimple(new StreamingJsonDelegate(out, true), o, processedObjects, incs, excs, "${path}${propertyName}.", renderNulls)
+                                            processSimple(new StreamingJsonBuilder.StreamingJsonDelegate(out, true), o, processedObjects, incs, excs, "${path}${propertyName}.", renderNulls)
                                             out.append(JsonOutput.CLOSE_BRACE)
                                         }
                                     })
@@ -467,7 +465,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
                 }
             }
 
-            jsonDelegate.first = false
+            StreamingJsonDelegateAccess.setFirst(jsonDelegate, false)
 
             if (customizer != null) {
                 customizer.setDelegate(jsonDelegate)
@@ -490,10 +488,10 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         JsonView jsonView = (JsonView) view
         MappingFactory mappingFactory = jsonView.mappingContext?.mappingFactory
         if (mappingFactory != null) {
-            return mappingFactory.isSimpleType(propertyType) || (value instanceof Enum) || (value instanceof Map)
+            return mappingFactory.isSimpleType(propertyType) || (value instanceof Enum) || (value instanceof Map) || hasDateTimeConverter(propertyType)
         }
         else {
-            return MappingFactory.isSimpleType(propertyType.getName()) || (value instanceof Enum) || (value instanceof Map)
+            return MappingFactory.isSimpleType(propertyType.getName()) || (value instanceof Enum) || (value instanceof Map) || hasDateTimeConverter(propertyType)
         }
 
     }
@@ -683,7 +681,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
         }
     }
 
-    protected void processSimpleProperty(StreamingJsonDelegate jsonDelegate, PersistentProperty prop, String propertyName, Object value) {
+    protected void processSimpleProperty(StreamingJsonBuilder.StreamingJsonDelegate jsonDelegate, PersistentProperty prop, String propertyName, Object value) {
         if (prop instanceof Custom) {
             def propertyType = value.getClass()
             def template = renderTemplate(value, propertyType)
@@ -695,7 +693,7 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
 
         if (isStringType(prop.type)) {
             jsonDelegate.call(propertyName, value.toString())
-        } else if (prop.type.isEnum()) {
+        } else if (prop.type.isEnum() && !hasDateTimeConverter(value.getClass())) {
             jsonDelegate.call(propertyName, ((Enum) value).name())
         } else if (value instanceof TimeZone) {
             jsonDelegate.call(propertyName, value.getID())
@@ -894,5 +892,17 @@ class DefaultGrailsJsonViewHelper extends DefaultJsonViewHelper implements Grail
             return (T) value
         }
         return null
+    }
+
+    @CompileStatic
+    private static class StreamingJsonDelegateAccess {
+
+        private static final Field FIRST = StreamingJsonBuilder.StreamingJsonDelegate.getDeclaredField('first').tap {
+            accessible = true
+        }
+
+        static void setFirst(StreamingJsonBuilder.StreamingJsonDelegate delegate, boolean first) {
+            FIRST.set(delegate, first)
+        }
     }
 }

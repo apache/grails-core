@@ -41,6 +41,6 @@ class AclObjectIdentity extends AbstractAclObjectIdentity {
     }
 
     static constraints = {
-        objectId unique: 'aclClass'
+        objectId unique: 'aclClass', nullable: false
     }
 }

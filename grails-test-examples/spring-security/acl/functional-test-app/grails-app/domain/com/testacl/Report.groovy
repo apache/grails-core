@@ -19,11 +19,11 @@
 
 package com.testacl
 
+import grails.compiler.GrailsCompileStatic
 import grails.plugin.springsecurity.acl.annotation.AclVoter
 import grails.plugin.springsecurity.acl.annotation.AclVoters
-import groovy.transform.CompileStatic
 
-@CompileStatic
+@GrailsCompileStatic
 @AclVoters([
 	@AclVoter(name='aclReportWriteVoter',
 	          configAttribute='ACL_REPORT_WRITE',
@@ -40,5 +40,10 @@ class Report {
 	Report(String name, int number) {
 		this.name = name
 		this.number = number
+	}
+
+	static constraints = {
+		name(nullable: false)
+		number(nullable: false)
 	}
 }

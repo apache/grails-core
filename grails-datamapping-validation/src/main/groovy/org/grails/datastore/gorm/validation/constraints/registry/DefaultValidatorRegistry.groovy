@@ -57,7 +57,11 @@ class DefaultValidatorRegistry implements ValidatorRegistry, ConstraintRegistry,
         this.constraintRegistry = new DefaultConstraintRegistry(messageSource)
         this.messageSource = messageSource
         Map<String, Object> defaultConstraintsMap = resolveDefaultConstraints(connectionSourceSettings)
-        this.constraintsEvaluator = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraintsMap)
+        // Default to true if not explicitly configured
+        boolean cacheAnnotations = connectionSourceSettings.cacheAutoTimestampAnnotations != null ?
+            connectionSourceSettings.cacheAutoTimestampAnnotations : true
+        boolean defaultNullable = connectionSourceSettings.default.nullable
+        this.constraintsEvaluator = new DefaultConstraintEvaluator(constraintRegistry, mappingContext, defaultConstraintsMap, cacheAnnotations, defaultNullable)
         this.mappingContext = mappingContext
     }
 

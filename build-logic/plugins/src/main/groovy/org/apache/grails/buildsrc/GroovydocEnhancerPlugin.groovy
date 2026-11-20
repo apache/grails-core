@@ -75,53 +75,68 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
             if (project.configurations.names.contains('documentation')) {
                 it.groovyClasspath = project.configurations.getByName('documentation')
             }
+            // Groovydoc Class.forName's referenced types against this classpath. Compile
+            // classpath is not enough: Hibernate 7 (and similar libraries) publish logging
+            // APIs such as jboss-logging as runtime-only transitives, and loading those
+            // classes without the jar fails with NoClassDefFoundError.
+            def runtimeClasspath = project.configurations.findByName('runtimeClasspath')
+            if (runtimeClasspath != null) {
+                it.classpath = it.classpath ? it.classpath.plus(runtimeClasspath) : runtimeClasspath
+            }
         }
     }
 
     @CompileDynamic
     private static void configureAntBuilderExecution(Project project, GroovydocEnhancerExtension extension) {
+        GroovydocRunner runner = project.objects.newInstance(GroovydocRunner)
+        // Same form as PublishGuideTask uses for guideMaxHeapSize
+        Provider<String> maxHeapSize = project.providers.gradleProperty('groovydocMaxHeapSize')
+                .orElse(extension.maxHeapSize)
+        Provider<String> javaVersion = extension.javaVersionEnabled.flatMap { boolean enabled ->
+            enabled ? extension.javaVersion : project.providers.provider { (String) null }
+        }
+
         project.tasks.withType(Groovydoc).configureEach { gdoc ->
             if (!extension.useAntBuilder.get()) {
                 return
             }
 
+            // The task's extra properties are read while the task graph is stored, since the
+            // configuration cache does not restore a task's extensions when it runs the task.
+            Provider<List<Map<String, String>>> groovydocLinks = project.provider { resolveLinks(gdoc) }
+            Provider<List<File>> groovydocSourceDirs = project.provider { resolveSourceDirectories(gdoc, project) }
+
             // The external javadoc mapping changes the generated HTML, so a change to it has to
             // invalidate the task's output.
-            gdoc.inputs.property('groovydocLinks', project.provider { resolveLinks(gdoc) })
+            gdoc.inputs.property('groovydocLinks', groovydocLinks)
 
             gdoc.actions.clear()
-            gdoc.doLast {
-                def destDir = gdoc.destinationDir.tap { it.mkdirs() }
-                def sourceDirs = resolveSourceDirectories(gdoc, project)
+            gdoc.doLast { Groovydoc task ->
+                def destDir = task.destinationDir.tap { it.mkdirs() }
+                def sourceDirs = groovydocSourceDirs.get().findAll { it.exists() }
                 if (sourceDirs.isEmpty()) {
                     throw new org.gradle.api.GradleException(
-                            "groovydoc task '${gdoc.name}': no source directories found. " +
+                            "groovydoc task '${task.name}': no source directories found. " +
                             'Every published module must produce a groovydoc jar for Maven Central.'
                     )
                 }
 
-                def classpath = gdoc.groovyClasspath
+                def classpath = task.groovyClasspath
                 if (!classpath || classpath.empty) {
                     throw new org.gradle.api.GradleException(
-                            "groovydoc task '${gdoc.name}': groovyClasspath is empty. " +
+                            "groovydoc task '${task.name}': groovyClasspath is empty. " +
                             'Every published module must produce a groovydoc jar for Maven Central.'
                     )
                 }
 
                 // Groovydoc resolves references to types outside the documented sources with
                 // Class.forName against its own classloader; anything it cannot load becomes a
-                // link to a page that was never generated. Adding the documented sources'
-                // compile classpath lets those types resolve, at which point the 'links'
-                // below turn them into external javadoc URLs.
-                def antClasspath = gdoc.classpath ? classpath.plus(gdoc.classpath) : classpath
+                // link to a page that was never generated. The groovydoc classpath includes
+                // compile and runtime dependencies so types such as Hibernate (which need
+                // runtime-only jars like jboss-logging) can load; the 'links' below then turn
+                // those types into external javadoc URLs.
+                def antClasspath = task.classpath ? classpath.plus(task.classpath) : classpath
 
-                project.ant.taskdef(
-                        name: 'groovydoc',
-                        classname: 'org.codehaus.groovy.ant.Groovydoc',
-                        classpath: antClasspath.asPath
-                )
-
-                def links = resolveLinks(gdoc)
                 def sourcepath = sourceDirs
                         .collect { it.absolutePath }
                         .join(File.pathSeparator)
@@ -130,26 +145,29 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
                         destdir: destDir.absolutePath,
                         sourcepath: sourcepath,
                         packagenames: '**.*',
-                        windowtitle: gdoc.windowTitle ?: '',
-                        doctitle: gdoc.docTitle ?: '',
-                        footer: gdoc.footer ?: '',
-                        access: resolveGroovydocProperty(gdoc.access)?.name()?.toLowerCase() ?: 'protected',
-                        author: resolveGroovydocProperty(gdoc.includeAuthor) as String,
-                        noTimestamp: resolveGroovydocProperty(gdoc.noTimestamp) as String,
-                        noVersionStamp: resolveGroovydocProperty(gdoc.noVersionStamp) as String,
-                        processScripts: resolveGroovydocProperty(gdoc.processScripts) as String,
-                        includeMainForScripts: resolveGroovydocProperty(gdoc.includeMainForScripts) as String
+                        windowtitle: task.windowTitle ?: '',
+                        doctitle: task.docTitle ?: '',
+                        footer: task.footer ?: '',
+                        access: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.access)?.name()?.toLowerCase() ?: 'protected',
+                        author: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.includeAuthor) as String,
+                        noTimestamp: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.noTimestamp) as String,
+                        noVersionStamp: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.noVersionStamp) as String,
+                        processScripts: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.processScripts) as String,
+                        includeMainForScripts: GroovydocEnhancerPlugin.resolveGroovydocProperty(task.includeMainForScripts) as String
                 ]
 
-                if (extension.javaVersionEnabled.get()) {
-                    antArgs.put('javaVersion', extension.javaVersion.get())
+                if (javaVersion.present) {
+                    antArgs.put('javaVersion', javaVersion.get())
                 }
 
-                project.ant.groovydoc(antArgs) {
-                    for (var l in links) {
-                        link(packages: l.packages, href: l.href)
-                    }
-                }
+                runner.run(
+                        antClasspath,
+                        maxHeapSize.get(),
+                        task.temporaryDir,
+                        antArgs,
+                        groovydocLinks.get(),
+                        task.logger.infoEnabled
+                )
             }
         }
     }
@@ -157,9 +175,7 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
     @CompileDynamic
     private static List<File> resolveSourceDirectories(Groovydoc gdoc, Project project) {
         if (gdoc.ext.has('groovydocSourceDirs') && gdoc.ext.groovydocSourceDirs) {
-            return (gdoc.ext.groovydocSourceDirs as List<File>)
-                    .findAll { it.exists() }
-                    .unique()
+            return (gdoc.ext.groovydocSourceDirs as List<File>).unique()
         }
 
         List<File> sourceDirs = []
@@ -167,8 +183,8 @@ class GroovydocEnhancerPlugin implements Plugin<Project> {
         if (sourceSets) {
             def mainSS = sourceSets.findByName('main')
             if (mainSS) {
-                sourceDirs.addAll(mainSS.groovy.srcDirs.findAll { it.exists() })
-                sourceDirs.addAll(mainSS.java.srcDirs.findAll { it.exists() })
+                sourceDirs.addAll(mainSS.groovy.srcDirs)
+                sourceDirs.addAll(mainSS.java.srcDirs)
             }
         }
         sourceDirs.unique()

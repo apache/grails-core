@@ -57,6 +57,7 @@ import org.grails.web.json.JSONException;
 import org.grails.web.json.JSONObject;
 import org.grails.web.json.JSONTokener;
 import org.grails.web.json.JSONWriter;
+import org.grails.web.json.JsonDateFormat;
 import org.grails.web.json.PathCapturingJSONWriterWrapper;
 import org.grails.web.json.PrettyPrintJSONWriter;
 
@@ -148,6 +149,10 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
      * @throws ConverterException
      */
     public void render(HttpServletResponse response) throws ConverterException {
+        ConvertersConfigurationHolder.withConverterObservation("json", () -> renderInternal(response));
+    }
+
+    private void renderInternal(HttpServletResponse response) throws ConverterException {
         response.setContentType(GrailsWebUtil.getContentType(contentType, encoding));
         try {
             render(response.getWriter());
@@ -542,7 +547,8 @@ public class JSON extends AbstractConverter<JSONWriter> implements IncludeExclud
                 writer.object();
                 for (Object o : valueMap.entrySet()) {
                     Map.Entry element = (Map.Entry) o;
-                    writer.key(String.valueOf(element.getKey())); //.value(element.getValue());
+                    Object elementKey = element.getKey();
+                    writer.key(elementKey == null ? "null" : JsonDateFormat.formatKey(elementKey));
                     json.convertAnother(element.getValue());
                 }
                 writer.endObject();

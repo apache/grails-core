@@ -241,7 +241,7 @@ class DocPublisher {
         def ext = asciidoc ? '.adoc' : '.gdoc'
 
         if (yamlTocFile.exists()) {
-            def tocStrategy = new YamlTocStrategy(new FileResourceChecker(guideSrcDir), ext)
+            def tocStrategy = new YamlTocStrategy(new FileResourceChecker(guideSrcDir), ext, engineProperties)
             guide = tocStrategy.generateToc(yamlTocFile)
 
             // A set of all gdoc files.

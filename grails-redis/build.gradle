@@ -66,6 +66,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api' // @Slf4j
     compileOnly 'org.slf4j:slf4j-nop' // Remove warning about missing slf4j implementation during gsp compilation
 
+    testImplementation project(':grails-core')
+    testImplementation 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation and tests
+    testImplementation 'org.spockframework:spock-core'
+    testImplementation 'org.springframework:spring-beans'
+
     integrationTestImplementation project(':grails-testing-support-redis')
     integrationTestImplementation project(':grails-testing-support-web')
     integrationTestImplementation project(':grails-testing-support-datamapping')

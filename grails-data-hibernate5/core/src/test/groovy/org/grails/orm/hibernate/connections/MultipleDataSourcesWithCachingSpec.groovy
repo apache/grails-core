@@ -30,7 +30,7 @@ import spock.lang.Specification
 class MultipleDataSourcesWithCachingSpec extends Specification {
 
     void "Test map to multiple data sources"() {
-        given:"A configuration for multiple data sources"
+        given: "A configuration for multiple data sources"
         Map config = [
                 'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
                 'dataSource.dbCreate': 'update',
@@ -45,7 +45,7 @@ class MultipleDataSourcesWithCachingSpec extends Specification {
         ]
 
         when:
-        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),CachingBook )
+        HibernateDatastore datastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), CachingBook)
         CachingBook book = CachingBook.withTransaction {
             new CachingBook(name:"The Stand").save(flush:true)
             CachingBook.get( CachingBook.first().id )

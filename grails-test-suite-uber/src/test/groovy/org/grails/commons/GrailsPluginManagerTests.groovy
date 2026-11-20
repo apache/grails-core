@@ -22,11 +22,13 @@ import spock.lang.Specification
 import org.springframework.beans.factory.support.RootBeanDefinition
 import org.springframework.beans.propertyeditors.ClassEditor
 import org.springframework.context.ApplicationContext
+import org.springframework.core.env.StandardEnvironment
 import org.springframework.web.servlet.i18n.CookieLocaleResolver
 
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
 import grails.plugins.DefaultGrailsPluginManager
+import org.apache.grails.core.plugins.DefaultPluginDiscovery
 import org.grails.support.MockApplicationContext
 
 class GrailsPluginManagerTests extends Specification {
@@ -41,11 +43,11 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'registers observers and informs them of plugin events'() {
         given: 'a plugin manager with an observed plugin and an observer plugin'
-        def pluginManager = new DefaultGrailsPluginManager([
-                MyGrailsPlugin,
-                AnotherGrailsPlugin,
-                ObservingGrailsPlugin
-        ] as Class[], grailsApplication).tap {
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [MyGrailsPlugin, AnotherGrailsPlugin, ObservingGrailsPlugin] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery).tap {
             applicationContext = ctx
         }
 
@@ -79,10 +81,11 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'wildcard observers do not observe themselves'() {
         given: 'a wildcard observer and an observed plugin'
-        def pluginManager = new DefaultGrailsPluginManager([
-                AnotherGrailsPlugin,
-                ObservingAllGrailsPlugin
-        ] as Class[], grailsApplication)
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [AnotherGrailsPlugin, ObservingAllGrailsPlugin] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -104,10 +107,11 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'skips disabled plugins during loading'() {
         given: 'a plugin manager with one disabled plugin'
-        def pluginManager = new DefaultGrailsPluginManager([
-                AnotherGrailsPlugin,
-                DisabledGrailsPlugin
-        ] as Class[], grailsApplication)
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [AnotherGrailsPlugin, DisabledGrailsPlugin] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -120,17 +124,23 @@ class GrailsPluginManagerTests extends Specification {
         }
     }
 
-    def 'initializes the plugin manager from an explicit plugin resource path'() {
-        given: 'a plugin manager constructed with an explicit test plugin resource path'
-        def pluginManager = new DefaultGrailsPluginManager(TEST_PLUGIN_RESOURCE_PATH, grailsApplication)
-        
-        expect: 'the plugin resource path is resolved into a single plugin resource'
-        pluginManager.pluginResources.length == 1
+    def 'discovers plugin resources from the configured path'() {
+        given: 'the discovery is configured with the plugin resource path'
+        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH)
+
+        when: 'plugin discovery is initialized'
+        pluginDiscovery.init(new StandardEnvironment())
+
+        then: 'the configured plugin resource is discovered'
+        pluginDiscovery.pluginResources.length == 1
     }
 
     def 'loads discovered plugins and resolves them by name and version'() {
-        given: 'the plugin manager has been initialized from the resource path'
-        def pluginManager = new DefaultGrailsPluginManager(TEST_PLUGIN_RESOURCE_PATH, grailsApplication)
+        given: 'the plugin discovery has been initialized from the resource path'
+        def pluginDiscovery = new DefaultPluginDiscovery(TEST_PLUGIN_RESOURCE_PATH).tap {
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded and looked up by name'
         pluginManager.loadPlugins()
@@ -158,12 +168,15 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'loads plugins successfully when a plugin declares loadAfter dependencies'() {
         given: 'a plugin manager with a plugin that declares loadAfter dependencies'
-        def pluginManager = new DefaultGrailsPluginManager([
-                ShouldLoadLastGrailsPlugin,
-                MyGrailsPlugin,
-                AnotherGrailsPlugin
-            ] as Class[], grailsApplication
-        )
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [
+                    ShouldLoadLastGrailsPlugin,
+                    MyGrailsPlugin,
+                    AnotherGrailsPlugin
+            ] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -176,9 +189,13 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'does not load a plugin when required dependencies are missing'() {
         given: 'a plugin manager missing a required dependency'
-        def pluginManager = new DefaultGrailsPluginManager([
-                MyGrailsPlugin // depends on 'another' plugin which is not included here
-        ] as Class[], grailsApplication)
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [
+                    MyGrailsPlugin // depends on 'another' plugin which is not included here
+            ] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -189,11 +206,15 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'loads plugins when required dependencies are satisfied'() {
         given: 'a plugin manager with all required dependencies present'
-        def pluginManager = new DefaultGrailsPluginManager([
-                MyGrailsPlugin,
-                AnotherGrailsPlugin,
-                SomeOtherGrailsPlugin
-        ] as Class[], grailsApplication)
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [
+                    MyGrailsPlugin,
+                    AnotherGrailsPlugin,
+                    SomeOtherGrailsPlugin
+            ] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -204,12 +225,16 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'evicts superseded plugins during loading'() {
         given: 'a plugin manager with an evicting plugin'
-        def pluginManager = new DefaultGrailsPluginManager([
-                MyGrailsPlugin,
-                AnotherGrailsPlugin,
-                SomeOtherGrailsPlugin,
-                ShouldEvictSomeOtherGrailsPlugin
-        ] as Class[], grailsApplication)
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [
+                    MyGrailsPlugin,
+                    AnotherGrailsPlugin,
+                    SomeOtherGrailsPlugin,
+                    ShouldEvictSomeOtherGrailsPlugin
+            ] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery)
 
         when: 'plugins are loaded'
         pluginManager.loadPlugins()
@@ -225,10 +250,14 @@ class GrailsPluginManagerTests extends Specification {
 
     def 'invokes plugin shutdown callbacks when the manager shuts down'() {
         given: 'a plugin manager with a plugin that defines an onShutdown callback'
-        def pluginManager = new DefaultGrailsPluginManager([
-                MyGrailsPlugin,
-                AnotherGrailsPlugin, // needed to satisfy the dependency of MyGrailsPlugin
-        ] as Class[], grailsApplication).tap {
+        def pluginDiscovery = new DefaultPluginDiscovery().tap {
+            pluginClasses = [
+                    MyGrailsPlugin,
+                    AnotherGrailsPlugin, // needed to satisfy the dependency of MyGrailsPlugin
+            ] as Class[]
+            init(new StandardEnvironment())
+        }
+        def pluginManager = new DefaultGrailsPluginManager(grailsApplication, pluginDiscovery).tap {
              applicationContext = ctx
         }
 

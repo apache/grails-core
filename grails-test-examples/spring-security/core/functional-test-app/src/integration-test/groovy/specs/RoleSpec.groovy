@@ -16,19 +16,21 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package specs
 
-import grails.testing.mixin.integration.Integration
 import pages.role.CreateRolePage
 import pages.role.EditRolePage
 import pages.role.ListRolePage
 import pages.role.ShowRolePage
 import spock.lang.IgnoreIf
+import spock.lang.Stepwise
 
+import grails.testing.mixin.integration.Integration
+
+@Stepwise
 @Integration
 @IgnoreIf({ !(
-		System.getProperty('TESTCONFIG') == 'annotation' ||
+        System.getProperty('TESTCONFIG') == 'annotation' ||
         System.getProperty('TESTCONFIG') == 'basic' ||
         System.getProperty('TESTCONFIG') == 'basicCacheUsers' ||
         System.getProperty('TESTCONFIG') == 'requestmap' ||
@@ -36,87 +38,83 @@ import spock.lang.IgnoreIf
 })
 class RoleSpec extends AbstractSecuritySpec {
 
-	void 'there are no roles initially'() {
-		when:
-		to ListRolePage
+    void 'there are no roles initially'() {
+        when:
+        def page = to(ListRolePage)
 
-		then:
-		roleRows.size() == 0
-	}
+        then:
+        page.roleRows.size() == 0
+    }
 
-	void 'add a role'() {
-		when:
-		to ListRolePage
-		newRoleButton.click()
+    void 'add a role'() {
+        when:
+        def page = to(ListRolePage)
+        page.newRoleButton.click()
 
-		then:
-		at CreateRolePage
+        and:
+        page = at(CreateRolePage)
+        page.authorityField.text = 'test'
+        page.createButton.click()
 
-		when:
-		authority = 'test'
-		createButton.click()
+        and:
+        page = at(ShowRolePage)
 
-		then:
-		at ShowRolePage
-		authority == 'test'
-	}
+        then:
+        page.authority == 'test'
+    }
 
-	void 'edit the details'() {
-		when:
-		to ListRolePage
-		roleRow(0).showLink.click()
+    void 'edit the details'() {
+        when:
+        def page = to(ListRolePage)
+        page.roleRow(0).showLink.click()
+        page = at(ShowRolePage)
 
-		then:
-		at ShowRolePage
+        and:
+        page.editButton.click()
+        page = at(EditRolePage)
 
-		when:
-		editButton.click()
+        and:
+        page.authorityField.text = 'test_new'
+        page.updateButton.click()
 
-		then:
-		at EditRolePage
+        then:
+        at(ShowRolePage)
 
-		when:
-		authority = 'test_new'
-		updateButton.click()
+        when:
+        page = to(ListRolePage)
 
-		then:
-		at ShowRolePage
+        then:
+        //page.roleRows.size() == 1
+        page.roleRow(0).authority == 'test_new'
+    }
 
-		when:
-		to ListRolePage
+    void 'show role'() {
+        when:
+        def page = to(ListRolePage)
+        page.roleRow(0).showLink.click()
 
-		then:
-		roleRows.size() == 1
+        then:
+        at(ShowRolePage)
+    }
 
-		def row = roleRow(0)
-		row.authority == 'test_new'
-	}
+    void 'delete role'() {
+        when:
+        def page = to(ListRolePage).tap {
+            roleRow(0).showLink.click()
+        }
+        def deletedId = page.id
 
-	void 'show role'() {
-		when:
-		to ListRolePage
-		roleRow(0).showLink.click()
+        and:
+        page = at(ShowRolePage)
 
-		then:
-		at ShowRolePage
-	}
+        and:
+        withConfirm { page.deleteButton.click() }
 
-	void 'delete role'() {
-		when:
-		to ListRolePage
-		roleRow(0).showLink.click()
-		def deletedId = id
+        and:
+        page = at(ListRolePage)
 
-		then:
-		at ShowRolePage
-
-		when:
-		withConfirm { deleteButton.click() }
-
-		then:
-		at ListRolePage
-
-		message == "TestRole $deletedId deleted"
-		roleRows.size() == 0
-	}
+        then:
+        page.message == "TestRole $deletedId deleted"
+        page.roleRows.size() == 0
+    }
 }

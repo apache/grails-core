@@ -62,6 +62,11 @@ boolean isReleased = Book.findWhere(author: "Stephen King",
 === Description
 
 
+`findWhere` returns the first matching instance, or `null` when no instance matches. A `null` value in the argument map matches rows where that property is `null`.
+
+Only domain class property names may be used as keys in the argument map. Invalid property names are rejected instead of being interpolated into the generated query.
+
 Parameters:
 
 * `queryParams` - A `Map` of key/value pairs to be used in the query
+* `args` - Optional query arguments such as `offset`, `cache`, `readOnly`, `fetchSize`, `timeout`, `flushMode`, and `lock`. `findWhere` always limits the query to one result.

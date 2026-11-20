@@ -78,6 +78,7 @@ import org.grails.datastore.mapping.mongo.MongoConstants
 import org.grails.datastore.mapping.mongo.MongoDatastore
 import org.grails.datastore.mapping.mongo.config.MongoAttribute
 import org.grails.datastore.mapping.mongo.engine.MongoCodecEntityPersister
+import org.grails.datastore.mapping.mongo.engine.MongoIdCoercion
 import org.grails.datastore.mapping.query.Query
 import org.grails.datastore.mapping.reflect.FieldEntityAccess
 
@@ -263,9 +264,16 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                             encodeEmbeddedCollectionUpdate(access, sets, unsets, (Association) prop, v)
                         }
                         else {
-                            def propKind = prop.getClass().superclass
-                            PropertyEncoder<? extends PersistentProperty> propertyEncoder = getPropertyEncoder((Class<? extends PersistentProperty>) propKind)
-                            propertyEncoder?.encode(writer, prop, v, access, encoderContext, codecRegistry)
+                            def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
+                            def propertyEncoder = getPropertyEncoder(propKind)
+                            ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
+                                    writer,
+                                    (PersistentProperty) prop,
+                                    v,
+                                    access,
+                                    encoderContext,
+                                    codecRegistry
+                            )
                         }
 
                     }
@@ -345,10 +353,18 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
             if (hasSets && isVersioned) {
                 def version = entity.version
-                def propKind = version.getClass().superclass
+                def propKind = (Class<? extends PersistentProperty>) version.getClass().superclass
                 MongoCodecEntityPersister.incrementEntityVersion(access)
                 def v = access.getProperty(version.name)
-                getPropertyEncoder((Class<? extends PersistentProperty>) propKind)?.encode(writer, version, v, access, encoderContext, codecRegistry)
+                def propertyEncoder = getPropertyEncoder(propKind)
+                ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(
+                        writer,
+                        version,
+                        v,
+                        access,
+                        encoderContext,
+                        codecRegistry
+                )
             }
 
             writer.writeEndDocument()
@@ -361,7 +377,41 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
             }
         }
         else {
-            // TODO: Support non-dirty checkable objects?
+            // Non-DirtyCheckable values: no per-property change history available,
+            // so when the caller is encoding this as an embedded update (null→non-null
+            // transition on a single-valued embedded field), encode every persistent
+            // property. Without this, the parent's $set on the embedded path stays
+            // empty and the sub-document is silently dropped.
+            if (embedded) {
+                def sets = new BsonDocument()
+                BsonWriter writer = new BsonDocumentWriter(sets)
+                writer.writeStartDocument()
+                if (!entity.isRoot()) {
+                    sets.put(MongoConstants.MONGO_CLASS_FIELD, new BsonString(entity.discriminator))
+                }
+                for (propertyName in entity.persistentPropertyNames) {
+                    def prop = entity.getPropertyByName(propertyName)
+                    if (prop == null) continue
+                    Object v = access.getProperty(prop.name)
+                    if (v == null) continue
+                    if (prop instanceof Embedded) {
+                        encodeEmbeddedUpdate(sets, new Document(), (Association) prop, v)
+                    }
+                    else if (prop instanceof EmbeddedCollection) {
+                        encodeEmbeddedCollectionUpdate(access, sets, new Document(), (Association) prop, v)
+                    }
+                    else {
+                        // Groovy 5 STC: erase the wildcard before encode.
+                        def propKind = (Class<? extends PersistentProperty>) prop.getClass().superclass
+                        def propertyEncoder = getPropertyEncoder(propKind)
+                        ((PropertyEncoder<PersistentProperty>) propertyEncoder)?.encode(writer, prop, v, access, encoderContext, codecRegistry)
+                    }
+                }
+                writer.writeEndDocument()
+                if (!sets.isEmpty()) {
+                    update.put(MONGO_SET_OPERATOR, sets)
+                }
+            }
         }
 
         return update
@@ -374,7 +424,11 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
 
     protected void encodeEmbeddedCollectionUpdate(EntityAccess parentAccess, BsonDocument sets, Document unsets, Association association, Object v) {
         if (v instanceof Collection) {
-            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection) v).hasChangedSize()) {
+            // Per-element updates are only valid for the decoded collection mutated in place —
+            // an ASSIGNED wrapper is a wholesale replacement whose layout need not match the
+            // stored array, so it must fall through to the full re-encode below.
+            if ((v instanceof DirtyCheckableCollection) && !((DirtyCheckableCollection) v).hasChangedSize()
+                    && !((DirtyCheckableCollection) v).isAssigned()) {
                 int i = 0
                 for (o in (v as Collection)) {
                     def embeddedUpdate = encodeUpdate(o, createEntityAccess(o), EncoderContext.builder().build(), true)
@@ -493,6 +547,9 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                         return it
                     }
                 }
+                identifiers = identifiers.collect {
+                    MongoIdCoercion.coerceIdToDeclaredType(it, property.associatedEntity)
+                }
                 def associatedType = property.associatedEntity.javaClass
                 if (SortedSet.isAssignableFrom(type)) {
                     entityAccess.setPropertyNoConversion(
@@ -565,10 +622,16 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                     if (updateCollection) {
                         // update existing collection
                         Collection identifiers = (Collection) mongoSession.getAttribute(parentAccess.entity, "${property}.ids")
+                        if (identifiers != null) {
+                            identifiers = identifiers.collect {
+                                MongoIdCoercion.coerceIdToStoredType(it, associatedEntity)
+                            }
+                        }
                         if (identifiers == null) {
                             def entityReflector = FieldEntityAccess.getOrIntializeReflector(associatedEntity)
                             identifiers = ((Collection) value).collect() {
-                                entityReflector.getIdentifier(it)
+                                MongoIdCoercion.coerceIdToStoredType(
+                                        entityReflector.getIdentifier(it), associatedEntity)
                             }
                         }
                         writer.writeName(MappingUtils.getTargetKey((PersistentProperty) property))
@@ -611,6 +674,10 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                         def associationAccess = mappingContext.getEntityReflector(associatedEntity)
                         associationId = associationAccess.getIdentifier(value)
                     }
+                    // Write the reference in the type the target's _id is STORED as, so a
+                    // String-id domain whose _id is a BSON ObjectId is pointed at by an
+                    // ObjectId -- keeping $lookup and raw driver queries working.
+                    associationId = MongoIdCoercion.coerceIdToStoredType(associationId, associatedEntity)
                     if (associationId != null) {
                         writer.writeName(MappingUtils.getTargetKey(property))
                         MongoAttribute attr = (MongoAttribute) property.mapping.mappedForm
@@ -655,20 +722,27 @@ class PersistentEntityCodec extends BsonPersistentEntityCodec {
                 associationId = (Serializable) dBRef.get(DB_REF_ID_FIELD)
             }
             else {
-                switch (associatedEntity.identity.type) {
-                    case ObjectId:
+                // Read whatever BSON type is actually present rather than the type the
+                // mapping predicts. The two legitimately differ: a non-hex assigned id falls
+                // back to BSON String even under storedAs: ObjectId, and a collection written
+                // before a storedAs change holds the old type. Reading by expectation throws
+                // BsonInvalidOperationException on those documents.
+                switch (bsonReader.currentBsonType) {
+                    case BsonType.OBJECT_ID:
                         associationId = bsonReader.readObjectId()
                         break
-                    case Long:
+                    case BsonType.INT64:
                         associationId = (Long) bsonReader.readInt64()
                         break
-                    case Integer:
-                        associationId =  (Integer) bsonReader.readInt32()
+                    case BsonType.INT32:
+                        associationId = (Integer) bsonReader.readInt32()
                         break
                     default:
                         associationId = bsonReader.readString()
                 }
             }
+
+            associationId = (Serializable) MongoIdCoercion.coerceIdToDeclaredType(associationId, associatedEntity)
 
             if (isLazy) {
                 entityAccess.setPropertyNoConversion(

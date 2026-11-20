@@ -18,7 +18,6 @@
  */
 package grails.artefact
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import org.codehaus.groovy.runtime.InvokerHelper
 
@@ -27,17 +26,18 @@ import jakarta.annotation.PostConstruct
 import org.springframework.web.context.request.RequestAttributes
 
 import grails.artefact.gsp.TagLibraryInvoker
-import grails.util.Environment
-import grails.util.GrailsMetaClassUtils
 import grails.web.api.ServletAttributes
 import grails.web.api.WebAttributes
 import org.grails.buffer.GrailsPrintWriter
 import org.grails.encoder.Encoder
 import org.grails.taglib.GrailsTagException
+import org.grails.taglib.GroovyPageAttributes
 import org.grails.taglib.TagLibraryLookup
-import org.grails.taglib.TagLibraryMetaUtils
+import org.grails.taglib.TagMethodContext
+import org.grails.taglib.TagMethodInvoker
 import org.grails.taglib.TagOutput
 import org.grails.taglib.TemplateVariableBinding
+import org.grails.taglib.encoder.OutputContextLookupHelper
 import org.grails.taglib.encoder.OutputEncodingStack
 import org.grails.taglib.encoder.WithCodecHelper
 import org.grails.web.servlet.mvc.GrailsWebRequest
@@ -56,21 +56,29 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
 
     private Encoder rawEncoder
 
+    /**
+     * Retained deliberately, and deliberately empty.
+     *
+     * <p>Every tag in every namespace used to be installed onto this tag library's metaclass here, so
+     * that a tag library calling another tag found a method rather than falling through to
+     * methodMissing. Tags are resolved through the tag library lookup instead, so there is nothing to
+     * install and nothing to initialise.
+     *
+     * <p>It cannot simply be deleted. A trait method is part of the binary contract: Groovy weaves a
+     * call to the generated helper into every implementing class, so a tag library from a plugin
+     * compiled against an earlier release calls this method by name at construction. Removing it
+     * raises NoSuchMethodError for every such tag library - which is what happened when it was.
+     */
     @PostConstruct
     void initializeTagLibrary() {
-        if (!Environment.isDevelopmentMode()) {
-            TagLibraryMetaUtils.enhanceTagLibMetaClass(GrailsMetaClassUtils.getExpandoMetaClass(getClass()), getTagLibraryLookup(), getTaglibNamespace())
-        }
     }
 
-    @CompileDynamic
-    def raw(Object value) {
-        if (rawEncoder == null) {
-            rawEncoder = WithCodecHelper.lookupEncoder(grailsApplication, 'Raw')
-            if (rawEncoder == null)
-                return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
+    Object raw(Object value) {
+        Encoder encoder = WithCodecHelper.lookupEncoder(getGrailsApplication(), 'Raw')
+        if (encoder == null) {
+            return InvokerHelper.invokeMethod(value, 'encodeAsRaw', null)
         }
-        return rawEncoder.encode(value)
+        return encoder.encode(value)
     }
 
     /**
@@ -131,35 +139,49 @@ trait TagLibrary implements WebAttributes, ServletAttributes, TagLibraryInvoker 
      * @throws MissingPropertyException When no tag namespace or tag is found
      */
     Object propertyMissing(String name) {
+        if (name == 'attrs') {
+            def contextAttrs = TagMethodContext.currentAttrs()
+            if (contextAttrs != null) {
+                return contextAttrs
+            }
+        }
+        if (name == 'body') {
+            def contextBody = TagMethodContext.currentBody()
+            if (contextBody != null) {
+                return contextBody
+            }
+        }
         TagLibraryLookup gspTagLibraryLookup = getTagLibraryLookup()
         if (gspTagLibraryLookup != null) {
 
             Object result = gspTagLibraryLookup.lookupNamespaceDispatcher(name)
             if (result == null) {
-                String namespace = getTaglibNamespace()
-                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(namespace, name)
+                String resolvedNamespace = getTaglibNamespace()
+                GroovyObject tagLibrary = gspTagLibraryLookup.lookupTagLibrary(resolvedNamespace, name)
                 if (tagLibrary == null) {
+                    resolvedNamespace = TagOutput.DEFAULT_NAMESPACE
                     tagLibrary = gspTagLibraryLookup.lookupTagLibrary(TagOutput.DEFAULT_NAMESPACE, name)
                 }
 
                 if (tagLibrary != null) {
-                    Object tagProperty = tagLibrary.getProperty(name)
+                    Object tagProperty = TagMethodInvoker.getClosureTagProperty(tagLibrary, name)
                     if (tagProperty instanceof Closure) {
                         result = ((Closure<?>) tagProperty).clone()
+                    } else if (TagMethodInvoker.hasInvokableTagMethod(tagLibrary, name)) {
+                        final String currentNamespace = resolvedNamespace
+                        result = { Map attrs = [:], Closure body = null ->
+                            Object output = TagOutput.captureTagOutput(gspTagLibraryLookup, currentNamespace, name, attrs, body, OutputContextLookupHelper.lookupOutputContext())
+                            boolean gspTagSyntaxCall = attrs instanceof GroovyPageAttributes && ((GroovyPageAttributes) attrs).gspTagSyntaxCall()
+                            boolean returnsObject = gspTagLibraryLookup.doesTagReturnObject(currentNamespace, name)
+                            if (gspTagSyntaxCall && !returnsObject && output != null) {
+                                OutputEncodingStack.currentStack().taglibWriter.print(output)
+                                return null
+                            }
+                            output
+                        }
                     }
                 }
             }
-
-            if (result != null && !Environment.isDevelopmentMode()) {
-                MetaClass mc = GrailsMetaClassUtils.getExpandoMetaClass(getClass())
-
-                // Register the property for the already-existing singleton instance of the taglib
-                TagLibraryMetaUtils.registerPropertyMissingForTag(this.metaClass, name, result)
-
-                // Register the property for the ExpandoMetaClass so that other tag libs that inherit from it benefit
-                TagLibraryMetaUtils.registerPropertyMissingForTag(mc, name, result)
-            }
-
             if (result != null) {
                 return result
             }

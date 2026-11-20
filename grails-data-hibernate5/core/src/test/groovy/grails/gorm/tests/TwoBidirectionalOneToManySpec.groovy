@@ -31,12 +31,12 @@ import spock.lang.Specification
  */
 class TwoBidirectionalOneToManySpec extends Specification {
 
-    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(Room, PointX, PointY)
+    @AutoCleanup @Shared HibernateDatastore datastore = new HibernateDatastore(Room, PointX, PointY, PointZ)
     @Shared PlatformTransactionManager transactionManager = datastore.transactionManager
 
     @Rollback
     void "test an entity with 2 bidirectional one-to-many mappings"() {
-        when:"A new entity is created is created"
+        when:"A new entity is created"
         Room r = new Room(name:"Test")
                         .addToPointx(new PointX())
                         .addToPointy(new PointY())
@@ -46,12 +46,30 @@ class TwoBidirectionalOneToManySpec extends Specification {
         then:"The entity was saved"
         !r.errors.hasErrors()
         Room.count == 1
+        PointX.count == 1
+        PointY.count == 1
+
+    }
+
+    @Rollback
+    void "test an entity with 1 one directional one-to-many mappings"() {
+        when:"A new entity is created"
+        Room r = new Room(name:"Test")
+                .addToPointz(new PointZ())
+
+        r.save(flush:true)
+
+        then:"The entity was saved"
+        !r.errors.hasErrors()
+        Room.count == 1
+
+        PointZ.count == 1
     }
 }
 
 @Entity
 class Room {
-    static hasMany = [pointx:PointX,pointy:PointY]
+    static hasMany = [pointx:PointX,pointy:PointY, pointz:PointZ]
 
     String name
 }
@@ -68,6 +86,14 @@ class PointX {
 @Entity
 class PointY {
     static  belongsTo = [room:Room]
+    Room destiny
+    static constraints = {
+        destiny nullable:true
+    }
+}
+
+@Entity
+class PointZ {
     Room destiny
     static constraints = {
         destiny nullable:true

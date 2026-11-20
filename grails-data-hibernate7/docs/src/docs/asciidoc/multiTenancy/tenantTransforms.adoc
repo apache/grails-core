@@ -1,0 +1,57 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+The following transformations can be applied to any class to simplify greatly the development of Multi-Tenant applications. These include:
+
+- `@CurrentTenant` - Resolve the current tenant for the context of a class or method
+- `@Tenant` - Use a specific tenant for the context of a class or method
+- `@WithoutTenant` - Execute logic without a specific tenant (using the default connection)
+
+For example:
+
+[source,groovy]
+----
+import grails.gorm.multitenancy.*
+
+// resolve the current tenant for every method
+@CurrentTenant
+class TeamService {
+
+    // execute the countPlayers method without a tenant id
+    @WithoutTenant
+    int countPlayers() {
+        Player.count()
+    }
+
+    // use the tenant id "another" for all GORM logic within the method
+    @Tenant({"another"})
+    List<Team> allTwoTeams() {
+        Team.list()
+    }
+
+    List<Team> listTeams() {
+        Team.list(max:10)
+    }
+
+    @Transactional
+    void addTeam(String name) {
+        new Team(name:name).save(flush:true)
+    }
+}
+----

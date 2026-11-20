@@ -94,7 +94,7 @@ List<Book> allBooks = withoutId {
 }
 ----
 
-Only `withoutId` and `@WithoutTenant` do this. A tenant id that a `TenantResolver` returns or that is passed to `withId` restricts GORM to that tenant, also when it is `DEFAULT`, the name of the default connection source. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
+Only `withoutId` and `@WithoutTenant` do this. A tenant id that a `TenantResolver` returns or that is passed to `withId` restricts GORM to that tenant, also when it is `default`, the name of the default connection source. `Tenants.isWithoutId()` tells whether the current code runs without a tenant id.
 
 GORM also activates the filter before Hibernate loads a collection of a multi-tenant entity, whether it is loaded lazily or fetched by join, also when it is a many-to-many collection or a query fetches it by join through another association, so the collection holds the instances of the current tenant only. A collection of a multi-tenant entity that is mapped with `fetch: 'join'` is loaded eagerly with a select of its own, because Hibernate does not apply the filter to a collection that it fetches by join with an instance loaded by id. `load` and `proxy` of a multi-tenant entity run a query, as `get` does.
 

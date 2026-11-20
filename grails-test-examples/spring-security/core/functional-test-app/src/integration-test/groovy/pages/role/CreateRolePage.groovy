@@ -16,13 +16,15 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages.role
 
+import geb.module.TextInput
 import pages.CreatePage
 
 class CreateRolePage extends CreatePage {
-	static content = {
-		createButton(to: ShowRolePage) { create() }
-	}
+
+    static content = {
+        authorityField { $('input', name: 'authority').module(TextInput) }
+        createButton(to: ShowRolePage) { $('input', name: 'create') }
+    }
 }

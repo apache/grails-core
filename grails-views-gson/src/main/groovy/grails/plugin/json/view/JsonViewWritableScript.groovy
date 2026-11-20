@@ -16,13 +16,12 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package grails.plugin.json.view
 
+import groovy.json.StreamingJsonBuilder
 import groovy.transform.CompileStatic
 
 import grails.plugin.json.builder.JsonOutput
-import grails.plugin.json.builder.StreamingJsonBuilder
 import grails.plugin.json.view.api.JsonView
 import grails.plugin.json.view.api.internal.DefaultGrailsJsonViewHelper
 import grails.plugin.json.view.api.internal.ParentInfo
@@ -60,12 +59,6 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         }
     }
 
-    /**
-     * TODO: When Groovy 2.4.5 go back to JsonBuilder from groovy-json
-     *
-     * @param callable
-     * @return
-     */
     StreamingJsonBuilder json(@DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         if (parentData.size() > 0) {
             if (!inline) {
@@ -100,19 +93,19 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
                 json.call(callable)
             }
         }
-        return json
+        return json as StreamingJsonBuilder
     }
 
     StreamingJsonBuilder json(Iterable iterable) {
         this.root = iterable
         json.call(iterable.asList())
-        return json
+        return json as StreamingJsonBuilder
     }
 
     StreamingJsonBuilder json(Map map) {
         this.root = map
         json.call(map)
-        return json
+        return json as StreamingJsonBuilder
     }
 
     /**
@@ -122,9 +115,9 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
      *
      * @return The json builder
      */
-    StreamingJsonBuilder json(JsonOutput.JsonUnescaped unescaped) {
+    StreamingJsonBuilder json(groovy.json.JsonOutput.JsonUnescaped unescaped) {
         print(unescaped.text)
-        return json
+        return json as StreamingJsonBuilder
     }
 
     /**
@@ -160,25 +153,19 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
             writable.setInline(inline)
             writable.writeTo(out)
         }
-        return json
+        return json as StreamingJsonBuilder
     }
 
-    /**
-     * TODO: When Groovy 2.4.5 go back to JsonBuilder from groovy-json
-     *
-     * @param callable
-     * @return
-     */
     StreamingJsonBuilder json(Iterable iterable, @DelegatesTo(value = StreamingJsonBuilder.StreamingJsonDelegate, strategy = Closure.DELEGATE_FIRST) Closure callable) {
         json.call(iterable.asList(), callable)
-        return json
+        return json as StreamingJsonBuilder
     }
 
     StreamingJsonBuilder json(Object...args) {
         if (args.length == 1) {
             def val = args[0]
-            if (val instanceof JsonOutput.JsonUnescaped) {
-                this.json((JsonOutput.JsonUnescaped) val)
+            if (val instanceof groovy.json.JsonOutput.JsonUnescaped) {
+                this.json((groovy.json.JsonOutput.JsonUnescaped) val)
             }
             else if (val instanceof JsonOutput.JsonWritable) {
                 this.json((JsonOutput.JsonWritable) val)
@@ -190,7 +177,7 @@ abstract class JsonViewWritableScript extends AbstractWritableScript implements 
         else {
             json.call(args)
         }
-        return json
+        return json as StreamingJsonBuilder
     }
 
     private GrailsView prepareParentWritable(GrailsViewTemplate parentTemplate, Map parentModel) {

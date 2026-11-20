@@ -24,7 +24,8 @@ import geb.Page
 class ScaffoldPage extends Page {
 
 	static content = {
-		heading { $('h1') }
+		h1 { $('h1', 0) }
+		heading { h1.text() }
 		message { $('div.message').text() }
 	}
 

@@ -20,7 +20,7 @@ package org.grails.cli.profile.commands
 
 import groovy.transform.CompileDynamic
 
-import jline.console.completer.Completer
+import org.jline.reader.Completer
 
 import grails.build.logging.GrailsConsole
 import org.grails.cli.profile.AbstractStep
@@ -67,8 +67,7 @@ class DefaultMultiStepCommand extends MultiStepCommand {
                                 if (completerClass) {
                                     try {
                                         this.description.completer = (Completer) Thread.currentThread().contextClassLoader.loadClass(completerClass.toString()).getDeclaredConstructor().newInstance()
-                                    } catch (e) {
-                                        // ignore
+                                    } catch (ignored) {
                                     }
                                 }
                             }

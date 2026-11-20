@@ -31,6 +31,11 @@ import org.apache.grails.data.testing.tck.domains.PersonEvent
  */
 class DomainEventsSpec extends GrailsDataTckSpec {
 
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(PersonEvent, ModifyPerson)
+    }
+
     def setup() {
         PersonEvent.resetStore()
     }
@@ -61,7 +66,7 @@ class DomainEventsSpec extends GrailsDataTckSpec {
         try {
             p.save()
             manager.session.flush()
-        } catch (e) {
+        } catch (ignored) {
             // ignore hibernate related flush errors
         }
         manager.session.clear()

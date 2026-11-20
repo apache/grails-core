@@ -19,7 +19,10 @@
 
 package org.grails.cli.profile.commands
 
-import jline.console.completer.Completer
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 import org.grails.build.parsing.CommandLine
 import org.grails.build.parsing.CommandLineParser
@@ -34,13 +37,13 @@ abstract class ArgumentCompletingCommand implements Command, Completer {
     CommandLineParser cliParser = new CommandLineParser()
 
     @Override
-    final int complete(String buffer, int cursor, List<CharSequence> candidates) {
+    final void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
         def desc = getDescription()
-        def commandLine = cliParser.parseString(buffer)
-        return complete(commandLine, desc, candidates, cursor)
+        def commandLine = cliParser.parseString(line.line())
+        complete(commandLine, desc, candidates)
     }
 
-    protected int complete(CommandLine commandLine, CommandDescription desc, List<CharSequence> candidates, int cursor) {
+    protected void complete(CommandLine commandLine, CommandDescription desc, List<Candidate> candidates) {
         def invalidOptions = commandLine.undeclaredOptions.keySet().findAll { String str ->
             desc.getFlag(str.trim()) == null
         }
@@ -54,15 +57,14 @@ abstract class ArgumentCompletingCommand implements Command, Completer {
                 if (lastOption) {
                     def lastArg = lastOption.key
                     if (arg.name.startsWith(lastArg)) {
-                        candidates.add("${argName.substring(lastArg.length())} ".toString())
+                        candidates.add(new Candidate("$flag ".toString()))
                     } else if (!invalidOptions) {
-                        candidates.add("$flag ".toString())
+                        candidates.add(new Candidate("$flag ".toString()))
                     }
                 } else {
-                    candidates.add("$flag ".toString())
+                    candidates.add(new Candidate("$flag ".toString()))
                 }
             }
         }
-        return cursor
     }
 }

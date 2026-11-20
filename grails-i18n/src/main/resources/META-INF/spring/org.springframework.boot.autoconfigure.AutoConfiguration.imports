@@ -1,1 +1,2 @@
+org.grails.plugins.i18n.GrailsLocaleResolverAutoConfiguration
 org.grails.plugins.i18n.I18nAutoConfiguration

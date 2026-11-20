@@ -91,10 +91,10 @@ class ErrorHandlingSpec extends Specification implements HttpClientSupport {
         response.assertStatus(statusCode)
 
         where:
-        condition     | statusCode
-        'notfound'    | 404
-        'badrequest'  | 400
-        'forbidden'   | 403
+        condition    | statusCode
+        'notfound'   | 404
+        'badrequest' | 400
+        'forbidden'  | 403
     }
 
     def "conditional error returns success for unknown condition"() {
@@ -106,7 +106,7 @@ class ErrorHandlingSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                status: 'ok',
+                status   : 'ok',
                 condition: 'normal'
         ])
     }
@@ -144,7 +144,7 @@ class ErrorHandlingSpec extends Specification implements HttpClientSupport {
 
         then:
         response.assertJson(200, [
-                status: 'ok',
+                status : 'ok',
                 message: 'Operation successful'
         ])
     }
@@ -156,8 +156,8 @@ class ErrorHandlingSpec extends Specification implements HttpClientSupport {
         then:
         response.assertJsonContains(200, [
                 status: 'ok',
-                data: [
-                        id: 1,
+                data  : [
+                        id  : 1,
                         name: 'Test Item'
                 ]
         ])

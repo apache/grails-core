@@ -167,22 +167,4 @@ class JSONBuilderSpec extends Specification {
         then:
         '{"books":[{"title":"one"},{"title":"two"},{"title":"three"}]}' == result.toString()
     }
-
-
-    @Ignore("This isn't supported with the new JsonBuilder. This test is not supported.")
-    void testAppendToArray() {
-        def builder = new JSONBuilder()
-
-        def results = ['one', 'two', 'three']
-
-        def result = builder.build {
-            books = array { list ->
-                for (b in results) {
-                    list << [title: b]
-                }
-            }
-        }
-
-        assertEquals '{"books":[{"title":"one"},{"title":"two"},{"title":"three"}]}', result.toString()
-    }
 }

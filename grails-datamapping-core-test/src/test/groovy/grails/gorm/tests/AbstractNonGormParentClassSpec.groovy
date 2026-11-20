@@ -27,7 +27,7 @@ import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 class AbstractNonGormParentClassSpec extends GrailsDataTckSpec {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ConcreteFoo])
+        manager.registerDomainClasses(ConcreteFoo)
     }
 
     void "Test a concrete domain class that extends a common base class"() {
@@ -39,10 +39,12 @@ class AbstractNonGormParentClassSpec extends GrailsDataTckSpec {
 }
 
 abstract class Common {
+
     String foo
 }
 
 @Entity
 class ConcreteFoo extends Common {
+
     String bar
 }

@@ -36,6 +36,6 @@ class AclClass implements Serializable {
 	}
 
 	static constraints = {
-		className unique: true
+		className unique: true, nullable: false
 	}
 }

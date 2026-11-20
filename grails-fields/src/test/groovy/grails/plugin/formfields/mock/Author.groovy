@@ -33,7 +33,7 @@ class Author {
 	static hasMany = [books: Book]
 	
 	static constraints = {
-		name blank: false
+		name blank: false, nullable: false
 		placeOfBirth nullable: true
 	}
 }

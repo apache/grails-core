@@ -167,9 +167,11 @@ To build the code, without tests, simply run:
 
     ./gradlew build -PskipTests
 
-If you encounter out of memory errors when trying to run the build, try adjusting Gradle build settings. For example:
+If you encounter out of memory errors when trying to run the build, raise the daemon heap.
+`org.gradle.jvmargs` in `gradle.properties` is what sizes it, so a bare `-Xmx` in `GRADLE_OPTS`
+is ignored - override the property itself:
 
-    export GRADLE_OPTS="-Xms2G -Xmx5G"
+    export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4G"
 
 Please note that a valid container runtime is required to run Grails Tests. The example above omits the tests so the
 build will pass.
@@ -312,6 +314,11 @@ Concerning when a review is required for a `protected` branch:
    * Minimum # of Reviewers:  2 reviewers, preferred 3
    * Mandated Waiting Period: 3 days if over a weekend, 1 day if during the week.
 * Otherwise - `Review then Commit` with only 1 reviewer required. 
+
+An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given
+before it are dismissed automatically and the pull request has to be approved again; a rebase, or a merge of the base
+branch, that leaves the changes of the pull request as they were keeps them. A dismissed approval does not block the
+merge button, so check the review state of a pull request before merging it.
 
 ## Join The Project Team
 For people willing to contribute more than an occasional pull request, consider joining our core team.  Inquire in the `questions` channel in slack to learn more.

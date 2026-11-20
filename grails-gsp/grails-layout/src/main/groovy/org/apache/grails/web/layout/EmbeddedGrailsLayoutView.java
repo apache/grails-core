@@ -28,6 +28,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import com.opensymphony.module.sitemesh.RequestConstants;
 import com.opensymphony.sitemesh.Content;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +49,8 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
     protected View innerView;
 
     public static final String GSP_GRAILS_LAYOUT_PAGE = EmbeddedGrailsLayoutView.class.getName() + ".GSP_GRAILS_LAYOUT_PAGE";
+
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     public EmbeddedGrailsLayoutView(GroovyPageLayoutFinder groovyPageLayoutFinder, View innerView) {
         this.groovyPageLayoutFinder = groovyPageLayoutFinder;
@@ -85,7 +89,7 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
                                 LOG.debug("Found layout. Rendering content for layout {} and model {}", decorator.getPage(), model);
                             }
 
-                            decorator.render(content, model, request, response, webRequest.getServletContext());
+                            renderWithLayout(decorator, content, model, request, response, webRequest);
                             return;
                         }
                         break;
@@ -101,6 +105,27 @@ public class EmbeddedGrailsLayoutView extends AbstractGrailsView {
             }
         }
 
+    }
+
+    protected void renderWithLayout(SpringMVCViewDecorator decorator, Content content, Map<String, Object> model,
+            HttpServletRequest request, HttpServletResponse response, GrailsWebRequest webRequest) throws Exception {
+        if (this.observationRegistry.isNoop()) {
+            decorator.render(content, model, request, response, webRequest.getServletContext());
+            return;
+        }
+        String resource = (decorator.getPage() != null && !decorator.getPage().isEmpty()) ? decorator.getPage() : "unknown";
+        Observation observation = Observation.createNotStarted("gsp.layout", this.observationRegistry)
+                .contextualName("gsp.layout " + resource)
+                .highCardinalityKeyValue("gsp.name", resource);
+        observation.observeChecked(() -> decorator.render(content, model, request, response, webRequest.getServletContext()));
+    }
+
+    /**
+     * Sets the {@link ObservationRegistry} used to instrument GSP layout (SiteMesh) decoration. Defaults
+     * to {@link ObservationRegistry#NOOP}, in which case layout decoration is not observed.
+     */
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = (observationRegistry != null) ? observationRegistry : ObservationRegistry.NOOP;
     }
 
     protected void beforeDecorating(Content content, Map<String, Object> model, GrailsWebRequest webRequest,

@@ -39,7 +39,7 @@ class GraphQLServiceManager {
         services.put(clazz, service)
     }
 
-    public <T extends Object> T getService(Class<T> serviceType) throws ServiceNotFoundException {
+    <T extends Object> T getService(Class<T> serviceType) throws ServiceNotFoundException {
         if (services.containsKey(serviceType)) {
             return (T)services.get(serviceType)
         }

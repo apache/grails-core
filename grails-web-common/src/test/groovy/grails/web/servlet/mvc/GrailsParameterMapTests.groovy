@@ -18,12 +18,23 @@
  */
 package grails.web.servlet.mvc
 
+import groovy.transform.CompileStatic
+import jakarta.servlet.FilterChain
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletRequestWrapper
+
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.StaticMessageSource
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.mock.web.MockMultipartFile
+import org.springframework.mock.web.MockMultipartHttpServletRequest
 import org.springframework.mock.web.MockServletContext
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.support.GenericWebApplicationContext
+import org.springframework.web.filter.FormContentFilter
+import org.grails.web.util.WebUtils
+
 import spock.lang.Issue
 
 import static org.junit.jupiter.api.Assertions.*
@@ -32,6 +43,82 @@ class GrailsParameterMapTests {
 
     GrailsParameterMap theMap
     MockHttpServletRequest mockRequest = new MockHttpServletRequest()
+
+    @Test
+    void testMultipartFilesArePopulatedFromTheRequestItself() {
+        def request = multipartRequest()
+        request.addParameter('name', 'Dierk Koenig')
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals 'Dierk Koenig', theMap.name
+        assertEquals 'test.txt', theMap.file.originalFilename
+    }
+
+    @Test
+    void testMultipartFilesArePopulatedThroughLaterRequestWrappers() {
+        // The request Grails exposes is the outermost one, so files have to be discovered by unwrapping
+        // rather than by the request itself being a MultipartHttpServletRequest.
+        def request = new HttpServletRequestWrapper(new HttpServletRequestWrapper(multipartRequest()))
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals 'test.txt', theMap.file.originalFilename
+    }
+
+    @Test
+    void testMultipartFilesArePopulatedFromThePublishedAttribute() {
+        // The shape produced when the DispatcherServlet resolves a request Grails had already bound,
+        // leaving the multipart wrapper above it rather than below.
+        def request = new MockHttpServletRequest()
+        request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipartRequest())
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals 'test.txt', theMap.file.originalFilename
+    }
+
+    @Test
+    void testMultipartTextFieldsArePopulatedWhenTheRequestItselfDoesNotExposeThem() {
+        // A servlet container is not obliged to publish a multipart body's text fields through the request's
+        // own parameter map. Spring's wrapper merges them into its; here the outermost request is not that
+        // wrapper, so the fields are reachable only through the wrapper it published.
+        def multipart = multipartRequest()
+        multipart.addParameter('description', 'a file about nothing')
+        def request = new MockHttpServletRequest()
+        request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipart)
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals 'a file about nothing', theMap.description
+        assertEquals 'test.txt', theMap.file.originalFilename
+    }
+
+    @Test
+    void testTheRequestsOwnParametersWinOverTheMultipartWrappers() {
+        // The precedence Spring's own wrapper applies: what the request already answers with is not displaced.
+        def multipart = multipartRequest()
+        multipart.addParameter('name', 'from the multipart body')
+        def request = new MockHttpServletRequest()
+        request.addParameter('name', 'from the query string')
+        request.setAttribute(WebUtils.MULTIPART_HTTP_SERVLET_REQUEST_ATTRIBUTE, multipart)
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals 'from the query string', theMap.name
+    }
+
+    @Test
+    void testMultipleFilesUnderOneNameArePopulatedAsAList() {
+        def request = new MockMultipartHttpServletRequest()
+        request.contentType = 'multipart/form-data; boundary=test'
+        request.addFile(new MockMultipartFile('file', 'one.txt', 'text/plain', 'one'.bytes))
+        request.addFile(new MockMultipartFile('file', 'two.txt', 'text/plain', 'two'.bytes))
+
+        theMap = new GrailsParameterMap(request)
+
+        assertEquals(['one.txt', 'two.txt'], theMap.file*.originalFilename)
+    }
 
     @Test
     void testSubmapViaArraySubscript() {
@@ -92,82 +179,87 @@ class GrailsParameterMapTests {
     }
 
     @Test
-    void testParseRequestBodyForPutRequest() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPutBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PUT', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
-
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
-
-        request = new MockHttpServletRequest()
-        request.method = 'PUT'
-        request.content = 'foo='.bytes
-        request.contentType = "application/x-www-form-urlencoded"
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
-
-        params = new GrailsParameterMap(request)
-
-        assert '' == params.foo
     }
 
     @Test
-    void testParseRequestBodyForPutRequestWithCharset() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded; charset=UTF-8"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPutBodyWithCharsetIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PUT', 'foo=bar&one=two', 'application/x-www-form-urlencoded; charset=UTF-8'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
-
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
-
-        request = new MockHttpServletRequest()
-        request.method = 'PUT'
-        request.contentType = "application/x-www-form-urlencoded; charset=UTF-8"
-        request.content = 'foo='.bytes
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
-
-        params = new GrailsParameterMap(request)
-
-        assert '' == params.foo
     }
 
     @Test
-    void testParseRequestBodyForPatchRequest() {
-        def request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PATCH'
-        request.contentType = "application/x-www-form-urlencoded"
-
-        def params = new GrailsParameterMap(request)
+    void testFormEncodedPatchBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('PATCH', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
         assert 'bar' == params.foo
         assert 'two' == params.one
+    }
 
-        params = new GrailsParameterMap(request)
-        assert params.foo == null // should be null, request can't be parsed twice
+    @Test
+    void testFormEncodedDeleteBodyIsExposedAsParams() {
+        def params = new GrailsParameterMap(formFilteredRequest('DELETE', 'foo=bar&one=two', 'application/x-www-form-urlencoded'))
 
-        request = new MockHttpServletRequest()
-        request.content = 'foo=bar&one=two'.bytes
-        request.method = 'PATCH'
-        request.contentType = "application/x-www-form-urlencoded"
-        request.content = 'foo='.bytes
-        request.removeAttribute(GrailsParameterMap.REQUEST_BODY_PARSED)
+        assert 'bar' == params.foo
+        assert 'two' == params.one
+    }
 
-        params = new GrailsParameterMap(request)
+    @Test
+    void testParametersOfAnUnparseableMultipartRequestAreEmptyRatherThanThrowing() {
+        // An upload breaching the container's limits fails part parsing, and every later parameter read
+        // fails with it. Filters ahead of the DispatcherServlet build this map, so throwing here would
+        // abort the request where no HandlerExceptionResolver can see it.
+        def request = unparseableRequest('multipart/form-data; boundary=test')
 
-        assert '' == params.foo
+        theMap = new GrailsParameterMap(request)
+
+        assertTrue theMap.isEmpty()
+    }
+
+    @Test
+    void testAnUnreadableParameterMapStillThrowsForANonMultipartRequest() {
+        def request = unparseableRequest('application/x-www-form-urlencoded')
+
+        def e = assertThrows(IllegalStateException) { new GrailsParameterMap(request) }
+
+        assertEquals 'parameters are unreadable', e.message
+    }
+
+    private static HttpServletRequest unparseableRequest(String contentType) {
+        def request = new MockHttpServletRequest() {
+            @Override
+            Map<String, String[]> getParameterMap() {
+                throw new IllegalStateException('parameters are unreadable')
+            }
+        }
+        request.contentType = contentType
+        request.method = 'POST'
+        request
+    }
+
+    private static MockMultipartHttpServletRequest multipartRequest() {
+        def request = new MockMultipartHttpServletRequest()
+        request.contentType = 'multipart/form-data; boundary=test'
+        request.addFile(new MockMultipartFile('file', 'test.txt', 'text/plain', 'content'.bytes))
+        request
+    }
+
+    // Runs the request through Spring's FormContentFilter — the same filter Boot registers at runtime —
+    // and returns the wrapped request, so the test exercises the real parsing path instead of a fallback.
+    private static HttpServletRequest formFilteredRequest(String method, String body, String contentType) {
+        def request = new MockHttpServletRequest()
+        request.method = method
+        request.contentType = contentType
+        request.content = body.bytes
+        HttpServletRequest[] filtered = new HttpServletRequest[1]
+        new FormContentFilter().doFilter(request, new MockHttpServletResponse(), { req, res -> filtered[0] = (HttpServletRequest) req } as FilterChain)
+        filtered[0]
     }
 
     @Test
@@ -513,5 +605,127 @@ class GrailsParameterMapTests {
         def params = new GrailsParameterMap(request)
         assert '[a.b.c.d:1, a:[b.c.d:1, b:[c.d:1, c:[d:1], e:2], b.e:2], a.b.e:2]' == params.toString()
         assert params != null
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testAddingParametersNamedAfterAnAccessor() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap['identifier'] = 'id1'
+        theMap['request'] = 'req1'
+
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+        assertEquals 'id1', theMap.get('identifier')
+        assertEquals 'req1', theMap.get('request')
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testPropertySyntaxForParametersNamedAfterAnAccessor() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        theMap.identifier = 'id1'
+        theMap.request = 'req1'
+
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'req1', theMap.request
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testParametersNamedAfterAnAccessorArrivingFromTheRequest() {
+        mockRequest.addParameter('identifier', 'id1')
+        mockRequest.addParameter('request', 'req1')
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'req1', theMap['request']
+        assertEquals 'id1', theMap.identifier
+        assertEquals 'req1', theMap.request
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testParametersNamedAfterAnAccessorAreAbsentWhenNotSubmitted() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertNull theMap['identifier']
+        assertNull theMap['request']
+        assertNull theMap.identifier
+        assertNull theMap.request
+        assertFalse theMap.containsKey('identifier')
+        assertFalse theMap.containsKey('request')
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    // getProperty/setProperty are runtime hooks the static compiler never reaches, so a colliding
+    // accessor could not be worked around at runtime. This pins that statically compiled access
+    // reaches the map in every form.
+    @Test
+    void testStaticallyCompiledAccessAddressesTheMap() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        StaticallyCompiledAccess.writeSubscript(theMap, 'id1')
+        assertEquals 'id1', theMap['identifier']
+        assertEquals 'id1', StaticallyCompiledAccess.readSubscript(theMap)
+        assertEquals 'id1', StaticallyCompiledAccess.readProperty(theMap)
+
+        StaticallyCompiledAccess.writeProperty(theMap, 'id2')
+        assertEquals 'id2', theMap['identifier']
+        assertEquals 'id2', StaticallyCompiledAccess.readProperty(theMap)
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testTheUnderlyingRequestIsStillReachable() {
+        theMap = new GrailsParameterMap(mockRequest)
+
+        assertSame mockRequest, theMap.request()
+        assertSame mockRequest, StaticallyCompiledAccess.readRequest(theMap)
+
+        theMap['request'] = 'req1'
+        assertSame mockRequest, theMap.request()
+    }
+
+    // https://github.com/apache/grails-core/issues/16280
+    @Test
+    void testRemovingAndCloningParametersNamedAfterAnAccessor() {
+        mockRequest.addParameter('identifier', 'id1')
+        theMap = new GrailsParameterMap(mockRequest)
+
+        def cloned = theMap.clone()
+        assertEquals 'id1', cloned['identifier']
+
+        assertEquals 'id1', theMap.remove('identifier')
+        assertFalse theMap.containsKey('identifier')
+        assertEquals 'id1', cloned['identifier']
+    }
+
+    @CompileStatic
+    static class StaticallyCompiledAccess {
+
+        static void writeSubscript(GrailsParameterMap params, Object value) {
+            params['identifier'] = value
+        }
+
+        static void writeProperty(GrailsParameterMap params, Object value) {
+            params.identifier = value
+        }
+
+        static Object readSubscript(GrailsParameterMap params) {
+            params['identifier']
+        }
+
+        static Object readProperty(GrailsParameterMap params) {
+            params.identifier
+        }
+
+        static HttpServletRequest readRequest(GrailsParameterMap params) {
+            params.request()
+        }
     }
 }

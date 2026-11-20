@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 ////
 
+NOTE: GORM for Hibernate runs on Hibernate 5.6 by default, with Hibernate 7.4 available as a drop-in replacement. If you are moving an application to Hibernate 7, see the link:upgrading.html#_hibernate_5_to_hibernate_7_migration[Hibernate 5 to Hibernate 7 Migration] guide for the full list of differences and workarounds.
+
 Grails provides the following GORM configuration options:
 
 * `grails.gorm.failOnError`  - If set to `true`, causes the `save()` method on domain classes to throw a `grails.validation.ValidationException` if link:validation.html[validation] fails during a save.  This option may also be assigned a list of Strings representing package names.  If the value is a list of Strings then the failOnError behavior will only be applied to domain classes in those packages (including sub-packages).  See the link:{domainClassesRef}save.html[save] method docs for more information.

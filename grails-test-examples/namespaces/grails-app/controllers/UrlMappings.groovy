@@ -30,6 +30,25 @@ class UrlMappings {
             namespace = "admin"
         }
 
+        // Exercises URL paths that dispatch to controllers with static namespace declarations. Link
+        // generation inference is based on controller namespace metadata; request-time mapping
+        // conditions such as headers still require explicit namespace selection when ambiguous.
+        "/frontend/$controller/$action?/$id?(.$format)?"{
+            namespace = "frontend"
+        }
+
+        "/manage/$controller/$action?/$id?(.$format)?"{
+            namespace = "manage"
+        }
+
+        "/archive/$controller/$action?/$id?(.$format)?"{
+            namespace = "archive"
+        }
+
+        "/home-submit"(controller: "home", action: "target", method: "POST")
+        "/home-list/$page"(controller: "home", action: "list")
+        "/home-by/$category"(controller: "home", action: "list", method: "GET")
+
         "/"(view:"/index")
         "500"(view:'/error')
     }

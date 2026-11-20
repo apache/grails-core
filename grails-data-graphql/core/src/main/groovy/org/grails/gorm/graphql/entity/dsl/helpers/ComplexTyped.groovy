@@ -19,7 +19,13 @@
 
 package org.grails.gorm.graphql.entity.dsl.helpers
 
-import graphql.schema.*
+import graphql.schema.GraphQLInputObjectField
+import graphql.schema.GraphQLInputObjectType
+import graphql.schema.GraphQLInputType
+import graphql.schema.GraphQLList
+import graphql.schema.GraphQLNonNull
+import graphql.schema.GraphQLObjectType
+import graphql.schema.GraphQLOutputType
 import groovy.transform.CompileStatic
 import org.grails.datastore.mapping.model.MappingContext
 import org.grails.gorm.graphql.entity.fields.ComplexField
@@ -102,11 +108,16 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
             for (Field field: fields) {
                 if (field.input) {
-                    builder.field(newInputObjectField()
+                    GraphQLInputObjectField.Builder fieldBuilder = newInputObjectField()
                             .name(field.name)
                             .description(field.description)
-                            .defaultValue(field.defaultValue)
-                            .type(field.getInputType(typeManager, mappingContext)))
+                            .type(field.getInputType(typeManager, mappingContext))
+
+                    if (field.defaultValue != null) {
+                        fieldBuilder.defaultValueProgrammatic(field.defaultValue)
+                    }
+
+                    builder.field(fieldBuilder)
                 }
             }
             GraphQLInputType type = builder.build()
@@ -126,7 +137,11 @@ trait ComplexTyped<T> extends ExecutesClosures {
 
     private void handleField(@DelegatesTo(strategy = Closure.DELEGATE_ONLY)Closure closure, Field field) {
         field.nullable(defaultNull)
-        withDelegate(closure, (Object)field)
+        // GROOVY-12106: STC could not resolve this inherited ExecutesClosures static from a sub-trait
+        // body; fixed in Groovy 5.0.7, so the plain inherited-static call compiles again. Qualifying
+        // this call (e.g. ExecutesClosures.withDelegate(...)) does NOT resolve under STC either - only
+        // the unqualified form works, so leave it as-is despite IDE inspections suggesting otherwise.
+        withDelegate(closure, (Object) field)
         handleField(field)
     }
 

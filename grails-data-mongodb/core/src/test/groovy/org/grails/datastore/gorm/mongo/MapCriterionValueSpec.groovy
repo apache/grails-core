@@ -23,6 +23,7 @@ import grails.persistence.Entity
 import org.apache.grails.data.mongo.core.GrailsDataMongoTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.springframework.dao.InvalidDataAccessResourceUsageException
+import spock.lang.Unroll
 
 /**
  * Verifies that a Map criterion value carrying a MongoDB operator key is rejected by every public
@@ -33,7 +34,7 @@ class MapCriterionValueSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
     static final Map OPERATOR_MAP = ['$ne': 'x']
 
     void setupSpec() {
-        manager.domainClasses.addAll([ApiToken])
+        manager.registerDomainClasses(ApiToken)
     }
 
     void setup() {
@@ -43,53 +44,37 @@ class MapCriterionValueSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager>
         manager.session.clear()
     }
 
-    /**
-     * On 7.0.x the TCK manager recreates every registered collection for each feature, and the
-     * MongoDB test container runs with a 1024 file descriptor limit, so the query forms are checked
-     * in a single feature rather than as unrolled rows. Any form that does not throw is reported by
-     * its label.
-     */
-    void "Test every query form rejects a Map criterion value that carries an operator key"() {
-        given: 'Every public query form that takes a criterion value, with a Map value'
-        Map<String, Closure> queries = [
-                'findWhere'               : { ApiToken.findWhere(token: OPERATOR_MAP) },
-                'findAllWhere'            : { ApiToken.findAllWhere(token: OPERATOR_MAP) },
-                'criteria eq'             : { ApiToken.createCriteria().get { eq('token', OPERATOR_MAP) } },
-                'criteria ne'             : { ApiToken.createCriteria().list { ne('token', OPERATOR_MAP) } },
-                'criteria inList'         : { ApiToken.createCriteria().list { inList('uses', [1, OPERATOR_MAP]) } },
-                'criteria idEq'           : { ApiToken.createCriteria().get { idEq(OPERATOR_MAP) } },
-                'where DSL on id'         : { def m = OPERATOR_MAP; ApiToken.where { id == m }.list() },
-                'findById'                : { ApiToken.findById(OPERATOR_MAP) },
-                'where DSL'               : { def m = OPERATOR_MAP; ApiToken.where { token == m }.list() },
-                'dynamic finder Integer'  : { ApiToken.findAllByUses(['$gt': 41]) },
-                'dynamic finder gt'       : { ApiToken.findAllByUsesGreaterThan(['$gt': 41]) },
-                'dynamic finder ne'       : { ApiToken.findAllByUsesNotEqual(['$gt': 41]) },
-                'Map property operator'   : { ApiToken.findWhere(attributes: ['$exists': true]) },
-                'negated eq'              : { ApiToken.createCriteria().list { not { eq('token', OPERATOR_MAP) } } },
-                'enum findWhere'          : { ApiToken.findWhere(status: OPERATOR_MAP) },
-                'enum criteria eq'        : { ApiToken.createCriteria().list { eq('status', OPERATOR_MAP) } },
-                'enum criteria ne'        : { ApiToken.createCriteria().list { ne('status', OPERATOR_MAP) } },
-                'enum where DSL'          : { def m = OPERATOR_MAP; ApiToken.where { status == m }.list() },
-                'enum dynamic finder'     : { ApiToken.findAllByStatus(OPERATOR_MAP) },
-                'enum inList'             : { ApiToken.createCriteria().list { inList('status', [OPERATOR_MAP]) } },
-                'enum negated eq'         : { ApiToken.createCriteria().list { not { eq('status', OPERATOR_MAP) } } },
-        ]
+    @Unroll
+    void "Test #label rejects a Map criterion value that carries an operator key"() {
+        when: "A Map value is passed where a scalar is expected"
+        query.call()
 
-        when: 'Each form is executed'
-        List<String> notRefused = []
-        queries.each { String label, Closure query ->
-            try {
-                query.call()
-                notRefused << "$label (returned normally)".toString()
-            } catch (InvalidDataAccessResourceUsageException ignored) {
-                // expected
-            } catch (Throwable t) {
-                notRefused << "$label (threw ${t.class.simpleName})".toString()
-            }
-        }
+        then: "The query is refused"
+        thrown(InvalidDataAccessResourceUsageException)
 
-        then: 'Every form is refused with InvalidDataAccessResourceUsageException'
-        notRefused.empty
+        where:
+        label                     | query
+        'findWhere'               | { ApiToken.findWhere(token: OPERATOR_MAP) }
+        'findAllWhere'            | { ApiToken.findAllWhere(token: OPERATOR_MAP) }
+        'criteria eq'             | { ApiToken.createCriteria().get { eq('token', OPERATOR_MAP) } }
+        'criteria ne'             | { ApiToken.createCriteria().list { ne('token', OPERATOR_MAP) } }
+        'criteria inList'         | { ApiToken.createCriteria().list { inList('uses', [1, OPERATOR_MAP]) } }
+        'criteria idEq'           | { ApiToken.createCriteria().get { idEq(OPERATOR_MAP) } }
+        'where DSL on id'         | { def m = OPERATOR_MAP; ApiToken.where { id == m }.list() }
+        'findById'                | { ApiToken.findById(OPERATOR_MAP) }
+        'where DSL'               | { def m = OPERATOR_MAP; ApiToken.where { token == m }.list() }
+        'dynamic finder Integer'  | { ApiToken.findAllByUses(['$gt': 41]) }
+        'dynamic finder gt'       | { ApiToken.findAllByUsesGreaterThan(['$gt': 41]) }
+        'dynamic finder ne'       | { ApiToken.findAllByUsesNotEqual(['$gt': 41]) }
+        'Map property operator'   | { ApiToken.findWhere(attributes: ['$exists': true]) }
+        'negated eq'              | { ApiToken.createCriteria().list { not { eq('token', OPERATOR_MAP) } } }
+        'enum findWhere'          | { ApiToken.findWhere(status: OPERATOR_MAP) }
+        'enum criteria eq'        | { ApiToken.createCriteria().list { eq('status', OPERATOR_MAP) } }
+        'enum criteria ne'        | { ApiToken.createCriteria().list { ne('status', OPERATOR_MAP) } }
+        'enum where DSL'          | { def m = OPERATOR_MAP; ApiToken.where { status == m }.list() }
+        'enum dynamic finder'     | { ApiToken.findAllByStatus(OPERATOR_MAP) }
+        'enum inList'             | { ApiToken.createCriteria().list { inList('status', [OPERATOR_MAP]) } }
+        'enum negated eq'         | { ApiToken.createCriteria().list { not { eq('status', OPERATOR_MAP) } } }
     }
 
     void "Test Map values without operator keys are sent as literal subdocument comparisons"() {

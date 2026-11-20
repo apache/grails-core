@@ -738,7 +738,11 @@ class RedisServiceSpec extends Specification {
         }
 
         then:
-        result?.startsWith('No signature of method: redis.clients.jedis.Jedis.methodThatDoesNotExistAndNeverWill')
+        // Groovy 4: 'No signature of method: redis.clients.jedis.Jedis.methodThatDoesNotExistAndNeverWill() ...'
+        // Groovy 5: 'No signature of method: methodThatDoesNotExistAndNeverWill for class: redis.clients.jedis.Jedis ...'
+        result?.startsWith('No signature of method: ')
+        result?.contains('methodThatDoesNotExistAndNeverWill')
+        result?.contains('redis.clients.jedis.Jedis')
     }
 
     // utility method for assisting in test setup

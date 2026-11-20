@@ -31,6 +31,7 @@ import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 
+import org.grails.datastore.mapping.core.exceptions.ConfigurationException;
 import org.grails.datastore.mapping.model.AbstractPersistentEntity;
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
@@ -64,7 +65,7 @@ public class JpaQueryBuilder {
     public static final String NOT_CLAUSE = " NOT";
     public static final String LOGICAL_AND = " AND ";
     public static final String UPDATE_CLAUSE = "UPDATE ";
-    public static final String DELETE_CLAUSE = "DELETE ";
+    public static final String DELETE_CLAUSE = "DELETE FROM ";
 
     public static final String LOGICAL_OR = " OR ";
     private static final Map<Class, QueryHandler> queryHandlers = new HashMap<>();
@@ -95,6 +96,9 @@ public class JpaQueryBuilder {
     }
 
     public JpaQueryBuilder(PersistentEntity entity, Query.Junction criteria) {
+        if (entity == null) {
+            throw new ConfigurationException("No persistent entity specified for JPA query builder");
+        }
         this.entity = entity;
         this.criteria = criteria;
         this.logicalName = entity.getDecapitalizedName();
@@ -464,21 +468,7 @@ public class JpaQueryBuilder {
                 whereClause.append(logicalName)
                            .append(DOT)
                            .append(name)
-                           .append(" IS EMPTY ");
-
-                return position;
-            }
-        });
-
-        queryHandlers.put(Query.IsNotNull.class, new QueryHandler() {
-            public int handle(PersistentEntity entity, Query.Criterion criterion, StringBuilder q, StringBuilder whereClause, String logicalName, int position, List parameters, ConversionService conversionService, boolean allowJoins, boolean hibernateCompatible) {
-                Query.IsNotNull isNotNull = (Query.IsNotNull) criterion;
-                final String name = isNotNull.getProperty();
-                validateProperty(entity, name, Query.IsNotNull.class);
-                whereClause.append(logicalName)
-                           .append(DOT)
-                           .append(name)
-                           .append(" IS NOT NULL ");
+                           .append(" IS NOT EMPTY ");
 
                 return position;
             }

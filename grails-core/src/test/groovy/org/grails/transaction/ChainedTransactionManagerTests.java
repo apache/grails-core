@@ -93,6 +93,25 @@ public class ChainedTransactionManagerTests {
 	}
 
 	@Test
+	public void shouldDeduplicateRepeatedTransactionManagerInstances() {
+
+		// The same PlatformTransactionManager instance can be supplied more than once when it is
+		// exposed under multiple bean names (for example the primary data source manager aliased by
+		// an additional transactionManager_<dataSource> bean). It must be registered - and therefore
+		// committed - only once, otherwise the second commit fails with
+		// "Transaction is already completed - do not call commit or rollback more than once".
+		PlatformTransactionManager single = createNonFailingTransactionManager("single");
+
+		setupTransactionManagers(single, single);
+
+		assertThat(tm.getTransactionManagers().size(), is(1));
+
+		createAndCommitTransaction();
+
+		assertThat(single, isCommitted());
+	}
+
+	@Test
 	public void shouldThrowMixedRolledBackExceptionForNonFirstTMFailure() throws Exception {
 
 		setupTransactionManagers(TestPlatformTransactionManager.createFailingTransactionManager("first"),

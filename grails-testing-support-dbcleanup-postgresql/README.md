@@ -27,6 +27,6 @@ To use PostgreSQL database cleanup in your integration tests, add the following 
 testImplementation 'org.postgresql:postgresql'
 
 // Optional: For functional tests with Docker containers
-testImplementation 'org.testcontainers:postgresql:1.20.1'
-testImplementation 'org.testcontainers:testcontainers:1.20.1'
+testImplementation 'org.testcontainers:testcontainers-postgresql'
+testImplementation 'org.testcontainers:testcontainers'
 ```

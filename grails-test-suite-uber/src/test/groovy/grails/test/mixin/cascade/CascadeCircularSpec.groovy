@@ -72,6 +72,7 @@ class Person {
     static mappedBy = [students: 'none', peers: 'none']
 
     static constraints = {
+        master nullable: false
         peers cascade: false
     }
 

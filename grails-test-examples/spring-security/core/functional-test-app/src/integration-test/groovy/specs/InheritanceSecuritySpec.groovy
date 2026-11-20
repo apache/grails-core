@@ -19,6 +19,8 @@
 
 package specs
 
+import spock.lang.Unroll
+
 import grails.testing.mixin.integration.Integration
 import pages.IndexPage
 import pages.LoginPage
@@ -28,107 +30,108 @@ import spock.lang.IgnoreIf
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'annotation' })
 class InheritanceSecuritySpec extends AbstractSecuritySpec {
 
-	protected void resetDatabase() {
-		super.resetDatabase()
-		go 'testData/addTestUsers'
-	}
+    protected void resetDatabase() {
+        super.resetDatabase()
+        go 'testData/addTestUsers'
+    }
 
-	void 'should redirect to login page for anonymous'() {
-		when:
-		go uri
+    @Unroll
+    void 'should redirect to login page for anonymous'() {
+        when:
+        go uri
 
-		then:
-		at LoginPage
+        then:
+        at LoginPage
 
-		where:
-		uri << ['base/index', 'extended/index', 'base/delete', 'extended/delete', 'base/update', 'extended/update']
-	}
+        where:
+        uri << ['base/index', 'extended/index', 'base/delete', 'extended/delete', 'base/update', 'extended/update']
+    }
 
-	void 'verify security for testuser'() {
-		when:
-		login 'testuser', 'password'
+    void 'verify security for testuser'() {
+        when:
+        login 'testuser', 'password'
 
-		then:
-		at IndexPage
+        then:
+        at IndexPage
 
-		when:
-		go 'base/index'
+        when:
+        go 'base/index'
 
-		then:
-		pageSource =~ /BaseController/
+        then:
+        pageSource =~ /BaseController/
 
-		when:
-		go 'base/delete'
+        when:
+        go 'base/delete'
 
-		then:
-		pageSource =~ /DELETED/
+        then:
+        pageSource =~ /DELETED/
 
-		when:
-		go 'base/update'
+        when:
+        go 'base/update'
 
-		then:
-		pageSource =~ /BaseController - UPDATED/
+        then:
+        pageSource =~ /BaseController - UPDATED/
 
-		when:
-		go 'extended/index'
+        when:
+        go 'extended/index'
 
-		then:
-		pageSource =~ /ExtendedController/
+        then:
+        pageSource =~ /ExtendedController/
 
-		when:
-		go 'extended/delete'
+        when:
+        go 'extended/delete'
 
-		then:
-		pageSource =~ /DELETED/
+        then:
+        pageSource =~ /DELETED/
 
-		when:
-		go 'extended/update'
+        when:
+        go 'extended/update'
 
-		then:
-		pageSource =~ /ExtendedController - UPDATED/
-	}
+        then:
+        pageSource =~ /ExtendedController - UPDATED/
+    }
 
-	void 'verify security for other user'() {
-		when:
-		login 'testuser_books', 'password'
+    void 'verify security for other user'() {
+        when:
+        login 'testuser_books', 'password'
 
-		then:
-		at IndexPage
+        then:
+        at IndexPage
 
-		when:
-		go 'base/index'
+        when:
+        go 'base/index'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
-		when:
-		go 'base/delete'
+        when:
+        go 'base/delete'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
-		when:
-		go 'base/update'
+        when:
+        go 'base/update'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
-		when:
-		go 'extended/index'
+        when:
+        go 'extended/index'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
-		when:
-		go 'extended/delete'
+        when:
+        go 'extended/delete'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
 
-		when:
-		go 'extended/update'
+        when:
+        go 'extended/update'
 
-		then:
-		$('.errors').text() == "Sorry, you're not authorized to view this page."
-	}
+        then:
+        $('.alert-danger p').text() == "Sorry, you're not authorized to view this page."
+    }
 }

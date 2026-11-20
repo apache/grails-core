@@ -75,7 +75,7 @@ jobs:
           printf 'version=%s\n' "${java_version}" >> "${GITHUB_OUTPUT}"
 
       - name: "Setup Corretto"
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: corretto
           java-version: ${{ steps.jdk.outputs.version }}
@@ -84,7 +84,7 @@ jobs:
         id: gradle-cache-policy
         uses: ./.github/actions/gradle-cache-policy
       - name: "Setup Gradle"
-        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
         with:
           # Decided by the step above; see .github/actions/gradle-cache-policy.
           cache-read-only: ${{ steps.gradle-cache-policy.outputs.read-only }}
@@ -117,10 +117,10 @@ jobs:
       - name: "Package Forge for Elastic Beanstalk"
         working-directory: grails-forge
         shell: bash
-        run: ./gradlew grails-forge-web-netty:awsElasticBeanstalk
+        run: ./gradlew grails-forge-web:awsElasticBeanstalk
 
       - name: "Configure AWS credentials through OIDC"
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ env.DEPLOY_ROLE_ARN }}
           aws-region: us-east-1
@@ -161,7 +161,7 @@ jobs:
           VERSION_LABEL: ${{ steps.target.outputs.version-label }}
         run: |
           set -Eeuo pipefail
-          artifact='grails-forge/grails-forge-web-netty/build/distributions/grails-forge-web-netty-aws.zip'
+          artifact='grails-forge/grails-forge-web/build/distributions/grails-forge-web-aws.zip'
           test -s "${artifact}"
           aws s3 cp "${artifact}" "s3://${ARTIFACT_BUCKET}/${S3_KEY}" --only-show-errors
 

@@ -53,9 +53,9 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
 
     final RendererRegistry rendererRegistry
 
-    final Renderer defaultRenderer
+    final Renderer<?> defaultRenderer
 
-    DefaultViewRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer defaultRenderer) {
+    DefaultViewRenderer(Class<T> targetType, MimeType mimeType, SmartViewResolver viewResolver, ProxyHandler proxyHandler, RendererRegistry rendererRegistry, Renderer<?> defaultRenderer) {
         super(targetType, mimeType)
         this.viewResolver = viewResolver
         this.proxyHandler = proxyHandler
@@ -94,7 +94,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         }
 
         def webRequest = ((ServletRenderContext) context).getWebRequest()
-        def request = webRequest.currentRequest
+        def request = webRequest.request
         def response = webRequest.currentResponse
 
         AbstractUrlBasedView view
@@ -118,7 +118,7 @@ abstract class DefaultViewRenderer<T> extends DefaultHtmlRenderer<T> {
         }
 
         if (view != null) {
-            Map<String, ?> model
+            Map<String, Object> model
             if (object instanceof Map) {
                 def map = (Map) object
                 model = map

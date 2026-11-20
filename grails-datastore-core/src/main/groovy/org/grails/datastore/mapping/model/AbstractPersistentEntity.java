@@ -21,6 +21,7 @@ package org.grails.datastore.mapping.model;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -300,7 +301,11 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public boolean isIdentityName(String propertyName) {
-        return getIdentity().getName().equals(propertyName);
+        PersistentProperty identity = getIdentity();
+        if (identity != null) {
+            return identity.getName().equals(propertyName);
+        }
+        return GormProperties.IDENTITY.equals(propertyName);
     }
 
     public PersistentEntity getParentEntity() {
@@ -341,7 +346,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
     }
 
     public ClassMapping<T> getMapping() {
-        return new AbstractClassMapping<Entity>(this, context) {
+        return (ClassMapping<T>) new AbstractClassMapping<Entity>(this, context) {
             @Override
             public Entity getMappedForm() {
                 return new Entity();
@@ -351,11 +356,8 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
 
     public Object newInstance() {
         try {
-            return getJavaClass().newInstance();
-        } catch (InstantiationException e) {
-            throw new EntityCreationException("Unable to create entity of type [" + getJavaClass().getName() +
-                    "]: " + e.getMessage(), e);
-        } catch (IllegalAccessException e) {
+            return getJavaClass().getDeclaredConstructor().newInstance();
+        } catch (InstantiationException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
             throw new EntityCreationException("Unable to create entity of type [" + getJavaClass().getName() +
                     "]: " + e.getMessage(), e);
         }
@@ -377,7 +379,7 @@ public abstract class AbstractPersistentEntity<T extends Entity> implements Pers
         return (this.versionCompatibleType || !propertiesInitialized) && versioned;
     }
 
-    public Class getJavaClass() {
+    public Class<?> getJavaClass() {
         return javaClass;
     }
 

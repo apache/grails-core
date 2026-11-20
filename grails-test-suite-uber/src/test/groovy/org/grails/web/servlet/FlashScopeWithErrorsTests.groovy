@@ -67,4 +67,8 @@ class FlashScopeWithErrorsTests extends Specification implements DomainUnitTest<
 class Book {
     String title
     URL site
+
+    static constraints = {
+        title nullable: false
+    }
 }

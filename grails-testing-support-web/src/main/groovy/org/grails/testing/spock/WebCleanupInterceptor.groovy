@@ -28,6 +28,7 @@ import org.springframework.web.context.request.RequestContextHolder
 
 import grails.testing.web.GrailsWebUnitTest
 import org.grails.gsp.GroovyPagesTemplateEngine
+import org.grails.testing.runtime.support.LazyTagLibraryLookup
 import org.grails.web.gsp.GroovyPagesTemplateRenderer
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
@@ -54,6 +55,11 @@ class WebCleanupInterceptor implements IMethodInterceptor {
         }
         if (ctx?.containsBean(GROOVY_PAGES_TEMPLATE_RENDERER)) {
             ctx.getBean(GROOVY_PAGES_TEMPLATE_RENDERER, GroovyPagesTemplateRenderer).clearCache()
+        }
+        if (ctx?.containsBean('gspTagLibraryLookup')) {
+            LazyTagLibraryLookup lookup = ctx.getBean(LazyTagLibraryLookup)
+            lookup.clear()
+            lookup.cleanTagLibsMetaClass()
         }
         test.webRequest = null
     }

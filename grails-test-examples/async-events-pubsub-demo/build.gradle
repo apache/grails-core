@@ -48,11 +48,10 @@ dependencies {
     implementation 'org.apache.grails:grails-services'
     implementation 'org.apache.grails:grails-url-mappings'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
 
     implementation 'org.apache.grails:grails-views-gson'
@@ -64,12 +63,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
 
     runtimeOnly 'com.h2database:h2'
-    runtimeOnly 'org.fusesource.jansi:jansi'
     runtimeOnly 'com.zaxxer:HikariCP'
 
     testImplementation 'org.apache.grails:grails-testing-support-web'
 
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 bootRun {

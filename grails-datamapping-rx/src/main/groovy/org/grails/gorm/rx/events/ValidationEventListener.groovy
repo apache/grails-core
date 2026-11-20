@@ -27,14 +27,15 @@ import org.grails.datastore.mapping.engine.event.PreInsertEvent
 import org.grails.datastore.mapping.engine.event.PreUpdateEvent
 import org.grails.datastore.rx.RxDatastoreClient
 import org.springframework.context.ApplicationEvent
+
 /**
  * A validation event listener for RxGORM
  *
- * @author Graeme Rocher
  * @since 6.0
  */
 @CompileStatic
 class ValidationEventListener implements PersistenceEventListener {
+
     @Override
     boolean supportsEventType(Class<? extends ApplicationEvent> eventType) {
         return PreInsertEvent.isAssignableFrom(eventType) || PreUpdateEvent.isAssignableFrom(eventType)
@@ -49,15 +50,15 @@ class ValidationEventListener implements PersistenceEventListener {
     void onApplicationEvent(ApplicationEvent event) {
         def persistenceEvent = (AbstractPersistenceEvent) event
         def entityObject = persistenceEvent.getEntityObject()
-        if(entityObject instanceof GormValidateable) {
+        if (entityObject instanceof GormValidateable) {
             GormValidateable gormValidateable = (GormValidateable) entityObject
-            if(gormValidateable.shouldSkipValidation()) {
-                if( gormValidateable.getErrors()?.hasErrors() )  {
+            if (gormValidateable.shouldSkipValidation()) {
+                if (gormValidateable.getErrors()?.hasErrors()) {
                     persistenceEvent.cancel()
                 }
             }
             else {
-                if( !gormValidateable.validate() ) {
+                if (!gormValidateable.validate()) {
                     persistenceEvent.cancel()
                 }
             }

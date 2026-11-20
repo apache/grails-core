@@ -23,6 +23,7 @@ import java.lang.reflect.Modifier
 
 import groovy.transform.CompilationUnitAware
 import groovy.transform.CompileStatic
+import org.codehaus.groovy.ast.AnnotatedNode
 import org.codehaus.groovy.ast.AnnotationNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
@@ -31,12 +32,16 @@ import org.codehaus.groovy.ast.FieldNode
 import org.codehaus.groovy.ast.MethodNode
 import org.codehaus.groovy.ast.Parameter
 import org.codehaus.groovy.ast.PropertyNode
+import org.codehaus.groovy.ast.expr.ArgumentListExpression
 import org.codehaus.groovy.ast.expr.ClassExpression
+import org.codehaus.groovy.ast.expr.ClosureExpression
 import org.codehaus.groovy.ast.expr.ConstantExpression
 import org.codehaus.groovy.ast.expr.Expression
 import org.codehaus.groovy.ast.expr.ListExpression
+import org.codehaus.groovy.ast.expr.MethodCallExpression
 import org.codehaus.groovy.ast.expr.VariableExpression
 import org.codehaus.groovy.ast.stmt.BlockStatement
+import org.codehaus.groovy.ast.stmt.ExpressionStatement
 import org.codehaus.groovy.ast.tools.GenericsUtils
 import org.codehaus.groovy.control.CompilePhase
 import org.codehaus.groovy.control.SourceUnit
@@ -49,9 +54,14 @@ import org.codehaus.groovy.transform.trait.TraitComposer
 
 import groovyjarjarasm.asm.Opcodes
 
+import org.springframework.transaction.PlatformTransactionManager
+
 import grails.gorm.services.Service
 import grails.gorm.transactions.NotTransactional
+import grails.gorm.transactions.ReadOnly
+import grails.gorm.transactions.Transactional
 import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.datastore.gorm.GormRegistry
 import org.grails.datastore.gorm.services.Implemented
 import org.grails.datastore.gorm.services.ServiceEnhancer
 import org.grails.datastore.gorm.services.ServiceImplementer
@@ -86,25 +96,36 @@ import org.grails.datastore.gorm.transactions.transform.TransactionalTransform
 import org.grails.datastore.gorm.transform.AbstractTraitApplyingGormASTTransformation
 import org.grails.datastore.gorm.validation.jakarta.services.implementers.MethodValidationImplementer
 import org.grails.datastore.mapping.core.Datastore
+import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.core.connections.MultipleConnectionSourceCapableDatastore
 import org.grails.datastore.mapping.core.order.OrderedComparator
+import org.grails.datastore.mapping.transactions.TransactionCapableDatastore
 
 import static org.apache.groovy.ast.tools.AnnotatedNodeUtils.markAsGenerated
+import static org.codehaus.groovy.ast.tools.GeneralUtils.args
 import static org.codehaus.groovy.ast.tools.GeneralUtils.assignS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.block
 import static org.codehaus.groovy.ast.tools.GeneralUtils.callX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.castX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.classX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.constX
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifElseS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.declS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.ifS
+import static org.codehaus.groovy.ast.tools.GeneralUtils.notNullX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.param
 import static org.codehaus.groovy.ast.tools.GeneralUtils.params
+import static org.codehaus.groovy.ast.tools.GeneralUtils.propX
 import static org.codehaus.groovy.ast.tools.GeneralUtils.returnS
 import static org.codehaus.groovy.ast.tools.GeneralUtils.varX
+import static org.grails.datastore.gorm.transform.AstMethodDispatchUtils.callD
 import static org.grails.datastore.mapping.reflect.AstUtils.COMPILE_STATIC_TYPE
-import static org.grails.datastore.mapping.reflect.AstUtils.ZERO_PARAMETERS
-import static org.grails.datastore.mapping.reflect.AstUtils.addAnnotationIfNecessary
+import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.addAnnotationIfNecessary
+import static org.grails.datastore.mapping.reflect.AstAnnotationUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.copyAnnotations
 import static org.grails.datastore.mapping.reflect.AstUtils.copyParameters
 import static org.grails.datastore.mapping.reflect.AstUtils.error
 import static org.grails.datastore.mapping.reflect.AstUtils.findAllUnimplementedAbstractMethods
-import static org.grails.datastore.mapping.reflect.AstUtils.findAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.hasAnnotation
 import static org.grails.datastore.mapping.reflect.AstUtils.warning
 
@@ -170,47 +191,41 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
     @Override
     boolean shouldWeave(AnnotationNode annotationNode, ClassNode classNode) {
-        return !Modifier.isAbstract(classNode.modifiers)
+        return classNode.getNodeMetaData(APPLIED_MARKER) != APPLIED_MARKER
     }
 
     @Override
     void visitAfterTraitApplied(SourceUnit sourceUnit, AnnotationNode annotationNode, ClassNode classNode) {
-        // if the class node is an interface we are going to try and generate an implementation
-        // and add the implementation as an inner class. If any method of the interface cannot be implemented
-        // a compilation error occurs
         boolean isInterface = classNode.isInterface()
         boolean isAbstractClass = !isInterface && Modifier.isAbstract(classNode.modifiers)
 
         List<FieldNode> propertiesFields = []
-        if (isAbstractClass) {
+        if (isAbstractClass || !isInterface) {
             List<PropertyNode> properties = classNode.getProperties().sort { it.name }
             for (PropertyNode pn in properties) {
                 ClassNode propertyType = pn.type
                 if (hasAnnotation(propertyType, Service) && propertyType != classNode && Modifier.isPublic(pn.modifiers) && pn.getterBlock == null && pn.setterBlock == null) {
                     FieldNode field = pn.field
                     propertiesFields.add(field)
-                    // NOTE:
-                    // We intentionally do NOT set a getter block on the abstract class's
-                    // PropertyNode here. The previous approach of setting a lazy getter that
-                    // referenced varX('datastore') caused two problems under @CompileStatic:
-                    //
-                    // 1. The 'datastore' field only exists on the generated impl class
-                    // 2. StaticTypeCheckingVisitor.visitProperty() throws "Unexpected return
-                    //    statement" when encountering ReturnStatement in a property getter block
-                    //
-                    // Instead, service properties are eagerly populated in the generated
-                    // setDatastore() method on the impl class (below).
                 }
             }
 
-            List<ConstructorNode> constructors = classNode.getDeclaredConstructors()
-            if (!constructors.isEmpty()) {
-                error(sourceUnit, classNode, 'Abstract data Services should not define constructors')
+            if (isAbstractClass) {
+                List<ConstructorNode> constructors = classNode.getDeclaredConstructors()
+                if (!constructors.isEmpty()) {
+                    error(sourceUnit, classNode, 'Abstract data Services should not define constructors')
+                }
             }
-
         }
 
         propertiesFields.sort(true) { it.name } // ensure a consistent order of processing fields
+
+        Expression valueMember = annotationNode.getMember('value')
+        ClassExpression ce = valueMember instanceof ClassExpression ? (ClassExpression) valueMember : null
+        
+        ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
+
+        ClassNode datastoreType = ClassHelper.make(Datastore)
 
         if (isInterface || isAbstractClass) {
             // create a new class to represent the implementation
@@ -223,45 +238,37 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                     superClass,
                     interfaces)
 
-            if (!propertiesFields.isEmpty()) {
+            // weave the trait class
+            weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
 
-                ClassNode datastoreType = ClassHelper.make(Datastore)
-                FieldNode datastoreField = impl.addField('datastore', Modifier.PRIVATE, datastoreType, null)
-                VariableExpression datastoreFieldVar = varX(datastoreField)
+            addDatastoreMethods(impl, datastoreType, targetDomainClass, propertiesFields)
 
-                BlockStatement body = block()
-                Parameter datastoreParam = param(datastoreType, 'd')
-                MethodNode datastoreSetterNode = impl.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
-                        datastoreParam
-                ), null, body)
-                markAsGenerated(impl, datastoreSetterNode)
-                body.addStatement(
-                        assignS(datastoreFieldVar, varX(datastoreParam))
-                )
-                MethodNode datastoreGetterNode = impl.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, ZERO_PARAMETERS, null,
-                        returnS(datastoreFieldVar)
-                )
-                markAsGenerated(impl, datastoreGetterNode)
-                for (FieldNode fn in propertiesFields) {
-                    body.addStatement(
-                            assignS(varX(fn), callX(datastoreFieldVar, 'getService', classX(fn.type.plainNodeReference)))
-                    )
-                }
-            }
+            copyAnnotations(classNode, impl, null, null, true)
+            AnnotationNode serviceAnnotation = findAnnotation((AnnotatedNode)impl, Service)
+            if (serviceAnnotation != null && serviceAnnotation.getMember('name') == null) {
 
-            copyAnnotations(classNode, impl)
-            AnnotationNode serviceAnnotation = findAnnotation(impl, Service)
-            if (serviceAnnotation.getMember('name') == null) {
                 serviceAnnotation
                         .setMember('name', new ConstantExpression(Introspector.decapitalize(serviceClassName)))
             }
             // add compile static by default
             impl.addAnnotation(new AnnotationNode(COMPILE_STATIC_TYPE))
-            // weave the trait class
-            ClassExpression ce = (ClassExpression) annotationNode.getMember('value')
-            ClassNode targetDomainClass = ce != null ? ce.type : ClassHelper.OBJECT_TYPE
-            // weave with generic argument
-            weaveTraitWithGenerics(impl, getTraitClass(), targetDomainClass)
+
+            String explicitConnection = getExplicitConnection(classNode)
+            if (explicitConnection != null) {
+                generateConnectionAwareTransactionManager(impl, new ConstantExpression(explicitConnection))
+            } else if (targetDomainClass != ClassHelper.OBJECT_TYPE) {
+                def domainConnection = resolveDomainDatasource(targetDomainClass)
+                if (domainConnection != null
+                        && ConnectionSource.DEFAULT != domainConnection
+                        && ConnectionSource.ALL != domainConnection) {
+                    applyDomainConnectionToService(classNode, impl, domainConnection)
+                } else {
+                    // Generate a default transaction manager getter for DEFAULT connections
+                    generateDefaultTransactionManager(impl, targetDomainClass)
+                }
+            } else {
+                generateDefaultTransactionManager(impl, targetDomainClass)
+            }
 
             List<MethodNode> abstractMethods = findAllUnimplementedAbstractMethods(classNode)
             abstractMethods.sort(true) { it.name } // ensure a consistent order of processing methods
@@ -292,21 +299,43 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 MethodNode methodImpl = null
                 for (ServiceImplementer implementer in implementers) {
                     if (implementer.doesImplement(targetDomainClass, method)) {
+                        int modifiers = method.modifiers
+                        if (Modifier.isAbstract(modifiers)) {
+                            modifiers -= Modifier.ABSTRACT
+                        }
+                        if (isInterface) {
+                            modifiers |= Modifier.PUBLIC
+                        }
                         methodImpl = new MethodNode(
                                 method.name,
-                                Modifier.PUBLIC,
+                                modifiers,
                                 GenericsUtils.makeClassSafeWithGenerics(method.returnType, method.returnType.genericsTypes),
                                 copyParameters(method.parameters),
-                                method.exceptions,
+                                method.exceptions == null ? ClassNode.EMPTY_ARRAY : method.exceptions,
                                 new BlockStatement())
                         methodImpl.setDeclaringClass(impl)
+                        markAsGenerated(impl, methodImpl)
+
                         if (Modifier.isProtected(method.modifiers)) {
-                            if (!TransactionalTransform.hasTransactionalAnnotation(methodImpl)) {
-                                addAnnotationIfNecessary(methodImpl, NotTransactional)
+                            if (!TransactionalTransform.hasTransactionalAnnotation(methodImpl) && findAnnotation((AnnotatedNode)methodImpl, NotTransactional) == null) {
+                                addAnnotationIfNecessary((AnnotatedNode)methodImpl, NotTransactional)
                             }
                         }
+
                         implementer.implement(targetDomainClass, method, methodImpl, impl)
+
+                        // Copy annotations after implement() so that @Query GString values are
+                        // already replaced with constX(IMPLEMENTED) before being copied to methodImpl.
+                        copyAnnotations(method, methodImpl, null, null, true)
+
+                        if (!Modifier.isProtected(method.modifiers)) {
+                            if (!TransactionalTransform.hasTransactionalAnnotation(methodImpl)) {
+                                addAnnotationIfNecessary((AnnotatedNode)methodImpl, ReadOnly)
+                            }
+                        }
+
                         def implementedAnn = new AnnotationNode(ClassHelper.make(Implemented))
+
                         Class implementedClass = implementer.getClass()
                         if (implementer instanceof AdaptedImplementer) {
                             implementedClass = ((AdaptedImplementer) implementer).getAdapted().getClass()
@@ -346,10 +375,67 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
 
             sourceUnit.getAST().addClass(impl)
         } else {
+            addDatastoreMethods(classNode, datastoreType, targetDomainClass, propertiesFields)
             Expression exposeExpr = annotationNode.getMember('expose')
             if (exposeExpr == null || (exposeExpr instanceof ConstantExpression && exposeExpr == ConstantExpression.TRUE)) {
                 generateServiceDescriptor(sourceUnit, classNode)
             }
+        }
+    }
+
+    private void addDatastoreMethods(ClassNode classNode, ClassNode datastoreType, ClassNode targetDomainClass, List<FieldNode> propertiesFields) {
+        BlockStatement setterBody = block()
+        Parameter datastoreParam = param(datastoreType, 'd')
+        
+        FieldNode datastoreField = null
+        if (targetDomainClass.name == 'java.lang.Object') {
+            datastoreField = classNode.getField('$datastore')
+            if (datastoreField == null) {
+                datastoreField = classNode.addField('$datastore', Modifier.PRIVATE, datastoreType.plainNodeReference, null)
+            }
+            setterBody.addStatement(assignS(varX(datastoreField), varX(datastoreParam)))
+        }
+
+        if (classNode.getDeclaredMethod('setDatastore', params(datastoreParam)) == null) {
+            MethodNode datastoreSetterNode = classNode.addMethod('setDatastore', Modifier.PUBLIC, ClassHelper.VOID_TYPE, params(
+                    datastoreParam
+            ), ClassNode.EMPTY_ARRAY, setterBody)
+            markAsGenerated(classNode, datastoreSetterNode)
+
+            if (!propertiesFields.isEmpty()) {
+                // If there are properties to inject, we use the setter to initialize them
+                // but we don't want to store the datastore itself.
+                VariableExpression datastoreVar = varX(datastoreParam)
+                for (FieldNode fn in propertiesFields) {
+                    setterBody.addStatement(
+                            assignS(varX(fn), callX(datastoreVar, 'getService', classX(fn.type.plainNodeReference)))
+                    )
+                }
+            }
+        }
+
+        if (classNode.getDeclaredMethod('getDatastore', Parameter.EMPTY_ARRAY) == null) {
+            def apiResolverExpr = callX(callX(classX(GormRegistry), 'getInstance'), 'getApiResolver')
+            MethodNode datastoreGetterNode
+            if (targetDomainClass.name == 'java.lang.Object') {
+                datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
+                        ifElseS(
+                            notNullX(varX(datastoreField)),
+                            returnS(varX(datastoreField)),
+                            returnS(callX(apiResolverExpr, 'findDatastore', args(constX(null))))
+                        )
+                )
+            } else {
+                // Resolve the datastore for the target domain class through the registry, which
+                // returns null when GORM is not configured rather than throwing. The service
+                // infrastructure (validation, transaction manager resolution) relies on this
+                // null-tolerant contract to degrade gracefully outside a configured GORM runtime.
+                def registryExpr = callX(classX(GormRegistry), 'getInstance')
+                datastoreGetterNode = classNode.addMethod('getDatastore', Modifier.PUBLIC, datastoreType.plainNodeReference, Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
+                        returnS(callX(registryExpr, 'getDatastore', args(classX(targetDomainClass))))
+                )
+            }
+            markAsGenerated(classNode, datastoreGetterNode)
         }
     }
 
@@ -450,6 +536,202 @@ class ServiceTransformation extends AbstractTraitApplyingGormASTTransformation i
                 warning(sourceUnit, classNode, "Error generating service loader descriptor for class [${className}]: $e.message")
             }
         }
+    }
+
+    private static String resolveDomainDatasource(ClassNode domainClass) {
+        def mappingField = domainClass.getDeclaredField('mapping')
+        if (mappingField == null) {
+            def mappingProp = domainClass.getProperty('mapping')
+            if (mappingProp != null) {
+                mappingField = mappingProp.field
+            }
+        }
+        if (mappingField != null) {
+            return extractDatasourceFromExpression(mappingField.initialValueExpression)
+        }
+        return null
+    }
+
+    private static String extractDatasourceFromExpression(Expression expr) {
+        if (!(expr instanceof ClosureExpression)) {
+            return null
+        }
+        def code = ((ClosureExpression) expr).getCode()
+        if (!(code instanceof BlockStatement)) {
+            return null
+        }
+        for (def stmt : ((BlockStatement) code).statements) {
+            if (!(stmt instanceof ExpressionStatement)) {
+                continue
+            }
+            def stmtExpr = ((ExpressionStatement) stmt).expression
+            if (!(stmtExpr instanceof MethodCallExpression)) {
+                continue
+            }
+            def call = (MethodCallExpression) stmtExpr
+            def methodName = call.methodAsString
+            if ('datasource' == methodName || 'connection' == methodName || 'connections' == methodName) {
+                def args = call.arguments
+                if (args instanceof ArgumentListExpression) {
+                    def argExprs = ((ArgumentListExpression) args).expressions
+                    if (!argExprs.isEmpty() && argExprs[0] instanceof ConstantExpression) {
+                        return ((ConstantExpression) argExprs[0]).value?.toString()
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private static String getExplicitConnection(ClassNode classNode) {
+        AnnotationNode ann = findAnnotation((AnnotatedNode)classNode, Transactional)
+        if (ann != null) {
+            Expression connection = ann.getMember('connection')
+            if (connection instanceof ConstantExpression) {
+                def value = ((ConstantExpression) connection).value?.toString()
+                if (value != null && !value.isEmpty()) {
+                    return value
+                }
+            }
+        }
+        return null
+    }
+
+    private static void applyDomainConnectionToService(ClassNode classNode, ClassNode implClass, String connectionName) {
+        def connectionExpr = new ConstantExpression(connectionName)
+        applyDomainConnection(classNode, connectionExpr)
+        applyDomainConnection(implClass, connectionExpr)
+
+        // TransactionalTransform runs before ServiceTransformation creates the impl class, so it never
+        // gets a chance to weave getTransactionManager() with the correct connection-aware logic.
+        // We generate it here directly to ensure the right transaction manager is used at runtime.
+        generateConnectionAwareTransactionManager(implClass, connectionExpr)
+    }
+
+    private static void applyDomainConnection(ClassNode node, ConstantExpression connectionExpr) {
+        AnnotationNode ann = findAnnotation((AnnotatedNode)node, Transactional)
+        if (ann != null) {
+            ann.setMember('connection', connectionExpr)
+        }
+        else {
+            AnnotationNode newAnn = new AnnotationNode(ClassHelper.make(Transactional))
+            newAnn.setMember('connection', connectionExpr)
+            node.addAnnotation(newAnn)
+        }
+    }
+
+    /**
+     * Generates a {@code getTransactionManager()} method on the impl class that resolves the
+     * transaction manager for the inherited connection source. This mirrors the logic in
+     * {@link org.grails.datastore.gorm.transactions.transform.TransactionalTransform#weaveTransactionManagerAware}
+     * for classes implementing the {@link org.grails.datastore.mapping.services.Service} trait.
+     */
+    private static void generateConnectionAwareTransactionManager(ClassNode implClass, ConstantExpression connectionExpr) {
+        // Remove any existing getTransactionManager() that was added without connection awareness
+        implClass.getMethods('getTransactionManager').each {
+            implClass.removeMethod(it)
+        }
+
+        def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        def multipleConnectionDatastore = ClassHelper.make(MultipleConnectionSourceCapableDatastore)
+        def registryExpr = callX(classX(GormRegistry), 'getInstance')
+
+        // getTargetDatastore() respects the $targetDatastore field set via setTargetDatastore(),
+        // which is the parent multi-datasource datastore. getDatastore() resolves via GormRegistry
+        // and may return a child (default-only) datastore that can't route to secondary.
+        def datastoreVar = callX(varX('this'), 'getTargetDatastore')
+        // ((MultipleConnectionSourceCapableDatastore) datastore).getDatastoreForConnection(connectionName)
+        def datastoreForConnection = callD(
+                castX(multipleConnectionDatastore, datastoreVar),
+                'getDatastoreForConnection',
+                connectionExpr
+        )
+        // .getTransactionManager()
+        def datastoreTxManager = propX(
+                castX(transactionCapableDatastore, datastoreForConnection),
+                'transactionManager'
+        )
+        // GormRegistry.getInstance().findSingleTransactionManager(connectionName)
+        def fallbackTxManager = callX(
+                registryExpr,
+                'findSingleTransactionManager',
+                args(connectionExpr)
+        )
+
+        // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
+        def body = ifElseS(
+                notNullX(datastoreVar),
+                returnS(datastoreTxManager),
+                returnS(fallbackTxManager)
+        )
+
+        def methodNode = implClass.addMethod(
+                'getTransactionManager',
+                Modifier.PUBLIC,
+                transactionManagerClassNode,
+                Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
+                body
+        )
+        markAsGenerated(implClass, methodNode)
+    }
+
+    private static void generateDefaultTransactionManager(ClassNode implClass, ClassNode targetDomainClass) {
+        // Remove any existing getTransactionManager() that was added without connection awareness
+        implClass.getMethods('getTransactionManager').each {
+            implClass.removeMethod(it)
+        }
+
+        def transactionManagerClassNode = ClassHelper.make(PlatformTransactionManager)
+        def transactionCapableDatastore = ClassHelper.make(TransactionCapableDatastore)
+        def registryExpr = callX(classX(GormRegistry), 'getInstance')
+
+        // Datastore serviceDatastore = getDatastore() (method from Service trait or overridden on impl)
+        // Called once, as it can resolve through the registry, and so that every use below sees the same datastore.
+        VariableExpression datastoreVar = varX('serviceDatastore', ClassHelper.make(Datastore))
+        // .getTransactionManager()
+        def datastoreTxManager = propX(
+                castX(transactionCapableDatastore, datastoreVar),
+                'transactionManager'
+        )
+        // GormRegistry.getInstance().findSingleTransactionManager()
+        def fallbackTxManager = callX(
+                registryExpr,
+                'findSingleTransactionManager'
+        )
+
+        // PlatformTransactionManager tenantTransactionManager = GormRegistry.getInstance().findCurrentTenantTransactionManager(serviceDatastore)
+        // if (tenantTransactionManager != null) return tenantTransactionManager
+        // The tenant is the one bound for the service's datastore: the thread can hold a different one for each datastore.
+        BlockStatement body = new BlockStatement()
+        body.addStatement(
+            declS(datastoreVar, callX(varX('this'), 'getDatastore'))
+        )
+        VariableExpression tenantTransactionManagerVar = varX('tenantTransactionManager', transactionManagerClassNode)
+        body.addStatement(
+            declS(tenantTransactionManagerVar, callX(registryExpr, 'findCurrentTenantTransactionManager', datastoreVar))
+        )
+        body.addStatement(
+            ifS(notNullX(tenantTransactionManagerVar), returnS(tenantTransactionManagerVar))
+        )
+
+        // if (datastore != null) { return <datastoreTxManager> } else { return <fallbackTxManager> }
+        body.addStatement(
+            ifElseS(
+                notNullX(datastoreVar),
+                returnS(datastoreTxManager),
+                returnS(fallbackTxManager)
+            )
+        )
+
+        def methodNode = implClass.addMethod(
+                'getTransactionManager',
+                Modifier.PUBLIC,
+                transactionManagerClassNode,
+                Parameter.EMPTY_ARRAY, ClassNode.EMPTY_ARRAY,
+                body
+        )
+        markAsGenerated(implClass, methodNode)
     }
 
     @Override

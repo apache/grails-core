@@ -109,6 +109,8 @@ class EntityValidatorDomainPropertySpec extends Specification implements MocksDo
             testRequired1(nullable: false, blank: false)
             testRequired2(nullable: false, blank: true)
             testRequired3(nullable: true, blank: false)
+            testRequired4(nullable: false)  // explicit now that the default is nullable; this spec
+                                            // builds its own MappingContext so it can't use the config opt-out
         }
     }
 

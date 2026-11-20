@@ -63,7 +63,7 @@ class ResponseRedirector {
 
     void redirect(Map arguments = Collections.emptyMap()) {
         def webRequest = GrailsWebRequest.lookup()
-        HttpServletRequest request = webRequest.currentRequest
+        HttpServletRequest request = webRequest.request
         HttpServletResponse response = webRequest.getCurrentResponse()
 
         redirect(request, response, arguments)
@@ -139,7 +139,7 @@ class ResponseRedirector {
             status = moved ? HttpStatus.MOVED_PERMANENTLY.value() : HttpStatus.PERMANENT_REDIRECT.value()
         }
         else {
-            status = moved ? HttpStatus.MOVED_TEMPORARILY.value() : HttpStatus.TEMPORARY_REDIRECT.value()
+            status = moved ? HttpStatus.FOUND.value() : HttpStatus.TEMPORARY_REDIRECT.value()
         }
 
         response.status = status

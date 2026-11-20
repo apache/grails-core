@@ -83,4 +83,62 @@ class QuartzSchedulingSpec extends Specification {
                 assert OnDemandJob.EXECUTIONS.get() > before
             }
     }
+
+    void 'a job scheduled at runtime with a repeat interval is executed by the scheduler'() {
+        given:
+            PollingConditions conditions = new PollingConditions(timeout: 30)
+            int before = OnDemandJob.EXECUTIONS.get()
+
+        when:
+            OnDemandJob.schedule(200L, 2, [foo: 'bar'])
+
+        then:
+            conditions.eventually {
+                assert OnDemandJob.EXECUTIONS.get() > before
+            }
+    }
+
+    void 'a job scheduled at runtime with a cron expression is registered with the scheduler'() {
+        given:
+            JobKey jobKey = JobKey.jobKey(OnDemandJob.name, 'GRAILS_JOBS')
+            int before = quartzScheduler.getTriggersOfJob(jobKey).size()
+
+        when:
+            OnDemandJob.schedule('0 0 6 * * ?')
+
+        then:
+            quartzScheduler.getTriggersOfJob(jobKey).size() == before + 1
+    }
+
+    void 'scheduling a job with a null argument reports the null instead of failing with a null pointer'() {
+        when: 'the value an application passes to schedule turns out to be null'
+            OnDemandJob.schedule(null)
+
+        then:
+            IllegalArgumentException e = thrown()
+            e.message.startsWith("The trigger passed for the job [${OnDemandJob.name}] is null.")
+            e.message.contains('resolves to the one taking a trigger')
+    }
+
+    void 'a job whose trigger can never fire does not keep the application from starting'() {
+        given:
+            JobKey jobKey = JobKey.jobKey(NeverFiringJob.name, 'GRAILS_JOBS')
+
+        expect: 'the application is up, with the job registered but without the trigger it declared'
+            quartzScheduler.isStarted()
+            quartzScheduler.checkExists(jobKey)
+            quartzScheduler.getTriggersOfJob(jobKey).isEmpty()
+    }
+
+    void 'scheduling a job that the scheduler does not know about reports why'() {
+        when: 'a job that is turned off is scheduled at runtime'
+            DisabledJob.triggerNow()
+
+        then:
+            IllegalStateException e = thrown()
+            e.message.startsWith("The job [${DisabledJob.name}] is not registered with a Quartz scheduler.")
+
+        and: 'it never reached the scheduler in the first place'
+            !quartzScheduler.checkExists(JobKey.jobKey(DisabledJob.name, 'GRAILS_JOBS'))
+    }
 }

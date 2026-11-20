@@ -18,13 +18,10 @@
  */
 package org.grails.config
 
-import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.util.logging.Slf4j
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
-
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 /**
  * @deprecated This class is deprecated to reduce complexity, improve performance, and increase maintainability. Use {@code config.getProperty(String key, Class<T> targetType)} instead.
@@ -34,7 +31,6 @@ import org.slf4j.LoggerFactory
 @CompileStatic
 class NavigableMap implements Map<String, Object>, Cloneable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(NavigableMap)
     private static final int MAX_DOTTED_BRACKETS = 8
 
     final NavigableMap rootConfig
@@ -94,7 +90,6 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         delegateMap.containsValue(value)
     }
 
-    @CompileDynamic
     @Override
     Object get(Object key) {
         Object result = delegateMap.get(key)
@@ -452,61 +447,11 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             if (subscriptStart > -1) {
                 String k = sourceKey[0..<subscriptStart]
                 String index = sourceKey[subscriptStart + 1..<subscriptEnd]
-                String remainder = subscriptEnd != sourceKey.length() - 1 ? sourceKey[subscriptEnd + 2..-1] : null
-                if (remainder) {
-
-                    boolean isNumber = index.isNumber()
-                    if (isNumber) {
-                        int i = index.toInteger()
-                        def currentValue = targetMap.get(k)
-                        List list = currentValue instanceof List ? currentValue : []
-                        if (list.size() > i) {
-                            def v = list.get(i)
-                            if (v instanceof Map) {
-                                putBelowSubscript(rootMap, (Map) v, remainder, sourceValue)
-                            } else {
-                                Map newMap = [:]
-                                newMap.put(remainder, sourceValue)
-                                fill(list, i, null)
-                                list.set(i, newMap)
-                            }
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            fill(list, i, null)
-                            list.set(i, newMap)
-                        }
-                        targetMap.put(k, list)
-                    } else {
-                        def currentValue = targetMap.get(k)
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-
-                        def v = nestedMap.get(index)
-                        if (v instanceof Map) {
-                            putBelowSubscript(rootMap, (Map) v, remainder, sourceValue)
-                        } else {
-                            Map newMap = [:]
-                            newMap.put(remainder, sourceValue)
-                            nestedMap.put(index, newMap)
-                        }
-                    }
-                } else {
-                    def currentValue = targetMap.get(k)
-                    if (index.isNumber()) {
-                        List list = currentValue instanceof List ? currentValue : []
-                        int i = index.toInteger()
-                        fill(list, i, null)
-                        list.set(i, sourceValue)
-                        targetMap.put(k, list)
-                    } else {
-                        Map nestedMap = currentValue instanceof Map ? currentValue : [:]
-                        targetMap.put(k, nestedMap)
-                        nestedMap.put(index, sourceValue)
-                    }
+                String rest = sourceKey.substring(subscriptEnd + 1)
+                targetMap.put(k, setSubscriptValue(rootMap, targetMap.get(k), index, rest, sourceValue))
+                if (isSubscriptChain(rest)) {
                     targetMap.put(sourceKey, sourceValue)
                 }
-
             }
         } else {
             Object currentValue = targetMap.containsKey(sourceKey) ? targetMap.get(sourceKey) : null
@@ -598,6 +543,44 @@ class NavigableMap implements Map<String, Object>, Cloneable {
             }
             return submap
         }
+    }
+
+    /**
+     * Sets a value in a list (numeric index) or map (other index) at the given subscript, creating
+     * the container when the current value is not one. The text following the subscript is either
+     * empty, further subscripts such as {@code [1]} for a list nested in a list, or a {@code .name}
+     * remainder stored as a key of a map element.
+     */
+    private Object setSubscriptValue(NavigableMap rootMap, Object currentValue, String index, String rest, Object sourceValue) {
+        if (index.isNumber()) {
+            List list = currentValue instanceof List ? (List) currentValue : []
+            int i = index.toInteger()
+            fill(list, i, null)
+            list.set(i, subscriptElementValue(rootMap, list.get(i), rest, sourceValue))
+            return list
+        }
+        Map nestedMap = currentValue instanceof Map ? (Map) currentValue : [:]
+        nestedMap.put(index, subscriptElementValue(rootMap, nestedMap.get(index), rest, sourceValue))
+        return nestedMap
+    }
+
+    private Object subscriptElementValue(NavigableMap rootMap, Object currentValue, String rest, Object sourceValue) {
+        if (!rest) {
+            return sourceValue
+        }
+        if (rest.startsWith('[')) {
+            int end = rest.indexOf(']')
+            if (end > 0) {
+                return setSubscriptValue(rootMap, currentValue, rest[1..<end], rest.substring(end + 1), sourceValue)
+            }
+        }
+        Map element = currentValue instanceof Map ? (Map) currentValue : [:]
+        putBelowSubscript(rootMap, element, rest.substring(1), sourceValue)
+        return element
+    }
+
+    private static boolean isSubscriptChain(String rest) {
+        rest ==~ /(\[[^\]]*\])*/
     }
 
     private void fill(List list, Integer toIndex, Object value) {
@@ -792,18 +775,18 @@ class NavigableMap implements Map<String, Object>, Cloneable {
                     }
                     if (value instanceof Collection) {
                         if (forceStrings) {
-                            flatConfig.put(fullKey, ((Collection) value).join(','))
+                            ((Map<Object, Object>) flatConfig).put(fullKey, ((Collection) value).join(','))
                         } else {
-                            flatConfig.put(fullKey, value)
+                            ((Map<Object, Object>) flatConfig).put(fullKey, value)
                         }
                         int index = 0
                         for (Object item: (Collection) value) {
                             String collectionKey = "${fullKey}[${index}]".toString()
-                            flatConfig.put(collectionKey, forceStrings ? String.valueOf(item) : item)
+                            ((Map<Object, Object>) flatConfig).put(collectionKey, forceStrings ? String.valueOf(item) : item)
                             index++
                         }
                     } else {
-                        flatConfig.put(fullKey, forceStrings ? String.valueOf(value) : value)
+                        ((Map<Object, Object>) flatConfig).put(fullKey, forceStrings ? String.valueOf(value) : value)
                     }
                 }
             }
@@ -823,6 +806,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
     /**
      * @deprecated This class should be avoided due to known performance reasons. Use {@code config.getProperty(String key, Class<T> targetType)} instead of dot based navigation.
      */
+    @Slf4j
     @Deprecated
     @CompileStatic
     static class NullSafeNavigator implements Map<String, Object> {
@@ -832,9 +816,7 @@ class NavigableMap implements Map<String, Object>, Cloneable {
         NullSafeNavigator(NavigableMap parent, List<String> path) {
             this.parent = parent
             this.path = path
-            if (LOG.isWarnEnabled()) {
-                LOG.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
-            }
+            log.warn("Accessing config key '{}' through dot notation has known performance issues, consider using 'config.getProperty(key, targetClass)' instead.", path)
         }
 
         Object getAt(Object key) {

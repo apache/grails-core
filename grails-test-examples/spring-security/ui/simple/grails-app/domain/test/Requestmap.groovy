@@ -42,8 +42,9 @@ class Requestmap implements Serializable {
 	}
 
 	static constraints = {
+		configAttribute nullable: false
 		httpMethod nullable: true
-		url validator: { String url, Requestmap requestmap, errors ->
+		url nullable: false, validator: { String url, Requestmap requestmap, errors ->
 			if (!url) return
 
 			Requestmap.withSession {

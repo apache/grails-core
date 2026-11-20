@@ -34,7 +34,8 @@ class TestRole implements Serializable {
 	String description
 
 	static constraints = {
-		auth blank: false, unique: true
+		auth blank: false, unique: true, nullable: false
+		description nullable: false
 	}
 
 	static mapping = {

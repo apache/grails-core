@@ -18,18 +18,19 @@
  */
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
+import org.bson.types.ObjectId
+
+import org.springframework.boot.autoconfigure.AutoConfigurationPackages
+import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
+
 import grails.gorm.annotation.Entity
 import grails.mongodb.geo.Point
 import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
 import org.apache.grails.testing.mongo.AutoStartedMongoSpec
-import org.bson.types.ObjectId
-import org.springframework.boot.autoconfigure.AutoConfigurationPackages
-import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
-import org.springframework.context.annotation.AnnotationConfigApplicationContext
-import org.springframework.context.annotation.Configuration
-import org.springframework.context.annotation.Import
-import spock.lang.Specification
 import spock.util.environment.RestoreSystemProperties
 
 /**
@@ -46,8 +47,8 @@ class MongoDbGormAutoConfigureWithGeoSpacialSpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
-        System.setProperty('spring.data.mongodb.host', dbContainer.getHost())
-        System.setProperty('spring.data.mongodb.port', dbContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String)
+        System.setProperty('spring.mongodb.host', dbContainer.getHost())
+        System.setProperty('spring.mongodb.port', dbContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String)
     }
 
     void cleanup() {

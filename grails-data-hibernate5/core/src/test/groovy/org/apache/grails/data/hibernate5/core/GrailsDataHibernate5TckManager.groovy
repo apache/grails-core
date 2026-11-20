@@ -35,8 +35,8 @@ import org.hibernate.SessionFactory
 import org.hibernate.dialect.H2Dialect
 import org.springframework.beans.factory.DisposableBean
 import org.springframework.context.ApplicationContext
-import org.springframework.orm.hibernate5.SessionFactoryUtils
-import org.springframework.orm.hibernate5.SessionHolder
+import org.grails.orm.hibernate.support.hibernate5.SessionFactoryUtils
+import org.grails.orm.hibernate.support.hibernate5.SessionHolder
 import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import org.springframework.transaction.support.TransactionSynchronizationManager
@@ -53,6 +53,8 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
     ApplicationContext applicationContext
     HibernateDatastore multiDataSourceDatastore
     HibernateDatastore multiTenantMultiDataSourceDatastore
+    ConfigObject grailsConfig = new ConfigObject()
+    boolean isTransactional = true
 
     @Override
     void setup(Class<? extends Specification> spec) {
@@ -62,16 +64,12 @@ class GrailsDataHibernate5TckManager extends GrailsDataTckManager {
 
     @Override
     Session createSession() {
-        ConfigObject grailsConfig = new ConfigObject()
-        boolean isTransactional = true
-
-        System.setProperty('hibernate5.gorm.suite', "true")
+        grailsConfig.dataSource.dbCreate = grailsConfig.dataSource.dbCreate ?: "create-drop"
         grailsApplication = new DefaultGrailsApplication(domainClasses as Class[], new GroovyClassLoader(GrailsDataHibernate5TckManager.getClassLoader()))
         if (grailsConfig) {
             grailsApplication.config.putAll(grailsConfig)
         }
 
-        grailsConfig.dataSource.dbCreate = "create-drop"
         hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(grailsConfig), domainClasses as Class[])
         transactionManager = hibernateDatastore.getTransactionManager()
         sessionFactory = hibernateDatastore.sessionFactory

@@ -83,6 +83,15 @@ public class LazyTagLibraryLookup extends TagLibraryLookup {
         }
     }
 
+    @Override
+    public void clear() {
+        super.clear();
+        registerTemplateNamespace();
+        for (Class providedArtefact : tagLibClasses) {
+            registerLazyLoadableTagLibClass(providedArtefact);
+        }
+    }
+
     public void registerLazyLoadableTagLibClass(Class tagLibClass) {
         Class defaultTagLibClass = null;
         GrailsTagLibClass grailsTagLibClass = null;

@@ -19,6 +19,8 @@
 package org.grails.core.io;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 
 import org.springframework.core.io.ByteArrayResource;
@@ -46,7 +48,11 @@ public class GrailsByteArrayResource extends ByteArrayResource {
      */
     @Override
     public URL getURL() throws IOException {
-        return new URL("file", null, getDescription());
+        try {
+            return new URI("file", null, getDescription(), null).toURL();
+        } catch (URISyntaxException e) {
+            throw new IOException("Invalid fake file URL: " + getDescription(), e);
+        }
     }
 
     @Override

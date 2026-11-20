@@ -1,0 +1,32 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+This chapter is about using AI models from an application: answering questions, summarising, classifying, searching by meaning and letting a model call the application's own services. It is distinct from the AI tooling that helps *develop* a Grails application, which the <<agentSkills,Agent Skills>> section covers.
+
+Grails integrates https://spring.io/projects/spring-ai[Spring AI] through the `grails-spring-ai` plugin. Spring AI gives an application one API, the `ChatClient`, over the chat models of OpenAI, Anthropic, Ollama, Google, Amazon Bedrock, Mistral and others, along with embeddings, vector stores, tool calling and the Model Context Protocol.
+
+The plugin adds what a Grails application needs on top of that:
+
+* The Spring AI version is managed by the Grails BOM, so an application declares Spring AI starters without versions and gets the line that matches its Grails release.
+* A `ChatClient.Builder` is auto-configured whichever provider is on the classpath.
+* Defaults that suit a web application: a failed model call is retried a few times rather than for minutes, and prompts and completions are logged in the development environment only.
+* A chat response an action streams is written to the client as server-sent events, through the asynchronous request support of Grails.
+* Testing support with a scripted chat model and a deterministic embedding model, so unit and integration tests need no provider and no credentials.
+
+The following sections cover installing the plugin, the model providers to choose from, its configuration, using the chat client, streaming responses and testing. The {springAiReference}[Spring AI reference] documents the Spring AI API itself.

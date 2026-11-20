@@ -29,7 +29,7 @@ import org.bson.types.ObjectId
  */
 class AggregateMethodSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([City])
+        manager.registerDomainClasses(City)
     }
 
     void "Test aggregate method"() {

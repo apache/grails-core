@@ -26,6 +26,7 @@ import groovy.transform.CompileStatic
 import org.springframework.security.access.ConfigAttribute
 import org.springframework.security.access.SecurityConfig
 import org.springframework.security.access.method.AbstractFallbackMethodSecurityMetadataSource
+import org.springframework.util.ReflectionUtils
 
 import grails.plugin.springsecurity.acl.util.ProxyUtils
 import grails.plugin.springsecurity.annotation.Secured
@@ -51,10 +52,17 @@ class SecuredAnnotationSecurityMetadataSource extends AbstractFallbackMethodSecu
 
     @Override
     protected Collection<ConfigAttribute> findAttributes(Method method, Class<?> targetClass) {
-        Method actualMethod = ProxyUtils.unproxy(method)
-        if (isService(actualMethod.declaringClass)) {
-            return processAnnotation(actualMethod.getAnnotation(Secured))
+        def actualClass = targetClass == null ?
+                ProxyUtils.unproxy(method.declaringClass) :
+                ProxyUtils.unproxy(targetClass)
+        if (isService(actualClass)) {
+            def actualMethod = ReflectionUtils.findMethod(actualClass, method.name, method.parameterTypes)
+            if (actualMethod == null) {
+                actualMethod = ProxyUtils.unproxy(method)
+            }
+            return processAnnotation(actualMethod?.getAnnotation(Secured))
         }
+        null
     }
 
     Collection<ConfigAttribute> getAllConfigAttributes() {}
@@ -66,7 +74,14 @@ class SecuredAnnotationSecurityMetadataSource extends AbstractFallbackMethodSecu
     }
 
     protected boolean isService(Class<?> clazz) {
-        serviceClassNames.any { String name -> name == clazz.name }
+        def current = clazz
+        while (current != null && current != Object) {
+            if (serviceClassNames.any { it == current.name }) {
+                return true
+            }
+            current = current.superclass
+        }
+        false
     }
 
     /**

@@ -19,16 +19,22 @@
 package org.grails.testing
 
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.BeanRegistrar
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
+import org.springframework.beans.factory.support.BeanRegistryAdapter
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.context.MessageSource
+import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.AnnotatedElementUtils
 import org.springframework.util.ClassUtils
 
+import grails.compiler.beans.GrailsBeans
 import grails.config.Config
 import grails.core.DefaultGrailsApplication
 import grails.core.GrailsApplication
@@ -70,6 +76,8 @@ trait GrailsUnitTest {
         if (_grailsApplication == null) {
             def builder = new GrailsApplicationBuilder(
                     doWithSpring: doWithSpring(),
+                    beanRegistrar: beanRegistrar(),
+                    configurationClasses: getConfigurationClasses(),
                     doWithConfig: doWithConfig(),
                     includePlugins: getIncludePlugins(),
                     loadExternalBeans: loadExternalBeans(),
@@ -107,25 +115,88 @@ trait GrailsUnitTest {
         applicationContext.beanFactory.preInstantiateSingletons()
     }
 
-    void defineBeans(Object plugin) {
-        Class clazz = plugin.getClass()
-        try {
-            Method doWithSpringMethod = clazz.getMethod('doWithSpring')
-            Closure config = (Closure) doWithSpringMethod.invoke(plugin)
-            if (config != null) {
-                defineBeans(config)
-                return
-            }
-        } catch (NoSuchMethodException e) {}
-
-        try {
-            Method doWithSpringField = clazz.getMethod('getDoWithSpring')
-            defineBeans((Closure) doWithSpringField.invoke(plugin))
-        } catch (NoSuchFieldException e) {}
+    /**
+     * Applies a {@link BeanRegistrar} to the test application context, the same way a plugin's
+     * {@code beanRegistrar()} hook is applied by the framework at boot time.
+     */
+    void defineBeans(BeanRegistrar registrar) {
+        ConfigurableApplicationContext context = applicationContext
+        new BeanRegistryAdapter((BeanDefinitionRegistry) context, context.beanFactory,
+                context.environment, registrar.getClass()).register(registrar)
+        context.beanFactory.preInstantiateSingletons()
     }
 
+    /**
+     * Applies a plugin's {@code doWithSpring()} and {@code beanRegistrar()} to the test application
+     * context. A plugin's {@code beans} block is not among them: it compiles to an auto-configuration,
+     * which is registered before the context refreshes - include the plugin through
+     * {@link #getIncludePlugins()} for that.
+     */
+    void defineBeans(Object plugin) {
+        Class clazz = plugin.getClass()
+        // Mirror the boot order: the doWithSpring() DSL is applied first and the beanRegistrar()
+        // second, so a plugin defining both hooks (e.g. one that is mid-migration) gets both sets
+        // of beans and registrar beans win any name conflicts with the deprecated DSL
+        Closure dsl = null
+        try {
+            dsl = (Closure) clazz.getMethod('doWithSpring').invoke(plugin)
+        } catch (NoSuchMethodException ignored) {}
+        if (dsl == null) {
+            try {
+                dsl = (Closure) clazz.getMethod('getDoWithSpring').invoke(plugin)
+            } catch (NoSuchMethodException ignored) {}
+        }
+        if (dsl != null) {
+            defineBeans(dsl)
+        }
+
+        try {
+            Method beanRegistrarMethod = clazz.getMethod('beanRegistrar')
+            BeanRegistrar registrar = (BeanRegistrar) beanRegistrarMethod.invoke(plugin)
+            if (registrar != null) {
+                defineBeans(registrar)
+            }
+        } catch (NoSuchMethodException ignored) {}
+    }
+
+    /**
+     * Beans for the test application context in the bean builder DSL.
+     *
+     * @deprecated since 8.0, as {@code doWithSpring()} is on plugins and applications, in favour of a
+     * {@code beans} block, {@link #beanRegistrar()} or a configuration class (see
+     * {@link #getConfigurationClasses()}). The DSL keeps working but receives no fixes for new issues.
+     */
+    @Deprecated(since = '8.0')
     Closure doWithSpring() {
         null
+    }
+
+    /**
+     * Registers beans in the test application context, the way an application's or a plugin's
+     * {@code beanRegistrar()} does at boot and at the same point: after {@link #doWithSpring()}, so a
+     * registrar bean wins a name conflict with the deprecated DSL.
+     *
+     * @return the registrar, or {@code null} (the default) to register nothing
+     * @since 8.0
+     */
+    BeanRegistrar beanRegistrar() {
+        null
+    }
+
+    /**
+     * Configuration classes for the test application context. They are registered ahead of the
+     * framework's auto-configurations, as an application's own configuration is, so an
+     * auto-configuration's {@code @ConditionalOnMissingBean} backs off from the beans they declare.
+     *
+     * <p>By default, the static nested classes of the test, and of any test it extends, annotated
+     * {@code @Configuration} directly or through another annotation such as {@code @AutoConfiguration}
+     * - the convention Spring's own test support follows. A test's {@code beans} block compiles into
+     * one of them, {@code BeansConfiguration}. Override to register other classes instead.</p>
+     *
+     * @since 8.0
+     */
+    Set<Class<?>> getConfigurationClasses() {
+        nestedConfigurationClasses(getClass())
     }
 
     Closure doWithConfig() {
@@ -167,6 +238,32 @@ trait GrailsUnitTest {
             cleanupPromiseFactory()
             Holders.clear()
         }
+    }
+
+    /**
+     * Outermost test class first, so a nested class in a subclass is registered later and wins a
+     * bean name the two share. Within one class the one its {@code beans} block compiles to comes
+     * last, so the block wins a name it shares with a hand-written nested class; the order of the
+     * hand-written ones is {@code getDeclaredClasses()}'s, which Java does not specify.
+     */
+    private Set<Class<?>> nestedConfigurationClasses(Class<?> testClass) {
+        List<Class<?>> hierarchy = []
+        for (Class<?> type = testClass; type != null && type != Object; type = type.superclass) {
+            hierarchy.add(0, type)
+        }
+        Set<Class<?>> found = new LinkedHashSet<>()
+        for (Class<?> type : hierarchy) {
+            List<Class<?>> declared = type.declaredClasses.findAll { Class<?> nested ->
+                int modifiers = nested.modifiers
+                Modifier.isStatic(modifiers) && !Modifier.isPrivate(modifiers) && !Modifier.isFinal(modifiers) &&
+                        AnnotatedElementUtils.hasAnnotation(nested, Configuration)
+            }
+            // stable, so only the generated class moves
+            found.addAll(declared.sort(false) { Class<?> nested ->
+                nested.simpleName == GrailsBeans.UNIT_TEST_CONFIGURATION_NAME ? 1 : 0
+            })
+        }
+        found
     }
 
     @CompileDynamic

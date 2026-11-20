@@ -27,7 +27,7 @@ import groovy.transform.CompileStatic
 class ErrorsController {
 
 	def error404() {
-		String uri = 'request.forwardURI'
+		String uri = request.forwardURI ?: request.requestURI ?: 'unknown URI'
 		if (!uri.contains('favicon.ico')) {
 			println "\n\nERROR 404: could not find $uri\n\n"
 		}

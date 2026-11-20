@@ -18,18 +18,18 @@
  */
 package grails.plugin.springsecurity
 
-import groovy.transform.CompileStatic
-
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationContextAware
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationListener
-import org.springframework.security.access.event.AbstractAuthorizationEvent
+import org.springframework.security.authorization.event.AuthorizationEvent
 import org.springframework.security.authentication.event.AbstractAuthenticationEvent
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent
 import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent
 import org.springframework.security.web.authentication.switchuser.AuthenticationSwitchUserEvent
+
+import groovy.transform.CompileStatic
 
 /**
  * Registers as an event listener and delegates handling of security-related events
@@ -70,14 +70,18 @@ class SecurityEventListener implements ApplicationListener<ApplicationEvent>, Ap
         if (e instanceof AbstractAuthenticationEvent) {
             if (e instanceof InteractiveAuthenticationSuccessEvent) {
                 call e, 'onInteractiveAuthenticationSuccessEvent'
-            } else if (e instanceof AbstractAuthenticationFailureEvent) {
+            }
+            else if (e instanceof AbstractAuthenticationFailureEvent) {
                 call e, 'onAbstractAuthenticationFailureEvent'
-            } else if (e instanceof AuthenticationSuccessEvent) {
+            }
+            else if (e instanceof AuthenticationSuccessEvent) {
                 call e, 'onAuthenticationSuccessEvent'
-            } else if (e instanceof AuthenticationSwitchUserEvent) {
+            }
+            else if (e instanceof AuthenticationSwitchUserEvent) {
                 call e, 'onAuthenticationSwitchUserEvent'
             }
-        } else if (e instanceof AbstractAuthorizationEvent) {
+        }
+        else if (e instanceof AuthorizationEvent) {
             call e, 'onAuthorizationEvent'
         }
     }
@@ -88,5 +92,5 @@ class SecurityEventListener implements ApplicationListener<ApplicationEvent>, Ap
         if (closure instanceof Closure) {
             closure e, applicationContext
         }
-    }
+     }
 }

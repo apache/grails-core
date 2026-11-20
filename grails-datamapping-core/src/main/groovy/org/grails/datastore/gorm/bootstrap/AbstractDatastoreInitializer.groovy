@@ -24,6 +24,7 @@ import java.beans.Introspector
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 
+import org.springframework.beans.factory.config.RuntimeBeanReference
 import org.springframework.beans.factory.support.BeanDefinitionRegistry
 import org.springframework.context.ApplicationContext
 import org.springframework.context.ApplicationEventPublisher
@@ -43,6 +44,7 @@ import org.springframework.core.type.classreading.CachingMetadataReaderFactory
 import org.springframework.util.ClassUtils
 
 import grails.gorm.annotation.Entity
+import org.apache.grails.common.aot.AheadOfTimeProcessing
 import org.grails.datastore.gorm.events.ConfigurableApplicationContextEventPublisher
 import org.grails.datastore.gorm.events.DefaultApplicationEventPublisher
 import org.grails.datastore.gorm.plugin.support.PersistenceContextInterceptorAggregator
@@ -71,12 +73,12 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     public static final String TRANSACTION_MANAGER_BEAN = 'transactionManager'
     public static final String ENTITY_CLASS_RESOURCE_PATTERN = '/**/*.class'
     public static final String OSIV_CLASS_NAME = 'org.grails.datastore.mapping.web.support.OpenSessionInViewInterceptor'
+    public static final String WEB_APPLICATION_CONTEXT_CLASS_NAME = 'org.springframework.web.context.WebApplicationContext'
 
     PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver()
     Collection<Class> persistentClasses = []
     Collection<String> packages = []
     PropertyResolver configuration = new StandardEnvironment()
-    boolean registerApplicationIfNotPresent = true
     Object originalConfiguration
 
     protected ClassLoader classLoader = Thread.currentThread().contextClassLoader
@@ -125,6 +127,32 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     /**
+     * What a bean definition should hold in place of the configuration itself.
+     *
+     * <p>A definition holding the resolver is a definition holding everything the resolver can
+     * reach, and generating code for such a definition writes those values out: an environment
+     * carries the machine's own variables, so the generated source ends up containing the
+     * environment of whatever machine built it, along with whatever was in it -- credentials among
+     * them -- and the application then reads its settings from there rather than from where it
+     * runs.</p>
+     *
+     * <p>So while code is being generated, and only then, the context's environment is named
+     * instead, which leaves the lookup to be made where the application runs. Every other time the
+     * resolver is held as it always was, which matters for a datastore brought up on its own: its
+     * configuration is whatever the caller passed and there is no environment holding it.</p>
+     */
+    protected Object configurationReference(BeanDefinitionRegistry registry) {
+        if (!AheadOfTimeProcessing.generatingCode) {
+            return configuration
+        }
+        boolean insideContainer = registry instanceof ConfigurableApplicationContext ||
+                resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext
+        insideContainer
+                ? new RuntimeBeanReference(ConfigurableApplicationContext.ENVIRONMENT_BEAN_NAME)
+                : configuration
+    }
+
+    /**
      * Finds the event publisher to use
      *
      * @param beanDefinitionRegistry The event publisher
@@ -142,6 +170,26 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             eventPublisher = new DefaultApplicationEventPublisher()
         }
         return eventPublisher
+    }
+
+    /**
+     * Finds the publisher class a datastore definition should name, in place of a publisher itself.
+     *
+     * <p>The same choice {@link #findEventPublisher} makes -- one that publishes through the
+     * surrounding context, or the one that publishes nowhere -- but left to the container to build.
+     * A definition holding an already-constructed publisher is a definition that cannot be generated
+     * ahead of time: generating one means writing out what it holds, and a publisher bound to a
+     * running context is not something there is any way to write down.</p>
+     *
+     * @param beanDefinitionRegistry the registry the definitions are being contributed to
+     * @return the class to register the publisher bean under
+     */
+    protected Class<? extends ApplicationEventPublisher> findEventPublisherClass(BeanDefinitionRegistry beanDefinitionRegistry) {
+        if (beanDefinitionRegistry instanceof ConfigurableApplicationContext ||
+                resourcePatternResolver.resourceLoader instanceof ConfigurableApplicationContext) {
+            return ConfigurableApplicationContextEventPublisher
+        }
+        return DefaultApplicationEventPublisher
     }
 
     /**
@@ -206,8 +254,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             for (entityName in entityNames) {
                 try {
                     persistentClasses << classLoader.loadClass(entityName)
-                } catch (ClassNotFoundException e) {
-                    // ignore
+                } catch (ClassNotFoundException ignored) {
                 }
             }
         }
@@ -261,20 +308,54 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
         }
     }
 
+    /**
+     * Hook subclasses can override to contribute bean definitions common to every datastore type
+     * they configure. The {@code registry} and {@code type} parameters are unused by this default
+     * no-op implementation but are part of the override contract used by overriders such as the
+     * Hibernate and MongoDB datastore initializers.
+     */
     @CompileDynamic
+    @SuppressWarnings(['GrMethodMayBeStatic', 'GroovyUnusedDeclaration'])
     Closure getCommonConfiguration(BeanDefinitionRegistry registry, String type) {
         return {}
     }
 
+    /**
+     * The classes this datastore maps.
+     *
+     * @param datastoreType the datastore the classes are being collected for
+     * @return the classes, which a datastore's definition takes through {@link #mappedClasses}
+     */
     protected Collection<Class> collectMappedClasses(String datastoreType) {
-        def classes = !secondaryDatastore ? persistentClasses : persistentClasses.findAll() { Class cls ->
+        !secondaryDatastore ? persistentClasses : persistentClasses.findAll() { Class cls ->
             isMappedClass(datastoreType, cls)
         }
-        return classes
+    }
+
+    /**
+     * The classes this datastore maps, as the array its constructor takes.
+     *
+     * <p>The array type is what makes this survive ahead-of-time processing. A datastore takes its
+     * classes as a variable-argument parameter, so the constructor argument the generator writes out
+     * is looked up by that parameter's type when the bean is rebuilt. A collection does not answer to
+     * {@code Class[]}, so the lookup misses it and the argument is resolved as a dependency instead,
+     * which for an array type means every {@code Class} bean in the context: none. The datastore is
+     * then built mapping nothing, and the first call on a domain class reports that it is not one.</p>
+     *
+     * <p>Kept apart from {@link #collectMappedClasses} rather than folded into it, because that one
+     * is the seam a datastore outside this repository overrides to say which classes are its own.
+     * Changing what it returns would leave such an override no longer overriding anything, and
+     * silently unasked.</p>
+     *
+     * @param datastoreType the datastore the classes are being collected for
+     * @return the classes, as the array a datastore's constructor takes
+     */
+    protected Class[] mappedClasses(String datastoreType) {
+        collectMappedClasses(datastoreType) as Class[]
     }
 
     protected boolean isMappedClass(String datastoreType, Class cls) {
-        datastoreType.equals(ClassPropertyFetcher.getStaticPropertyValue(cls, GormProperties.MAPPING_STRATEGY, String))
+        datastoreType == ClassPropertyFetcher.getStaticPropertyValue(cls, GormProperties.MAPPING_STRATEGY, String)
     }
 
     abstract Closure getBeanDefinitions(BeanDefinitionRegistry beanDefinitionRegistry)
@@ -304,14 +385,14 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             "${type}PersistenceContextInterceptorAggregator"(PersistenceContextInterceptorAggregator)
 
             def classLoader = Thread.currentThread().contextClassLoader
-            if (registry.containsBeanDefinition('dispatcherServlet') && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
+            if (isWebApplicationRegistry(registry) && ClassUtils.isPresent(OSIV_CLASS_NAME, classLoader)) {
                 String interceptorName = "${type}OpenSessionInViewInterceptor"
                 "${interceptorName}"(ClassUtils.forName(OSIV_CLASS_NAME, classLoader)) {
                     datastore = ref("${type}Datastore")
                 }
             }
             loadDataServices(null)
-                    .each { serviceName, serviceClass ->
+                    .each { String serviceName, Class<?> serviceClass ->
                         "$serviceName"(DatastoreServiceMethodInvokingFactoryBean, serviceClass) {
                             targetObject = ref("${type}Datastore")
                             targetMethod = 'getService'
@@ -356,8 +437,30 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     @CompileDynamic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected boolean containsRegisteredBean(Object builder, BeanDefinitionRegistry registry, String beanName) {
         registry.containsBeanDefinition(beanName) || (builder.hasProperty('springConfig') && builder.springConfig.containsBean(beanName))
+    }
+
+    /**
+     * Determines whether the given registry belongs to a web application. The presence of the
+     * {@code dispatcherServlet} bean definition is only a reliable signal after Spring Boot
+     * auto-configuration has been processed; Grails plugin bean definitions register before
+     * that, so the type of the registry (the web application context itself) is checked as well.
+     *
+     * @param registry The bean definition registry
+     * @return true if the registry belongs to a web application
+     */
+    protected boolean isWebApplicationRegistry(BeanDefinitionRegistry registry) {
+        if (registry == null) {
+            return false
+        }
+        if (registry.containsBeanDefinition('dispatcherServlet')) {
+            return true
+        }
+        ClassLoader classLoader = getClass().classLoader
+        return ClassUtils.isPresent(WEB_APPLICATION_CONTEXT_CLASS_NAME, classLoader) &&
+                ClassUtils.forName(WEB_APPLICATION_CONTEXT_CLASS_NAME, classLoader).isInstance(registry)
     }
 
     /**
@@ -365,7 +468,13 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
      */
     protected abstract Class<AbstractDatastorePersistenceContextInterceptor> getPersistenceInterceptorClass()
 
+    /**
+     * Not made static: {@code getClass()} intentionally resolves the classloader of the concrete
+     * subclass instance rather than this base class, which matters when a subclass is loaded by a
+     * different (e.g. plugin/OSGi) classloader than {@link AbstractDatastoreInitializer} itself.
+     */
     @CompileStatic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected Class getGrailsApplicationClass() {
         ClassLoader cl = getClass().getClassLoader()
         if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
@@ -375,6 +484,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
 
     }
 
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected boolean isGrailsPresent() {
         ClassLoader cl = getClass().getClassLoader()
         if (ClassUtils.isPresent('grails.core.DefaultGrailsApplication', cl)) {
@@ -384,6 +494,7 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
     }
 
     @CompileStatic
+    @SuppressWarnings('GrMethodMayBeStatic')
     protected Class getGrailsValidatorClass() {
         throw new UnsupportedOperationException('Method getGrailsValidatorClass no longer supported')
     }
@@ -394,13 +505,14 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             try {
                 Thread.currentThread().contextClassLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader')
                 return true
-            } catch (e) {
+            } catch (ignored) {
                 return false
             }
         }
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
-            def beanReader = classLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader').newInstance(registry)
+            def readerClass = classLoader.loadClass('org.springframework.beans.factory.groovy.GroovyBeanDefinitionReader')
+            def beanReader = readerClass.getDeclaredConstructor(BeanDefinitionRegistry).newInstance(registry)
             beanReader.beans(beanDefinitions)
         }
     }
@@ -411,14 +523,15 @@ abstract class AbstractDatastoreInitializer implements ResourceLoaderAware {
             try {
                 Thread.currentThread().contextClassLoader.loadClass('grails.spring.BeanBuilder')
                 return true
-            } catch (e) {
+            } catch (ignored) {
                 return false
             }
         }
 
         static void registerBeans(BeanDefinitionRegistry registry, Closure beanDefinitions) {
             def classLoader = Thread.currentThread().contextClassLoader
-            def beanBuilder = classLoader.loadClass('grails.spring.BeanBuilder').newInstance()
+            def beanBuilderClass = classLoader.loadClass('grails.spring.BeanBuilder')
+            def beanBuilder = beanBuilderClass.getDeclaredConstructor().newInstance()
             beanBuilder.beans(beanDefinitions)
             beanBuilder.registerBeans(registry)
         }

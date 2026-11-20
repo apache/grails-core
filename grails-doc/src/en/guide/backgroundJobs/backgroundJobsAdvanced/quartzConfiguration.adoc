@@ -26,6 +26,7 @@ quartz:
     jdbcStore: false
 ----
 
+[[_plugin_options]]
 ===== Plugin options
 
 [cols="2,1,4"]
@@ -59,6 +60,10 @@ quartz:
 | `quartz.exposeSchedulerInRepository`
 | `false`
 | Whether the scheduler is registered with the Quartz `SchedulerRepository`, making it reachable via `StdSchedulerFactory.getDefaultScheduler()`.
+
+| `quartz.failOnNeverFiringTriggers`
+| `false`
+| Whether startup fails when a job declares a trigger which can never fire — a cron expression whose last occurrence is in the past, for example. By default such a trigger is reported as an error in the log and skipped, and the application starts with the rest of its jobs and triggers scheduled. Set this to `true` to have the scheduler reject the trigger and the application fail to start.
 
 | `quartz.scheduler.instanceName`
 | The bean name
@@ -179,6 +184,27 @@ Two things are required for this to work:
 . A `quartz.properties` file on the classpath, or equivalent `quartz.*` configuration, describing the job store — see the Quartz documentation on job stores.
 
 Persistent storage interacts with the `durability` and `requestsRecovery` job properties described in <<quartzJobProperties,Job Properties>>.
+
+[[_jobs_in_a_shared_job_store]]
+====== The application only removes its own jobs
+
+When an application starts, the plugin removes the jobs it finds in the store which are no longer enabled
+job artefacts of that application — a job class that has been deleted, or one turned off with
+`jobEnabled = false`. Every job it registers is stamped with the name of the application, taken from
+`info.app.name` or from the application metadata when that is unset, and only jobs carrying that name are
+candidates for removal. A job another application registered, and a job scheduled through the Quartz API
+rather than declared as a job artefact, are left where they are.
+
+That matters as soon as a job store is shared — between the instances of a clustered application, or
+between two applications pointing at the same Quartz tables:
+
+* Two applications sharing a store must not share an application name, or each treats the other's jobs as
+its own and removes them on startup. An application which does not name itself uses the default name,
+which every unnamed application shares, and the plugin warns about that when it starts against a JDBC
+job store.
+* A job written to the store by a version of the plugin older than Grails 8 carries no application name,
+so it is never removed automatically. Remove such a leftover through
+<<quartzJobManagerService,jobManagerService>> or from the Quartz tables.
 
 [[_trigger_names_and_persistent_storage]]
 ====== Trigger names are permanent

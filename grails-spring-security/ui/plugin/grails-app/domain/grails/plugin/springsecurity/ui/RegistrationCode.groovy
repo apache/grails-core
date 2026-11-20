@@ -27,6 +27,11 @@ class RegistrationCode {
     String token = UUID.randomUUID().toString().replaceAll('-', '')
     Date dateCreated
 
+    static constraints = {
+        username nullable: false
+        token nullable: false
+    }
+
     static mapping = {
         version false
     }

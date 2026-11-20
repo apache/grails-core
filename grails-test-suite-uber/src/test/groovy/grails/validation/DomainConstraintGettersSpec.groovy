@@ -41,6 +41,17 @@ class DomainConstraintGettersSpec extends Specification implements DataTest {
         ]
     }
 
+    // This spec verifies which properties become constraint properties, using the default
+    // nullable constraint (and its 'nullable' validation error) as the detection mechanism.
+    // Grails 8 makes properties nullable by default, so restore required-by-default for this
+    // spec's own context to keep exercising that detection.
+    @Override
+    Closure doWithConfig() {
+        { config ->
+            config.grails.gorm.default.constraints = { '*'(nullable: false) }
+        }
+    }
+
     // STANDARD DOMAIN
 
     void 'ensure all public properties are by default constraint properties'() {

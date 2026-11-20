@@ -28,7 +28,7 @@ class ForgotPasswordPage extends LifecyclePage {
 	static at = { title == 'Forgot Password' }
 	static content = {
 		username { $(name: 'username').module(TextInput) }
-		submitBtn { $('a', id: 'submit') }
+		submitBtn { $('#submit') }
 	}
 
 	def <T extends LifecyclePage> T submitForgotPassword(String username = null, Class<T> expectedPageType) {

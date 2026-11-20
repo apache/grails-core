@@ -34,7 +34,7 @@ import spock.lang.Ignore
 class ReadConcernArgumentSpec extends GrailsDataTckSpec<GrailsDataMongoTckManager> {
 
     void setupSpec() {
-        manager.domainClasses += [grails.gorm.tests.Person]
+        manager.registerDomainClasses(grails.gorm.tests.Person)
     }
 
     @Ignore

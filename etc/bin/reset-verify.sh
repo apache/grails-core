@@ -43,5 +43,6 @@ cd "${CWD}"
 
 rm -rf "apache-grails-${VERSION}-bin"
 rm -rf "apache-grails-wrapper-${VERSION}-bin"
+rm -rf "apache-grails-${VERSION}-docs"
 rm -rf "profile-wrapper-check"
 rm -f ./custom-repos.gradle

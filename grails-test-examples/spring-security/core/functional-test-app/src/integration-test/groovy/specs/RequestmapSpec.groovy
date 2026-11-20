@@ -20,6 +20,8 @@
 package specs
 
 import com.testapp.TestDataService
+import spock.lang.Stepwise
+
 import grails.testing.mixin.integration.Integration
 import pages.requestmap.CreateRequestmapPage
 import pages.requestmap.EditRequestmapPage
@@ -27,100 +29,82 @@ import pages.requestmap.ListRequestmapPage
 import pages.requestmap.ShowRequestmapPage
 import spock.lang.IgnoreIf
 
+@Stepwise
 @Integration
 @IgnoreIf({ System.getProperty('TESTCONFIG') != 'requestmap' })
 class RequestmapSpec extends AbstractSecuritySpec {
 
-	void 'test request maps are initially present'() {
-		when:
-		go 'testRequestmap/list?max=100'
+    void 'test request maps are initially present'() {
+        when:
+        def page = to(ListRequestmapPage, max: 100)
 
-		then:
-		at ListRequestmapPage
-		requestmapRows.size() == TestDataService.URIS_FOR_REQUESTMAPS.size()
-	}
+        then:
+        page.requestmapRows.size() == TestDataService.URIS_FOR_REQUESTMAPS.size()
+    }
 
-	void 'add a requestmap'() {
-		when:
-		to ListRequestmapPage
-		newRequestmapButton.click()
+    void 'add a requestmap'() {
+        when:
+        to(ListRequestmapPage).with {
+            newRequestmapButton.click()
+        }
 
-		then:
-		at CreateRequestmapPage
+        and:
+        def page = at(CreateRequestmapPage)
+        page.urlField.text = '/nuevo/**'
+        page.configAttributeField.text = 'ROLE_ADMIN'
+        page.createButton.click()
+        page = at(ShowRequestmapPage)
 
-		when:
-		$('form').url = '/nuevo/**'
-		configAttribute = 'ROLE_ADMIN'
-		createButton.click()
+        then:
+        page.value('URL') == '/nuevo/**'
+        page.configAttribute == 'ROLE_ADMIN'
 
-		then:
-		at ShowRequestmapPage
-		value('URL') == '/nuevo/**'
-		configAttribute == 'ROLE_ADMIN'
+        when:
+        page = to(ListRequestmapPage, max: 100)
 
-		when:
-		go 'testRequestmap/list?max=100'
+        then:
+        page.requestmapRows.size() == (TestDataService.URIS_FOR_REQUESTMAPS.size() + 1)
+    }
 
-		then:
-		at ListRequestmapPage
-		requestmapRows.size() == (TestDataService.URIS_FOR_REQUESTMAPS.size() + 1)
-	}
+    void 'edit the details'() {
+        when:
+        def page = to(ListRequestmapPage, max: 100)
+        page.requestmapRow(19).showLink.click()
+        page = at(ShowRequestmapPage)
 
-	void 'edit the details'() {
-		when:
-		go 'testRequestmap/list?max=100'
+        and:
+        page.editButton.click()
+        page = at(EditRequestmapPage)
 
-		then:
-		at ListRequestmapPage
+        and:
+        page.urlField.text = '/secure2/**'
+        page.configAttributeField.text = 'ROLE_ADMINX'
+        page.updateButton.click()
+        page = at(ShowRequestmapPage)
 
-		when:
-		requestmapRow(19).showLink.click()
+        then:
+        page.value('URL') == '/secure2/**'
+        page.configAttribute == 'ROLE_ADMINX'
+    }
 
-		then:
-		at ShowRequestmapPage
+    void 'delete requestmap'() {
+        when:
+        def page = to(ListRequestmapPage, max: 100)
+        page.requestmapRow(19).showLink.click()
+        page = at(ShowRequestmapPage)
+        def deletedId = page.id
 
-		when:
-		editButton.click()
+        and:
+        withConfirm { page.deleteButton.click() }
+        page = at(ListRequestmapPage)
 
-		then:
-		at EditRequestmapPage
+        then:
+        page.message == "TestRequestmap $deletedId deleted"
 
-		when:
-		$('form').url = '/secure2/**'
-		configAttribute = 'ROLE_ADMINX'
-		updateButton.click()
+        when:
+        page = to(ListRequestmapPage, max: 100)
 
-		then:
-		at ShowRequestmapPage
-		value('URL') == '/secure2/**'
-		configAttribute == 'ROLE_ADMINX'
-	}
-
-	void 'delete requestmap'() {
-		when:
-		go 'testRequestmap/list?max=100'
-
-		then:
-		at ListRequestmapPage
-
-		when:
-		requestmapRow(19).showLink.click()
-
-		then:
-		at ShowRequestmapPage
-
-		when:
-		def deletedId = id
-		withConfirm { deleteButton.click() }
-
-		then:
-		at ListRequestmapPage
-		message == "TestRequestmap $deletedId deleted"
-
-		when:
-		go 'testRequestmap/list?max=100'
-
-		then:
-		requestmapRows.size() == TestDataService.URIS_FOR_REQUESTMAPS.size()
-	}
+        then:
+        page.requestmapRows.size() == TestDataService.URIS_FOR_REQUESTMAPS.size()
+    }
 }

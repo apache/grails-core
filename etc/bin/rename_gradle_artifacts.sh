@@ -21,7 +21,7 @@ set -euo pipefail
 
 # This script updates Gradle build files by replacing old artifact coordinates with the new ones,
 # as defined in the reference table at:
-#   https://github.com/apache/grails-core/blob/7.0.x/RENAME.md
+#   https://github.com/apache/grails-core/blob/8.0.x/RENAME.md
 #
 # Usage:
 #   ./rename_gradle_artifacts.sh [directory]
@@ -184,7 +184,6 @@ echo "Mapping grails-data artifacts"
 declare -a gorm_mappings=(
   "org[.]grails[.]plugins:views-json-templates|org.apache.grails:grails-data-mongodb-gson-templates"
   "org[.]grails[.]plugins:mongodb|org.apache.grails:grails-data-mongodb"
-  "org[.]grails[.]plugins:hibernate6|org.apache.grails:grails-data-hibernate6"
   "org[.]grails[.]plugins:hibernate5|org.apache.grails:grails-data-hibernate5"
   "org[.]grails[.]plugins:database-migration|org.apache.grails:grails-data-hibernate5-dbmigration"
   "org[.]grails[.]tck[.]tests:tck|org.apache.grails.data:grails-datamapping-tck-tests"
@@ -198,16 +197,20 @@ declare -a gorm_mappings=(
   "org[.]grails:grails-datastore-gorm-mongodb-bson|org.apache.grails.data:grails-data-mongodb-bson"
   "org[.]grails:grails-datastore-gorm-mongodb-ext|org.apache.grails.data:grails-data-mongodb-ext"
   "org[.]grails:grails-datastore-gorm-mongodb|org.apache.grails.data:grails-data-mongodb-core"
-  "org[.]grails:grails-datastore-gorm-hibernate6|org.apache.grails.data:grails-data-hibernate6-core"
   "org[.]grails:grails-datastore-gorm-hibernate5|org.apache.grails.data:grails-data-hibernate5-core"
-  "org[.]grails:grails-datastore-gorm-async|org.apache.grails.data:grails-datamapping-async"
+  "org[.]grails:gorm-graphql|org.apache.grails.data:grails-data-graphql-core"
+  "org[.]grails:gorm-graphql-plugin|org.apache.grails:grails-data-graphql"
+  "org[.]grails:grails-datastore-gorm-async|org.apache.grails:grails-datamapping-async"
+  "org[.]apache[.]grails[.]data:grails-datamapping-async|org.apache.grails:grails-datamapping-async"
   "org[.]grails:grails-datastore-gorm|org.apache.grails.data:grails-datamapping-core"
   "org[.]grails:grails-datastore-gorm-tck|org.apache.grails.data:grails-datamapping-tck-tests"
   "org[.]grails:grails-datastore-core|org.apache.grails.data:grails-datastore-core"
   "org[.]grails:grails-datastore-async|org.apache.grails.data:grails-datastore-async"
   "org[.]grails:gorm-mongodb-spring-boot|org.apache.grails:grails-data-mongodb-spring-boot"
-  "org[.]grails:gorm-hibernate6-spring-boot|org.apache.grails:grails-data-hibernate6-spring-boot"
   "org[.]grails:gorm-hibernate5-spring-boot|org.apache.grails:grails-data-hibernate5-spring-boot"
+  "org[.]grails[.]plugins:neo4j|org.apache.grails:grails-data-neo4j"
+  "org[.]grails:grails-datastore-gorm-neo4j|org.apache.grails.data:grails-data-neo4j-core"
+  "org[.]grails:gorm-neo4j-spring-boot|org.apache.grails:grails-data-neo4j-spring-boot"
 )
 declare -a excluded_gorm_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]views-json-templates['\"]|exclude module:'grails-data-mongodb-gson-templates'"
@@ -215,7 +218,6 @@ declare -a excluded_gorm_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]tck-domains['\"]|exclude module:'grails-datamapping-tck-domains'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]tck-base['\"]|exclude module:'grails-datamapping-tck-base'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]mongodb['\"]|exclude module:'grails-data-mongodb'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]hibernate6['\"]|exclude module:'grails-data-hibernate6'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]hibernate5['\"]|exclude module:'grails-data-hibernate5'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-gorm-testing-support['\"]|exclude module:'grails-testing-support-datamapping'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-web['\"]|exclude module:'grails-datastore-web'"
@@ -224,16 +226,17 @@ declare -a excluded_gorm_mappings=(
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-simple['\"]|exclude module:'grails-data-simple'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-mongodb['\"]|exclude module:'grails-data-mongodb-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-mongodb-ext['\"]|exclude module:'grails-data-mongodb-ext'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-hibernate6['\"]|exclude module:'grails-data-hibernate6-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-hibernate5['\"]|exclude module:'grails-data-hibernate5-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-async['\"]|exclude module:'grails-datamapping-async'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm['\"]|exclude module:'grails-datamapping-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-core['\"]|exclude module:'grails-datastore-core'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-async['\"]|exclude module:'grails-datastore-async'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-mongodb-spring-boot['\"]|exclude module:'grails-data-mongodb-spring-boot'"
-  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-hibernate6-spring-boot['\"]|exclude module:'grails-data-hibernate6-spring-boot'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-hibernate5-spring-boot['\"]|exclude module:'grails-data-hibernate5-spring-boot'"
   "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]database-migration['\"]|exclude module:'grails-data-hibernate5-dbmigration'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]neo4j['\"]|exclude module:'grails-data-neo4j'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]grails-datastore-gorm-neo4j['\"]|exclude module:'grails-data-neo4j-core'"
+  "exclude[[:space:]]+module[[:space:]]*:[[:space:]]*['\"]gorm-neo4j-spring-boot['\"]|exclude module:'grails-data-neo4j-spring-boot'"
 )
 mappings+=("${gorm_mappings[@]}")
 excluded_mappings+=("${excluded_gorm_mappings[@]}")

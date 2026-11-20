@@ -18,6 +18,7 @@ import java.beans.PropertyDescriptor;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.grails.datastore.mapping.config.Property;
 import org.grails.datastore.mapping.engine.internal.MappingUtils;
@@ -84,6 +85,10 @@ public abstract class Basic<T extends Property> extends ToMany<T> {
 
     public Class getComponentType() {
         return componentType;
+    }
+
+    public boolean isEnum() {
+        return Optional.ofNullable(componentType).map(Class::isEnum).orElse(false);
     }
 
     @Override

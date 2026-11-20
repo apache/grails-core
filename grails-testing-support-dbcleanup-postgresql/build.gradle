@@ -27,6 +27,7 @@ plugins {
     id 'org.apache.grails.buildsrc.sbom'
     id 'org.apache.grails.buildsrc.vulnerability-scan'
     id 'org.apache.grails.gradle.grails-code-style'
+    id 'org.apache.grails.gradle.grails-jacoco'
 }
 
 version = projectVersion
@@ -50,8 +51,8 @@ dependencies {
 
     testImplementation 'org.apache.groovy:groovy'
     testImplementation 'org.postgresql:postgresql'
-    testImplementation 'org.testcontainers:postgresql:1.21.4'
-    testImplementation 'org.testcontainers:testcontainers:1.21.4'
+    testImplementation 'org.testcontainers:testcontainers-postgresql'
+    testImplementation 'org.testcontainers:testcontainers'
     testImplementation 'org.slf4j:slf4j-simple'
     testRuntimeOnly 'net.bytebuddy:byte-buddy'
 }

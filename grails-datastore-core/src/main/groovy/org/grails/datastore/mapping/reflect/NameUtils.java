@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.codehaus.groovy.runtime.MetaClassHelper;
+import org.apache.groovy.util.BeanUtils;
 
 import org.grails.datastore.mapping.model.config.GormProperties;
 
@@ -98,15 +98,16 @@ public class NameUtils {
     }
 
     /**
-     * Get the class name, taking into account proxies
+     * Get the class name, taking into account proxies.
+     * A {@code $} in the simple name marks a generated subclass; a nested class
+     * is unaffected, since its simple name carries no {@code $}.
      *
      * @param clazz The class
      * @return The class name
      */
-    public static String getClassName(Class clazz) {
-        final String sn = clazz.getSimpleName();
-        if (sn.contains(DOLLAR_SEPARATOR)) {
-            return clazz.getSuperclass().getName();
+    public static String getClassName(Class<?> clazz) {
+        while (clazz.getSimpleName().contains(DOLLAR_SEPARATOR) && clazz.getSuperclass() != null) {
+            clazz = clazz.getSuperclass();
         }
         return clazz.getName();
     }
@@ -158,6 +159,42 @@ public class NameUtils {
      * @return The class name
      */
     public static String capitalize(String name) {
-        return MetaClassHelper.capitalize(name);
+        return BeanUtils.capitalize(name);
+    }
+
+    /**
+     * Whether the given value is shaped like a property path: one or more Java identifiers
+     * separated by single dots, for example {@code name} or {@code author.name}. Identifier
+     * segments follow {@link Character#isJavaIdentifierStart(int)} and
+     * {@link Character#isJavaIdentifierPart(int)}, so {@code $} and non-ASCII letters are
+     * accepted while ignorable control characters, whitespace, punctuation and operators are not.
+     * Useful for checking a caller-supplied property name before it is interpolated into a query.
+     *
+     * @param path The candidate property path
+     * @return {@code true} if the value is a well-formed property path
+     */
+    public static boolean isValidPropertyPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+        boolean expectSegmentStart = true;
+        int i = 0;
+        while (i < path.length()) {
+            int codePoint = path.codePointAt(i);
+            if (expectSegmentStart) {
+                if (!Character.isJavaIdentifierStart(codePoint)) {
+                    return false;
+                }
+                expectSegmentStart = false;
+            }
+            else if (codePoint == '.') {
+                expectSegmentStart = true;
+            }
+            else if (!Character.isJavaIdentifierPart(codePoint) || Character.isIdentifierIgnorable(codePoint)) {
+                return false;
+            }
+            i += Character.charCount(codePoint);
+        }
+        return !expectSegmentStart;
     }
 }

@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+    id 'org.apache.grails.gradle.bom-property-overrides'
+}
+
+dependencies {
+    implementation platform('org.example:test-bom:1.0.0')
+    implementation enforcedPlatform('org.example:enforced-bom:2.0.0')
+    implementation 'org.example:regular-lib:1.0.0'
+}
+
+tasks.register('inspectBomSetup') {
+    def report = providers.provider {
+        def extension = project.extensions.findByName('bomPropertyOverrides')
+        Set<String> detected = org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
+                .detectDeclaredBoms(project.configurations)
+        [
+                "HAS_EXTENSION=${extension != null}",
+                "AUTO_DETECT_DEFAULT=${extension?.autoDetect?.get()}",
+                "DETECTED_BOMS=${detected.sort().join(',')}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
+    }
+}

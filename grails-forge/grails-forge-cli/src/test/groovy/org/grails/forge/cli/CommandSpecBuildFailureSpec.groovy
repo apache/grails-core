@@ -19,10 +19,7 @@
 
 package org.grails.forge.cli
 
-import io.micronaut.context.ApplicationContext
 import org.grails.forge.application.ApplicationType
-import spock.lang.AutoCleanup
-import spock.lang.Shared
 
 /**
  * Gradle writes a build's failure report to stderr, so a failed generated build is reported
@@ -34,10 +31,6 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
     // Larger than the 64 KiB pipe buffer of Linux and macOS, so a Gradle client left writing its
     // failure report to a pipe nobody reads blocks on it instead of exiting.
     private static final int FAILURE_MESSAGE_LENGTH = 70000
-
-    @Shared
-    @AutoCleanup
-    ApplicationContext beanContext = ApplicationContext.run()
 
     void 'a generated build that fails is reported with its failure report instead of waiting out the poll budget'() {
         given: 'a generated project whose build fails while configuring, with a report larger than a pipe buffer'

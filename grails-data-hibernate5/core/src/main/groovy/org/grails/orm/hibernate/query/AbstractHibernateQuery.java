@@ -45,6 +45,8 @@ import org.hibernate.dialect.function.SQLFunction;
 import org.hibernate.persister.entity.PropertyMapping;
 import org.hibernate.type.BasicType;
 import org.hibernate.type.TypeResolver;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.convert.ConversionService;
@@ -81,6 +83,8 @@ import org.grails.orm.hibernate.proxy.HibernateProxyHandler;
  */
 @SuppressWarnings("rawtypes")
 public abstract class AbstractHibernateQuery extends Query {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractHibernateQuery.class);
 
     public static final String SIZE_CONSTRAINT_PREFIX = "Size";
 
@@ -479,10 +483,16 @@ public abstract class AbstractHibernateQuery extends Query {
     public AssociationQuery createQuery(String associationName) {
         final PersistentProperty property = entity.getPropertyByName(calculatePropertyName(associationName));
         if (property != null && (property instanceof Association)) {
+            Association association = (Association) property;
+            if (association instanceof Embedded) {
+                // Hibernate cannot create a sub-criteria on a component ("Criteria objects
+                // cannot be created directly on components"); return a plain association
+                // query whose criteria the criterion adapter applies via dotted paths.
+                return super.createQuery(associationName);
+            }
             String alias = generateAlias(associationName);
             CriteriaAndAlias subCriteria = getOrCreateAlias(associationName, alias);
 
-            Association association = (Association) property;
             if (subCriteria.criteria != null) {
                 return new HibernateAssociationQuery(subCriteria.criteria, (AbstractHibernateSession) getSession(), association.getAssociatedEntity(), association, alias);
             }
@@ -565,6 +575,21 @@ public abstract class AbstractHibernateQuery extends Query {
         return hibernateProjectionList;
     }
 
+    /**
+     * @since 8.0
+     */
+    @Override
+    public Number countResults() {
+        if (hibernateProjectionList != null && !hibernateProjectionList.isEmpty()) {
+            LOG.warn("DetachedCriteria.count() with user-defined projections cannot use a SQL count query " +
+                    "due to a Hibernate 5 limitation. All grouped result rows will be loaded into memory to " +
+                    "determine the count. This may impact performance on large result sets.");
+            return list().size();
+        }
+        projections().count();
+        return (Number) singleResult();
+    }
+
     @Override
     public Query max(int max) {
         if (criteria != null)
@@ -608,6 +633,9 @@ public abstract class AbstractHibernateQuery extends Query {
 
     @Override
     public Query order(Order order) {
+        if (order == null) {
+            return this;
+        }
         super.order(order);
 
         String property = order.getProperty();

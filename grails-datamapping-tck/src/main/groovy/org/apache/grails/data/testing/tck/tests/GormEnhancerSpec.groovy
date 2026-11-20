@@ -21,11 +21,18 @@ package org.apache.grails.data.testing.tck.tests
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import org.apache.grails.data.testing.tck.domains.ChildEntity
 import org.apache.grails.data.testing.tck.domains.TestEntity
+import org.grails.datastore.gorm.GormEnhancer
+import org.grails.datastore.mapping.core.connections.ConnectionSource
 
 /**
  * @author graemerocher
  */
 class GormEnhancerSpec extends GrailsDataTckSpec {
+
+    @Override
+    void setupSpec() {
+        manager.registerDomainClasses(TestEntity, ChildEntity)
+    }
 
     void 'Test basic CRUD operations'() {
         given:
@@ -114,6 +121,35 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
 
         then:
         2 == results.size()
+    }
+
+    void 'Test getAll preserves the supplied id order'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        def fred = new TestEntity(name: 'Fred', age: 41, child: new ChildEntity(name: 'Fred Child')).save()
+        def barney = new TestEntity(name: 'Barney', age: 42, child: new ChildEntity(name: 'Barney Child')).save()
+        manager.session.flush()
+
+        when: 'ids are requested out of insertion order'
+        def results = TestEntity.getAll([barney.id, bob.id, fred.id])
+
+        then: 'results are returned in the requested order'
+        ['Barney', 'Bob', 'Fred'] == results*.name
+    }
+
+    void 'Test getAll returns a null slot for a missing id'() {
+        given:
+        def bob = new TestEntity(name: 'Bob', age: 40, child: new ChildEntity(name: 'Bob Child')).save()
+        manager.session.flush()
+        def missingId = bob.id + 1000
+
+        when:
+        def results = TestEntity.getAll([bob.id, missingId])
+
+        then: 'the present row keeps its position and the missing id yields a null slot'
+        2 == results.size()
+        'Bob' == results[0]?.name
+        null == results[1]
     }
 
     void 'Test ident() method'() {
@@ -250,5 +286,34 @@ class GormEnhancerSpec extends GrailsDataTckSpec {
 
         then:
         2 == TestEntity.count()
+    }
+
+    void 'findStaticApi returns a non-null API for the default qualifier after enhancement'() {
+        when:
+        def staticApi = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        then:
+        staticApi != null
+        instanceApi != null
+        validationApi != null
+    }
+
+    void 'findStaticApi returns the same cached instance on repeated calls'() {
+        when:
+        def staticApi1 = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi1 = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi1 = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        and:
+        def staticApi2 = GormEnhancer.findStaticApi(TestEntity, ConnectionSource.DEFAULT)
+        def instanceApi2 = GormEnhancer.findInstanceApi(TestEntity, ConnectionSource.DEFAULT)
+        def validationApi2 = GormEnhancer.findValidationApi(TestEntity, ConnectionSource.DEFAULT)
+
+        then:
+        staticApi1.is(staticApi2)
+        instanceApi1.is(instanceApi2)
+        validationApi1.is(validationApi2)
     }
 }

@@ -19,18 +19,17 @@
 
 package org.grails.forge.feature.spring
 
-import org.grails.forge.BeanContextSpec
+import spock.lang.Unroll
+
+import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.BuildBuilder
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.fixture.CommandOutputFixture
 import org.grails.forge.options.DevelopmentReloading
-import org.grails.forge.options.JdkVersion
 import org.grails.forge.options.Options
 import org.grails.forge.options.ServletImpl
-import org.grails.forge.options.TestFramework
-import spock.lang.Unroll
 
-class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
+class SpringBootSpec extends ApplicationContextSpec implements CommandOutputFixture {
 
     @Unroll
     void "test spring boot starter dependencies for #applicationType application"() {
@@ -69,15 +68,19 @@ class SpringBootSpec extends BeanContextSpec implements CommandOutputFixture {
         !build.contains("implementation \"org.springframework.boot:spring-boot-starter-tomcat\"")
     }
 
-    void "test undertow servlet includes jboss-threads dependency"() {
+    void "test undertow servlet applies the grails-undertow plugin"() {
         when:
-        String build = new BuildBuilder(beanContext)
+        // Spring Boot 4 no longer ships spring-boot-starter-undertow; Undertow
+        // support comes from the Grails Undertow plugin, which bundles the vendored
+        // Spring Boot Undertow autoconfiguration (grails-undertow-spring-boot).
+        final String build = new BuildBuilder(beanContext)
                 .servletImpl(ServletImpl.UNDERTOW)
                 .render()
 
         then:
-        build.contains('implementation "org.springframework.boot:spring-boot-starter-undertow"')
-        build.contains('runtimeOnly "org.jboss.threads:jboss-threads')
-        !build.contains('implementation "org.springframework.boot:spring-boot-starter-tomcat"')
+        build.contains("implementation \"org.apache.grails:grails-undertow\"")
+        !build.contains("org.springframework.boot:spring-boot-starter-undertow")
+        !build.contains("implementation \"org.springframework.boot:spring-boot-starter-tomcat\"")
+        !build.contains("implementation \"org.springframework.boot:spring-boot-starter-jetty\"")
     }
 }

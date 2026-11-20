@@ -29,7 +29,7 @@ import spock.lang.Issue
  */
 class CountByWithEmbeddedSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
     void setupSpec() {
-        manager.domainClasses.addAll([CountByPerson])
+        manager.registerDomainClasses(CountByPerson)
     }
 
     @Issue('https://github.com/apache/grails-core/issues/9846')

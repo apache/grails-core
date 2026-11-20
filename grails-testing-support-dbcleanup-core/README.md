@@ -106,8 +106,8 @@ jdbc:h2:file:/tmp/testdb
 **Libraries**:
 - `org.apache.groovy:groovy-sql` - SQL DSL for Groovy
 - `org.postgresql:postgresql` - PostgreSQL JDBC Driver
-- `org.testcontainers:postgresql:1.20.1` (test scope)
-- `org.testcontainers:testcontainers:1.20.1` (test scope)
+- `org.testcontainers:testcontainers-postgresql` (test scope)
+- `org.testcontainers:testcontainers` (test scope)
 
 **Features**:
 - Automatic table truncation for PostgreSQL-backed tests

@@ -19,11 +19,12 @@
 package org.grails.transaction;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,7 +89,14 @@ public class ChainedTransactionManager implements PlatformTransactionManager {
 
         this.synchronizationManager = synchronizationManager;
         this.transactionManagers = new ArrayList<>();
-        this.transactionManagers.addAll(Arrays.asList(transactionManagers));
+        // Dedupe by identity, preserving order: the same manager can be registered under several
+        // bean names, and committing one instance twice throws "Transaction is already completed".
+        Set<PlatformTransactionManager> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (PlatformTransactionManager transactionManager : transactionManagers) {
+            if (seen.add(transactionManager)) {
+                this.transactionManagers.add(transactionManager);
+            }
+        }
     }
 
     /*

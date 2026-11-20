@@ -37,7 +37,6 @@ import grails.core.support.GrailsApplicationAware
 import grails.gsp.TagLib
 import grails.plugins.GrailsPluginManager
 import grails.util.GrailsStringUtils
-import grails.util.GrailsUtil
 import grails.util.Metadata
 import grails.web.mapping.LinkGenerator
 import grails.web.mapping.UrlMappingsHolder
@@ -73,11 +72,29 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     boolean useJsessionId = false
     boolean hasResourceProcessor = false
 
+    String flashMessagesMessageClass = 'alert alert-success alert-dismissible fade show'
+    String flashMessagesMessageIcon = 'bi bi-check-circle me-2'
+    String flashMessagesErrorClass = 'alert alert-danger alert-dismissible fade show'
+    String flashMessagesErrorIcon = 'bi bi-exclamation-triangle me-2'
+    String flashMessagesWarningClass = 'alert alert-warning alert-dismissible fade show'
+    String flashMessagesWarningIcon = 'bi bi-exclamation-circle me-2'
+    String flashMessagesRole = 'alert'
+    boolean flashMessagesDismissible = true
+
     void afterPropertiesSet() {
         def config = grailsApplication.config
 
         useJsessionId = config.getProperty(Settings.GRAILS_VIEWS_ENABLE_JSESSIONID, Boolean, false)
         hasResourceProcessor = applicationContext.containsBean('grailsResourceProcessor')
+
+        flashMessagesMessageClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_CLASS, String, flashMessagesMessageClass)
+        flashMessagesMessageIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_MESSAGE_ICON, String, flashMessagesMessageIcon)
+        flashMessagesErrorClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_CLASS, String, flashMessagesErrorClass)
+        flashMessagesErrorIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ERROR_ICON, String, flashMessagesErrorIcon)
+        flashMessagesWarningClass = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_CLASS, String, flashMessagesWarningClass)
+        flashMessagesWarningIcon = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_WARNING_ICON, String, flashMessagesWarningIcon)
+        flashMessagesRole = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_ROLE, String, flashMessagesRole)
+        flashMessagesDismissible = config.getProperty(Settings.VIEWS_GSP_FLASH_MESSAGES_DISMISSIBLE, Boolean, flashMessagesDismissible)
 
         if (applicationContext.containsBean('requestDataValueProcessor')) {
             requestDataValueProcessor = applicationContext.getBean('requestDataValueProcessor', RequestDataValueProcessor)
@@ -91,7 +108,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the cookie name
      */
-    Closure cookie = { attrs ->
+    def cookie(Map attrs) {
         request.cookies.find { it.name == attrs.name }?.value
     }
 
@@ -102,7 +119,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the header name
      */
-    Closure header = { attrs ->
+    def header(Map attrs) {
         attrs.name ? request.getHeader(attrs.name) : null
     }
 
@@ -115,7 +132,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr bean the name or the type of a bean in the applicationContext; the type can be an interface or superclass
      * @attr scope the scope name; defaults to pageScope
      */
-    Closure set = { attrs, body ->
+    def set(Map attrs, Closure body) {
         def var = attrs.var
         if (!var) throw new IllegalArgumentException('[var] attribute must be specified to for <g:set>!')
 
@@ -138,18 +155,6 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     /**
      * Creates a link to a resource, generally used as a method rather than a tag.<br/>
      *
-     * eg. &lt;link type="text/css" href="${createLinkTo(dir:'css',file:'main.css')}" /&gt;
-     *
-     * @emptyTag
-     */
-    Closure createLinkTo = { attrs ->
-        GrailsUtil.deprecated('Tag [createLinkTo] is deprecated please use [resource] instead')
-        return resource(attrs)
-    }
-
-    /**
-     * Creates a link to a resource, generally used as a method rather than a tag.<br/>
-     *
      * eg. &lt;link type="text/css" href="${resource(dir:'css',file:'main.css')}" /&gt;
      *
      * @emptyTag
@@ -161,7 +166,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr absolute If set to "true" will prefix the link target address with the value of the grails.serverURL property from Config, or http://localhost:&lt;port&gt; if no value in Config and not running in production.
      * @attr plugin The plugin to look for the resource in
      */
-    Closure resource = { attrs ->
+    def resource(Map attrs) {
         if (!attrs.pluginContextPath && pageScope.pluginContextPath) {
             attrs.pluginContextPath = pageScope.pluginContextPath
         }
@@ -179,7 +184,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr plugin Optional the name of the grails plugin if the resource is not part of the application
      * @attr uri Optional app-relative URI path of the resource if not using dir/file attributes - only if Resources plugin is in use
      */
-    Closure img = { attrs ->
+    def img(Map attrs) {
         if (!attrs.uri && !attrs.dir) {
             attrs.dir = 'images'
         }
@@ -225,11 +230,10 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         def linkAttrs
         if (attrs.params instanceof Map && attrs.params.containsKey('attrs')) {
             linkAttrs = attrs.params.remove('attrs').clone()
-        }
-        else {
+        } else {
             linkAttrs = [:]
         }
-        writer <<  '<a href="'
+        writer << '<a href="'
         writer << createLink(attrs).encodeAsHTML()
         writer << '"'
         if (elementId) {
@@ -266,13 +270,13 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static LINK_WRITERS = [
-        js: { url, constants, attrs ->
-           return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
-        },
+            js: { url, constants, attrs ->
+                return "<script src=\"${url}\"${getAttributesToRender(constants, attrs)}></script>"
+            },
 
-        link: { url, constants, attrs ->
-           return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
-        }
+            link: { url, constants, attrs ->
+                return "<link href=\"${url}\"${getAttributesToRender(constants, attrs)}/>"
+            }
     ]
 
     static getAttributesToRender(constants, attrs) {
@@ -287,16 +291,16 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
     }
 
     static SUPPORTED_TYPES = [
-        css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
-        js: [type: 'text/javascript', writer: 'js'],
+            css: [type: 'text/css', rel: 'stylesheet', media: 'screen, projection'],
+            js: [type: 'text/javascript', writer: 'js'],
 
-        gif: [rel: 'shortcut icon'],
-        jpg: [rel: 'shortcut icon'],
-        png: [rel: 'shortcut icon'],
-        ico: [rel: 'shortcut icon'],
-        appleicon: [rel: 'apple-touch-icon']
+            gif: [rel: 'shortcut icon'],
+            jpg: [rel: 'shortcut icon'],
+            png: [rel: 'shortcut icon'],
+            ico: [rel: 'shortcut icon'],
+            appleicon: [rel: 'apple-touch-icon']
 
-        // @todo add feed link types here too
+            // @todo add feed link types here too
     ]
 
     /**
@@ -308,7 +312,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr plugin
      * @attr type
      */
-    Closure external = { attrs ->
+    def external(Map attrs) {
         if (!attrs.uri) {
             attrs.uri = resource(attrs).toString()
         }
@@ -320,7 +324,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr uri
      * @attr type
      */
-    protected renderResourceLink(attrs) {
+    private renderResourceLink(attrs) {
         def uri = attrs.remove('uri')
         def type = attrs.remove('type')
         if (!type) {
@@ -338,7 +342,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         // Allow attrs to overwrite any constants
         attrs.each { typeInfo.remove(it.key) }
 
-        out << writer(processedUrl(uri, request), typeInfo, attrs)
+        out << writer(processedUrl(uri, request).encodeAsHTML(), typeInfo, attrs)
         out << '\r\n'
     }
 
@@ -363,12 +367,12 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr mapping The named URL mapping to use to rewrite the link
      * @attr event Webflow _eventId parameter
      */
-    Closure createLink = { attrs ->
-        return doCreateLink(attrs instanceof  Map ? (Map) attrs : Collections.emptyMap())
+    def createLink(Map attrs) {
+        return doCreateLink(attrs instanceof Map ? (Map) attrs : Collections.emptyMap())
     }
 
     @CompileStatic
-    protected String doCreateLink(Map attrs) {
+    private String doCreateLink(Map attrs) {
         Map urlAttrs = attrs
         if (attrs.url instanceof Map) {
             urlAttrs = (Map) attrs.url
@@ -403,7 +407,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr name REQUIRED the tag name
      * @attr attrs tag attributes
      */
-    Closure withTag = { attrs, body ->
+    def withTag(Map attrs, Closure body) {
         def writer = out
         writer << "<${attrs.name}"
         attrs.attrs?.each { k, v ->
@@ -412,9 +416,8 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
                 writer << " $k=\""
                 v()
                 writer << '"'
-            }
-            else {
-                writer << " $k=\"$v\""
+            } else {
+                writer << " $k=\"${v.encodeAsHTML()}\""
             }
         }
         writer << '>'
@@ -431,7 +434,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      * @attr REQUIRED in The collection to iterate over
      * @attr delimiter The value of the delimiter to use during the join. If no delimiter is specified then ", " (a comma followed by a space) will be used as the delimiter.
      */
-    Closure join = { attrs ->
+    def join(Map attrs) {
         def collection = attrs.'in'
         if (collection == null) {
             throwTagError('Tag ["join"] missing required attribute ["in"]')
@@ -448,17 +451,17 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
      *
      * @attr name REQUIRED the metadata key
      */
-    Closure meta = { attrs ->
+    def meta(Map attrs) {
         if (!attrs.name) {
             throwTagError('Tag ["meta"] missing required attribute ["name"]')
         }
-        return Metadata.current[attrs.name]
+        return Metadata.current.getOrDefault(attrs.name, null)
     }
 
     /**
      * Filters the url through the RequestDataValueProcessor bean if it is registered.
      */
-    String processedUrl(String link, request) {
+    private String processedUrl(String link, request) {
         if (requestDataValueProcessor == null) {
             return link
         }
@@ -466,8 +469,72 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         return requestDataValueProcessor.processUrl(request, link)
     }
 
-    Closure applyCodec = { Map attrs, Closure body ->
+    def applyCodec(Map attrs, Closure body) {
         // encoding is handled in GroovyPage.invokeTag and GroovyPage.captureTagOutput
         body()
+    }
+
+    /**
+     * Renders flash.message, flash.error, and flash.warning as Bootstrap alert divs.
+     * Automatically skips rendering if already called during this request, preventing
+     * duplicate display when used in both pages and layouts.
+     *
+     * @emptyTag
+     *
+     * @attr messageClass CSS class for flash.message alerts (default: 'alert alert-success alert-dismissible fade show')
+     * @attr messageIcon Icon class for flash.message alerts (default: 'bi bi-check-circle me-2')
+     * @attr errorClass CSS class for flash.error alerts (default: 'alert alert-danger alert-dismissible fade show')
+     * @attr errorIcon Icon class for flash.error alerts (default: 'bi bi-exclamation-triangle me-2')
+     * @attr warningClass CSS class for flash.warning alerts (default: 'alert alert-warning alert-dismissible fade show')
+     * @attr warningIcon Icon class for flash.warning alerts (default: 'bi bi-exclamation-circle me-2')
+     * @attr role ARIA role for alert divs (default: 'alert')
+     * @attr dismissible Whether to show a close button (default: true)
+     */
+    def flashMessages(Map attrs) {
+        if (request.getAttribute('_flashRendered')) {
+            return
+        }
+
+        boolean rendered = false
+        boolean dismissible = attrs.dismissible != null ? attrs.dismissible.toString().toBoolean() : flashMessagesDismissible
+        String role = attrs.role ?: flashMessagesRole
+
+        if (flash.message) {
+            renderFlashAlert(
+                    (attrs.messageClass ?: flashMessagesMessageClass) as String,
+                    (attrs.messageIcon ?: flashMessagesMessageIcon) as String,
+                    flash.message, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.error) {
+            renderFlashAlert(
+                    (attrs.errorClass ?: flashMessagesErrorClass) as String,
+                    (attrs.errorIcon ?: flashMessagesErrorIcon) as String,
+                    flash.error, dismissible, role)
+            rendered = true
+        }
+
+        if (flash.warning) {
+            renderFlashAlert(
+                    (attrs.warningClass ?: flashMessagesWarningClass) as String,
+                    (attrs.warningIcon ?: flashMessagesWarningIcon) as String,
+                    flash.warning, dismissible, role)
+            rendered = true
+        }
+
+        if (rendered) {
+            request.setAttribute('_flashRendered', true)
+        }
+    }
+
+    private void renderFlashAlert(String cssClass, String icon, Object message, boolean dismissible, String role) {
+        out << "<div class=\"${cssClass}\" role=\"${role}\">"
+        out << "<i class=\"${icon}\"></i>"
+        out << message.toString().encodeAsHTML()
+        if (dismissible) {
+            out << '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>'
+        }
+        out << '</div>'
     }
 }

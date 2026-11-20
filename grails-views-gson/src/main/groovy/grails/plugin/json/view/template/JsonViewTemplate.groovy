@@ -19,10 +19,10 @@
 
 package grails.plugin.json.view.template
 
+import groovy.json.JsonGenerator
 import groovy.transform.CompileStatic
 import groovy.transform.InheritConstructors
 
-import grails.plugin.json.builder.JsonGenerator
 import grails.plugin.json.view.JsonViewWritableScript
 import grails.plugin.json.view.api.jsonapi.JsonApiIdRenderStrategy
 import grails.views.GrailsViewTemplate
@@ -41,4 +41,9 @@ class JsonViewTemplate extends GrailsViewTemplate {
         writableTemplate.setJsonApiIdRenderStrategy(jsonApiIdRenderStrategy)
         writableTemplate
     }
+
+    void setGenerator(JsonGenerator jsonGenerator) {
+        generator = jsonGenerator
+    }
+
 }

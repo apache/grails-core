@@ -27,5 +27,5 @@ class Country extends Location {
     Integer population = 0
 
     static hasMany = [residents: Person]
-    Set residents
+
 }

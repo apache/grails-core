@@ -20,6 +20,7 @@
 package org.grails.datastore.gorm.validation.constraints;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -143,7 +144,7 @@ public class ScaleConstraint extends AbstractConstraint {
      */
     private BigDecimal getScaledValue(BigDecimal originalValue) {
         if (originalValue.scale() > scale) {
-            return originalValue.setScale(scale, BigDecimal.ROUND_HALF_UP);
+            return originalValue.setScale(scale, RoundingMode.HALF_UP);
         }
         return originalValue;
     }

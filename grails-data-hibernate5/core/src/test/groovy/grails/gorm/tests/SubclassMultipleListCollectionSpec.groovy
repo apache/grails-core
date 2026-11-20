@@ -28,6 +28,7 @@ import spock.lang.*
  * Created by graemerocher on 01/03/2017.
  */
 @Ignore
+@Issue('https://github.com/apache/grails-core/issues/14624')
 class SubclassMultipleListCollectionSpec extends Specification {
 
     @AutoCleanup @Shared HibernateDatastore hibernateDatastore
@@ -41,9 +42,8 @@ class SubclassMultipleListCollectionSpec extends Specification {
         transactionManager = hibernateDatastore.getTransactionManager()
     }
 
-    @Ignore // not yet implemented
     @Rollback
-    @Issue('https://github.com/apache/grails-data-mapping/issues/882')
+    @Issue('https://github.com/apache/grails-core/issues/14624')
     void "test inheritance with multiple list collections"() {
         when:
         Iteration iter = new Iteration()

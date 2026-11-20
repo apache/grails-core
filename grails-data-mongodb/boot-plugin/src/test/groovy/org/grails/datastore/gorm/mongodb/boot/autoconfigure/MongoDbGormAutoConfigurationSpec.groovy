@@ -18,16 +18,16 @@
  */
 package org.grails.datastore.gorm.mongodb.boot.autoconfigure
 
-import grails.gorm.annotation.Entity
-import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
-import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
 import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
-import org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+import org.springframework.boot.mongodb.autoconfigure.MongoAutoConfiguration
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
-import spock.lang.Specification
+
+import grails.gorm.annotation.Entity
+import org.apache.grails.testing.mongo.AbstractMongoGrailsExtension
+import org.apache.grails.testing.mongo.AutoStartedMongoSpec
 import spock.util.environment.RestoreSystemProperties
 
 /**
@@ -44,8 +44,8 @@ class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
     }
 
     void setupSpec() {
-        System.setProperty('spring.data.mongodb.host', dbContainer.getHost())
-        System.setProperty('spring.data.mongodb.port', dbContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String)
+        System.setProperty('spring.mongodb.host', dbContainer.getHost())
+        System.setProperty('spring.mongodb.port', dbContainer.getMappedPort(AbstractMongoGrailsExtension.DEFAULT_MONGO_PORT) as String)
     }
 
     void cleanup() {
@@ -53,12 +53,10 @@ class MongoDbGormAutoConfigurationSpec extends AutoStartedMongoSpec {
     }
 
     void setup() {
-
         AutoConfigurationPackages.register(context, "org.grails.datastore.gorm.mongodb.boot.autoconfigure")
         this.context.register(TestConfiguration, MongoAutoConfiguration.class,
                               PropertyPlaceholderAutoConfiguration.class);
     }
-
 
     void 'Test that GORM is correctly configured'() {
         when:"The context is refreshed"

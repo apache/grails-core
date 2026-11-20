@@ -87,4 +87,54 @@ class CustomTriggerFactoryBeanSpec extends Specification {
             assert DateBuilder.IntervalUnit.MINUTE == customTrigger.repeatIntervalUnit
             assert 5 == customTrigger.repeatInterval
     }
+
+    void 'the misfire instruction a trigger declares is carried by the trigger'() {
+        setup:
+            def builder = new TriggersConfigBuilder('TestJob', null)
+            builder.build {
+                simple name: 'simple', repeatInterval: 1000,
+                        misfireInstruction: SimpleTrigger.MISFIRE_INSTRUCTION_RESCHEDULE_NEXT_WITH_REMAINING_COUNT
+                cron name: 'cron', cronExpression: CRON_EXPRESSION,
+                        misfireInstruction: CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING
+            }
+
+            Map<String, Trigger> triggers = [:]
+
+            builder.triggers.values().each {
+                CustomTriggerFactoryBean factory = new CustomTriggerFactoryBean()
+                factory.setTriggerClass(it.triggerClass)
+                factory.setTriggerAttributes(it.triggerAttributes)
+                factory.afterPropertiesSet()
+                Trigger trigger = factory.getObject() as Trigger
+                triggers.put(trigger.key.name, trigger)
+            }
+
+        expect:
+            triggers['simple'].misfireInstruction == SimpleTrigger.MISFIRE_INSTRUCTION_RESCHEDULE_NEXT_WITH_REMAINING_COUNT
+            triggers['cron'].misfireInstruction == CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING
+    }
+
+    void 'a trigger uses the smart misfire policy of its type unless it declares an instruction'() {
+        setup:
+            def builder = new TriggersConfigBuilder('TestJob', null)
+            builder.build {
+                simple name: 'simple', repeatInterval: 1000
+                cron name: 'cron', cronExpression: CRON_EXPRESSION
+            }
+
+            Map<String, Trigger> triggers = [:]
+
+            builder.triggers.values().each {
+                CustomTriggerFactoryBean factory = new CustomTriggerFactoryBean()
+                factory.setTriggerClass(it.triggerClass)
+                factory.setTriggerAttributes(it.triggerAttributes)
+                factory.afterPropertiesSet()
+                Trigger trigger = factory.getObject() as Trigger
+                triggers.put(trigger.key.name, trigger)
+            }
+
+        expect:
+            triggers['simple'].misfireInstruction == Trigger.MISFIRE_INSTRUCTION_SMART_POLICY
+            triggers['cron'].misfireInstruction == Trigger.MISFIRE_INSTRUCTION_SMART_POLICY
+    }
 }

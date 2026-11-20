@@ -26,6 +26,12 @@ package org.grails.exceptions.reporting;
  */
 public interface StackTraceFilterer {
 
+    /**
+     * Message used as the header for full stack trace log entries emitted on the
+     * dedicated {@code StackTrace} logger. The filterer itself does not log;
+     * {@code GrailsExceptionResolver} writes the entry when
+     * {@code grails.exceptionresolver.logFullStackTrace} is enabled.
+     */
     String FULL_STACK_TRACE_MESSAGE = "Full Stack Trace:";
     String SYS_PROP_DISPLAY_FULL_STACKTRACE = "grails.full.stacktrace";
 

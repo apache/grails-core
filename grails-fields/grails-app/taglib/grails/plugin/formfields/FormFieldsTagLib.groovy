@@ -19,6 +19,8 @@
 package grails.plugin.formfields
 
 import java.sql.Blob
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -36,11 +38,16 @@ import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.context.properties.bind.Bindable
+import org.springframework.boot.context.properties.bind.Binder
+import org.springframework.context.EnvironmentAware
 import org.springframework.context.MessageSource
 import org.springframework.context.MessageSourceResolvable
 import org.springframework.context.NoSuchMessageException
+import org.springframework.core.env.Environment
 import org.springframework.web.servlet.LocaleResolver
 
+import grails.gorm.validation.DisplayType
 import grails.util.GrailsStringUtils
 import org.grails.buffer.FastStringWriter
 import org.grails.datastore.mapping.model.MappingContext
@@ -63,7 +70,7 @@ import org.grails.web.servlet.mvc.GrailsWebRequest
 import static FormFieldsTemplateService.toPropertyNameFormat
 
 @Slf4j
-class FormFieldsTagLib {
+class FormFieldsTagLib implements EnvironmentAware {
 
     static final namespace = 'f'
 
@@ -81,14 +88,11 @@ class FormFieldsTagLib {
     @Value('${grails.plugin.fields.localizeNumbers:true}')
     Boolean localizeNumbers
 
-    @Value('${grails.plugin.fields.exclusions.list:#{T(java.util.Arrays).asList("id", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsList
+    List<String> exclusionsList = ['id', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.input:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsInput
+    List<String> exclusionsInput = ['version', 'dateCreated', 'lastUpdated']
 
-    @Value('${grails.plugin.fields.exclusions.display:#{T(java.util.Arrays).asList("version", "dateCreated", "lastUpdated")}}')
-    List<String> exclusionsDisplay
+    List<String> exclusionsDisplay = ['version', 'dateCreated', 'lastUpdated']
 
     enum ExclusionType {
         List, Display, Input
@@ -107,6 +111,19 @@ class FormFieldsTagLib {
     MessageSource messageSource
 
     static defaultEncodeAs = [taglib: 'raw']
+
+    /**
+     * Reads the {@code grails.plugin.fields.exclusions} settings, each given as a comma-separated
+     * value or as a list. They are bound rather than injected with {@code @Value}, which cannot read
+     * a list from {@code application.yml}, because Grails exposes such a list element by element.
+     */
+    @Override
+    void setEnvironment(Environment environment) {
+        Binder binder = Binder.get(environment)
+        exclusionsList = binder.bind('grails.plugin.fields.exclusions.list', Bindable.listOf(String)).orElse(exclusionsList)
+        exclusionsInput = binder.bind('grails.plugin.fields.exclusions.input', Bindable.listOf(String)).orElse(exclusionsInput)
+        exclusionsDisplay = binder.bind('grails.plugin.fields.exclusions.display', Bindable.listOf(String)).orElse(exclusionsDisplay)
+    }
 
     class BeanAndPrefix {
         Object bean
@@ -246,7 +263,7 @@ class FormFieldsTagLib {
                 widgetAttrs.remove('class')
             }
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
             } else {
                 model.widget = renderWidget(propertyAccessor, model, widgetAttrs, widgetFolder ?: templatesFolder, theme)
             }
@@ -304,16 +321,6 @@ class FormFieldsTagLib {
                         displayStyle: displayStyle,
                         theme: theme])
         }
-    }
-
-    /**
-     * @deprecated since version 1.5 - Use widget instead
-     * @attr bean Name of the source bean in the GSP model.
-     * @attr property REQUIRED The name of the property to display. This is resolved
-     * against the specified bean or the bean in the current scope.
-     */
-    def input = { attrs ->
-        out << widget(attrs)
     }
 
     /**
@@ -388,7 +395,7 @@ class FormFieldsTagLib {
                 out << render(template: "/templates/_fields/$template", model: attrs + [domainClass: domainClass, domainProperties: properties]) { prop ->
                     BeanPropertyAccessor propertyAccessor = resolveProperty(bean, prop.name)
                     Map model = buildModel(propertyAccessor, attrs, 'HTML')
-                    out << raw(renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme))
+                    out << renderDisplayWidget(propertyAccessor, model, attrs, templatesFolder, theme)?.encodeAsRaw()
                 }
             }
         } else {
@@ -414,7 +421,7 @@ class FormFieldsTagLib {
             String widgetsFolderToUse = widgetFolder ?: templatesFolder
 
             if (hasBody(body)) {
-                model.widget = raw(body(model + [attrs: widgetAttrs] + widgetAttrs))
+                model.widget = body(model + [attrs: widgetAttrs] + widgetAttrs)?.encodeAsRaw()
                 model.value = body(model)
             } else {
                 model.widget = renderDisplayWidget(propertyAccessor, model, widgetAttrs, widgetsFolderToUse, theme)
@@ -425,7 +432,7 @@ class FormFieldsTagLib {
             if (template) {
                 out << render(template: template.path, plugin: template.plugin, model: model + [attrs: wrapperAttrs] + wrapperAttrs)
             } else {
-                out << raw(renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme))
+                out << renderDisplayWidget(propertyAccessor, model, attrs, widgetsFolderToUse, theme)?.encodeAsRaw()
             }
         }
 
@@ -563,8 +570,12 @@ class FormFieldsTagLib {
     }
 
     private resolvePageScopeVariable(attributeName) {
-        // Tomcat throws NPE if you query pageScope for null/empty values
-        attributeName?.toString() ? pageScope.variables[attributeName] : null
+        def variableName = attributeName?.toString()
+        if (!variableName) {
+            // Tomcat throws NPE if you query pageScope for null/empty values
+            return null
+        }
+        pageScope.variables[variableName]
     }
 
     private BeanAndPrefix resolveBeanAndPrefix(beanAttribute, prefixAttribute, attributes) {
@@ -617,12 +628,24 @@ class FormFieldsTagLib {
                 fieldsDomainPropertyFactory.build(domainClass.getPropertyByName(propertyName))
             }
         } else {
-            properties = list ? domainModelService.getListOutputProperties(domainClass) : domainModelService.getInputProperties(domainClass,
-                    exclusionType == ExclusionType.Input ? exclusionsInput : exclusionsDisplay)
+            if (list) {
+                properties = domainModelService.getListOutputProperties(domainClass)
+            } else if (exclusionType == ExclusionType.Display) {
+                properties = domainModelService.getOutputProperties(domainClass, exclusionsDisplay)
+            } else {
+                properties = domainModelService.getInputProperties(domainClass, exclusionsInput, true)
+            }
             // If 'except' is not set, but 'list' is, exclude 'id', 'dateCreated' and 'lastUpdated' by default
             List<String> blacklist = attrs.containsKey('except') ? getList(attrs.except) : (list ? exclusionsList : [])
 
-            properties.removeAll { it.name in blacklist }
+            properties.removeAll { property ->
+                if (property.name in blacklist) {
+                    DisplayType displayType = property.constrained?.displayType
+                    // DisplayType.ALL or OUTPUT_ONLY explicitly overrides the blacklist for output views
+                    return displayType != DisplayType.ALL && displayType != DisplayType.OUTPUT_ONLY
+                }
+                false
+            }
         }
 
         return properties
@@ -669,7 +692,7 @@ class FormFieldsTagLib {
         message ?: defaultMessage
     }
 
-    protected CharSequence renderDefaultField(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultField(Map model, Map attrs = [:]) {
         List classes = [attrs['class'] ?: 'fieldcontain']
         if (model.invalid) classes << (attrs.remove('invalidClass') ?: 'error')
         if (model.required) classes << (attrs.remove('requiredClass') ?: 'required')
@@ -702,11 +725,11 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(Map model, Map attrs = [:]) {
         renderDefaultInput(null, model, attrs)
     }
 
-    CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
+    private CharSequence renderDefaultInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs = [:]) {
         Constrained constrained = (Constrained) model.constraints
         attrs.name = (model.prefix ?: '') + model.property
         attrs.value = model.value
@@ -765,7 +788,7 @@ class FormFieldsTagLib {
         }
     }
 
-    CharSequence renderDateTimeInput(Map model, Map attrs) {
+    private CharSequence renderDateTimeInput(Map model, Map attrs) {
         attrs.precision = model.type in [java.sql.Time, LocalDateTime] ? 'minute' : 'day'
         if (!model.required) {
             attrs.noSelection = ['': '']
@@ -774,7 +797,7 @@ class FormFieldsTagLib {
         return g.datePicker(attrs)
     }
 
-    CharSequence renderStringInput(Map model, Map attrs) {
+    private CharSequence renderStringInput(Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type) {
@@ -806,7 +829,7 @@ class FormFieldsTagLib {
         return g.field(attrs)
     }
 
-    CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
+    private CharSequence renderNumericInput(BeanPropertyAccessor propertyAccessor, Map model, Map attrs) {
         Constrained constrained = (Constrained) model.constraints
 
         if (!attrs.type && constrained?.inList) {
@@ -832,14 +855,22 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected NumberFormat getNumberFormatter() {
-        NumberFormat.getInstance(getLocale())
+    private NumberFormat getNumberFormatter() {
+        NumberFormat numberFormat = NumberFormat.getInstance(getLocale())
+        // Normalize Unicode minus sign (U+2212) to ASCII hyphen-minus (U+002D)
+        // for HTML compatibility (fixes grails-core#15178)
+        if (numberFormat instanceof DecimalFormat) {
+            DecimalFormatSymbols symbols = ((DecimalFormat) numberFormat).decimalFormatSymbols
+            symbols.minusSign = '-' as char
+            ((DecimalFormat) numberFormat).decimalFormatSymbols = symbols
+        }
+        return numberFormat
     }
 
     @CompileStatic
-    protected Locale getLocale() {
+    private Locale getLocale() {
         def locale
-        def request = GrailsWebRequest.lookup()?.currentRequest
+        def request = GrailsWebRequest.lookup()?.request
         if (request instanceof HttpServletRequest) {
             locale = localeResolver?.resolveLocale(request)
         }
@@ -850,7 +881,7 @@ class FormFieldsTagLib {
     }
 
     @CompileStatic
-    protected String getDefaultNumberType(Map model) {
+    private String getDefaultNumberType(Map model) {
         Class modelType = (Class) model.type
 
         def typeName = modelType.simpleName.toLowerCase()
@@ -912,24 +943,28 @@ class FormFieldsTagLib {
         Writer buffer = new FastStringWriter()
         buffer << '<ul>'
         def persistentProperty = model.persistentProperty
-        def controllerName
+        // The associated domain class, rather than a controller named after it, so each link reaches the
+        // controller serving the domain class wherever it is.
+        Class associatedClass = null
+        def propertyName
         def shortName
         if (persistentProperty instanceof Association) {
             Association prop = ((Association) persistentProperty)
-            controllerName = prop.associatedEntity.decapitalizedName
+            associatedClass = prop.associatedEntity.javaClass
+            propertyName = prop.associatedEntity.decapitalizedName
             shortName = prop.associatedEntity.javaClass.simpleName
         }
 
         attrs.value.each {
             buffer << '<li>'
-            buffer << g.link(controller: controllerName, action: 'show', id: it.id, it.toString().encodeAsHTML())
+            buffer << g.link(resource: associatedClass, action: 'show', id: it.id, it.toString().encodeAsHTML())
             buffer << '</li>'
         }
         buffer << '</ul>'
-        def referencedTypeLabel = message(code: "${controllerName}.label", default: shortName)
+        def referencedTypeLabel = message(code: "${propertyName}.label", default: shortName)
         def addLabel = g.message(code: 'default.add.label', args: [referencedTypeLabel])
         PersistentEntity beanClass = (PersistentEntity) model.beanClass
-        buffer << g.link(controller: controllerName, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
+        buffer << g.link(resource: associatedClass, action: 'create', params: [("${beanClass.decapitalizedName}.id".toString()): model.bean.id], addLabel)
         buffer.buffer
     }
 
@@ -998,7 +1033,7 @@ class FormFieldsTagLib {
 
     private CharSequence displayAssociation(value, PersistentEntity referencedDomainClass) {
         if (value && referencedDomainClass) {
-            g.link(controller: referencedDomainClass.decapitalizedName, action: 'show', id: value.id, value.toString().encodeAsHTML())
+            g.link(resource: referencedDomainClass.javaClass, action: 'show', id: value.id, value.toString().encodeAsHTML())
         } else if (value) {
             value.toString()
         }

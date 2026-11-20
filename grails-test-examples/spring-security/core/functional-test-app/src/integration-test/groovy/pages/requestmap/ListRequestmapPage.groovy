@@ -24,27 +24,27 @@ import pages.ScaffoldPage
 
 class ListRequestmapPage extends ScaffoldPage {
 
-	static url = 'testRequestmap'
+    static url = 'testRequestmap'
 
-	static at = {
-		title ==~ /TestRequestmap List/
-	}
+    static at = {
+        title ==~ /TestRequestmap List/
+    }
 
-	static content = {
-		newRequestmapButton(to: CreateRequestmapPage) { $('a', text: 'New TestRequestmap') }
-		requestmapTable { $('div.content table', 0) }
-		requestmapRows(required: false) { requestmapTable.find('tbody').find('tr') }
-		requestmapRow { i -> requestmapRows[i].module(RequestmapRow) }
-	}
+    static content = {
+        newRequestmapButton(to: CreateRequestmapPage) { $('a', text: 'New TestRequestmap') }
+        requestmapTable { $('div.content table', 0) }
+        requestmapRows(required: false) { requestmapTable.find('tbody').find('tr') }
+        requestmapRow { int i -> requestmapRows[i].module(RequestmapRow) }
+    }
 }
 
 class RequestmapRow extends Module {
-	static content = {
-		cell { i -> $('td', i) }
-		cellText { i -> cell(i).text() }
-		cellHrefText{ i -> cell(i).find('a').text() }
+    static content = {
+        cell { int i -> $('td', i) }
+        cellText { int i -> cell(i).text() }
+        cellHrefText { int i -> cell(i).find('a').text() }
 
-		configAttribute { cellText(1) }
-		showLink(to: ShowRequestmapPage) { cell(0).find('a') }
-	}
+        configAttribute { cellText(1) }
+        showLink(to: ShowRequestmapPage) { cell(0).find('a') }
+    }
 }

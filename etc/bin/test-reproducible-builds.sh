@@ -28,28 +28,26 @@ cd "${SCRIPT_DIR}/../.."
 rm -rf "${SCRIPT_DIR}/results" || true
 mkdir -p "${SCRIPT_DIR}/results"
 
+build_all() {
+  killall -e java || true
+  cd grails-gradle
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
+  cd ..
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
+  cd grails-forge
+  ./gradlew build --rerun-tasks -PskipTests --no-build-cache --no-daemon
+  cd ..
+  killall -e java || true
+}
+
 git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
-killall -e java || true
-cd grails-gradle
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd grails-forge
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
+build_all
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/first.txt"
 mkdir -p "${SCRIPT_DIR}/results/first"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/first/"
 
 git clean -xdf --exclude='etc/bin' --exclude='.idea' --exclude='.gradle'
-killall -e java || true
-cd grails-gradle
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd grails-forge
-./gradlew build --rerun-tasks -PskipTests --no-build-cache
-cd ..
+build_all
 "${SCRIPT_DIR}/generate-build-artifact-hashes.groovy" > "${SCRIPT_DIR}/results/second.txt"
 mkdir -p "${SCRIPT_DIR}/results/second"
 find . -path ./etc -prune -o -type f -path '*/build/libs/*.jar' -print0 | xargs -0 cp --parents -t "${SCRIPT_DIR}/results/second/"

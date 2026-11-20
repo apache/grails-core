@@ -115,9 +115,9 @@ Lookups by id are restricted to the current tenant as well. `get`, `read`, `exis
 Book.get(id)
 ----
 
-Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. Inside `Tenants.withoutId` a lookup by id is not restricted to a tenant, and neither is a proxy returned by `load` that is initialized there. A tenant id of `DEFAULT` restricts a lookup by id to that tenant as it restricts a query.
+Without a current tenant a lookup by id throws `TenantNotFoundException`, as a query does. Inside `Tenants.withoutId` a lookup by id is not restricted to a tenant, and neither is a proxy returned by `load` that is initialized there. A tenant id of `default` restricts a lookup by id to that tenant as it restricts a query.
 
-When an instance is saved, GORM sets its `tenantId` to the current tenant id, also when that tenant id is `DEFAULT`, the name of the default connection source. Only inside `Tenants.withoutId` or a method annotated with `@WithoutTenant` does an instance keep the `tenantId` that is set on it.
+When an instance is saved, GORM sets its `tenantId` to the current tenant id, also when that tenant id is `default`, the name of the default connection source. Only inside `Tenants.withoutId` or a method annotated with `@WithoutTenant` does an instance keep the `tenantId` that is set on it.
 
 But this logic bypasses any built into tenant id interception and inclusion:
 

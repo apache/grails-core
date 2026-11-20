@@ -69,6 +69,7 @@ import org.grails.datastore.gorm.validation.constraints.eval.DefaultConstraintEv
 import org.grails.datastore.gorm.validation.constraints.registry.ConstraintRegistry;
 import org.grails.datastore.gorm.validation.constraints.registry.DefaultConstraintRegistry;
 import org.grails.datastore.mapping.keyvalue.mapping.config.KeyValueMappingContext;
+import org.grails.web.util.HiddenHttpMethod;
 
 import static grails.web.mapping.UrlMapping.ACTION;
 import static grails.web.mapping.UrlMapping.CONTROLLER;
@@ -129,11 +130,32 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
     private static final String RESOURCE = "resource";
     private static final String RESOURCES = "resources";
 
+    /**
+     * The value of the {@code resources} argument that maps the RESTful resource conventions onto every
+     * controller, rather than onto one named controller.
+     */
+    private static final String WILDCARD_RESOURCES = "*";
+
     private final ApplicationContext applicationContext;
     private GrailsApplication grailsApplication;
 
     private final ConstraintRegistry constraintRegistry;
     private final ConstraintsEvaluator constraintsEvaluator;
+
+    /**
+     * Whether a "resources" mapping should also route a POST to the member URL at the update action.
+     *
+     * RestfulController has permitted POST for update since #9926 — raised because AngularJS $resource, and
+     * the clients modelled on it, POST to the member URL to save an existing object rather than sending a
+     * PUT — but no mapping was ever generated for it, leaving that permission unreachable.
+     *
+     * Generated only while the hidden HTTP method filter is disabled. In that mode the filter chain already
+     * sees a form's PUT as a bare POST to this URL, so the route adds no request shape security had been
+     * able to distinguish; it does add a member URL that answers POST, which the upgrade notes call out.
+     */
+    private boolean isPostUpdateVariantEnabled() {
+        return grailsApplication != null && !HiddenHttpMethod.isServletFilterMode(grailsApplication.getConfig());
+    }
 
     public DefaultUrlMappingEvaluator(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -418,6 +440,69 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             }
         }
 
+        /**
+         * Define a group with default mapping parameters that are inherited by child mappings.
+         * Child mappings can override any default by specifying the parameter explicitly.
+         *
+         * <p>Example usage:
+         * <pre>
+         * group "/api", namespace: 'api', controller: 'resource', {
+         *     "/list"(action: 'list')    // inherits namespace and controller
+         *     "/show"(action: 'show')    // inherits namespace and controller
+         * }
+         * </pre>
+         *
+         * @param defaults Map of default parameters (controller, action, namespace, plugin, view, method/HTTP_METHOD)
+         * @param uri The URI prefix for the group
+         * @param mappingsClosure The mappings in the group
+         * @since 7.1
+         */
+        public void group(Map<String, Object> defaults, String uri, Closure<?> mappingsClosure) {
+            try {
+                var parentResource = new ParentResource(null, uri, true, true);
+                parentResources.push(parentResource);
+                var mappingInfo = pushNewMetaMappingInfo();
+                applyGroupDefaults(mappingInfo, defaults);
+                var builder = new UrlGroupMappingRecursionBuilder(this, parentResource);
+                mappingsClosure.setDelegate(builder);
+                mappingsClosure.setResolveStrategy(Closure.DELEGATE_FIRST);
+                mappingsClosure.call();
+            } finally {
+                mappingInfoDeque.pop();
+                parentResources.pop();
+            }
+        }
+
+        private void applyGroupDefaults(MetaMappingInfo mappingInfo, Map<String, Object> defaults) {
+            if (defaults == null || defaults.isEmpty()) {
+                return;
+            }
+            // Merge defaults with any inherited group defaults
+            if (mappingInfo.getGroupDefaults() == null) {
+                mappingInfo.setGroupDefaults(new HashMap<>(defaults));
+            } else {
+                mappingInfo.getGroupDefaults().putAll(defaults);
+            }
+            if (defaults.containsKey(CONTROLLER)) {
+                mappingInfo.setController(defaults.get(CONTROLLER));
+            }
+            if (defaults.containsKey(ACTION)) {
+                mappingInfo.setAction(defaults.get(ACTION));
+            }
+            if (defaults.containsKey(NAMESPACE)) {
+                mappingInfo.setNamespace(defaults.get(NAMESPACE));
+            }
+            if (defaults.containsKey(PLUGIN)) {
+                mappingInfo.setPlugin(defaults.get(PLUGIN));
+            }
+            if (defaults.containsKey(VIEW)) {
+                mappingInfo.setView(defaults.get(VIEW));
+            }
+            if (defaults.containsKey(HTTP_METHOD)) {
+                mappingInfo.setHttpMethod(defaults.get(HTTP_METHOD).toString());
+            }
+        }
+
         @Override
         public Object invokeMethod(String methodName, Object arg) {
             if (binding == null) {
@@ -688,13 +773,16 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                             String version = null;
 
                             if (namedArguments.containsKey(UrlMapping.VERSION)) {
-                                version = namedArguments.get(UrlMapping.VERSION).toString();
+                                Object versionValue = namedArguments.get(UrlMapping.VERSION);
+                                version = versionValue != null ? versionValue.toString() : null;
                             }
                             if (namedArguments.containsKey(NAMESPACE)) {
-                                mappingInfo.setNamespace(namedArguments.get(NAMESPACE).toString());
+                                Object nsValue = namedArguments.get(NAMESPACE);
+                                mappingInfo.setNamespace(nsValue != null ? nsValue.toString() : null);
                             }
                             if (namedArguments.containsKey(PLUGIN)) {
-                                mappingInfo.setPlugin(namedArguments.get(PLUGIN).toString());
+                                Object pluginValue = namedArguments.get(PLUGIN);
+                                mappingInfo.setPlugin(pluginValue != null ? pluginValue.toString() : null);
                             }
 
                             var urlData = createUrlMappingData(mappedURI, isResponseCode);
@@ -718,7 +806,13 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                                 createSingleResourceRestfulMappings(controllerName, mappingInfo.getPlugin(), mappingInfo.getNamespace(), version, urlData, currentConstraints, calculateIncludes(namedArguments, DEFAULT_RESOURCE_INCLUDES));
                             } else if (namedArguments.containsKey(RESOURCES)) {
                                 var controller = namedArguments.get(RESOURCES);
-                                var controllerName = controller.toString();
+                                var isWildcard = WILDCARD_RESOURCES.equals(controller.toString());
+                                if (isWildcard) {
+                                    validateWildcardResources(mappedURI, args, currentConstraints);
+                                }
+                                // A null controller name leaves the mapping to resolve the controller from the
+                                // URL's own capture when a request is matched.
+                                String controllerName = isWildcard ? null : controller.toString();
                                 mappingInfo.setController(controllerName);
                                 parentResources.push(new ParentResource(controllerName, mappedURI, false));
                                 try {
@@ -837,6 +931,28 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             return uriBuilder.toString();
         }
 
+        /**
+         * Validates a wildcard resources mapping. Because the controller is not known until a request is
+         * matched, the URL has to capture it, and no child resource can be nested within it.
+         */
+        private void validateWildcardResources(String mappedURI, Object[] args, List<ConstrainedProperty> constraints) {
+            var capturesController = false;
+            for (var constraint : constraints) {
+                if (CONTROLLER.equals(constraint.getPropertyName())) {
+                    capturesController = true;
+                    break;
+                }
+            }
+            if (!capturesController) {
+                throw new UrlMappingException("A wildcard resources mapping requires the URL to capture the " +
+                        "controller, for example \"/$controller\"(resources: '*'), but [" + mappedURI + "] does not");
+            }
+            if (args.length > 1 && args[1] instanceof Closure) {
+                throw new UrlMappingException("Cannot nest mappings within the wildcard resources mapping [" +
+                        mappedURI + "] because the parent controller is not known until a request is matched");
+            }
+        }
+
         private void invokeLastArgumentIfClosure(Object[] args) {
             if (args.length > 1 && args[1] instanceof Closure) {
                 ((Closure<?>) args[1]).call();
@@ -875,6 +991,11 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 // PUT /$controller/$id -> action:'update'
                 var updateUrlMapping = createUpdateActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
                 configureUrlMapping(updateUrlMapping);
+                if (isPostUpdateVariantEnabled()) {
+                    // POST /$controller/$id -> action:'update'
+                    var updatePostUrlMapping = createUpdatePostActionResourcesRestfulMapping(controllerName, pluginName, namespace, version, urlData, constrainedList);
+                    configureUrlMapping(updatePostUrlMapping);
+                }
             }
             if (includes.contains(ACTION_PATCH)) {
                 // PATCH /$controller/$id -> action:'patch'
@@ -892,6 +1013,16 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
             var deleteUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
             var deleteUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
             return new RegexUrlMapping(deleteUrlMappingData, controllerName, ACTION_DELETE, namespace, pluginName, null, HttpMethod.DELETE.toString(), version, deleteUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
+        }
+
+        // Shares the update route's URL, so only the request method differs and no new URL is introduced.
+        // Deliberately not generated for a singular "resource" mapping: that has no id segment and POST
+        // /$controller is already the save route, and a client POSTing to save an existing object always has
+        // an id to put in the URL.
+        protected UrlMapping createUpdatePostActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
+            var updateUrlMappingData = createRelativeUrlDataWithIdAndFormat(urlData);
+            var updateUrlMappingConstraints = createConstraintsWithIdAndFormat(constrainedList);
+            return new RegexUrlMapping(updateUrlMappingData, controllerName, ACTION_UPDATE, namespace, pluginName, null, HttpMethod.POST.toString(), version, updateUrlMappingConstraints.toArray(new ConstrainedProperty[0]), grailsApplication);
         }
 
         protected UrlMapping createUpdateActionResourcesRestfulMapping(String controllerName, Object pluginName, Object namespace, String version, UrlMappingData urlData, List<ConstrainedProperty> constrainedList) {
@@ -1231,6 +1362,12 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                         mappingInfo.getConstraints().add(new DefaultConstrainedProperty(UrlMapping.class, parentResource.controllerName + "Id", String.class, constraintRegistry));
                     }
                 }
+                // Inherit group defaults (only explicitly set via group defaults, not from normal mapping processing)
+                var parentGroupDefaults = parentMappingInfo.getGroupDefaults();
+                if (parentGroupDefaults != null && !parentGroupDefaults.isEmpty()) {
+                    mappingInfo.setGroupDefaults(new HashMap<>(parentGroupDefaults));
+                    applyGroupDefaults(mappingInfo, parentGroupDefaults);
+                }
             }
             if (!previousConstraints.isEmpty()) {
                 mappingInfo.getConstraints().addAll(previousConstraints);
@@ -1281,6 +1418,14 @@ public class DefaultUrlMappingEvaluator implements UrlMappingEvaluator, ClassLoa
                 uri = parentResource.uri.concat(uri);
             }
             super.group(uri, mappings);
+        }
+
+        @Override
+        public void group(Map<String, Object> defaults, String uri, Closure<?> mappings) {
+            if (parentResource != null) {
+                uri = parentResource.uri.concat(uri);
+            }
+            super.group(defaults, uri, mappings);
         }
     }
 }

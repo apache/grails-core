@@ -215,7 +215,7 @@ class Video {
     String title
     Integer numberOfMinutes
     static constraints = {
-        title blank:false
+        title blank: false, nullable: false
         numberOfMinutes nullable: true
     }
 }

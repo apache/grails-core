@@ -20,6 +20,8 @@ package org.grails.datastore.gorm.dirty.checking
 
 import grails.gorm.annotation.Entity
 import grails.gorm.dirty.checking.DirtyCheck
+import org.apache.grails.common.compiler.GroovyTransformOrder
+import org.grails.compiler.gorm.DirtyCheckTransformation
 import org.grails.datastore.mapping.dirty.checking.DirtyCheckable
 import spock.lang.PendingFeature
 import spock.lang.Specification
@@ -29,6 +31,11 @@ import spock.lang.Issue
  * @author Graeme Rocher
  */
 class DirtyCheckTransformationSpec extends Specification {
+
+    void "priority orders the transform via DIRTY_CHECK_ORDER"() {
+        expect:
+        new DirtyCheckTransformation().priority() == GroovyTransformOrder.DIRTY_CHECK_ORDER
+    }
     @Issue('https://github.com/apache/grails-data-mapping/issues/894')
     void "Test transform doesn't make getters require static compilation"() {
         when:"A Dirty checkable class with generic types is parsed"

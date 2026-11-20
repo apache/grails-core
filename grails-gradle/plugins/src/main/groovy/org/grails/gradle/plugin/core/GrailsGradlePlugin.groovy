@@ -18,21 +18,20 @@
  */
 package org.grails.gradle.plugin.core
 
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+
 import grails.util.BuildSettings
 import grails.util.Environment
-import grails.util.GrailsNameUtils
 import grails.util.Metadata
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import io.spring.gradle.dependencymanagement.DependencyManagementPlugin
-import io.spring.gradle.dependencymanagement.dsl.DependencyManagementExtension
 import org.apache.grails.gradle.common.PropertyFileUtils
 import org.apache.tools.ant.filters.EscapeUnicode
 import org.apache.tools.ant.filters.ReplaceTokens
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
-import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -41,57 +40,102 @@ import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.dsl.DependencyHandler
 import org.gradle.api.attributes.AttributeMatchingStrategy
+import org.gradle.api.attributes.Category
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.file.CopySpec
+import org.gradle.api.file.Directory
 import org.gradle.api.file.DuplicatesStrategy
 import org.gradle.api.file.FileCollection
 import org.gradle.api.file.RegularFile
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.ExtraPropertiesExtension
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.AbstractCopyTask
+import org.gradle.api.tasks.GroovySourceDirectorySet
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetOutput
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.process.JavaForkOptions
 import org.gradle.tooling.provider.model.ToolingModelBuilderRegistry
-import org.grails.build.parsing.CommandLineParser
-import org.grails.gradle.plugin.commands.ApplicationContextCommandTask
-import org.grails.gradle.plugin.commands.ApplicationContextScriptTask
+import org.grails.gradle.plugin.bom.BomPropertyOverridesExtension
+import org.grails.gradle.plugin.bom.BomPropertyOverridesPlugin
+import org.grails.gradle.plugin.commands.GrailsCliGradlePlugin
 import org.grails.gradle.plugin.exploded.ExplodedCompatibilityRule
 import org.grails.gradle.plugin.exploded.ExplodedDisambiguationRule
 import org.grails.gradle.plugin.exploded.GrailsExplodedPlugin
+import org.grails.gradle.plugin.i18n.GenerateI18nDescriptorTask
+import org.apache.grails.gradle.plugin.aot.AotCacheExtension
+import org.apache.grails.gradle.plugin.aot.ExtractApplicationTask
+import org.apache.grails.gradle.plugin.aot.GenerateNativeMetadataTask
+import org.apache.grails.gradle.plugin.aot.NativeMetadataExtension
+import org.apache.grails.gradle.plugin.aot.TraceNativeMetadataTask
+import org.apache.grails.gradle.plugin.aot.TrainAotCacheTask
 import org.grails.gradle.plugin.model.GrailsClasspathToolingModelBuilder
 import org.grails.gradle.plugin.run.FindMainClassTask
 import org.grails.gradle.plugin.util.SourceSets
-import org.grails.io.support.FactoriesLoaderSupport
 import org.springframework.boot.gradle.dsl.SpringBootExtension
 import org.springframework.boot.gradle.plugin.ResolveMainClassName
 import org.springframework.boot.gradle.plugin.SpringBootPlugin
 import org.springframework.boot.gradle.tasks.bundling.BootArchive
 import org.springframework.boot.gradle.tasks.run.BootRun
-import org.springframework.boot.loader.tools.LoaderImplementation
-
 import javax.inject.Inject
 
 /**
  * The main Grails gradle plugin implementation
  *
  * @since 3.0
- * @author Graeme Rocher
  */
 @CompileStatic
-class GrailsGradlePlugin extends GroovyPlugin {
+class GrailsGradlePlugin implements Plugin<Project> {
 
-    public static final String APPLICATION_CONTEXT_COMMAND_CLASS = 'grails.dev.commands.ApplicationCommand'
+    private static final String NATIVE_IMAGE_PLUGIN = 'org.graalvm.buildtools.native'
+
+    /** The plugin that compiles the pages, which are half of what a native image has to be told about. */
+    private static final String GSP_PLUGIN = 'org.apache.grails.gradle.grails-gsp'
+
+    private static final String SPRING_BOOT_PLUGIN = 'org.springframework.boot'
+
+    private static final String ASSET_PIPELINE_PLUGIN = 'cloud.wondrify.asset-pipeline'
+
+    private static final int TRAINING_PORT = 18080
+
+    /** Not the training port: a trace and a training run are both a started application. */
+    private static final int TRACING_PORT = 18081
+
+    private static final int TRAINING_START_TIMEOUT_SECONDS = 180
+
     private static final String CLI_PID_FILE_PROPERTY = 'grails.cli.pid.file'
     private static final String RUN_APP_PID_FILE_NAME = 'run-app.pid'
+
+    /**
+     * A {@code configurationScript} configured on a GroovyCompile task, keyed by compile task name
+     * and captured when the task graph is ready, for the generator task to fold into the combined
+     * script it writes. An instance field rather than a static one so it is scoped to this project
+     * and this build, and cannot leak a stale script into a later build in the same daemon.
+     */
+    private final Map<String, File> userGroovyCompilerConfigScripts = new ConcurrentHashMap<>()
+
+    /**
+     * The Grails half of the compiler configuration script, keyed by compile task name. Built while
+     * the compile task is configured so subclasses can declare inputs on it, and evaluated when the
+     * generator task builds its content.
+     */
+    private final Map<String, Closure<String>> grailsCompilerConfigScripts = new ConcurrentHashMap<>()
 
     List<Class<Plugin>> basePluginClasses = [IntegrationTestGradlePlugin] as List<Class<Plugin>>
     List<String> excludedGrailsAppSourceDirs = ['migrations', 'assets']
@@ -104,6 +148,9 @@ class GrailsGradlePlugin extends GroovyPlugin {
     }
 
     void apply(Project project) {
+
+        project.pluginManager.apply(GroovyPlugin)
+
         // validate that only an app or a plugin is registered, and never both
         OnlyOneGrailsPlugin marker = (OnlyOneGrailsPlugin) project.getExtensions().findByName(OnlyOneGrailsPlugin.name)
         if (marker) {
@@ -113,10 +160,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         // reset the environment to ensure it is resolved again for each invocation
         Environment.reset()
-
-        if (!project.tasks.names.contains('compileGroovy')) {
-            super.apply(project)
-        }
 
         excludeDependencies(project)
 
@@ -140,27 +183,33 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
         enableNative2Ascii(project, grailsVersion)
 
+        configureI18nDescriptor(project)
+        configureNativeMetadata(project)
+        configureAotCache(project)
+
+        configureTemplateResources(project)
+
         configureAssetCompilation(project)
 
-        configureConsoleTask(project)
+        // the CLI tier — the grailsCli configurations, command/console/shell/script tasks, and
+        // cli companion discovery — lives in its own plugin
+        project.pluginManager.apply(GrailsCliGradlePlugin)
 
         configureForkSettings(project, grailsVersion)
 
         configureBootRunPidFile(project)
 
+        configureAheadOfTimeProcessing(project)
+
+        configureNativeImage(project)
+
         configureJavaCompatibilityArgs(project)
 
         configureGrailsSourceDirs(project)
 
-        configureApplicationCommands(project)
-
         project.gradle.projectsEvaluated {
             createBuildPropertiesTask(project)
         }
-
-        configureRunScript(project)
-
-        configureRunCommand(project)
 
         configureGroovyCompiler(project)
 
@@ -180,69 +229,231 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
+    /**
+     * The main class the {@code findMainClass} task found. The value is read from the task's output when it is
+     * queried, so the configuration cache keeps it lazy instead of storing whatever the file held before the task ran.
+     */
     protected static Provider<String> getMainClassProvider(Project project) {
-        Provider<FindMainClassTask> findMainClassTask = project.tasks.named('findMainClass', FindMainClassTask)
-        project.provider {
-            File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-            if (!cacheFile?.exists()) {
-                return null
-            }
-
-            cacheFile?.text
-        }
+        project.tasks.named('findMainClass', FindMainClassTask)
+                .flatMap { FindMainClassTask task -> task.mainClassCacheFile }
+                .map { RegularFile cacheFile -> cacheFile.asFile.exists() ? cacheFile.asFile.text : null }
     }
 
     private void configureGroovyCompiler(Project project) {
         project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
-            // Use a task-specific config file to avoid overlapping outputs when multiple
-            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
-            Provider<RegularFile> groovyCompilerConfigFile = project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${c.name}.groovy")
-            c.outputs.file(groovyCompilerConfigFile)
+            if (c.name == 'compileGroovy') {
+                // Resource-only changes do not ordinarily invalidate compilation. These files change
+                // what the compiler generates: whether it owns the imports resource, and what it
+                // merges into the factories files, so adding, editing or deleting one must run the
+                // transforms even when no Groovy source changed.
+                AutoConfigurationImportsCompileInput.register(project, c)
+                FactoriesCompileInput.registerGrailsFactories(project, c)
+                FactoriesCompileInput.registerCliFactories(project, c)
+                // Under incremental Groovy compilation, which a build opts into with
+                // options.incremental = true, a deleted class that nothing depends on compiles nothing,
+                // so the factories files the compiler generated are reconciled with what the compilation
+                // produced once it is done. The default full recompilation cleans the destination
+                // directory first and leaves nothing to prune.
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.GRAILS_FACTORIES_LOCATION,
+                        [FactoriesCompileInput.GRAILS_FACTORIES_PATH])
+                PruneGeneratedFactories.register(project, c, PruneGeneratedFactories.CLI_FACTORIES_LOCATION,
+                        FactoriesCompileInput.CLI_FACTORIES_PATHS)
+            }
+            // Publish the project base directory to the Groovy compiler's worker daemon JVM so the
+            // GlobalGrailsClassInjectorTransformation AST transform can locate
+            // src/main/resources/META-INF/grails.factories without relying on hardcoded
+            // "build"/"target" output-directory names. Reuses the same CommandLineArgumentProvider
+            // pattern as forked test/run tasks (see configureForkSettings).
+            c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
 
-            Closure<String> userScriptGenerator = getGroovyCompilerScript(c, project)
-            c.doFirst {
-                // This isn't ideal - we're performing configuration at execution time, but the alternative would be having
-                // to maintain a clean / configuration task and then gradle would want to cache those tasks.  Since the inputs
-                // to those tasks would effectively be the runtimeClasspath, dependency problems can arise if another task
-                // changes the runtimeClasspath. To prevent having to add those tasks into the dependency chain, use doFirst
-                File combinedFile = groovyCompilerConfigFile.get().asFile
-                if (!combinedFile.exists()) {
-                    combinedFile.parentFile.mkdirs()
-                    combinedFile.createNewFile()
+            // Publish the grails { compileStatic { controllers / services / tagLibs } } opt-ins to the
+            // compiler worker JVM as system properties so CompileStaticArtefactInjector can stamp
+            // @GrailsCompileStatic onto the matching artefacts. Read lazily (asArguments) so the value
+            // reflects the user's grails { } block regardless of configuration ordering.
+            GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+            if (grailsExtension != null) {
+                c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsCompileStaticArtefactsProvider(grailsExtension.compileStatic))
+
+                // Publish grails { gorm { defaultIdType } } the same way, so GORM's entity
+                // transformation knows what type of id to add to a domain class that declares none.
+                c.groovyOptions.forkOptions.jvmArgumentProviders.add(new GrailsGormIdTypeProvider(grailsExtension.gorm))
+            }
+        }
+
+        configureGroovyCompilerConfigScript(project)
+
+        // Configure indy and log status after evaluation so user's grails { } block has been applied
+        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+        project.afterEvaluate {
+            boolean indyEnabled = grailsExtension.indy.getOrElse(false)
+            Boolean preserveParameterNames = grailsExtension.preserveParameterNames.getOrNull()
+
+            project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+                c.groovyOptions.optimizationOptions.indy = indyEnabled
+
+                if (preserveParameterNames != null) {
+                    project.logger.info('Grails: Configuring Groovy compilation to preserve parameter names: {}', preserveParameterNames)
+                    c.groovyOptions.parameters = preserveParameterNames
                 }
+            }
 
-                String configuredScript = null
-                if (c.groovyOptions.configurationScript) {
-                    configuredScript = c.groovyOptions.configurationScript.text?.trim() ?: null
-                }
-                String grailsScript = userScriptGenerator?.call()
-
-                String combinedScripts = """
-                    // Grails groovy compilation configuration to ensure ASTs are applied correctly
-                    
-                    ${grailsScript?.trim() ?: ''}
-
-                    ${configuredScript?.trim() ?: ''}
-                """
-                combinedFile.write(combinedScripts)
-                c.groovyOptions.configurationScript = combinedFile
+            if (!indyEnabled) {
+                project.logger.info('Grails: Groovy invokedynamic (indy) is disabled to improve performance (see issue #15293).')
+                project.logger.info('        To enable invokedynamic: grails { indy = true } in build.gradle')
             }
         }
     }
 
-    protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
-        GrailsExtension grails = project.extensions.findByType(GrailsExtension)
-        if (!grails.importJavaTime) {
-            return null
+    /**
+     * Wires each {@link GroovyCompile} task to a combined Groovy compiler configuration script
+     * produced by a dedicated generator task.
+     *
+     * <p>The script cannot be written from a {@code doFirst} on the compile task: Gradle finalizes
+     * task properties before any task action runs, so assigning {@code groovyOptions.configurationScript}
+     * from {@code doFirst} fails from Gradle 9.7 on, where {@code GroovyCompileOptions} became a lazy
+     * property — "The value for task ':compileGroovy' property 'groovyOptions.configurationScriptFile'
+     * is final and cannot be changed any further." Once the property is assigned during configuration,
+     * Gradle also treats the script as an input file that has to exist before the compile task runs,
+     * which a producing task guarantees across a {@code clean build} and a {@code doFirst} cannot.</p>
+     */
+    private void configureGroovyCompilerConfigScript(Project project) {
+        // Generators for the source-set compile tasks are registered up front, from the source-set
+        // container: the hook is live, so a source set added after the project is evaluated is
+        // covered, and the tasks are there to be listed. Registering from a GroovyCompile
+        // configuration action instead is not an option — the task container is not mutable while
+        // one of its tasks is being configured, and the attempt throws TaskCreationException.
+        SourceSetContainer sourceSets = project.extensions.findByType(SourceSetContainer)
+        sourceSets?.configureEach { SourceSet sourceSet ->
+            groovyCompilerConfigGenerator(project, sourceSet.getCompileTaskName('groovy'))
         }
 
+        project.tasks.withType(GroovyCompile).configureEach { GroovyCompile c ->
+            // Built while the compile task is being configured, which is what lets subclasses
+            // declare their own inputs on it (GrailsPluginGradlePlugin registers the project
+            // version and name that it bakes into compiled classes as AST metadata). The script
+            // no longer reads the compile classpath, so there is nothing here that must be
+            // deferred out of configuration.
+            grailsCompilerConfigScripts.put(c.name, getGroovyCompilerScript(c, project))
+
+            // Resolved while the task graph is built, after configuration — a point where the
+            // container is mutable again. That is what lets a GroovyCompile no source set owns,
+            // one a build registers directly, get its generator here rather than go without.
+            c.dependsOn({ groovyCompilerConfigGenerator(project, c.name) } as Callable)
+        }
+
+        // The combined script is assigned once the task graph is ready — the last point before
+        // execution and after every configuration callback has run. Assigning earlier (during
+        // afterEvaluate) loses a configurationScript that a later callback assigns, because that
+        // assignment simply overwrites ours and the Grails imports vanish silently. Only the
+        // compile tasks about to run are touched: nothing else consumes the script.
+        project.gradle.taskGraph.whenReady { TaskExecutionGraph graph ->
+            for (Task task : graph.allTasks) {
+                if (task instanceof GroovyCompile && task.project == project) {
+                    captureGroovyCompilerConfigScript(project, (GroovyCompile) task)
+                }
+            }
+        }
+    }
+
+    private void captureGroovyCompilerConfigScript(Project project, GroovyCompile c) {
+        def combinedFile = groovyCompilerConfigFile(project, c.name).get().asFile
+        // configurationScriptFile is the lazy property that supersedes the configurationScript
+        // File accessor (@ReplacedBy since Gradle 9.7); the eager setter delegates to it, so
+        // a script assigned either way is picked up here.
+        def configurationScriptFile = c.groovyOptions.configurationScriptFile
+        def configured = configurationScriptFile.asFile.getOrNull()
+        if (configured != null && configured != combinedFile) {
+            userGroovyCompilerConfigScripts.put(c.name, configured)
+        } else {
+            userGroovyCompilerConfigScripts.remove(c.name)
+        }
+        configurationScriptFile.set(combinedFile)
+    }
+
+    private TaskProvider<GrailsCompilerConfigScriptTask> groovyCompilerConfigGenerator(Project project, String compileTaskName) {
+        String generatorName = groovyCompilerConfigGeneratorName(compileTaskName)
+        if (project.tasks.names.contains(generatorName)) {
+            return project.tasks.named(generatorName, GrailsCompilerConfigScriptTask)
+        }
+        project.tasks.register(generatorName, GrailsCompilerConfigScriptTask) { GrailsCompilerConfigScriptTask t ->
+            t.description = "Generates the Grails Groovy compiler configuration script for $compileTaskName"
+            // Read when the generator runs. The compile task has been realized by then — resolving
+            // the producer dependency below realizes it — so its script closure is registered.
+            t.grailsScript.set(project.provider { grailsCompilerConfigScripts.get(compileTaskName)?.call() })
+            t.configurationScript.fileProvider(project.provider { userGroovyCompilerConfigScripts.get(compileTaskName) })
+            // Use a task-specific config file to avoid overlapping outputs when multiple
+            // GroovyCompile tasks exist in the same project (e.g. compileGroovy, compileTestGroovy).
+            t.outputFile.set(groovyCompilerConfigFile(project, compileTaskName))
+            // A build may point configurationScript at a file another task produces. Task graph
+            // construction happens before the property is taken over above, so at this point it
+            // still carries whatever the build set, and with it that producer. Wrapping it in a
+            // FileCollection asks Gradle for that producer without resolving the value: depending
+            // on the property directly tries to convert the file itself into a task, and building a
+            // collection from a property with no value fails while dependencies are resolved.
+            t.dependsOn({
+                GroovyCompile compile = project.tasks.named(compileTaskName, GroovyCompile).get()
+                RegularFileProperty configured = compile.groovyOptions.configurationScriptFile
+                if (!configured.present) {
+                    return []
+                }
+                FileCollection scriptFiles = project.files(configured)
+                List<Object> dependencies = [scriptFiles]
+                if (scriptFiles.buildDependencies.getDependencies(t).isEmpty()) {
+                    // A plain file has no producer metadata. Preserve the older file + dependsOn
+                    // wiring by matching only direct compile dependencies that declare this exact
+                    // output. Inheriting unrelated dependencies could introduce a cycle, and
+                    // reading the compile or runtime classpath would restore the original bug.
+                    File scriptFile = configured.asFile.get()
+                    dependencies.addAll(compile.taskDependencies.getDependencies(compile).findAll { Task dependency ->
+                        dependency != t && dependency.outputs.files.contains(scriptFile)
+                    })
+                }
+                dependencies
+            } as Callable)
+        }
+    }
+
+    private static String groovyCompilerConfigGeneratorName(String compileTaskName) {
+        "generate${compileTaskName.capitalize()}GrailsCompilerConfig"
+    }
+
+    private static Provider<RegularFile> groovyCompilerConfigFile(Project project, String compileTaskName) {
+        project.layout.buildDirectory.file("grailsGroovyCompilerConfig-${compileTaskName}.groovy")
+    }
+
+    protected Closure<String> getGroovyCompilerScript(GroovyCompile compile, Project project) {
+        GrailsExtension grails = project.extensions.findByType(GrailsExtension)
+
+        // Evaluated lazily so it reflects the grails { } block regardless of configuration ordering,
+        // but it reads only extension state — never the compile classpath.
         return { ->
-            '''withConfig(configuration) {
+            // Start with user-configured imports
+            Set<String> starImports = new LinkedHashSet<>(grails.starImports)
+
+            // Add Grails annotation packages and common validation annotations if enabled.
+            // These are added whether or not the packages are present: a star import of a package
+            // that is not on the classpath contributes no classes and is not an error in Groovy, so
+            // probing the classpath to decide bought nothing and forced the whole script to be
+            // computed at execution time. jakarta.validation.constraints was already unconditional.
+            if (grails.importGrailsCommonAnnotations) {
+                starImports.add('jakarta.validation.constraints')
+                starImports.add('grails.gorm.annotation')
+                starImports.add('grails.plugin.scaffolding.annotation')
+            }
+
+            // Return null if no imports are needed
+            if (starImports.isEmpty()) {
+                return null
+            }
+
+            // Build the import statements
+            def importStatements = starImports.collect { pkg -> "                        star '$pkg'" }.join('\n')
+            """withConfig(configuration) {
                     imports {
-                        star 'java.time'
+${importStatements}
                     }
                 }
-            '''
+            """ as String
         }
     }
 
@@ -251,7 +462,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
         // Adding an exclusion to every dependency in a pom is very verbose and
         // greatly increases the size of the pom.
         // It would be nice to have documented in a comment why this global exclude is in here
-        String slf4jPreventExclusion = project.properties['slf4jPreventExclusion']
+        String slf4jPreventExclusion = project.findProperty('slf4jPreventExclusion')
         if (!slf4jPreventExclusion || slf4jPreventExclusion != 'true') {
             project.configurations.configureEach { Configuration configuration ->
                 configuration.exclude(group: 'org.slf4j', module: 'slf4j-simple')
@@ -268,7 +479,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 profileConfiguration.transitive = true
 
                 profileConfiguration.defaultDependencies { DependencySet deps ->
-                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.properties['grailsVersion'] ?: BuildSettings.grailsVersion}" as String
+                    String defaultProfileCoordinates = "org.apache.grails.profiles:${System.getProperty('grails.profile') ?: getDefaultProfile()}:${project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion}" as String
                     project.logger.info('No Grails profile is defined for project {}, defaulting to: {}', project.name, defaultProfileCoordinates)
                     deps.add(
                             project.dependencies.create(defaultProfileCoordinates)
@@ -290,20 +501,287 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected void applyDefaultPlugins(Project project) {
         applySpringBootPlugin(project)
+        applyGrailsBom(project)
+    }
 
+    /**
+     * Applies a single Grails BOM as a Gradle platform and enables property-based
+     * version overrides via the standalone
+     * {@code org.apache.grails.gradle.bom-property-overrides} plugin.
+     *
+     * <p>This replaces the Spring Dependency Management plugin with two
+     * orthogonal pieces:</p>
+     * <ol>
+     *   <li><strong>BOM import</strong>: the BOM selected by {@code grails.bom}
+     *       (default {@code grails-bom}) is contributed as a Gradle {@code platform()}
+     *       dependency - or an {@code enforcedPlatform()} for the Micronaut variants -
+     *       to every eligible declarable configuration, mirroring the global behaviour Spring
+     *       DM provided via {@code configurations.all() + resolutionStrategy.eachDependency()}.
+     *       The platform is contributed lazily, through {@link Configuration#withDependencies},
+     *       when a configuration's dependencies are first observed. It therefore never counts
+     *       against the {@link Configuration#defaultDependencies} that other plugins use to
+     *       populate an otherwise empty configuration on demand (such as this plugin's
+     *       {@code profile} configuration). Dedicated tool and annotation-processor
+     *       classpaths, including {@code jacocoAgent} and {@code jacocoAnt}, are excluded.
+     *       Exactly one Grails BOM is ever applied; the BOMs are split by integration
+     *       (default / hibernate / micronaut), so the plugin never layers two of them.</li>
+     *   <li><strong>Property overrides</strong>: the BOM-agnostic
+     *       {@link BomPropertyOverridesPlugin} reads the BOM's
+     *       {@code <properties>} block and applies any project-level
+     *       overrides via Gradle's
+     *       {@code ResolutionStrategy.eachDependency()}.</li>
+     * </ol>
+     *
+     * <p>Set {@code grails { bom = null }} (or the deprecated
+     * {@code grails { springDependencyManagement = false }}) to suppress the automatic BOM
+     * application entirely and declare the {@code platform()}/{@code enforcedPlatform()} by hand.</p>
+     *
+     * <p>Usage: to override a version managed by the Grails or Spring Boot BOM, set the
+     * corresponding property in {@code gradle.properties} or {@code build.gradle}:</p>
+     * <pre>
+     * // gradle.properties
+     * slf4j.version=1.7.36
+     *
+     * // or build.gradle
+     * ext['slf4j.version'] = '1.7.36'
+     * </pre>
+     *
+     * @see BomPropertyOverridesPlugin
+     * @since 8.0
+     */
+    protected void applyGrailsBom(Project project) {
+        // Ensure the developmentOnly configuration exists. Spring Boot's plugin
+        // normally creates this, but using maybeCreate guarantees it is available
+        // even if plugin ordering changes or Spring Boot is not applied. We do
+        // this outside afterEvaluate so that other plugins applied during the
+        // same configuration phase can rely on the configuration existing.
+        project.configurations.maybeCreate('developmentOnly')
+
+        // The BOM selection `grails { bom = ... }` is set in the user's build.gradle,
+        // which runs AFTER plugin apply. We therefore wait until afterEvaluate to read
+        // it, together with any Grails BOM the build declares by hand, and decide which
+        // single BOM to apply.
         project.afterEvaluate {
-            GrailsExtension ge = project.extensions.getByType(GrailsExtension)
-            if (ge.springDependencyManagement) {
-                Plugin dependencyManagementPlugin = project.plugins.findPlugin(DependencyManagementPlugin)
-                if (dependencyManagementPlugin == null) {
-                    project.plugins.apply(DependencyManagementPlugin)
+            String effectiveBom = effectiveGrailsBom(project)
+            if (!effectiveBom) {
+                project.logger.info(
+                    'grails.bom is null; skipping automatic application of the Grails platform BOM and bom-property-overrides plugin for project {}',
+                    project.path
+                )
+                return
+            }
+
+            String grailsVersion = (project.findProperty('grailsVersion') ?: BuildSettings.grailsVersion) as String
+            String bomCoordinates = "org.apache.grails:${effectiveBom}:${grailsVersion}" as String
+
+            // The Micronaut BOM variants must be applied as an enforcedPlatform: they layer
+            // Micronaut-specific overrides (javaparser-core, etc.) on top of grails-base-bom,
+            // and Micronaut's own platform would otherwise win those versions via conflict
+            // resolution. All other Grails BOMs are applied as a regular platform.
+            boolean enforced = ENFORCED_PLATFORM_BOMS.contains(effectiveBom)
+
+            // Contribute the single BOM to every declarable project configuration that does not
+            // already declare a Grails BOM by hand, matching the behavior of the Spring Dependency
+            // Management plugin which applied version constraints globally via configurations.all()
+            // + resolutionStrategy.eachDependency(). Configurations that already declare the BOM
+            // (e.g. 'implementation' in a generated app) are left untouched so a second BOM is
+            // never layered on them, while sibling declarable configurations (such as 'console')
+            // still receive BOM coverage. Non-declarable configurations (e.g. apiElements,
+            // runtimeElements) inherit constraints through their parent configurations.
+            // Tool/annotation-processor configurations are excluded because they hold independent
+            // classpaths that already use their own platforms (e.g. Micronaut's annotation
+            // processors import io.micronaut.platform:micronaut-platform). Adding a Grails BOM as a
+            // second non-enforced platform on those configurations causes version conflict
+            // resolution to upgrade transitives and break the tools/processors - unlike
+            // resolutionStrategy hooks, platform() constraints participate in version conflict
+            // resolution.
+            //
+            // The platform is contributed through withDependencies rather than added eagerly here.
+            // Gradle runs a configuration's dependency actions once, when its dependencies are
+            // first observed (resolution, publication, incoming.dependencies): the
+            // defaultDependencies actions first - and only while the configuration holds no
+            // dependencies at all - then the withDependencies actions. A platform added eagerly
+            // counts as a declared dependency and silently disables the defaults other plugins
+            // rely on, such as this plugin's own profile configuration (#16335).
+            // Registering through configureEach also covers configurations that plugins create
+            // after this callback has run.
+            DependencyHandler dependencyHandler = project.dependencies
+            project.configurations.configureEach { Configuration configuration ->
+                if (!configuration.canBeDeclared || isExcludedFromBomPlatform(configuration.name)) {
+                    return
                 }
+                configuration.withDependencies { DependencySet dependencies ->
+                    // A create() configuration can change role after configureEach runs.
+                    if (!configuration.canBeDeclared || declaresGrailsBom(dependencies)) {
+                        return
+                    }
+                    dependencies.add(enforced ?
+                            dependencyHandler.enforcedPlatform(bomCoordinates) :
+                            dependencyHandler.platform(bomCoordinates))
+                }
+            }
 
-                DependencyManagementExtension dme = project.extensions.findByType(DependencyManagementExtension)
-
-                applyBomImport(dme, project)
+            // bom-property-overrides auto-detects BOMs by scanning the dependencies declared on the
+            // configurations when its own afterEvaluate callback runs (registered below, so after
+            // this one). The platform contributed lazily above is not declared yet at that point,
+            // so register the applied BOM with the plugin explicitly. autoDetect = false is
+            // honoured: the auto-applied BOM is part of what a build opts out of when it disables
+            // detection and lists the BOMs to process by hand.
+            BomPropertyOverridesExtension overrides = project.extensions.getByType(BomPropertyOverridesExtension)
+            if (overrides.autoDetect.get()) {
+                overrides.bom(bomCoordinates)
             }
         }
+
+        // Delegate property-based version overrides to the bundled plugin. Auto-detect picks up
+        // any platform()/enforcedPlatform() declared by hand, and the afterEvaluate above registers
+        // the auto-applied BOM explicitly, so users can extend the override surface simply by
+        // declaring their own platforms - no extra configuration is required here.
+        //
+        // Applied unconditionally, as its own top-level statement here - NOT nested inside the
+        // afterEvaluate{} above, and NOT gated on grails.bom being set. Two things depend on that:
+        //
+        // 1. Ordering: BomPropertyOverridesPlugin.apply() registers its own project.afterEvaluate{}
+        //    for the actual override-application logic. Gradle appends a newly-registered
+        //    afterEvaluate listener to the END of the notification queue it's currently
+        //    processing - so calling project.plugins.apply(BomPropertyOverridesPlugin) from INSIDE
+        //    the afterEvaluate{} above (as this method used to) pushes that registration behind
+        //    every afterEvaluate callback other plugins registered synchronously during apply() -
+        //    including GrailsCliGradlePlugin's CLI companion probe (configureApplicationCommands),
+        //    which eagerly resolves the api/implementation/runtimeOnly buckets via grailsCliDetect
+        //    and locks them against further mutation. In a multi-project build, resolving one
+        //    project's probe can force a dependency project to finish configuring mid-resolution,
+        //    landing squarely in that window - causing BomManagedVersions.applyTo() to throw
+        //    "Cannot mutate the dependencies of configuration ... after ... was resolved". Applying
+        //    the plugin here, synchronously and before GrailsCliGradlePlugin is applied further
+        //    down in this method, keeps both registrations in the same, race-free, apply()-time
+        //    queue position. project.plugins.apply() is also idempotent, so this stays safe even
+        //    if the build separately applies org.apache.grails.gradle.bom-property-overrides itself.
+        //
+        // 2. Unconditional application: whether grails.bom ends up null is only known once the
+        //    afterEvaluate{} above runs, which - per point 1 - is too late to gate this call
+        //    without reintroducing the same race. This is safe: when there's no BOM (grails.bom
+        //    null and no platform() declared by hand), BomPropertyOverridesPlugin's own
+        //    auto-detection finds no declared platform and applyOverrides() is a no-op - so
+        //    opting out of the BOM still results in zero constraints being added, only
+        //    project.plugins.findPlugin(...) now reports it as applied.
+        project.plugins.apply(BomPropertyOverridesPlugin)
+    }
+
+    /**
+     * Grails BOM artifact names that must be applied as an {@code enforcedPlatform} rather than
+     * a regular {@code platform}, because they layer Micronaut-specific overrides on top of
+     * grails-base-bom that the Micronaut platform would otherwise override via conflict resolution.
+     */
+    private static final Set<String> ENFORCED_PLATFORM_BOMS = [
+            'grails-micronaut-bom',
+            'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
+    ] as Set<String>
+
+    /**
+     * Known Grails BOM artifact names (group {@code org.apache.grails}). Used to detect whether a
+     * project already declares a Grails BOM by hand so the plugin does not inject a second one,
+     * preserving the guarantee that exactly one Grails BOM is applied.
+     */
+    private static final Set<String> GRAILS_BOM_NAMES = [
+            'grails-bom',
+            'grails-base-bom',
+            'grails-hibernate5-bom',
+            'grails-hibernate7-bom',
+            'grails-neo4j-bom',
+            'grails-micronaut-bom',
+            'grails-hibernate5-micronaut-bom',
+            'grails-hibernate7-micronaut-bom',
+    ] as Set<String>
+
+    /**
+     * Returns the artifact name of the single Grails BOM the plugin applies to the project: the
+     * BOM the build declares by hand as a {@code platform()} / {@code enforcedPlatform()} when
+     * there is one, otherwise the {@code grails.bom} selection. Returns {@code null} when
+     * {@code grails.bom} is {@code null}, i.e. the build opted out of automatic BOM application.
+     * Fails the build when more than one distinct Grails BOM is declared by hand.
+     */
+    private static String effectiveGrailsBom(Project project) {
+        GrailsExtension grailsExtension = project.extensions.findByType(GrailsExtension)
+        String bomName = grailsExtension == null ? GrailsExtension.DEFAULT_BOM : grailsExtension.bom.getOrNull()
+        if (!bomName) {
+            return null
+        }
+
+        // Exactly one Grails BOM may be applied. The BOMs are split by integration
+        // (default / hibernate / micronaut), so a project must select a single variant.
+        // If the build declares a Grails BOM by hand - for example a Micronaut application
+        // declaring enforcedPlatform(grails-micronaut-bom), or an application generated by
+        // Grails Forge / a profile that declares platform(grails-bom) directly - honor that
+        // selection instead of the configured default, and fail fast if more than one distinct
+        // Grails BOM is declared.
+        Set<String> declaredBoms = declaredGrailsBoms(project)
+        if (declaredBoms.size() > 1) {
+            throw new GradleException(
+                "Project '${project.name}' declares more than one Grails BOM (${declaredBoms.join(', ')}). " +
+                    'Exactly one Grails BOM may be applied; the BOMs are split by integration ' +
+                    '(default / hibernate / micronaut), so a project must select a single variant.'
+            )
+        }
+        declaredBoms.isEmpty() ? bomName : declaredBoms.first()
+    }
+
+    /**
+     * Returns the distinct known Grails BOM artifact names declared by hand as a {@code platform()}
+     * or {@code enforcedPlatform()} on the project's declarable configurations.
+     */
+    private static Set<String> declaredGrailsBoms(Project project) {
+        Set<String> names = new LinkedHashSet<>()
+        for (Configuration configuration : project.configurations) {
+            if (!configuration.canBeDeclared) {
+                continue
+            }
+            for (Dependency dependency : configuration.dependencies) {
+                if (isGrailsBomPlatform(dependency)) {
+                    names.add(dependency.name)
+                }
+            }
+        }
+        names
+    }
+
+    /**
+     * Returns whether the given declared dependencies already contain a known Grails BOM declared
+     * as a {@code platform()} / {@code enforcedPlatform()}, so the plugin can avoid layering a
+     * second BOM on top of it.
+     */
+    private static boolean declaresGrailsBom(DependencySet dependencies) {
+        for (Dependency dependency : dependencies) {
+            if (isGrailsBomPlatform(dependency)) {
+                return true
+            }
+        }
+        false
+    }
+
+    /**
+     * Returns whether the dependency is a known Grails BOM declared with platform semantics, i.e. a
+     * {@code platform()} or {@code enforcedPlatform()} declaration (carrying the {@code Category}
+     * attribute). A plain {@code org.apache.grails:*-bom} dependency does not import constraints and
+     * is therefore not treated as a declared BOM.
+     */
+    private static boolean isGrailsBomPlatform(Dependency dependency) {
+        if (dependency.group != 'org.apache.grails' || !GRAILS_BOM_NAMES.contains(dependency.name)) {
+            return false
+        }
+        if (!(dependency instanceof ModuleDependency)) {
+            return false
+        }
+        Category category = ((ModuleDependency) dependency).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+        category != null && (category.name == Category.REGULAR_PLATFORM || category.name == Category.ENFORCED_PLATFORM)
+    }
+
+    private static boolean isExcludedFromBomPlatform(String name) {
+        name == 'checkstyle' || name == 'codenarc' || name == 'pmd' ||
+                name == 'spotbugs' || name == 'spotbugsPlugins' ||
+                name == 'jacocoAgent' || name == 'jacocoAnt' ||
+                name == 'annotationProcessor' || name.endsWith('AnnotationProcessor')
     }
 
     protected void applySpringBootPlugin(Project project) {
@@ -313,42 +791,43 @@ class GrailsGradlePlugin extends GroovyPlugin {
         }
     }
 
-    @CompileDynamic
-    private void applyBomImport(DependencyManagementExtension dme, project) {
-        dme.imports({
-            mavenBom("org.apache.grails:grails-bom:${project.properties['grailsVersion']}")
-        })
-    }
-
     protected String getDefaultProfile() {
         'web'
     }
 
     @CompileDynamic
-    protected Task createBuildPropertiesTask(Project project) {
+    protected void createBuildPropertiesTask(Project project) {
         if (project.tasks.findByName('buildProperties') == null) {
             File resourcesDir = SourceSets.findMainSourceSet(project).output.resourcesDir
             File buildInfoFile = new File(resourcesDir, 'META-INF/grails.build.info')
 
-            Task buildPropertiesTask = project.tasks.create('buildProperties')
             Map<String, Object> buildPropertiesContents = [
-                'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
-                'info.app.name': project.name,
-                'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
-                'info.app.grailsVersion': project.properties.get('grailsVersion')
+                    'grails.env': Environment.isSystemSet() ? Environment.getCurrent().getName() : Environment.PRODUCTION.getName(),
+                    (BuildSettings.GORM_DEFAULT_ID_TYPE): project.extensions.getByType(GrailsExtension).gorm.defaultIdType.get(),
+                    'info.app.name': project.name,
+                    'info.app.version': project.version instanceof Serializable ? project.version : project.version.toString(),
+                    'info.app.grailsVersion': project.findProperty('grailsVersion')
             ]
 
-            buildPropertiesTask.inputs.properties(buildPropertiesContents)
-            buildPropertiesTask.outputs.file(buildInfoFile)
-            buildPropertiesTask.doLast {
-                project.buildDir.mkdirs()
-                ant.mkdir(dir: buildInfoFile.parentFile)
-                ant.propertyfile(file: buildInfoFile) {
-                    for (me in buildPropertiesTask.inputs.properties) {
-                        entry(key: me.key, value: me.value)
+            // Capture build directory at configuration time to avoid Task.project access at execution time
+            def buildDir = project.layout.buildDirectory.asFile.get()
+
+            TaskProvider<Task> buildPropertiesTask = project.tasks.register('buildProperties') { Task task ->
+                task.inputs.properties(buildPropertiesContents)
+                task.outputs.file(buildInfoFile)
+
+                task.doLast {
+                    buildDir.mkdirs()
+                    buildInfoFile.parentFile.mkdirs()
+                    Properties props = new Properties()
+                    task.inputs.properties.each { key, value ->
+                        props.setProperty(key as String, value as String)
                     }
+                    buildInfoFile.withOutputStream { out ->
+                        props.store(out, null)
+                    }
+                    PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
                 }
-                PropertyFileUtils.makePropertiesFileReproducible(buildInfoFile)
             }
 
             TaskContainer tasks = project.tasks
@@ -359,7 +838,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileStatic
     protected void configureMicronaut(Project project) {
         project.afterEvaluate {
-            boolean micronautEnabled = project.getConfigurations().getByName('implementation').getDependencies().findAll { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' } as boolean
+            boolean micronautEnabled = project.getConfigurations().getByName('runtimeClasspath').getAllDependencies().any { Dependency dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut' }
             if (!micronautEnabled) {
                 return
             }
@@ -371,26 +850,21 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
             project.logger.lifecycle('Micronaut Support Detected for {}', project.name)
 
-            // Validate that grails-micronaut-bom is applied as enforcedPlatform. The BOM is now the
-            // single source of truth for the Micronaut platform version: applying it as
-            // enforcedPlatform pins io.micronaut.platform:micronaut-platform with a strict
-            // constraint that no transitive can override.
+            // Validate that a Micronaut-compatible Grails BOM is applied as enforcedPlatform. The
+            // selected BOM is the single source of truth for the Micronaut platform version:
+            // applying it as enforcedPlatform pins io.micronaut.platform:micronaut-platform with a
+            // strict constraint that no transitive can override.
             validateMicronautBom(project)
-
-            project.logger.info('Configuring CLASSIC boot loader for Micronaut compatibility in {}', project.name)
-            project.tasks.withType(BootArchive).configureEach {
-                it.loaderImplementation.convention(LoaderImplementation.CLASSIC)
-            }
 
         }
     }
 
     /**
-     * Validates that grails-micronaut-bom is applied as an enforcedPlatform when micronaut is used.
-     * The grails-micronaut-bom layers Micronaut-specific overrides (e.g. javaparser-core) on top
-     * of grails-bom; without enforcedPlatform, Micronaut's platform would override these versions
-     * via Gradle's conflict resolution. Regular Grails projects (without Micronaut) should continue
-     * to use the spring-managed versions via plain platform(:grails-bom).
+     * Validates that a Micronaut-compatible BOM is applied as an enforcedPlatform when micronaut is used.
+     * The grails-micronaut-bom (and its hibernate-specific variants) layers Micronaut-specific overrides
+     * (e.g. javaparser-core) on top of grails-base-bom; without enforcedPlatform, Micronaut's platform would
+     * override these versions via Gradle's conflict resolution. Regular Grails projects (without Micronaut)
+     * should continue to use the spring-managed versions via plain platform(:grails-bom).
      */
     @CompileStatic
     protected static void validateMicronautBom(Project project) {
@@ -399,28 +873,45 @@ class GrailsGradlePlugin extends GroovyPlugin {
             return
         }
 
+        // Exactly one Grails BOM is ever applied (the BOMs are split by integration:
+        // default / hibernate / micronaut). A Micronaut project selects the Micronaut
+        // variant either by setting grails { bom = 'grails-micronaut-bom' } (contributed
+        // as an enforcedPlatform by applyGrailsBom) or by opting out via grails { bom = null }
+        // and declaring enforcedPlatform(grails-micronaut-bom) by hand. Either way the
+        // Micronaut BOM must be an enforcedPlatform so the Micronaut platform cannot override
+        // its versions via conflict resolution. A hand-declared BOM is visible on the
+        // 'implementation' configuration right away: accept it when at least one Micronaut
+        // BOM declared there is an enforcedPlatform.
         for (Dependency dep : implConfig.dependencies) {
-            if (dep.name == 'grails-micronaut-bom' && dep instanceof ModuleDependency) {
-                Object categoryAttr = ((ModuleDependency) dep).attributes.getAttribute(
-                        org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
-                )
-                if (categoryAttr != null && categoryAttr.toString() == org.gradle.api.attributes.Category.ENFORCED_PLATFORM) {
+            if (ENFORCED_PLATFORM_BOMS.contains(dep.name) && dep instanceof ModuleDependency) {
+                Category category = ((ModuleDependency) dep).attributes.getAttribute(Category.CATEGORY_ATTRIBUTE)
+                if (category != null && category.name == Category.ENFORCED_PLATFORM) {
                     return // correctly configured
                 }
             }
         }
 
+        // The auto-applied BOM is contributed lazily (see applyGrailsBom), so it is not declared
+        // yet when this afterEvaluate callback runs. When 'implementation' declares no Grails BOM
+        // by hand, the BOM applyGrailsBom selected is the one that will land on it - and the
+        // Micronaut variants are always contributed as an enforcedPlatform.
+        if (!declaresGrailsBom(implConfig.dependencies) && ENFORCED_PLATFORM_BOMS.contains(effectiveGrailsBom(project))) {
+            return
+        }
+
         throw new GradleException(
-                "Project '${project.name}' uses Micronaut but does not apply grails-micronaut-bom as an enforcedPlatform. " +
+                "Project '${project.name}' uses Micronaut but does not apply a Micronaut BOM as an enforcedPlatform. " +
                         "Micronaut's platform declares higher versions of javaparser-core and other libraries that would " +
-                        'override the grails-bom versions via conflict resolution. Change to:\n\n' +
-                        '    implementation enforcedPlatform(project(\':grails-micronaut-bom\'))\n'
+                        'override the grails-bom versions via conflict resolution. Change to one of:\n\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate5-micronaut-bom:$grailsVersion")\n' +
+                        '    implementation enforcedPlatform("org.apache.grails:grails-hibernate7-micronaut-bom:$grailsVersion")\n'
         )
     }
 
     @CompileStatic
     protected void configureGroovy(Project project) {
-        final String groovyVersion = project.properties['groovy.version']
+        final String groovyVersion = project.findProperty('groovy.version')
         if (groovyVersion) {
             project.logger.lifecycle('Warning: groovy.version is defined, Grails Gradle Plugin will force all groovy dependencies to version {}.', groovyVersion)
             project.configurations.configureEach { Configuration configuration ->
@@ -448,38 +939,7 @@ class GrailsGradlePlugin extends GroovyPlugin {
 
     protected GrailsExtension registerGrailsExtension(Project project) {
         if (project.extensions.findByName('grails') == null) {
-            project.extensions.add('grails', new GrailsExtension(project))
-        }
-    }
-
-    @CompileDynamic
-    protected void configureApplicationCommands(Project project) {
-        def applicationContextCommands = FactoriesLoaderSupport.loadFactoryNames(APPLICATION_CONTEXT_COMMAND_CLASS)
-        project.afterEvaluate {
-            FileCollection fileCollection = buildClasspath(project, project.configurations.runtimeClasspath, project.configurations.console)
-            for (ctxCommand in applicationContextCommands) {
-                String taskName = GrailsNameUtils.getLogicalPropertyName(ctxCommand, 'Command')
-                String commandName = GrailsNameUtils.getScriptName(GrailsNameUtils.getLogicalName(ctxCommand, 'Command'))
-                if (!project.tasks.names.contains(taskName)) {
-                    project.tasks.register(taskName, ApplicationContextCommandTask).configure {
-                        it.classpath = fileCollection
-                        it.command = commandName
-                        it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-                        List<Object> args = []
-                        def otherArgs = project.findProperty('args')
-                        if (otherArgs) {
-                            args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                        }
-
-                        def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
-
-                        it.doFirst {
-                            args << appClassProvider.get()
-                            it.args(args)
-                        }
-                    }
-                }
-            }
+            project.extensions.create('grails', GrailsExtension, project)
         }
     }
 
@@ -537,15 +997,28 @@ class GrailsGradlePlugin extends GroovyPlugin {
         grailsVersion
     }
 
-    @CompileDynamic
     protected void configureAssetCompilation(Project project) {
-        if (project.extensions.findByName('assets')) {
-            project.assets {
-                assetsPath = project.layout.projectDirectory.dir('grails-app/assets')
-            }
-            project.tasks.named('assetCompile').configure {
-                it.destinationDirectory = project.layout.buildDirectory.dir('assetCompile/assets')
-            }
+        // Whenever the asset pipeline is applied, not only if it already has been: an application
+        // applies this plugin first, before the pipeline has created its extension.
+        project.pluginManager.withPlugin(ASSET_PIPELINE_PLUGIN) {
+            configureAssetPipelineLayout(project)
+        }
+    }
+
+    /**
+     * Only the asset pipeline's own extension needs dynamic dispatch, as the plugin is not a
+     * compile-time dependency. Calls to this plugin's own private methods stay out of here: on a
+     * reused daemon Gradle replaces the meta class of the applied plugin class with one that
+     * dispatches on the runtime class alone, so under Gradle 8 a private method of this class is
+     * not found when the applied plugin is a subclass.
+     *
+     * <p>The pipeline only defaults to {@code grails-app/assets} if this plugin was applied before
+     * it. Its compiled assets keep the pipeline's own location, {@code build/assets}.</p>
+     */
+    @CompileDynamic
+    private static void configureAssetPipelineLayout(Project project) {
+        project.assets {
+            assetsPath = project.layout.projectDirectory.dir('grails-app/assets')
         }
     }
 
@@ -568,7 +1041,21 @@ class GrailsGradlePlugin extends GroovyPlugin {
             // Use a CommandLineArgumentProvider so that the absolute project directory path
             // is normalized for build cache relocatability (PathSensitivity.RELATIVE).
             task.jvmArgumentProviders.add(new GrailsAppBaseDirProvider(project.projectDir))
-            task.systemProperty(BuildSettings.PROJECT_TARGET_DIR, project.layout.buildDirectory.get().asFile.name)
+            // Where development reloading compiles a changed class and copies a changed message bundle, and where
+            // the application reads resources from: the build's own directories, wherever the build directory is, not
+            // the build/classes/groovy/main and build/resources/main BuildSettings falls back to
+            task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_CLASSES_DIR,
+                    project.projectDir, mainGroovyClassesDir(project), task.systemProperties))
+            task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_RESOURCES_DIR,
+                    project.projectDir, mainResourcesDir(project), task.systemProperties))
+            // The application compiles a page again when it changes, so the page opt-in has to reach
+            // the JVM running it as well as the one the build compiles pages in.
+            task.jvmArgumentProviders.add(new GrailsGspCompileStaticProvider(
+                    project.extensions.getByType(GrailsExtension).compileStatic))
+            // The build directory itself, where development keeps its restart marker (.grailspid): passed as a
+            // path relative to the project, not its name, so that two instances of one checkout have one each
+            task.jvmArgumentProviders.add(new GrailsProjectOutputDirProvider(BuildSettings.PROJECT_TARGET_DIR,
+                    project.projectDir, project.layout.buildDirectory, task.systemProperties))
             task.systemProperty(Environment.KEY, defaultGrailsEnv)
             task.systemProperty(Environment.FULL_STACKTRACE, System.getProperty(Environment.FULL_STACKTRACE) ?: '')
             if (task.minHeapSize == null) {
@@ -595,6 +1082,113 @@ class GrailsGradlePlugin extends GroovyPlugin {
         tasks.withType(JavaExec).configureEach(systemPropertyConfigurer.curry(grailsEnvSystemProperty ?: Environment.DEVELOPMENT.getName()))
 
         configureToolchainForForkTasks(project)
+    }
+
+    /**
+     * The main source set's Groovy classes directory, which the application's development reloading compiles a
+     * changed class into (see {@link GrailsProjectOutputDirProvider}). The plugin applies the {@code groovy} plugin,
+     * so the main source set and its Groovy classes directory are always there.
+     */
+    private static Provider<Directory> mainGroovyClassesDir(Project project) {
+        project.extensions.getByType(SourceSetContainer).named(SourceSet.MAIN_SOURCE_SET_NAME).flatMap { SourceSet main ->
+            main.extensions.getByType(GroovySourceDirectorySet).classesDirectory
+        }
+    }
+
+    /**
+     * The main source set's resources directory, which the application reads resources from in development and the
+     * i18n plugin copies a changed message bundle into (see {@link GrailsProjectOutputDirProvider}).
+     */
+    private static Provider<Directory> mainResourcesDir(Project project) {
+        project.layout.dir(project.extensions.getByType(SourceSetContainer).named(SourceSet.MAIN_SOURCE_SET_NAME)
+                .map { SourceSet main -> main.output.resourcesDir })
+    }
+
+    /**
+     * Generates the application's bean definitions for the environment it will be run in.
+     *
+     * <p>Generation reads the definitions to write them out as code, and an application declares
+     * different ones in different environments -- development declares reloadable beans, which
+     * cannot be expressed as generated code. Left at the default the definitions written out are
+     * development's, and an application built from them is not the application that was asked
+     * for.</p>
+     *
+     * <p>Nothing here runs unless the application applies Spring Boot's AOT plugin, which is what
+     * asks for generated definitions in the first place.</p>
+     */
+    protected void configureAheadOfTimeProcessing(Project project) {
+        project.pluginManager.withPlugin('org.springframework.boot.aot') {
+            project.tasks.named('processAot', JavaExec) { JavaExec task ->
+                task.systemProperty(Environment.KEY, Environment.PRODUCTION.name)
+            }
+        }
+    }
+
+    /**
+     * What a Grails application needs of a native image that an image cannot work out for itself.
+     *
+     * <p>Applications resolve calls through invokedynamic here, because the classic call site
+     * defines a class as it runs and an image has no way to define one. The framework has to be
+     * built the same way. This is a convention, so an application that has said otherwise keeps
+     * what it said.</p>
+     *
+     * <p>Nothing here runs unless the application applies GraalVM's plugin, which is what asks for
+     * an image in the first place. An application that never builds one is untouched.</p>
+     */
+    protected void configureNativeImage(Project project) {
+        project.pluginManager.withPlugin('org.graalvm.buildtools.native') {
+            GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+            grailsExt.indy.convention(true)
+        }
+        configureNativeMetadataTrace(project)
+    }
+
+    /**
+     * Records the reflection a running application does, which is the half of an image's metadata
+     * that reading the build output cannot supply.
+     *
+     * <p>{@code generateNativeMetadata} writes down the application's own artefacts without running
+     * anything. What it cannot see is the framework reflecting along a request path -- a controller
+     * method reached through Groovy's dispatch, a conversion asked for while binding a form -- and an
+     * image built without those starts, serves its home page, and fails on the first request that
+     * needs one.</p>
+     *
+     * <p>Run deliberately rather than as part of a build: it starts the application, and what it
+     * writes belongs in the sources beside the code, where the next person can see which paths an
+     * image was built to cover.</p>
+     */
+    protected void configureNativeMetadataTrace(Project project) {
+        NativeMetadataExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
+                .extensions.create('nativeMetadata', NativeMetadataExtension)
+        extension.paths.convention(['/'])
+        extension.forms.convention([])
+        extension.jvmArguments.convention(['-Dgrails.env=production'])
+        extension.port.convention(TRACING_PORT)
+        extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
+        extension.outputDirectory.convention(project.layout.projectDirectory
+                .dir('src/native/resources/META-INF/native-image'))
+
+        project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
+            TaskProvider<?> bootJar = project.tasks.named('bootJar')
+            Provider<JavaLauncher> launcher = trainingLauncher(project)
+
+            project.tasks.register('traceNativeMetadata', TraceNativeMetadataTask) { TraceNativeMetadataTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Runs the application under the tracing agent and records the reflection it does'
+                task.dependsOn(bootJar)
+                task.archiveFile.set(archiveFileOf(bootJar))
+                // The project's toolchain unless told otherwise, which for a project that builds an
+                // image is the GraalVM the image is built with -- and the agent is only there.
+                task.javaExecutable.set(extension.javaExecutable
+                        .orElse(launcher.map { JavaLauncher java -> java.executablePath.asFile.absolutePath }))
+                task.jvmArguments.set(extension.jvmArguments)
+                task.paths.set(extension.paths)
+                task.forms.set(extension.forms)
+                task.port.set(extension.port)
+                task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
+                task.outputDirectory.set(extension.outputDirectory)
+            }
+        }
     }
 
     protected void configureBootRunPidFile(Project project) {
@@ -719,59 +1313,6 @@ class GrailsGradlePlugin extends GroovyPlugin {
         return JavaVersion.current().majorVersion.toInteger()
     }
 
-    protected void configureConsoleTask(Project project) {
-        TaskContainer tasks = project.tasks
-        if (!project.configurations.names.contains('console')) {
-            if (!tasks.names.contains('findMainClass')) {
-                project.logger.info('Project {} does not contain the findMainClass task so the console & shell tasks will not be created.', project.name)
-                return
-            }
-
-            NamedDomainObjectProvider<Configuration> consoleConfiguration = project.configurations.register('console')
-            createConsoleTask(project, tasks, consoleConfiguration)
-            createShellTask(project, tasks, consoleConfiguration)
-        }
-    }
-
-    @CompileDynamic
-    protected TaskProvider<JavaExec> createConsoleTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
-        def consoleTask = tasks.register('console', JavaExec)
-        project.afterEvaluate {
-            consoleTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-                it.mainClass.set('grails.ui.console.GrailsSwingConsole')
-
-                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
-
-                it.doFirst {
-                    it.args(appClass.get())
-                }
-            }
-        }
-        consoleTask
-    }
-
-    @CompileDynamic
-    protected TaskProvider<JavaExec> createShellTask(Project project, TaskContainer tasks, NamedDomainObjectProvider<Configuration> configuration) {
-        def shellTask = tasks.register('shell', JavaExec)
-        project.afterEvaluate {
-            shellTask.configure {
-                it.dependsOn(tasks.named('classes'), tasks.named('findMainClass'))
-                it.classpath = project.sourceSets.main.runtimeClasspath + configuration.get()
-                it.mainClass.set('grails.ui.shell.GrailsShell')
-                it.standardInput = System.in
-
-                def appClass = GrailsGradlePlugin.getMainClassProvider(project)
-
-                it.doFirst {
-                    it.args(appClass.get())
-                }
-            }
-        }
-        shellTask
-    }
-
     @CompileDynamic
     protected void registerFindMainClassTask(Project project) {
         TaskContainer taskContainer = project.tasks
@@ -813,24 +1354,19 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 def extraProperties = project.extensions.getByType(ExtraPropertiesExtension)
                 def overriddenMainClass = propertyMainClassName ?: springBootMainClassName
                 if (!overriddenMainClass) {
-                    // the findMainClass task needs to set these values
-                    extraProperties.set('mainClassName', project.provider {
-                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                        if (!cacheFile?.exists()) {
-                            return null
-                        }
-
-                        cacheFile?.text
-                    })
-
-                    springBootExtension.mainClass.set(project.provider {
-                        File cacheFile = findMainClassTask.get().mainClassCacheFile.orNull?.asFile
-                        if (!cacheFile?.exists()) {
-                            return null
-                        }
-
-                        cacheFile?.text
-                    })
+                    // A mapped task output rejects configuration-time reads. Each flatMap query instead creates
+                    // a fresh value source: an early read cannot memoize null (or an earlier build's class) for
+                    // execution, and the configuration cache stores an unread source for the task to query later.
+                    ProviderFactory providers = project.providers
+                    Provider<String> foundMainClass = findMainClassTask
+                            .flatMap { FindMainClassTask task -> task.mainClassCacheFile }
+                            .flatMap { RegularFile cacheFile ->
+                                providers.of(FoundMainClassValueSource) {
+                                    it.parameters.mainClassCacheFile.set(cacheFile)
+                                }
+                            }
+                    extraProperties.set('mainClassName', foundMainClass)
+                    springBootExtension.mainClass.set(foundMainClass)
                 } else {
                     // we need to set the overridden value on both
                     extraProperties.set('mainClass', overriddenMainClass)
@@ -852,6 +1388,10 @@ class GrailsGradlePlugin extends GroovyPlugin {
                 // internally (return !OS_NAME.contains("win")), so legacy Windows consoles never receive
                 // raw ANSI escapes, while macOS/Linux and modern terminals get colored bootRun output.
                 it.systemProperty('spring.output.ansi.console-available', 'true')
+                // startup progress settings a developer keeps as Gradle properties, such as opening a browser,
+                // reach the application under their own names
+                it.jvmArgumentProviders.add(new GrailsStartupProgressProvider(
+                        project.providers.gradlePropertiesPrefixedBy(GrailsStartupProgressProvider.PREFIX)))
             }
 
             project.tasks.withType(ResolveMainClassName).configureEach {
@@ -861,6 +1401,263 @@ class GrailsGradlePlugin extends GroovyPlugin {
         } else if (!FindMainClassTask.isAssignableFrom(existingTask.class)) {
             project.logger.warn('Grails Projects typically register a findMainClass task to force the MainClass resolution for Spring Boot. This task already exists so this will not occur.')
         }
+    }
+
+    /**
+     * Packages {@code src/main/templates} into the main resources as {@code META-INF/templates}.
+     *
+     * <p>Grails plugins override this: they stage templates through the {@code copyTemplates} task
+     * into a directory of their own so that a plugin's templates are not subject to the resource
+     * filters {@code processResources} applies to {@code grails-app} resource directories.</p>
+     */
+    protected void configureTemplateResources(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+        project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources task ->
+            task.from(project.layout.projectDirectory.dir('src/main/templates')) { CopySpec spec ->
+                spec.into('META-INF/templates')
+            }
+        }
+    }
+
+    /**
+     * Records the message bundles this artifact ships into {@code META-INF/grails/i18n.properties}.
+     *
+     * <p>Spring Boot's message source is configured with an explicit base-name list, which nothing at
+     * runtime can discover without scanning the classpath. Writing the answer here lets the runtime
+     * read it back through an exact-name resource lookup instead — no {@code classpath*:*.properties}
+     * scan, and therefore no wildcard resource metadata needed for a native image.</p>
+     *
+     * <p>The task reads the bundle <em>sources</em>, not the processed resources: {@code native2ascii}
+     * and {@code EscapeUnicode} rewrite bundle contents but never file names, so there is no need to
+     * order this after them and no risk of a {@code processResources} dependency cycle.</p>
+     */
+    protected void configureI18nDescriptor(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+        GrailsExtension grailsExt = project.extensions.getByType(GrailsExtension)
+
+        TaskProvider<GenerateI18nDescriptorTask> descriptorTask = project.tasks.register(
+                'generateI18nDescriptor', GenerateI18nDescriptorTask) { GenerateI18nDescriptorTask task ->
+            task.group = BasePlugin.BUILD_GROUP
+            task.description = 'Records the message bundle base names and locales this artifact contributes'
+            task.bundleDirectory.set(project.layout.projectDirectory.dir('grails-app/i18n'))
+            task.artifactType.set(grailsArtifactType())
+            task.artifactName.set(grailsArtifactName(project))
+            task.artifactVersion.set(project.provider { project.version?.toString() })
+            task.declaredBasenames.set(grailsExt.i18n.basenames)
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-i18n'))
+        }
+
+        project.tasks.named(sourceSet.processResourcesTaskName, ProcessResources).configure { ProcessResources task ->
+            task.from(descriptorTask)
+        }
+    }
+
+    /**
+     * Wires up the cache the JDK can write for an application, so the next start reads what a
+     * training run worked out rather than working it out again.
+     *
+     * <p>Three steps, because the cache is only usable against the layout it was trained on: the
+     * archive is extracted, the extracted application is run and asked for its pages, and what the
+     * run recorded is left beside it. An application asks for this with
+     * {@code grails.aotCache.enabled}, and says which of its pages matter.</p>
+     */
+    protected void configureAotCache(Project project) {
+        AotCacheExtension extension = ((ExtensionAware) project.extensions.getByName('grails'))
+                .extensions.create('aotCache', AotCacheExtension)
+        extension.enabled.convention(false)
+        extension.paths.convention([])
+        extension.jvmArguments.convention(['-Dspring.aot.enabled=true', '-Dgrails.env=production'])
+        extension.port.convention(TRAINING_PORT)
+        extension.startTimeoutSeconds.convention(TRAINING_START_TIMEOUT_SECONDS)
+
+        project.pluginManager.withPlugin(SPRING_BOOT_PLUGIN) {
+            TaskProvider<?> bootJar = project.tasks.named('bootJar')
+            Provider<Directory> application = project.layout.buildDirectory.dir('aot-cache/application')
+            Provider<JavaLauncher> launcher = trainingLauncher(project)
+
+            TaskProvider<ExtractApplicationTask> extract = project.tasks.register(
+                    'extractAotCacheApplication', ExtractApplicationTask) { ExtractApplicationTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Extracts the application, which is the form the cache is read against'
+                task.onlyIf { extension.enabled.get() }
+                task.archiveFile.set(archiveFileOf(bootJar))
+                // The launcher rather than its path: this task is cacheable, and a path is where a
+                // JDK happens to live on the machine that ran the build. Set as the provider it is,
+                // so the toolchain is not resolved -- and a JDK not provisioned -- by every build
+                // that merely reads this project.
+                task.javaLauncher.set(launcher)
+                task.destination.set(application)
+            }
+
+            project.tasks.register('trainAotCache', TrainAotCacheTask) { TrainAotCacheTask task ->
+                task.group = BasePlugin.BUILD_GROUP
+                task.description = 'Runs the application once so the JDK can write down what starting it needs'
+                task.onlyIf { extension.enabled.get() }
+                task.dependsOn(extract)
+                task.applicationDirectory.set(application)
+                task.archiveFileName.set(archiveFileOf(bootJar).map { RegularFile file -> file.asFile.name })
+                // Beside the extracted application rather than inside it. Inside, the cache and its
+                // metadata land in the directory this task declares as its input, so writing them
+                // changes that input and the task can never be up to date -- every build would run
+                // the application again to record what the last one already recorded.
+                Provider<Directory> beside = project.layout.buildDirectory.dir('aot-cache')
+                // Read here rather than inside the closure below. A provider is queried when the
+                // property is finalized or the task runs, so a closure that reaches through
+                // project carries the project into the task's state -- which the configuration
+                // cache refuses. The name is a string by then, which it does not mind.
+                String cacheName = project.name
+                task.cacheFile.set(beside.map { Directory dir -> dir.file("${cacheName}.aot") })
+                task.metadataFile.set(beside.map { Directory dir -> dir.file('aot-cache.properties') })
+                task.javaExecutable.set(launcher.map { JavaLauncher java -> java.executablePath.asFile.absolutePath })
+                // Recorded from the JDK that will run the training, not the one running the build.
+                // A cache is read only by the JDK build that wrote it, and this is what a deployment
+                // checks that against -- so naming the wrong one is worse than naming none.
+                task.javaVersion.set(launcher.map { JavaLauncher java -> java.metadata.jvmVersion })
+                task.javaVendor.set(launcher.map { JavaLauncher java -> java.metadata.vendor })
+                task.jvmArguments.set(extension.jvmArguments)
+                task.paths.set(extension.paths)
+                task.port.set(extension.port)
+                task.startTimeoutSeconds.set(extension.startTimeoutSeconds)
+            }
+        }
+    }
+
+    /**
+     * The archive a task should consume, as something to be resolved when it runs.
+     *
+     * <p>A provider rather than a file: asking the task for its archive resolves the task, and a
+     * task resolved while the build is configured is one every build pays for whether or not it
+     * asked for an archive.</p>
+     */
+    private static Provider<RegularFile> archiveFileOf(TaskProvider<?> bootJar) {
+        bootJar.flatMap { Task task -> (Provider<RegularFile>) task.property('archiveFile') }
+    }
+
+    /**
+     * The JDK the cache will be trained on, which is the project's toolchain where it declares one.
+     *
+     * <p>A cache is read only by the JDK build that wrote it, so training has to happen on the JDK
+     * the application is compiled for rather than whichever one happens to be running Gradle. A
+     * project on the Java 21 baseline with a Java 25 toolchain compiles with 25 and would otherwise
+     * have trained with 21, where the cache options do not exist -- and the failure it reported was
+     * that the training run ended before it started serving.</p>
+     *
+     * <p>Where no toolchain is declared this resolves to the JDK running the build, which is also
+     * the one that compiled the application.</p>
+     */
+    private static Provider<JavaLauncher> trainingLauncher(Project project) {
+        JavaToolchainService toolchains = project.extensions.getByType(JavaToolchainService)
+        JavaPluginExtension java = project.extensions.getByType(JavaPluginExtension)
+        toolchains.launcherFor(java.toolchain)
+    }
+
+    /**
+     * Records the application's own classes and pages so a native image keeps them usable. The build
+     * output already names both, so an application does not have to be traced to be buildable.
+     */
+    protected void configureNativeMetadata(Project project) {
+        // Only where an image is actually being built. The metadata is read by nothing else, and
+        // generating it means reading the compiled classes and the pages compiled into every
+        // dependency -- so wiring it into processResources unconditionally made a build that only
+        // wanted to write a resource compile its sources and resolve its whole runtime classpath
+        // first, which a project that had declared no repositories could not do.
+        project.pluginManager.withPlugin(NATIVE_IMAGE_PLUGIN) {
+            configureNativeMetadataTask(project)
+        }
+    }
+
+    private void configureNativeMetadataTask(Project project) {
+        SourceSet sourceSet = SourceSets.findMainSourceSet(project)
+
+        TaskProvider<GenerateNativeMetadataTask> metadataTask = project.tasks.register(
+                'generateNativeMetadata', GenerateNativeMetadataTask) { GenerateNativeMetadataTask task ->
+            task.group = BasePlugin.BUILD_GROUP
+            task.description = 'Records the application classes and pages a native image must keep'
+            // The classes directory is written by more than one task, so the dependency has to be
+            // stated. Against the compilations rather than the classes task, because what reads
+            // this task's output has to run after the pages are compiled, and compiling the pages
+            // runs the classes task -- see where the output is consumed, below.
+            task.dependsOn(project.tasks.named(sourceSet.compileJavaTaskName))
+            // Asked of the names rather than of the tasks: findByName creates the task in order to
+            // answer whether it exists, so a build pays for one it may not have depended on.
+            ['compileGroovy', 'copyAstClasses'].each { String name ->
+                if (project.tasks.names.contains(name)) {
+                    task.dependsOn(project.tasks.named(name))
+                }
+            }
+            task.classesDirs.from(sourceSet.output.classesDirs)
+            task.pageClassesDirs.from(project.layout.buildDirectory.dir('gsp-classes/main'))
+            // Leniently: the pages compiled into dependencies are worth finding, but not at the
+            // price of making every build that writes a resource resolve the whole runtime
+            // classpath first. A dependency that cannot be resolved contributes no pages rather
+            // than failing a build that never asked for a native image.
+            task.pageClasspath.from(project.configurations.named('runtimeClasspath').map { conf ->
+                conf.incoming.artifactView { view -> view.lenient(true) }.files
+            })
+            task.outputDirectory.set(project.layout.buildDirectory.dir('generated-resources/grails-native'))
+        }
+
+        // The pages are half of what this records, and they are compiled by compileGroovyPages.
+        project.pluginManager.withPlugin(GSP_PLUGIN) {
+            metadataTask.configure { GenerateNativeMetadataTask task ->
+                task.dependsOn(project.tasks.named('compileGroovyPages'))
+            }
+        }
+
+        // Consumed after the classes exist rather than through processResources.
+        //
+        // processResources looks like the natural home for a generated resource, and it was the
+        // home until it turned out to invert the order this task needs: compileGroovyPages depends
+        // on classes, classes runs processResources, and processResources consuming this task put
+        // it ahead of all three. The pages were therefore compiled after the task that reads them
+        // had already run -- so the page half of the metadata was empty on a clean build and stale
+        // on any other, and an image built from it was missing every page. Nothing failed; the
+        // pages were simply not found at runtime.
+        //
+        // No ordering satisfies both directions, so the output goes to what runs after the pages
+        // are compiled: the archive, and the image being built from it. Adding it to the source
+        // set output instead would put the cycle back, because the classes task builds those.
+        project.tasks.withType(Jar).configureEach { Jar jar ->
+            if (jar.name == 'bootJar') {
+                jar.from(metadataTask) { CopySpec spec -> spec.into('BOOT-INF/classes') }
+            }
+        }
+        addToNativeImageClasspath(project, metadataTask)
+    }
+
+    /**
+     * Puts the recorded metadata on the classpath the image is built from.
+     *
+     * <p>Dynamically, because the plugin that defines the extension is not on this plugin's compile
+     * classpath -- and it is only asked for inside {@code withPlugin}, so an application that never
+     * builds an image never reaches it.</p>
+     */
+    @CompileDynamic
+    private static void addToNativeImageClasspath(Project project,
+                                                  TaskProvider<GenerateNativeMetadataTask> metadataTask) {
+        def graalvm = project.extensions.findByName('graalvmNative')
+        graalvm?.binaries?.configureEach { binary ->
+            binary.classpath(metadataTask)
+        }
+    }
+
+    /**
+     * The {@code artifact.type} recorded in the i18n descriptor. Applications and plugins are
+     * distinguished so that message precedence can put the application's own bundles ahead of every
+     * plugin's, which classloader enumeration order can never express.
+     */
+    protected String grailsArtifactType() {
+        GenerateI18nDescriptorTask.TYPE_APPLICATION
+    }
+
+    /**
+     * The {@code artifact.name} recorded in the i18n descriptor. For an application this is only
+     * diagnostic; {@link GrailsPluginGradlePlugin} overrides it with the Grails plugin name, which
+     * both namespaces the plugin's base names and links the descriptor to the plugin the runtime
+     * discovers.
+     */
+    protected Provider<String> grailsArtifactName(Project project) {
+        project.provider { project.name }
     }
 
     /**
@@ -884,14 +1681,16 @@ class GrailsGradlePlugin extends GroovyPlugin {
             }
 
             Map<String, String> replaceTokens = [
-                'info.app.name': project.name,
-                'info.app.version': project.version?.toString(),
-                'info.app.grailsVersion': grailsVersion
+                    'info.app.name': project.name,
+                    'info.app.version': project.version?.toString(),
+                    'info.app.grailsVersion': grailsVersion
             ]
 
-            task.from(project.relativePath('src/main/templates')) { spec ->
-                spec.into('META-INF/templates')
-            }
+            // Filter parameters are not part of Gradle's up-to-date checks (gradle/gradle#1191),
+            // so the token values must be declared as inputs — otherwise bumping grailsVersion or
+            // the app version leaves processResources UP-TO-DATE and stale substituted values
+            // (e.g. info.app.grailsVersion in application.yml) are repackaged into every build.
+            task.inputs.properties(replaceTokens)
 
             if (!native2ascii) {
                 task.from(sourceSet.resources) { spec ->
@@ -925,106 +1724,21 @@ class GrailsGradlePlugin extends GroovyPlugin {
     @CompileDynamic
     protected TaskProvider<Task> createNative2AsciiTask(TaskContainer tasks, src, dest) {
         TaskProvider<Task> native2asciiTask = tasks.register('native2ascii').configure {
-            it.doLast {
-                it.ant.native2ascii(src: src, dest: dest,
-                        includes: '**/*.properties', encoding: 'UTF-8')
-            }
             it.inputs.dir(src)
             it.outputs.dir(dest)
+
+            it.doLast { Task task ->
+                task.ant.native2ascii(src: src, dest: dest,
+                        includes: '**/*.properties', encoding: 'UTF-8')
+            }
         }
 
         native2asciiTask
     }
 
-    @CompileDynamic
-    protected void configureRunScript(Project project) {
-        if (!project.tasks.names.contains('runScript')) {
-            def runTask = project.tasks.register('runScript', ApplicationContextScriptTask)
-            project.afterEvaluate {
-                runTask.configure {
-                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-
-                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
-                    // with Grails' plugin management and bean wiring when running CLI scripts via Gradle
-                    it.systemProperty('spring.devtools.restart.enabled', 'false')
-
-                    List<Object> args = []
-                    def otherArgs = project.findProperty('args')
-                    if (otherArgs) {
-                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                    }
-
-                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
-
-                    it.doFirst {
-                        args << appClassProvider.get()
-                        it.args(args)
-                    }
-                }
-            }
-        }
-    }
-
-    @CompileDynamic
-    protected void configureRunCommand(Project project) {
-        if (!project.tasks.names.contains('runCommand')) {
-            def runTask = project.tasks.register('runCommand', ApplicationContextCommandTask)
-            project.afterEvaluate {
-                runTask.configure {
-                    SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-                    it.classpath = mainSourceSet.runtimeClasspath + project.configurations.getByName('console')
-                    it.systemProperty(Environment.KEY, System.getProperty(Environment.KEY, Environment.DEVELOPMENT.getName()))
-
-                    // devtools' automatic restart mechanism uses a specialized classloader setup, which can interfere
-                    // with Grails' plugin management and bean wiring when running CLI commands via Gradle
-                    it.systemProperty('spring.devtools.restart.enabled', 'false')
-
-                    List<Object> args = []
-                    def otherArgs = project.findProperty('args')
-                    if (otherArgs) {
-                        args.addAll(CommandLineParser.translateCommandline(otherArgs as String))
-                    }
-
-                    def appClassProvider = GrailsGradlePlugin.getMainClassProvider(project)
-
-                    it.doFirst {
-                        args << appClassProvider.get()
-                        it.args(args)
-                    }
-
-                }
-            }
-        }
-    }
-
-    protected FileCollection resolveClassesDirs(SourceSetOutput output, Project project) {
-        output?.classesDirs ?: project.files(project.layout.buildDirectory.dir('classes/main'))
-    }
-
-    protected FileCollection buildClasspath(Project project, Configuration... configurations) {
-        SourceSet mainSourceSet = SourceSets.findMainSourceSet(project)
-        SourceSetOutput output = mainSourceSet?.output
-        FileCollection mainFiles = resolveClassesDirs(output, project)
-        FileCollection fileCollection = project.files(project.layout.buildDirectory.dir('resources/main'), project.layout.buildDirectory.dir('gsp-classes')) + mainFiles
-        configurations.each {
-            fileCollection = fileCollection + it.filter({ File file -> !file.name.startsWith('spring-boot-devtools') })
-        }
-        fileCollection
-    }
-
-    protected FileCollection buildClasspath(Project project, String... configurationNames) {
-        buildClasspath(
-                project,
-                configurationNames.collect {
-                    project.configurations.named(it).getOrNull()
-                }.findAll(/* remove nulls */) as Configuration[]
-        )
-    }
-
     @CompileStatic
     private static final class OnlyOneGrailsPlugin {
+
         String pluginClassname
     }
 }

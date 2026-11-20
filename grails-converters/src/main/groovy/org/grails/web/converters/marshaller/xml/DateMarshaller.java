@@ -19,9 +19,10 @@
 package org.grails.web.converters.marshaller.xml;
 
 import java.text.Format;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
-
-import org.apache.commons.lang3.time.FastDateFormat;
 
 import grails.converters.XML;
 import org.grails.web.converters.ConverterUtil;
@@ -29,26 +30,33 @@ import org.grails.web.converters.exceptions.ConverterException;
 import org.grails.web.converters.marshaller.ObjectMarshaller;
 
 /**
+ * XML ObjectMarshaller which converts a Date Object to an ISO 8601 offset
+ * date-time string in the system default zone (e.g. {@code 2024-06-15T14:30:45.123-04:00}).
+ *
  * @author Siegfried Puchbauer
  * @since 1.1
  */
 public class DateMarshaller implements ObjectMarshaller<XML> {
 
-    private final Format formatter;
+    private static final DateTimeFormatter DEFAULT_FORMATTER =
+            DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault());
+
+    private final Format legacyFormatter;
 
     /**
      * Constructor with a custom formatter.
      * @param formatter  the formatter
      */
     public DateMarshaller(Format formatter) {
-        this.formatter = formatter;
+        this.legacyFormatter = formatter;
     }
 
     /**
-     * Default constructor.
+     * Default constructor — uses {@link DateTimeFormatter#ISO_OFFSET_DATE_TIME}
+     * with the system default zone.
      */
     public DateMarshaller() {
-        this(FastDateFormat.getInstance("yyyy-MM-dd HH:mm:ss.S z"));
+        this(null);
     }
 
     public boolean supports(Object object) {
@@ -57,10 +65,21 @@ public class DateMarshaller implements ObjectMarshaller<XML> {
 
     public void marshalObject(Object object, XML xml) throws ConverterException {
         try {
-            xml.chars(formatter.format(object));
+            Date date = (Date) object;
+            String formatted = legacyFormatter != null ?
+                    legacyFormatter.format(date) :
+                    DEFAULT_FORMATTER.format(toInstant(date));
+            xml.chars(formatted);
         }
         catch (Exception e) {
             throw ConverterUtil.resolveConverterException(e);
         }
+    }
+
+    // java.sql.Date and java.sql.Time throw UnsupportedOperationException from toInstant()
+    private static Instant toInstant(Date date) {
+        return date instanceof java.sql.Date || date instanceof java.sql.Time ?
+                Instant.ofEpochMilli(date.getTime()) :
+                date.toInstant();
     }
 }

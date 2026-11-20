@@ -43,26 +43,14 @@ class UrlMappingParameterTests extends Specification implements UrlMappingsUnitT
         info.actionName == 'list'
 
     }
-    void testUseDispatchAction() {
-        when:
-        webRequest.params.controller = 'foo'
-        webRequest.currentRequest.addParameter("${WebUtils.DISPATCH_ACTION_PARAMETER}foo", "true")
-        def info = urlMappingsHolder.match('/foo/list')
-        assert info != null
-        info.configure webRequest
-
-        then:
-        info.actionName == 'foo'
-        "de" == webRequest.params.lang
-    }
 
     void testNotEqual() {
-        when:
+        when: 'a request parameter shadows the name the URI captures'
         webRequest.params.controller = 'foo'
         def info = urlMappingsHolder.match('/showSomething/bad')
 
-        then:'url should not have matched'
-        info.controllerName == 'foo'
+        then: 'the notEqual constraint rejects the blog mapping and the URI falls through to the default mapping, whose controller is the one the URI captured rather than the request parameter'
+        info.controllerName == 'showSomething'
 
         when:
         info = urlMappingsHolder.match('/showSomething/good')

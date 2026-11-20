@@ -21,20 +21,16 @@ package org.grails.web.mapping;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-
-import groovy.lang.Closure;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +72,11 @@ public class RegexUrlMapping extends AbstractUrlMapping {
 
     public static final String FORMAT_PARAMETER = "format";
     private Pattern[] patterns;
-    private Map<Integer, List<Pattern>> patternByTokenCount = new HashMap<>();
+    /** Marks a pattern containing a ** token, which can match across any number of path segments. */
+    private static final int SPANS_SEGMENTS = -1;
+
+    /** Slash count per compiled pattern, parallel to {@link #patterns}, used to skip impossible candidates. */
+    private int[] patternSlashCounts;
     private UrlMappingData urlData;
     private static final String DEFAULT_ENCODING = "UTF-8";
     private static final Logger LOG = LoggerFactory.getLogger(RegexUrlMapping.class);
@@ -133,22 +133,17 @@ public class RegexUrlMapping extends AbstractUrlMapping {
         urlData = data;
         patterns = new Pattern[urls.length];
 
+        patternSlashCounts = new int[urls.length];
+
         for (int i = 0; i < urls.length; i++) {
             String url = urls[i];
-            Integer slashCount = org.springframework.util.StringUtils.countOccurrencesOf(url, "/");
-            List<Pattern> tokenCountPatterns = patternByTokenCount.get(slashCount);
-            if (tokenCountPatterns == null) {
-                tokenCountPatterns = new ArrayList<>();
-                patternByTokenCount.put(slashCount, tokenCountPatterns);
-            }
 
             Pattern pattern = convertToRegex(url);
             if (pattern == null) {
                 throw new IllegalStateException("Cannot use null pattern in regular expression mapping for url [" + data.getUrlPattern() + "]");
             }
-            tokenCountPatterns.add(pattern);
             this.patterns[i] = pattern;
-
+            this.patternSlashCounts[i] = slashCountFor(url);
         }
 
         if (constraints != null) {
@@ -244,6 +239,17 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                 // happen any time a URL mapping ends with a pattern like
                 // /$someVariable(.$someExtension)
                 pattern += "/([^/]+)\\.([^/.]+)?";
+            } else if (urlData.hasGreedyExtensionParam() && urlData.hasOptionalExtension() &&
+                       shouldApplyGreedyForUrl(url, urlData.getGreedyTokenIndex())) {
+                // Handle greedy extension param (+ marker): match within a single path segment up to the last dot
+                // The key is to make the entire dot+extension group optional using (?: )?
+                // For /(*)+(\.(*))?  we want regex: /([^/]+?)(?:\.([^/.]+))?  (required, greedy)
+                // For /(*)?+(\.(*))?  we want regex: /([^/]+?)?(?:\.([^/.]+))? (optional, greedy)
+                // Only apply greedy regex if this logical URL actually includes the greedy token
+                String processed = urlEnd
+                        .replace("/(*)?(\\.(*))?", "/([^/]+?)?(?:\\.([^/.]+))?")   // Optional greedy: (*)?+
+                        .replace("/(*)(\\.(*))?", "/([^/]+?)(?:\\.([^/.]+))?");    // Required greedy: (*)+
+                pattern += processed;
             } else {
                 pattern += urlEnd
                         .replace("(\\.(*))", "(\\.[^/]+)?")
@@ -265,6 +271,26 @@ public class RegexUrlMapping extends AbstractUrlMapping {
     }
 
     /**
+     * Determines if greedy regex should be applied for a given logical URL.
+     * Greedy regex should only be applied when the logical URL includes the greedy token.
+     * This is determined by counting the path segments (slashes) in the URL.
+     *
+     * @param url The logical URL being processed
+     * @param greedyTokenIndex The 0-based index of the greedy token
+     * @return true if greedy regex should be applied, false otherwise
+     */
+    private boolean shouldApplyGreedyForUrl(String url, int greedyTokenIndex) {
+        if (greedyTokenIndex < 0) {
+            return false;
+        }
+        // Count the number of path segments by counting slashes
+        // A URL with N slashes has N tokens (e.g., /a/b/c has 3 slashes and 3 tokens)
+        int slashCount = org.springframework.util.StringUtils.countOccurrencesOf(url, "/");
+        // The greedy token at index N is present only if there are at least N+1 slashes
+        return slashCount > greedyTokenIndex;
+    }
+
+    /**
      * Matches the given URI and returns a DefaultUrlMappingInfo instance or null
      *
      * @param uri The URI to match
@@ -272,8 +298,32 @@ public class RegexUrlMapping extends AbstractUrlMapping {
      * @see grails.web.mapping.UrlMappingInfo
      */
     public UrlMappingInfo match(String uri) {
-        for (Pattern pattern : patterns) {
-            Matcher m = pattern.matcher(uri);
+        return match(uri, countSlashes(uri));
+    }
+
+    /**
+     * Matches the given URI, skipping patterns whose segment count rules them out before any regular
+     * expression work is done.
+     * <p>
+     * Every construct {@link #convertToRegex(String)} emits is bounded to a single path segment
+     * ({@code [^/]+?}, {@code ([^/.]+?)} and friends) except {@code .*}, which is produced only by a
+     * {@code **} token. So for a pattern with no {@code **}, a matching URI has exactly the pattern's
+     * slash count, or one more because of the optional trailing {@code /??} the pattern ends with.
+     * Patterns are skipped, never reordered, so the mapping that wins is unchanged.
+     *
+     * @param uri The URI to match
+     * @param uriSlashCount The number of '/' characters in the URI, so callers scanning many mappings
+     *                      compute it once rather than once per mapping
+     * @return A UrlMappingInfo instance or null
+     */
+    public UrlMappingInfo match(String uri, int uriSlashCount) {
+        for (int i = 0; i < patterns.length; i++) {
+            int patternSlashCount = patternSlashCounts[i];
+            if (patternSlashCount != SPANS_SEGMENTS &&
+                    uriSlashCount != patternSlashCount && uriSlashCount != patternSlashCount + 1) {
+                continue;
+            }
+            Matcher m = patterns[i].matcher(uri);
             if (m.matches()) {
                 UrlMappingInfo urlInfo = createUrlMappingInfo(uri, m);
                 if (urlInfo != null) {
@@ -282,6 +332,32 @@ public class RegexUrlMapping extends AbstractUrlMapping {
             }
         }
         return null;
+    }
+
+    /**
+     * @return the number of '/' characters in the logical URL, or {@link #SPANS_SEGMENTS} when it
+     *         contains a {@code **} token and so can match across any number of segments
+     */
+    private static int slashCountFor(String url) {
+        for (int i = 0; i < url.length() - 1; i++) {
+            if (url.charAt(i) == '*' && url.charAt(i + 1) == '*') {
+                return SPANS_SEGMENTS;
+            }
+        }
+        return countSlashes(url);
+    }
+
+    /**
+     * @return the number of '/' characters in the given string
+     */
+    public static int countSlashes(String uri) {
+        int count = 0;
+        for (int i = 0; i < uri.length(); i++) {
+            if (uri.charAt(i) == '/') {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -359,7 +435,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
             }
             m = DOUBLE_WILDCARD_PATTERN.matcher(token);
             if (m.find()) {
-                StringBuffer buf = new StringBuffer();
+                StringBuilder buf = new StringBuilder();
                 do {
                     ConstrainedProperty prop = constraints[paramIndex++];
                     String propName = prop.getPropertyName();
@@ -624,7 +700,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                     }
                 }
                 // if the format is specified but the value is empty, ignore it
-                if (!(FORMAT_PARAMETER.equals(propertyName) && GrailsStringUtils.isEmpty(lastGroup))) {
+                if (!(FORMAT_PARAMETER.equals(propertyName) && !GrailsStringUtils.hasLength(lastGroup))) {
                     params.put(propertyName, lastGroup);
                 }
                 break;
@@ -648,7 +724,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
                         lastGroup = lastGroup.substring(1);
                     }
                     // if the format is specified but the value is empty, ignore it
-                    if (!(FORMAT_PARAMETER.equals(propertyName) && GrailsStringUtils.isEmpty(lastGroup))) {
+                    if (!(FORMAT_PARAMETER.equals(propertyName) && !GrailsStringUtils.hasLength(lastGroup))) {
                         params.put(propertyName, lastGroup);
                     }
                 }
@@ -700,7 +776,11 @@ public class RegexUrlMapping extends AbstractUrlMapping {
 
     /**
      * This method will look for a constraint for the given name and return a closure that when executed will
-     * attempt to evaluate its value from the bound request parameters at runtime.
+     * attempt to evaluate its value at runtime.
+     *
+     * <p>The mapping is shared by every request it matches, so the returned evaluator holds only the name
+     * of the token to resolve. The {@link UrlMappingInfo} produced by a match resolves it against the values
+     * that match captured.</p>
      *
      * @param name        The name of the constrained property
      * @param constraints The array of current ConstrainedProperty instances
@@ -711,15 +791,7 @@ public class RegexUrlMapping extends AbstractUrlMapping {
 
         for (ConstrainedProperty constraint : constraints) {
             if (constraint.getPropertyName().equals(name)) {
-                return new Closure(this) {
-                    private static final long serialVersionUID = -2404119898659287216L;
-
-                    @Override
-                    public Object call(Object... objects) {
-                        GrailsWebRequest webRequest = UrlMappingUtils.lookupWebRequest();
-                        return webRequest != null ? webRequest.getParams().get(name) : null;
-                    }
-                };
+                return new RuntimeConstraintEvaluator(this, name);
             }
         }
         return null;

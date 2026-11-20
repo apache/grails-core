@@ -1,0 +1,353 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.orm.hibernate.connections
+
+import groovy.transform.AutoClone
+import groovy.transform.CompileStatic
+import groovy.transform.builder.Builder
+import groovy.transform.builder.SimpleStrategy
+
+import org.hibernate.CustomEntityDirtinessStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategy
+import org.hibernate.boot.model.naming.PhysicalNamingStrategySnakeCaseImpl
+import org.hibernate.cfg.Configuration
+
+import org.springframework.core.io.Resource
+
+import org.grails.datastore.gorm.jdbc.connections.DataSourceSettings
+import org.grails.datastore.mapping.core.connections.ConnectionSourceSettings
+import org.grails.orm.hibernate.HibernateEventListeners
+import org.grails.orm.hibernate.dirty.GrailsEntityDirtinessStrategy
+import org.grails.orm.hibernate.support.ClosureEventTriggeringInterceptor
+
+/**
+ * Settings for Hibernate
+ *
+ * @author Graeme Rocher
+ * @since 6.0
+ */
+@Builder(builderStrategy = SimpleStrategy, prefix = '')
+@AutoClone
+class HibernateConnectionSourceSettings extends ConnectionSourceSettings {
+
+    /**
+     * Whether to prepare the datastore for runtime reloading
+     */
+    boolean enableReload = false
+    /**
+     * Settings for the dataSource
+     */
+    DataSourceSettings dataSource = new DataSourceSettings()
+
+    /**
+     * Settings for Hibernate
+     */
+    HibernateSettings hibernate = new HibernateSettings()
+
+    /**
+     * Convert to hibernate properties
+     *
+     * @return The properties
+     */
+    Properties toProperties() {
+        Properties properties = new Properties()
+        properties.putAll(dataSource.toHibernateProperties())
+        properties.putAll(hibernate.toProperties())
+        return properties
+    }
+
+    @Builder(builderStrategy = SimpleStrategy, prefix = '')
+    @AutoClone
+    static class HibernateSettings extends LinkedHashMap<String, String> {
+
+        /**
+         * Whether OpenSessionInView should be read-only
+         */
+        OsivSettings osiv = new OsivSettings()
+        /**
+         * Whether Hibernate should be in read-only mode
+         */
+        boolean readOnly = false
+
+        /**
+         * Whether to use Hibernate's dirty checking instead of Grails'
+         */
+        boolean hibernateDirtyChecking = false
+        /**
+         * Cache settings
+         */
+        CacheSettings cache = new CacheSettings()
+
+        /**
+         * Flush settings
+         */
+        FlushSettings flush = new FlushSettings()
+
+        /**
+         * The configuration class
+         */
+        Class<? extends Configuration> configClass
+
+        /**
+         * The naming strategy
+         */
+        Class<? extends PhysicalNamingStrategy> naming_strategy = PhysicalNamingStrategySnakeCaseImpl
+
+        /**
+         *
+         */
+        Class<? extends CustomEntityDirtinessStrategy> entity_dirtiness_strategy = GrailsEntityDirtinessStrategy
+
+        /**
+         * A subclass of ClosureEventTriggeringInterceptor
+         */
+        Class<? extends ClosureEventTriggeringInterceptor> closureEventTriggeringInterceptorClass
+
+        /**
+         * The event triggering interceptor
+         */
+        ClosureEventTriggeringInterceptor eventTriggeringInterceptor
+        /**
+         * The default hibernate event listeners
+         */
+        HibernateEventListeners hibernateEventListeners = new HibernateEventListeners()
+
+        /**
+         * Set the locations of multiple Hibernate XML config files, for example as
+         * classpath resources "classpath:hibernate.cfg.xml,classpath:extension.cfg.xml".
+         * <p>Note: Can be omitted when all necessary properties and mapping
+         * resources are specified locally via this bean.
+         * @see org.hibernate.cfg.Configuration#configure(java.net.URL)
+         */
+
+        Resource[] configLocations
+
+        /**
+         * Set locations of Hibernate mapping files, for example as classpath
+         * resource "classpath:example.hbm.xml". Supports any resource location
+         * via Spring's resource abstraction, for example relative paths like
+         * "WEB-INF/mappings/example.hbm.xml" when running in an application context.
+         * <p>Can be used to add to mappings from a Hibernate XML config file,
+         * or to specify all mappings locally.
+         * @see org.hibernate.cfg.Configuration#addInputStream
+         */
+        Resource[] mappingLocations
+
+        /**
+         * Set locations of cacheable Hibernate mapping files, for example as web app
+         * resource "/WEB-INF/mapping/example.hbm.xml". Supports any resource location
+         * via Spring's resource abstraction, as long as the resource can be resolved
+         * in the file system.
+         * <p>Can be used to add to mappings from a Hibernate XML config file,
+         * or to specify all mappings locally.
+         * @see org.hibernate.cfg.Configuration#addCacheableFile(java.io.File)
+         */
+        Resource[] cacheableMappingLocations
+
+        /**
+         * Set locations of jar files that contain Hibernate mapping resources,
+         * like "WEB-INF/lib/example.hbm.jar".
+         * <p>Can be used to add to mappings from a Hibernate XML config file,
+         * or to specify all mappings locally.
+         * @see org.hibernate.cfg.Configuration#addJar(java.io.File)
+         */
+        Resource[] mappingJarLocations
+
+        /**
+         * Set locations of directories that contain Hibernate mapping resources,
+         * like "WEB-INF/mappings".
+         * <p>Can be used to add to mappings from a Hibernate XML config file,
+         * or to specify all mappings locally.
+         * @see org.hibernate.cfg.Configuration#addDirectory(java.io.File)
+         */
+        Resource[] mappingDirectoryLocations
+
+        /**
+         * Specify annotated entity classes to register with this Hibernate SessionFactory.
+         * @see org.hibernate.cfg.Configuration#addAnnotatedClass(Class)
+         */
+        Class<?>[] annotatedClasses
+
+        /**
+         * Specify the names of annotated packages, for which package-level
+         * annotation metadata will be read.
+         * @see org.hibernate.cfg.Configuration#addPackage(String)
+         */
+        String[] annotatedPackages
+
+        /**
+         * Specify packages to search for autodetection of your entity classes in the
+         * classpath. This is analogous to Spring's component-scan feature
+         * ({@link org.springframework.context.annotation.ClassPathBeanDefinitionScanner}).
+         */
+        String[] packagesToScan
+
+        /**
+         * JPA Settings
+         */
+        JpaSettings jpa = new JpaSettings()
+
+        /**
+         * Any additional properties that should be passed through as is.
+         */
+        Properties additionalProperties = new Properties()
+
+        @CompileStatic
+        static Map<String, Object> toHibernateEventListeners(ClosureEventTriggeringInterceptor eventTriggeringInterceptor) {
+            if (eventTriggeringInterceptor != null) {
+                return [
+//                    'save': eventTriggeringInterceptor,
+//                    'save-update': eventTriggeringInterceptor,
+                    'merge': eventTriggeringInterceptor,
+                    // Hibernate's internal event name for EventType.PERSIST is 'create' (historical naming);
+                    // 'create-onflush' is the persist cascaded during a flush, whose default listener uses
+                    // a different cascade action, so the interceptor supplies a dedicated listener for it.
+                    'create': eventTriggeringInterceptor,
+                    'create-onflush': eventTriggeringInterceptor.persistOnFlushEventListener,
+                    'pre-load': eventTriggeringInterceptor,
+                    'post-load': eventTriggeringInterceptor,
+                    'pre-insert': eventTriggeringInterceptor,
+                    'post-insert': eventTriggeringInterceptor,
+                    'pre-update': eventTriggeringInterceptor,
+                    'post-update': eventTriggeringInterceptor,
+                    'pre-delete': eventTriggeringInterceptor,
+                    'post-delete': eventTriggeringInterceptor
+                ] as Map<String, Object>
+            }
+            return Collections.emptyMap()
+        }
+
+        /**
+         * Convert to Hibernate properties
+         *
+         * @return The hibernate properties
+         */
+        @CompileStatic
+        Properties toProperties() {
+            Properties props = new Properties()
+            if (naming_strategy != null) {
+                props.put('hibernate.naming_strategy'.toString(), naming_strategy.name)
+            }
+            if (configClass != null) {
+                props.put('hibernate.config_class'.toString(), configClass.name)
+            }
+            // Hibernate reads hibernate.cache.use_query_cache, so that is the property cache.queries sets. It is written
+            // only when the application set cache.queries: an unset one leaves what a configuration file or Hibernate's
+            // own default decides. A property of that name that the application sets itself comes later and wins.
+            if (cache.queries != null) {
+                props.put('hibernate.cache.use_query_cache', String.valueOf(cache.queries))
+            }
+            props.put('hibernate.jpa.compliance.cascade', String.valueOf(jpa.compliance.cascade))
+
+            if (entity_dirtiness_strategy != null && !hibernateDirtyChecking) {
+                props.put('hibernate.entity_dirtiness_strategy', entity_dirtiness_strategy.name)
+            }
+
+            props.put('hibernate.connection.handling_mode', 'DELAYED_ACQUISITION_AND_HOLD')
+
+            String prefix = 'hibernate'
+            props.putAll(additionalProperties)
+            populateProperties(props, this, prefix)
+            return props
+        }
+
+        @CompileStatic
+        protected void populateProperties(Properties props, Map current, String prefix) {
+            for (key in current.keySet()) {
+                def value = current.get(key)
+                if (value instanceof Map) {
+                    populateProperties(props, (Map) value, "${prefix}.$key")
+                } else if (value != null) {
+                    props.put("$prefix.$key".toString(), value)
+                }
+            }
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class CacheSettings {
+            /**
+             * Whether to cache queries. Unset by default, which leaves the decision to the Hibernate configuration.
+             */
+            Boolean queries
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class FlushSettings {
+            /**
+             * The default flush mode
+             */
+            FlushMode mode = FlushMode.COMMIT
+
+            /**
+             * We use a separate enum here because the classes differ between Hibernate 3 and 4
+             *
+             * @see org.hibernate.FlushMode
+             */
+            static enum FlushMode {
+
+                MANUAL(0),
+                COMMIT(5),
+                AUTO(10),
+                ALWAYS(20)
+
+                private final int level
+
+                FlushMode(int level) {
+                    this.level = level
+                }
+
+                int getLevel() {
+                    return level
+                }
+            }
+        }
+
+        /**
+         * Settings for OpenSessionInView
+         */
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class OsivSettings {
+            /**
+             * Whether to cache queries
+             */
+            boolean readonly = false
+
+            /**
+             * Whether OSIV is enabled
+             */
+            boolean enabled = true
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        @AutoClone
+        static class JpaSettings {
+
+            JpaComplianceSettings compliance = new JpaComplianceSettings()
+        }
+
+        @Builder(builderStrategy = SimpleStrategy, prefix = '')
+        static class JpaComplianceSettings {
+
+            boolean cascade = true
+        }
+    }
+}

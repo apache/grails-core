@@ -1,0 +1,73 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+// tag::basic_declaration[]
+package demo
+
+import grails.testing.web.controllers.ControllerUnitTest
+import spock.lang.Specification
+
+class DemoControllerSpec extends Specification implements ControllerUnitTest<DemoController> {
+
+    // ...
+
+// end::basic_declaration[]
+
+// tag::test_render[]
+    void "test action which renders text"() {
+        when:
+        controller.hello()               // <1>
+
+        then:
+        status == 200                    // <2>
+        response.text == 'Hello, World!' // <3>
+    }
+
+// end::test_render[]
+    void 'test invalid request method'() {
+        when:
+        request.method = 'POST'
+        controller.clearDatabase()
+
+        then:
+        status == 405
+    }
+
+    void 'test valid request method'() {
+        when:
+        request.method = 'DELETE'
+        controller.clearDatabase()
+
+        then:
+        status == 200
+        response.text == 'Success'
+    }
+
+    void 'test private methods can be executed'() {
+        expect:
+        controller.privateMethod() == 'From Private'
+    }
+
+    void 'test protected methods can be executed'() {
+        expect:
+        controller.protectedMethod() == 'From Protected'
+    }
+// tag::basic_declaration[]
+}
+// end::basic_declaration[]
+

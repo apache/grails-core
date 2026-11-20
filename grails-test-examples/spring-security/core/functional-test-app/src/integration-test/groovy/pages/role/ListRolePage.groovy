@@ -16,7 +16,6 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages.role
 
 import geb.Module
@@ -24,26 +23,26 @@ import pages.ScaffoldPage
 
 class ListRolePage extends ScaffoldPage {
 
-	static url = 'testRole'
+    static url = 'testRole'
 
-	static at = {
-		title ==~ /TestRole List/
-	}
+    static at = {
+        title ==~ /TestRole List/
+    }
 
-	static content = {
-		newRoleButton(to: CreateRolePage) { $('a', text: 'New TestRole') }
-		roleTable { $('div.content table', 0) }
-		roleRow { i -> roleRows[i].module RoleRow }
-		roleRows(required: false) { roleTable.find('tbody').find('tr') }
-	}
+    static content = {
+        newRoleButton(to: CreateRolePage) { $('a', text: 'New TestRole') }
+        roleTable { $('div.content table', 0) }
+        roleRow { int i -> roleRows[i].module(RoleRow) }
+        roleRows(required: false) { roleTable.find('tbody').find('tr') }
+    }
 }
 
 class RoleRow extends Module {
-	static content = {
-		cell { i -> $('td', i) }
-		cellText { i -> cell(i).text() }
-		cellHrefText{ i -> cell(i).find('a').text() }
-		authority { cellText(0) }
-		showLink(to: ShowRolePage) { cell(0).find('a') }
-	}
+    static content = {
+        cell { int i -> $('td', i) }
+        cellText { int i -> cell(i).text() }
+        cellHrefText { int i -> cell(i).find('a').text() }
+        authority { cellText(0) }
+        showLink(to: ShowRolePage) { cell(0).find('a') }
+    }
 }

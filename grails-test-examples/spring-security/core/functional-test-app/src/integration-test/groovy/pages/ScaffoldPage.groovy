@@ -16,18 +16,19 @@
  *  specific language governing permissions and limitations
  *  under the License.
  */
-
 package pages
 
 import geb.Page
 
 class ScaffoldPage extends Page {
-	static content = {
-		heading { $('h1') }
-		message { $('div.message').text() }
-	}
 
-	long getId() {
-		driver.currentUrl.substring(driver.currentUrl.lastIndexOf('/') + 1) as Long
-	}
+    static content = {
+        h1 { $('h1') }
+        heading { h1.text() }
+        message { $('div.message').text() }
+    }
+
+    long getId() {
+        driver.currentUrl.substring(driver.currentUrl.lastIndexOf('/') + 1) as Long
+    }
 }

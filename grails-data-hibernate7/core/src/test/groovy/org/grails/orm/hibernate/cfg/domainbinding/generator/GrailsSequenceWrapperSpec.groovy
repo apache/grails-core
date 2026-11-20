@@ -1,0 +1,52 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+
+package org.grails.orm.hibernate.cfg.domainbinding.generator
+
+import grails.gorm.tests.HibernateGormDatastoreSpec
+import org.grails.orm.hibernate.cfg.PersistentEntityNamingStrategy
+import org.grails.orm.hibernate.cfg.domainbinding.hibernate.GrailsHibernatePersistentEntity
+import org.grails.orm.hibernate.cfg.HibernateSimpleIdentity
+import org.hibernate.engine.jdbc.env.spi.JdbcEnvironment
+import org.hibernate.generator.GeneratorCreationContext
+import spock.lang.Subject
+
+class GrailsSequenceWrapperSpec extends HibernateGormDatastoreSpec {
+
+    @Subject
+    GrailsSequenceWrapper wrapper = new GrailsSequenceWrapper()
+
+    def "should delegate to GrailsSequenceGeneratorEnum"() {
+        given:
+        def context = Mock(GeneratorCreationContext)
+        def mappedId = Mock(HibernateSimpleIdentity)
+        def domainClass = Mock(GrailsHibernatePersistentEntity)
+        def jdbcEnvironment = Mock(JdbcEnvironment)
+        def namingStrategy = Mock(PersistentEntityNamingStrategy)
+
+        // Setup minimal mocks for assigned generator which is simple to instantiate
+        context.getProperty() >> null 
+
+        when:
+        def generator = wrapper.getGenerator("assigned", context, mappedId, domainClass, jdbcEnvironment, namingStrategy)
+
+        then:
+        generator instanceof org.hibernate.generator.Assigned
+    }
+}

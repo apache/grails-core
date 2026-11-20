@@ -1,0 +1,412 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.datastore.gorm.mongodb.springdata
+
+import grails.gorm.annotation.Entity
+
+import org.apache.grails.testing.mongo.EmbeddedReplicaSetSpec
+import org.grails.datastore.mapping.mongo.MongoDatastore
+import org.springframework.data.mongodb.MongoDatabaseFactory
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory
+import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions
+import org.springframework.data.mongodb.core.mapping.MongoMappingContext
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.mongodb.repository.support.MongoRepositoryFactory
+import org.springframework.transaction.CannotCreateTransactionException
+import org.springframework.transaction.TransactionDefinition
+import org.springframework.transaction.TransactionUsageException
+import org.springframework.transaction.support.TransactionSynchronizationManager
+import org.springframework.transaction.support.TransactionTemplate
+import spock.lang.AutoCleanup
+import spock.lang.Shared
+
+/**
+ * Proves a single transaction, managed by {@link GormSharedSessionMongoTransactionManager}, spans
+ * both a GORM {@code save()} and a Spring Data {@code MongoTemplate} write atomically on one shared
+ * {@link com.mongodb.client.ClientSession}.
+ */
+class UnifiedMongoTransactionSpec extends EmbeddedReplicaSetSpec {
+
+    @Shared
+    @AutoCleanup
+    MongoDatastore datastore
+
+    @Shared
+    MongoTemplate mongoTemplate
+
+    @Shared
+    MongoDatabaseFactory factory
+
+    @Shared
+    TransactionTemplate transactionTemplate
+
+    void setupSpec() {
+        Map config = [
+                'grails.mongodb.url'          : mongoUrl,
+                'grails.mongodb.transactional': true
+        ]
+        datastore = new MongoDatastore(config, GormThing)
+
+        factory = new SimpleMongoClientDatabaseFactory(datastore.mongoClient, datastore.defaultDatabase)
+        MongoCustomConversions conversions = new MongoCustomConversions([])
+        MongoMappingContext mappingContext = new MongoMappingContext()
+        mappingContext.simpleTypeHolder = conversions.simpleTypeHolder
+        mappingContext.afterPropertiesSet()
+        MappingMongoConverter converter = new MappingMongoConverter(new DefaultDbRefResolver(factory), mappingContext)
+        converter.customConversions = conversions
+        converter.afterPropertiesSet()
+        mongoTemplate = new MongoTemplate(factory, converter)
+
+        transactionTemplate = new TransactionTemplate(new GormSharedSessionMongoTransactionManager(datastore, factory))
+    }
+
+    void setup() {
+        GormThing.withNewSession {
+            GormThing.DB.drop()
+        }
+        mongoTemplate.dropCollection(SpringDataThing)
+    }
+
+    private long gormCount() {
+        GormThing.withNewSession { GormThing.count() }
+    }
+
+    private long springDataCount() {
+        mongoTemplate.count(new Query(), SpringDataThing)
+    }
+
+    void "test a GORM save and a Spring Data write commit together in one transaction"() {
+        when: "both a GORM entity and a Spring Data document are written in one transaction"
+        transactionTemplate.execute {
+            new GormThing(name: "gorm").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            return null
+        }
+
+        then: "both are persisted"
+        gormCount() == 1
+        springDataCount() == 1
+    }
+
+    void "test a GORM save and a Spring Data write roll back together when the transaction fails"() {
+        when: "both are written then the transaction throws"
+        transactionTemplate.execute {
+            new GormThing(name: "gorm").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            throw new RuntimeException("boom")
+        }
+
+        then: "the exception propagates"
+        thrown(RuntimeException)
+
+        and: "neither write was persisted - they shared one aborted MongoDB transaction"
+        gormCount() == 0
+        springDataCount() == 0
+    }
+
+    void "test a read-only unified transaction drops the unflushed GORM write and commits the Spring Data one"() {
+        given: "a read-only transaction on the same unified manager"
+        TransactionTemplate readOnlyTemplate = new TransactionTemplate(
+                new GormSharedSessionMongoTransactionManager(datastore, factory))
+        readOnlyTemplate.readOnly = true
+
+        when: "it queues a GORM write and issues a Spring Data write"
+        readOnlyTemplate.execute {
+            new GormThing(name: "gorm").save()
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            return null
+        }
+
+        then: "the GORM write is discarded, because a read-only transaction commits without flushing"
+        gormCount() == 0
+
+        and: "the Spring Data write is persisted: a read-only transaction has no server transaction to hold it in"
+        springDataCount() == 1
+
+        and: "no Spring Data resource holder was bound for it"
+        !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a unified transaction started inside another joins it, for GORM and Spring Data alike"() {
+        when: "both stacks write in an outer and an inner transaction, then the outer one fails"
+        transactionTemplate.execute {
+            new GormThing(name: "outer").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "outerSD"))
+            transactionTemplate.execute {
+                new GormThing(name: "inner").save(flush: true)
+                mongoTemplate.insert(new SpringDataThing(name: "innerSD"))
+                return null
+            }
+            throw new RuntimeException("outer")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "the inner transaction's writes were rolled back with the outer one's"
+        gormCount() == 0
+        springDataCount() == 0
+    }
+
+    void "test a unified transaction started inside another commits every write of both with the outer one"() {
+        when:
+        transactionTemplate.execute {
+            new GormThing(name: "outer").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "outerSD"))
+            transactionTemplate.execute {
+                new GormThing(name: "inner").save(flush: true)
+                mongoTemplate.insert(new SpringDataThing(name: "innerSD"))
+                return null
+            }
+            new GormThing(name: "after").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "afterSD"))
+            return null
+        }
+
+        then: "beginning the inner transaction did not abort the outer one's writes on either stack"
+        gormCount() == 3
+        springDataCount() == 3
+    }
+
+    void "test a REQUIRES_NEW unified transaction commits both stacks' writes on its own"() {
+        given:
+        TransactionTemplate requiresNew = new TransactionTemplate(new GormSharedSessionMongoTransactionManager(datastore, factory))
+        requiresNew.propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
+
+        when: "the inner transaction commits while the outer one fails"
+        transactionTemplate.execute {
+            new GormThing(name: "outer").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "outerSD"))
+            requiresNew.execute {
+                new GormThing(name: "inner").save(flush: true)
+                mongoTemplate.insert(new SpringDataThing(name: "innerSD"))
+                return null
+            }
+            mongoTemplate.insert(new SpringDataThing(name: "afterSD"))
+            throw new RuntimeException("outer")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "only the inner transaction's writes survived: its MongoTemplate calls ran in its own session"
+        GormThing.withNewSession { GormThing.findAll()*.name } == ["inner"]
+        mongoTemplate.findAll(SpringDataThing)*.name == ["innerSD"]
+
+        and: "nothing was left bound to the thread"
+        !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a unified transaction in a new session runs Spring Data in its own session, and the outer one keeps its own"() {
+        when: "a transaction in a new session commits inside a unified one, which then fails"
+        transactionTemplate.execute {
+            new GormThing(name: "outer").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "outerSD"))
+            GormThing.withNewSession {
+                transactionTemplate.execute {
+                    new GormThing(name: "inner").save(flush: true)
+                    mongoTemplate.insert(new SpringDataThing(name: "innerSD"))
+                    return null
+                }
+            }
+            mongoTemplate.insert(new SpringDataThing(name: "afterSD"))
+            throw new RuntimeException("outer")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "the new session's transaction committed both stacks' writes, and the outer one's MongoTemplate write after it rolled back with the rest"
+        GormThing.withNewSession { GormThing.findAll()*.name } == ["inner"]
+        mongoTemplate.findAll(SpringDataThing)*.name == ["innerSD"]
+
+        and: "nothing was left bound to the thread"
+        !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a read-only unified transaction in a new session runs Spring Data outside the surrounding transaction, as one on its own does"() {
+        given:
+        TransactionTemplate readOnlyTemplate = new TransactionTemplate(new GormSharedSessionMongoTransactionManager(datastore, factory))
+        readOnlyTemplate.readOnly = true
+
+        when: "it writes through MongoTemplate, and the surrounding transaction then fails"
+        transactionTemplate.execute {
+            mongoTemplate.insert(new SpringDataThing(name: "outerSD"))
+            GormThing.withNewSession {
+                readOnlyTemplate.execute {
+                    mongoTemplate.insert(new SpringDataThing(name: "readOnlySD"))
+                    return null
+                }
+            }
+            mongoTemplate.insert(new SpringDataThing(name: "afterSD"))
+            throw new RuntimeException("outer")
+        }
+
+        then:
+        thrown(RuntimeException)
+
+        and: "its write was not part of the surrounding transaction, whose writes before and after it rolled back"
+        mongoTemplate.findAll(SpringDataThing)*.name == ["readOnlySD"]
+
+        and:
+        !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a read-write unified transaction commits an unflushed GORM write"() {
+        when: "the same sequence runs without the read-only flag"
+        transactionTemplate.execute {
+            new GormThing(name: "gorm").save()
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            return null
+        }
+
+        then: "the commit flushes the session, so both writes are persisted"
+        gormCount() == 1
+        springDataCount() == 1
+    }
+
+    void "test Spring Data reads a document written by GORM on the shared connection"() {
+        given: "GORM writes an entity outside any transaction"
+        GormThing.withNewSession {
+            new GormThing(name: "written-by-gorm").save(flush: true)
+        }
+
+        expect: "Spring Data, using the same client and database, sees it in GORM's collection"
+        mongoTemplate.count(new Query(), "gormThing") == 1
+    }
+
+    void "test sequential unified transactions each commit without leaking the shared session or holder"() {
+        when: "two separate transactions each write to both stacks"
+        transactionTemplate.execute {
+            new GormThing(name: "first").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "firstSD"))
+            return null
+        }
+        transactionTemplate.execute {
+            new GormThing(name: "second").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "secondSD"))
+            return null
+        }
+
+        then: "both committed - the first transaction's session/holder did not leak into the second or get double-closed"
+        gormCount() == 2
+        springDataCount() == 2
+
+        and: "no Spring Data resource holder remains bound to the thread after completion"
+        !TransactionSynchronizationManager.hasResource(factory)
+    }
+
+    void "test a per-transaction timeout on the unified manager is rejected and binds no Spring Data resource"() {
+        given: "a unified transaction template that requests an explicit timeout"
+        def timeoutTemplate = new TransactionTemplate(new GormSharedSessionMongoTransactionManager(datastore, factory))
+        timeoutTemplate.timeout = 5
+
+        when: "a transaction touching both stacks is attempted"
+        timeoutTemplate.execute {
+            new GormThing(name: "gorm").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "springData"))
+            return null
+        }
+
+        then: "the unified begin is refused before the Spring Data holder is bound"
+        def e = thrown(CannotCreateTransactionException)
+        e.cause instanceof TransactionUsageException
+
+        and: "no Spring Data resource holder was left bound to the thread"
+        !TransactionSynchronizationManager.hasResource(factory)
+
+        and: "neither stack persisted anything"
+        gormCount() == 0
+        springDataCount() == 0
+
+        when: "a normal transaction runs afterward"
+        transactionTemplate.execute {
+            new GormThing(name: "later").save(flush: true)
+            mongoTemplate.insert(new SpringDataThing(name: "laterSD"))
+            return null
+        }
+
+        then: "the unified manager still works - the rejected begin left no corrupt state"
+        gormCount() == 1
+        springDataCount() == 1
+    }
+
+    void "test a Spring Data repository works over the shared connection"() {
+        given:
+        SpringDataThingRepository repository = new MongoRepositoryFactory(mongoTemplate).getRepository(SpringDataThingRepository)
+
+        when: "a document is saved and read back through the repository"
+        repository.save(new SpringDataThing(name: "viaRepository"))
+
+        then:
+        repository.count() == 1
+        repository.findAll().first().name == "viaRepository"
+
+        and: "GORM sees the same database"
+        mongoTemplate.count(new Query(), SpringDataThing) == 1
+    }
+
+    void "test the auto-configuration wires a shared factory, a mongoTemplate and a unified transaction manager"() {
+        given:
+        SpringDataMongoGormAutoConfiguration config = new SpringDataMongoGormAutoConfiguration()
+        MongoCustomConversions conversions = config.mongoCustomConversions()
+        MongoMappingContext context = config.springDataMongoMappingContext(conversions)
+
+        when:
+        MongoDatabaseFactory factory = config.mongoDatabaseFactory(datastore)
+
+        then: "the factory is built over GORM's client and database"
+        factory instanceof SimpleMongoClientDatabaseFactory
+        factory.mongoDatabase.name == datastore.defaultDatabase
+
+        and: "a MongoTemplate is produced"
+        config.mongoTemplate(factory, config.mappingMongoConverter(factory, context, conversions)) != null
+
+        and: "the primary transaction manager shares GORM's session with Spring Data"
+        config.transactionManager(datastore, factory) instanceof GormSharedSessionMongoTransactionManager
+    }
+
+    void "test the shared database factory does not close GORM's MongoClient"() {
+        given:
+        MongoDatabaseFactory factory = new SimpleMongoClientDatabaseFactory(datastore.mongoClient, datastore.defaultDatabase)
+
+        when: "the factory is destroyed"
+        ((org.springframework.data.mongodb.core.SimpleMongoClientDatabaseFactory) factory).destroy()
+
+        then: "GORM's client is still usable"
+        gormCount() == 0
+    }
+}
+
+@Entity
+class GormThing {
+    String name
+}
+
+class SpringDataThing {
+    String id
+    String name
+}
+
+interface SpringDataThingRepository extends MongoRepository<SpringDataThing, String> {
+}

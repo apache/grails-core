@@ -18,6 +18,8 @@
  */
 package org.grails.web.pages;
 
+import java.lang.reflect.InvocationTargetException;
+
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import groovy.lang.GroovyObjectSupport;
@@ -65,8 +67,8 @@ public class GroovyPagesUriSupportTests {
     }
 
     @Test
-    public void testGetTemplateURIForController() throws IllegalAccessException, InstantiationException {
-        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").newInstance();
+    public void testGetTemplateURIForController() throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException {
+        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").getDeclaredConstructor().newInstance();
         GroovyPagesUriSupport uriSupport = new GroovyPagesUriSupport();
         assertEquals("/foo/_bar.gsp", uriSupport.getTemplateURI(controller, "bar"));
         assertEquals("/bar/_foo.gsp", uriSupport.getTemplateURI(controller, "/bar/foo"));
@@ -74,8 +76,8 @@ public class GroovyPagesUriSupportTests {
     }
 
     @Test
-    public void testGetViewURIForController() throws IllegalAccessException, InstantiationException {
-        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").newInstance();
+    public void testGetViewURIForController() throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException {
+        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").getDeclaredConstructor().newInstance();
         GroovyPagesUriSupport uriSupport = new GroovyPagesUriSupport();
         assertEquals("/foo/bar.gsp", uriSupport.getViewURI(controller, "bar"));
         assertEquals("/bar.gsp", uriSupport.getViewURI(controller, "../bar"));
@@ -84,8 +86,8 @@ public class GroovyPagesUriSupportTests {
     }
 
     @Test
-    public void testNoSuffixGetViewURIForController() throws IllegalAccessException, InstantiationException {
-        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").newInstance();
+    public void testNoSuffixGetViewURIForController() throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException {
+        GroovyObject controller = (GroovyObject) new GroovyClassLoader().parseClass("class FooController { }").getDeclaredConstructor().newInstance();
         GroovyPagesUriSupport uriSupport = new GroovyPagesUriSupport();
         assertEquals("/foo/bar", uriSupport.getNoSuffixViewURI(controller, "bar"));
         assertEquals("/bar/foo", uriSupport.getNoSuffixViewURI(controller, "/bar/foo"));

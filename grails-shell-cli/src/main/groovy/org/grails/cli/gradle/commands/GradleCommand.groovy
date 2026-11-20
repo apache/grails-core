@@ -20,7 +20,10 @@ package org.grails.cli.gradle.commands
 
 import groovy.transform.CompileStatic
 
-import jline.console.completer.Completer
+import org.jline.reader.Candidate
+import org.jline.reader.Completer
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 import org.gradle.tooling.BuildLauncher
 
 import org.grails.cli.gradle.GradleUtil
@@ -65,13 +68,12 @@ class GradleCommand implements ProjectCommand, Completer, ProjectContextAware {
     }
 
     @Override
-    int complete(String buffer, int cursor, List<CharSequence> candidates) {
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
         initializeCompleter()
 
-        if (completer)
-            return completer.complete(buffer, cursor, candidates)
-        else
-            return cursor
+        if (completer) {
+            completer.complete(reader, line, candidates)
+        }
     }
 
     private void initializeCompleter() {

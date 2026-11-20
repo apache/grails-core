@@ -46,6 +46,12 @@ class AclEntry implements Serializable {
     }
 
     static constraints = {
-        aceOrder unique: 'aclObjectIdentity'
+        aceOrder unique: 'aclObjectIdentity', nullable: false
+        aclObjectIdentity nullable: false
+        sid nullable: false
+        mask nullable: false
+        granting nullable: false
+        auditSuccess nullable: false
+        auditFailure nullable: false
     }
 }

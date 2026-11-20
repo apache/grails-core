@@ -25,18 +25,16 @@ import org.grails.datastore.gorm.GormEntity
 import org.grails.orm.hibernate.HibernateDatastore
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
+import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 
 /**
- * Tests the unique constraint
- */
-/**
+ * Tests the unique constraint.
  *
- *  NOTE: This test is disabled because in order for the test suite to run quickly we need to run each test in a transaction.
- *  This makes it not possible to test the scenario outlined here, however tests for this use case exist in the hibernate plugin itself
- *  so we are covered.
- *
+ * NOTE: This test is disabled because in order for the test suite to run quickly we need to run each test in a transaction.
+ * This makes it not possible to test the scenario outlined here, however tests for this use case exist in the hibernate plugin itself
+ * so we are covered.
  */
 class UniqueConstraintHibernateSpec extends Specification {
 
@@ -91,7 +89,7 @@ class UniqueConstraintHibernateSpec extends Specification {
 
     }
 
-    @spock.lang.Ignore
+    @Ignore
     def "Test unique constraint with a hasOne association"() {
         when:"Two domain classes with the same license are saved"
         Driver one

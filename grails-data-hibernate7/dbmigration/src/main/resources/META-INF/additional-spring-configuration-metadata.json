@@ -1,0 +1,106 @@
+{
+    "groups": [
+        {
+            "name": "grails.plugin.databasemigration",
+            "description": "Database Migration Plugin"
+        },
+        {
+            "name": "grails.plugin.databasemigration.startup",
+            "description": "Database Migration Plugin - Startup"
+        }
+    ],
+    "properties": [
+        {
+            "name": "grails.plugin.databasemigration.updateOnStart",
+            "type": "java.lang.Boolean",
+            "description": "Whether to run changesets from the specified file at application startup.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.plugin.databasemigration.updateAllOnStart",
+            "type": "java.lang.Boolean",
+            "description": "Whether to run changesets at startup for all configured datasources.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.plugin.databasemigration.updateOnStartFileName",
+            "type": "java.lang.String",
+            "description": "The changelog file name to run at startup. For named datasources uses `changelog-<name>.groovy`.",
+            "defaultValue": "changelog.groovy"
+        },
+        {
+            "name": "grails.plugin.databasemigration.dropOnStart",
+            "type": "java.lang.Boolean",
+            "description": "Whether to drop all database tables before auto-running migrations at startup.",
+            "defaultValue": false
+        },
+        {
+            "name": "grails.plugin.databasemigration.updateOnStartContexts",
+            "type": "java.util.List",
+            "description": "Liquibase contexts to activate when running migrations at startup. Empty means all contexts.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.plugin.databasemigration.updateOnStartLabels",
+            "type": "java.util.List",
+            "description": "Liquibase labels to filter changesets when running migrations at startup. Empty means all labels.",
+            "defaultValue": []
+        },
+        {
+            "name": "grails.plugin.databasemigration.updateOnStartDefaultSchema",
+            "type": "java.lang.String",
+            "description": "The default database schema to use when running migrations at startup.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.plugin.databasemigration.databaseChangeLogTableName",
+            "type": "java.lang.String",
+            "description": "The name of the Liquibase changelog tracking table.",
+            "defaultValue": "DATABASECHANGELOG"
+        },
+        {
+            "name": "grails.plugin.databasemigration.databaseChangeLogLockTableName",
+            "type": "java.lang.String",
+            "description": "The name of the Liquibase lock table used to prevent concurrent migrations.",
+            "defaultValue": "DATABASECHANGELOGLOCK"
+        },
+        {
+            "name": "grails.plugin.databasemigration.changelogLocation",
+            "type": "java.lang.String",
+            "description": "The directory containing changelog files.",
+            "defaultValue": "grails-app/migrations"
+        },
+        {
+            "name": "grails.plugin.databasemigration.changelogFileName",
+            "type": "java.lang.String",
+            "description": "The name of the main changelog file. For named datasources uses `changelog-<name>.groovy`.",
+            "defaultValue": "changelog.groovy"
+        },
+        {
+            "name": "grails.plugin.databasemigration.contexts",
+            "type": "java.lang.String",
+            "description": "Comma-delimited list of Liquibase contexts to use for all operations.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.plugin.databasemigration.excludeObjects",
+            "type": "java.lang.String",
+            "description": "Comma-delimited list of database objects to ignore in diff and generate operations.",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.plugin.databasemigration.includeObjects",
+            "type": "java.lang.String",
+            "description": "Comma-delimited list of database objects to include in diff and generate operations (all others excluded).",
+            "defaultValue": null
+        },
+        {
+            "name": "grails.plugin.databasemigration.skipUpdateOnStartMainClasses",
+            "type": "java.util.List",
+            "description": "List of main class names for which startup migrations are skipped, preventing migrations when running CLI commands.",
+            "defaultValue": [
+                "grails.ui.command.GrailsApplicationContextCommandRunner"
+            ]
+        }
+    ]
+}

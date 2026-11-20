@@ -27,8 +27,8 @@ import org.springframework.core.env.Environment
 /**
  * Tests for {@link SecurityAutoConfigurationExcluder}.
  *
- * Verifies that Spring Boot security auto-configuration classes that conflict
- * with the Grails Spring Security plugin are filtered out during the
+ * Verifies that Spring Boot 4 servlet security auto-configuration classes that
+ * conflict with the Grails Spring Security plugin are filtered out during the
  * auto-configuration discovery phase.
  */
 class SecurityAutoConfigurationExcluderSpec extends Specification {
@@ -49,13 +49,17 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
         where:
         className << [
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration',
-                'org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.actuate.web.servlet.ManagementWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration',
+                'org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration',
+                'org.springframework.boot.security.saml2.autoconfigure.Saml2RelyingPartyAutoConfiguration',
+                'org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet.OAuth2AuthorizationServerAutoConfiguration',
+                'org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet.OAuth2AuthorizationServerJwtAutoConfiguration',
         ]
     }
 
@@ -80,13 +84,59 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         ]
     }
 
+    @Unroll
+    def "match preserves Spring Boot 3 (pre-move) security auto-configuration class names: #className"() {
+        given: 'these legacy class names are no longer registered as auto-configurations in Spring Boot 4'
+        def autoConfigs = [className] as String[]
+
+        when:
+        def results = excluder.match(autoConfigs, null)
+
+        then: 'the filter is conservative and only excludes the verified Spring Boot 4 names'
+        results[0]
+
+        where:
+        className << [
+                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
+                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration',
+                'org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration',
+                'org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration',
+                'org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration',
+                'org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration',
+                'org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration',
+        ]
+    }
+
+    @Unroll
+    def "match preserves reactive Spring Boot 4 security auto-configuration: #className"() {
+        given: 'reactive variants are not excluded; they are guarded by ConditionalOnWebApplication(REACTIVE)'
+        def autoConfigs = [className] as String[]
+
+        when:
+        def results = excluder.match(autoConfigs, null)
+
+        then: 'the filter is servlet-only and lets reactive variants pass through'
+        results[0]
+
+        where:
+        className << [
+                'org.springframework.boot.security.autoconfigure.ReactiveUserDetailsServiceAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.web.reactive.ReactiveWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.actuate.web.reactive.ReactiveManagementWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.rsocket.RSocketSecurityAutoConfiguration',
+                'org.springframework.boot.security.oauth2.client.autoconfigure.reactive.ReactiveOAuth2ClientAutoConfiguration',
+                'org.springframework.boot.security.oauth2.client.autoconfigure.reactive.ReactiveOAuth2ClientWebSecurityAutoConfiguration',
+                'org.springframework.boot.security.oauth2.server.resource.autoconfigure.reactive.ReactiveOAuth2ResourceServerAutoConfiguration',
+        ]
+    }
+
     def "match handles mixed array of included and excluded auto-configurations"() {
         given:
         def autoConfigs = [
                 'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
                 'org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration',
                 'org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration',
         ] as String[]
 
@@ -94,11 +144,11 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         def results = excluder.match(autoConfigs, null)
 
         then:
-        results[0]  // DataSource — included
-        !results[1] // SecurityAutoConfiguration — excluded
-        results[2]  // Jackson — included
-        !results[3] // SecurityFilterAutoConfiguration — excluded
-        results[4]  // DispatcherServlet — included
+        results[0]  // DataSource - included
+        !results[1] // SecurityAutoConfiguration - excluded
+        results[2]  // Jackson - included
+        !results[3] // SecurityFilterAutoConfiguration - excluded
+        results[4]  // DispatcherServlet - included
     }
 
     def "match handles empty array"() {
@@ -115,7 +165,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
     def "match handles null metadata parameter gracefully"() {
         given: 'autoConfigurationMetadata is null (not used by this filter)'
         def autoConfigs = [
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
         ] as String[]
 
         when:
@@ -125,19 +175,23 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         !results[0]
     }
 
-    def "getExcludedAutoConfigurations returns all 7 known conflicting classes"() {
+    def "getExcludedAutoConfigurations returns all 11 known conflicting classes"() {
         when:
         def excluded = SecurityAutoConfigurationExcluder.excludedAutoConfigurations
 
         then:
-        excluded.size() == 7
-        excluded.contains('org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration')
-        excluded.contains('org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration')
-        excluded.contains('org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration')
-        excluded.contains('org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration')
-        excluded.contains('org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientAutoConfiguration')
-        excluded.contains('org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration')
-        excluded.contains('org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration')
+        excluded.size() == 11
+        excluded.contains('org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.autoconfigure.actuate.web.servlet.ManagementWebSecurityAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.oauth2.client.autoconfigure.OAuth2ClientAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.saml2.autoconfigure.Saml2RelyingPartyAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet.OAuth2AuthorizationServerAutoConfiguration')
+        excluded.contains('org.springframework.boot.security.oauth2.server.authorization.autoconfigure.servlet.OAuth2AuthorizationServerJwtAutoConfiguration')
     }
 
     def "getExcludedAutoConfigurations returns unmodifiable set"() {
@@ -157,8 +211,8 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
         and:
         def autoConfigs = [
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilterAutoConfiguration',
                 'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
         ] as String[]
 
@@ -171,7 +225,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         results[2]
     }
 
-    def "match excludes by default when environment has no property set"() {
+    def "match excludes by default when environment has the property set to true"() {
         given:
         def env = Mock(Environment)
         env.getProperty(SecurityAutoConfigurationExcluder.ENABLED_PROPERTY, Boolean, true) >> true
@@ -179,7 +233,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
 
         and:
         def autoConfigs = [
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
         ] as String[]
 
         when:
@@ -192,7 +246,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
     def "match excludes by default when no environment is set"() {
         given: 'excluder without environment (e.g. unit test usage)'
         def autoConfigs = [
-                'org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration',
+                'org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration',
         ] as String[]
 
         when:
@@ -213,7 +267,7 @@ class SecurityAutoConfigurationExcluderSpec extends Specification {
         and: 'one of them registers SecurityAutoConfigurationExcluder as an AutoConfigurationImportFilter'
         allContents.any { content ->
             content.contains('org.springframework.boot.autoconfigure.AutoConfigurationImportFilter') &&
-                    content.contains('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
+                content.contains('grails.plugin.springsecurity.SecurityAutoConfigurationExcluder')
         }
     }
 }

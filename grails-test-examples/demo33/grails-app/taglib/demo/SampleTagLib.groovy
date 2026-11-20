@@ -20,6 +20,8 @@
 // tag::basic_declaration[]
 package demo
 
+import grails.gsp.Tag
+
 class SampleTagLib {
 
     static defaultEncodeAs = [taglib:'html']
@@ -28,23 +30,27 @@ class SampleTagLib {
 
     // end::basic_declaration[]
     // tag::hello_world[]
-    def helloWorld = { attrs ->
+    @Tag
+    def helloWorld() {
         out << 'Hello, World!'
     }
     // end::hello_world[]
     // tag::say_hello[]
-    def sayHello = { attrs ->
+    @Tag
+    def sayHello() {
         out << "Hello, ${attrs.name}!"
     }
     // end::say_hello[]
     // tag::render_some_number[]
-    def renderSomeNumber = { attrs ->
+    @Tag
+    def renderSomeNumber() {
         int number = attrs.int('value', -1)
         out << "The Number Is ${number}"
     }
     // end::render_some_number[]
 
-    def renderMessage = {
+    @Tag
+    def renderMessage() {
         out << message(code: 'some.custom.message', locale: request.locale)
     }
 // tag::basic_declaration[]

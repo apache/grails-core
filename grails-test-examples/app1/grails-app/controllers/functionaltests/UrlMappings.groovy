@@ -31,6 +31,9 @@ class UrlMappings {
             }
         }
 
+        // See RequestPathSpec.groovy - one request through filter chain, dispatcher, mapping and controller
+        "/request-path"(resources: 'requestPath')
+
         "/alphaDemo"(controller: 'demo', action: 'doit', namespace: 'alpha')
         "/betaDemo"(controller: 'demo', action: 'doit', namespace: 'beta')
 
@@ -89,6 +92,27 @@ class UrlMappings {
         
         // Redirect mapping with permanent flag
         "/api/old-endpoint"(redirect: '/api/test', permanent: true)
+
+        // Group defaults
+        group('/group-defaults', namespace: 'api', controller: 'groupDefaults') {
+            '/list'(action: 'list')
+            '/show'(action: 'show')
+        }
+
+        group('/group-override', namespace: 'api', controller: 'groupDefaults') {
+            '/special'(controller: 'groupOverride', action: 'handle')
+            '/normal'(action: 'index')
+        }
+
+        group('/group-no-defaults') {
+            '/info'(controller: 'urlMappingsTest', action: 'index')
+        }
+
+        group('/community', namespace: 'api') {
+            group('/topics', controller: 'groupDefaults') {
+                '/gallery'(action: 'gallery')
+            }
+        }
 
         // === CORS Test Routes (under /api/** which has CORS enabled) ===
         "/api/cors"(controller: 'corsTest', action: 'index')

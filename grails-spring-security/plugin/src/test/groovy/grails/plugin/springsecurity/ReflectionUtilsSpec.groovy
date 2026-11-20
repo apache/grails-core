@@ -19,6 +19,14 @@
 package grails.plugin.springsecurity
 
 import org.springframework.http.HttpMethod
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
+
+import grails.web.mapping.UrlMappingInfo
+import grails.web.mapping.UrlMappingsHolder
+import grails.web.mime.MimeType
+import org.grails.web.mime.HttpServletResponseExtension
+import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * @author Burt Beckwith
@@ -152,8 +160,8 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
         ReflectionUtils.getGrailsServerURL() == null
     }
 
-    void 'findFilterNames works with multiple boolean representations of settings'() {
-        when:
+    void 'findFilterNames coerces boolean settings without throwing (including null values)'() {
+        when: 'settings are supplied as booleans, strings, or null (e.g. a key absent from config)'
         ConfigObject config = [
                 'filterChain.filterNames' : 'dummy',
                 'secureChannel.definition': secureChannelValue,
@@ -165,7 +173,7 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
         ] as ConfigObject
         ReflectionUtils.findFilterChainNames(config)
 
-        then:
+        then: 'no exception is thrown - Groovy 5 rejects `null as boolean`, so null must coerce to false'
         noExceptionThrown()
 
         where:
@@ -173,6 +181,26 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
         true               | false               | false     | false           | true           | false
         'true'             | 'false'             | 'false'   | 'false'         | 'true'         | 'false'
         true               | 'false'             | null      | null            | 'true'         | null
+        null               | null                | null      | null            | null           | null
+    }
+
+    void "findFilterNames includes the x509 filter only when useX509 coerces to true (value=#x509Value)"() {
+        given: 'a config that does not list filter names explicitly, so the boolean flags drive the chain'
+        ConfigObject config = ['useX509': x509Value] as ConfigObject
+
+        when:
+        SortedMap<Integer, String> names = ReflectionUtils.findFilterChainNames(config)
+
+        then: 'x509ProcessingFilter is present only when the flag is truthy; null coerces to false without throwing'
+        names.containsValue('x509ProcessingFilter') == x509Enabled
+
+        where:
+        x509Value || x509Enabled
+        true      || true
+        false     || false
+        'true'    || true
+        null      || false
+        ''        || false
     }
 
     void 'get intercept url map with empty httpMethod config'() {
@@ -192,5 +220,45 @@ class ReflectionUtilsSpec extends AbstractUnitSpec {
         interceptedUrls.first()?.pattern == '/secure/**'
         interceptedUrls.first().configAttributes?.size() == 1
         interceptedUrls.first().configAttributes.first().attribute == 'IS_AUTHENTICATED_ANONYMOUSLY'
+    }
+
+    void 'url mappings are matched on the method the request will be routed as'() {
+        given: 'a browser form POST asking to be treated as a DELETE'
+        def request = new MockHttpServletRequest(method: 'POST', requestURI: '/book/1')
+        request.addParameter('_method', 'DELETE')
+        def grailsRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+
+        and: 'a holder that records the method it was asked to match'
+        String matchedWith = null
+        def holder = [matchAll: { String uri, String httpMethod, String version ->
+            matchedWith = httpMethod
+            new UrlMappingInfo[0]
+        }] as UrlMappingsHolder
+
+        when: 'the security chain resolves the request to a mapping, before the dispatcher has run'
+        ReflectionUtils.matchAllUrlMappings(holder, '/book/1', grailsRequest,
+                [getMimeTypeForRequest: { Object... a -> MimeType.HTML }] as HttpServletResponseExtension)
+
+        then: 'it matches on DELETE, so it authorizes the action the dispatcher is about to run'
+        matchedWith == 'DELETE'
+    }
+
+    void 'url mappings are matched on the request method when nothing asked for an override'() {
+        given:
+        def request = new MockHttpServletRequest(method: 'POST', requestURI: '/book')
+        def grailsRequest = new GrailsWebRequest(request, new MockHttpServletResponse(), servletContext)
+
+        String matchedWith = null
+        def holder = [matchAll: { String uri, String httpMethod, String version ->
+            matchedWith = httpMethod
+            new UrlMappingInfo[0]
+        }] as UrlMappingsHolder
+
+        when:
+        ReflectionUtils.matchAllUrlMappings(holder, '/book', grailsRequest,
+                [getMimeTypeForRequest: { Object... a -> MimeType.HTML }] as HttpServletResponseExtension)
+
+        then:
+        matchedWith == 'POST'
     }
 }

@@ -23,7 +23,6 @@ import groovy.xml.slurpersupport.GPathResult
 import jakarta.servlet.http.HttpServletRequest
 
 import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.util.ReflectionUtils
 
 import grails.converters.JSON
 import org.grails.io.support.SpringIOUtils
@@ -43,7 +42,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
      * @param format The format of the response
      */
     void setFormat(String format) {
-        HttpServletRequest request = GrailsWebRequest.lookup().getCurrentRequest()
+        HttpServletRequest request = GrailsWebRequest.lookup().getRequest()
 
         request.setAttribute(GrailsApplicationAttributes.RESPONSE_FORMAT, format)
         // remove so that is can be repopulated
@@ -78,12 +77,16 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     }
 
     /**
-     * Get the response XML
+     * Get the response XML.
+     *
+     * <p>The body is the controller's own output rather than untrusted input, so a
+     * {@code DOCTYPE} declaration is accepted. External entities and external DTDs are still
+     * not resolved.
      *
      * @return The response XML
      */
     GPathResult getXml() {
-        SpringIOUtils.createXmlSlurper().parseText(contentAsString)
+        SpringIOUtils.createXmlSlurper(true).parseText(contentAsString)
     }
 
     /**
@@ -107,13 +110,11 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     @Override
     void reset() {
         final webRequest = GrailsWebRequest.lookup()
-        webRequest?.currentRequest?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
+        webRequest?.request?.removeAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
         setCommitted(false)
-        def field = ReflectionUtils.findField(MockHttpServletResponse, 'writer')
-        ReflectionUtils.makeAccessible(field)
-        field.set(this, null)
-        webRequest.setOut(getWriter())
         super.reset()
+        // Let the next response choose a writer or an output stream when it needs one.
+        webRequest?.setOut(null)
     }
 
     String getRedirectUrl() {
@@ -123,7 +124,7 @@ abstract class AbstractGrailsMockHttpServletResponse extends MockHttpServletResp
     @Override
     String getRedirectedUrl() {
         final webRequest = GrailsWebRequest.lookup()
-        final redirectURI = webRequest?.currentRequest?.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
+        final redirectURI = webRequest?.request?.getAttribute(GrailsApplicationAttributes.REDIRECT_ISSUED)
 
         if (redirectURI != null) {
             return redirectURI

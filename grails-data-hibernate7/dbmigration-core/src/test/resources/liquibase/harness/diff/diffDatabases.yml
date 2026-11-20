@@ -1,0 +1,52 @@
+# note database names should match with ones provided in harness-config.yml
+---
+references:
+  - targetDatabaseName: h2
+    referenceDatabaseName: hibernateClassic
+    expectedDiffs:
+      missingObjects:
+      unexpectedObjects:
+      changedObjects:
+        - diffName: "HIBERNATE.authors.email"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'VARCHAR(100 BYTE)'"
+            order: "order changed from 'null' to '4'"
+        - diffName: "HIBERNATE.authors.added"
+          diffs:
+            defaultValue : "defaultValue changed from 'null' to 'CURRENT_TIMESTAMP()'"
+            order: "order changed from 'null' to '6'"
+        - diffName: "HIBERNATE.authors.last_name"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'VARCHAR(50 BYTE)'"
+            order: "order changed from 'null' to '3'"
+        - diffName: "HIBERNATE.posts.content"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'CLOB(2147483647)'"
+            order: "order changed from 'null' to '5'"
+        - diffName: "HIBERNATE.authors.birthdate"
+          diffs:
+            order: "order changed from 'null' to '5'"
+        - diffName: "HIBERNATE.authors.first_name"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'VARCHAR(50 BYTE)'"
+            order: "order changed from 'null' to '2'"
+        - diffName: "HIBERNATE.authors.id"
+          diffs:
+            order: "order changed from 'null' to '1'"
+        - diffName: "HIBERNATE.posts.description"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'VARCHAR(500 BYTE)'"
+            order: "order changed from 'null' to '4'"
+        - diffName: "HIBERNATE.posts.inserted_date"
+          diffs:
+            order: "order changed from 'null' to '6'"
+        - diffName: "HIBERNATE.posts.title"
+          diffs:
+            type : "type changed from 'varchar(255)' to 'VARCHAR(255 BYTE)'"
+            order: "order changed from 'null' to '3'"
+        - diffName: "HIBERNATE.posts.author_id"
+          diffs:
+            order: "order changed from 'null' to '2'"
+        - diffName: "HIBERNATE.posts.id"
+          diffs:
+            order: "order changed from 'null' to '1'"

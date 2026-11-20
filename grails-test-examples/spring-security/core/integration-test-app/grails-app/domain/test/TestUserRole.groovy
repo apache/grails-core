@@ -89,7 +89,8 @@ class TestUserRole implements Serializable {
 	}
 
 	static constraints = {
-		role validator: { TestRole r, TestUserRole ur ->
+		user nullable: false
+		role nullable: false, validator: { TestRole r, TestUserRole ur ->
 			if (ur.user?.id) {
 				if (TestUserRole.exists(ur.user.id, r.id)) {
 					return ['userRole.exists']

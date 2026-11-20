@@ -71,6 +71,7 @@ Every instance must use the same `instanceName` and the same tables. Only `insta
 * *Set `requestsRecovery` on jobs that must not be lost.* Without it, work that was executing when a node died is not re-run after failover. See <<quartzJobProperties,Job Properties>>.
 * *Jobs must be idempotent anyway.* Clustering guarantees one node fires a trigger, not that the work is never repeated — a node can die mid-execution and, with `requestsRecovery`, the job runs again from the start.
 * *Clustering does not spread a single execution across nodes.* One firing runs entirely on one node. Load balancing happens across separate firings, not within one.
+* *Every application sharing the tables needs its own name.* Each instance removes the jobs of *its* application which are no longer declared, and recognises them by the application name — so instances of one application share a name, while two different applications on the same tables must not. See <<_jobs_in_a_shared_job_store,The application only removes its own jobs>>.
 ====
 
 ===== If you are not clustering

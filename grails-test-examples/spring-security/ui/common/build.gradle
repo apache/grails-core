@@ -24,9 +24,12 @@ plugins {
 
 dependencies {
     implementation platform(project(':grails-bom'))
+
     testFixturesImplementation platform(project(':grails-bom'))
     testFixturesImplementation testFixtures('org.apache.grails:grails-spring-security')
     testFixturesImplementation testFixtures('org.apache.grails:grails-geb')
+
+    testFixturesCompileOnly 'org.slf4j:slf4j-nop' // Prevents warning about missing slf4j implementation during compilation
 }
 
 apply {

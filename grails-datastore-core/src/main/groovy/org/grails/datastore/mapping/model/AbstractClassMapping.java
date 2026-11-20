@@ -27,10 +27,10 @@ import org.grails.datastore.mapping.config.Entity;
  * @since 1.0
  */
 @SuppressWarnings("rawtypes")
-public abstract class AbstractClassMapping<T extends Entity> implements ClassMapping {
+public abstract class AbstractClassMapping<T extends Entity> implements ClassMapping<T> {
     protected PersistentEntity entity;
     protected MappingContext context;
-    private IdentityMapping identifierMapping;
+    private IdentityMapping<?> identifierMapping;
 
     public AbstractClassMapping(PersistentEntity entity, MappingContext context) {
         this.entity = entity;
@@ -45,7 +45,7 @@ public abstract class AbstractClassMapping<T extends Entity> implements ClassMap
 
     public abstract T getMappedForm();
 
-    public IdentityMapping getIdentifier() {
+    public IdentityMapping<?> getIdentifier() {
         return identifierMapping;
     }
 }

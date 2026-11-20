@@ -21,8 +21,14 @@ package pages
 
 class ShowReportPage extends ScaffoldPage {
 
+	static url = '/report/show'
+
 	static at = {
-		heading.text() == 'Show Report'
+		heading == 'Show Report'
+	}
+
+	String convertToPath(Object[] args) {
+		args ? "?number=${args[0]}" : ''
 	}
 
 	static content = {

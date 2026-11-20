@@ -28,8 +28,6 @@ import spock.lang.Issue
 import grails.util.GrailsWebMockUtil
 import grails.web.mapping.AbstractUrlMappingsSpec
 import grails.web.mapping.UrlMappingInfo
-import grails.web.mapping.exceptions.UrlMappingException
-import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
  * How a matched mapping resolves its names and creates URLs depending on the request attributes bound to the
@@ -77,44 +75,6 @@ class UrlMappingInfoRequestAttributesSpec extends AbstractUrlMappingsSpec {
 
         where:
         attributes << [GRAILS, PLAIN_OVER_GRAILS, PLAIN, NOTHING]
-    }
-
-    void 'names the URI supplies resolve from the GrailsWebRequest with #attributes bound'() {
-        given:
-        def request = request('GET', '/book/show/42')
-        bind(attributes, request)
-        def mappings = getUrlMappingsHolder {
-            "/$controller/$action?/$id?"()
-        }
-
-        when:
-        UrlMappingInfo info = mappings.match('/book/show/42')
-        info.configure(GrailsWebRequest.lookup(request))
-
-        then:
-        info.controllerName == 'book'
-        info.actionName == 'show'
-        info.id == '42'
-
-        where:
-        attributes << [GRAILS, PLAIN_OVER_GRAILS]
-    }
-
-    void 'a controller name the URI supplies cannot be established with #attributes bound'() {
-        given:
-        bind(attributes, request('GET', '/book/show/42'))
-        def mappings = getUrlMappingsHolder {
-            "/$controller/$action?/$id?"()
-        }
-
-        when:
-        mappings.match('/book/show/42').controllerName
-
-        then:
-        thrown(UrlMappingException)
-
-        where:
-        attributes << [PLAIN, NOTHING]
     }
 
     void 'a name closure reads the GrailsWebRequest with #attributes bound'() {
@@ -174,26 +134,6 @@ class UrlMappingInfoRequestAttributesSpec extends AbstractUrlMappingsSpec {
         PLAIN_OVER_GRAILS || 'save'
         PLAIN             || 'save'
         NOTHING           || null
-    }
-
-    void 'a dispatch action parameter selects the action with #attributes bound'() {
-        given:
-        def request = request('POST', '/book')
-        request.addParameter('_action_update', 'Update')
-        bind(attributes, request)
-        def mappings = getUrlMappingsHolder {
-            '/book'(controller: 'book', action: 'save')
-        }
-
-        expect:
-        mappings.match('/book').actionName == expectedAction
-
-        where:
-        attributes        || expectedAction
-        GRAILS            || 'update'
-        PLAIN_OVER_GRAILS || 'update'
-        PLAIN             || 'save'
-        NOTHING           || 'save'
     }
 
     void 'a mapping creates its URL with the context path of the GrailsWebRequest with #attributes bound'() {

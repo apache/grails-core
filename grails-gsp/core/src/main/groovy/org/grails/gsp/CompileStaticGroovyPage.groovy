@@ -46,6 +46,11 @@ abstract class CompileStaticGroovyPage extends GroovyPage {
         gspTagLibraryLookup != null && gspTagLibraryLookup.hasNamespace(namespace) ? new TagLibNamespaceMethodDispatcher(namespace, gspTagLibraryLookup, outputContext) : null
     }
 
+    // The names the framework binds into every page are declared on the page itself rather than
+    // here, by GroovyPageParser: a page is compiled with the application's classpath, and this class
+    // is not, so a type this module cannot see -- the flash scope, the web request -- can still be
+    // named there. It also leaves a page free to declare one of those names in its own model.
+
     @Override
     Object getProperty(String property) {
         return resolveProperty(property)

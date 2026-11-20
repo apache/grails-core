@@ -18,12 +18,13 @@
  */
 package org.grails.datastore.mapping.model;
 
+import org.grails.datastore.mapping.config.Property;
+
 /**
  * @author Graeme Rocher
  * @since 1.0
  */
-@SuppressWarnings("rawtypes")
-public interface IdentityMapping extends PropertyMapping {
+public interface IdentityMapping<T extends Property> extends PropertyMapping<T> {
 
     /**
      * The identifier property name(s). Usually there is just one identifier
@@ -38,4 +39,19 @@ public interface IdentityMapping extends PropertyMapping {
      * @return The type of value generated used
      */
     ValueGenerator getGenerator();
+
+    /**
+     * The native storage type for this identifier, which may differ from the declared Java type.
+     *
+     * <p>When non-{@code null}, the backend is expected to coerce identifier values between
+     * the declared type and this type at write, read, and query time. Currently honored by
+     * MongoDB GORM to support patterns like "declare {@code String id}, store BSON
+     * {@code ObjectId}" without requiring per-call conversion in application code.
+     *
+     * @return the storage type, or {@code null} to use the declared property type.
+     * @since 7.1.1
+     */
+    default Class<?> getStoredAs() {
+        return null;
+    }
 }

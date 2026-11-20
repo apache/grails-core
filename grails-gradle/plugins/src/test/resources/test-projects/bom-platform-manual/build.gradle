@@ -1,0 +1,43 @@
+plugins {
+    id 'org.apache.grails.gradle.grails-app'
+}
+
+// This project already declares a Grails BOM by hand (the Micronaut variant, as an
+// enforcedPlatform). The Grails Gradle plugin must therefore NOT auto-inject grails-bom on top
+// of it - exactly one Grails BOM may be applied.
+dependencies {
+    implementation enforcedPlatform("org.apache.grails:grails-micronaut-bom:$grailsVersion")
+}
+
+tasks.register('inspectBomSetup') {
+    def report = providers.provider {
+        def isGrailsBom = { dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-bom' }
+        def isMicronautBom = { dep -> dep.group == 'org.apache.grails' && dep.name == 'grails-micronaut-bom' }
+
+        // Observing compileClasspath runs the dependency actions of its whole hierarchy, so any
+        // platform the plugin contributes to 'implementation' is declared by now.
+        def compileDeps = configurations.compileClasspath.incoming.dependencies
+        def hasGrailsBom = compileDeps.any(isGrailsBom)
+        def hasMicronautBom = compileDeps.any(isMicronautBom)
+
+        // A sibling declarable configuration that does NOT declare a BOM by hand must still
+        // receive the single effective BOM (the Micronaut variant) via per-configuration
+        // injection. testCompileClasspath extends testImplementation; inspect what
+        // testImplementation itself declares once its dependency actions have run.
+        configurations.testCompileClasspath.incoming.dependencies
+        def testImplDeps = configurations.testImplementation.dependencies
+
+        def hasBomPropertyOverrides = project.plugins.findPlugin('org.apache.grails.gradle.bom-property-overrides') != null
+
+        [
+                "HAS_GRAILS_BOM=${hasGrailsBom}",
+                "HAS_MICRONAUT_BOM=${hasMicronautBom}",
+                "SIBLING_HAS_MICRONAUT_BOM=${testImplDeps.any(isMicronautBom)}",
+                "SIBLING_HAS_GRAILS_BOM=${testImplDeps.any(isGrailsBom)}",
+                "HAS_BOM_PROPERTY_OVERRIDES=${hasBomPropertyOverrides}"
+        ]*.toString()
+    }
+    doLast {
+        report.get().each { println it }
+    }
+}

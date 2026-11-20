@@ -49,11 +49,10 @@ dependencies {
     implementation 'org.apache.grails:grails-datasource'
     implementation 'org.apache.grails:grails-databinding'
     implementation 'org.apache.grails:grails-web-boot'
-    if(System.getenv('SITEMESH3_TESTING_ENABLED') == 'true') {
-        implementation 'org.apache.grails:grails-sitemesh3'
-    }
-    else {
+    if (System.getenv('SITEMESH2_TESTING_ENABLED') == 'true') {
         implementation 'org.apache.grails:grails-layout'
+    } else {
+        implementation 'org.apache.grails:grails-sitemesh3'
     }
     implementation 'org.apache.grails:grails-logging'
     implementation 'org.apache.grails:grails-cache'
@@ -61,7 +60,6 @@ dependencies {
     implementation 'org.apache.grails:grails-events'
     implementation 'org.apache.grails:grails-data-hibernate5'
     implementation 'org.apache.grails:grails-views-gson'
-    console 'org.apache.grails:grails-console'
     profile 'org.apache.grails.profiles:rest-api'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.apache.tomcat:tomcat-jdbc'
@@ -69,7 +67,7 @@ dependencies {
     testImplementation 'org.apache.grails:grails-testing-support-web'
     testImplementation 'org.apache.grails:grails-testing-support-datamapping'
 
-    integrationTestImplementation project(':grails-testing-support-http-client')
+    integrationTestImplementation 'org.apache.grails:grails-testing-support-http-client'
 }
 
 bootRun {

@@ -158,6 +158,11 @@ class MyJob {
 }
 ----
 
+A trigger that can never fire — a cron expression whose last occurrence is in the past, or an end time
+that has already passed — is reported as an error in the log and left unscheduled, so it does not keep the
+application from starting. Configure `quartz.failOnNeverFiringTriggers` to have startup fail instead; see
+<<_plugin_options,Configuration>>.
+
 The `triggers` closure is given access to the `grailsApplication` object, so trigger attributes can be driven from configuration:
 
 [source,groovy]

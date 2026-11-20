@@ -32,6 +32,9 @@ import jakarta.persistence.FlushModeType;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.criteria.JoinType;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.util.Assert;
@@ -55,15 +58,16 @@ import org.grails.datastore.mapping.query.event.PreQueryEvent;
  * @since 1.0
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
-public abstract class Query implements Cloneable {
+public abstract class Query implements Cloneable, Serializable {
 
-    protected final PersistentEntity entity;
-    protected final Session session;
+    protected final transient PersistentEntity entity;
+    protected final transient Session session;
+    protected transient Log logger = LogFactory.getLog(this.getClass());
 
     protected Junction criteria = new Conjunction();
     protected ProjectionList projections = new ProjectionList();
-    protected int max = -1;
-    protected int offset = 0;
+    protected Integer max;
+    protected Integer offset;
     protected List<Order> orderBy = new ArrayList<>();
     protected boolean uniqueResult;
     protected Map<String, FetchType> fetchStrategies = new HashMap<>();
@@ -85,6 +89,20 @@ public abstract class Query implements Cloneable {
             newQuery.add(criterion);
         }
         return newQuery;
+    }
+
+    /**
+     * @return The maximum number of results to return
+     */
+    public Integer getMax() {
+        return max;
+    }
+
+    /**
+     * @return The offset of the first result
+     */
+    public Integer getOffset() {
+        return offset;
     }
 
     /**
@@ -279,6 +297,15 @@ public abstract class Query implements Cloneable {
         if (order != null) {
             orderBy.add(order);
         }
+        return this;
+    }
+
+    /**
+     * Clears all order entries from this query.
+     * Subclasses that store orders in additional structures (e.g. JPA criteria) should override this.
+     */
+    public Query clearOrders() {
+        orderBy.clear();
         return this;
     }
 
@@ -589,6 +616,31 @@ public abstract class Query implements Cloneable {
         return results.isEmpty() ? null : results.get(0);
     }
 
+    /**
+     * Counts the rows this query would return, respecting any existing projections or grouping.
+     * Subclasses may override to provide an optimized implementation (e.g., derived-table count).
+     * The default implementation falls back to loading all rows when user-defined projections
+     * exist, since appending a count projection would produce incorrect results.
+     *
+     * @return The row count
+     * @since 8.0
+     */
+    public Number countResults() {
+        if (!projections.getProjectionList().isEmpty()) {
+            // When user-defined projections exist (e.g. groupProperty + count),
+            // a simple count() projection returns incorrect results because it
+            // appends to the existing projections rather than replacing them.
+            // Fall back to counting the grouped result rows.
+            // Hibernate 7 resolves this via HibernateQuery.countResults() using derived-table subqueries.
+            logger.warn("DetachedCriteria.count() with user-defined projections cannot use a SQL count query " +
+                "due to a datastore limitation. All grouped result rows will be loaded into memory to " +
+                "determine the count. This may impact performance on large result sets.");
+            return list().size();
+        }
+        projections().count();
+        return (Number) singleResult();
+    }
+
     private List doList() {
         flushBeforeQuery();
 
@@ -751,12 +803,18 @@ public abstract class Query implements Cloneable {
     /**
      * Represents a criterion to be used in a criteria query
      */
-    public static interface Criterion {}
+    /**
+     * Common interface for all query elements
+     */
+    public static interface QueryElement extends Serializable {}
+
+    public static interface Criterion extends QueryElement {}
 
     /**
      * The ordering of results.
      */
-    public static class Order {
+    public static class Order implements Serializable {
+        private static final long serialVersionUID = 1L;
         private Direction direction = Direction.ASC;
         private String property;
         private boolean ignoreCase = false;
@@ -1395,7 +1453,7 @@ public abstract class Query implements Cloneable {
     /**
      * A projection
      */
-    public static class Projection {}
+    public static class Projection implements QueryElement {}
 
     /**
      * A projection used to obtain the identifier of an object
@@ -1520,6 +1578,7 @@ public abstract class Query implements Cloneable {
         }
 
         public ProjectionList distinct() {
+            add(Projections.distinct());
             return this;
         }
 

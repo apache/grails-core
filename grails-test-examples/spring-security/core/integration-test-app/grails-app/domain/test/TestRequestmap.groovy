@@ -36,9 +36,9 @@ class TestRequestmap implements Serializable {
 	HttpMethod httpMethod
 
 	static constraints = {
-		rolePattern blank: false
+		rolePattern blank: false, nullable: false
 		httpMethod nullable: true
-		urlPattern blank: false, unique: 'httpMethod'
+		urlPattern blank: false, unique: 'httpMethod', nullable: false
 	}
 
 	static mapping = {

@@ -18,10 +18,13 @@
  */
 package org.grails.cli.interactive.completers
 
-import jline.console.completer.FileNameCompleter
+import org.jline.builtins.Completers.FileNameCompleter
+import org.jline.reader.Candidate
+import org.jline.reader.LineReader
+import org.jline.reader.ParsedLine
 
 /**
- * JLine Completor that does file path matching like FileNameCompletor,
+ * JLine Completor that does file path matching like FileNameCompleter,
  * but in addition it escapes whitespace in completions with the '\'
  * character.
  *
@@ -31,19 +34,22 @@ import jline.console.completer.FileNameCompleter
 class EscapingFileNameCompletor extends FileNameCompleter {
 
     /**
-     * <p>Gets FileNameCompletor to create a list of candidates and then
+     * <p>Gets FileNameCompleter to create a list of candidates and then
      * inserts '\' before any whitespace characters in each of the candidates.
      * If a candidate ends in a whitespace character, then that is <em>not</em>
      * escaped.</p>
      */
-    int complete(String buffer, int cursor, List candidates) {
-        int retval = super.complete(buffer, cursor, candidates)
+    @Override
+    void complete(LineReader reader, ParsedLine line, List<Candidate> candidates) {
+        List<Candidate> tempCandidates = []
+        super.complete(reader, line, tempCandidates)
 
-        int count = candidates.size()
-        for (int i = 0; i < count; i++) {
-            candidates[i] = candidates[i].replaceAll(/(\s)(?!$)/, '\\\\$1')
+        for (Candidate candidate : tempCandidates) {
+            String value = candidate.value()
+            // Escape whitespace in the value, except for trailing whitespace
+            String escapedValue = value.replaceAll(/(\s)(?!$)/, '\\\\$1')
+            candidates.add(new Candidate(escapedValue, candidate.displ(), candidate.group(), 
+                    candidate.descr(), candidate.suffix(), candidate.key(), candidate.complete()))
         }
-
-        return retval
     }
 }

@@ -21,13 +21,14 @@ package org.grails.datastore.gorm
 import grails.persistence.Entity
 import org.apache.grails.data.simple.core.GrailsDataCoreTckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+
 /**
  * Tests for usage of assigned identifiers
  */
 class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([River])
+        manager.registerDomainClasses(River)
     }
 
     void "Test that entities can be saved, retrieved and updated with assigned ids"() {
@@ -64,6 +65,7 @@ class AssignedIdentifierSpec extends GrailsDataTckSpec<GrailsDataCoreTckManager>
 
 @Entity
 class River {
+
     String name
     String country
     static mapping = {

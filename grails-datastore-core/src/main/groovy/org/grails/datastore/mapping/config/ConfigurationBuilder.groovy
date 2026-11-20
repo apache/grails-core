@@ -18,6 +18,9 @@
  */
 package org.grails.datastore.mapping.config
 
+import java.beans.Introspector
+import java.beans.PropertyDescriptor
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -28,7 +31,12 @@ import groovy.transform.builder.SimpleStrategy
 import groovy.util.logging.Slf4j
 
 import org.springframework.core.convert.ConversionFailedException
+import org.springframework.core.convert.ConverterNotFoundException
+import org.springframework.core.env.ConfigurableEnvironment
+import org.springframework.core.env.EnumerablePropertySource
 import org.springframework.core.env.PropertyResolver
+import org.springframework.core.env.PropertySource
+import org.springframework.util.ClassUtils
 import org.springframework.util.ReflectionUtils
 
 import org.grails.datastore.mapping.core.exceptions.ConfigurationException
@@ -253,7 +261,7 @@ abstract class ConfigurationBuilder<B, C> {
                         }
 
                         if (newBuilder instanceof Map) {
-                            Map subMap = propertyResolver.getProperty(propertyPath, Map, Collections.emptyMap())
+                            Map subMap = resolveMapProperty(propertyPath, Collections.emptyMap())
                             if (!subMap.isEmpty()) {
                                 ((Map) newBuilder).putAll(subMap)
                             }
@@ -356,30 +364,53 @@ abstract class ConfigurationBuilder<B, C> {
                             throw new ConfigurationException("Cannot read configuration for path $propertyPathForArg: $e.message", e)
                         }
                     }
+                    else if (argType == Class) {
+                        // Resolve a Class-typed setting. The configured value may already be a Class (an
+                        // application.groovy Class literal) or a fully-qualified class-name String. Read it raw and,
+                        // for the String form, resolve via the thread context class loader rather than relying on a
+                        // String->Class converter registered on the property resolver's ConversionService - that
+                        // converter is load-order sensitive and resolves against the framework class loader, so an
+                        // application-defined class (for example hibernate.configClass) was silently left unbound.
+                        Object rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+                        if (rawValue instanceof Class) {
+                            args.add(rawValue)
+                        }
+                        else {
+                            String className = rawValue instanceof CharSequence ? rawValue.toString().trim() : null
+                            if (className) {
+                                ClassLoader classLoader = Thread.currentThread().contextClassLoader ?: getClass().classLoader
+                                try {
+                                    args.add(ClassUtils.forName(className, classLoader))
+                                } catch (ClassNotFoundException | LinkageError e) {
+                                    throw new ConfigurationException("Invalid class name [$className] for setting [$propertyPathForArg]: ${e.message}", e)
+                                }
+                            }
+                            else {
+                                Object fallBackValue = getFallBackValue(fallBackConfig, settingName)
+                                if (fallBackValue != null) {
+                                    args.add(fallBackValue)
+                                }
+                            }
+                        }
+                    }
                     else {
                         Object fallBackValue = getFallBackValue(fallBackConfig, settingName)
 
                         def value
                         try {
-                            value = propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
+                            value = argType == Map
+                                    ? resolveMapProperty(propertyPathForArg, (Map) fallBackValue)
+                                    : propertyResolver.getProperty(propertyPathForArg, argType, fallBackValue)
                         } catch (ConversionFailedException e) {
-                            if (argType.isEnum()) {
-                                value = propertyResolver.getProperty(propertyPathForArg, String)
-                                if (value != null) {
-                                    try {
-                                        value = Enum.valueOf((Class) argType, value.toUpperCase())
-                                    } catch (Throwable e2) {
-                                        // ignore e2 and throw original
-                                        throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                                    }
-                                }
-                                else {
-                                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                                }
-                            }
-                            else {
-                                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
-                            }
+                            value = handleConversionException(e, argType, propertyPathForArg, fallBackValue)
+                        } catch (ConverterNotFoundException e) {
+                            // Spring 7 no longer converts a configuration Map into an arbitrary
+                            // settings type, so a nested settings type the conversion service does
+                            // not know about has to be populated from the Map here. Types carrying
+                            // a runtime @Builder annotation never reach this point - they are built
+                            // by the recursion above - so this covers the plain settings beans, such
+                            // as the Hibernate hibernateEventListeners tree.
+                            value = handleConverterNotFoundException(e, argType, propertyPathForArg, fallBackValue)
                         }
                         if (value != null) {
                             log.debug('Resolved value [{}] for setting [{}]', value, propertyPathForArg)
@@ -397,6 +428,168 @@ abstract class ConfigurationBuilder<B, C> {
 
         }
 
+    }
+
+    private Map resolveMapProperty(String propertyPath, Map fallBackValue) {
+        if (propertyResolver instanceof DatastoreEnvironment || !(propertyResolver instanceof ConfigurableEnvironment)) {
+            return readDirectMap(propertyPath, fallBackValue)
+        }
+        ConfigurableEnvironment environment = (ConfigurableEnvironment) propertyResolver
+        String prefix = propertyPath + '.'
+        Map<String, Object> result = new LinkedHashMap<>()
+        Set<Map<String, Object>> containers = Collections.newSetFromMap(new IdentityHashMap<Map<String, Object>, Boolean>())
+        containers.add(result)
+        boolean stored = false
+        for (PropertySource<?> propertySource : environment.propertySources) {
+            if (!(propertySource instanceof EnumerablePropertySource)) {
+                continue
+            }
+            Set<List<Object>> builtLists = Collections.newSetFromMap(new IdentityHashMap<List<Object>, Boolean>())
+            for (String name : ((EnumerablePropertySource<?>) propertySource).propertyNames) {
+                if (name == null || !name.startsWith(prefix)) {
+                    continue
+                }
+                String relativeName = name.substring(prefix.length())
+                if (relativeName.isEmpty() || pathBlocked(result, builtLists, relativeName)) {
+                    continue
+                }
+                Object value = readEnvironmentValue(environment, name)
+                if (value == null) {
+                    continue
+                }
+                putFlattenedName(result, containers, builtLists, relativeName, value)
+                stored = true
+            }
+        }
+        if (!stored) {
+            // A map stored at the exact path is used only when no flattened name exists.
+            return readDirectMap(propertyPath, fallBackValue)
+        }
+        return result
+    }
+
+    /**
+     * Read the exact path. ConversionFailedException and ConverterNotFoundException propagate
+     * from this call, which a raw environment reaches only after the walk stored nothing.
+     */
+    private Map readDirectMap(String propertyPath, Map fallBackValue) {
+        Map directValue = propertyResolver.getProperty(propertyPath, Map)
+        if (directValue != null && !directValue.isEmpty()) {
+            return directValue
+        }
+        return directValue != null ? directValue : fallBackValue
+    }
+
+    /**
+     * Read the highest precedence entry, preserving maps and lists. String values are resolved
+     * through the environment so its unresolvable-placeholder setting is kept.
+     */
+    private static Object readEnvironmentValue(ConfigurableEnvironment environment, String name) {
+        for (PropertySource<?> propertySource : environment.propertySources) {
+            Object value = propertySource.getProperty(name)
+            if (value == null) {
+                continue
+            }
+            if (!(value instanceof String)) {
+                return value
+            }
+            String resolved = environment.getProperty(name)
+            return resolved != null ? resolved : value
+        }
+        return null
+    }
+
+    /**
+     * True when this path is already stored, or an ancestor holds a non-map.
+     * A stored map is not a blocking ancestor of a missing leaf.
+     * Only a list built from the numeric indexes of the current source accepts a later index,
+     * so a higher source's list replaces a lower one whole.
+     */
+    private static boolean pathBlocked(Map<String, Object> result, Set<List<Object>> builtLists, String name) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            if (!current.containsKey(segments[i])) {
+                return false
+            }
+            Object child = current.get(segments[i])
+            if (!(child instanceof Map)) {
+                return true
+            }
+            current = (Map<String, Object>) child
+        }
+        String leaf = segments[segments.length - 1]
+        if (!current.containsKey(leaf)) {
+            return false
+        }
+        if (bracket < 0) {
+            return true
+        }
+        Object existing = current.get(leaf)
+        if (!(existing instanceof List) || !builtLists.contains((List<Object>) existing)) {
+            return true
+        }
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        List<?> values = (List<?>) existing
+        return index < values.size() && values.get(index) != null
+    }
+
+    private static void putFlattenedName(Map<String, Object> result, Set<Map<String, Object>> containers,
+                                         Set<List<Object>> builtLists, String name, Object value) {
+        int bracket = indexedBracket(name)
+        String listPath = bracket > 0 ? name.substring(0, bracket) : name
+        String[] segments = listPath.split('\\.')
+        Map<String, Object> current = result
+        for (int i = 0; i < segments.length - 1; i++) {
+            Object child = current.get(segments[i])
+            if (child instanceof Map && !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> copied = new LinkedHashMap<>((Map<String, Object>) child)
+                containers.add(copied)
+                current.put(segments[i], copied)
+                child = copied
+            }
+            if (!(child instanceof Map) || !containers.contains((Map<String, Object>) child)) {
+                Map<String, Object> created = new LinkedHashMap<>()
+                containers.add(created)
+                current.put(segments[i], created)
+                child = created
+            }
+            current = (Map<String, Object>) child
+        }
+        String leaf = segments[segments.length - 1]
+        if (bracket < 0) {
+            current.put(leaf, value)
+            return
+        }
+        int index = Integer.parseInt(name.substring(bracket + 1, name.length() - 1))
+        Object existing = current.get(leaf)
+        List<Object> values
+        if (existing instanceof List && builtLists.contains((List<Object>) existing)) {
+            values = (List<Object>) existing
+        }
+        else {
+            values = new ArrayList<>()
+            builtLists.add(values)
+        }
+        while (values.size() <= index) {
+            values.add(null)
+        }
+        values.set(index, value)
+        current.put(leaf, values)
+    }
+
+    private static int indexedBracket(String name) {
+        int bracket = name.lastIndexOf('[')
+        if (bracket <= 0 || !name.endsWith(']')) {
+            return -1
+        }
+        if (name.lastIndexOf('.') > bracket) {
+            return -1
+        }
+        String indexText = name.substring(bracket + 1, name.length() - 1)
+        return indexText.matches('\\d+') ? bracket : -1
     }
 
     protected Object newChildBuilderForFallback(Object childBuilder, Object fallbackConfig) {
@@ -432,5 +625,225 @@ abstract class ConfigurationBuilder<B, C> {
      */
     protected void startBuild(Object builder, String configurationPath) {
         // no-op
+    }
+    /**
+     * Handle ConversionFailedException - for enums, try case-insensitive conversion
+     */
+    private Object handleConversionException(ConversionFailedException e, Class argType, String propertyPathForArg, Object fallBackValue) {
+        if (argType.isEnum()) {
+            def value = propertyResolver.getProperty(propertyPathForArg, String)
+            if (value != null) {
+                try {
+                    return Enum.valueOf((Class) argType, value.toUpperCase())
+                } catch (IllegalArgumentException e2) {
+                    throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+                }
+            }
+            else {
+                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+            }
+        }
+        else {
+            ConverterNotFoundException converterNotFoundException = findConverterNotFoundException(e)
+            if (converterNotFoundException != null) {
+                return handleConverterNotFoundException(converterNotFoundException, argType, propertyPathForArg, fallBackValue)
+            }
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+        }
+    }
+
+    private static ConverterNotFoundException findConverterNotFoundException(Throwable exception) {
+        Throwable cause = exception
+        while (cause != null) {
+            if (cause instanceof ConverterNotFoundException) {
+                return (ConverterNotFoundException) cause
+            }
+            cause = cause.getCause()
+        }
+        return null
+    }
+
+    /**
+     * Handle ConverterNotFoundException by instantiating the target type and populating it from
+     * the configured Map. Spring 7 removed the conversion that previously turned a configuration
+     * Map into a settings type, so nested settings beans the conversion service does not know
+     * about - the Hibernate hibernateEventListeners tree, for example - no longer bind without
+     * this. Independent of the Groovy version.
+     */
+    @CompileDynamic
+    private Object handleConverterNotFoundException(ConverterNotFoundException e, Class argType, String propertyPathForArg, Object fallBackValue, Object rawValue = null) {
+        if (rawValue == null) {
+            try {
+                // Use Object.class to prevent Spring's MapToMapConverter from deep-converting values
+                rawValue = propertyResolver.getProperty(propertyPathForArg, Object)
+            } catch (ConfigurationException e2) {
+                throw e2
+            } catch (Exception e2) {
+                throw new ConfigurationException("Cannot read configuration for path [$propertyPathForArg]: $e2.message", e2)
+            }
+        }
+
+        if (rawValue instanceof Map) {
+            try {
+                Map<String, PropertyDescriptor> writableProperties = [:]
+                Introspector.getBeanInfo(argType).propertyDescriptors.each { PropertyDescriptor property ->
+                    if (property.name != 'metaClass' && property.writeMethod != null) {
+                        writableProperties[property.name] = property
+                    }
+                }
+
+                def instance = argType.getDeclaredConstructor().newInstance()
+                if (fallBackValue != null && argType.isInstance(fallBackValue)) {
+                    // A map-backed settings type carries arbitrary entries as well as declared
+                    // properties, so the inherited entries have to come across too or overriding
+                    // one nested value would silently drop the rest.
+                    if (instance instanceof Map && fallBackValue instanceof Map) {
+                        ((Map) instance).putAll((Map) fallBackValue)
+                    }
+                    writableProperties.values().each { PropertyDescriptor property ->
+                        if (property.readMethod != null && property.readMethod.parameterCount == 0) {
+                            Object fallbackPropertyValue = property.readMethod.invoke(fallBackValue)
+                            writeProperty(instance, property, fallbackPropertyValue, "$propertyPathForArg.$property.name")
+                        }
+                    }
+                }
+
+                boolean mapBacked = instance instanceof Map
+                Set<String> resolvedProperties = [] as Set<String>
+                ((Map) rawValue).each { key, val ->
+                    String propertyName = key.toString()
+                    PropertyDescriptor property = writableProperties[propertyName]
+                    if (property != null) {
+                        Object fallBackPropertyValue = getFallBackValue(fallBackValue, propertyName)
+                        Object value = resolveMapValue(property.propertyType, "$propertyPathForArg.$propertyName", fallBackPropertyValue, val)
+                        writeProperty(instance, property, value, "$propertyPathForArg.$propertyName")
+                        resolvedProperties.add(propertyName)
+                        return
+                    }
+                    int nestedPropertySeparator = propertyName.indexOf('.')
+                    if (nestedPropertySeparator > 0) {
+                        String nestedPropertyName = propertyName.substring(0, nestedPropertySeparator)
+                        PropertyDescriptor nestedProperty = writableProperties[nestedPropertyName]
+                        if (nestedProperty != null) {
+                            if (resolvedProperties.add(nestedPropertyName)) {
+                                Object fallBackPropertyValue = getFallBackValue(fallBackValue, nestedPropertyName)
+                                // The entry value belongs to a descendant of this property, not to
+                                // the property itself, so it is resolved from the path rather than
+                                // bound from the value in hand.
+                                Object value = resolveMapValue(nestedProperty.propertyType, "$propertyPathForArg.$nestedPropertyName", fallBackPropertyValue, null)
+                                writeProperty(instance, nestedProperty, value, "$propertyPathForArg.$nestedPropertyName")
+                            }
+                            return
+                        }
+                    }
+                    // Types that are themselves a Map (HibernateSettings extends LinkedHashMap, for
+                    // example) exist precisely to carry arbitrary keys such as hibernate.hbm2ddl.auto,
+                    // so an entry that is not a declared bean property belongs in the map rather than
+                    // being rejected. Only types with a fixed set of properties reject unknown keys.
+                    if (mapBacked) {
+                        ((Map) instance).put(propertyName, val)
+                        return
+                    }
+                    throw new ConfigurationException("Unknown setting [$propertyPathForArg.$propertyName]")
+                }
+                return instance
+            } catch (ConfigurationException e2) {
+                throw e2
+            } catch (InvocationTargetException e2) {
+                Throwable cause = e2.targetException
+                if (cause instanceof Error) {
+                    throw (Error) cause
+                }
+                if (cause instanceof ConfigurationException) {
+                    throw (ConfigurationException) cause
+                }
+                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $cause.message", cause)
+            } catch (Exception e2) {
+                throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e2.message", e2)
+            }
+        }
+
+        if (rawValue != null) {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: cannot convert value [$rawValue] to required type [$argType.name]", e)
+        }
+
+        // If we have a fallback value, return it
+        if (fallBackValue != null) {
+            return fallBackValue
+        }
+
+        if (e != null) {
+            throw new ConfigurationException("Invalid value for setting [$propertyPathForArg]: $e.message", e)
+        }
+        return null
+    }
+
+    /**
+     * Invoke a property setter with an explicit single-element argument array so that a null value
+     * is passed as the argument rather than being read as an absent varargs array.
+     */
+    private static void writeProperty(Object instance, PropertyDescriptor property, Object value, String propertyPath) {
+        try {
+            property.writeMethod.invoke(instance, [value] as Object[])
+        } catch (IllegalArgumentException e) {
+            throw new ConfigurationException(
+                    "Invalid value for setting [$propertyPath]: cannot assign [$value] to a property of type [$property.propertyType.name]", e)
+        }
+    }
+
+    private Object resolveClassValue(String propertyPath, Object rawValue, Object fallBackValue) {
+        Object value = rawValue instanceof Class || rawValue instanceof CharSequence ? rawValue : propertyResolver.getProperty(propertyPath, Object)
+        if (value instanceof Class) {
+            return value
+        }
+        String className = value instanceof CharSequence ? value.toString().trim() : null
+        if (!className) {
+            // Matches the top-level Class handling: a value that names no class must leave an
+            // inherited one in place rather than clear it.
+            return fallBackValue
+        }
+        ClassLoader classLoader = Thread.currentThread().contextClassLoader ?: getClass().classLoader
+        try {
+            return ClassUtils.forName(className, classLoader)
+        } catch (ClassNotFoundException | LinkageError e) {
+            throw new ConfigurationException("Invalid class name [$className] for setting [$propertyPath]: ${e.message}", e)
+        }
+    }
+
+    private Object resolveMapValue(Class propertyType, String propertyPath, Object fallBackValue, Object rawValue) {
+        // Class-typed entries must use the same thread context class loader route as the
+        // top-level Class handling above, because the resolver's String->Class converter
+        // resolves against the framework class loader and silently leaves an
+        // application-defined class (hibernate.configClass, for example) unbound.
+        if (propertyType == Class) {
+            return resolveClassValue(propertyPath, rawValue, fallBackValue)
+        }
+        if (rawValue instanceof Map && !propertyType.isInstance(rawValue)) {
+            return handleConverterNotFoundException(null, propertyType, propertyPath, fallBackValue, rawValue)
+        }
+        Object value
+        try {
+            value = propertyResolver.getProperty(propertyPath, propertyType)
+        } catch (ConversionFailedException e) {
+            return handleConversionException(e, propertyType, propertyPath, fallBackValue)
+        } catch (ConverterNotFoundException e) {
+            return handleConverterNotFoundException(e, propertyType, propertyPath, fallBackValue)
+        }
+        if (value != null) {
+            return value
+        }
+        // The resolver exposes the Map for this level but does not necessarily expose everything
+        // below it as a dotted property, so an entry the caller already holds is bound from that
+        // value instead of being dropped. Only an already-assignable value is taken directly;
+        // anything needing conversion has been resolved by the branches above.
+        Object nestedValue = propertyResolver.getProperty(propertyPath, Object)
+        if (nestedValue == null) {
+            nestedValue = rawValue
+        }
+        if (nestedValue instanceof Map) {
+            return propertyType.isInstance(nestedValue) ? nestedValue :
+                    handleConverterNotFoundException(null, propertyType, propertyPath, fallBackValue, nestedValue)
+        }
+        return ClassUtils.isAssignableValue(propertyType, nestedValue) ? nestedValue : null
     }
 }

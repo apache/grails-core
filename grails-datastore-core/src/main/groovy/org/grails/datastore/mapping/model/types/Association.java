@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import jakarta.persistence.CascadeType;
@@ -264,6 +265,12 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         return associatedEntity != null && associatedEntity.getJavaClass().isAssignableFrom(owner.getJavaClass());
     }
 
+    public boolean isCorrectlyOwned() {
+        return Optional.ofNullable(getAssociatedEntity())
+                .map(associatedEntity -> associatedEntity.isOwningEntity(getOwner()))
+                .orElse(false);
+    }
+
     protected Set<CascadeType> getCascadeOperations() {
         if (cascadeOperations == null) {
             buildCascadeOperations();
@@ -327,5 +334,42 @@ public abstract class Association<T extends Property> extends AbstractPersistent
         T mappedForm = this.getMapping().getMappedForm();
         final String cascade = mappedForm.getCascadeValidate();
         return cascade != null ? CascadeValidateType.fromMappedName(cascade) : CascadeValidateType.DEFAULT;
+    }
+
+    public boolean isHasOne() {
+        return Optional.of(this)
+                .filter(OneToOne.class::isInstance)
+                .map(OneToOne.class::cast)
+                .map(ToOne::isForeignKeyInChild)
+                .orElse(false);
+    }
+
+    public boolean isOneToOne() {
+        return this instanceof OneToOne;
+    }
+
+    public boolean isOneToMany() {
+        return this instanceof OneToMany;
+    }
+
+    public boolean isManyToMany() {
+        return this instanceof ManyToMany;
+    }
+
+    public boolean isManyToOne() {
+        return this instanceof ManyToOne;
+    }
+
+    public boolean canBindOneToOneWithSingleColumnAndForeignKey() {
+        return Optional.of(this)
+                .filter(Association::isBidirectional)
+                .map(Association::getInverseSide)
+                .filter(otherSide -> !otherSide.isHasOne())
+                .map(otherSide -> !this.isOwningSide() && otherSide.isOwningSide())
+                .orElse(false);
+    }
+
+    public boolean isBidirectionalToManyMap() {
+        return Map.class.isAssignableFrom(this.getType()) && this.isBidirectional();
     }
 }

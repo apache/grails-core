@@ -124,6 +124,27 @@ class PropertySourcesConfigSpec extends Specification {
         cfg.foo.bar == ['two': '2']
     }
 
+    void 'a dotted key walks plain nested maps and skips empty segments'() {
+        given: "a plain map value that was put without flattened keys"
+        def config = new PropertySourcesConfig()
+        config.put('plain', [nested: [value: 'found']])
+
+        expect: "each segment of the key is resolved against the map it reaches"
+        config.getProperty('plain.nested.value') == 'found'
+        config.getProperty('plain.nested', Map) == [value: 'found']
+        config.getProperty('plain.missing.value') == null
+
+        and: "empty segments are ignored as they always were"
+        config.getProperty('plain..nested.value') == 'found'
+        config.getProperty('.plain.nested.value.') == 'found'
+        config.getProperty('...') == null
+
+        and: "a key that runs past a scalar answers with that scalar, as it always has"
+        // Grails 8 behaviour, pinned on purpose: apache/grails-core#16732 makes such a key absent on 9.0.x
+        config.getProperty('plain.nested.value.deeper') == 'found'
+        config.containsProperty('plain.nested.value.deeper')
+    }
+
     void 'a dotted key inside a nested map is exported under its full path and overwrites no other property'() {
         given: "a map holding a property and, in a nested map, a dotted key that alone names the same property"
         def config = new PropertySourcesConfig([a: [b: 'root'], x: ['a.b': 'nested'], logging: [level: ['org.springframework': 'DEBUG']]])
@@ -538,14 +559,14 @@ class PropertySourcesConfigSpec extends Specification {
         expect: "the value is read by its key"
         config.getProperty(key) == 'x'
 
-        and: "the nested maps hold no container for it, and the flat key holds the value under the first subscript, as before"
+        and: "the nested maps hold no container for it, and the flat key holds the containers the subscripts wrote, as before"
         config.navigate('app', 'grid') == null
-        config.getProperty('app.grid', Object)[first].values() as List == ['x']
+        config.getProperty('app.grid', Object) == written
 
         where:
-        key                    | first
-        'app.grid[0][1].name'  | 0
-        'app.grid[a][b].name'  | 'a'
+        key                    | written
+        'app.grid[0][1].name'  | [[null, [name: 'x']]]
+        'app.grid[a][b].name'  | [a: [b: [name: 'x']]]
     }
 
     void 'a list of maps written by indexed keys is given as plain maps by getProperty, as before, and read through dot notation'() {
@@ -747,7 +768,7 @@ app:
         config.navigate('app', 'origins') == ['http://second']
 
         and: "the property source still holds the placeholder"
-        source.getProperty('app.origins') == ['http://${exampleHost}']
+        source.getSource().get('app.origins') == ['http://${exampleHost}']
 
         where:
         description                    | source
@@ -771,8 +792,8 @@ app:
         config.navigate('app', 'origins') == ['https://a.example.com', 'https://c.example.com']
 
         and: "a list of the same kind, while the source keeps its own"
-        config.navigate('app', 'origins').getClass() == source.getProperty('app.origins').getClass()
-        source.getProperty('app.origins') == ['https://a.example.com', 'https://b.example.com']
+        config.navigate('app', 'origins').getClass() == source.getSource().get('app.origins').getClass()
+        source.getSource().get('app.origins') == ['https://a.example.com', 'https://b.example.com']
 
         when: "the source of higher precedence is removed and the config is built again"
         propertySources.remove('higher')

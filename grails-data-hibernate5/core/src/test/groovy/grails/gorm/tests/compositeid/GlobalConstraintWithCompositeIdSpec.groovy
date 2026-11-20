@@ -36,27 +36,29 @@ import spock.lang.Specification
  */
 class GlobalConstraintWithCompositeIdSpec extends Specification {
 
-    @Shared Map config = [
-            'dataSource.url':"jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
-            'dataSource.dbCreate': 'update',
-            'dataSource.dialect': H2Dialect.name,
-            'dataSource.formatSql': 'true',
-            'hibernate.flush.mode': 'COMMIT',
-            'grails.gorm.default.constraints':{
+    @Shared
+    Map config = [
+            'dataSource.url'                 : "jdbc:h2:mem:grailsDB;LOCK_TIMEOUT=10000",
+            'dataSource.dbCreate'            : 'update',
+            'dataSource.dialect'             : H2Dialect.name,
+            'dataSource.formatSql'           : 'true',
+            'hibernate.flush.mode'           : 'COMMIT',
+            'grails.gorm.default.constraints': {
                 '*'(nullable: true)
             }
     ]
 
-    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config),ParentB, ChildB, DomainB)
-    @Shared PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
+    @Shared @AutoCleanup HibernateDatastore hibernateDatastore = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config), ParentB, ChildB, DomainB)
+    @Shared
+    PlatformTransactionManager transactionManager = hibernateDatastore.transactionManager
 
     @Rollback
     @Issue('https://github.com/apache/grails-core/issues/10457')
     void "test global constraints with composite id"() {
         when:
-        ParentB parent = new ParentB(code:"AAA", desc: "BBB")
-                                    .addToChilds(name:"Child A")
-                                    .save(flush:true)
+        ParentB parent = new ParentB(code: "AAA", desc: "BBB")
+                .addToChilds(name: "Child A")
+                .save(flush: true)
 
         then:
         ParentB.count == 1
