@@ -180,6 +180,23 @@ class ScriptCommandTaskSpec extends CommandProjectSpecification {
         again.output.contains('STACKTRACE=false')
     }
 
+    def "a system property of the build that starts with grails. reaches the JVM of the script, also in a build whose configuration is reused"() {
+        given:
+        setupCommandProject(WITH_STAND_IN)
+
+        when:
+        BuildResult without = executeTask('runScriptCommand', ['--arg=data-import'])
+        BuildResult with = executeTask('runScriptCommand', ['--arg=data-import', '-Dgrails.probe.one=a b'])
+        BuildResult other = executeTask('runScriptCommand', ['--arg=data-import', '-Dgrails.probe.one=c'])
+
+        then:
+        without.output.contains('PROBE=null')
+        with.output.contains('PROBE=a b')
+        with.output.contains('Configuration cache entry reused')
+        other.output.contains('PROBE=c')
+        other.output.contains('Configuration cache entry reused')
+    }
+
     def "a script that fails is a failed build"() {
         given:
         setupCommandProject(WITH_STAND_IN)

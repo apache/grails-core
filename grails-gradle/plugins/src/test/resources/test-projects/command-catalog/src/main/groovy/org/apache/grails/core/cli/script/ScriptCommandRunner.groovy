@@ -30,6 +30,7 @@ class ScriptCommandRunner {
         say('STARTED', args)
         println "BASE=${System.getProperty('base.dir')}"
         println "STACKTRACE=${Boolean.getBoolean('grails.full.stacktrace')}"
+        println "PROBE=${System.getProperty('grails.probe.one')}"
         if (args.length == 1 && args[0].startsWith(CommandArgumentsFile.ARGUMENT)) {
             try {
                 say('ARGUMENT', CommandArgumentsFile.read(new File(args[0].substring(CommandArgumentsFile.ARGUMENT.length()))) as String[])

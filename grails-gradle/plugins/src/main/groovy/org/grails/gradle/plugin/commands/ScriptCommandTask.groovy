@@ -34,6 +34,7 @@ import org.gradle.api.tasks.options.Option
 import org.gradle.work.DisableCachingByDefault
 
 import org.apache.grails.gradle.model.cli.CommandArgumentsFile
+import org.grails.gradle.plugin.core.GrailsSystemPropertyArgumentProvider
 
 /**
  * Runs a script command: a script {@code src/main/scripts/<name>.groovy} of the project, or one a
@@ -75,7 +76,9 @@ abstract class ScriptCommandTask extends JavaExec {
     @Inject
     ScriptCommandTask() {
         mainClass.convention(RUNNER)
-        systemProperties(System.properties.findAll { it.key.toString().startsWith('grails.') && it.key != FULL_STACKTRACE } as Map<String, Object>)
+        // read when the task runs, so that a build that reuses a configuration cache entry passes its own
+        jvmArgumentProviders.add(new GrailsSystemPropertyArgumentProvider(
+                project.providers.systemPropertiesPrefixedBy(GrailsSystemPropertyArgumentProvider.PREFIX), systemProperties, true))
         argumentsFileBase.convention(project.layout.projectDirectory)
     }
 
@@ -141,8 +144,9 @@ abstract class ScriptCommandTask extends JavaExec {
     @Override
     void exec() {
         args(runnerArguments())
-        // Asked for when the task runs and not when it is configured, so that a build whose configuration
-        // is reused shows the stack trace of a script exactly when this build was started with the property.
+        // The properties of the build reach the JVM of the script when the task runs (see the constructor),
+        // but not over a value the task has itself, and the Grails plugin gives every JavaExec one for this
+        // property: the build that is started for stack traces says so here.
         if (Boolean.getBoolean(FULL_STACKTRACE)) {
             systemProperty(FULL_STACKTRACE, 'true')
         }
