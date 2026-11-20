@@ -44,6 +44,8 @@ import org.grails.buffer.GrailsPrintWriter
 import org.grails.core.artefact.DomainClassArtefactHandler
 import org.grails.encoder.CodecLookup
 import org.grails.encoder.Encoder
+import org.grails.encoder.EncodingStateRegistry
+import org.grails.encoder.EncodingStateRegistryLookupHolder
 import org.grails.plugins.web.GrailsTagDateHelper
 import org.grails.web.servlet.mvc.SynchronizerTokensHolder
 
@@ -444,7 +446,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             link = requestDataValueProcessor.processAction(request, link, request.method)
         }
 
-        writer << encodeAttributeValue(link)
+        writer << encodeUrl(link, linkAttrs.url)
         writer << '" '
 
         // if URL is not null remove attributes
@@ -618,7 +620,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             link = requestDataValueProcessor.processAction(request, link, request.method)
         }
 
-        out << encodeAttributeValue(link)
+        out << encodeUrl(link, linkAttrs.url)
         out << '" '
 
         attrs.keySet().removeAll(LinkGenerator.LINK_ATTRIBUTES)
@@ -1229,7 +1231,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 // ignore
             }
         }
-        keyValue = processFormFieldValueIfNecessary(selectName, keyValue instanceof String ? keyValue : "${keyValue}", 'option')
+        keyValue = processFormFieldValueIfNecessary(selectName, keyValue, 'option')
         writer << "value=\"${keyValue.toString().encodeAsHTML()}\" "
 
         if (dataAttrsMap) {
@@ -1282,8 +1284,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         booleanToAttribute(attrs, 'readonly')
 
         def checked = attrs.remove('checked') ? true : false
-        // Hand the encoded string itself on, so that the encoder recognizes it and does not encode it again
-        value = processFormFieldValueIfNecessary(name, value?.toString()?.encodeAsHTML(), 'radio')
+        value = processFormFieldValueIfNecessary(name, encodeUnlessHtmlEncoded(value), 'radio')
         out << "<input type=\"radio\" name=\"${encodeAttributeValue(name)}\"${ checked ? ' checked="checked" ' : ' '}value=\"${encodeAttributeValue(value)}\" "
         if (!attrs.containsKey('id')) {
             out << """id="${encodeAttributeValue(name)}" """
@@ -1338,12 +1339,69 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     private processFormFieldValueIfNecessary(name, value, type) {
-        if (requestDataValueProcessor != null) {
-            // A String is handed on as it is, because a new String would lose the encoder's record that the value is
-            // already encoded, and the processor's result would be encoded again even when the processor returns it unchanged
-            return requestDataValueProcessor.processFormFieldValue(request, name, value instanceof String ? value : "${value}", type)
+        if (requestDataValueProcessor == null) {
+            return value
         }
-        return value
+        Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
+        boolean htmlEncoded = value instanceof CharSequence && isHtmlEncoded((CharSequence) value, htmlEncoder)
+        // The processor gets a new String, which carries no encoding state, so that its result is encoded unless the
+        // value was HTML-encoded and the processor returns it unchanged. A value marked raw, as message() returns, is
+        // therefore encoded after the processor, as it always was.
+        String argument = newString(value)
+        String result = requestDataValueProcessor.processFormFieldValue(request, name == null ? null : name.toString(), argument, type)
+        if (htmlEncoded && result == argument) {
+            htmlEncoder.markEncoded(result)
+        }
+        result
+    }
+
+    /**
+     * Encodes the URL of a form. A url attribute that is HTML-encoded and comes out of createLink unchanged keeps its
+     * encoding, so that it is written once.
+     */
+    private Object encodeUrl(Object link, Object url) {
+        Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
+        if (link instanceof CharSequence && url instanceof CharSequence && link.toString() == url.toString() &&
+                isHtmlEncoded((CharSequence) url, htmlEncoder)) {
+            return link
+        }
+        encodeAttributeValue(link)
+    }
+
+    /**
+     * Returns the value as it is when it is HTML-encoded, and otherwise encodes a copy of it, so that a value marked raw
+     * is encoded as well.
+     */
+    private Object encodeUnlessHtmlEncoded(Object value) {
+        Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
+        if (value instanceof CharSequence && isHtmlEncoded((CharSequence) value, htmlEncoder)) {
+            return value
+        }
+        encodeAttributeValue(newString(value))
+    }
+
+    /**
+     * A new String with the value's text, which carries no encoding state. A GString with a single value can return
+     * that value itself from toString(), so it does not serve.
+     */
+    @CompileStatic
+    private static String newString(Object value) {
+        new StringBuilder().append(value).toString()
+    }
+
+    /**
+     * Whether the value is recorded as encoded with the HTML codec in this request. A value marked raw is not.
+     * Converting a captured StreamCharBuffer to a String records the encoding of its content for that String.
+     */
+    @CompileStatic
+    private static boolean isHtmlEncoded(CharSequence value, Encoder htmlEncoder) {
+        EncodingStateRegistry registry = EncodingStateRegistryLookupHolder.encodingStateRegistryLookup?.lookup()
+        if (registry == null || htmlEncoder == null) {
+            return false
+        }
+        Set<Encoder> encoders = registry.getEncodingStateFor(value.toString()).encoders
+        // Asked of the HTML codec, because the identifier of the Raw codec declares itself equivalent to every codec
+        encoders != null && encoders.any { Encoder encoder -> htmlEncoder.codecIdentifier.isEquivalent(encoder.codecIdentifier) }
     }
 
     /**

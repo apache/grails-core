@@ -31,6 +31,7 @@ import org.grails.plugins.web.taglib.ApplicationTagLib
 import org.grails.plugins.web.taglib.FormTagLib
 import org.grails.plugins.web.taglib.RenderTagLib
 import org.grails.plugins.web.taglib.UrlMappingTagLib
+import org.grails.plugins.web.taglib.ValidationTagLib
 import org.grails.web.errors.ErrorsViewStackTracePrinter
 
 class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<FormTagLib> {
@@ -41,6 +42,7 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
     def setup() {
         mockTagLib(ApplicationTagLib)
         mockTagLib(UrlMappingTagLib)
+        mockTagLib(ValidationTagLib)
         tagLib.grailsTagDateHelper = new DefaultGrailsTagDateHelper()
     }
 
@@ -213,6 +215,106 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         !output.contains(VALUE)
     }
 
+    void '#tag writes a value captured from a GSP body once through a processor that returns it unchanged'() {
+        given:
+        tagLib.requestDataValueProcessor = new PassThroughProcessor()
+
+        when:
+        def output = applyTemplate('<g:set var="captured">${value.encodeAsHTML()}</g:set>' + template, [value: VALUE])
+
+        then:
+        output.contains(' value="' + ENCODED + '"')
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        tag                   | template
+        'g:checkBox'          | '<g:checkBox name="c" value="${captured}"/>'
+        'g:actionSubmit'      | '<g:actionSubmit value="${captured}"/>'
+        'g:actionSubmitImage' | '<g:actionSubmitImage value="${captured}" src="/images/go.png"/>'
+        'g:radio'             | '<g:radio name="r" value="${captured}"/>'
+        'g:textField'         | '<g:textField name="t" value="${captured}"/>'
+    }
+
+    void '#tag writes a value from fieldValue() once through a processor that returns it unchanged'() {
+        given:
+        tagLib.requestDataValueProcessor = new PassThroughProcessor()
+
+        when:
+        def output = applyTemplate(template, [book: new Book(title: VALUE)])
+
+        then:
+        output.contains(' value="' + ENCODED + '"')
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        tag                   | template
+        'g:checkBox'          | '<g:checkBox name="c" value="${fieldValue(bean: book, field: \'title\')}"/>'
+        'g:actionSubmit'      | '<g:actionSubmit value="${fieldValue(bean: book, field: \'title\')}"/>'
+        'g:actionSubmitImage' | '<g:actionSubmitImage value="${fieldValue(bean: book, field: \'title\')}" src="/images/go.png"/>'
+    }
+
+    void '#tag encodes a value from message() that a processor returns unchanged'() {
+        given:
+        tagLib.requestDataValueProcessor = new PassThroughProcessor()
+
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains(' value="' + ENCODED + '"')
+        !output.contains(VALUE)
+
+        where:
+        tag              | template
+        'g:textField'    | '<g:textField name="t" value="${message(code: \'no.such.code\', default: value)}"/>'
+        'g:hiddenField'  | '<g:hiddenField name="t" value="${message(code: \'no.such.code\', default: value)}"/>'
+        'g:submitButton' | '<g:submitButton name="t" value="${message(code: \'no.such.code\', default: value)}"/>'
+        'g:field'        | '<g:field type="text" name="t" value="${message(code: \'no.such.code\', default: value)}"/>'
+        'g:radio'        | '<g:radio name="r" value="${message(code: \'no.such.code\', default: value)}"/>'
+    }
+
+    void 'g:radio encodes a value marked raw, as it did before'() {
+        when:
+        def output = applyTemplate('<g:radio name="r" value="${raw(value)}"/>', [value: VALUE])
+
+        then:
+        output.contains(' value="' + ENCODED + '"')
+        !output.contains(VALUE)
+    }
+
+    void 'g:checkBox takes a name captured from a GSP body when a processor is registered'() {
+        given:
+        tagLib.requestDataValueProcessor = new PassThroughProcessor()
+
+        when:
+        def output = applyTemplate('<g:set var="captured">${value.encodeAsHTML()}</g:set><g:checkBox name="${captured}"/>', [value: VALUE])
+
+        then:
+        output.contains('<input type="hidden" name="_' + ENCODED + '" /><input type="checkbox" name="' + ENCODED + '" ')
+        !output.contains('&amp;quot;')
+    }
+
+    void '#tag writes a url that was encoded beforehand once #description'() {
+        given:
+        tagLib.requestDataValueProcessor = processor
+
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains(expected)
+        !output.contains('&amp;quot;')
+
+        where:
+        tag                  | description                        | processor                  | template                                                         || expected
+        'g:form'             | 'without a processor'              | null                       | '<g:form url="${value.encodeAsHTML()}"></g:form>'                || '<form action="' + ENCODED + '" '
+        'g:form'             | 'through a pass-through processor' | new PassThroughProcessor() | '<g:form url="${value.encodeAsHTML()}"></g:form>'                || '<form action="' + ENCODED + '" '
+        'g:formActionSubmit' | 'without a processor'              | null                       | '<g:formActionSubmit value="Go" url="${value.encodeAsHTML()}"/>' || ' formaction="' + ENCODED + '" '
+        'g:formActionSubmit' | 'through a pass-through processor' | new PassThroughProcessor() | '<g:formActionSubmit value="Go" url="${value.encodeAsHTML()}"/>' || ' formaction="' + ENCODED + '" '
+    }
+
     void 'g:form encodes the hidden fields of the request data value processor'() {
         given:
         tagLib.requestDataValueProcessor = new PassThroughProcessor(fields: [(VALUE): VALUE])
@@ -280,6 +382,10 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         String processUrl(HttpServletRequest request, String url) {
             url
         }
+    }
+
+    static class Book {
+        String title
     }
 
     static class AppendingProcessor extends PassThroughProcessor {
