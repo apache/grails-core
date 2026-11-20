@@ -645,6 +645,14 @@ spring:
 - Delete `grails.profile` from `application.yml` when nothing of the project reads it, and remove a "Profile" row from a welcome page that shows it. Replace `grails.config.Settings.PROFILE`, which is removed, with the literal `'grails.profile'` in code that still reads the key. `GrailsPlugin.PROFILES` is deprecated for removal.
 - Do not add `grails.profile` or a `profile` dependency to make something work: neither has an effect at run time.
 
+## `grails run <file>.groovy` Outside a Project Is Removed
+
+Outside a project, `grails run app.groovy` compiled a loose Groovy script and started it as a Spring Boot application. Grails 9 removes it with no replacement, and with it `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` of `grails-data-hibernate5-spring-boot` and `grails-data-hibernate7-spring-boot`, which added GORM to such a script that had an `@Entity` class, and the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it.
+
+- Scripts inside a project are unaffected: `run-script` and the script commands run through `runScriptCommand` work as before. `HibernateGormAutoConfiguration` is unchanged.
+- A script that was started with `grails run` becomes a project: create an application with the features it needs and move the code into it, or run it in an existing application with `run-script`.
+- Remove code that names `GormCompilerAutoConfiguration`. Nothing takes its place.
+
 # After the Upgrade
 
 ## Verification Checklist

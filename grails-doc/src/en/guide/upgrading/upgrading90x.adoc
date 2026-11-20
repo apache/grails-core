@@ -1682,3 +1682,16 @@ Closure doWithSpring() {
 A plugin that needs a web application to work says so with what it needs, such as `@ConditionalOnWebApplication` on its auto-configuration, not with a profile.
 * *The key.* Delete `grails.profile` from `application.yml` (or `application.groovy`) when nothing of your own reads it. A page or an endpoint of your own that shows it, such as the "Profile" row of a welcome page copied from an earlier version, shows nothing for an application without the key: remove the row.
 * *`Settings.PROFILE`.* Code that used the constant to read the key names the key itself, `'grails.profile'`.
+
+==== 38. `grails run <file>.groovy` Outside a Project Is Removed, and `GormCompilerAutoConfiguration` With It
+
+Outside a project, the `run` command of the Grails shell compiled a loose Groovy script and started it as a Spring Boot application: `grails run app.groovy`. Dependencies and imports were added to such a script from the annotations it used, and `GormCompilerAutoConfiguration` of `grails-data-hibernate5-spring-boot` and `grails-data-hibernate7-spring-boot` added GORM for Hibernate and the `grails.gorm` imports to a script that had an `@Entity` class.
+
+Grails 9 has neither. The command is removed with the shell and has no replacement, and the two artifacts no longer contain `org.grails.datastore.gorm.boot.compiler.GormCompilerAutoConfiguration` or the `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration` file that registered it. `HibernateGormAutoConfiguration`, the Spring Boot auto-configuration of the same artifacts, is unchanged.
+
+Scripts inside a project are not affected: `run-script` runs a Groovy script with the application context of the project as before, and the script commands of a project and of its plugins run through `runScriptCommand` as note 33 describes.
+
+===== Required Actions
+
+* *A script that was started with `grails run`.* Make it a project: create an application with the features it needs and move the code of the script into it, or run the code inside an existing application with `run-script`.
+* *Code that names `GormCompilerAutoConfiguration`.* Remove it. Nothing takes its place, because nothing compiles a script outside a project.

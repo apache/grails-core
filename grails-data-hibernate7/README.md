@@ -39,7 +39,7 @@ For testing the following was done:
 |---|---|
 | `grails-data-hibernate7-core` | Domain binding pipeline, GORM/Hibernate mapping, `HibernateDatastore` |
 | `grails-data-hibernate7-spring-orm` | Shared Spring ORM / Hibernate integration support used by the core, Spring Boot, and Grails plugin modules |
-| `grails-data-hibernate7-spring-boot` | Spring Boot autoconfiguration (`HibernateGormAutoConfiguration`) and Grails CLI SPI (`GormCompilerAutoConfiguration`) |
+| `grails-data-hibernate7-spring-boot` | Spring Boot autoconfiguration (`HibernateGormAutoConfiguration`) |
 
 ## Autoconfiguration
 
@@ -47,11 +47,6 @@ For testing the following was done:
 
 Bootstraps `HibernateDatastore`, `SessionFactory`, and `PlatformTransactionManager` from any available `DataSource` bean.
 Registered via `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`.
-
-### `GormCompilerAutoConfiguration` (Grails CLI)
-
-A Grails CLI SPI hook (`org.grails.cli.compiler.CompilerAutoConfiguration`) that detects `@Entity` classes in Grails scripts and automatically adds the `grails-data-hibernate7-core` dependency and `grails.gorm.*` imports to the compilation context.
-Registered via `META-INF/services/org.grails.cli.compiler.CompilerAutoConfiguration`.
 
 ## Using GORM Without Grails
 
