@@ -203,7 +203,10 @@ public class Holders {
     public static void reset() {
         setPluginManager(null);
         setGrailsApplication(null);
-        setServletContext(null);
+        // there is no holder outside a Servlet environment, where grails-web-common is not on the class path
+        if (servletContexts != null) {
+            setServletContext(null);
+        }
         setPluginManager(null);
         setPluginManagerInCreation(false);
         setConfig(null);
