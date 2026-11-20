@@ -19,6 +19,7 @@
 package grails.gorm.multitenancy.plainclass
 
 import org.springframework.transaction.IllegalTransactionStateException
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -60,11 +61,12 @@ class PlainClassInTenantBlockSpec extends Specification {
                         (Settings.SETTING_MULTI_TENANCY_MODE)   : mode,
                         (Settings.SETTING_MULTI_TENANT_RESOLVER): new SystemPropertyTenantResolver()
                 ]),
-                schema ? [ConnectionSource.DEFAULT] : [ConnectionSource.DEFAULT, 'foo'],
+                schema ? [ConnectionSource.DEFAULT] : [ConnectionSource.DEFAULT, 'foo', 'bar'],
                 TenantNote, PlainNote
         )
         if (schema) {
             datastore.addTenantForSchema('foo')
+            datastore.addTenantForSchema('bar')
         }
         seed = PlainNote.withTransaction { new PlainNote(text: 'seed').save(flush: true) }
     }
@@ -226,6 +228,35 @@ class PlainClassInTenantBlockSpec extends Specification {
 
         then:
         holder(PlainNote, saved.id).is(datastore)
+        PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
+
+        where:
+        [mode, tenantId, boundSession] << [MODES, ['foo', 'unregistered'], [false, true]].combinations()
+    }
+
+    @Unroll
+    void 'with #mode multi-tenancy, a flushed save with tenant #tenantId ignores another transaction and boundSession=#boundSession'() {
+        given:
+        startDatastore(mode)
+        def other = (SimpleMapDatastore) datastore.getDatastoreForConnection('bar')
+        Closure write = {
+            Tenants.withTenant(PlainNote, tenantId) {
+                new PlainNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        new TransactionTemplate(other.transactionManager).execute { status ->
+            if (boundSession) {
+                PlainNote.withSession { write.call() }
+            }
+            else {
+                write.call()
+            }
+            status.setRollbackOnly()
+        }
+
+        then:
         PlainNote.withTransaction { PlainNote.list()*.text.sort() } == ['flushed', 'seed']
 
         where:

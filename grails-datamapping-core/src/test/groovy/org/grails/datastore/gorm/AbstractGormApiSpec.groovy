@@ -29,6 +29,7 @@ import org.grails.datastore.mapping.core.connections.ConnectionSource
 import org.grails.datastore.mapping.multitenancy.MultiTenantCapableDatastore
 import org.grails.datastore.mapping.simple.SimpleMapDatastore
 import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Specification
 
@@ -153,20 +154,28 @@ class AbstractGormApiSpec extends Specification {
         resolver.resolve().is(ds)
     }
 
-    void 'a plain class can be flushed with an unregistered tenant bound and no transaction'() {
+    void 'a plain class can be flushed with an unregistered tenant bound and unrelatedTransaction=#unrelatedTransaction'() {
         given:
         datastore.close()
         datastore = new SimpleMapDatastore(
                 DatastoreUtils.createPropertyResolver(['grails.gorm.multiTenancy.mode': 'DATABASE']),
-                [ConnectionSource.DEFAULT], AbstractGormApiThing)
+                [ConnectionSource.DEFAULT, 'other'], AbstractGormApiThing)
 
         when:
-        def saved = Tenants.withTenant(AbstractGormApiThing, 'unregistered') {
-            new AbstractGormApiThing(name: 'flushed').save(flush: true)
+        Closure write = {
+            Tenants.withTenant(AbstractGormApiThing, 'unregistered') {
+                new AbstractGormApiThing(name: 'flushed').save(flush: true)
+            }
         }
+        def saved = unrelatedTransaction
+                ? new TransactionTemplate(((SimpleMapDatastore) datastore.getDatastoreForConnection('other')).transactionManager).execute { write.call() }
+                : write.call()
 
         then:
         AbstractGormApiThing.get(saved.id)?.name == 'flushed'
+
+        where:
+        unrelatedTransaction << [false, true]
     }
 
     interface MixedDatastore extends MultiTenantCapableDatastore, Datastore {}

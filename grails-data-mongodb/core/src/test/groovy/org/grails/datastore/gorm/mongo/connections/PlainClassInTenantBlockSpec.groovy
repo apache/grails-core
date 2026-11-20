@@ -19,6 +19,7 @@
 package org.grails.datastore.gorm.mongo.connections
 
 import org.springframework.transaction.IllegalTransactionStateException
+import org.springframework.transaction.support.TransactionTemplate
 import spock.lang.AutoCleanup
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -60,7 +61,8 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
                 'grails.gorm.multiTenancy.tenantResolverClass': SystemPropertyTenantResolver,
                 (MongoSettings.SETTING_URL)                   : "mongodb://${mongoHost}:${mongoPort}/plainClassDefaultDb".toString(),
                 (MongoSettings.SETTING_CONNECTIONS)           : [
-                        foo: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassFooDb".toString()]
+                        foo: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassFooDb".toString()],
+                        bar: [url: "mongodb://${mongoHost}:${mongoPort}/plainClassBarDb".toString()]
                 ]
         ], PlainMongoNote, TenantMongoNote)
         seed = new PlainMongoNote(text: 'seed').save(flush: true)
@@ -190,6 +192,36 @@ class PlainClassInTenantBlockSpec extends AutoStartedMongoSpec {
         then: 'read without GORM'
         textsIn('plainClassDefaultDb', PlainMongoNote) == ['flushed', 'seed']
         textsIn('plainClassFooDb', PlainMongoNote) == []
+
+        where:
+        [tenantId, boundSession] << [['foo', 'unregistered'], [false, true]].combinations()
+    }
+
+    @Unroll
+    void 'a flushed save with tenant #tenantId ignores another transaction and boundSession=#boundSession'() {
+        given:
+        def other = (MongoDatastore) datastore.getDatastoreForConnection('bar')
+        Closure write = {
+            Tenants.withTenant(PlainMongoNote, tenantId) {
+                new PlainMongoNote(text: 'flushed').save(flush: true)
+            }
+        }
+
+        when:
+        new TransactionTemplate(other.transactionManager).execute { status ->
+            if (boundSession) {
+                PlainMongoNote.withSession { write.call() }
+            }
+            else {
+                write.call()
+            }
+            status.setRollbackOnly()
+        }
+
+        then: 'the other transaction does not own the write'
+        textsIn('plainClassDefaultDb', PlainMongoNote) == ['flushed', 'seed']
+        textsIn('plainClassFooDb', PlainMongoNote) == []
+        textsIn('plainClassBarDb', PlainMongoNote) == []
 
         where:
         [tenantId, boundSession] << [['foo', 'unregistered'], [false, true]].combinations()
