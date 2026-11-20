@@ -80,7 +80,13 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     protected Session openSession() throws DataAccessResourceFailureException {
         Session session = super.openSession();
-        applyFlushMode(session);
+        try {
+            applyFlushMode(session);
+        } catch (RuntimeException | Error ex) {
+            // not bound yet, so afterCompletion would not find it
+            SessionFactoryUtils.closeSession(session);
+            throw ex;
+        }
         return session;
     }
 
@@ -92,20 +98,50 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     public void preHandle(WebRequest request) throws DataAccessException {
         super.preHandle(request);
 
-        for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
-            SessionFactory sf = config.sessionFactory;
-            if (TransactionSynchronizationManager.hasResource(sf)) {
-                // a session is already open for this request: use it, and leave it to the one that opened it
-                incrementParticipateCount(request, sf);
-                continue;
+        int acquired = 0;
+        try {
+            for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
+                SessionFactory sf = config.sessionFactory;
+                if (TransactionSynchronizationManager.hasResource(sf)) {
+                    // a session is already open for this request: use it, and leave it to the one that opened it
+                    incrementParticipateCount(request, sf);
+                } else {
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Opening additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+                    }
+                    Session session = sf.openSession();
+                    try {
+                        session.setHibernateFlushMode(config.flushMode);
+                        TransactionSynchronizationManager.bindResource(sf, new SessionHolder(session));
+                    } catch (RuntimeException | Error ex) {
+                        // not bound yet, so the release below would not find it
+                        SessionFactoryUtils.closeSession(session);
+                        throw ex;
+                    }
+                }
+                acquired++;
             }
-            if (logger.isDebugEnabled()) {
-                logger.debug("Opening additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
-            }
-            Session session = sf.openSession();
-            session.setHibernateFlushMode(config.flushMode);
-            SessionHolder sessionHolder = new SessionHolder(session);
-            TransactionSynchronizationManager.bindResource(sf, sessionHolder);
+        } catch (RuntimeException | Error ex) {
+            releaseAfterFailedPreHandle(request, acquired, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Releases what a {@link #preHandle} that failed partway acquired, since Spring calls {@link #afterCompletion}
+     * only on interceptors whose preHandle completed: the sessions of the other datasources it opened or joined, then
+     * the default session. A failure to release one is attached to the original failure, which preHandle rethrows.
+     */
+    private void releaseAfterFailedPreHandle(WebRequest request, int acquired, Throwable failure) {
+        try {
+            closeAdditionalSessions(request, acquired, false);
+        } catch (RuntimeException | Error releaseEx) {
+            failure.addSuppressed(releaseEx);
+        }
+        try {
+            super.afterCompletion(request, null);
+        } catch (RuntimeException | Error releaseEx) {
+            failure.addSuppressed(releaseEx);
         }
     }
 
@@ -169,7 +205,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
         try {
-            closeAdditionalSessions(request, false);
+            closeAdditionalSessions(request, additionalSessionFactories.size(), false);
         } finally {
             super.afterCompletion(request, ex);
         }
@@ -188,7 +224,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterConcurrentHandlingStarted(WebRequest request) {
         try {
-            closeAdditionalSessions(request, true);
+            closeAdditionalSessions(request, additionalSessionFactories.size(), true);
         } finally {
             if (isGrailsAsync(request) && !isParticipating(request) &&
                     TransactionSynchronizationManager.hasResource(getSessionFactory())) {
@@ -220,9 +256,13 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         return request.getAttribute(getParticipateAttributeName(), WebRequest.SCOPE_REQUEST) != null;
     }
 
-    private void closeAdditionalSessions(WebRequest request, boolean flushFirst) {
+    /**
+     * Closes the sessions this request opened for the first {@code count} other datasources, and counts down those it
+     * joined. With {@code flushFirst}, flushes each it opened first when Hibernate allows it.
+     */
+    private void closeAdditionalSessions(WebRequest request, int count, boolean flushFirst) {
         Throwable firstFlushFailure = null;
-        for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
+        for (int i = count - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
             SessionFactory sf = config.sessionFactory;
             if (decrementParticipateCount(request, sf)) {
