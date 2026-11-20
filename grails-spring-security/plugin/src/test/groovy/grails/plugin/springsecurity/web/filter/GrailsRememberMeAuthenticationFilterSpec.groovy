@@ -148,6 +148,60 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
     }
 
     @Issue('#15877')
+    @Issue('#15877')
+    @Unroll
+    void 'with the login form at #formUrl, a GET of #uri is #outcome, whatever way the dot segments of the address are spelled'() {
+        given:
+        AuthenticationSuccessHandler handler = Mock(AuthenticationSuccessHandler)
+        MockHttpServletRequest request = new MockHttpServletRequest('GET', uri)
+        request.contextPath = contextPath
+        MockHttpServletResponse response = new MockHttpServletResponse()
+        MockFilterChain chain = new MockFilterChain()
+        GrailsRememberMeAuthenticationFilter filter = filterWith(handler)
+        filter.loginFormUrl = formUrl
+
+        when:
+        filter.doFilter(request, response, chain)
+
+        then: 'a browser reads %2e as a dot, so the path it asks for has no dot segment, however the address spells it'
+        (chain.request != null) == isForm
+
+        where:
+        formUrl                                          | uri                   | contextPath || isForm
+        '/app/%2e%2e/login/auth'                         | '/login/auth'         | ''          || true
+        '/app/%2E%2E/login/auth'                         | '/login/auth'         | ''          || true
+        '/app/.%2e/login/auth'                           | '/login/auth'         | ''          || true
+        '/app/%2e./login/auth'                           | '/login/auth'         | ''          || true
+        '/app/%2E./login/auth'                           | '/login/auth'         | ''          || true
+        '/login/%2e/auth'                                | '/login/auth'         | ''          || true
+        '/login/%2E/auth'                                | '/login/auth'         | ''          || true
+        '/login/auth/%2e'                                | '/login/auth/'        | ''          || true
+        '/login/auth/x/%2e%2e'                           | '/login/auth/'        | ''          || true
+        '/login/auth/x/..'                               | '/login/auth/'        | ''          || true
+        '/login/auth/.'                                  | '/login/auth/'        | ''          || true
+        '/../login/auth'                                 | '/login/auth'         | ''          || true
+        '/%2e%2e/login/auth'                             | '/login/auth'         | ''          || true
+        '/%2e%2e/%2e%2e/login/auth'                      | '/login/auth'         | ''          || true
+        '/a/b/../../login/auth'                          | '/login/auth'         | ''          || true
+        '/a/b/%2e%2e/%2e%2e/login/auth'                  | '/login/auth'         | ''          || true
+        '/a/%2e%2e/b/%2e%2e/login/auth'                  | '/login/auth'         | ''          || true
+        '/app/%2e%2e/login/auth'                         | '/app/login/auth'     | '/app'      || true
+        '/x/%2e%2e/login/auth?lang=en'                   | '/app/login/auth'     | '/app'      || true
+        'https://example.test/app/%2e%2e/login/auth'     | '/login/auth'         | ''          || true
+        'https://example.test/app/%2E%2E/login/auth'     | '/login/auth'         | ''          || true
+        'https://example.test/login/%2e/auth'            | '/login/auth'         | ''          || true
+        'https://example.test/%2e%2e/login/auth'         | '/login/auth'         | ''          || true
+        'https://example.test/a/b/%2e%2e/%2e%2e/login/auth' | '/login/auth'      | ''          || true
+        'https://example.test/app/%2e%2e/login/auth#top' | '/login/auth'         | ''          || true
+        '/login/%2e%2e/other'                            | '/login/auth'         | ''          || false
+        '/login/auth/%2e%2e/other'                       | '/login/auth'         | ''          || false
+        '/app/%2e%2e/login/auth'                         | '/app/login/auth'     | ''          || false
+        '/login/%2e/auth'                                | '/login/other'        | ''          || false
+        'https://example.test/login/%2e%2e/other'        | '/login/auth'         | ''          || false
+        '/login/%2f../auth'                              | '/login/auth'         | ''          || false
+        outcome = isForm ? 'the login form, passed down the chain' : 'another page, redirected to'
+    }
+
     void 'the request for the login form goes on down the filter chain, so the controller can send a remembered user to the full login page'() {
         given:
         AuthenticationSuccessHandler handler = Mock(AuthenticationSuccessHandler)

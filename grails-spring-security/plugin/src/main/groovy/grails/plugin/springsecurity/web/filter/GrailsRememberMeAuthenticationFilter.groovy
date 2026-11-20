@@ -139,18 +139,36 @@ class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilte
                 return false
             }
             // the path the browser sends has no dot segments, so the configured one has none either
-            return request.requestURI == (form.normalize().rawPath ?: '/')
+            return request.requestURI == (withoutDotSegments(form.rawPath ?: '/') ?: '/')
         }
         request.requestURI == request.contextPath + withoutDotSegments(withoutQueryAndFragment(loginFormUrl))
     }
 
+    /**
+     * The path as a browser sends it: a segment of one or two dots is removed, with the segment before it for two, and a
+     * {@code ..} at the root stays at the root. A browser reads {@code %2e} as a dot, in either case, so {@code %2e%2e},
+     * {@code .%2E} and the like are dot segments too.
+     */
     private static String withoutDotSegments(String path) {
-        try {
-            return new URI(path).normalize().rawPath ?: path
+        String[] segments = path.split('/', -1)
+        List<String> kept = []
+        for (int i = 0; i < segments.length; i++) {
+            String segment = segments[i]
+            String dots = segment.toLowerCase(Locale.ROOT).replace('%2e', '.')
+            boolean last = i == segments.length - 1
+            if (dots == '.' || dots == '..') {
+                if (dots == '..' && kept.size() > 1) {
+                    kept.remove(kept.size() - 1)
+                }
+                if (last) {
+                    kept.add('')
+                }
+            }
+            else {
+                kept.add(segment)
+            }
         }
-        catch (URISyntaxException ignored) {
-            return path
-        }
+        kept.join('/')
     }
 
     private static String withoutQueryAndFragment(String url) {
