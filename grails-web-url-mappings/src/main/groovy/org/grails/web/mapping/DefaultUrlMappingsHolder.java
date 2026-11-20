@@ -30,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Closure;
@@ -101,6 +102,10 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
     private final Set<String> DEFAULT_ACTION_PARAMS = CollectionUtils.newSet(UrlMapping.ACTION);
     private final PathMatcher pathMatcher = new AntPathMatcher();
     private final AtomicInteger initCounter = new AtomicInteger();
+    private ClassLoader indexClassLoader;
+    private UrlMappingsIndex urlMappingsIndex = UrlMappingsIndex.empty();
+    private volatile Map<String, UrlMapping> staticPathMappings = Map.of();
+    private final Set<String> indexMatchedUris = ConcurrentHashMap.newKeySet();
 
     public DefaultUrlMappingsHolder(List<UrlMapping> mappings) {
         this(mappings, null, false);
@@ -132,6 +137,9 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
 
     public void initialize() {
         sortMappings();
+        urlMappingsIndex = UrlMappingsIndex.empty();
+        staticPathMappings = Map.of();
+        indexMatchedUris.clear();
 
         cachedMatches = Caffeine.newBuilder()
             .maximumSize(maxWeightedCacheCapacity)
@@ -199,6 +207,59 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
                 }
             }
         }
+        installVerifiedIndex();
+    }
+
+    /**
+     * Keeps an index entry only when it names the highest-precedence runtime mapping for that
+     * static pattern. A missing or disagreeing index leaves the linear match in place.
+     */
+    private void installVerifiedIndex() {
+        if (indexClassLoader == null || mappings == null) {
+            return;
+        }
+        urlMappingsIndex = UrlMappingsIndex.load(indexClassLoader);
+        if (urlMappingsIndex.isEmpty()) {
+            return;
+        }
+        Map<String, UrlMapping> verified = new HashMap<>();
+        Set<String> seenPatterns = new HashSet<>();
+        for (UrlMapping mapping : mappings) {
+            String pattern = staticPattern(mapping);
+            if (pattern == null || !seenPatterns.add(pattern)) {
+                continue;
+            }
+            if (urlMappingsIndex.describes(pattern, mapping.getControllerName(), mapping.getActionName(),
+                    mapping.getNamespace(), mapping.getPluginName(), mapping.getHttpMethod(),
+                    mapping.getViewName())) {
+                verified.put(pattern, mapping);
+            }
+        }
+        staticPathMappings = verified;
+    }
+
+    private static String staticPattern(UrlMapping mapping) {
+        if (mapping.getUrlData() == null) {
+            return null;
+        }
+        String pattern = mapping.getUrlData().getUrlPattern();
+        if (pattern == null || !pattern.startsWith("/") || pattern.indexOf('$') >= 0 || pattern.indexOf('*') >= 0 ||
+                pattern.indexOf('(') >= 0 || pattern.indexOf('?') >= 0) {
+            return null;
+        }
+        return pattern;
+    }
+
+    void setIndexClassLoader(ClassLoader indexClassLoader) {
+        this.indexClassLoader = indexClassLoader;
+    }
+
+    UrlMappingsIndex getUrlMappingsIndex() {
+        return urlMappingsIndex;
+    }
+
+    boolean matchedFromIndex(String uri) {
+        return indexMatchedUris.contains(uri);
     }
 
     @SuppressWarnings("unchecked")
@@ -508,6 +569,7 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             return info;
         }
 
+        UrlMapping indexed = staticPathMappings.get(uri);
         final boolean debugEnabled = LOG.isDebugEnabled();
         final int uriSlashCount = RegexUrlMapping.countSlashes(uri);
         for (UrlMapping mapping : mappings) {
@@ -518,6 +580,9 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             info = matchMapping(mapping, uri, uriSlashCount);
             if (info != null) {
                 cachedMatches.put(uri, info);
+                if (mapping == indexed) {
+                    indexMatchedUris.add(uri);
+                }
                 break;
             }
         }
@@ -594,6 +659,8 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
             boolean anyVersion = version != null && version.equals(UrlMapping.ANY_VERSION);
             final boolean debugEnabled = LOG.isDebugEnabled();
             final int uriSlashCount = RegexUrlMapping.countSlashes(uri);
+            UrlMapping indexed = staticPathMappings.get(uri);
+            boolean firstAccepted = true;
             for (UrlMapping mapping : mappings) {
                 if (debugEnabled) {
                     LOG.debug("Attempting to match URI [{}] with pattern [{}]", uri, mapping.getUrlData().getUrlPattern());
@@ -607,10 +674,17 @@ public class DefaultUrlMappingsHolder implements UrlMappings {
 
                     String mappingHttpMethod = current.getHttpMethod();
                     String mappingVersion = current.getVersion();
-                    boolean isValidHttpMethod = mappingHttpMethod == null || anyHttpMethod || mappingHttpMethod.equalsIgnoreCase(UrlMapping.ANY_HTTP_METHOD) || mappingHttpMethod.equalsIgnoreCase(httpMethod);
-                    boolean isValidVersion = mappingVersion == null || anyVersion || mappingVersion.equals(UrlMapping.ANY_VERSION) || mappingVersion.equals(version);
+                    boolean isValidHttpMethod = mappingHttpMethod == null || anyHttpMethod ||
+                            mappingHttpMethod.equalsIgnoreCase(UrlMapping.ANY_HTTP_METHOD) ||
+                            mappingHttpMethod.equalsIgnoreCase(httpMethod);
+                    boolean isValidVersion = mappingVersion == null || anyVersion ||
+                            mappingVersion.equals(UrlMapping.ANY_VERSION) || mappingVersion.equals(version);
                     if (isValidHttpMethod && isValidVersion) {
                         matchingUrls.add(current);
+                        if (firstAccepted && mapping == indexed) {
+                            indexMatchedUris.add(uri);
+                        }
+                        firstAccepted = false;
                     }
                 }
             }

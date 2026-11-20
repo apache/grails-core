@@ -118,6 +118,13 @@ public class UrlMappingsHolderFactoryBean implements FactoryBean<UrlMappings>, I
         if (urlCreatorCacheSize != null) {
             defaultUrlMappingsHolder.setUrlCreatorMaxWeightedCacheCapacity(urlCreatorCacheSize);
         }
+        ClassLoader indexLoader = grailsApplication.getClassLoader();
+        if (indexLoader == null) {
+            indexLoader = applicationContext.getClassLoader();
+        }
+        // The holder matches with the indexes this loader can see. Passing it here, rather than
+        // discovering a loader inside the holder, keeps an explicit loader from being replaced.
+        defaultUrlMappingsHolder.setIndexClassLoader(indexLoader);
         // call initialize() after settings are in place
         defaultUrlMappingsHolder.initialize();
         UrlConverter urlConverter = applicationContext.containsBean(UrlConverter.BEAN_NAME) ? applicationContext.getBean(UrlConverter.BEAN_NAME, UrlConverter.class) : null;
