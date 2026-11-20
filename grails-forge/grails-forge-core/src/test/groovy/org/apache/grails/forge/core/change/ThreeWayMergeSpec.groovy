@@ -19,7 +19,9 @@
 package org.apache.grails.forge.core.change
 
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 import spock.lang.Specification
+import spock.lang.Timeout
 import spock.lang.Unroll
 
 class ThreeWayMergeSpec extends Specification {
@@ -106,6 +108,100 @@ class ThreeWayMergeSpec extends Specification {
         then:
         merge.conflicts == 0
         merge.merged.toList() == current.toList() + bytes('new\n').toList()
+    }
+
+    @Unroll
+    void "a change among lines that are alike touches every one of them: #what is a conflict"() {
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes(base), bytes(current), bytes(proposed))
+
+        then:
+        merge.conflicts == 1
+        merge.merged == null
+
+        where:
+        what                                                 | base              | current              | proposed
+        'a line among empty lines, and a line before them'   | 'x\n\n\n\n'       | 'x\n\nmine\n\n\n'   | 'x\ny\n\n\n'
+        'an empty line removed, and a line added among them' | 'a\n\n\n\nb\n'    | 'a\n\n\nb\n'        | 'a\n\nnew\n\n\nb\n'
+        'a line doubled, and a line added after its like'    | 'a\nb\nb\nc\n'    | 'a\nb\nb\nb\nc\n'   | 'a\nb\nnew\nb\nc\n'
+    }
+
+    @Unroll
+    void "changes with a line between them are merged also when that line is like its neighbours: #what"() {
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes(base), bytes(current), bytes(proposed))
+
+        then:
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == merged
+
+        where:
+        what                                        | base                  | current                     | proposed                   || merged
+        'lines on the two sides of an empty line'   | '{\na\n\nb\n\nc\n}\n' | '{\na\n\nb\nmine\n\nc\n}\n' | '{\na\n\nb\n\nnew\nc\n}\n' || '{\na\n\nb\nmine\n\nnew\nc\n}\n'
+        'lines on the two sides of a closing brace' | 'a\n}\n}\n'           | 'a\n}\nmine\n}\n'          | 'a\nnew\n}\n}\n'          || 'a\nnew\n}\nmine\n}\n'
+        'lines between and after two empty lines'   | 'a\n\n\nb\n'          | 'a\n\nmine\n\nb\n'         | 'a\n\n\nnew\nb\n'         || 'a\n\nmine\n\nnew\nb\n'
+    }
+
+    void "the lines of a conflict are those of the two sides, without what they have alike, and the line of the file is said"() {
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes('a\nb\nc\nd\ne\nf\n'), bytes('a\nb\nc\nmine\nd\ne\nF\n'), bytes('a\nb\nc\nnew\nother\nd\ne\nf\nlast\n'))
+
+        then:
+        merge.conflicts == 2
+        merge.conflictingChanges*.line == [4, 7]
+        merge.conflictingChanges*.current == [['mine'], ['F']]
+        merge.conflictingChanges*.proposed == [['new', 'other'], ['f', 'last']]
+        !merge.tooLarge
+    }
+
+    @Unroll
+    @Timeout(value = 600, unit = TimeUnit.SECONDS)
+    void "a file of the project of #lines other lines is not merged, and that is found at once"() {
+        given:
+        String generated = (0..<200).collect { "line ${it}\n" }.join('')
+        String withFeature = generated.replace('line 7\n', 'feature\n')
+
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes(generated), bytes((0..<lines).collect { "other ${it}\n" }.join('')), bytes(withFeature))
+
+        then:
+        merge.tooLarge
+        merge.conflicts == 1
+        merge.merged == null
+        merge.conflictingChanges.isEmpty()
+
+        where:
+        lines << [3000, 20000, 100000, 300000, 1000000]
+    }
+
+    @Timeout(value = 600, unit = TimeUnit.SECONDS)
+    void "a long file with few changes is merged, and so is a file that got many lines in one place"() {
+        given:
+        List<String> generated = (0..<50000).collect { "line ${it}\n".toString() }
+        List<String> mine = new ArrayList<>(generated)
+        mine.set(100, 'mine\n')
+        List<String> withFeature = new ArrayList<>(generated)
+        withFeature.set(40000, 'feature\n')
+
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes(generated.join('')), bytes(mine.join('')), bytes(withFeature.join('')))
+
+        then:
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8).readLines()[100] == 'mine'
+        new String(merge.merged, StandardCharsets.UTF_8).readLines()[40000] == 'feature'
+
+        when: 'a hundred thousand lines of the project before the generated ones'
+        String many = (0..<100000).collect { "mine ${it}\n" }.join('')
+        merge = ThreeWayMerge.of(bytes(generated.take(200).join('')), bytes(many + generated.take(200).join('')), bytes(generated.take(199).join('') + 'feature\n'))
+
+        then:
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == many + generated.take(199).join('') + 'feature\n'
+
+        and:
+        ThreeWayMerge.isComparable(bytes(generated.join('')), bytes(mine.join('')))
+        !ThreeWayMerge.isComparable(bytes(generated.join('')), bytes((0..<5000).collect { "other ${it}\n" }.join('')))
     }
 
     private static byte[] bytes(String text) {

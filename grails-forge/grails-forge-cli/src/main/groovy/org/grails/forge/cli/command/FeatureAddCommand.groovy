@@ -44,7 +44,8 @@ import java.util.concurrent.Callable
  * @since 9.0
  */
 @CommandLine.Command(name = FeatureAddCommand.NAME, description = [
-        'Adds features to the application in the current directory, as if it had been created with them.',
+        'Adds features to the application in the current directory: its files and its record become those of an application that was created with them. ' +
+                'A feature the application already has is left as it is.',
         'The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, ' +
                 'nothing is written and the files are named.'])
 @Component
@@ -55,7 +56,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
     public static final String NAME = 'add'
 
     private static final Map<Action, String> ACTIONS = [(Action.ADD): 'add', (Action.UPDATE): 'update', (Action.MERGE): 'merge', (Action.ADOPT): 'keep',
-                                                        (Action.CONFLICT): 'conflict'] as Map<Action, String>
+                                                        (Action.CONFLICT): 'conflict', (Action.REMOVE): 'remove'] as Map<Action, String>
 
     @CommandLine.Parameters(arity = '1..*', paramLabel = 'FEATURE', split = ',',
             description = 'The names of the features to add, as the create commands list them with --list-features.')
@@ -83,10 +84,11 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 throw new ProjectStateException("There is no application here that a feature can be added to: ${ProjectState.MANIFEST} is missing. " +
                         'Run the command in the directory of an application that Grails 9 created')
             }
-            if (!preview && FeatureAddition.recover(directory)) {
-                out('@|blue ||@ An earlier change of the application that was interrupted was undone')
+            FeatureAddition addition = new FeatureAddition(projectGenerator)
+            for (String message : (preview ? Collections.<String>emptyList() : addition.recover(directory).getMessages())) {
+                out("@|blue ||@ ${message}")
             }
-            ChangePlan plan = new FeatureAddition(projectGenerator).plan(directory, features, getOperatingSystem(), this)
+            ChangePlan plan = addition.plan(directory, features, getOperatingSystem(), this)
             return apply(plan, preview)
         } catch (FeatureSelectionException e) {
             // features an application cannot have are a mistake in the command line, as they are when it is created
@@ -108,6 +110,10 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             out('@|blue ||@ Nothing was changed')
             return 0
         }
+        if (plan.isRefused() && !preview) {
+            err(shown(plan.refusal))
+            return 1
+        }
         List<String> required = plan.added.findAll { String name -> !plan.requested.contains(name) }
         out("@|blue ||@ ${preview ? 'To add' : 'Adding'} the ${plan.requested.size() == 1 ? 'feature' : 'features'} ${shown(plan.requested.join(', '))}" +
                 (required.isEmpty() ? '' : ", and with ${plan.requested.size() == 1 ? 'it' : 'them'} ${shown(required.join(', '))}"))
@@ -116,6 +122,15 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                     (file.action == Action.MERGE ? ' (your changes are kept)' : '') +
                     (file.action == Action.ADOPT ? ' (it is what the feature makes it already)' : '') +
                     (file.action == Action.CONFLICT ? ": ${shown(file.reason)}" : ''))
+            for (String line : file.details) {
+                out("             ${shown(line)}")
+            }
+        }
+        for (String lost : plan.lostFeatures) {
+            out("    remove   the feature ${shown(lost)}")
+        }
+        for (String option : plan.changedOptions) {
+            out("    change   ${shown(option)}")
         }
         if (diff) {
             // what a file has is not markup of this command
@@ -123,11 +138,15 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
                 spec.commandLine().getOut().println(line)
             }
         }
+        if (plan.isRefused()) {
+            err(shown(plan.refusal))
+            return 1
+        }
         List<PlannedFile> conflicts = plan.getConflicts()
         if (!conflicts.isEmpty()) {
             err("The ${plan.requested.size() == 1 ? 'feature was' : 'features were'} not added: ${conflicts.size()} ${conflicts.size() == 1 ? 'file' : 'files'} " +
-                    'cannot be written without losing what the application has. Nothing was changed. See what the feature would change with --diff, ' +
-                    'make room for it in the files that are named, and add the feature again')
+                    'cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; ' +
+                    '--diff shows what the feature would change. Make room for it and add the feature again')
             return 1
         }
         if (preview) {

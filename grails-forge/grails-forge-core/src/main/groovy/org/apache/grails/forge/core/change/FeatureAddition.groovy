@@ -48,6 +48,8 @@ import org.grails.forge.util.VersionInfo
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.text.Normalizer
+import java.util.function.Consumer
 
 /**
  * Adds features to an application that was generated, from the state the generator left under
@@ -75,24 +77,54 @@ final class FeatureAddition {
 
     private static final int MAX_NAMED = 10
     private static final int MAX_MESSAGE = 1000
+    private static final int MAX_PLACES = 5
+    private static final int MAX_QUOTED = 8
+    private static final int MAX_QUOTED_LINE = 160
 
     private final ProjectGenerator generator
+    private final Path records
 
+    /**
+     * @param generator the generator of the applications
+     */
     FeatureAddition(ProjectGenerator generator) {
-        this.generator = generator
+        this(generator, Path.of(System.getProperty('user.home'), '.grails', 'forge', 'transactions'))
     }
 
     /**
-     * Undoes a change of the project that was interrupted, which has to be done before the project is
-     * changed again.
+     * @param generator the generator of the applications
+     * @param records the directory the record of a change is kept in while the change is made, which
+     * is how a change that was interrupted is found again. It is a directory of whoever runs the
+     * command and not of the project: what a project comes with never says that there is a change to
+     * undo. Without it, it is {@code .grails/forge/transactions} in the home directory of the user
+     */
+    FeatureAddition(ProjectGenerator generator, Path records) {
+        this.generator = generator
+        this.records = records
+    }
+
+    /**
+     * Ends a change of the project that this user began and that was interrupted, which has to be
+     * done before the project is changed again. Every file of the change is looked at first. When
+     * all of them are what the change wrote, the change is complete and stays. Otherwise the files it
+     * wrote are put back; a file it wrote that was changed since stops that, and then nothing is
+     * put back.
      *
      * @param projectDirectory the directory of the project
-     * @return whether there was such a change, and the project is now as it was before it
-     * @throws ProjectChangeException when a file was changed since the interruption and is left as
-     * it is, with what to do
+     * @return what was done; nothing, when no change was interrupted
+     * @throws ProjectChangeException when the change cannot be undone, with the files and what to do
      */
-    static boolean recover(Path projectDirectory) {
-        return ProjectTransaction.recover(projectDirectory)
+    ProjectRecovery recover(Path projectDirectory) {
+        return recover(projectDirectory) { String path -> }
+    }
+
+    /**
+     * @param putBack told the path of each file once it is put back. What it throws is not handled:
+     * the rest is then put back when this is called again
+     * @see #recover(Path)
+     */
+    ProjectRecovery recover(Path projectDirectory, Consumer<String> putBack) {
+        return ProjectTransaction.recover(projectDirectory, records, putBack)
     }
 
     /**
@@ -107,8 +139,8 @@ final class FeatureAddition {
      * @throws ProjectChangeException when features cannot be added to this project, or not these
      */
     ChangePlan plan(Path projectDirectory, List<String> names, @Nullable OperatingSystem operatingSystem, ConsoleOutput console) {
-        if (ProjectTransaction.isInterrupted(projectDirectory)) {
-            throw new ProjectChangeException("An earlier change of the project was interrupted (${ProjectTransaction.CURRENT}); it is undone when a feature is added, " +
+        if (ProjectTransaction.isInterrupted(projectDirectory, records)) {
+            throw new ProjectChangeException('An earlier change of the project was interrupted; it is undone when a feature is added without --dry-run and --diff, ' +
                     'and has to be before anything else is done')
         }
         ProjectState state = ProjectState.read(projectDirectory)
@@ -151,7 +183,7 @@ final class FeatureAddition {
             }
         }
         if (toAdd.isEmpty()) {
-            return new ChangePlan(projectDirectory, [], alreadyThere.unique(), [], [], [])
+            return new ChangePlan(projectDirectory, records, [], alreadyThere.unique(), [], [], [], null, [], [])
         }
 
         byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
@@ -181,16 +213,26 @@ final class FeatureAddition {
 
         RenderedProject after
         try {
-            after = render(manifest, recorded + toAdd, operatingSystem, console)
+            after = render(manifest, recorded + toAdd, operatingSystem, console, true)
         } catch (FeatureSelectionException e) {
-            if (e.getOption() != null) {
-                throw new FeatureSelectionException("${e.getMessage()}. The application was created with that option, and adding a feature does not change " +
-                        'the options of an application', e)
+            if (e.getOption() == null) {
+                throw e
             }
-            throw e
+            // The feature does not agree with an option the application has. What the application
+            // would be with the feature in the place of that option is worked out all the same, to
+            // show it: it is refused below, because it takes away what the application has
+            try {
+                after = render(manifest, recorded + toAdd, operatingSystem, ConsoleOutput.NOOP, false)
+            } catch (FeatureSelectionException ignored) {
+                throw e
+            }
         }
         ProjectState proposed = stateOf(after)
-        additive(toAdd, state, proposed)
+        List<String> changedOptions = changedOptions(state.manifest.options, proposed.manifest.options)
+        List<String> has = proposed.lock.featureNames
+        List<String> lostFeatures = state.lock.featureNames.findAll { String name -> !has.contains(name) }
+        List<String> lostFiles = state.baseline.files.findAll { BaselineFile file -> proposed.baseline.find(file.path) == null }*.path
+        String refusal = refusal(toAdd, changedOptions, lostFeatures, lostFiles)
 
         boolean posix = projectDirectory.getFileSystem().supportedFileAttributeViews().contains('posix')
         List<PlannedFile> files = []
@@ -222,19 +264,65 @@ final class FeatureAddition {
         // the manifest last, as when the application was generated
         writes << new Write(ProjectState.MANIFEST, after.content(ProjectState.MANIFEST), null, ProjectTransaction.sha256(manifestBytes))
 
+        // what a feature that is refused would take away is shown with what it would add
+        for (String path : lostFiles) {
+            BaselineFile generated = state.baseline.find(path)
+            Working working = working(projectDirectory, path)
+            files << new PlannedFile(path, Action.REMOVE, null, generated.binary, working.content, new byte[0], null, before.content(path), new byte[0], [])
+        }
         List<String> had = lock.featureNames
-        return new ChangePlan(projectDirectory, toAdd, alreadyThere.unique(), proposed.lock.featureNames.findAll { String name -> !had.contains(name) },
-                files.sort(false) { PlannedFile file -> file.path }, writes)
+        return new ChangePlan(projectDirectory, records, toAdd, alreadyThere.unique(), proposed.lock.featureNames.findAll { String name -> !had.contains(name) },
+                files.sort(false) { PlannedFile file -> file.path }, writes, refusal, lostFeatures, changedOptions)
     }
 
-    private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console) {
+    private static List<String> changedOptions(GenerationOptions has, GenerationOptions would) {
+        List<String> changed = []
+        if (has.servlet != would.servlet) {
+            changed << "--servlet ${would.servlet.name().toLowerCase(Locale.ROOT)} in the place of ${has.servlet.name().toLowerCase(Locale.ROOT)}".toString()
+        }
+        if (has.data != would.data) {
+            changed << "--data ${would.data.name().toLowerCase(Locale.ROOT)} in the place of ${has.data.name().toLowerCase(Locale.ROOT)}".toString()
+        }
+        if (has.reloading != would.reloading) {
+            changed << "--reloading ${would.reloading.name().toLowerCase(Locale.ROOT).replace('_', '-')} in the place of ${has.reloading.name().toLowerCase(Locale.ROOT).replace('_', '-')}".toString()
+        }
+        if (has.jdk != would.jdk) {
+            changed << "--jdk ${would.jdk.majorVersion()} in the place of ${has.jdk.majorVersion()}".toString()
+        }
+        return changed
+    }
+
+    // Nothing the application has is taken away by adding to it. What would be, and how to have it
+    private static String refusal(List<String> toAdd, List<String> changedOptions, List<String> lostFeatures, List<String> lostFiles) {
+        if (changedOptions.isEmpty() && lostFeatures.isEmpty() && lostFiles.isEmpty()) {
+            return null
+        }
+        String adding = "Adding ${named(toAdd)}"
+        String how = " An application has it when it is created with it (--features ${toAdd.join(',')}" +
+                "${changedOptions.isEmpty() ? '' : ', ' + changedOptions.collect { String option -> option.substring(0, option.indexOf(' in the place')) }.join(', ')}); " +
+                "to change this application by hand, feature add ${toAdd.join(',')} --diff shows what would be added to its files and what would be removed, " +
+                'and the record under .grails then does not know of the change. Nothing was changed'
+        if (!changedOptions.isEmpty()) {
+            return "${adding} would change what the application was created with (${changedOptions.join(', ')})" +
+                    "${lostFeatures.isEmpty() ? '' : " and take the ${lostFeatures.size() == 1 ? 'feature' : 'features'} ${named(lostFeatures)} out of it"}: " +
+                    "adding a feature does not change the options of an application.${how}"
+        }
+        if (!lostFeatures.isEmpty()) {
+            return "${adding} would take the ${lostFeatures.size() == 1 ? 'feature' : 'features'} ${named(lostFeatures)} out of the application: " +
+                    "a feature that replaces another cannot be added to an application.${how}"
+        }
+        return "${adding} would leave out ${lostFiles.size() == 1 ? 'a file' : 'files'} the application was generated with (${named(lostFiles)}), " +
+                "which adding a feature does not do.${how}"
+    }
+
+    private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, boolean optionsAreChoices = true) {
         Project project = NameUtils.parse(manifest.defaultPackage + '.' + manifest.name)
         GenerationOptions recorded = manifest.options
         // The options of the manifest are what the application has, so each of them is a choice: a
         // feature that would put another servlet container, reloader or Grails Data implementation in
         // the place of the one the application has is refused, and replaces nothing
         Options options = new Options(recorded.reloading, recorded.data, recorded.servlet, recorded.jdk, operatingSystem)
-                .withGiven(EnumSet.allOf(OptionName))
+                .withGiven(optionsAreChoices ? EnumSet.allOf(OptionName) : EnumSet.noneOf(OptionName))
         GeneratorContext context = generator.createGeneratorContext(manifest.applicationType, project, options, operatingSystem, features, console, [],
                 manifest.excludedFeatures*.name)
         RenderedProject rendered = new RenderedProject()
@@ -266,25 +354,6 @@ final class FeatureAddition {
         return unlike.toList()
     }
 
-    // nothing the application has is taken away by adding to it
-    private static void additive(List<String> toAdd, ProjectState state, ProjectState proposed) {
-        String adding = "Adding ${named(toAdd)}"
-        if (proposed.manifest.options != state.manifest.options) {
-            throw new ProjectChangeException("${adding} would change the options the application was created with, which adding a feature does not do; nothing was changed")
-        }
-        List<String> has = proposed.lock.featureNames
-        List<String> lost = state.lock.featureNames.findAll { String name -> !has.contains(name) }
-        if (!lost.isEmpty()) {
-            throw new ProjectChangeException("${adding} would take the ${lost.size() == 1 ? 'feature' : 'features'} ${named(lost)} out of the application: " +
-                    'a feature that replaces another cannot be added to an application, only chosen when it is created; nothing was changed')
-        }
-        List<String> gone = state.baseline.files.findAll { BaselineFile file -> proposed.baseline.find(file.path) == null }*.path
-        if (!gone.isEmpty()) {
-            throw new ProjectChangeException("${adding} would leave out ${gone.size() == 1 ? 'a file' : 'files'} the application was generated with (${named(gone)}), " +
-                    'which adding a feature does not do; nothing was changed')
-        }
-    }
-
     /**
      * What becomes of one file.
      *
@@ -299,23 +368,26 @@ final class FeatureAddition {
         Working working = working(project, path)
         String does = base == null ? 'adds' : 'changes'
         if (working.obstacle != null) {
-            return conflict(path, "the feature ${does} this file, and in the project ${working.obstacle}", binary, working, base, proposed)
+            return conflict(path, "the feature ${does} this file, and in the project ${working.obstacle}", binary, working, base, proposed, working.advice)
         }
         if (base == null) {
             if (working.content == null) {
-                return new PlannedFile(path, Action.ADD, null, binary, null, proposed, proposedExecutable ? Boolean.TRUE : null, null, proposed)
+                return new PlannedFile(path, Action.ADD, null, binary, null, proposed, proposedExecutable ? Boolean.TRUE : null, null, proposed, [])
             }
             if (!(binary ? Arrays.equals(working.content, proposed) : ThreeWayMerge.sameText(working.content, proposed))) {
-                return conflict(path, 'the feature adds this file, and the project has another file of its name', binary, working, base, proposed)
+                return conflict(path, 'the feature adds this file, and the project has another file of its name', binary, working, base, proposed,
+                        ['Rename or remove the file of the project, add the feature, and bring into the new file what was in yours'])
             }
             if (posix && working.executable != proposedExecutable) {
                 return conflict(path, "the feature adds this file as one that ${proposedExecutable ? 'can' : 'cannot'} be executed, and the file of the project " +
-                        "${working.executable ? 'can' : 'cannot'} be", binary, working, base, proposed)
+                        "${working.executable ? 'can' : 'cannot'} be", binary, working, base, proposed,
+                        ["Make the file ${proposedExecutable ? '' : 'not '}executable and add the feature again".toString()])
             }
-            return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed)
+            return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
         }
         if (working.content == null) {
-            return conflict(path, 'the feature changes this file, and it was removed from the project', binary, working, base, proposed)
+            return conflict(path, 'the feature changes this file, and it was removed from the project', binary, working, base, proposed,
+                    ["Put the file back as it was generated (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, and remove it again".toString()])
         }
         byte[] result
         boolean edited
@@ -328,7 +400,8 @@ final class FeatureAddition {
             } else if (Arrays.equals(working.content, proposed)) {
                 result = working.content
             } else {
-                return conflict(path, 'the feature changes this binary file, and it was changed in the project too', binary, working, base, proposed)
+                return conflict(path, 'the feature changes this binary file, and it was changed in the project too', binary, working, base, proposed,
+                        ["Put the file back as it was generated (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, and make your change to the new file".toString()])
             }
             edited = false
         } else if (ThreeWayMerge.sameText(working.content, proposed)) {
@@ -336,9 +409,15 @@ final class FeatureAddition {
             edited = false
         } else {
             ThreeWayMerge merge = ThreeWayMerge.of(base, working.content, proposed)
+            if (merge.isTooLarge()) {
+                return conflict(path, "the feature changes this file, and the file of the project has more lines than are merged (${ThreeWayMerge.MAX_LINES}) or differs " +
+                        "from the generated one in more of them (${ThreeWayMerge.MAX_CHANGED})", binary, working, base, proposed,
+                        [("Put the file aside, put the generated one in its place (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, " +
+                                 'and bring your changes into the new file').toString()])
+            }
             if (merge.getConflicts() > 0) {
                 return conflict(path, "the feature changes ${merge.getConflicts() == 1 ? 'lines' : "${merge.getConflicts()} places"} of this file that were changed " +
-                        'in the project too, or lines next to them', binary, working, base, proposed)
+                        'in the project too, or lines next to them', binary, working, base, proposed, places(merge))
             }
             result = merge.getMerged()
             edited = !ThreeWayMerge.sameText(working.content, base)
@@ -347,13 +426,41 @@ final class FeatureAddition {
         // the feature makes it
         Boolean executable = posix && baseExecutable != proposedExecutable && working.executable != proposedExecutable ? Boolean.valueOf(proposedExecutable) : null
         if (executable == null && Arrays.equals(result, working.content)) {
-            return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed)
+            return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
         }
-        return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed)
+        return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed, [])
     }
 
-    private static PlannedFile conflict(String path, String reason, boolean binary, Working working, byte[] base, byte[] proposed) {
-        return new PlannedFile(path, Action.CONFLICT, reason, binary, working.content, null, null, base, proposed)
+    private static PlannedFile conflict(String path, String reason, boolean binary, Working working, byte[] base, byte[] proposed, List<String> details) {
+        return new PlannedFile(path, Action.CONFLICT, reason, binary, working.content, null, null, base, proposed, details)
+    }
+
+    // Each place the two changed, with the lines of both, and what to do about it
+    private static List<String> places(ThreeWayMerge merge) {
+        List<String> lines = []
+        for (ThreeWayMerge.Conflict place : merge.getConflictingChanges().take(MAX_PLACES)) {
+            lines << (place.current.isEmpty() ? "before line ${place.line} the project removed lines, and the feature has there:" :
+                    "at line ${place.line} the project has:").toString()
+            if (!place.current.isEmpty()) {
+                lines.addAll(quoted(place.current))
+                lines << (place.proposed.isEmpty() ? 'and the feature removes lines there' : 'and the feature has there:')
+            }
+            lines.addAll(quoted(place.proposed))
+        }
+        if (merge.getConflicts() > MAX_PLACES) {
+            lines << "and ${merge.getConflicts() - MAX_PLACES} more places".toString()
+        }
+        lines << 'Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, ' +
+                'at least one unchanged line away (or take them out), add the feature again, and then put them where they belong'
+        return lines
+    }
+
+    private static List<String> quoted(List<String> lines) {
+        List<String> quoted = lines.take(MAX_QUOTED).collect { String line -> '    ' + (line.length() > MAX_QUOTED_LINE ? line.substring(0, MAX_QUOTED_LINE) + '...' : line) }
+        if (lines.size() > MAX_QUOTED) {
+            quoted << "    ... ${lines.size() - MAX_QUOTED} more lines".toString()
+        }
+        return quoted
     }
 
     // The file of the project: its content, nothing when there is no file, or what is there in its
@@ -381,10 +488,37 @@ final class FeatureAddition {
             if (Files.size(file) > StateLimits.MAX_BASELINE_FILE) {
                 return new Working(null, false, 'it is larger than a generated file can be')
             }
+            // on a file system that takes Build.gradle for build.gradle, the file would come back under
+            // the name the generator has for it
+            String named = nameThere(file)
+            if (named != steps.last()) {
+                return new Working(null, false, "it is named ${named}".toString(),
+                        ["Give the file the name ${steps.last()}, add the feature, and give it its name back".toString()])
+            }
             return new Working(Files.readAllBytes(file), Files.isExecutable(file), null)
         } catch (IOException e) {
             throw new ProjectChangeException("${path} cannot be read (${e.getClass().getSimpleName()}); nothing was changed", e)
         }
+    }
+
+    // the name a file has in its directory, which is not the name it was found by where the file
+    // system takes one case of a letter, or one composition of it, for another
+    private static String nameThere(Path file) throws IOException {
+        String name = file.getFileName().toString()
+        String other = null
+        Files.newDirectoryStream(file.getParent()).withCloseable { stream ->
+            for (Path each : stream) {
+                String there = each.getFileName().toString()
+                if (Normalizer.normalize(there, Normalizer.Form.NFC) == Normalizer.normalize(name, Normalizer.Form.NFC)) {
+                    other = name
+                    break
+                }
+                if (there.equalsIgnoreCase(name)) {
+                    other = there
+                }
+            }
+        }
+        return other ?: name
     }
 
     private static byte[] bytes(Path project, String path) {
@@ -411,10 +545,13 @@ final class FeatureAddition {
         final boolean executable
         final String obstacle
 
-        Working(byte[] content, boolean executable, String obstacle) {
+        final List<String> advice
+
+        Working(byte[] content, boolean executable, String obstacle, List<String> advice = []) {
             this.content = content
             this.executable = executable
             this.obstacle = obstacle
+            this.advice = advice
         }
     }
 }

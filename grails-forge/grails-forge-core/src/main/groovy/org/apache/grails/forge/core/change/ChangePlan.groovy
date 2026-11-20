@@ -26,6 +26,7 @@ import org.apache.grails.forge.core.change.ProjectTransaction.Write
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.function.Consumer
+import java.util.regex.Pattern
 
 /**
  * What adding features to a project comes to, worked out for every file before any is written: see
@@ -54,7 +55,10 @@ final class ChangePlan {
         ADOPT,
 
         /** The file cannot be written without losing something of the project */
-        CONFLICT
+        CONFLICT,
+
+        /** The features would leave the file out. That is not done: the plan is refused, and shows the file */
+        REMOVE
     }
 
     /**
@@ -69,6 +73,12 @@ final class ChangePlan {
         /** For a conflict, why the file cannot be written; {@code null} otherwise */
         final String reason
 
+        /**
+         * For a conflict, what is in the way and what to do about it, a line each: for lines that
+         * both changed, the lines of the two. No line has a character that acts on a terminal.
+         */
+        final List<String> details
+
         private final boolean binary
         private final byte[] current
         private final byte[] result
@@ -77,7 +87,9 @@ final class ChangePlan {
         private final byte[] proposed
 
         @PackageScope
-        PlannedFile(String path, Action action, String reason, boolean binary, byte[] current, byte[] result, Boolean executable, byte[] base, byte[] proposed) {
+        PlannedFile(String path, Action action, String reason, boolean binary, byte[] current, byte[] result, Boolean executable, byte[] base, byte[] proposed,
+                    List<String> details) {
+            this.details = Collections.unmodifiableList(details.collect { String line -> safe(line) })
             this.path = path
             this.action = action
             this.reason = reason
@@ -94,6 +106,15 @@ final class ChangePlan {
         }
     }
 
+    /** The most lines {@link #diff()} shows of one file */
+    public static final int MAX_DIFF_OF_FILE = 400
+
+    /** The most lines {@link #diff()} shows */
+    public static final int MAX_DIFF = 2000
+
+    // control, format and private-use characters but the tabulator, unpaired surrogates, line and paragraph separators
+    private static final Pattern UNSAFE = Pattern.compile(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}&&[^\t]]/)
+
     /** The features that were asked for and are added, by their names */
     final List<String> requested
 
@@ -106,12 +127,31 @@ final class ChangePlan {
     /** The files the features write, change or cannot change, in the order of their paths. A file the features leave as it is is not among them */
     final List<PlannedFile> files
 
+    /**
+     * Why the features are not added, whatever the files are: they would take away something the
+     * application has. {@code null} for features that only add. The files of such a plan show what
+     * would be added and removed, and it cannot be applied.
+     */
+    final String refusal
+
+    /** The features the application would lose, for a plan that is refused */
+    final List<String> lostFeatures
+
+    /** The options the application would have in the place of those it was created with, as the create commands take them, for a plan that is refused */
+    final List<String> changedOptions
+
     private final Path project
+    private final Path records
     private final List<Write> state
 
     @PackageScope
-    ChangePlan(Path project, List<String> requested, List<String> alreadyThere, List<String> added, List<PlannedFile> files, List<Write> state) {
+    ChangePlan(Path project, Path records, List<String> requested, List<String> alreadyThere, List<String> added, List<PlannedFile> files, List<Write> state,
+               String refusal, List<String> lostFeatures, List<String> changedOptions) {
         this.project = project
+        this.records = records
+        this.refusal = refusal
+        this.lostFeatures = Collections.unmodifiableList(new ArrayList<String>(lostFeatures))
+        this.changedOptions = Collections.unmodifiableList(new ArrayList<String>(changedOptions))
         this.requested = Collections.unmodifiableList(new ArrayList<String>(requested))
         this.alreadyThere = Collections.unmodifiableList(new ArrayList<String>(alreadyThere))
         this.added = Collections.unmodifiableList(new ArrayList<String>(added))
@@ -134,47 +174,90 @@ final class ChangePlan {
     }
 
     /**
+     * @return whether the features are not added because they would take away something the
+     * application has
+     */
+    boolean isRefused() {
+        return refusal != null
+    }
+
+    /**
      * What would change in the files of the project, as a unified diff of each file that is written
      * from what the project has to what it would have. For a file that cannot be written, the change
-     * the features make to it is shown instead, marked as rejected. A line has no control character
-     * but the tabulator.
+     * the features make to it is shown instead, marked as rejected; for a file a refused plan would
+     * leave out, its removal. A line has no control or format character but the tabulator, and the
+     * carriage return of a line that ends with CR LF is not shown. At most {@link #MAX_DIFF_OF_FILE}
+     * lines are shown of a file and {@link #MAX_DIFF} of all of them; a line says how many were
+     * left out.
      */
     List<String> diff() {
         List<String> lines = []
+        int left = 0
         for (PlannedFile file : files) {
             if (file.action == Action.ADOPT) {
                 continue
             }
-            boolean conflict = file.action == Action.CONFLICT
-            byte[] from = conflict ? (file.base ?: file.current) : file.current
-            byte[] to = conflict ? file.proposed : file.result
-            if (conflict) {
-                lines << "rejected: ${file.path} (${file.reason})".toString()
-            }
-            if (file.binary) {
-                lines << "Binary file ${file.path} ${from == null ? 'is added' : 'changes'}".toString()
+            List<String> ofFile = diff(file)
+            if (lines.size() + ofFile.size() > MAX_DIFF) {
+                left += ofFile.size()
                 continue
             }
-            List<String> before = from == null ? [] as List<String> : text(from)
-            List<String> after = text(to)
-            List<String> unified = UnifiedDiffUtils.generateUnifiedDiff(from == null ? '/dev/null' : 'a/' + file.path, 'b/' + file.path, before, DiffUtils.diff(before, after), 3)
-            if (unified.isEmpty()) {
-                lines << "${file.path}: whether the file can be executed changes".toString()
-            }
-            lines.addAll(unified)
+            lines.addAll(ofFile)
         }
-        return lines.collect { String line -> line.replaceAll(/[\p{Cc}&&[^\t]]/, '?') }
+        if (left > 0) {
+            lines << "... ${left} more lines of other files are not shown".toString()
+        }
+        return lines.collect { String line -> safe(line) }
     }
 
+    private static List<String> diff(PlannedFile file) {
+        List<String> lines = []
+        boolean conflict = file.action == Action.CONFLICT
+        boolean removal = file.action == Action.REMOVE
+        byte[] from = conflict ? (file.base != null ? file.base : file.current) : removal && file.current == null ? file.base : file.current
+        byte[] to = conflict ? file.proposed : file.result
+        if (conflict) {
+            lines << "rejected: ${file.path} (${file.reason})".toString()
+        }
+        if (file.binary) {
+            lines << "Binary file ${file.path} ${removal ? 'is removed' : from == null ? 'is added' : 'changes'}".toString()
+            return lines
+        }
+        if (from != null && !ThreeWayMerge.isComparable(from, to)) {
+            lines << "${file.path}: the file differs in more lines than are shown".toString()
+            return lines
+        }
+        List<String> before = from == null ? [] as List<String> : text(from)
+        List<String> after = text(to)
+        List<String> unified = UnifiedDiffUtils.generateUnifiedDiff(from == null ? '/dev/null' : 'a/' + file.path, removal ? '/dev/null' : 'b/' + file.path,
+                before, DiffUtils.diff(before, after), 3)
+        if (unified.isEmpty()) {
+            lines << "${file.path}: whether the file can be executed changes".toString()
+        }
+        lines.addAll(unified.take(MAX_DIFF_OF_FILE))
+        if (unified.size() > MAX_DIFF_OF_FILE) {
+            lines << "... ${unified.size() - MAX_DIFF_OF_FILE} more lines of ${file.path} are not shown".toString()
+        }
+        return lines
+    }
+
+    // the lines of a file, without what ends them
     private static List<String> text(byte[] bytes) {
         List<String> lines = new String(bytes, StandardCharsets.UTF_8).split('\n', -1).toList()
-        return lines.last().isEmpty() ? lines.subList(0, lines.size() - 1) : lines
+        lines = lines.last().isEmpty() ? lines.subList(0, lines.size() - 1) : lines
+        return lines.collect { String line -> line.endsWith('\r') ? line.substring(0, line.length() - 1) : line }
+    }
+
+    // what is shown of a file is not what a terminal acts on, or reads backwards
+    private static String safe(String line) {
+        return UNSAFE.matcher(line).replaceAll('?')
     }
 
     /**
      * Writes the files and the new state of the project, all of them or none.
      *
      * @throws IllegalStateException for a plan with conflicts
+     * @throws ProjectChangeException for a plan that is refused, with why
      * @throws ProjectChangeException when the files could not be written, or one of them is not what
      * it was when the plan was made; the message says whether the project is as it was
      */
@@ -189,10 +272,14 @@ final class ChangePlan {
      * {@code .grails} among them. What it throws is not handled: the change then stays where it is,
      * as it does when the program ends at that point, and is undone by {@link FeatureAddition#recover(Path)}
      * @throws IllegalStateException for a plan with conflicts
+     * @throws ProjectChangeException for a plan that is refused, with why
      * @throws ProjectChangeException when the files could not be written, or one of them is not what
      * it was when the plan was made; the message says whether the project is as it was
      */
     void apply(Consumer<String> written) {
+        if (isRefused()) {
+            throw new ProjectChangeException(refusal)
+        }
         if (!getConflicts().isEmpty()) {
             throw new IllegalStateException('A plan with conflicts cannot be applied')
         }
@@ -206,6 +293,6 @@ final class ChangePlan {
             }
         }
         writes.addAll(state)
-        ProjectTransaction.run(project, writes, written)
+        ProjectTransaction.run(project, records, writes, written)
     }
 }
