@@ -57,6 +57,7 @@ class AsyncActionResultTransformer implements ActionResultTransformer {
             }
             DeferredResult<Object> deferredResult = new DeferredResult<Object>()
             asyncManager.startDeferredResultProcessing(deferredResult)
+            AsyncRequestSupport.asyncStarted(webRequest)
             request.setAttribute(GrailsApplicationAttributes.ASYNC_STARTED, true)
 
             promise.onComplete { Object value ->

@@ -29,6 +29,7 @@ import org.springframework.web.context.support.StaticWebApplicationContext
 
 import org.grails.web.util.GrailsApplicationAttributes
 
+import spock.lang.Issue
 import spock.lang.Specification
 
 class GrailsWebRequestSpec extends Specification {
@@ -105,6 +106,34 @@ class GrailsWebRequestSpec extends Specification {
 
         expect: 'that substitution is gone, so either accessor may be called'
         webRequest.getCurrentRequest().is(webRequest.getRequest())
+    }
+
+    void cleanup() {
+        RequestContextHolder.resetRequestAttributes()
+    }
+
+    @Issue('https://github.com/apache/grails-core/issues/15851')
+    void 'lookup finds the bound web request until it is detached'() {
+        given:
+        boolean detached = false
+        GrailsWebRequest webRequest = new GrailsWebRequest(new MockHttpServletRequest(servletContext),
+                new MockHttpServletResponse(), servletContext) {
+            @Override
+            protected boolean isDetached() {
+                return detached
+            }
+        }
+        RequestContextHolder.requestAttributes = webRequest
+
+        expect:
+        GrailsWebRequest.lookup().is(webRequest)
+
+        when: 'the request it stands for completes while it is still bound, as for a task that outlives it'
+        detached = true
+
+        then: 'code that runs on finds no web request, as outside a request'
+        GrailsWebRequest.lookup() == null
+        RequestContextHolder.requestAttributes.is(webRequest)
     }
 
     void 'looking up the web request of a request finds the one bound to the thread for that very request'() {

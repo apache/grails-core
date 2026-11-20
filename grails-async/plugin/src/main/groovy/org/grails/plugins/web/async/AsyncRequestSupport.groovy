@@ -27,7 +27,8 @@ import org.springframework.web.context.request.async.StandardServletAsyncWebRequ
 import org.grails.web.servlet.mvc.GrailsWebRequest
 
 /**
- * Applies the same timeout policy to eager and controller-result async requests.
+ * Applies the same timeout policy to eager and controller-result async requests, and tells the tasks started during
+ * a request when its asynchronous processing starts.
  */
 @CompileStatic
 class AsyncRequestSupport {
@@ -45,6 +46,16 @@ class AsyncRequestSupport {
         asyncRequest.addCompletionHandler { request.currentRequest.setAttribute(COMPLETED, Boolean.TRUE) }
         asyncRequest.timeout = timeoutFor(request.applicationContext)
         return asyncRequest
+    }
+
+    /**
+     * Tells the tasks started during a request that its asynchronous processing has started, so they are detached
+     * once that processing completes, even when they were started before it began.
+     *
+     * @param request the web request whose asynchronous processing has started
+     */
+    static void asyncStarted(GrailsWebRequest request) {
+        TaskRequestLifecycle.asyncStarted(request.currentRequest)
     }
 
     private static Long timeoutFor(ApplicationContext context) {
