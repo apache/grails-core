@@ -167,7 +167,14 @@ an action annotated `@ResponseBody`, a `CompletableFuture` it returns included. 
 selects the properties `respond` writes through Spring MVC. See
 xref:theWebLayer#springResponses[Returning Spring MVC Responses].
 
-See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11 and 13 to 16.
+With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, `request.format`, `response.format`,
+`withFormat` and the format `respond` writes in are resolved with Spring MVC's content negotiation manager, so that the
+`spring.mvc.contentnegotiation.*` settings apply to them, and the `format` parameter, URL extensions and the
+`grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too, such as a
+`ResponseEntity` it returns. See <<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>.
+
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 6 to 13 and 15 to 18, and
+<<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>.
 
 ==== Hibernate 7 Criteria Queries Can Be Extended
 
@@ -592,6 +599,23 @@ WARNING: Reloading discards unflushed changes to the instance, exactly as `refre
 GORM for Hibernate 7 now starts tracking changes to an entity when it is persisted or merged, not only once its row has been inserted. Previously an entity whose identifier is generated before the insert, such as one mapped with `id generator: 'increment'` or any member of a `tablePerConcreteClass` hierarchy, was written with an `INSERT` immediately followed by an `UPDATE` of the same row and started at `version` 1. It now starts at `version` 0 with a single statement, as on Hibernate 5.
 
 As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+
+==== A Domain Class Answers with Its Auto-Timestamp Listener
+
+Every datastore has an `AutoTimestampEventListener` of its own, and so does every data source of an application with several and every tenant with a database or schema of its own. A listener only handles the saves made through its own datastore, so the `autoTimestampEventListener` bean, which belongs to the default data source, cannot turn off the timestamps of a domain class saved to another one. A domain class now answers with the listener that handles its saves:
+
+[source,groovy]
+----
+// Car is mapped to the default data source and Person to the 'people' data source
+Car.autoTimestampEventListener.withoutTimestamps {
+    car.save(flush: true)
+}
+Person.autoTimestampEventListener.withoutTimestamps {
+    person.save(flush: true)
+}
+----
+
+The lookup follows the data source a save made from the same place goes to. For a `Book` mapped to several data sources, inside a `Book.secondary.withTransaction { }` block, or a method annotated `@Transactional(connection = 'secondary')`, it is the `secondary` data source's listener, and `Book.secondary.autoTimestampEventListener` names that data source anywhere. For a multi-tenant class it is the current tenant's. This works with GORM for Hibernate 7, Hibernate 5, MongoDB and Neo4j, and in unit tests. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
 
 ==== Default Security Response Headers
 

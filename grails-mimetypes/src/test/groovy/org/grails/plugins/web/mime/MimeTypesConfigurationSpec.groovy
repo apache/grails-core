@@ -125,7 +125,7 @@ class MimeTypesConfigurationSpec extends Specification {
         def mimeUtility = Stub(ObjectProvider) { getObject() >> new DefaultMimeUtility(custom) }
 
         expect:
-        MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(mimeUtility, new DefaultGrailsApplication())
+        MimeTypesConfiguration.grailsMimeTypesWebMvcConfigurer(mimeUtility, new DefaultGrailsApplication(), Stub(ObjectProvider))
                 .contentNegotiationStrategy.configuredMimeTypes as List == custom as List
     }
 

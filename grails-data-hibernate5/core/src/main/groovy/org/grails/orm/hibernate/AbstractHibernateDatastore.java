@@ -49,6 +49,7 @@ import org.springframework.core.env.PropertyResolver;
 
 import grails.gorm.multitenancy.Tenants;
 import org.grails.datastore.gorm.events.AutoTimestampEventListener;
+import org.grails.datastore.gorm.events.AutoTimestampingDatastore;
 import org.grails.datastore.gorm.jdbc.schema.DefaultSchemaHandler;
 import org.grails.datastore.gorm.jdbc.schema.SchemaHandler;
 import org.grails.datastore.gorm.validation.registry.support.ValidatorRegistries;
@@ -84,7 +85,7 @@ import org.grails.orm.hibernate.event.listener.AbstractHibernateEventListener;
  * @author Graeme Rocher
  * @since 2.0
  */
-public abstract class AbstractHibernateDatastore extends AbstractDatastore implements ApplicationContextAware, Settings, SchemaMultiTenantCapableDatastore<SessionFactory, HibernateConnectionSourceSettings>, TransactionCapableDatastore, Closeable, MessageSourceAware, MultipleConnectionSourceCapableDatastore {
+public abstract class AbstractHibernateDatastore extends AbstractDatastore implements ApplicationContextAware, Settings, SchemaMultiTenantCapableDatastore<SessionFactory, HibernateConnectionSourceSettings>, TransactionCapableDatastore, Closeable, MessageSourceAware, MultipleConnectionSourceCapableDatastore, AutoTimestampingDatastore {
 
     public static final String CONFIG_PROPERTY_CACHE_QUERIES = "grails.hibernate.cache.queries";
     public static final String CONFIG_PROPERTY_OSIV_READONLY = "grails.hibernate.osiv.readonly";
@@ -301,6 +302,7 @@ public abstract class AbstractHibernateDatastore extends AbstractDatastore imple
     /**
      * @return The event listener that populates lastUpdated and dateCreated
      */
+    @Override
     public AutoTimestampEventListener getAutoTimestampEventListener() {
         return autoTimestampEventListener;
     }
