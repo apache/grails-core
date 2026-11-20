@@ -31,6 +31,7 @@ import groovy.transform.CompileStatic
 import io.micronaut.spring.boot.starter.EnableMicronaut
 
 }
+import org.springframework.context.annotation.ComponentScan
 @if(features.contains("spring-boot-starter-security")) {
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -39,6 +40,8 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 
 }
+
+
 import grails.boot.GrailsApp
 import grails.boot.config.GrailsAutoConfiguration
 @if(applicationType.equals(ApplicationType.PLUGIN) || applicationType.equals(ApplicationType.WEB_PLUGIN)) {
@@ -50,6 +53,7 @@ import grails.plugins.metadata.PluginSource
 @@PluginSource
 }
 @@CompileStatic
+@@ComponentScan(value = '@project.getPackageName()')
 @if(features.contains("grails-micronaut")) {
 @@EnableMicronaut
 }
