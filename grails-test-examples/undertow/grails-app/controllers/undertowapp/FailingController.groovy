@@ -63,6 +63,10 @@ class FailingController {
         throw new StackOverflowError('answered by the error controller')
     }
 
+    def answeredByFailingController() {
+        throw new IndexOutOfBoundsException('answered by an error controller that fails')
+    }
+
     def answeredByForwardingController() {
         throw new ArithmeticException('answered by an error controller that forwards')
     }
@@ -122,6 +126,10 @@ class FailingController {
 
     def errorHandler() {
         render status: 500, text: 'Answered by the error controller'
+    }
+
+    def failingErrorHandler() {
+        throw new IllegalArgumentException('the error controller failed as well')
     }
 
     def forwardingErrorHandler() {

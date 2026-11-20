@@ -25,6 +25,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.runtime.InvokerInvocationException;
@@ -123,26 +124,28 @@ public class GrailsExceptionResolver extends SimpleMappingExceptionResolver impl
         }
 
         UrlMappingsHolder urlMappings = lookupUrlMappings();
-        if (urlMappings != null) {
-            mv = resolveViewOrForward(ex, urlMappings, request, response, mv);
-        }
+        Exception resolved = ex;
+        ModelAndView view = mv;
+        Supplier<ModelAndView> errorHandler = () -> urlMappings == null ? view :
+                resolveViewOrForward(resolved, urlMappings, request, response, view);
 
-        recordServerError(request, reportedFailure(ex), dispatchedAs);
-
-        return mv;
+        return answerServerError(request, reportedFailure(ex), dispatchedAs, errorHandler);
     }
 
     /**
      * Every exception this resolves is a server error, which resolving it hides from the observation of the request.
+     * It is recorded around the error handler, so that what fails while the handler answers it does not take its place.
      * A failure inside an include is not recorded: its error page is rendered inside the page that included it, which
      * goes on to answer the request.
      *
      * @param dispatchedAs how the request was dispatched before an error handler was forwarded to
      */
-    private static void recordServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs) {
-        if (dispatchedAs != DispatcherType.INCLUDE) {
-            ServerErrorObservation.recordServerError(request, ex);
+    private static ModelAndView answerServerError(HttpServletRequest request, Throwable ex, DispatcherType dispatchedAs,
+            Supplier<ModelAndView> errorHandler) {
+        if (dispatchedAs == DispatcherType.INCLUDE) {
+            return errorHandler.get();
         }
+        return ServerErrorObservation.recordServerError(request, ex, errorHandler);
     }
 
     /**

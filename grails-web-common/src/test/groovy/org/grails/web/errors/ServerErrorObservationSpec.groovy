@@ -18,6 +18,8 @@
  */
 package org.grails.web.errors
 
+import java.util.function.Supplier
+
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
 import io.micrometer.observation.ObservationRegistry
@@ -70,6 +72,44 @@ class ServerErrorObservationSpec extends Specification {
         then:
         stoppedWith.is(FIRST)
         notified == [FIRST]
+    }
+
+    void 'what fails while an error handler answers a server error does not replace it, when #recordedBy records it'() {
+        when: 'the error handler fails as well, and its own failure is answered and recorded inside it'
+        def answer = null
+        observe {
+            answer = ServerErrorObservation.recordServerError(request, FIRST, {
+                record.call(request)
+                'answered'
+            } as Supplier<String>)
+        }
+
+        then: 'the request failed with the failure the handler answered'
+        answer == 'answered'
+        stoppedWith.is(FIRST)
+        notified == [FIRST]
+
+        where:
+        recordedBy                             | record
+        'the Grails resolution inside it'      | { req -> ServerErrorObservation.recordServerError(req, LATER) }
+        'Spring MVC as a handled server error' | { req -> ServerHttpObservationFilter.recordHandledException(req, LATER) }
+    }
+
+    void 'an error handler that fails without an answer leaves its own failure to the observation'() {
+        when:
+        observe {
+            try {
+                ServerErrorObservation.recordServerError(request, FIRST, { throw LATER } as Supplier<Object>)
+            }
+            catch (IllegalStateException unanswered) {
+                assert unanswered.is(LATER)
+            }
+            ServerErrorObservation.recordServerError(request, LATER)
+        }
+
+        then: 'nothing was recorded for the failure it could not answer, so the next one is'
+        stoppedWith.is(LATER)
+        notified == [LATER]
     }
 
     void 'without an observation, a server error is only noted on the request'() {

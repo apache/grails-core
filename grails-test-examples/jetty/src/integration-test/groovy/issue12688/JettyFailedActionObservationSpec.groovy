@@ -94,6 +94,7 @@ class JettyFailedActionObservationSpec extends Specification implements HttpClie
         'the error view, for an Error'                                       | '/failing/answeredByViewForAnError'               | '/failing/answeredByViewForAnError'               | 'An error has occurred'            || 'AssertionError'
         'an error controller, for an Error'                                  | '/failing/answeredByControllerForAnError'         | '/failing/answeredByControllerForAnError'         | 'Answered by the error controller' || 'StackOverflowError'
         'an error controller that forwards'                                  | '/failing/answeredByForwardingController'         | '/failing/answeredByForwardingController'         | 'Answered by the error controller' || 'ArithmeticException'
+        'an error controller that fails'                                     | '/failing/answeredByFailingController'            | '/failing/answeredByFailingController'            | 'An error has occurred'            || 'IndexOutOfBoundsException'
         'the error view, after an include'                                   | '/failing/failsAfterInclude'                      | '/failing/failsAfterInclude'                      | 'An error has occurred'            || 'IllegalStateException'
         'an error controller, after an include'                              | '/failing/failsAfterIncludeAnsweredByController'  | '/failing/failsAfterIncludeAnsweredByController'  | 'Answered by the error controller' || 'UnsupportedOperationException'
     }

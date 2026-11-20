@@ -45,6 +45,8 @@ import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
 import org.springframework.context.ApplicationContext
 import org.springframework.context.support.StaticApplicationContext
+import org.springframework.core.Ordered
+import org.springframework.http.HttpStatus
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -64,6 +66,8 @@ import org.springframework.web.servlet.ViewResolver
 import org.springframework.web.servlet.handler.SimpleUrlHandlerMapping
 import org.springframework.web.servlet.mvc.Controller
 import org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.web.servlet.mvc.annotation.ResponseStatusExceptionResolver
 import org.springframework.web.servlet.mvc.support.DefaultHandlerExceptionResolver
 import org.springframework.web.servlet.view.InternalResourceView
 import spock.lang.Issue
@@ -238,6 +242,37 @@ class GrailsExceptionResolverSpec extends Specification {
         restoresForward | container
         true            | 'the container restores the request, as Tomcat and Jetty do'
         false           | 'the request still reads as the forward'
+    }
+
+    void 'the exception of an action stays the error of the observation when its error controller fails as well, and #resolvedBy resolves that'() {
+        given: 'the Grails dispatcher servlet behind the filter, and an error controller that fails'
+        ServerRequestObservationContext observed = null
+        List<Throwable> notified = []
+        def registry = registryReporting({ observed = it }, { notified << it })
+        def resolver = resolverFor({ '500'(controller: 'errors', action: 'serverError') }, true)
+        def original = new IllegalStateException('original')
+        def servlet = dispatcherServletWith(resolver, [
+                '/failing'           : { req, res -> throw original } as Controller,
+                '/errors/serverError': { req, res -> throw later } as Controller],
+                springResolves ? [new ResponseStatusExceptionResolver(order: Ordered.HIGHEST_PRECEDENCE)] : [])
+        def request = new ForwardingRequest(servletContext, '/failing', servlet, ['/failing', '/errors/serverError'] as Set,
+                true)
+        def response = new MockHttpServletResponse()
+
+        when:
+        new ServerHttpObservationFilter(registry).doFilter(request, response, { req, res ->
+            servlet.service(req, res)
+        } as FilterChain)
+
+        then: 'the request failed with what the action threw, not with what failed while answering it'
+        observed.error.is(original)
+        notified.size() == 1
+        notified.first().is(original)
+
+        where:
+        resolvedBy    | springResolves | later
+        'Grails'      | false          | new UnsupportedOperationException('error controller failed')
+        'Spring MVC'  | true           | new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, 'error controller failed')
     }
 
     void 'the handlers hear once of an exception an error controller answers in a forward from an asynchronous dispatch'() {
@@ -1113,12 +1148,16 @@ class GrailsExceptionResolverSpec extends Specification {
         resolver
     }
 
-    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers) {
+    private GrailsDispatcherServlet dispatcherServletWith(GrailsExceptionResolver resolver, Map<String, Controller> handlers,
+            List<HandlerExceptionResolver> springResolvers = []) {
         def handlerMapping = new SimpleUrlHandlerMapping(handlers)
         handlerMapping.applicationContext = webContext
         webContext.beanFactory.registerSingleton('handlerMapping', handlerMapping)
         webContext.beanFactory.registerSingleton('handlerAdapter', new SimpleControllerHandlerAdapter())
         webContext.beanFactory.registerSingleton('exceptionResolver', resolver)
+        springResolvers.eachWithIndex { HandlerExceptionResolver springResolver, int i ->
+            webContext.beanFactory.registerSingleton("springExceptionResolver$i", springResolver)
+        }
         def servlet = new GrailsDispatcherServlet(webContext)
         servlet.init(new MockServletConfig(servletContext, 'grails'))
         servlet
