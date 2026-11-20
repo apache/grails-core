@@ -1919,6 +1919,25 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
 
                     return name;
                 }
+                if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.ELEMENT_COLLECTION) {
+                    // a collection of basic values (for example enums) is joined like an association and
+                    // its values are restricted through Hibernate's 'elements' pseudo property
+                    associationStack.add(name);
+                    final String associationPath = getAssociationPath();
+                    createAliasIfNeccessary(name, associationPath, joinType);
+                    logicalExpressionStack.add(new LogicalExpression(AND));
+                    invokeClosureNode(callable);
+                    aliasStack.remove(aliasStack.size() - 1);
+                    if (!aliasInstanceStack.isEmpty()) {
+                        aliasInstanceStack.remove(aliasInstanceStack.size() - 1);
+                    }
+                    LogicalExpression logicalExpression = logicalExpressionStack.remove(logicalExpressionStack.size() - 1);
+                    if (!logicalExpression.args.isEmpty()) {
+                        addToCriteria(logicalExpression.toCriterion());
+                    }
+                    associationStack.remove(associationStack.size() - 1);
+                    return name;
+                }
                 if (attribute.getPersistentAttributeType() == Attribute.PersistentAttributeType.EMBEDDED) {
                     associationStack.add(name);
                     logicalExpressionStack.add(new LogicalExpression(AND));
