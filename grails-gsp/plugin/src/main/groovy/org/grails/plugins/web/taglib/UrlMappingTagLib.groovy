@@ -96,6 +96,21 @@ class UrlMappingTagLib implements TagLibrary {
     }
 
     /**
+     * Joins CSS classes, encoding each one that is not encoded yet, and marks the result as encoded, so that a class
+     * the caller has already encoded is written once when the tag adds a class of its own.
+     */
+    private static String joinEncodedClasses(Encoder htmlEncoder, Object... cssClasses) {
+        String joined = cssClasses.findAll { it }.collect { htmlEncoder.encode(it) }.join(' ')
+        htmlEncoder.markEncoded(joined)
+        joined
+    }
+
+    private static Map appendEncodedClass(Map attrs, String cssClass, Encoder htmlEncoder) {
+        attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], cssClass)
+        attrs
+    }
+
+    /**
      * Creates next/previous links to support pagination for the current controller.<br/>
      *
      * &lt;g:paginate total="${Account.count()}" /&gt;<br/>
@@ -122,6 +137,7 @@ class UrlMappingTagLib implements TagLibrary {
     Closure paginate = { Map attrsMap ->
         TypeConvertingMap attrs = (TypeConvertingMap) attrsMap
         def writer = out
+        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         if (attrs.total == null) {
             throwTagError('Tag [paginate] is missing required attribute [total]')
         }
@@ -184,14 +200,14 @@ class UrlMappingTagLib implements TagLibrary {
         // display previous link when not on firststep unless omitPrev is true
         if (currentstep > firststep && !attrs.boolean('omitPrev')) {
             linkParams.offset = offset - max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'prevLink')) {
+            writer << callLink(appendEncodedClass((Map) linkTagAttrs.clone(), 'prevLink', htmlEncoder)) {
                 (attrs.prev ?: messageSource.getMessage('paginate.prev', null, messageSource.getMessage('default.paginate.prev', null, 'Previous', locale), locale))
             }
         }
 
         // display steps when steps are enabled and laststep is not firststep
         if (steps && laststep > firststep) {
-            Map stepAttrs = appendClass((Map) linkTagAttrs.clone(), 'step')
+            Map stepAttrs = appendEncodedClass((Map) linkTagAttrs.clone(), 'step', htmlEncoder)
 
             // determine begin and endstep paging variables
             int beginstep = currentstep - (Math.round(maxsteps / 2.0d) as int) + (maxsteps % 2)
@@ -220,7 +236,7 @@ class UrlMappingTagLib implements TagLibrary {
             }
 
             // display paginate steps
-            def currentStepClass = codecLookup.lookupEncoder('HTML').encode([attrs.get('class') ?: '', activeClass].join(' ').trim())
+            String currentStepClass = joinEncodedClasses(htmlEncoder, attrs.get('class'), activeClass)
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
                     writer << "<span class=\"${currentStepClass}\">${i}</span>"
@@ -245,7 +261,7 @@ class UrlMappingTagLib implements TagLibrary {
         // display next link when not on laststep unless omitNext is true
         if (currentstep < laststep && !attrs.boolean('omitNext')) {
             linkParams.offset = offset + max
-            writer << callLink(appendClass((Map) linkTagAttrs.clone(), 'nextLink')) {
+            writer << callLink(appendEncodedClass((Map) linkTagAttrs.clone(), 'nextLink', htmlEncoder)) {
                 (attrs.next ? attrs.next : messageSource.getMessage('paginate.next', null, messageSource.getMessage('default.paginate.next', null, 'Next', locale), locale))
             }
         }
@@ -311,9 +327,10 @@ class UrlMappingTagLib implements TagLibrary {
         if (params.offset) linkParams.offset = params.offset
 
         // determine and add sorting order for this column to link params
-        attrs['class'] = (attrs['class'] ? "${attrs['class']} sortable" : 'sortable')
+        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
+        attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], 'sortable')
         if (property == sort) {
-            attrs['class'] = (attrs['class'] as String) + ' sorted ' + order
+            attrs['class'] = joinEncodedClasses(htmlEncoder, attrs['class'], 'sorted', order)
             if (order == 'asc') {
                 linkParams.order = 'desc'
             }
@@ -338,7 +355,6 @@ class UrlMappingTagLib implements TagLibrary {
 
         writer << '<th '
         // process remaining attributes
-        Encoder htmlEncoder = codecLookup.lookupEncoder('HTML')
         attrs.each { k, v ->
             writer << k
             writer << '="'

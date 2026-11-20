@@ -163,6 +163,56 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         'g:textField'         | '<g:textField name="t" value="${value}"/>'
     }
 
+    void 'g:paginate writes #description class once next to the classes it adds'() {
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains(' class="' + ENCODED + ' prevLink"')
+        output.contains('<span class="' + ENCODED + ' currentStep">2</span>')
+        output.contains(' class="' + ENCODED + ' step"')
+        output.contains(' class="' + ENCODED + ' nextLink"')
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        description          | template
+        'a plain'            | '<g:paginate total="30" offset="10" class="${value}" controller="book" action="list"/>'
+        'an already encoded' | '<g:paginate total="30" offset="10" class="${value.encodeAsHTML()}" controller="book" action="list"/>'
+    }
+
+    void 'g:sortableColumn writes #description class once next to the classes it adds'() {
+        given:
+        params.sort = 'title'
+        params.order = 'asc'
+
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains('<th class="' + ENCODED + ' sortable sorted asc" ')
+        !output.contains(VALUE)
+        !output.contains('&amp;quot;')
+
+        where:
+        description          | template
+        'a plain'            | '<g:sortableColumn property="title" title="Title" class="${value}" action="list"/>'
+        'an already encoded' | '<g:sortableColumn property="title" title="Title" class="${value.encodeAsHTML()}" action="list"/>'
+    }
+
+    void 'g:sortableColumn encodes the sort order of the request'() {
+        given:
+        params.sort = 'title'
+        params.order = VALUE
+
+        when:
+        def output = applyTemplate('<g:sortableColumn property="title" title="Title" action="list"/>')
+
+        then:
+        output.contains('<th class="sortable sorted ' + ENCODED + '" ')
+        !output.contains(VALUE)
+    }
+
     void 'g:form encodes the hidden fields of the request data value processor'() {
         given:
         tagLib.requestDataValueProcessor = new PassThroughProcessor(fields: [(VALUE): VALUE])
