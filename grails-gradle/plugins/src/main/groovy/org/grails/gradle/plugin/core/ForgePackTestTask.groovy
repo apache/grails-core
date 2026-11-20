@@ -1,0 +1,326 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one
+ *  or more contributor license agreements.  See the NOTICE file
+ *  distributed with this work for additional information
+ *  regarding copyright ownership.  The ASF licenses this file
+ *  to you under the Apache License, Version 2.0 (the
+ *  "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ */
+package org.grails.gradle.plugin.core
+
+import java.nio.charset.StandardCharsets
+import java.util.regex.Matcher
+import java.util.regex.Pattern
+
+import javax.inject.Inject
+
+import groovy.transform.CompileStatic
+
+import org.apache.tools.ant.taskdefs.condition.Os
+import org.gradle.api.GradleException
+import org.gradle.api.file.DeleteSpec
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.options.Option
+import org.gradle.process.ExecResult
+import org.gradle.process.ExecSpec
+import org.gradle.work.DisableCachingByDefault
+
+/**
+ * Tests the Forge feature pack of a plugin with applications: Forge generates one for each fixture,
+ * with the feature of the pack selected, and each is then built with its own Gradle wrapper.
+ *
+ * <p>Forge is started as {@link CheckForgePackTask} starts it, in a JVM of its own that has the class
+ * path of the {@code grailsForgePackTooling} configuration. It is told the directory of the pack, the
+ * directory to generate in and, when the build names fixtures, a file that lists them; without one it
+ * generates an application for each type of application the pack is for. It writes a line for each
+ * fixture, {@link #GENERATED_LINE} or {@link #REFUSED_LINE}, or the problems of a pack it cannot read,
+ * and then the one line {@link #SUMMARY_LINE}. It ends with 0 when every fixture was generated, with 1
+ * when one was refused or the pack has problems, and with anything else when it could not generate. An
+ * end without the last line is not a run that got to its end.</p>
+ *
+ * <p>The repositories the generated builds resolve from are given to Forge in the environment variable
+ * {@code GRAILS_REPO_URL}, as they are given to the commands that create an application. A build of a
+ * fixture uses the Gradle user home of this build, so what it downloads is downloaded once, and the
+ * Java of the toolchain of the project. All of what it writes goes to a log of the fixture.</p>
+ *
+ * @since 9.0
+ */
+@CompileStatic
+@DisableCachingByDefault(because = 'What is tested is that applications can be generated and built here')
+abstract class ForgePackTestTask extends ForgePackToolTask {
+
+    /** The class of Forge that generates the fixtures of a pack. */
+    public static final String MAIN_CLASS = 'org.apache.grails.forge.core.pack.PackFixtures'
+
+    /** What Forge writes for a fixture it generated: a pattern, with the name of the fixture. */
+    public static final String GENERATED_LINE = /generated ([a-z][a-z0-9-]*)/
+
+    /** What Forge writes for a fixture the generator refused: a pattern, with the name of the fixture and why. */
+    public static final String REFUSED_LINE = /refused ([a-z][a-z0-9-]*): (.+)/
+
+    /** What Forge writes for a problem of a pack it cannot read: a pattern, with the problem. */
+    public static final String PACK_PROBLEM_LINE = /pack: (.+)/
+
+    /** The last line Forge writes when it got to its end: a pattern, with the numbers of fixtures. */
+    public static final String SUMMARY_LINE = /feature pack fixtures: generated=(\d+) refused=(\d+)/
+
+    /** The log of the build of a fixture, in the directory of the fixture below the report directory. */
+    public static final String LOG_NAME = 'build.log'
+
+    /** What became of the fixtures, in the report directory. */
+    public static final String REPORT_NAME = 'report.txt'
+
+    private static final int GENERATED = 0
+    private static final int REFUSED = 1
+    private static final int MAX_OTHER_LINES = 3
+    private static final int MAX_TAIL_BYTES = 64 * 1024
+    private static final int MAX_TAIL_LINES = 30
+    private static final int MAX_TAIL_LINE = 300
+    private static final int MAX_FAILED_TASKS = 5
+    private static final Pattern FAILED_TASK = Pattern.compile(/^> Task (:\S+) FAILED\s*$/)
+
+    /**
+     * The fixtures, each as the line Forge reads: a name, a type of application, and then options and
+     * features. Without any, Forge generates an application for each type the pack is for.
+     */
+    @Input
+    abstract ListProperty<String> getFixtures()
+
+    /** The tasks that are run in each generated application. */
+    @Input
+    abstract ListProperty<String> getBuildTasks()
+
+    /** Further arguments for the Gradle of each generated application. */
+    @Input
+    abstract ListProperty<String> getBuildArguments()
+
+    /**
+     * The repositories the generated applications resolve from before the ones every generated
+     * application has, as entries of {@code GRAILS_REPO_URL}. They are not shown: an address can hold
+     * a password.
+     */
+    @Input
+    abstract ListProperty<String> getRepositories()
+
+    /** Whether the generated applications are built with {@code --offline}. */
+    @Input
+    abstract Property<Boolean> getOffline()
+
+    @Option(option = 'offline-fixtures', description = 'Builds the generated applications with --offline.')
+    void setOfflineFixtures(boolean offline) {
+        this.offline.set(offline)
+    }
+
+    /** The Gradle user home the generated applications are built with: that of this build. */
+    @Internal
+    abstract Property<String> getGradleUserHome()
+
+    /** Where the applications are generated, each in the directory of its fixture. */
+    @Internal
+    abstract DirectoryProperty getFixturesDirectory()
+
+    /** Where the log of each fixture is written, in the directory of the fixture, and what became of them all. */
+    @OutputDirectory
+    abstract DirectoryProperty getReportDirectory()
+
+    @Inject
+    protected abstract FileSystemOperations getFileSystemOperations()
+
+    @TaskAction
+    void test() {
+        File applications = fixturesDirectory.get().asFile
+        File reports = reportDirectory.get().asFile
+        fileSystemOperations.delete { DeleteSpec spec -> spec.delete(applications, reports) }
+        reports.mkdirs()
+        requireTooling('tested', 'tests', 'test')
+        if (buildTasks.get().isEmpty()) {
+            throw new GradleException("The feature pack in ${SOURCE} could not be tested: there is no task to run in the applications")
+        }
+        List<String> names = generate(applications)
+        List<String> report = []
+        List<String> failures = []
+        for (String name : names) {
+            File log = new File(new File(reports, name), LOG_NAME)
+            String failure = build(name, new File(applications, name), log)
+            report << "${name}: ${failure == null ? 'built' : 'failed: ' + failure}".toString()
+            if (failure != null) {
+                failures << "  - ${name}: ${failure}\n    the application is in ${new File(applications, name)}\n    the whole log is in ${log}\n".toString() +
+                        (whatWentWrong(log) ?: tail(log)).collect { String line -> '      ' + line }.join('\n')
+            }
+        }
+        new File(reports, REPORT_NAME).setText(report.join('\n') + '\n', StandardCharsets.UTF_8.name())
+        if (failures) {
+            throw new GradleException("The feature pack in ${SOURCE} was generated into ${names.size()} " +
+                    "${names.size() == 1 ? 'application' : 'applications'}, of which ${failures.size()} could not be built with " +
+                    "${buildTasks.get().join(' ')}:\n" + failures.join('\n'))
+        }
+        logger.lifecycle('The feature pack in {} was generated into {} and built with {}: {}. The logs are in {}',
+                SOURCE, names.size() == 1 ? '1 application' : "${names.size()} applications", buildTasks.get().join(' '), names.join(', '), reports)
+    }
+
+    // the names of the fixtures that were generated, which are all of them
+    private List<String> generate(File applications) {
+        List<String> arguments = [packDirectory.get().asFile.absolutePath, applications.absolutePath]
+        if (!fixtures.get().isEmpty()) {
+            File listed = new File(temporaryDir, 'fixtures.txt')
+            listed.setText(fixtures.get().join('\n') + '\n', StandardCharsets.UTF_8.name())
+            arguments << listed.absolutePath
+        }
+        // those of this task and no others: what the environment of the build has is not an input of it
+        Launched result = launch(MAIN_CLASS, arguments, [GRAILS_REPO_URL: repositories.get() ? repositories.get().join(';') : null])
+        List<String> written = result.written
+        boolean ended = written && written.last() ==~ SUMMARY_LINE && written.count { String line -> line ==~ SUMMARY_LINE } == 1
+        List<String> fixtureLines = ended ? written.take(written.size() - 1) : written
+        List<String> generated = fixtureLines.findAll { String line -> line ==~ GENERATED_LINE }
+        List<String> refused = fixtureLines.findAll { String line -> line ==~ REFUSED_LINE }
+        List<String> problems = fixtureLines.findAll { String line -> line ==~ PACK_PROBLEM_LINE }
+        List<String> others = fixtureLines - generated - refused - problems
+        boolean counted = false
+        if (ended) {
+            Matcher summary = written.last() =~ SUMMARY_LINE
+            counted = summary.matches() && summary.group(1) == String.valueOf(generated.size()) && summary.group(2) == String.valueOf(refused.size())
+        }
+        if (result.exitValue == GENERATED && counted && generated && !refused && !problems && !others) {
+            result.said.each { String line -> logger.info(line) }
+            logger.info('Forge: {}', written.last())
+            return generated.collect { String line -> line.substring('generated '.length()) }
+        }
+        if (result.exitValue == REFUSED && counted && !others && problems && !generated && !refused) {
+            throw new GradleException("The feature pack in ${SOURCE} cannot be used:\n" +
+                    problems.collect { String problem -> '  - ' + problem.substring('pack: '.length()) }.join('\n'))
+        }
+        if (result.exitValue == REFUSED && counted && !others && !problems && refused) {
+            throw new GradleException("The feature pack in ${SOURCE} could not be tested: of ${generated.size() + refused.size()} fixtures " +
+                    "the generator refused ${refused.size()}, and none was built:\n" +
+                    refused.collect { String line -> '  - ' + line.substring('refused '.length()) }.join('\n'))
+        }
+        String why
+        List<String> shown = result.said
+        if (ended && (result.exitValue == GENERATED || result.exitValue == REFUSED)) {
+            why = 'It said that it had generated the fixtures, and what else was written to the standard output is not what it writes ' +
+                    "for them, so it cannot be told what was generated: ${some((others ?: fixtureLines).collect { String line -> quoted(line) }, MAX_OTHER_LINES)}"
+        } else if (result.exitValue == GENERATED || result.exitValue == REFUSED) {
+            why = launcherHint(result.errors, MAIN_CLASS) ?: 'It ended as a run that generated the fixtures or was refused some does, without saying ' +
+                    "that it had got to its end: a template may have ended the JVM, or the Forge of the ${TOOLING} configuration is not the one " +
+                    'this version of the Grails Gradle plugin expects'
+            shown = written + result.said
+        } else {
+            why = launcherHint(result.errors, MAIN_CLASS)
+        }
+        throw new GradleException("The feature pack in ${SOURCE} could not be tested (Forge ended with ${result.exitValue})" +
+                "${why ? '. ' + why : ''}${shown ? ':\n' + shown.collect { String line -> '  ' + line }.join('\n') : ''}")
+    }
+
+    // why the application could not be built, or null
+    private String build(String name, File application, File log) {
+        log.parentFile.mkdirs()
+        boolean windows = Os.isFamily(Os.FAMILY_WINDOWS)
+        File wrapper = new File(application, windows ? 'gradlew.bat' : 'gradlew')
+        if (!wrapper.isFile()) {
+            log.setText("The application has no ${wrapper.name}\n", StandardCharsets.UTF_8.name())
+            return "the application was generated without ${wrapper.name}, the Gradle wrapper it is built with"
+        }
+        List<String> command = windows ? ['cmd', '/c', wrapper.absolutePath] : [wrapper.absolutePath]
+        command.addAll(buildTasks.get())
+        // the log is read by people and by this task, and the home is where this build has its dependencies
+        command.addAll(['--console=plain', '--gradle-user-home', gradleUserHome.get()])
+        if (offline.get()) {
+            command << '--offline'
+        }
+        command.addAll(buildArguments.get())
+        String javaHome = javaLauncher.isPresent() ? javaLauncher.get().metadata.installationPath.asFile.absolutePath : null
+        logger.lifecycle('Building the fixture {} of the feature pack: {}', name, buildTasks.get().join(' '))
+        ExecResult result = new FileOutputStream(log).withCloseable { FileOutputStream output ->
+            execOperations.exec { ExecSpec spec ->
+                spec.commandLine(command)
+                spec.workingDir = application
+                if (javaHome != null) {
+                    spec.environment('JAVA_HOME', javaHome)
+                }
+                spec.standardOutput = output
+                spec.errorOutput = output
+                spec.ignoreExitValue = true
+            }
+        }
+        if (result.exitValue == 0) {
+            return null
+        }
+        List<String> failed = failedTasks(log)
+        return failed ? "${failed.size() == 1 ? 'task' : 'tasks'} ${failed.join(', ')} failed (Gradle ended with ${result.exitValue})".toString() :
+                "Gradle ended with ${result.exitValue} and named no task that failed".toString()
+    }
+
+    private static List<String> failedTasks(File log) {
+        List<String> failed = []
+        log.withReader(StandardCharsets.UTF_8.name()) { Reader reader ->
+            String line
+            while (failed.size() < MAX_FAILED_TASKS && (line = reader.readLine()) != null) {
+                Matcher task = FAILED_TASK.matcher(line)
+                if (task.matches()) {
+                    failed << clean(task.group(1))
+                }
+            }
+        }
+        return failed
+    }
+
+    /**
+     * What Gradle says went wrong, which with a stack trace asked for is far from the end of the log:
+     * the lines from the first {@code * What went wrong:} to the advice or the stack trace after it,
+     * in bounds. Nothing for a log without it.
+     */
+    private static List<String> whatWentWrong(File log) {
+        List<String> said = []
+        log.withReader(StandardCharsets.UTF_8.name()) { Reader reader ->
+            String line
+            boolean within = false
+            while (said.size() < MAX_TAIL_LINES && (line = reader.readLine()) != null) {
+                if (within && (line.startsWith('* Try:') || line.startsWith('* Exception is:'))) {
+                    break
+                }
+                within = within || line.startsWith('* What went wrong:')
+                if (within && !line.trim().isEmpty()) {
+                    said << clean(line)
+                }
+            }
+        }
+        return said
+    }
+
+    // the end of a log, for a build that did not say what went wrong: in bounds, without control characters
+    private static List<String> tail(File log) {
+        byte[] bytes = new RandomAccessFile(log, 'r').withCloseable { RandomAccessFile file ->
+            long length = file.length()
+            byte[] end = new byte[(int) Math.min(length, (long) MAX_TAIL_BYTES)]
+            file.seek(length - end.length)
+            file.readFully(end)
+            end
+        }
+        List<String> lines = new String(bytes, StandardCharsets.UTF_8).readLines()
+                .collect { String line -> clean(line) }
+                .findAll { String line -> !line.trim().isEmpty() }
+        return lines.takeRight(MAX_TAIL_LINES)
+    }
+
+    private static String clean(String line) {
+        String safe = line.replaceAll(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]+/, ' ').stripTrailing()
+        return safe.length() > MAX_TAIL_LINE ? safe.substring(0, safe.offsetByCodePoints(0, safe.codePointCount(0, MAX_TAIL_LINE))) + '...' : safe
+    }
+}

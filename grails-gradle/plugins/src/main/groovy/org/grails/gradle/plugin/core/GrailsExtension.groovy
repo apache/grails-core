@@ -52,6 +52,7 @@ class GrailsExtension {
         this.compileStatic = project.objects.newInstance(GrailsCompileStaticOptions)
         this.gorm = project.objects.newInstance(GrailsGormOptions)
         this.i18n = project.objects.newInstance(GrailsI18nOptions)
+        this.forgePackTest = project.objects.newInstance(GrailsForgePackTestOptions)
         this.cliAutoProvision = project.objects.property(Boolean).convention(project.provider {
             def fromProperty = project.findProperty('grailsCliAutoProvision')
             fromProperty == null ? Boolean.TRUE : Boolean.parseBoolean(fromProperty as String)
@@ -194,6 +195,38 @@ class GrailsExtension {
      */
     void i18n(@DelegatesTo(value = GrailsI18nOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
         configureClosure.delegate = this.i18n
+        configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
+        configureClosure.call()
+    }
+
+    /**
+     * How the Forge feature pack of a plugin is tested by the task {@code forgePackTest}, configured
+     * through the nested {@code forgePackTest} block. Only a plugin with a pack in
+     * {@code src/main/forge} has use for it:
+     *
+     * <pre>
+     * grails {
+     *     forgePackTest {
+     *         fixture('mongo') {
+     *             applicationType = 'rest-api'
+     *             options = [data: 'mongodb']
+     *         }
+     *     }
+     * }
+     * </pre>
+     *
+     * @since 9.0
+     */
+    final GrailsForgePackTestOptions forgePackTest
+
+    /**
+     * Configures the nested {@link #forgePackTest} options.
+     *
+     * @param configureClosure a closure applied to the {@link GrailsForgePackTestOptions}
+     * @since 9.0
+     */
+    void forgePackTest(@DelegatesTo(value = GrailsForgePackTestOptions, strategy = Closure.DELEGATE_FIRST) Closure<?> configureClosure) {
+        configureClosure.delegate = this.forgePackTest
         configureClosure.resolveStrategy = Closure.DELEGATE_FIRST
         configureClosure.call()
     }

@@ -147,7 +147,10 @@ tasks.named('test', Test).configure { Test test ->
 // since it can be longer than a command line.
 def packCheckClasspathFile = layout.buildDirectory.file('pack-check/classpath.txt')
 TaskProvider<Task> writePackCheckClasspath = tasks.register('writePackCheckClasspath') { Task task ->
-    FileCollection classpath = sourceSets.main.runtimeClasspath
+    // with the compiled pages of the generator, which the jar of this module has and its main runtime
+    // class path has not: PackFixturesSpec generates applications, which are rendered from them
+    FileCollection classpath = sourceSets.main.runtimeClasspath +
+            files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
     task.inputs.files(classpath)
     task.outputs.file(packCheckClasspathFile)
     task.doLast {
@@ -160,10 +163,19 @@ tasks.named('test', Test).configure { Test test ->
     // of Forge that is renamed, or says something else, fails a spec here and not the build of a plugin
     String startedByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.MAIN_CLASS
     String readByGradlePlugin = org.grails.gradle.plugin.core.CheckForgePackTask.CHECKED_LINE
+    // and the same of the class that generates the fixtures of a pack, for PackFixturesSpec
+    Map<String, String> ofFixtures = [
+            mainClassOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.MAIN_CLASS,
+            generatedLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.GENERATED_LINE,
+            refusedLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.REFUSED_LINE,
+            packProblemLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.PACK_PROBLEM_LINE,
+            summaryLineOfGradlePlugin: org.grails.gradle.plugin.core.ForgePackTestTask.SUMMARY_LINE,
+    ]
     test.jvmArgumentProviders.add({
         ["-Dforge.packCheck.classpathFile=${packCheckClasspathFile.get().asFile.absolutePath}".toString(),
          "-Dforge.packCheck.mainClassOfGradlePlugin=${startedByGradlePlugin}".toString(),
-         "-Dforge.packCheck.checkedLineOfGradlePlugin=${readByGradlePlugin}".toString()]
+         "-Dforge.packCheck.checkedLineOfGradlePlugin=${readByGradlePlugin}".toString()] +
+                ofFixtures.collect { String name, String value -> "-Dforge.packFixtures.${name}=${value}".toString() }
     } as CommandLineArgumentProvider)
 }
 // The specs of the templates of packs hold the guide and the class with the template API to each other

@@ -35,10 +35,13 @@ import org.gradle.api.GradleException
 import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.artifacts.ArtifactRepositoryContainer
 import org.gradle.api.artifacts.ArtifactView
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.DependencySet
 import org.gradle.api.artifacts.dsl.DependencyHandler
+import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.attributes.AttributeContainer
 import org.gradle.api.attributes.Bundling
 import org.gradle.api.attributes.Category
@@ -63,7 +66,6 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.util.PatternFilterable
-import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -124,6 +126,9 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
     /** The task that checks the Forge feature pack of the plugin. */
     public static final String FORGE_PACK_CHECK_TASK = 'checkForgePack'
 
+    /** The task that tests the Forge feature pack of the plugin with generated applications. */
+    public static final String FORGE_PACK_TEST_TASK = 'forgePackTest'
+
     /** Forge, without its version: what checks the feature pack of the plugin unless the build names another. */
     public static final String FORGE_PACK_TOOLING = 'org.apache.grails.forge:grails-forge-core'
 
@@ -179,6 +184,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
         configureJarTask(project)
         configureForgePack(project)
         configureForgePackCheck(project)
+        configureForgePackTest(project)
         configureSourcesJarTask(project)
     }
 
@@ -439,7 +445,7 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             spec.parameters.packDirectory.set(source)
             spec.parameters.digest.set(false)
         }
-        NamedDomainObjectProvider<Configuration> tooling = project.configurations.register(FORGE_PACK_TOOLING_CONFIGURATION) { Configuration configuration ->
+        project.configurations.register(FORGE_PACK_TOOLING_CONFIGURATION) { Configuration configuration ->
             configuration.description = 'Forge, which checks the feature pack of the plugin. It is not a dependency of the plugin.'
             configuration.canBeConsumed = false
             configuration.canBeResolved = true
@@ -459,41 +465,15 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             }
         }
 
-        File sourceDirectory = source.asFile
-        Provider<String> lookAgain = providers.of(NeverTheSameValueSource) { ValueSourceSpec<ValueSourceParameters.None> spec -> }
         // the overrides of BOM properties of the project are not for the class path of Forge either
         project.pluginManager.withPlugin(BomPropertyOverridesPlugin.PLUGIN_ID) {
             project.extensions.getByType(BomPropertyOverridesExtension).excludeConfiguration(FORGE_PACK_TOOLING_CONFIGURATION)
         }
-        Provider<JavaLauncher> launcher = project.extensions.getByType(JavaToolchainService)
-                .launcherFor(project.extensions.getByType(JavaPluginExtension).toolchain)
         TaskProvider<CheckForgePackTask> checkForgePack = project.tasks.register(FORGE_PACK_CHECK_TASK, CheckForgePackTask) { CheckForgePackTask task ->
             task.group = LifecycleBasePlugin.VERIFICATION_GROUP
             task.description = "Checks the Forge feature pack in ${FORGE_PACK_SOURCE_DIR} with Forge."
-            task.packDirectory.set(source)
-            // not read while the build is configured, so it is read again by every build
-            task.packState.set(providers.of(ForgePackStateValueSource) { ValueSourceSpec<ForgePackStateValueSource.Parameters> spec ->
-                spec.parameters.packDirectory.set(source)
-                spec.parameters.digest.set(true)
-            })
-            // what cannot be resolved or fetched is left out here and fails the task, which can say what it is for
-            task.toolingClasspath.from(tooling.map { Configuration configuration ->
-                configuration.incoming.artifactView { ArtifactView.ViewConfiguration view -> view.lenient(true) }.files
-            })
-            task.toolingProblems.set(tooling.map { Configuration configuration ->
-                ForgeToolingProblems problems = ForgeToolingProblems.of(configuration)
-                if (!problems.empty) {
-                    // kept with the configuration cache, this would be what the next build is told too,
-                    // although the repository has it by then: that build is to look again
-                    lookAgain.get()
-                }
-                problems
-            })
-            task.javaLauncher.set(launcher)
+            configureForgePackTool(project, task)
             task.markerFile.set(layout.buildDirectory.file('grails/forge-pack-check/checked'))
-            task.onlyIf("there is a feature pack in ${FORGE_PACK_SOURCE_DIR}") { Task checked ->
-                Files.exists(sourceDirectory.toPath(), LinkOption.NOFOLLOW_LINKS)
-            }
         }
         project.tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure { Task check ->
             check.dependsOn(checkForgePack)
@@ -504,6 +484,86 @@ class GrailsPluginGradlePlugin extends GrailsGradlePlugin {
             project.tasks.withType(PublishToMavenRepository).configureEach { PublishToMavenRepository publish ->
                 publish.dependsOn(checkForgePack)
             }
+        }
+    }
+
+    /**
+     * Gives a task that runs Forge on the feature pack of the plugin what it runs it on and with: the
+     * pack, the class path of {@code grailsForgePackTooling} and what of it could not be had, and the
+     * Java of the toolchain. A plugin without {@code src/main/forge} skips the task.
+     */
+    private static void configureForgePackTool(Project project, ForgePackToolTask task) {
+        ProviderFactory providers = project.providers
+        Directory source = project.layout.projectDirectory.dir(FORGE_PACK_SOURCE_DIR)
+        File sourceDirectory = source.asFile
+        NamedDomainObjectProvider<Configuration> tooling = project.configurations.named(FORGE_PACK_TOOLING_CONFIGURATION)
+        Provider<String> lookAgain = providers.of(NeverTheSameValueSource) { ValueSourceSpec<ValueSourceParameters.None> spec -> }
+        task.packDirectory.set(source)
+        // not read while the build is configured, so it is read again by every build
+        task.packState.set(providers.of(ForgePackStateValueSource) { ValueSourceSpec<ForgePackStateValueSource.Parameters> spec ->
+            spec.parameters.packDirectory.set(source)
+            spec.parameters.digest.set(true)
+        })
+        // what cannot be resolved or fetched is left out here and fails the task, which can say what it is for
+        task.toolingClasspath.from(tooling.map { Configuration configuration ->
+            configuration.incoming.artifactView { ArtifactView.ViewConfiguration view -> view.lenient(true) }.files
+        })
+        task.toolingProblems.set(tooling.map { Configuration configuration ->
+            ForgeToolingProblems problems = ForgeToolingProblems.of(configuration)
+            if (!problems.empty) {
+                // kept with the configuration cache, this would be what the next build is told too,
+                // although the repository has it by then: that build is to look again
+                lookAgain.get()
+            }
+            problems
+        })
+        task.javaLauncher.set(project.extensions.getByType(JavaToolchainService)
+                .launcherFor(project.extensions.getByType(JavaPluginExtension).toolchain))
+        task.onlyIf("there is a feature pack in ${FORGE_PACK_SOURCE_DIR}") { Task checked ->
+            Files.exists(sourceDirectory.toPath(), LinkOption.NOFOLLOW_LINKS)
+        }
+    }
+
+    /**
+     * Tests the Forge feature pack of the plugin, when it has one and when it is asked for: the task
+     * {@code forgePackTest} has Forge generate applications with the feature of the pack, and builds
+     * each with its own Gradle wrapper. No other task depends on it, since it builds applications,
+     * which takes minutes and the repositories Grails is in. What is generated and how it is built is
+     * said in the {@code grails { forgePackTest { } }} block.
+     */
+    protected void configureForgePackTest(Project project) {
+        ProjectLayout layout = project.layout
+        GrailsForgePackTestOptions options = project.extensions.getByType(GrailsExtension).forgePackTest
+        RepositoryHandler declared = project.repositories
+        // the repositories of the build script, when the build names no others: read when the task is
+        // about to run, after every build script has declared its own
+        options.repositories.convention(project.provider {
+            declared.withType(MavenArtifactRepository).collect { MavenArtifactRepository repository ->
+                if (repository.name.startsWith(ArtifactRepositoryContainer.DEFAULT_MAVEN_LOCAL_REPO_NAME)) {
+                    return 'mavenLocal()'
+                }
+                if (repository.name.startsWith(ArtifactRepositoryContainer.DEFAULT_MAVEN_CENTRAL_REPO_NAME)) {
+                    return 'mavenCentral()'
+                }
+                repository.url.scheme == 'file' ? new File(repository.url).absolutePath : repository.url.toString()
+            }.unique()
+        })
+        String gradleUserHome = project.gradle.gradleUserHomeDir.absolutePath
+        project.tasks.register(FORGE_PACK_TEST_TASK, ForgePackTestTask) { ForgePackTestTask task ->
+            task.group = LifecycleBasePlugin.VERIFICATION_GROUP
+            task.description = "Generates applications with the Forge feature pack in ${FORGE_PACK_SOURCE_DIR} and builds them. " +
+                    'Not a part of check.'
+            configureForgePackTool(project, task)
+            task.fixtures.set(project.provider { options.fixtureLines() })
+            task.buildTasks.set(options.tasks)
+            task.buildArguments.set(options.arguments)
+            task.repositories.set(options.mavenLocal.zip(options.repositories) { Boolean mavenLocal, List<String> repositories ->
+                (mavenLocal ? ['mavenLocal()'] + repositories : repositories).toUnique()
+            })
+            task.offline.convention(options.offline)
+            task.gradleUserHome.set(gradleUserHome)
+            task.fixturesDirectory.set(layout.buildDirectory.dir('forge-pack-fixtures'))
+            task.reportDirectory.set(layout.buildDirectory.dir('forge-pack-test'))
         }
     }
 

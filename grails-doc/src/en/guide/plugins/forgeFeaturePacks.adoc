@@ -477,6 +477,62 @@ dependencies {
 ----
 
 
+==== Testing a Pack with Applications
+
+
+The check renders the templates of a pack for applications that are made up. The task `forgePackTest` goes the whole way: the generator creates real applications with the feature of the pack selected, as a `create-` command does, and each of them is then built with its own Gradle wrapper. It finds what the check cannot: a dependency that does not resolve, a build file block that does not work, a source file that does not compile, a setting or a file another feature of the application also has.
+
+[source,console]
+----
+$ ./gradlew forgePackTest
+----
+
+The task runs only when it is asked for. `check`, `build` and the tasks that publish the plugin do not run it, because of what it costs: every application is a Grails build of its own, which downloads its Gradle distribution and its dependencies the first time and takes minutes rather than seconds. The builds use the Gradle user home of the build of the plugin, so what one of them downloads is there for the next, and the Java of the toolchain of the plugin. A plugin without `src/main/forge` skips the task, and the task is up to date when the pack, the generator and what is configured below are as they were when it last passed.
+
+Each application is a _fixture_. Without configuration there is one for each of the `applicationTypes` of the descriptor, named after its type (`web`, `rest-api`, `web-plugin`, `plugin`), with the options every application has by default and no feature but that of the pack and the ones every application of the type has. All of them are named `com.example.shop`. In each the task runs `assemble`, which compiles the application and packages it and runs none of its tests.
+
+Fixtures, and how they are built, are configured in the `grails` block of the plugin. Once a fixture is named, the named ones are the only ones, and they are generated and built in the order of their names:
+
+[source,groovy]
+.build.gradle
+----
+grails {
+    forgePackTest {
+        fixture('web')                               // <1>
+        fixture('mongo') {
+            applicationType = 'rest-api'             // <2>
+            options = [data: 'mongodb', jdk: '25']   // <3>
+            features = ['views-markup']             // <4>
+        }
+        tasks = ['assemble', 'test']                 // <5>
+        arguments = ['--stacktrace']                 // <6>
+        repositories = ['https://repo.example.org/maven'] // <7>
+        mavenLocal = true                            // <8>
+        offline = false                              // <9>
+    }
+}
+----
+<1> A fixture has a name of lower case letters, digits and single hyphens, which names its directory and its log. Its type of application is `web` unless it says otherwise.
+<2> One of `web`, `rest-api`, `web-plugin` and `plugin`.
+<3> Any of `data`, `servlet`, `reloading` and `jdk`, with the values the `create-` commands take. An option that is left out has its default.
+<4> Features to select besides that of the pack.
+<5> The tasks to run in each application. The default is `assemble`.
+<6> Further arguments for the Gradle of each application.
+<7> The repositories the applications resolve from before the ones every generated application has: addresses, which have to be `https`, paths of directories, `mavenLocal()` or `mavenCentral()`. The default is the Maven repositories the build script of the plugin declares in its `repositories` block, by their addresses alone: without their credentials and without their content filters. Repositories that are declared in `settings.gradle` are not among them and have to be named here.
+<8> Puts the local Maven repository before the others, for a plugin or a Grails that was installed with `publishToMavenLocal`. Not by default.
+<9> Builds the applications with `--offline`, which works once everything they need is in the Gradle user home. `./gradlew forgePackTest --offline-fixtures` does the same for one run.
+
+The repositories are written into the build files of the applications the way `GRAILS_REPO_URL` writes them for a `create-` command. The value that variable has in the environment of the build is not used.
+
+The applications are generated in `build/forge-pack-fixtures/<fixture>`, where they stay to be looked at, and everything the build of one writes goes to `build/forge-pack-test/<fixture>/build.log`. `build/forge-pack-test/report.txt` says of each fixture whether it was built. When an application cannot be built, the others are still built, and the task then fails with, for each that failed, the tasks that failed, where the application and the whole log are, and what Gradle says went wrong, or the last lines of the log when it does not say.
+
+An application is generated the way a `create-` command generates it, with one addition: an application without a `settings.gradle`, which is every application unless a feature adds one, gets one that only names it. Without it Gradle would find the settings of the plugin above the application and refuse to build it.
+
+A fixture the generator refuses fails the task before anything is built, with what the generator says, as a `create-` command would say it: a fixture of a type the pack is not for, a feature there is not, an option the pack conflicts with, a template that fails for that application. So does a pack with a problem in its descriptor.
+
+The generator is the one `checkForgePack` runs, resolved from `grailsForgePackTooling` as described above.
+
+
 ==== Trying a Pack Out
 
 

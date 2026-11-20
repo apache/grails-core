@@ -78,3 +78,61 @@ if (providers.gradleProperty('published').present) {
         }
     }
 }
+
+// How forgePackTest is told what to generate and how to build it. Without any of these it has the
+// fixtures Forge makes of the pack, the task assemble and the repositories of this build.
+if (providers.gradleProperty('fixtures').present) {
+    String named = providers.gradleProperty('fixtures').get()
+    grails {
+        forgePackTest {
+            fixture('alpha') {
+                options = [data: 'mongodb', jdk: '25']
+                features = ['one', 'two']
+            }
+            named.split(',').findAll { it }.each { String each ->
+                fixture(each.split(':')[0]) {
+                    applicationType = each.split(':')[1]
+                }
+            }
+        }
+    }
+}
+if (providers.gradleProperty('fixtureBuild').present) {
+    grails {
+        forgePackTest {
+            tasks = ['build', 'check']
+            arguments = ['--stacktrace']
+        }
+    }
+}
+if (providers.gradleProperty('fixtureRepositories').present) {
+    grails {
+        forgePackTest {
+            repositories = ['https://repo.example.org/maven', 'mavenCentral()']
+        }
+    }
+}
+if (providers.gradleProperty('fixtureMavenLocal').present) {
+    grails {
+        forgePackTest {
+            mavenLocal = true
+        }
+    }
+}
+if (providers.gradleProperty('fixtureOffline').present) {
+    grails {
+        forgePackTest {
+            offline = true
+        }
+    }
+}
+if (providers.gradleProperty('fixtureOption').present) {
+    String option = providers.gradleProperty('fixtureOption').get()
+    grails {
+        forgePackTest {
+            fixture('odd') {
+                options = [(option): 'a value']
+            }
+        }
+    }
+}
