@@ -67,6 +67,9 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
         // Cache $_cache_cacheVariable = this.grailsCacheManager.getCache("...");
         VariableExpression cacheDeclaration = declareCache(annotationNode, cacheManagerVariableExpression, cachingBlock)
 
+        // if($_cache_cacheVariable != null) { ... } else { report the missing cache }
+        BlockStatement cacheBlock = whereCacheExists(annotationNode, classNode, cacheDeclaration, cachingBlock)
+
         Statement statement
 
         boolean clearAllEntries = false
@@ -82,16 +85,16 @@ class CacheEvictTransformation extends AbstractCacheTransformation {
             statement = stmt(callX(cacheDeclaration, 'clear'))
         } else {
             // def $_method_parameter_map = [name:value]
-            declareAndInitializeParameterValueMap(annotationNode, methodNode, cachingBlock)
+            declareAndInitializeParameterValueMap(annotationNode, methodNode, cacheBlock)
 
             // def $_cache_cacheKey = customCacheKeyGenerator.generate(className, methodName, hashCode, $_method_parameter_map)
-            VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cachingBlock)
+            VariableExpression cacheKeyDeclaration = declareCacheKey(sourceUnit, annotationNode, classNode, methodNode , cacheBlock)
 
             // $_cache_cacheVariable.evict($_cache_cacheKey)
             statement = stmt(callX(cacheDeclaration, 'evict', cacheKeyDeclaration))
         }
 
-        cachingBlock.addStatement(statement)
+        cacheBlock.addStatement(statement)
 
         newMethodBody.addStatement(
                 // if(grailsCacheManager != null)

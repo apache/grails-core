@@ -1664,6 +1664,11 @@ java -XX:MaxRAMPercentage=60.0 -XX:MaxMetaspaceSize=256m -Dgrails.env=prod -jar 
 
 - **A placeholder that names a configuration list no longer fails to resolve, and a list of plain values resolves to its elements.** Search for `@Value('${...}')` and other `${...}` placeholders that name a list in `application.yml` or `application.groovy`. A placeholder that names a list of objects is now left as written, so the injection point receives the placeholder text, or its default when it has one; in 8.0.0 a placeholder without a default failed to resolve. A list of plain values only, such as `names: [a, b]`, is now presented by its indexed names too, and a placeholder that names it resolves to its elements joined by commas. Read a list of objects through `grailsApplication.config` or bind it.
 
+## Cache Plugin Beside Another Cache Manager
+
+- **A second `CacheManager` beside the cache plugin's `grailsCacheManager` no longer stops a cached application from starting.** Search for `CacheManager` beans the application or its plugins define, and for `cacheUsers` in the Spring Security plugin's configuration, which defines one named `cacheManager`. Where neither cache manager is marked primary or has a `@Priority`, Grails 8.0.0 failed to create `grailsCacheAdminService` and every class with a cached method; Spring now uses `grailsCacheManager` there, also for classes compiled against 8.0.0. A cache manager marked primary or with a `@Priority` is still used, and nothing changes with `grails.cache.enabled: false`.
+- **A method whose cache the cache manager does not have runs uncached.** A cache manager answers null for a cache name it has no cache of, as a `JCacheCacheManager` does for a cache it was not configured with, and in Grails 8.0.0 every call of such a `@Cacheable`, `@CachePut` or `@CacheEvict` method failed with a `NullPointerException`. Classes compiled against 8.0.1 run uncached there, and a warning names the class and the cache once. Configure the cache in that cache manager to cache with it.
+
 # After the Upgrade
 
 ## Verification Checklist

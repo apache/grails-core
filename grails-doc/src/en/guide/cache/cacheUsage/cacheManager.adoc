@@ -20,3 +20,9 @@ under the License.
 The plugin registers an instance of the link:{springapi}/org/springframework/cache/CacheManager.html[CacheManager] interface as the `grailsCacheManager` Spring bean, so it's easy to access using dependency injection.
 
 The most common method you would call on the `grailsCacheManager` is `getCache(String name)` to access a link:{springapi}/org/springframework/cache/Cache.html[Cache] instance programmatically. This shouldn't be needed often however. From the `Cache` instance you can also access the underlying cache implementation using `cache.getNativeCache()`.
+
+The cache annotations and the cache tags cache with the `grailsCacheManager` bean. A cache provider plugin replaces it by defining a bean of that name, and an application can do the same with a `GrailsCacheManager` of its own.
+
+The annotations receive their cache manager by type. Where the application context has another cache manager too, Spring uses the one marked primary, or the one with the highest `@Priority`, and where there is neither, `grailsCacheManager`. That other cache manager might be one the application defines for Spring's own caching, or the one the Spring Security plugin defines when `cacheUsers` is set.
+
+A cache manager may have no cache of the name an annotation gives, as a `JCacheCacheManager` has none it was not configured with. The annotated method then runs uncached, and a warning names the class and the cache once for each cache manager.
