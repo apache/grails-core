@@ -865,7 +865,7 @@ Apply this part when the application is on Grails 6 or on Grails 7.0.18 or earli
 ## GORM for Hibernate 5: Sorts, Empty in Lists and Paged Totals
 
 - A map as the `sort` argument, `list(sort: [a: 'asc', b: 'desc'])`, orders by every property in the order listed; the static `list(sort: map)` kept only the last one. Sorting by a property of a composite id works. A sort no longer joins an association that the query's own block already joined. Review code that relied on the old order.
-- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB. To keep the earlier rows, remove the criterion.
+- An empty list given to `inList`, or to `in`, is an explicit false, so its negation matches every row: `not { inList('year', []) }` and `findAllByYearNotInList([])` matched nothing on PostgreSQL, MySQL and MariaDB. Removing the criterion would return every row, not none: to keep the earlier result, return an empty list before the query when the input list is empty.
 - The `totalCount` of a paged criteria with a `groupProperty` projection is the number of groups, not the number of rows before grouping. Remove workarounds for the larger number.
 - A default `sort` of a `hasMany` that names a property the associated entity does not have fails at startup with an error that names the association and the sort.
 
