@@ -128,6 +128,8 @@ tasks.named('test', Test).configure { Test test ->
     test.classpath += files(layout.buildDirectory.dir('gsp-classes/main')).builtBy('compileGroovyPages')
     // a spec that asks for a feature there is not would otherwise look for it in the plugin index, on the network
     test.environment('GRAILS_FORGE_CATALOG', 'none')
+    // and a spec that would ask another computer for anything fails with the address, and asks nothing
+    test.systemProperty('grails.forge.cli.noNetwork', 'true')
 }
 
 apply {

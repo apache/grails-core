@@ -621,7 +621,7 @@ A name given to `--features` that is neither a feature of Grails nor the feature
 
 A catalog names a plugin; it is not where the pack is read from. The jar has to have the SHA-256 the catalog records for it and is refused before it is opened when it has another one, and the pack in the jar has to have the name that was asked for. As with coordinates, this shows which jar was used, not who published it: use a catalog only when you trust who maintains it.
 
-The version that is chosen is the latest release of the plugin whose pack is for the type of application that is created, for this version of Grails and for this version of the command. A release is a version made of numbers and dots only. A snapshot, a milestone or a release candidate is never chosen for a name, and neither is any version of a plugin the catalog marks as deprecated: the command says so and names the coordinates, by which such a version can still be used. The version is chosen once, when the application is created: it is written to the state of the project with the SHA-256 of the jar and of the catalog, and a later change of the catalog does not change it.
+The version that is chosen is the latest release of the plugin whose pack is for the type of application that is created, for this version of Grails and for this version of the command. A release is a version made of numbers and dots only. A snapshot, a milestone or a release candidate is never chosen for a name, and neither is any version of a plugin the catalog marks as deprecated: the command says so and names the coordinates, by which such a version can still be used. For a plugin that the command itself has a version of, because a feature of Grails adds that plugin to an application, that version is the one that is taken and no other: when the catalog has no pack for it, the name is refused, and the message names the coordinates by which another version can be insisted on. The version is chosen once, when the application is created: it is written to the state of the project with the SHA-256 of the jar and of the catalog, and a later change of the catalog does not change it.
 
 A name of Grails is always the feature of Grails. A catalog cannot replace one: when a catalog has a plugin with a feature of such a name, the command says that the feature of Grails is the one that is used. When more than one plugin of the catalogs has a feature of the name that was asked for, the command refuses the name and lists the plugins; one of them is then selected by its full name, `group:artifact#name`:
 
@@ -641,7 +641,17 @@ NOTE: The plugin index of Grails does not record feature packs yet. Until it doe
 
 *Without a network.* `--offline` makes no request to the network: a catalog is read from its copy, however old, or from a file, and the jar of a plugin is taken only from a repository that is a directory, such as the local Maven repository. What is not there is reported and nothing is created.
 
-*When something is wrong.* A catalog that cannot be read, is too large (16 MiB) or is not a catalog ends the command with exit code 1 and one line that names the catalog and the reason; nothing is created. This is so only for a command that needed the catalog. A plugin of a catalog whose entry cannot be used is left out, and the others are still found; `--list-catalog-features` lists what was left out and why. A name that no catalog has does not exist, as before, with exit code 2, and the message says in which catalogs it was looked for. So do a name that more than one plugin has and a name whose plugin has no version that can be chosen.
+*When something is wrong.* A catalog you named, with `--feature-catalog` or `GRAILS_FORGE_CATALOG`, that cannot be read, is too large (16 MiB) or is not a catalog ends the command with exit code 1 and one line that names the catalog and the reason; nothing is created. This is so only for a command that needed the catalog.
+
+The plugin index of Grails, which is read when you named no catalog, never makes a name worse off than it is without a catalog. When it cannot be read, a name that is not known is refused as a feature that does not exist, with exit code 2 and the usage of the command, as a mistyped name always was, and a second line says that the catalog could not be read, why, and that the name was not looked for there:
+
+[source]
+----
+The requested feature does not exist: hibernate-validtor
+The feature catalog https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json could not be read: timeout, so hibernate-validtor was not looked for there
+----
+
+That catalog is waited for for 5 seconds at most. When it could not be read, an empty file beside the copies records that, and for 24 hours the catalog is not asked for again, so a second mistyped name does not wait; `--refresh` asks for it at once. With `--offline` and no copy the outcome is the same, and the line says that nothing was asked. A plugin of a catalog whose entry cannot be used is left out, and the others are still found; `--list-catalog-features` lists what was left out and why. A name that no catalog has does not exist, as before, with exit code 2, and the message says in which catalogs it was looked for. So do a name that more than one plugin has and a name whose plugin has no version that can be chosen.
 
 A catalog is a JSON document:
 

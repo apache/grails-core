@@ -34,6 +34,7 @@ import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.Project
 import org.grails.forge.application.generator.GeneratorContext
 import org.grails.forge.application.generator.ProjectGenerator
+import org.grails.forge.build.dependencies.Coordinate
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.FileSystemOutputHandler
@@ -48,6 +49,7 @@ import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
 import picocli.CommandLine
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.Callable
 import java.util.regex.Pattern
 
@@ -189,10 +191,14 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     private Integer create() throws Exception {
         if (listCatalogFeatures) {
             PackCatalogs catalogs = catalogs()
+            if (!catalogs.isEmpty() && catalogs.getUnread() != null) {
+                // the list was asked for, and there is none
+                throw new PackArtifactException(catalogs.getUnread())
+            }
             List<String> lines = catalogs.isEmpty() ? ['No feature catalog is read'] :
-                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion()) { String name ->
+                    catalogs.listing(applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), { String name ->
                         availableFeatures.findFeature(name, true).isPresent()
-                    }
+                    }, this.&managedVersion)
             saidOf(catalogs)
             for (String line : lines) {
                 out(line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
@@ -354,7 +360,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     "without ${e.getWithout()}. Leave out the option, or the feature that takes its place" :
                     "with ${e.getWith()}. Leave out the option, or the feature that requires it")
         }
-        return new CommandLine.ParameterException(this.spec.commandLine(), (message + taken(message) + notInCatalog).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
+        return new CommandLine.ParameterException(this.spec.commandLine(), (message + taken(message)).replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |') + notInCatalog)
     }
 
     /**
@@ -547,7 +553,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             for (String feature : sought) {
                 PackCatalogs.Choice choice
                 try {
-                    choice = catalogs.choose(feature, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion())
+                    choice = catalogs.choose(feature, applicationTypeName(), VersionInfo.getGrailsVersion(), VersionInfo.getVersion(), this.&managedVersion)
                 } catch (IllegalArgumentException e) {
                     throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |'))
                 }
@@ -593,9 +599,12 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                     }
                 }
             }
-            if (!notFound.isEmpty()) {
-                notInCatalog = ". ${notFound.collect { String feature -> FeatureSelectionException.shown(feature) }.join(', ')} " +
-                        "${notFound.size() == 1 ? 'was' : 'were'} not found in ${catalogs.searched()} either"
+            if (catalogs.getUnread() != null) {
+                // the catalog nobody named: a name that is not known is what it was without a catalog, and a line says what was not looked at
+                notInCatalog = '\n' + ("${catalogs.getUnread()}, so ${shown.join(', ')} ${shown.size() == 1 ? 'was' : 'were'} not looked for there").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
+            } else if (!notFound.isEmpty()) {
+                notInCatalog = (". ${notFound.collect { String feature -> FeatureSelectionException.shown(feature) }.join(', ')} " +
+                        "${notFound.size() == 1 ? 'was' : 'were'} not found in ${catalogs.searched()} either").replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |')
             }
         }
         for (String each : digests.keySet()) {
@@ -618,10 +627,31 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 throw new IllegalArgumentException('--refresh reads a feature catalog anew and --offline asks nothing of the network: give one of them')
             }
             packArtifacts().offline = offline
-            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, featureCatalogSetting()), featureCatalogCopies(), refresh)
+            String setting = featureCatalogSetting()
+            return new PackCatalogs(packArtifacts(), PackCatalogs.addresses(featureCatalogs, setting), featureCatalogCopies(), refresh,
+                    PackCatalogs.isByDefault(featureCatalogs, setting), defaultCatalogWithin())
         } catch (IllegalArgumentException e) {
             throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage())
         }
+    }
+
+    /**
+     * @return the version Forge has for a plugin in the applications it generates, or {@code null} for
+     * a plugin it has none for: what the features of Forge look the versions of their artifacts up in
+     */
+    private String managedVersion(String plugin) {
+        int colon = plugin.indexOf(':')
+        return contextFactory.getCoordinateResolver().resolve(plugin.substring(colon + 1))
+                .filter { Coordinate coordinate -> coordinate.getGroupId() == plugin.substring(0, colon) }
+                .map { Coordinate coordinate -> coordinate.getVersion() }
+                .orElse(null)
+    }
+
+    /**
+     * @return how long the feature catalog nobody named can take
+     */
+    protected Duration defaultCatalogWithin() {
+        return PackCatalogs.DEFAULT_WITHIN
     }
 
     private String applicationTypeName() {

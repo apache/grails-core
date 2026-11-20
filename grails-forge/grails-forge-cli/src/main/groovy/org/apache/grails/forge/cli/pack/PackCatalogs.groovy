@@ -34,6 +34,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.function.Function
 import java.util.function.Predicate
 import java.util.regex.Pattern
 import org.apache.grails.forge.cli.pack.PackCatalog.Plugin
@@ -57,6 +58,15 @@ final class PackCatalogs {
     /** The plugin index of Grails */
     public static final String DEFAULT = 'https://raw.githubusercontent.com/apache/grails-plugins-metadata/main/grails-plugins-index.json'
 
+    /**
+     * Whether the plugin index of Grails is read when no catalog is named. With {@code false}, a name
+     * is looked up only in a catalog the command or the environment names.
+     */
+    public static final boolean DEFAULT_ON = true
+
+    /** How long the catalog nobody named can take: a name that is mistyped does not wait for it as for a jar */
+    public static final Duration DEFAULT_WITHIN = Duration.ofSeconds(5)
+
     /** What is given in the place of an address for no catalog at all */
     public static final String NONE = 'none'
 
@@ -76,8 +86,11 @@ final class PackCatalogs {
     private final List<URI> addresses
     private final Path copies
     private final boolean refresh
+    private final boolean byDefault
+    private final Duration defaultWithin
     private final List<String> warnings = []
     private List<PackCatalog> catalogs
+    private String unread
 
     /**
      * @param artifacts what reads a file of an address, with its rules
@@ -86,6 +99,17 @@ final class PackCatalogs {
      * @param refresh whether every catalog is asked for, whatever copy there is
      */
     PackCatalogs(PackArtifacts artifacts, List<URI> addresses, Path copies, boolean refresh) {
+        this(artifacts, addresses, copies, refresh, false, DEFAULT_WITHIN)
+    }
+
+    /**
+     * @param byDefault whether the catalogs are those nobody named: one that cannot be read is then no
+     * failure of the command, is given less time, and is not asked again for a day
+     * @param defaultWithin how long such a catalog can take
+     */
+    PackCatalogs(PackArtifacts artifacts, List<URI> addresses, Path copies, boolean refresh, boolean byDefault, Duration defaultWithin) {
+        this.byDefault = byDefault
+        this.defaultWithin = defaultWithin
         this.artifacts = artifacts
         this.addresses = addresses
         this.copies = copies
@@ -102,7 +126,7 @@ final class PackCatalogs {
     static List<URI> addresses(List<String> given, String environment) {
         List<String> named = given ?: (environment ?: '').split(';')*.trim().findAll { String each -> !each.isEmpty() }
         if (named.isEmpty()) {
-            named = [DEFAULT]
+            return DEFAULT_ON ? [PackArtifacts.catalog(DEFAULT)] : Collections.<URI>emptyList()
         }
         if (named.contains(NONE)) {
             if (named.size() > 1) {
@@ -118,6 +142,13 @@ final class PackCatalogs {
             addresses << PackArtifacts.catalog(each)
         }
         return addresses.toList()
+    }
+
+    /**
+     * @return whether {@link #addresses} gives the catalog nobody named for these
+     */
+    static boolean isByDefault(List<String> given, String environment) {
+        return DEFAULT_ON && !given && (environment ?: '').split(';')*.trim().every { String each -> each.isEmpty() }
     }
 
     /**
@@ -165,12 +196,30 @@ final class PackCatalogs {
     List<PackCatalog> read() {
         if (catalogs == null) {
             List<PackCatalog> all = []
-            for (URI address : addresses) {
-                all << one(address)
+            try {
+                for (URI address : addresses) {
+                    all << one(address)
+                }
+            } catch (PackArtifactException e) {
+                if (!byDefault) {
+                    throw e
+                }
+                // nobody asked for this catalog: without it, a name is what it was before there were catalogs
+                unread = e.message
+                all = []
             }
             catalogs = all
         }
         return catalogs
+    }
+
+    /**
+     * @return why the catalog nobody named was not read, as one line that names it, or {@code null}
+     * when it was read, or when the catalogs are ones that were named, of which {@link #read()} throws
+     */
+    String getUnread() {
+        read()
+        return unread
     }
 
     /**
@@ -183,11 +232,15 @@ final class PackCatalogs {
      * @param applicationType the type of the application, as a descriptor names it
      * @param grails the version of Grails the application is for
      * @param forge the version of this Forge
+     * @param managed gives the version Forge has for a plugin in the applications it generates, by its
+     * {@code group:artifact}, or {@code null} for a plugin it has none for. Of such a plugin that
+     * version is the one that is taken, release or not, and no other: a pack of another version would
+     * be read for a build that has the plugin in the version of Forge
      * @return what was chosen, or {@code null} when no catalog has a pack of that name
      * @throws IllegalArgumentException when plugins have it and none of them, or more than one, can be chosen
      * @throws PackArtifactException when a catalog cannot be read
      */
-    Choice choose(String feature, String applicationType, String grails, String forge) {
+    Choice choose(String feature, String applicationType, String grails, String forge, Function<String, String> managed) {
         String name = nameOf(feature)
         String only = feature.contains('#') ? feature.substring(0, feature.indexOf('#')) : null
         Map<String, Choice> chosen = new LinkedHashMap<>()
@@ -202,7 +255,7 @@ final class PackCatalogs {
                 if (withIt.isEmpty()) {
                     continue
                 }
-                Object result = of(plugin, withIt, applicationType, grails, forge)
+                Object result = of(plugin, withIt, applicationType, grails, forge, managed.apply(plugin.coordinates))
                 if (result instanceof Version) {
                     chosen.put(plugin.coordinates, new Choice(catalog, plugin, (Version) result))
                 } else {
@@ -248,7 +301,7 @@ final class PackCatalogs {
      * @param ofFramework whether a name is that of a feature of the framework, which no plugin has
      * @return the lines of the list, none of which is markup of the command
      */
-    List<String> listing(String applicationType, String grails, String forge, Predicate<String> ofFramework) {
+    List<String> listing(String applicationType, String grails, String forge, Predicate<String> ofFramework, Function<String, String> managed) {
         List<String> lines = []
         Set<String> spoken = new HashSet<>()
         for (PackCatalog catalog : read()) {
@@ -264,7 +317,8 @@ final class PackCatalogs {
                     continue
                 }
                 for (String name : plugin.versions.findAll { Version version -> version.feature }*.name.unique()) {
-                    Object result = of(plugin, plugin.versions.findAll { Version version -> version.name == name && version.feature }, applicationType, grails, forge)
+                    Object result = of(plugin, plugin.versions.findAll { Version version -> version.name == name && version.feature }, applicationType, grails, forge,
+                            managed.apply(plugin.coordinates))
                     if (ofFramework.test(name)) {
                         shadowed++
                     } else if (result instanceof Version) {
@@ -284,7 +338,7 @@ final class PackCatalogs {
                 lines << '  no feature of this catalog can be selected by its name'
             }
             if (notOffered > 0) {
-                lines << ("  ${notOffered} more ${notOffered == 1 ? 'is' : 'are'} not offered: of a deprecated plugin, without a release, or not for " +
+                lines << ("  ${notOffered} more ${notOffered == 1 ? 'is' : 'are'} not offered: of a deprecated plugin, without a release, not in the version Forge has for it, or not for " +
                         "this application, Grails ${grails} and Forge ${forge}").toString()
             }
             if (shadowed > 0) {
@@ -317,11 +371,26 @@ final class PackCatalogs {
     /**
      * @return the version of a plugin that is chosen of those that have the feature, or why none is
      */
-    private static Object of(Plugin plugin, List<Version> withIt, String applicationType, String grails, String forge) {
+    private static Object of(Plugin plugin, List<Version> withIt, String applicationType, String grails, String forge, String managed) {
         List<Version> releases = withIt.findAll { Version version -> PackCatalog.isRelease(version.coordinates.version) }
         Version latest = latestOf(releases)
         if (plugin.deprecated) {
             return "${plugin.coordinates} is deprecated, and is used only by its coordinates, such as ${(latest ?: withIt.first()).coordinates}".toString()
+        }
+        if (managed != null) {
+            Version ofTheBom = withIt.find { Version version -> version.coordinates.version == managed && version.coordinates.toString() == "${plugin.coordinates}:${managed}".toString() }
+            if (ofTheBom == null) {
+                List<String> has = withIt*.version.take(MAX_REASONS)
+                return ("Forge has ${plugin.coordinates} in version ${managed} for the applications it generates, and the catalog has no pack for ${managed} (it has one for " +
+                        "${has.join(', ')}${withIt.size() > MAX_REASONS ? ' and others' : ''}); another version is used only by its coordinates, such as " +
+                        "${(latest ?: withIt.first()).coordinates}").toString()
+            }
+            if (!ofTheBom.readable || (ofTheBom.applicationTypes != null && !ofTheBom.applicationTypes.contains(applicationType)) ||
+                    !ofTheBom.grails.contains(grails) || !ofTheBom.forge.contains(forge)) {
+                return ("Forge has ${plugin.coordinates} in version ${managed} for the applications it generates, and the pack of ${managed} is not one this Forge reads for this " +
+                        "application, Grails ${grails} and Forge ${forge}").toString()
+            }
+            return ofTheBom
         }
         if (latest == null) {
             return "${plugin.coordinates} has it in no release, and a version that is none is used only by its coordinates, such as ${withIt.first().coordinates}".toString()
@@ -361,7 +430,10 @@ final class PackCatalogs {
                 throw new PackArtifactException("The feature catalog ${shown} could not be read: ${e.message}")
             }
         }
-        Path copy = copies?.resolve(digest(address.toString().getBytes(StandardCharsets.UTF_8)) + '.json')
+        String file = digest(address.toString().getBytes(StandardCharsets.UTF_8))
+        Path copy = copies?.resolve(file + '.json')
+        // says that the catalog nobody named could not be read, and since when
+        Path marker = byDefault ? copies?.resolve(file + '.unread') : null
         PackCatalog kept = null
         Instant keptAt = null
         if (copy != null) {
@@ -382,9 +454,23 @@ final class PackCatalogs {
             }
         }
         try {
-            byte[] bytes = artifacts.file(address, PackCatalog.MAX_BYTES, 'the catalog')
-            PackCatalog catalog = PackCatalog.parse(bytes, address)
+            Instant failedAt = refresh || artifacts.offline ? null : markedAt(marker)
+            if (failedAt != null) {
+                throw new PackArtifactException("the last attempt, at ${time(failedAt)}, failed, and it is not asked for again within a day; --refresh asks for it")
+            }
+            byte[] bytes
+            PackCatalog catalog
+            try {
+                bytes = artifacts.file(address, PackCatalog.MAX_BYTES, 'the catalog', byDefault ? defaultWithin : null)
+                catalog = PackCatalog.parse(bytes, address)
+            } catch (PackArtifactException e) {
+                if (marker != null && !artifacts.offline) {
+                    keep(marker, new byte[0])
+                }
+                throw e
+            }
             keep(copy, bytes)
+            discard(marker)
             return catalog
         } catch (PackArtifactException e) {
             // what was asked for anew is not answered with what there was
@@ -393,8 +479,31 @@ final class PackCatalogs {
                         (artifacts.offline ? ', and there is no copy of the catalog on this computer' : ''))
             }
             warnings << ("The feature catalog ${shown} could not be read (${e.message}): the copy of it that was read on " +
-                    "${DateTimeFormatter.ISO_INSTANT.format(keptAt.truncatedTo(ChronoUnit.SECONDS).atOffset(ZoneOffset.UTC))} is used").toString()
+                    "${time(keptAt)} is used").toString()
             return kept
+        }
+    }
+
+    private static String time(Instant instant) {
+        return DateTimeFormatter.ISO_INSTANT.format(instant.truncatedTo(ChronoUnit.SECONDS).atOffset(ZoneOffset.UTC))
+    }
+
+    /**
+     * @return when the catalog could not be read, if that was within the time a copy is used for
+     */
+    private static Instant markedAt(Path marker) {
+        if (marker == null) {
+            return null
+        }
+        try {
+            if (!Files.isRegularFile(marker, LinkOption.NOFOLLOW_LINKS)) {
+                return null
+            }
+            Instant at = Files.getLastModifiedTime(marker, LinkOption.NOFOLLOW_LINKS).toInstant()
+            Duration age = Duration.between(at, Instant.now())
+            return !age.isNegative() && age < TIME_TO_LIVE ? at : null
+        } catch (IOException | RuntimeException ignored) {
+            return null
         }
     }
 

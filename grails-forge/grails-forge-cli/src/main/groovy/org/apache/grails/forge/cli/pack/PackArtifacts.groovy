@@ -87,6 +87,13 @@ class PackArtifacts {
     /** How long one file can take */
     public static final Duration FILE_TIMEOUT = Duration.ofMinutes(5)
 
+    /**
+     * The system property that, when it is {@code true}, makes a request to another computer an
+     * {@link AssertionError} that names the address. It is for the tests of this module, which ask
+     * nothing of the network: a test that would, fails, and does not reach it.
+     */
+    public static final String NO_NETWORK_PROPERTY = 'grails.forge.cli.noNetwork'
+
     /** The option that names the repositories to ask */
     public static final String REPOSITORY_OPTION = '--feature-pack-repository'
 
@@ -585,10 +592,19 @@ class PackArtifacts {
      * message; as with {@link #resolve}, nothing an answer holds leaves this method in another way
      */
     byte[] file(URI address, int limit, String name) {
+        return file(address, limit, name, null)
+    }
+
+    /**
+     * @param within how long the file can take, from the request to its last byte, in the place of
+     * the times of a jar; {@code null} for those
+     * @see #file(URI, int, String)
+     */
+    byte[] file(URI address, int limit, String name, Duration within) {
         ByteArrayOutputStream sink = new ByteArrayOutputStream()
         String why
         try {
-            copy(address, address, limit, name, sink, [])
+            copy(address, address, limit, name, sink, [], within == null ? new Watch(answerTimeout, fileTimeout) : new Watch(within, within))
             return sink.toByteArray()
         } catch (Missing ignored) {
             why = 'not found'
@@ -616,7 +632,7 @@ class PackArtifacts {
     // an answer can be made to overflow the stack of what reads it, which is a failure of the answer;
     // any other error of the virtual machine is not one a repository is told of
     private static boolean isOfTheMachine(Throwable e) {
-        return e instanceof VirtualMachineError && !(e instanceof StackOverflowError)
+        return (e instanceof VirtualMachineError && !(e instanceof StackOverflowError)) || e instanceof NetworkAsked
     }
 
     private Pack from(URI repository, String where, Coordinates coordinates, String pinned) {
@@ -856,7 +872,10 @@ class PackArtifacts {
      * file has its own. Whatever ends the copy, what watches the time is ended with it.
      */
     private void copy(URI address, URI repository, long limit, String name, OutputStream sink, List<MessageDigest> digests) {
-        Watch watch = new Watch(answerTimeout, fileTimeout)
+        copy(address, repository, limit, name, sink, digests, new Watch(answerTimeout, fileTimeout))
+    }
+
+    private void copy(URI address, URI repository, long limit, String name, OutputStream sink, List<MessageDigest> digests, Watch watch) {
         Throwable failure = null
         boolean expired = false
         try {
@@ -1158,6 +1177,9 @@ class PackArtifacts {
 
         @Override
         Reply get(URI address) throws IOException {
+            if (Boolean.getBoolean(NO_NETWORK_PROPERTY) && !isNearby(address.host ?: '')) {
+                throw new NetworkAsked(address)
+            }
             if (client == null) {
                 HttpClient.Builder builder = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NEVER).connectTimeout(CONNECT_TIMEOUT)
                 client = (context == null ? builder : builder.sslContext(context)).build()
@@ -1195,6 +1217,14 @@ class PackArtifacts {
 
         NotGiven(int status) {
             super("HTTP status ${status}")
+        }
+    }
+
+    // a request that a test made and was not to make
+    private static final class NetworkAsked extends AssertionError {
+
+        NetworkAsked(URI address) {
+            super("A request was made to ${shown(address)}, and ${NO_NETWORK_PROPERTY} says that nothing is asked of another computer" as Object)
         }
     }
 

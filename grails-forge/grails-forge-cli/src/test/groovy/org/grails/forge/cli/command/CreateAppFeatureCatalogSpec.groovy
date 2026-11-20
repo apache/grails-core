@@ -67,6 +67,8 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
     String environment = null
     List<URI> asked = []
     Map<String, Closure<Reply>> answers = [:]
+    Duration within = Duration.ofSeconds(30)
+    boolean answered = true
 
     void setup() {
         originalOut = System.out
@@ -307,11 +309,9 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         exit = run('other', '--features', 'acme-audit')
 
         then: 'which this specification does not answer'
-        exit == 1
+        exit == 2
         asked*.toString() == [PackCatalogs.DEFAULT]
-        err.toString().contains('acme-audit is not of Grails or of a feature pack that was given, and was looked for in a feature catalog. ' +
-                "The feature catalog ${PackCatalogs.DEFAULT} could not be read: not found. A plugin can be given by its coordinates, " +
-                'group:artifact:version, and --feature-catalog names the catalog to read, or none')
+        err.toString().readLines()[0] == 'The requested feature does not exist: acme-audit'
         !new File(dir, 'other').exists()
     }
 
@@ -699,7 +699,7 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         List<String> lines = out.toString().readLines()
         lines.contains("Feature catalog ${catalog.toPath().toUri()}, sha256 ${sha256(catalog)}".toString())
         lines.any { it.startsWith("  acme-audit  ${COORDINATES}  Audits @ |red everything|@ [31m and more xxx") && it.endsWith('...') && it.length() < 300 }
-        lines.contains('  1 more is not offered: of a deprecated plugin, without a release, or not for this application, Grails ' +
+        lines.contains('  1 more is not offered: of a deprecated plugin, without a release, not in the version Forge has for it, or not for this application, Grails ' +
                 "${org.grails.forge.util.VersionInfo.grailsVersion} and Forge ${org.grails.forge.util.VersionInfo.version}".toString())
         lines.contains('  1 more has the name of a feature of the framework, which is the one that is selected by that name')
         lines.contains('  1 plugin is left out for what the catalog says of it:')
@@ -829,10 +829,267 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
         asked*.toString() == ["${PackArtifacts.MAVEN_CENTRAL}com/acme/acme-audit-grails/2.3.0/acme-audit-grails-2.3.0.jar"]
     }
 
+    @Unroll
+    void "a name that is not known is what it was before there were catalogs when the catalog nobody named cannot be read: #reason"() {
+        given: 'the plugin index of Grails is the catalog, and it does not answer'
+        setting = null
+        answers[PackCatalogs.DEFAULT] = answer
+
+        when:
+        int exit = run('shop', '--features', 'h2,hibernate-validtor')
+
+        then: 'the refusal of a feature that does not exist, with the usage, and a line about the catalog'
+        exit == 2
+        List<String> said = err.toString().readLines()
+        said[0] == 'The requested feature does not exist: hibernate-validtor'
+        said[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: ${reason}, so hibernate-validtor was not looked for there"
+        said[2].startsWith('Usage: create-app')
+        !new File(dir, 'shop').exists()
+        asked*.toString() == [PackCatalogs.DEFAULT]
+
+        and: 'that it could not be read is kept beside the copies, for the user alone'
+        Path marker = copies.resolve(digest(PackCatalogs.DEFAULT.getBytes('UTF-8')) + '.unread')
+        Files.size(marker) == 0
+        org.grails.forge.application.OperatingSystem.WINDOWS == null || !Files.getFileStore(marker).supportsFileAttributeView('posix') ||
+                PosixFilePermissions.toString(Files.getPosixFilePermissions(marker)) == 'rw-------'
+
+        when: 'another name is mistyped the same day'
+        asked.clear()
+        exit = run('shop', '--features', 'postgress')
+
+        then: 'the catalog is not asked for again'
+        exit == 2
+        asked.isEmpty()
+        err.toString().readLines()[0] == 'The requested feature does not exist: postgress'
+        err.toString().readLines()[1] ==~ 'The feature catalog ' + java.util.regex.Pattern.quote(PackCatalogs.DEFAULT) +
+                / could not be read: the last attempt, at \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ, failed, and it is not asked for again within a day; / +
+                /--refresh asks for it, so postgress was not looked for there/
+
+        when: 'the catalog is asked for anew'
+        exit = run('shop', '--features', 'postgress', '--refresh')
+
+        then:
+        exit == 2
+        asked*.toString() == [PackCatalogs.DEFAULT]
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: ${reason}, so postgress was not looked for there"
+
+        when: 'the day is over'
+        asked.clear()
+        Files.setLastModifiedTime(marker, FileTime.from(Instant.now() - PackCatalogs.TIME_TO_LIVE - Duration.ofMinutes(1)))
+        exit = run('shop', '--features', 'postgress')
+
+        then:
+        exit == 2
+        asked*.toString() == [PackCatalogs.DEFAULT]
+
+        where:
+        reason                                 | answer
+        'not found'                            | { new Reply(404, null, null) }
+        'timeout'                              | { throw new java.net.http.HttpTimeoutException('request timed out') }
+        'TLS failure (SSLHandshakeException)'  | { throw new javax.net.ssl.SSLHandshakeException('no trusted certificate, says the other side') }
+        'HTTP status 500'                      | { new Reply(500, null, null) }
+        'it is not a catalog: it is not JSON'  | { new Reply(200, null, new ByteArrayInputStream('<html>'.bytes)) }
+    }
+
+    void "the catalog nobody named is waited for a few seconds and not as long as a jar"() {
+        given:
+        setting = null
+        within = Duration.ofSeconds(2)
+        answers[PackCatalogs.DEFAULT] = {
+            Thread.sleep(120000)
+            new Reply(404, null, null)
+        }
+
+        when:
+        long started = System.nanoTime()
+        int exit = run('shop', '--features', 'hibernate-validtor')
+
+        then:
+        exit == 2
+        Duration.ofNanos(System.nanoTime() - started) < Duration.ofSeconds(60)
+        err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: timeout, so hibernate-validtor was not looked for there"
+        PackCatalogs.DEFAULT_WITHIN <= Duration.ofSeconds(10)
+    }
+
+    @Unroll
+    void "a catalog that was named and cannot be read fails the command: #reason"() {
+        given:
+        answers[HOSTED] = answer
+
+        when: 'it is named by the option'
+        int exit = run('shop', '--features', 'acme-audit', '--feature-catalog', HOSTED)
+
+        then:
+        exit == 1
+        err.toString().contains("acme-audit is not of Grails or of a feature pack that was given, and was looked for in a feature catalog. " +
+                "The feature catalog ${HOSTED} could not be read: ${reason}.")
+        !err.toString().contains('Usage')
+        !err.toString().contains('the other side')
+        !new File(dir, 'shop').exists()
+
+        and: 'what is remembered of the catalog nobody named is not remembered of this one'
+        !Files.exists(copies) || Files.list(copies).withCloseable { it.toList() }.isEmpty()
+
+        when: 'it is named by the environment'
+        setting = HOSTED
+        asked.clear()
+        exit = run('shop', '--features', 'acme-audit')
+
+        then:
+        exit == 1
+        asked*.toString() == [HOSTED]
+        err.toString().contains("The feature catalog ${HOSTED} could not be read: ${reason}.")
+
+        where:
+        reason                                 | answer
+        'not found'                            | { new Reply(404, null, null) }
+        'timeout'                              | { throw new java.net.http.HttpTimeoutException('request timed out') }
+        'TLS failure (SSLHandshakeException)'  | { throw new javax.net.ssl.SSLHandshakeException('no trusted certificate, says the other side') }
+    }
+
+    void "with --offline and no copy of the catalog nobody named, a name that is not known does not exist, and nothing is asked"() {
+        given:
+        setting = null
+
+        when:
+        int exit = run('shop', '--features', 'hibernate-validtor', '--offline')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == 'The requested feature does not exist: hibernate-validtor'
+        err.toString().readLines()[1] == "The feature catalog ${PackCatalogs.DEFAULT} could not be read: not asked, since --offline makes no request to " +
+                'the network, and there is no copy of the catalog on this computer, so hibernate-validtor was not looked for there'
+        asked.isEmpty()
+
+        and: 'that says nothing about whether the catalog can be read'
+        !Files.exists(copies) || Files.list(copies).withCloseable { it.toList() }.isEmpty()
+    }
+
+    void "a name is found in the catalog nobody named, and the plugin index of today has none"() {
+        given:
+        setting = null
+        File jar = publish(COORDINATES)
+        byte[] document = json([format: 1, plugins: [plugin(PLUGIN, ['2.3.0': pack(jar)])]]).getBytes('UTF-8')
+        answers[PackCatalogs.DEFAULT] = { new Reply(200, null, new ByteArrayInputStream(document)) }
+
+        when:
+        int exit = run('com.example.shop', '--features', 'acme-audit', '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        asked*.toString() == [PackCatalogs.DEFAULT]
+        out.toString().contains("    the coordinates are those the feature catalog ${PackCatalogs.DEFAULT} (sha256 ${digest(document)}) has for the feature acme-audit")
+        new File(dir, 'shop/.grails/forge.lock.yml').text.contains("  catalog: ${PackCatalogs.DEFAULT}\n  catalogSha256: ${digest(document)}\n")
+
+        when: 'the index is as it is published today'
+        Files.list(copies).withCloseable { it.toList() }.each { Files.delete(it) }
+        answers[PackCatalogs.DEFAULT] = { new Reply(200, null, new ByteArrayInputStream('[{"name": "Cache", "coords": "org.apache.grails:grails-cache"}]'.bytes)) }
+        exit = run('other', '--features', 'acme-audit')
+
+        then:
+        exit == 2
+        err.toString().readLines()[0] == 'The requested feature does not exist: acme-audit. acme-audit was not found in the feature catalog ' +
+                "${PackCatalogs.DEFAULT} (the plugin index without a format, which records no feature pack) either"
+
+        when: 'the list of the catalog nobody named is asked for, and it cannot be read'
+        Files.list(copies).withCloseable { it.toList() }.each { Files.delete(it) }
+        answers[PackCatalogs.DEFAULT] = { new Reply(500, null, null) }
+        exit = run('--list-catalog-features')
+
+        then: 'that is what was asked for, and it failed'
+        exit == 1
+        err.toString().contains("The feature catalog ${PackCatalogs.DEFAULT} could not be read: HTTP status 500")
+    }
+
+    void "of a plugin Forge has a version for, that version is the one that is taken, and no other"() {
+        given: 'an artifact Forge knows the version of'
+        org.grails.forge.build.dependencies.CoordinateResolver resolver = beanContext.getBean(ContextFactory).coordinateResolver
+        org.grails.forge.build.dependencies.Coordinate known = ['grails-web-console', 'cache-ehcache']
+                .collect { resolver.resolve(it).orElse(null) }.find { it != null && it.version != null }
+        assert known != null
+        String managed = "${known.groupId}:${known.artifactId}"
+        File ofTheBom = publish("${managed}:${known.version}")
+        File later = publish("${managed}:99.0.0")
+        File both = catalog([plugin(managed, [(known.version): pack(ofTheBom), '99.0.0': pack(later)])], 'both.json')
+        File onlyLater = catalog([plugin(managed, ['99.0.0': pack(later), '98.0.0': pack(later)])], 'later.json')
+        File unreadable = catalog([plugin(managed, [(known.version): pack(ofTheBom, [format: 2]), '99.0.0': pack(later)])], 'unreadable.json')
+        File otherGroup = catalog([plugin("org.other:${known.artifactId}", ['99.0.0': pack(publish("org.other:${known.artifactId}:99.0.0")), '1.0.0': pack(later)])], 'other.json')
+
+        when: 'the catalog has a pack for that version and for a later one'
+        int exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', both.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'the version of Forge is taken, also when it is no release'
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${managed}:${known.version} (${address}), sha256 ${sha256(ofTheBom)}")
+
+        when: 'the catalog has none for that version'
+        exit = run('shop', '--features', 'acme-audit', '--feature-catalog', onlyLater.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'no other version is chosen, and the command says how one is insisted on'
+        exit == 2
+        err.toString().contains("The feature acme-audit is not taken from the feature catalog: Forge has ${managed} in version ${known.version} for the applications it generates, " +
+                "and the catalog has no pack for ${known.version} (it has one for 99.0.0, 98.0.0); another version is used only by its coordinates, such as ${managed}:99.0.0")
+        !new File(dir, 'shop').exists()
+
+        when: 'the pack of that version is not one this Forge reads'
+        exit = run('shop', '--features', 'acme-audit', '--feature-catalog', unreadable.toURI().toString(), '--feature-pack-repository', address)
+
+        then:
+        exit == 2
+        err.toString().contains("Forge has ${managed} in version ${known.version} for the applications it generates, and the pack of ${known.version} is not one this Forge reads")
+
+        when: 'the coordinates are given'
+        exit = run('--list-features', '--features', "${managed}:99.0.0", '--feature-pack-repository', address)
+
+        then:
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from ${managed}:99.0.0 (${address})")
+
+        when: 'a plugin of another group has the name of the artifact'
+        exit = run('--list-features', '--features', 'acme-audit', '--feature-catalog', otherGroup.toURI().toString(), '--feature-pack-repository', address)
+
+        then: 'Forge has no version for it, and its latest release is taken'
+        exit == 0
+        out.toString().contains("Feature pack acme-audit from org.other:${known.artifactId}:99.0.0 (${address})")
+
+        when: 'the catalog is listed'
+        exit = run('--list-catalog-features', '--feature-catalog', both.toURI().toString(), '--feature-catalog', onlyLater.toURI().toString())
+
+        then: 'with the version that would be taken'
+        exit == 0
+        out.toString().readLines().any { it.startsWith("  acme-audit  ${managed}:${known.version}") }
+    }
+
+    void "a request these specifications do not answer themselves fails the specification, and is not made"() {
+        given: 'the command as it is made outside these specifications, and the plugin index of Grails as its catalog'
+        setting = null
+        answered = false
+
+        expect:
+        Boolean.getBoolean(PackArtifacts.NO_NETWORK_PROPERTY)
+
+        when:
+        run('shop', '--features', 'hibernate-validtor')
+
+        then:
+        AssertionError e = thrown()
+        e.message == "A request was made to ${PackCatalogs.DEFAULT}, and ${PackArtifacts.NO_NETWORK_PROPERTY} says that nothing is asked of another computer"
+
+        when: 'a jar is asked for'
+        new PackArtifacts().resolve(PackArtifacts.coordinates(COORDINATES), [PackArtifacts.repository('https://repository.invalid/maven')], null)
+
+        then:
+        AssertionError ofTheJar = thrown()
+        ofTheJar.message.startsWith('A request was made to https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0/acme-audit-grails-2.3.0.jar')
+    }
+
     private int run(String... args) {
         String catalogs = setting
         String repositories = environment
         Path keptIn = copies
+        Duration waited = within
+        boolean fake = answered
         Transport transport = { URI asking ->
             asked << asking
             Closure<Reply> answer = answers[asking.toString()]
@@ -853,7 +1110,12 @@ class CreateAppFeatureCatalogSpec extends CommandSpec implements CommandFixture 
 
             @Override
             protected PackArtifacts createPackArtifacts() {
-                return new PackArtifacts(transport)
+                return fake ? new PackArtifacts(transport) : new PackArtifacts()
+            }
+
+            @Override
+            protected Duration defaultCatalogWithin() {
+                return waited
             }
 
             @Override

@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import jakarta.annotation.Nullable
 import org.springframework.stereotype.Component
 import org.grails.forge.application.generator.GeneratorContext
+import org.grails.forge.build.dependencies.CoordinateResolver
 import org.grails.forge.build.dependencies.DefaultCoordinateResolver
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.DefaultFeature
@@ -76,6 +77,14 @@ class ContextFactory {
                           DefaultCoordinateResolver coordinateResolver) {
         this.featureValidator = featureValidator
         this.coordinateResolver = coordinateResolver
+    }
+
+    /**
+     * @return what knows the version of an artifact that the BOM of the Grails this Forge generates for manages
+     * @since 9.0
+     */
+    CoordinateResolver getCoordinateResolver() {
+        return coordinateResolver
     }
 
     FeatureContext createFeatureContext(AvailableFeatures availableFeatures,
