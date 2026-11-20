@@ -160,6 +160,45 @@ class MultiDataSourceSessionSpec extends Specification {
         preBoundSession.close()
     }
 
+    def "a request whose session for a later datasource fails to open releases the sessions it opened before"() {
+        given: "the secondary datasource opens sessions, and the tertiary one, after it, cannot"
+        HibernateDatastore broken = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config + [
+                'hibernate.generate_statistics': 'true',
+                'dataSource.url': 'jdbc:h2:mem:brokenDefaultDb;LOCK_TIMEOUT=10000',
+                'dataSources.secondary': [url: 'jdbc:h2:mem:healthySecondaryDb;LOCK_TIMEOUT=10000'],
+                'dataSources.tertiary': [url: 'jdbc:h2:mem:brokenTertiaryDb;LOCK_TIMEOUT=10000'],
+        ]), BrokenOsivBook, BrokenOsivAuthor)
+        SessionFactory defaultSf = broken.sessionFactory
+        SessionFactory secondarySf = broken.getDatastoreForConnection('secondary').sessionFactory
+        broken.getDatastoreForConnection('tertiary').sessionFactory.close()
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(broken)
+
+        when:
+        interceptor.preHandle(webRequest())
+
+        then: "the failure is thrown, and the sessions opened before it are unbound and closed"
+        thrown(IllegalStateException)
+        secondarySf.statistics.sessionOpenCount == 1
+        secondarySf.statistics.sessionCloseCount == 1
+        !TransactionSynchronizationManager.hasResource(secondarySf)
+        defaultSf.statistics.sessionCloseCount == defaultSf.statistics.sessionOpenCount
+        !TransactionSynchronizationManager.hasResource(defaultSf)
+
+        cleanup:
+        [defaultSf, secondarySf].each { SessionFactory sf ->
+            if (sf != null && TransactionSynchronizationManager.hasResource(sf)) {
+                TransactionSynchronizationManager.unbindResource(sf)
+            }
+        }
+        try {
+            broken?.close()
+        }
+        catch (Exception ignored) {
+            // its tertiary session factory is already closed
+        }
+    }
+
     def "an include uses the sessions of the request for every datasource and leaves them open"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
@@ -534,4 +573,18 @@ class RefusedThirdBook {
     static mapping = {
         datasource 'third'
     }
+}
+
+@Entity
+class BrokenOsivBook {
+    String title
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+
+@Entity
+class BrokenOsivAuthor {
+    String name
 }
