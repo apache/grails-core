@@ -30,7 +30,7 @@ limitations under the License.
   - *(inferred)* - reasoned from code structure, absence of a feature, or general domain knowledge. Each must have a matching entry in §14.
 - **Draft confidence**: ~48 *(documented)* / 0 *(maintainer)* / ~64 *(inferred)*. This model is a draft-first artifact per the rubric §3.2 - the *(inferred)* count is expected to drop sharply once §14 is worked through with the PMC.
 
-**Project description**: Apache Grails is an opinionated, full-stack web application framework for the JVM. It composes Apache Groovy, Spring Framework, Spring Boot, GORM (Hibernate / MongoDB / Neo4j data mapping), and GSP/JSON view rendering, and ships a CLI (`grails-shell-cli`, `grails-forge-cli`) plus an HTTP application generator (`grails-forge`). Grails is **embedded into a user-authored web application**; it is not deployed as a standalone network service by the project. The unit of trust modeled here is "an application using the Grails framework," not "a Grails server." *(documented: [README.md](./README.md))*
+**Project description**: Apache Grails is an opinionated, full-stack web application framework for the JVM. It composes Apache Groovy, Spring Framework, Spring Boot, GORM (Hibernate / MongoDB / Neo4j data mapping), and GSP/JSON view rendering, and ships a CLI (the `grails` command of `grails-forge/grails-cli`, over `grails-forge-cli`) plus an HTTP application generator (`grails-forge`). Grails is **embedded into a user-authored web application**; it is not deployed as a standalone network service by the project. The unit of trust modeled here is "an application using the Grails framework," not "a Grails server." *(documented: [README.md](./README.md))*
 
 ---
 
@@ -46,7 +46,7 @@ limitations under the License.
 |---|---|---|
 | **End user (HTTP client)** | **Untrusted** | Sends HTTP requests to a deployed Grails application. Source of all attacker-controllable input considered in this model. *(inferred)* |
 | **Application developer / operator** | **Trusted** | Writes controllers, services, domain classes, URL mappings, GSP templates; configures `application.yml` / `application.groovy`; runs the CLI; chooses plugins. *(inferred)* |
-| **Plugin / profile author** | **Trusted-by-association** | Author of a third-party Grails plugin or `grails` profile. Code from a plugin runs with full application privileges. The framework does not isolate plugin code. *(inferred)* |
+| **Plugin / feature pack author** | **Trusted-by-association** | Author of a third-party Grails plugin or of a feature pack the generator is given. Code from a plugin runs with full application privileges. The framework does not isolate plugin code. *(inferred)* |
 
 ### Component-family table
 
@@ -63,7 +63,7 @@ The framework is large; not every module has the same threat profile. The model 
 | Configuration loading | [`ExternalConfigRunListener`](./grails-core/src/main/groovy/grails/config/external/ExternalConfigRunListener.groovy), [`GroovyConfigPropertySourceLoader`](./grails-core/src/main/groovy/org/grails/core/cfg/GroovyConfigPropertySourceLoader.groovy), [`GrailsApplicationPostProcessor`](./grails-core/src/main/groovy/grails/boot/config/GrailsApplicationPostProcessor.groovy) | Yes - filesystem, env, system properties | **In** |
 | Plugin / artefact discovery | [`PluginManagerLoader`](./grails-core/src/main/groovy/grails/plugins/PluginManagerLoader.groovy), [`ClassPathScanner`](./grails-core/src/main/groovy/grails/boot/config/tools/ClassPathScanner.groovy), [`GrailsFactoriesLoader`](./grails-core/src/main/groovy/org/grails/core/io/support/GrailsFactoriesLoader.groovy) | Filesystem (classpath JARs) | **In** |
 | Compile-time AST transforms | [`GlobalGrailsClassInjectorTransformation`](./grails-core/src/main/groovy/org/grails/compiler/injection/GlobalGrailsClassInjectorTransformation.groovy), [`ResourceTransform`](./grails-rest-transforms/src/main/groovy/org/grails/plugins/web/rest/transform/ResourceTransform.groovy), [`ViewsTransform`](./grails-views-core/src/main/groovy/grails/views/compiler/ViewsTransform.groovy) | No (build only) | **In** (developer-trusted inputs only - see §6) |
-| CLI / shell (`grails-shell-cli`) | [`GrailsCli`](./grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy), [`MavenProfileRepository`](./grails-shell-cli/src/main/groovy/org/grails/cli/profile/repository/MavenProfileRepository.groovy) | Yes - network (Maven), filesystem | **In** (with caveats - see §3 and §7) |
+| CLI (`grails-forge/grails-cli`, `grails-forge/grails-forge-cli`) | [`GrailsCli`](./grails-forge/grails-cli/src/main/groovy/org/apache/grails/cli/GrailsCli.groovy), [`PackArtifacts`](./grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/pack/PackArtifacts.groovy) | Yes - network (Maven), filesystem | **In** (with caveats - see §3 and §7) |
 | Interactive consoles (`grails-console`) | [`GrailsShell`](./grails-console/src/main/groovy/grails/ui/shell/GrailsShell.groovy), `GroovyConsoleApplicationContext` | Local I/O | **Out** - developer-only tool, see §3 |
 | Hosted `grails-forge` HTTP APIs | [`ZipCreateController`](./grails-forge/grails-forge-web/grails-app/controllers/org/grails/forge/web/ZipCreateController.groovy) and sibling controllers | Yes - network | **Out** - separate Grails 8 web application deployed independently from user applications built with Grails; modeled separately by the Forge service operators. *(inferred)* |
 | Generated application scaffolding | the templates and bundled feature packs of `grails-forge/grails-forge-core/`, files emitted by `create-app` | n/a | **Out** - separately authored; the framework's contract does not extend to scaffolded code once it is in the user's repository. See §3. |
@@ -75,7 +75,7 @@ The framework is large; not every module has the same threat profile. The model 
 
 The framework **does not** attempt to defend against, and **does not** model, the following. Triagers may close findings citing this section.
 
-- **Application-level authentication and authorization.** The framework ships no built-in user store, login flow, or session-based auth. The user is expected to integrate with the Spring Security plugin, Apache Shiro, or an equivalent. The `grails-shell-cli` `SpringSecurityCompilerAutoConfiguration` is a compile-time hook for the plugin, not an auth implementation. *(documented: [grails-doc/src/en/guide/security/authentication.adoc](./grails-doc/src/en/guide/security/authentication.adoc), [grails-doc/src/en/guide/security/securityPlugins.adoc](./grails-doc/src/en/guide/security/securityPlugins.adoc))*
+- **Application-level authentication and authorization.** The framework ships no built-in user store, login flow, or session-based auth. The user is expected to integrate with the Spring Security plugin, Apache Shiro, or an equivalent. *(documented: [grails-doc/src/en/guide/security/authentication.adoc](./grails-doc/src/en/guide/security/authentication.adoc), [grails-doc/src/en/guide/security/securityPlugins.adoc](./grails-doc/src/en/guide/security/securityPlugins.adoc))*
 - **Transport security (TLS).** Provided by the Spring Boot embedded container (Tomcat / Jetty / Undertow / Netty) or by a reverse proxy in front of the application. Out of layer. *(inferred)*
 - **Database engine, JDBC driver, and JVM vulnerabilities.** The framework is a consumer; bugs in these layers are upstream. *(inferred)*
 - **Spring Framework, Spring Boot, Hibernate, GORM datastore implementations.** Triaged in their own projects; the framework re-exposes their public APIs but does not own their threat models. *(inferred)*
@@ -144,7 +144,7 @@ A triager applies these tests before deciding a finding is in-model:
 | Configuration loading | Reachable only if the attacker controls `grails.config.locations`, `GRAILS_CONFIG_LOCATIONS`, or the application classpath. **All three require local privilege at or above the application process** - therefore out of model in the default web-app scenario. *(inferred)* |
 | Plugin / artefact discovery | Reachable only via a malicious JAR on the classpath. Same precondition as above - **classpath compromise is out of model**. *(inferred)* |
 | Compile-time AST transforms | Reachable only at build time, with developer-controlled source files. Not reachable from an end user. *(inferred)* |
-| CLI / shell (`grails-shell-cli`) | Reachable by the developer running the CLI on their local machine. End users do not invoke the CLI; if they can, the host is already compromised. *(inferred)* |
+| CLI (`grails-forge/grails-cli`) | Reachable by the developer running the CLI on their local machine. End users do not invoke the CLI; if they can, the host is already compromised. *(inferred)* |
 
 The reachability column for **configuration loading** and **plugin discovery** is the load-bearing claim of this section: the framework's most powerful capabilities (Groovy DSL evaluation, classloader injection) are guarded by "code on the classpath is trusted." A report against these surfaces that does not first demonstrate untrusted control of the classpath or `grails.config.locations` is `OUT-OF-MODEL: trusted-input`. See §13.
 
@@ -173,12 +173,12 @@ The reachability column for **configuration loading** and **plugin discovery** i
 These are **negative claims** about the framework's behavior. By the rubric they are the lowest-confidence claims in the model and the highest-priority targets for maintainer confirmation (see §14).
 
 - The framework does not bind sockets directly. All network listening is delegated to the Spring Boot embedded container, configured by the operator. *(inferred)*
-- The framework does not spawn child processes from the runtime layer. The CLI (`grails-shell-cli`) does spawn build tools (Gradle) - but only when invoked by a developer at the terminal. *(inferred)*
+- The framework does not spawn child processes from the runtime layer. The CLI (`grails-forge/grails-cli`) does spawn build tools (Gradle) - but only when invoked by a developer at the terminal. *(inferred)*
 - The framework does not install JVM signal handlers. *(inferred)*
 - The framework does not read environment variables beyond `GRAILS_ENV` / `grails.env` / `grails.config.locations` and the Spring Boot standard set. *(inferred)*
 - The framework does not mutate global JVM state (default `Locale`, default `TimeZone`, system properties) at runtime. It does mutate `Locale` and `TimeZone` for the duration of a request via `GrailsWebRequest` for i18n - this is request-scoped, not process-wide. *(inferred)*
 - The framework does not write to stdout or stderr at runtime beyond SLF4J-routed logging. *(inferred)*
-- The framework does not load classes from network locations at runtime. (The CLI does, via `MavenProfileRepository`, but that is the developer surface - see §6 and §7.) *(inferred)*
+- The framework does not load classes from network locations at runtime. (The CLI does, when a developer names a feature pack by its coordinates: `PackArtifacts` downloads the jar and the generator runs its templates. That is the developer surface - see §6 and §7.) *(inferred)*
 
 ---
 
@@ -223,7 +223,7 @@ The framework's public input boundary is the HTTP request. Per-parameter trust i
 | `application.groovy` / `application.yml` contents | All keys | **No - trusted operator input** | `application.groovy` is evaluated as Groovy; treat it like source code, not configuration. *(inferred)* |
 | Domain `mapping {}` / `constraints {}` closure | Closure body | **No - trusted developer input** | Evaluated at startup via `HibernateMappingBuilder.evaluate()` and `ConstraintsEvaluator`. Developer-authored code. *(inferred)* |
 | AST transform inputs (`@Resource`, `@Validateable`, etc.) | Annotated source | **No - trusted developer input** | Run at compile time on developer source. *(inferred)* |
-| `MavenProfileRepository` (CLI) | Profile coordinates | **Trusted developer input by default; trusted-third-party if a custom repo is configured** | The CLI downloads profile JARs and executes their `.groovy` command scripts (`GroovyScriptCommand`). Treat profile sources with the same trust as any other build-time dependency. See §11. *(inferred)* |
+| `PackArtifacts` (CLI) | Feature pack coordinates | **Trusted developer input by default; trusted-third-party if a custom repo is configured** | The CLI downloads the jar of a feature pack that is named by its coordinates, and the generator runs the templates of the pack and writes what it adds to the build of the generated application. Treat feature pack sources with the same trust as any other build-time dependency. See §11. *(documented: [forgeFeaturePacks.adoc](./grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc))* |
 
 ### Size, shape, rate assumptions
 
@@ -261,7 +261,7 @@ Two load-bearing trust statements. The first is the framework's stated position 
 
 > "You must assume that every unprotected URL is publicly accessible one way or another." *(documented: [securingAgainstAttacks.adoc](./grails-doc/src/en/guide/security/securingAgainstAttacks.adoc))*
 
-> **Plugin code, `application.groovy`, plugin `doWithSpring` closures, AST transforms, and every JAR on the application classpath are fully trusted and execute with the privileges of the application process. The framework provides no sandbox, no isolation, and no verification of provenance beyond what Maven Resolver gives the CLI.** *(inferred)* (§14 wave 1)
+> **Plugin code, `application.groovy`, plugin `doWithSpring` closures, AST transforms, and every JAR on the application classpath are fully trusted and execute with the privileges of the application process. The framework provides no sandbox, no isolation, and no verification of provenance beyond the checksum a repository publishes for a feature pack jar, or a SHA-256 the developer gives the CLI for it.** *(inferred)* (§14 wave 1)
 
 A report that depends on hostile control of any of those surfaces is `OUT-OF-MODEL: trusted-input` (§13). A report that depends on a hostile HTTP client is in-model.
 
@@ -275,7 +275,7 @@ Not applicable - Apache Grails is a single-process web framework with no consens
 - **Compromised plugin / JAR on the application classpath.** Plugins run with full privileges by design. *(inferred)*
 - **Compromised build environment.** Out of model per §3.
 - **Co-tenant attacker on the same JVM (e.g., another application in a shared servlet container).** The framework does not assume process-level isolation between deployed applications. The model assumes one application per JVM. *(inferred)*
-- **Attacker who controls a Grails plugin or `grails` profile downloaded by a developer running the CLI.** This is the supply-chain surface around `MavenProfileRepository`; see §11. The framework does not verify profile JAR signatures beyond what Maven Resolver provides. *(inferred)*
+- **Attacker who controls a Grails plugin or feature pack downloaded by a developer running the CLI.** This is the supply-chain surface around `PackArtifacts`; see §11. The framework does not verify signatures of a feature pack JAR; it checks the jar against the checksum its repository publishes, or against a SHA-256 the developer gives. *(inferred)*
 - **Attacker with the ability to make a developer execute the `GrailsShell` or `GroovyConsole`.** Out of scope - these are unrestricted code-execution tools by design. *(inferred)*
 - **Side-channel observers** (timing, cache, micro-architectural). *(inferred)*
 
@@ -320,7 +320,7 @@ These properties are **disclaimed by design**. A report that depends on one of t
 - **Rate limiting / DoS protection against request volume.** No built-in throttling. *(documented: [securingAgainstAttacks.adoc](./grails-doc/src/en/guide/security/securingAgainstAttacks.adoc) "Denial of service")*
 - **Constant-time cryptographic operations.** No constant-time comparison or secret-handling primitives are provided. *(inferred)*
 - **Sandboxing of Groovy code in `application.groovy`, plugin `doWithSpring` blocks, or AST transforms.** Groovy source on the classpath is trusted, full stop. *(inferred)*
-- **Verification of plugin or `grails` profile JAR provenance.** The CLI uses standard Maven resolution; trust in the configured repository is operator-supplied. *(inferred)*
+- **Verification of plugin or feature pack JAR provenance.** The CLI takes a feature pack jar from the Maven repositories it is given and checks it against the checksum the repository publishes; trust in the configured repository is operator-supplied. *(inferred)*
 - **Cross-process / cross-tenant isolation.** One application per JVM is assumed. Sharing a JVM across mutually-untrusting apps is unsupported. *(inferred)*
 - **Transport security.** Provided by Spring Boot / the operator's proxy. *(inferred)*
 
@@ -398,7 +398,7 @@ In-the-wild patterns the API permits but that violate the assumptions in §5-§7
 The mirror of §11: patterns that scanners, fuzzers, AI analyzers, or human reviewers repeatedly flag against this project that **are not bugs given the model**. Feed this section to suppression configurations.
 
 - **"Dynamic class loading in `ClassPathScanner.classLoader.loadClass(name)`"** - SAST flags reflective class loading on apparently-attacker-controlled data. Discharged by the §6 trust assumption on classpath input ("application classpath contains only artifacts the operator/developer chose"). `name` originates from the build classpath, not from an HTTP request. → `OUT-OF-MODEL: trusted-input`.
-- **"Reflective `Class.forName` / `loadClass` in `ApplicationClassInjector` and AST infrastructure, and in `DatabaseMigrationCommand` (`passwordEncryptionCodec`) / `ConfigSupport` (`source`) / `ExecuteStep` (profile YAML `className`)"** - SAST flags the same reflective pattern across multiple modules. Discharged by the §6 trust assumption on `application.yml` / `application.groovy` / profile-YAML inputs ("trusted operator input"). Class names come from configuration files, not request data. → `OUT-OF-MODEL: trusted-input`.
+- **"Reflective `Class.forName` / `loadClass` in `ApplicationClassInjector` and AST infrastructure, and in `DatabaseMigrationCommand` (`passwordEncryptionCodec`) / `ConfigSupport` (`source`)"** - SAST flags the same reflective pattern across multiple modules. Discharged by the §6 trust assumption on `application.yml` / `application.groovy` inputs ("trusted operator input"). Class names come from configuration files, not request data. → `OUT-OF-MODEL: trusted-input`.
 - **"Groovy `evaluate()` / `ConfigSlurper` in `GroovyConfigPropertySourceLoader`, `ExternalConfigRunListener`, `HibernateMappingBuilder`, and `GroovyChangeLogParser`"** - SAST flags a code-injection sink. Discharged by the §6 trust assumption on `application.groovy`, domain `mapping {}` closures, external config locations, and migration files (all trusted developer/operator inputs). See the §9 Groovy-sandboxing disclaimer and §11 misuse patterns when the assumption does not hold. → `OUT-OF-MODEL: trusted-input` (or `BY-DESIGN: property-disclaimed` if the assumption is violated).
 - **"`GroovyShell` instantiation in `grails-console` (`GrailsShell`, `GroovyConsoleApplicationContext`) and `GrailsApplicationScriptRunner`"** - SAST flags arbitrary code execution. These are developer-only tools that take a `File` argument from the CLI, by design (§3). → `OUT-OF-MODEL: unsupported-component`.
 - **"Every `@GroovyASTTransformation` implementation in framework JARs"** - SAST flags AST-rewriting code as code-injection surface. Discharged by §8 P7 ("AST transforms only act on developer-authored source") and the §6 trust assumption on annotated source. The set on 9.0.x at the time of this revision is the union of: `Cache{Put,Evict,able}Transformation`, `TransactionalTransform`, `RollbackTransform`, `OrderedGormTransformation`, `TenantTransform`, `ServiceTransformation`, `GormEntityTransformation`, `JpaGormEntityTransformation`, `GlobalJpaEntityTransform`, `DirtyCheckTransformation`, `SubscriberTransform`, `PublisherTransform`, `MarkupViewsTransform`, `JsonViewsTransform`, `ViewsTransform`, `ResourceTransform`, `LinkableTransform`, `GlobalGrailsClassInjectorTransformation`, `GlobalImportTransformation`, `EnhancesTraitTransformation`, `HibernateEntityTransformation`, `RxScheduleIOTransformation`, `GroovyScriptCommandTransform`. Future additions inherit the same disposition unless they read attacker-controllable input. → `OUT-OF-MODEL: trusted-input`.
@@ -473,7 +473,7 @@ The model is **draft-first**. The questions below are grouped in waves of 3-7 pe
 ### Wave 3 - misuse, false friends, and §11a curation
 
 14. **`BeforeValidateHelper` serialization (§11a).** *Proposed*: this class is never stored in HTTP sessions or distributed caches by the framework itself. If an application does so, the framework does not own that risk. Confirm.
-15. **`MavenProfileRepository` supply chain.** *Proposed*: the CLI relies on Maven Resolver's default signature/checksum behavior; the framework does not add an additional verification layer. A typosquat or repository compromise is operator/developer responsibility. Confirm.
+15. **Feature pack supply chain (`PackArtifacts`).** *Proposed*: the CLI checks a downloaded feature pack jar against the checksum its repository publishes, or against a SHA-256 the developer gives, and verifies no signature; the framework does not add an additional verification layer. A typosquat or repository compromise is operator/developer responsibility. Confirm.
 16. **GSP `${raw()}` audit.** *Proposed*: the framework's own GSP files never call `raw()` on attacker-controllable data; SAST hits inside framework GSPs are `KNOWN-NON-FINDING`. Confirm with a spot-check.
 17. **`Groovysh`-backed actuator endpoints.** *Proposed*: there is no Spring Boot actuator endpoint shipped by the framework that evaluates Groovy. Confirm there is no `/groovy` or similar.
 18. **Open redirect via `redirect()`.** *Proposed*: `redirect(url: params.next)` is documented misuse in §11; the framework will not add an allow-list to `redirect()` itself. Confirm.

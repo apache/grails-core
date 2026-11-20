@@ -47,12 +47,9 @@ catch (IllegalArgumentException e) {
 options.width = consoleWidth()
 
 QueryTailRunner runner = new QueryTailRunner(options, grailsConsole.out, grailsConsole.ansiEnabled)
-// The run ends when the command is cancelled. Where the build of the project runs the script, that is the
-// end of its JVM; the Grails shell, which stays, tells a script that asks to be told.
+// The run ends when the command is cancelled, which is the end of the JVM the build of the project runs
+// the script in.
 Runtime.runtime.addShutdownHook(new Thread({ -> runner.stop() } as Runnable, 'query-tail-stop'))
-if (metaClass.respondsTo(this, 'addCancelledListener')) {
-    addCancelledListener({ -> runner.stop() })
-}
 return runner.run() == 0
 
 /**

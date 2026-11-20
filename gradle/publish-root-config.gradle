@@ -82,7 +82,6 @@ def publishedProjects = [
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
-        'grails-shell-cli',
         'grails-sitemesh3',
         'grails-spring',
         'grails-spring-ai',

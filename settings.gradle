@@ -101,7 +101,6 @@ include(
         'grails-rest-transforms',
         'grails-scaffolding',
         'grails-services',
-        'grails-shell-cli',
         'grails-spring',
         'grails-startup-progress',
         'grails-test-core',

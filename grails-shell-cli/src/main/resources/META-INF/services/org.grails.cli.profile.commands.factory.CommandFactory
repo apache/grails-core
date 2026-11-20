@@ -1,4 +1,0 @@
-org.grails.cli.profile.commands.factory.YamlCommandFactory
-org.grails.cli.profile.commands.factory.GroovyScriptCommandFactory
-org.grails.cli.profile.commands.factory.ServiceCommandFactory
-org.grails.cli.profile.commands.factory.ApplicationContextCommandFactory

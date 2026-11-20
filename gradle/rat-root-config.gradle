@@ -72,7 +72,6 @@ tasks.named('rat') {
             'grails-doc/src/en/ref/Configuration/Application Properties.adoc', // exclude generated data
             'grails-quartz/src/main/templates/**', // template files that people are expected to use in the end application
             'grails-scaffolding/src/main/templates/scaffolding/**/*', // template files that people are expected to use in the end application
-            'bin/**', // scripts generated during build for grails-shell-cli
             'build-logic/plugins/build/**', // exclude build artifacts
             'build-logic/docs-core/build/**', // exclude build artifacts
             'grails-test-examples/*/build/**', // build directories

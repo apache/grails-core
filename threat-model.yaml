@@ -80,12 +80,12 @@ components:
       - grails-core/src/main/groovy/org/grails/compiler/injection/GlobalGrailsClassInjectorTransformation.groovy
       - grails-rest-transforms/src/main/groovy/org/grails/plugins/web/rest/transform/ResourceTransform.groovy
       - grails-views-core/src/main/groovy/grails/views/compiler/ViewsTransform.groovy
-  - name: cli_shell_grails_shell_cli
+  - name: cli_grails_forge_cli
     in_model: true
     notes: "Developer surface; see §7 supply-chain caveats."
     representative_files:
-      - grails-shell-cli/src/main/groovy/org/grails/cli/GrailsCli.groovy
-      - grails-shell-cli/src/main/groovy/org/grails/cli/profile/repository/MavenProfileRepository.groovy
+      - grails-forge/grails-cli/src/main/groovy/org/apache/grails/cli/GrailsCli.groovy
+      - grails-forge/grails-forge-cli/src/main/groovy/org/apache/grails/forge/cli/pack/PackArtifacts.groovy
   - name: interactive_consoles_grails_console
     in_model: false
     out_of_model_reason: "Developer-only tools providing unrestricted Groovy execution by design (§3)."
@@ -211,11 +211,11 @@ entry_points:
     parameter: closure_body
     attacker_controllable: false
     trusted_role: developer
-  - surface: MavenProfileRepository
-    parameter: profile_coordinates
+  - surface: PackArtifacts
+    parameter: feature_pack_coordinates
     attacker_controllable: false
     trusted_role: developer
-    notes: "CLI-only; downloaded profiles execute .groovy command scripts."
+    notes: "CLI-only; the generator runs the templates of a downloaded feature pack."
 
 # §7 - adversary model summary.
 adversaries:
@@ -228,7 +228,7 @@ adversaries:
     - id: malicious_grails_plugin
     - id: build_environment_compromise
     - id: jvm_co_tenant
-    - id: malicious_profile_via_MavenProfileRepository
+    - id: malicious_feature_pack_via_PackArtifacts
     - id: GrailsShell_or_GroovyConsole_reachability
     - id: side_channel_observer
 
@@ -340,8 +340,8 @@ properties_disclaimed:
   - id: groovy_sandboxing
     description: "Sandboxing of Groovy code on the classpath, in application.groovy, or in plugin closures."
     provenance: inferred
-  - id: profile_jar_provenance
-    description: "Verification of Maven profile JAR provenance beyond Maven Resolver defaults."
+  - id: feature_pack_jar_provenance
+    description: "Verification of feature pack JAR provenance beyond the checksum its repository publishes."
     provenance: inferred
   - id: cross_tenant_isolation
     description: "Process-level isolation between deployed applications sharing a JVM."
@@ -385,8 +385,8 @@ known_non_findings:
   - pattern: "Dynamic class loading in ClassPathScanner.classLoader.loadClass(name)"
     discharged_by: "§6 trust assumption on classpath input"
     disposition: "OUT-OF-MODEL: trusted-input"
-  - pattern: "Reflective Class.forName / loadClass in ApplicationClassInjector, DatabaseMigrationCommand (passwordEncryptionCodec), ConfigSupport (source), ExecuteStep (profile YAML className)"
-    discharged_by: "§6 trust assumption on application.yml / application.groovy / profile-YAML inputs"
+  - pattern: "Reflective Class.forName / loadClass in ApplicationClassInjector, DatabaseMigrationCommand (passwordEncryptionCodec), ConfigSupport (source)"
+    discharged_by: "§6 trust assumption on application.yml / application.groovy inputs"
     disposition: "OUT-OF-MODEL: trusted-input"
   - pattern: "Groovy evaluate() / ConfigSlurper in GroovyConfigPropertySourceLoader, ExternalConfigRunListener, HibernateMappingBuilder, GroovyChangeLogParser"
     discharged_by: "§6 trust assumption on application.groovy / mapping closures / external config / migration files"
