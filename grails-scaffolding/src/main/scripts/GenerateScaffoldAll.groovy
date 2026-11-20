@@ -19,7 +19,6 @@
 
 description("Generates a scaffolded service and controller") {
   	usage 'generate-scaffold-all [domain class name]'
-    completer org.grails.cli.interactive.completers.DomainClassCompleter
     argument name:'Domain Class Name', description:"The name of domain class", required:true
     flag name:'force', description:"Whether to overwrite existing files"
     flag name:'namespace', description:"The namespace for the controller"

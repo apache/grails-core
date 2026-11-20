@@ -20,7 +20,6 @@
 
 description( "Generates a controller that performs CRUD operations" ) {
   usage "grails generate-controller [DOMAIN CLASS]"
-  completer org.grails.cli.interactive.completers.DomainClassCompleter
   flag name:'force', description:"Whether to overwrite existing files"
 }
 

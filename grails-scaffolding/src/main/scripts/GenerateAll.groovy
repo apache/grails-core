@@ -21,7 +21,6 @@
 description("Generates a controller that performs CRUD operations and the associated views") {
     usage "grails generate-all [DOMAIN CLASS]"
     argument name: 'Domain Class', description: "The name of the domain class", required: true
-    completer org.grails.cli.interactive.completers.DomainClassCompleter
     flag name: 'force', description: "Whether to overwrite existing files"
 }
 
