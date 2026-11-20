@@ -321,6 +321,26 @@ class CriteriaQueryArgumentsSpec extends GrailsDataTckSpec<GrailsDataHibernate5T
     }
 
     @Unroll
+    void "the total of a paged criteria with flushMode #mode #outcome the pending change"() {
+        given: 'a session that flushes by itself, so only the flush mode of the arguments keeps a change out'
+        TestEntity.withSession { Session s -> s.setHibernateFlushMode(FlushMode.AUTO) }
+        TestEntity.findByName('a').age = 99
+
+        when:
+        def page = TestEntity.createCriteria().list(max: 10, flushMode: mode) { eq('age', 99) }
+
+        then: 'the page and the count behind its total read the same data'
+        page.size() == expected
+        page.totalCount == expected
+
+        where:
+        mode     || expected
+        'MANUAL' || 0
+        'ALWAYS' || 1
+        outcome = expected ? 'flushes' : 'leaves out'
+    }
+
+    @Unroll
     void "an argument that is null or absent changes nothing on #route"() {
         expect:
         listFor(route, args).size() == 3 || route in ['where.find', 'findBy']

@@ -45,6 +45,9 @@ public class PagedResultList extends grails.gorm.PagedResultList {
     private transient GrailsHibernateTemplate hibernateTemplate;
     private final Criteria criteria;
 
+    /** The flush mode that the arguments of the page asked for; the count behind the total uses it too. Set by the criteria builder. */
+    org.hibernate.FlushMode flushMode;
+
     public PagedResultList(GrailsHibernateTemplate template, Criteria crit) {
         super(null);
         resultList = crit.list();
@@ -72,6 +75,13 @@ public class PagedResultList extends grails.gorm.PagedResultList {
                     CriteriaImpl impl = (CriteriaImpl) criteria;
                     Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());
                     hibernateTemplate.applySettings(totalCriteria);
+                    // the count has to read the data the page read: the flush mode and the timeout of the page's arguments are its too
+                    if (flushMode != null) {
+                        totalCriteria.setFlushMode(flushMode);
+                    }
+                    if (impl.getTimeout() != null) {
+                        totalCriteria.setTimeout(impl.getTimeout());
+                    }
 
                     Iterator iterator = impl.iterateExpressionEntries();
                     while (iterator.hasNext()) {

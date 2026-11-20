@@ -173,7 +173,15 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
     protected List createPagedResultList(Map args) {
         GrailsHibernateUtil.populateArgumentsForCriteria(datastore, targetClass, criteria, args, conversionService);
         GrailsHibernateTemplate ght = new GrailsHibernateTemplate(sessionFactory, (HibernateDatastore) datastore, getDefaultFlushMode());
-        return new PagedResultList(ght, criteria);
+        PagedResultList paged = new PagedResultList(ght, criteria);
+        Object mode = args.get("flushMode");
+        if (mode instanceof org.hibernate.FlushMode) {
+            paged.flushMode = (org.hibernate.FlushMode) mode;
+        }
+        else if (mode != null) {
+            paged.flushMode = org.hibernate.FlushMode.valueOf(String.valueOf(mode).trim());
+        }
+        return paged;
     }
 
     /**
