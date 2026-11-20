@@ -122,7 +122,7 @@ jobs:
           ./gradlew pTML -x groovydoc -x javadoc -x javadocAll -x groovydocAll -x asciidoc -x docGDK \
             --init-script $GITHUB_WORKSPACE/.github/scripts/groovy-snapshot-canary-build.init.gradle
       - name: "📤 Share locally built Groovy artifacts with the build_grails job"
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: local-groovy-maven-repo
           path: ~/.m2/repository/org/apache/groovy/

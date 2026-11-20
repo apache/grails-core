@@ -59,7 +59,7 @@ jobs:
         run: ./gradlew aggregateStyleViolations validateRepositoryConventions --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: core-reports
           path: build/reports/violations/
@@ -102,7 +102,7 @@ jobs:
         run: ./gradlew codeStyle
       - name: "📤 Upload Failure Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: forge-reports
           path: grails-forge/build/reports/code-style/
@@ -149,7 +149,7 @@ jobs:
         run: ./gradlew aggregateStyleViolations --continue
       - name: "📤 Upload Reports"
         if: always()
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: gradle-plugin-reports
           path: grails-gradle/build/reports/violations/
