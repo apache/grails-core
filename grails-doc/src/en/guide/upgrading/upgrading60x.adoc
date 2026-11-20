@@ -1316,3 +1316,5 @@ With GORM for Hibernate, `list` with a `Map` of sort properties, such as `Book.l
 ==== `count` works for a where query that has a sort
 
 With GORM for Hibernate, `count` on a where query or a detached criteria that has a sort, as in `Book.where { ... }.sort('title').count()` or `count(sort: 'title')`, failed with a `SQLGrammarException` on a database that rejects an order in a query that counts its rows, such as H2. As of Grails 7.0.18, the count is made without the sort. The join that a sort by a property of an association makes is kept, so `count` returns the number of instances that `list` returns for the same query.
+
+This also applies to a query that selects only a `count()` projection and to orders added by a `PreQueryEvent` listener. The count keeps the joins of those orders as well.
