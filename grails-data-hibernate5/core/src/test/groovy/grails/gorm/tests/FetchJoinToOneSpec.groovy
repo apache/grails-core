@@ -84,6 +84,52 @@ class FetchJoinToOneSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManage
         association << ['destination', 'origin']
     }
 
+    private void moreFlights() {
+        new FjFlight(number: 'F4', origin: new FjLocation(city: 'o4').save()).save()
+        new FjFlight(number: 'F5', destination: new FjLocation(city: 'c5').save()).save()
+        manager.session.flush()
+        manager.session.clear()
+    }
+
+    @Unroll
+    void "the total of a page that fetches #fetched with #route counts the flights the page can hold"() {
+        given: 'F4 has no destination, F5 has no origin'
+        moreFlights()
+        Map args = fetched ? [fetch: fetched.collectEntries { [(it): 'join'] }] : [:]
+
+        when:
+        List all = list(route, args)
+        def page = list(route, args + [max: 2])
+
+        then: 'the list leaves out the flights the join leaves out, the paged list with an inner join and the others with an outer one, and the total counts the same flights'
+        all.size() == expected
+        page.size() == 2
+        page.totalCount == expected
+
+        where:
+        route            | fetched                      | expected
+        'list'           | []                           | 5
+        'list'           | ['destination']              | 4
+        'list'           | ['origin']                   | 4
+        'list'           | ['destination', 'origin']    | 3
+        'where query'    | []                           | 5
+        'where query'    | ['destination']              | 5
+        'where query'    | ['origin']                   | 5
+        'where query'    | ['destination', 'origin']    | 5
+        'criteria'       | []                           | 5
+        'criteria'       | ['destination']              | 5
+        'criteria'       | ['origin']                   | 5
+        'criteria'       | ['destination', 'origin']    | 5
+    }
+
+    private static List list(String route, Map args) {
+        switch (route) {
+            case 'list': return FjFlight.list(args)
+            case 'where query': return FjFlight.where { number != null }.list(args)
+            default: return FjFlight.createCriteria().list(args) { }
+        }
+    }
+
     void "the total count of a paged list does not fetch the join-mapped association"() {
         when:
         def flights = FjFlight.list(max: 2)
@@ -123,6 +169,11 @@ class FjFlight {
     String number
     FjLocation destination
     FjLocation origin
+
+    static constraints = {
+        destination nullable: true
+        origin nullable: true
+    }
 
     static mapping = {
         destination fetch: 'join'
