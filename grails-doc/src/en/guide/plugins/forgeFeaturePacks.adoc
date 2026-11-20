@@ -138,8 +138,15 @@ A pack only adds. It cannot change what another selected feature gives the appli
 ==== Templates
 
 
-A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. Templates are GSP: `${...}` expressions, `<% %>` scriptlets, `<%-- --%>` comments and the tags listed under <<forgeFeaturePackTags,Tags in a Template>>. A line that holds nothing but logic writes nothing, and what an expression gives is written unescaped.
+A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. A template is GSP, and the generator reads three things in it:
 
+* `${...}` is an expression: its value is written, unescaped.
+* `<% ... %>` is a scriptlet, `<%-- ... --%>` and `%{-- ... --}%` are comments, and `<%@ page import="..." %>` is a directive.
+* Ten tags are <<forgeFeaturePackTags,instructions>>: `<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>` and `<g:def>`.
+
+Everything else is text and is written as it is, character for character. A line that holds nothing but scriptlets, directives and comments writes nothing, not even its line break.
+
+// example::template[]
 [source,gsp]
 .src/main/forge/templates/AuditConfig.groovy.gsp
 ----
@@ -152,6 +159,19 @@ class AuditConfig {
     String application = '${project.name}'
 }
 ----
+
+For an application `com.example.shop` without Spring Security, this writes:
+
+// example::template-written[]
+[source,groovy]
+----
+package com.example
+
+class AuditConfig {
+    String application = 'shop'
+}
+----
+
 
 A template can refer to these names. Any other name is an error, so a misspelled name fails the generation and does not write an incomplete file.
 
@@ -191,39 +211,63 @@ These names are template API 1, the one `templateApi: 1` in the descriptor asks 
 
 A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB, before and after it is rendered.
 
-A template that cannot be compiled, or that fails while it is rendered, stops the generation before any file is written. The message names the template and the line of it the error is on, for example `The template AuditConfig.groovy.gsp of the feature acme-audit cannot be rendered: line 4: ...`. For an error in a scriptlet of several lines, the line is the one the scriptlet starts on; a block or a tag that is never closed is reported at the end of the template.
+A template that cannot be compiled, or that fails while it is rendered, stops the generation before any file is written. The message names the template and the line of it the error is on, for example `The template AuditConfig.groovy.gsp of the feature acme-audit cannot be rendered: line 4: ...`. For an error in a scriptlet or an expression of several lines, the line is the one it starts on; a block or an instruction tag that is never closed is reported on the last line of the template.
 
 
 [[forgeFeaturePackTags]]
 ==== Tags in a Template
 
 
-Ten tags are instructions to the generator. They are run when the application is generated and are not written to the file: `<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>` and `<g:def>`. They take the attributes they take in a view.
+The ten instruction tags are run when the application is generated, and are not written to the file. They take the attributes they take in a view.
 
+// example::instructions[]
 [source,gsp]
 .src/main/forge/templates/audit.properties.gsp
 ----
 audit.store=<g:if test="${options.data == 'mongodb'}">collection</g:if><g:else>table</g:else>
-audit.features=<g:each in="${features}" var="feature">${feature} </g:each>
+audit.types=<g:each in="${['create', 'update']}" var="type">${type};</g:each>
+----
+
+writes, for an application that does not use MongoDB:
+
+// example::instructions-written[]
+[source,properties]
+----
+audit.store=table
+audit.types=create;update;
 ----
 
 A line that holds only a tag still writes its line break; only a line of scriptlets, directives and comments writes nothing. So an instruction tag suits a choice within a line, and a scriptlet a choice of whole lines.
 
-Every other tag is output. The generator has no tag libraries, so `<g:link>`, `<g:message>`, `<g:set>`, `<g:render>`, `<g:hasErrors>` and a tag of any other namespace are not run: the tag is written to the file, with its body and its end tag. That is what a pack wants when the file it writes is a view of the application. It also means that `<g:set>` in a template sets nothing; use `<g:def>` or a scriptlet for a value the template itself needs.
+*Every other tag is text.* The generator has no tag libraries. `<g:link>`, `<g:message>`, `<g:render>`, `<g:form>`, `<sec:ifLoggedIn>`, `<asset:javascript>`, `<tmpl:row>` and any other `<prefix:name>` are written to the file exactly as the template has them, with their attributes, their body and their end tag. An attribute such as `params="[id: 1]"` or `model="[book: book]"` is written as it is. This is what a pack wants when the file it writes is a view of the application. A tag named like an instruction in another namespace, such as `<my:if>`, is text as well.
 
-A tag that is output is not copied character for character. It is written again from its parts:
+WARNING: `<g:set>` is a tag of a tag library, so in a template it is written out and sets nothing. For a value the template itself needs, use `<g:def var="x" value="${...}"/>` or a scriptlet. The same holds for `<g:message>`, `<g:render>`, `<g:include>` and `<g:formatDate>`: they are for the application, and the generator does not run them.
 
-* `${...}` in an attribute or in the body is evaluated when the application is generated, and its value is written.
-* The body is part of the template, so the ten instruction tags in it are run.
-* The attributes are written one space apart with their values in quotes, and a start tag directly followed by its end tag is written as an empty tag.
-* An attribute whose whole value is a map, such as `model="[book: book]"`, is evaluated as an expression is.
-* `<tmpl:row/>` and `<link:book/>` are written as the `<g:render>` and `<g:link>` they stand for.
+`${...}` is evaluated wherever it stands, also in the attributes and the body of a tag that is text, and an instruction tag in the body of such a tag is run:
+
+// example::text-tags[]
+[source,gsp]
+----
+<g:form controller="${project.propertyName}Audit" params="[max: 10]">
+<g:if test="${options.servlet != 'none'}">    <g:submitButton name="search"/>
+</g:if></g:form>
+----
+
+writes, for an application named `shop`:
+
+// example::text-tags-written[]
+[source,gsp]
+----
+<g:form controller="shopAudit" params="[max: 10]">
+    <g:submitButton name="search"/>
+</g:form>
+----
 
 
 ===== Writing a View
 
 
-A view usually has GSP of its own, which has to reach the application and must not be evaluated when it is generated. There are three ways to write it, from the simplest:
+A view has GSP of its own, which has to reach the application and must not be evaluated when it is generated.
 
 A view with nothing to fill in is not a template. Give it a name in the pack that does not end with `.gsp`, and its real name in `to`. It is then written byte for byte:
 
@@ -234,42 +278,61 @@ files:
     to: grails-app/views/book/show.gsp
 ----
 
-In a template, a backslash in front of `${` writes the expression instead of evaluating it. This works in text and in the attributes of a tag that is output:
+In a template, the tags of the view need nothing, since they are text. What the generator would read is written with a backslash in front of it, and the backslash is not written:
 
+[cols="1,3"]
+|===
+|In the template |Writes
+
+|`\${`
+|`${`, an expression of the view
+
+|`\<%`
+|`<%`, which starts a scriptlet, a `<%@ page %>` directive or a `<%-- --%>` comment of the view
+
+|`\%{`
+|`%{`, which starts a `%{-- --}%` comment of the view
+
+|`\<g:if`, `\</g:if` and the other nine
+|The instruction tag, for the view to run
+|===
+
+Nothing is needed where these end: `}`, `%>`, `--%>` and `--}%` are text. To turn a view into a template, put a backslash in front of every `${`, `<%` and `%{` in it and in front of the start and end tags of the ten instructions, then remove the backslash where the generator is to fill something in.
+
+// example::view[]
 [source,gsp]
 .src/main/forge/templates/book/show.gsp.gsp
 ----
+\%{-- Shows a book of \${grailsApplication.config.info.app.name}. --}%
+\<%@ page import="${project.packageName}.Book" %>
 <h1>\${book.title} in ${project.naturalName}</h1>
-<g:link action="edit" id="\${book.id}">Edit</g:link>
-----
-
-writes, for an application named `shop`:
-
-[source,gsp]
-----
-<h1>${book.title} in Shop</h1>
-<g:link action="edit" id="${book.id}">Edit</g:link>
-----
-
-An instruction tag that the view needs, and any tag that has to be written exactly as it is typed, is kept from the generator by writing its `<` as an expression. Nothing else escapes a tag: a backslash in front of it does not, and neither does an HTML comment around it.
-
-[source,gsp]
-----
-${'<'}g:each in="\${books}" var="book">
-    <li>\${book.title}</li>
-${'<'}/g:each>
-${'<'}g:render template="row" model="[book: book]"/>
-----
-
-writes:
-
-[source,gsp]
-----
-<g:each in="${books}" var="book">
-    <li>${book.title}</li>
-</g:each>
+\<g:if test="\${book.authors}">
+    \<g:each in="\${book.authors}" var="author">
+        <g:link action="show" id="\${author.id}" params="[from: 'book']">\${author.name}</g:link>
+    \</g:each>
+\</g:if>
+\<% if (book.isbn) { %><p>\${book.isbn}</p>\<% } %>
 <g:render template="row" model="[book: book]"/>
 ----
+
+writes, for an application `com.example.shop`:
+
+// example::view-written[]
+[source,gsp]
+----
+%{-- Shows a book of ${grailsApplication.config.info.app.name}. --}%
+<%@ page import="com.example.Book" %>
+<h1>${book.title} in Shop</h1>
+<g:if test="${book.authors}">
+    <g:each in="${book.authors}" var="author">
+        <g:link action="show" id="${author.id}" params="[from: 'book']">${author.name}</g:link>
+    </g:each>
+</g:if>
+<% if (book.isbn) { %><p>${book.isbn}</p><% } %>
+<g:render template="row" model="[book: book]"/>
+----
+
+A backslash in front of anything else is a backslash. Two backslashes in front of `${`, `<%`, `%{` or an instruction tag write one backslash and then what they are in front of.
 
 
 ==== Checking a Pack

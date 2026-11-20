@@ -26,8 +26,10 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
 import org.grails.forge.ApplicationContextSpec
 import org.grails.forge.ForgeContexts
+import org.grails.forge.ForgeCoreConfiguration
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.OperatingSystem
 import org.grails.forge.application.Project
@@ -38,12 +40,14 @@ import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
 import org.springframework.context.ConfigurableApplicationContext
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import spock.lang.IgnoreIf
 import spock.lang.TempDir
 import spock.lang.Unroll
 
 /**
  * What a template of a feature pack is to the generator: when it is compiled, which of its tags are
- * instructions and which are written out, and what a template that fails says.
+ * instructions and that every other tag is text, and what a template that fails says.
  */
 class PackTemplateSpec extends ApplicationContextSpec {
 
@@ -51,6 +55,8 @@ class PackTemplateSpec extends ApplicationContextSpec {
 
     // has the class of the page it is compiled to remembered, each time it is rendered
     static final String REMEMBERS_ITS_CLASS = "<% System.properties.computeIfAbsent('${SEEN}') { [] } << getClass() %>\${pack.name}"
+
+    static final int LIMIT = 100_000
 
     @TempDir
     Path directory
@@ -97,46 +103,78 @@ class PackTemplateSpec extends ApplicationContextSpec {
         !seen[0].is(seen[1])
     }
 
-    void "the templates of a pack of Forge are compiled once, for every generation and for those made at once"() {
+    void "the templates of the packs of Forge are compiled once, whatever number of generations use them"() {
         given: 'a Forge of its own, which has rendered nothing yet'
         ConfigurableApplicationContext forge = ForgeContexts.create()
         BundledPackFeatures bundled = forge.getBean(BundledPackFeatures)
         ProjectGenerator generator = forge.getBean(ProjectGenerator)
-        int threads = 8
-        ExecutorService pool = Executors.newFixedThreadPool(threads)
-        CyclicBarrier together = new CyclicBarrier(threads)
 
         expect:
         bundled.compiledTemplates == 0
 
-        when: 'the first generations are made at once, so that the templates are compiled while others ask for them'
-        List<Future<List<Map<String, String>>>> made = (1..threads).collect { int thread ->
-            pool.submit({
-                together.await(60, TimeUnit.SECONDS)
-                (1..5).collect { generate(generator, ['asciidoctor'], [], ApplicationType.WEB, "example.grails.app${thread}") }
-            } as Callable<List<Map<String, String>>>)
-        }
-        Map<Integer, List<Map<String, String>>> byThread = [:]
-        made.eachWithIndex { Future<List<Map<String, String>>> each, int index -> byThread[index + 1] = each.get(120, TimeUnit.SECONDS) }
-        Map<String, String> after = generate(generator, ['asciidoctor'], [], ApplicationType.WEB, 'example.grails.app1')
+        when:
+        List<Map<String, String>> outputs = (1..4).collect { generate(generator, ['asciidoctor'], [], ApplicationType.WEB, 'example.grails.foo') }
 
         then: 'the pack has two templates, and they are compiled once each'
         bundled.compiledTemplates == 2
+        outputs[0]['src/docs/asciidoc/index.adoc'].startsWith('= Your Project\n')
+        outputs[0]['gradle/asciidoc.gradle'] =~ /version '\d[^']*'/
+        outputs.every { it['src/docs/asciidoc/index.adoc'] == outputs[0]['src/docs/asciidoc/index.adoc'] && it['gradle/asciidoc.gradle'] == outputs[0]['gradle/asciidoc.gradle'] }
 
-        and: 'every generation has what the templates write'
-        after['src/docs/asciidoc/index.adoc'].startsWith('= Your Project\n')
-        after['gradle/asciidoc.gradle'] =~ /version '\d[^']*'/
-        byThread.size() == threads
-        byThread.values().every { List<Map<String, String>> outputs ->
-            outputs.size() == 5 && outputs.every {
-                it['src/docs/asciidoc/index.adoc'] == after['src/docs/asciidoc/index.adoc'] &&
-                        it['gradle/asciidoc.gradle'] == after['gradle/asciidoc.gradle']
-            }
+        cleanup:
+        forge.close()
+    }
+
+    void "a template of a pack of Forge that is rendered for many applications at once writes each its own"() {
+        given: 'a pack of Forge whose template writes what the application is, in a Forge that has it'
+        Path resources = directory.resolve('resources')
+        Path packDirectory = Files.createDirectories(resources.resolve(Pack.BUNDLED_DIRECTORY).resolve('acme-of-forge/templates'))
+        Files.writeString(resources.resolve(Pack.BUNDLED_INDEX), 'acme-of-forge\n')
+        Files.writeString(packDirectory.parent.resolve('feature.yml'), PackGenerationSpec.HEADER + 'name: acme-of-forge\n' +
+                "files:\n  - from: who.txt.gsp\n    to: who.txt\n")
+        Files.writeString(packDirectory.resolve('who.txt.gsp'), '${project.name} of ${project.packageName}\n' +
+                '<% 40.times { i -> %>${project.className}${i};<% } %>\n' +
+                '<g:link controller="${project.propertyName}"><g:if test="${project.name.endsWith(\'7\')}">seven</g:if><g:else>other</g:else></g:link>\n')
+        ClassLoader loader = new URLClassLoader([resources.toUri().toURL()] as URL[], (ClassLoader) null)
+        AnnotationConfigApplicationContext forge = new AnnotationConfigApplicationContext()
+        forge.register(ForgeCoreConfiguration)
+        forge.registerBean('packsOfTheSpec', BundledPackFeatures, { new BundledPackFeatures(loader) } as Supplier<BundledPackFeatures>)
+        forge.refresh()
+        BundledPackFeatures bundled = forge.getBean('packsOfTheSpec', BundledPackFeatures)
+        ProjectGenerator generator = forge.getBean(ProjectGenerator)
+        int threads = 8
+        ExecutorService pool = Executors.newFixedThreadPool(threads)
+        CyclicBarrier together = new CyclicBarrier(threads)
+        Closure<String> expected = { String name ->
+            String className = name.capitalize()
+            "${name} of example.grails\n${(0..<40).collect { "${className}${it};" }.join('')}\n" +
+                    "<g:link controller=\"${name}\">${name.endsWith('7') ? 'seven' : 'other'}</g:link>\n"
         }
+
+        when: 'the first generations are made at once, so that the template is compiled while others ask for it'
+        List<Future<List<String>>> wrong = (0..<threads).collect { int thread ->
+            pool.submit({
+                together.await(60, TimeUnit.SECONDS)
+                List<String> mismatches = []
+                for (int i = 0; i < 25; i++) {
+                    String name = "app${thread}x${i}"
+                    String written = generate(generator, ['acme-of-forge'], [], ApplicationType.WEB, "example.grails.${name}")['who.txt']
+                    if (written != expected(name).toString()) {
+                        mismatches << written
+                    }
+                }
+                return mismatches
+            } as Callable<List<String>>)
+        }
+
+        then:
+        wrong.collect { it.get(240, TimeUnit.SECONDS) }.flatten() == []
+        bundled.compiledTemplates == 1
 
         cleanup:
         pool.shutdownNow()
         forge.close()
+        loader.close()
     }
 
     @Unroll
@@ -158,128 +196,136 @@ class PackTemplateSpec extends ApplicationContextSpec {
         'g:def'     | '<g:def var="v" value="${3}"/>${v}'                                                    || '3'
     }
 
-    void "the tags of the tag libraries of Grails are no instructions: they are written out"() {
+    void "the instructions are the tags the compiler of pages compiles into a page, and no other"() {
+        expect: 'what the guide lists and the generator leaves to the compiler is what the compiler takes'
+        PackTemplateSource.INSTRUCTIONS.every { org.grails.gsp.compiler.tags.GrailsTagRegistry.instance.isSyntaxTag(it) }
+        ['set', 'message', 'link', 'render', 'form', 'IF', 'elseIf', 'for', 'var'].every { !org.grails.gsp.compiler.tags.GrailsTagRegistry.instance.isSyntaxTag(it) }
+        PackTemplateSource.INSTRUCTIONS.size() == 10
+    }
+
+    void "the tags of the tag libraries of Grails are no instructions: they are written as they are"() {
         given:
         String source = ['set', 'message', 'link', 'createLink', 'resource', 'render', 'include', 'applyLayout', 'layoutBody', 'layoutHead',
                          'form', 'textField', 'textArea', 'hiddenField', 'passwordField', 'checkBox', 'radio', 'select', 'submitButton',
                          'actionSubmit', 'fieldValue', 'hasErrors', 'eachError', 'renderErrors', 'formatDate', 'formatNumber', 'paginate',
                          'sortableColumn', 'javascript', 'img', 'external', 'meta', 'join', 'cookie', 'header', 'pageProperty', 'ifPageProperty']
-                .collect { String name -> "<g:${name} a=\"1\"/>".toString() }.join('\n')
+                .collect { String name -> "<g:${name} a=\"1\" b='[c: d]'  />text</g:${name}>".toString() }.join('\n')
 
         expect:
         render(source) == source
     }
 
-    void "one set of compiled pages renders for many threads at once, each with its own model"() {
-        given: 'four templates, each with its number in what it writes'
-        PackPages pages = new PackPages(getClass().classLoader)
-        List<String> sources = (0..3).collect { int template ->
-            ('<% 3.times { i -> %>\n${n}-${i}-' + template + '\n<% } %>\n<g:if test="${n % 2 == 0}">even</g:if><g:else>odd</g:else>\n').toString()
-        }
-        int threads = 8
-        ExecutorService pool = Executors.newFixedThreadPool(threads)
-        CyclicBarrier together = new CyclicBarrier(threads)
+    @Unroll
+    void "a tag that is no instruction is text, and is written as the template has it: #what"() {
+        expect:
+        render(source) == (written ?: source)
 
-        when:
-        List<Future<List<String>>> wrong = (0..<threads).collect { int thread ->
-            pool.submit({
-                together.await(60, TimeUnit.SECONDS)
-                List<String> mismatches = []
-                for (int i = 0; i < 200; i++) {
-                    int template = (thread + i) % sources.size()
-                    int n = thread * 1000 + i
-                    String written = new String(pages.render('acme', sources[template], 'a template', 1, [n: n] as Map<String, Object>, 10_000), 'UTF-8')
-                    String expected = "${n}-0-${template}\n${n}-1-${template}\n${n}-2-${template}\n${n % 2 == 0 ? 'even' : 'odd'}\n"
-                    if (written != expected) {
-                        mismatches << written
-                    }
-                }
-                return mismatches
-            } as Callable<List<String>>)
-        }
-
-        then:
-        wrong.collect { it.get(120, TimeUnit.SECONDS) }.flatten() == []
-        pages.compiled == sources.size()
-
-        cleanup:
-        pool.shutdownNow()
+        where:
+        what                                                 | source                                                                || written
+        'its quotes and the space between its attributes'    | '<g:link action=\'show\'   id="1"\n   class="a b">x</g:link>'        || null
+        'quotes inside quotes'                               | '<g:x a=\'say "hi"\' b="it\'s"/>'                                     || null
+        'a space in front of the end of an empty tag'        | '<g:x a="1" />'                                                       || null
+        'an empty body'                                      | '<g:message code="a"></g:message>'                                    || null
+        'an attribute that is a map'                         | '<g:link action="show" params="[id: 1]">x</g:link>'                   || null
+        'a map that names what the template has not'         | '<g:link params="[id: book.id]" args="[entityName]">x</g:link>'       || null
+        'an attribute that is a list'                        | '<g:message code="a" args="[\'x\', \'y\']"/>'                         || null
+        'an attribute that is an empty map'                  | '<g:render template="x" model="[:]"/>'                                || null
+        'an attribute with brackets that is no Groovy'       | '<g:x title="[Draft] of [1]"/>'                                       || null
+        'an attribute with a greater-than sign'              | '<g:x title="a > b" other="c">d</g:x>'                                || null
+        'a tmpl tag'                                         | '<tmpl:row a="1"/>'                                                   || null
+        'a link tag'                                         | '<link:book a="1">x</link:book>'                                      || null
+        'a tag of a plugin'                                  | '<sec:ifLoggedIn><asset:javascript src="a.js"/></sec:ifLoggedIn>'     || null
+        'an end tag by itself'                               | 'a</g:form>b'                                                         || null
+        'a start tag by itself'                              | 'a<g:form action="b">'                                                || null
+        'a name of an instruction in other letters'          | '<G:IF test="x">y</G:IF><g:If test="x"/><g:ifx/>'                     || null
+        'a name of an instruction in another namespace'      | '<my:if test="x">y</my:if><my:each in="z"/>'                          || null
+        'g:set, which sets nothing'                          | 'a<g:set var="x" value="${project.name}"/>b'                          || 'a<g:set var="x" value="foo"/>b'
+        'the expressions of its attributes have their values' | '<g:x a="${project.name}" b="${null}" c="${true}" d="${[project.name]}"/>' || '<g:x a="foo" b="" c="true" d="[foo]"/>'
+        'the expressions of its body have their values'      | '<x:y a="${project.name}" b="2">in ${pack.name}</x:y>'                || '<x:y a="foo" b="2">in acme-audit</x:y>'
+        'an expression of several lines in an attribute'     | '<g:x a="${[1,\n 2].size()}"\n b="3"/>'                               || '<g:x a="2"\n b="3"/>'
+        'an escaped expression stays one, in an attribute'   | '<g:link action="show" id="\\${book.id}">\\${book.title} of ${project.name}</g:link>' || '<g:link action="show" id="${book.id}">${book.title} of foo</g:link>'
+        'an escaped expression that is a map stays one'      | '<g:render template="x" model="\\${[a: 1]}"/>'                        || '<g:render template="x" model="${[a: 1]}"/>'
+        'the instructions in its body run'                   | '<g:form action="save"><g:if test="${true}">in</g:if><g:textField name="${project.name}"/></g:form>' || '<g:form action="save">in<g:textField name="foo"/></g:form>'
+        'inside an instruction'                              | '<g:if test="${true}"><g:set var="a" value="1"/></g:if>'              || '<g:set var="a" value="1"/>'
+        'inside each turn of an instruction'                 | '<g:each in="${[1, 2]}" var="n"><g:link id="${n}">\n</g:link></g:each>' || '<g:link id="1">\n</g:link><g:link id="2">\n</g:link>'
     }
 
     @Unroll
-    void "a tag that is no instruction is written out: #what"() {
+    void "the text of a file is written as it is, whatever a page of a web application would make of it: #what"() {
         expect:
         render(source) == written
 
         where:
-        what                                                    | source                                                                  || written
-        'g:set, which sets nothing'                             | 'a<g:set var="x" value="${project.name}"/>b'                            || 'a<g:set var="x" value="foo"/>b'
-        'g:message'                                             | '<g:message code="a.b"/>'                                               || '<g:message code="a.b"/>'
-        'g:link, with its body'                                 | '<g:link controller="book" action="list">All ${1 + 1}</g:link>'         || '<g:link controller="book" action="list">All 2</g:link>'
-        'g:render'                                              | '<g:render template="/a/${project.name}"/>'                             || '<g:render template="/a/foo"/>'
-        'a tag without attributes'                              | '<g:layoutBody/>'                                                       || '<g:layoutBody/>'
-        'a tag of another namespace'                            | '<x:y a="${project.name}" b="2">in ${pack.name}</x:y>'                  || '<x:y a="foo" b="2">in acme-audit</x:y>'
-        'a name of an instruction in other letters'             | '<G:IF test="${true}">x</G:IF>'                                         || '<G:IF test="true">x</G:IF>'
-        'its attributes in their order'                         | '<g:x z="1" a="2" m="3"/>'                                              || '<g:x z="1" a="2" m="3"/>'
-        'the instructions in its body run'                      | '<g:form action="save"><g:if test="${true}">in</g:if><g:textField name="${project.name}"/></g:form>' || '<g:form action="save">in<g:textField name="foo"/></g:form>'
-        'inside an instruction'                                 | '<g:if test="${true}"><g:set var="a" value="1"/></g:if>'                || '<g:set var="a" value="1"/>'
-        'the expressions of its attributes have their values'   | '<g:x a="${project.name}" b="${null}" c="${true}" d="${[project.name]}"/>' || '<g:x a="foo" b="null" c="true" d="[foo]"/>'
-        'an escaped expression stays one, in an attribute too'  | '<g:link action="show" id="\\${book.id}">\\${book.title} of ${project.name}</g:link>' || '<g:link action="show" id="${book.id}">${book.title} of foo</g:link>'
-        'an escaped expression that is a map stays one'         | '<g:render template="x" model="\\${[a: 1]}"/>'                          || '<g:render template="x" model="${[a: 1]}"/>'
+        what                             | source                                                                                              || written
+        'the document of a view'         | '<!doctype html>\n<html>\n<head>\n    <meta name="layout" content="main"/>\n    <meta charset="utf-8">\n    <title>${project.name}</title>\n</head>\n<body class="a">\n<p>hi</p>\n</body>\n</html>\n' || '<!doctype html>\n<html>\n<head>\n    <meta name="layout" content="main"/>\n    <meta charset="utf-8">\n    <title>foo</title>\n</head>\n<body class="a">\n<p>hi</p>\n</body>\n</html>\n'
+        'a meta by itself'               | 'a\n<meta name="x" content="${project.name}">\nb\n'                                                 || 'a\n<meta name="x" content="foo">\nb\n'
+        'a title by itself'              | '<title>x</title>'                                                                                  || '<title>x</title>'
+        'XML with such names'            | '<book><title>x</title><body>x</body><head/></book>\n'                                              || '<book><title>x</title><body>x</body><head/></book>\n'
+        'Markdown with such a name'      | 'Put it in `<body>` and `<head>`.\n'                                                                || 'Put it in `<body>` and `<head>`.\n'
+        'what would be encoded for HTML' | '${"<b>&amp;\'\\""}'                                                                                || '<b>&amp;\'"'
+        'spaces and line breaks'         | '  a  \n\n\t<g:x/>  \n  <% if (true) { %>\n  b\n  <% } %>\n\n'                                       || '  a  \n\n\t<g:x/>  \n  b\n\n'
+        'Windows line breaks'            | 'a\r\n<g:x a="1"/>\r\n${project.name}\r\n'                                                          || 'a\r\n<g:x a="1"/>\r\nfoo\r\n'
     }
 
     @Unroll
-    void "a tag that is written out is written anew, not copied: #what"() {
+    void "a backslash in front of what the generator would read writes it instead: #what"() {
         expect:
         render(source) == written
 
         where:
-        what                                               | source                                                     || written
-        'its attributes are a space apart and in quotes'   | '<g:link action=\'show\'   id="1"\n   class="a b">x</g:link>' || '<g:link action="show" id="1" class="a b">x</g:link>'
-        'the quotes are those its values can be in'        | '<g:x a=\'say "hi"\' b="it\'s"/>'                          || '<g:x a=\'say "hi"\' b="it\'s"/>'
-        'an empty body is none'                            | '<g:message code="a"></g:message>'                         || '<g:message code="a"/>'
-        'an attribute that is a map is evaluated'          | '<g:render template="x" model="[a: 1]"/>'                  || '<g:render template="x" model="{a=1}"/>'
-        'a tmpl tag is the g:render it stands for'         | '<tmpl:row a="1"/>'                                        || '<g:render template="row" model="{a=1}"/>'
-        'a link tag is the g:link it stands for'           | '<link:book a="1"/>'                                       || '<g:link mapping="book" params="{a=1}"/>'
+        what                                  | source                                                                          || written
+        'an expression'                       | 'x \\${book.title} y ${project.name}'                                           || 'x ${book.title} y foo'
+        'a scriptlet'                         | '\\<% if (book) { %>\\${book}\\<% } %>'                                         || '<% if (book) { %>${book}<% } %>'
+        'a scriptlet that writes'             | '\\<%= book.title %>'                                                           || '<%= book.title %>'
+        'a directive'                         | '\\<%@ page import="${project.packageName}.Book" %>\n'                          || '<%@ page import="example.grails.Book" %>\n'
+        'a directive that is one of a page'   | '\\<%@ page contentType="text/plain" expressionCodec="html" trimLogicLines="false" grailsLayoutPreprocess="true" %>\n<head/>${"<"}\n' || '<%@ page contentType="text/plain" expressionCodec="html" trimLogicLines="false" grailsLayoutPreprocess="true" %>\n<head/><\n'
+        'a comment'                           | '\\<%-- a comment\n of ${project.name} --%>\n'                                  || '<%-- a comment\n of foo --%>\n'
+        'a comment of the other form'         | '\\%{--\n  A licence.\n--}%\n<p/>\n'                                            || '%{--\n  A licence.\n--}%\n<p/>\n'
+        'a scriptlet of the other form'       | '\\%{ int a = 1 }%'                                                             || '%{ int a = 1 }%'
+        'an instruction tag'                  | '\\<g:each in="\\${books}" var="b">\\${b} ${project.name}\\</g:each>'           || '<g:each in="${books}" var="b">${b} foo</g:each>'
+        'an instruction tag that is empty'    | '\\<g:def var="a" value="\\${1}"/>'                                             || '<g:def var="a" value="${1}"/>'
+        'a line of them only is still a line' | 'a\n\\<% if (x) { %>\nb\n\\<% } %>\n\\<%-- c --%>\nd\n'                          || 'a\n<% if (x) { %>\nb\n<% } %>\n<%-- c --%>\nd\n'
     }
 
-    @Unroll
-    void "what a view of the application needs as it is can be written: #what"() {
+    void "a backslash in front of anything else is a backslash"() {
         expect:
-        render(source) == written
+        render('a\\b \\<g:link>x\\</g:link> \\<p> \\$5 \\% \\{ c:\\dir\\ \\') == 'a\\b \\<g:link>x\\</g:link> \\<p> \\$5 \\% \\{ c:\\dir\\ \\'
+    }
+
+    void "two backslashes in front of what the generator would read write one, and what they are in front of"() {
+        expect:
+        render('\\\\${book} \\\\<% a %> \\\\%{-- c --}% \\\\<g:if test="x">') == '\\${book} \\<% a %> \\%{-- c --}% \\<g:if test="x">'
+    }
+
+    void "a dollar that starts no expression is a dollar"() {
+        expect:
+        render('cost $5 and $name and $ {x} and 100%') == 'cost $5 and $name and $ {x} and 100%'
+    }
+
+    void "what is in a scriptlet, an expression or a comment is theirs, also when it looks like a tag"() {
+        expect: 'what a scriptlet and an expression write is what they say'
+        render('<% out << \'<g:link a="[b: 1]"   >\' %>|${\'<x:y  >\'}|${"<g:if test=\'a\'>"}|<%= "</g:each>" %>') ==
+                '<g:link a="[b: 1]"   >|<x:y  >|<g:if test=\'a\'>|</g:each>'
+
+        and: 'a comment is left out with what is in it'
+        render('a<%-- <g:link>x</g:link> ${nope} --%>b%{-- <g:if> --}%c') == 'abc'
+
+        and: 'an instruction in a comment of HTML, which is text, runs'
+        render('<!-- <g:if test="${true}">x</g:if> <g:link/> -->') == '<!-- x <g:link/> -->'
+    }
+
+    @IgnoreIf(value = { RepositoryFiles.guide() == null }, reason = 'the guide is not beside Forge in these sources')
+    @Unroll
+    void "the example #example of the guide writes what the guide says it writes"() {
+        given:
+        Pack pack = pack('acme-audit', "files:\n  - from: t.txt.gsp\n    to: t.txt\n", ['t.txt.gsp': RepositoryFiles.example(example)], example)
+
+        expect:
+        generate(beanContext.getBean(ProjectGenerator), ['acme-audit'], [pack], ApplicationType.WEB, 'com.example.shop')['t.txt'] ==
+                RepositoryFiles.example("${example}-written")
 
         where:
-        what                                             | source                                                                           || written
-        'an expression, with a backslash'                | 'x \\${book.title} y ${project.name}'                                            || 'x ${book.title} y foo'
-        'a dollar that starts no expression'             | 'cost $5 and $name'                                                              || 'cost $5 and $name'
-        'an instruction tag, its < as an expression'     | '${\'<\'}g:each in="\\${books}" var="b">\\${b} ${project.name}${\'<\'}/g:each>'  || '<g:each in="${books}" var="b">${b} foo</g:each>'
-        'any tag as typed, its < as an expression'       | '${\'<\'}g:render template="x" model="[a: 1]"/>'                                 || '<g:render template="x" model="[a: 1]"/>'
-        'an instruction tag, as the text of an expression' | '${\'<g:if test="\\${book}">\'}t${\'</g:if>\'}'                                || '<g:if test="${book}">t</g:if>'
-    }
-
-    void "the examples of the guide write what the guide says they write"() {
-        expect: 'instructions within a line'
-        render('audit.store=<g:if test="${options.data == \'mongodb\'}">collection</g:if><g:else>table</g:else>\n' +
-                'audit.features=<g:each in="${features}" var="feature">${feature} </g:each>\n') =~ /^audit\.store=table\naudit\.features=([a-z0-9-]+ )*acme-audit ([a-z0-9-]+ )*\n$/
-
-        and: 'a line that holds only a tag writes its line break, and one that holds only a scriptlet does not'
-        render('<g:if test="${true}">\nyes\n</g:if>\n<% if (true) { %>\nyes\n<% } %>\n') == '\nyes\n\nyes\n'
-
-        and: 'a view with expressions of its own'
-        render('<h1>\\${book.title} in ${project.naturalName}</h1>\n<g:link action="edit" id="\\${book.id}">Edit</g:link>\n') ==
-                '<h1>${book.title} in Foo</h1>\n<g:link action="edit" id="${book.id}">Edit</g:link>\n'
-
-        and: 'a view with instructions of its own, and a tag as it is typed'
-        render('${\'<\'}g:each in="\\${books}" var="book">\n    <li>\\${book.title}</li>\n${\'<\'}/g:each>\n' +
-                '${\'<\'}g:render template="row" model="[book: book]"/>\n') ==
-                '<g:each in="${books}" var="book">\n    <li>${book.title}</li>\n</g:each>\n<g:render template="row" model="[book: book]"/>\n'
-    }
-
-    void "a backslash does not keep an instruction tag from running, and an instruction in a comment of HTML runs"() {
-        expect:
-        render('\\<g:if test="${true}">t\\</g:if>') == '\\t\\'
-        render('<!-- <g:if test="${true}">x</g:if> -->') == '<!-- x -->'
-        render('a<%-- <g:if test="${true}">x</g:if> --%>b') == 'ab'
+        example << ['template', 'instructions', 'text-tags', 'view']
     }
 
     void "a view that has nothing to fill in is a file of another name in the pack, and is written as it is"() {
@@ -291,7 +337,7 @@ class PackTemplateSpec extends ApplicationContextSpec {
         generate(['acme-audit'], [pack])['grails-app/views/book/show.gsp'] == view
     }
 
-    void "a name a tag that is written out would have set is not there"() {
+    void "a name a tag that is text would have set in a view is not there"() {
         when:
         render('one\n<g:set var="x" value="1"/>${x}\nthree')
 
@@ -320,25 +366,61 @@ class PackTemplateSpec extends ApplicationContextSpec {
         'throws on its last line'                         | 'one\ntwo\n<% throw new IllegalStateException("boom") %>'                       || 'line 3: boom'
         'throws on its only line'                         | '<% throw new IllegalStateException("boom") %>'                                 || 'line 1: boom'
         'throws after a comment of several lines'         | '<%-- a\n header\n of three lines --%>\nfour\n<% throw new IllegalStateException("boom") %>\nsix\n' || 'line 5: boom'
+        'throws after a comment of one line'              | 'one\n<%-- c --%>\n<% throw new IllegalStateException("boom") %>\n'             || 'line 3: boom'
+        'throws after an expression of several lines'     | '${[1,\n 2,\n 3].size()}\nfour\n<% features.nope() %>\nsix\n'                   || 'line 5: No signature of method: nope'
+        'throws after a scriptlet of several lines'       | '<%\n int a = 1\n int b = 2\n%>\nfive\n<% features.nope() %>\n'                 || 'line 6: No signature of method: nope'
+        'throws after tags of several lines that are text' | '<g:link\n  action="a"\n  params="[b: 1]">\nfour</g:link>\n<% features.nope() %>\n' || 'line 5: No signature of method: nope'
+        'throws after escapes'                            | '\\<%@ page import="a.B" %>\n\\%{-- c\n --}%\n\\<g:if test="x">\n<% features.nope() %>\n' || 'line 5: No signature of method: nope'
         'throws in a scriptlet of several lines'          | 'one\ntwo\n<%\n\n features.nope()\n%>\nseven\n'                                 || 'line 3: No signature of method: nope'
         'throws in a closure'                             | 'one\n<% [1].each { %>\nthree\n<% it.nope() %>\n<% } %>\n'                      || 'line 4: No signature of method: nope'
         'throws in the body of an instruction'            | 'one\n<g:each in="${[1]}" var="n">\nthree\n<% n.nope() %>\n</g:each>\n'         || 'line 4: No signature of method: nope'
-        'throws in the body of a tag that is written out' | 'one\n<g:form>\nthree\n<% throw new IllegalStateException("boom") %>\n</g:form>\n' || 'line 4: Error executing tag <g:form>: boom'
+        'throws in the body of a tag that is text'        | 'one\n<g:form>\nthree\n<% throw new IllegalStateException("boom") %>\n</g:form>\n' || 'line 4: boom'
         'throws in the test of an instruction'            | 'one\ntwo\n<g:if test="${features.nope()}">x</g:if>\n'                          || 'line 3: No signature of method: nope'
         'changes what it is given'                        | 'one\n<% features << "x" %>\n'                                                  || 'line 2: java.lang.UnsupportedOperationException'
         'names what there is not, in a scriptlet'         | 'one\ntwo\n<% if (flags) { %>x<% } %>\n'                                        || "line 3: There is no 'flags' for a template: template API 1 has "
         'asserts what is not so'                          | 'one\ntwo\n<% assert features.contains("nope") : "wanted" %>\n'                 || 'line 3: wanted'
         'calls itself without end'                        | 'one\ntwo\n<% def f; f = { f() }; f() %>\n'                                     || 'line 3: it calls itself without end'
+        'calls itself without end in an instruction'      | 'one\n<g:each in="${[1]}">\n<% def f; f = { f() }; f() %>\n</g:each>\n'         || 'line 3: it calls itself without end'
+        'calls itself without end in an expression'       | 'one\n${({ -> def f; f = { f() }; f() })()}\n'                                  || 'line 2: it calls itself without end'
         'fails in an expression'                          | 'one\ntwo\n${features.nope()}'                                                  || 'Error evaluating expression [features.nope()] on line [3]: '
-        'has a scriptlet that does not compile'           | 'one\ntwo\n<% def x = ) %>\nfour\n'                                             || "line 3: it does not compile: "
-        'has an expression that does not compile'         | 'one\n${1 +* }\nthree\n'                                                        || "line 2: it does not compile: "
-        'has a test that does not compile'                | 'one\ntwo\nthree\n<g:if test="${)}">x</g:if>'                                   || "line 4: it does not compile: "
-        'does not compile after a comment'                | '<%-- a\n header\n of three lines --%>\nfour\n<% def x = ) %>\nsix\n'           || "line 5: it does not compile: "
+        'fails in an expression in a tag that is text'    | 'one\n<g:link\n id="${features.nope()}"/>'                                      || 'Error evaluating expression [features.nope()] on line [3]: '
+        'has a scriptlet that does not compile'           | 'one\ntwo\n<% def x = ) %>\nfour\n'                                             || 'line 3: it does not compile: '
+        'has an expression that does not compile'         | 'one\n${1 +* }\nthree\n'                                                        || 'line 2: it does not compile: '
+        'has a test that does not compile'                | 'one\ntwo\nthree\n<g:if test="${)}">x</g:if>'                                   || 'line 4: it does not compile: '
+        'does not compile after a comment'                | '<%-- a\n header\n of three lines --%>\nfour\n<% def x = ) %>\nsix\n'           || 'line 5: it does not compile: '
+        'does not compile after an expression of several lines' | '${[1,\n 2,\n 3].size()}\nfour\n<% new no.such.Thing() %>\nsix\n'         || 'line 5: it does not compile: unable to resolve class no.such.Thing'
         'imports a class there is not'                    | 'one\ntwo\nthree\n<%@ page import="no.such.Thing" %>\nfive\nsix\n'              || 'line 4: it does not compile: unable to resolve class no.such.Thing'
-        'leaves a block open'                             | 'one\n<% if (true) { %>\nthree\n'                                               || "at its end: it does not compile: Missing '}'"
-        'leaves an instruction open'                      | 'one\n<g:if test="${true}">\nthree\n'                                           || 'at its end: Grails tags were not closed! [[<g:if>]]'
+        'leaves a block open'                             | 'one\n<% if (true) { %>\nthree\n'                                               || "line 3: it does not compile: Missing '}'"
+        'leaves an instruction open'                      | 'one\n<g:if test="${true}">\nthree\n'                                           || 'line 3: Grails tags were not closed! [[<g:if>]]'
         'has an instruction without what it needs'        | 'one\n<g:if>x</g:if>\nthree\n'                                                  || 'line 2: Tag [if] must have one or both of the attributes [test] or [env]'
         'has a declaration, which a page cannot have'     | 'one\n<%! int n = 0 %>\nthree\n'                                                || 'line 2: JSP-style declaration blocks'
+    }
+
+    void "a template whose page has more than a thousand lines says on which of its own it fails"() {
+        when:
+        render((1..499).collect { int line -> "<% int a${line} = ${line} %>\n" }.join('') + 'five hundred\n<% features.nope() %>\n')
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith('The template t.txt.gsp of the feature acme-audit cannot be rendered: line 501: No signature of method: nope')
+    }
+
+    @Unroll
+    void "a template that writes without end #where is stopped, and said to write too much"() {
+        when:
+        render(source)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The template t.txt.gsp of the feature acme-audit writes more than the 1048576 bytes a file of a feature pack can have'
+
+        where:
+        where                                  | source
+        'in a scriptlet'                       | '<% while (true) { %>' + ('x' * 1000) + '<% } %>'
+        'in the body of an instruction'        | '<g:each in="${[1]}"><% while (true) { %>' + ('x' * 1000) + '<% } %></g:each>'
+        'in an instruction in an instruction'  | '<g:if test="${true}"><g:while test="${true}">' + ('x' * 1000) + '</g:while></g:if>'
+        'in the body of a tag that is text'    | '<g:form><% while (true) { %>' + ('x' * 1000) + '<% } %></g:form>'
+        'in an expression'                     | '${(1..10000000).each { out << "' + ('x' * 1000) + '" }}'
     }
 
     void "a template that fails says the same every time it is rendered"() {
@@ -358,6 +440,111 @@ class PackTemplateSpec extends ApplicationContextSpec {
 
         then:
         messages.every { it.startsWith('The template bad.txt.gsp of the feature acme-audit cannot be rendered: line 2: it does not compile: ') }
+    }
+
+    @Unroll
+    void "a template that #problem is compiled once, however often it is rendered"() {
+        given:
+        PackPages pages = new PackPages(getClass().classLoader)
+
+        when:
+        List<String> messages = (1..10).collect {
+            try {
+                pages.render('acme', source, 'a template', 1, [:], LIMIT)
+                return 'rendered'
+            } catch (IllegalArgumentException e) {
+                return e.message
+            }
+        }
+
+        then:
+        messages.toSet() == [says].toSet()
+        pages.compiled == 1
+
+        where:
+        problem                  | source                 || says
+        'the parser refuses'     | 'one\n<g:if>x</g:if>'  || 'The template a template cannot be rendered: line 2: Tag [if] must have one or both of the attributes [test] or [env]'
+        'does not compile'       | '<% new no.such.Thing() %>' || 'The template a template cannot be rendered: line 1: it does not compile: unable to resolve class no.such.Thing'
+        'fails when it is run'   | '<% throw new IllegalStateException("no") %>' || 'The template a template cannot be rendered: line 1: no'
+    }
+
+    void "a template that is interrupted fails, and leaves the thread interrupted"() {
+        given:
+        PackPages pages = new PackPages(getClass().classLoader)
+
+        when:
+        pages.render('acme', '<% throw new InterruptedException("stop") %>', 'a template', 1, [:], LIMIT)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == 'The template a template cannot be rendered: line 1: stop'
+        Thread.interrupted()
+
+        when: 'what interrupts it is inside what a page throws'
+        pages.render('acme', '${[Thread.currentThread().interrupt(), Thread.sleep(60_000)]}', 'a template', 1, [:], LIMIT)
+
+        then:
+        thrown(IllegalArgumentException)
+        Thread.interrupted()
+    }
+
+    void "the templates of two owners are two pages, whatever their names and their sources are"() {
+        given: 'two owners and sources that are the same characters one after the other, with a separator between them'
+        PackPages pages = new PackPages(getClass().classLoader)
+        String separator = '\u0000' + PackPages.DIRECTIVES
+
+        when:
+        String first = new String(pages.render('a', 'Q' + separator + 'tail', 'a template', 1, [:], LIMIT), 'UTF-8')
+        String second = new String(pages.render('a' + separator + 'Q', 'tail', 'a template', 1, [:], LIMIT), 'UTF-8')
+
+        then:
+        pages.compiled == 2
+        first.startsWith('Q')
+        second == 'tail'
+
+        when: 'and the same owner and source again'
+        pages.render('a', 'Q' + separator + 'tail', 'a template', 1, [:], LIMIT)
+        pages.render('ab', 'c', 'a template', 1, [:], LIMIT)
+        pages.render('a', 'bc', 'a template', 1, [:], LIMIT)
+
+        then:
+        pages.compiled == 4
+    }
+
+    void "one set of compiled pages renders for many threads at once, each with its own model"() {
+        given: 'four templates, each with its number in what it writes'
+        PackPages pages = new PackPages(getClass().classLoader)
+        List<String> sources = (0..3).collect { int template ->
+            ('<% 3.times { i -> %>\n${n}-${i}-' + template + '\n<% } %>\n<g:if test="${n % 2 == 0}">even</g:if><g:else>odd</g:else><g:x n="${n}"/>\n').toString()
+        }
+        int threads = 8
+        ExecutorService pool = Executors.newFixedThreadPool(threads)
+        CyclicBarrier together = new CyclicBarrier(threads)
+
+        when:
+        List<Future<List<String>>> wrong = (0..<threads).collect { int thread ->
+            pool.submit({
+                together.await(60, TimeUnit.SECONDS)
+                List<String> mismatches = []
+                for (int i = 0; i < 200; i++) {
+                    int template = (thread + i) % sources.size()
+                    int n = thread * 1000 + i
+                    String written = new String(pages.render('acme', sources[template], 'a template', 1, [n: n] as Map<String, Object>, LIMIT), 'UTF-8')
+                    String expected = "${n}-0-${template}\n${n}-1-${template}\n${n}-2-${template}\n${n % 2 == 0 ? 'even' : 'odd'}<g:x n=\"${n}\"/>\n"
+                    if (written != expected) {
+                        mismatches << written
+                    }
+                }
+                return mismatches
+            } as Callable<List<String>>)
+        }
+
+        then:
+        wrong.collect { it.get(120, TimeUnit.SECONDS) }.flatten() == []
+        pages.compiled == sources.size()
+
+        cleanup:
+        pool.shutdownNow()
     }
 
     private String render(String source) {

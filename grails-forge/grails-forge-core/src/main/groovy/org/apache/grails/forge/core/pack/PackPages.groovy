@@ -19,6 +19,7 @@
 package org.apache.grails.forge.core.pack
 
 import groovy.transform.CompileStatic
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
@@ -45,7 +46,9 @@ import org.grails.taglib.encoder.OutputContext
  * application trusts where it comes from.</p>
  *
  * <p>Every template is compiled as if it started with {@link #DIRECTIVES}: a line that holds only
- * logic writes nothing, and what an expression gives is written as it is, not encoded for HTML.</p>
+ * logic writes nothing, what an expression gives is written as it is, not encoded for HTML, and the
+ * text is that of a file and not of a page of a web application. The only tags a template has are the
+ * instructions to the generator; every other tag is text, see {@link PackTemplateSource}.</p>
  *
  * <p>A template is compiled once for an instance, however often it is rendered: the compiled page is
  * kept, by a digest of whose template it is and of its source, for as long as the instance is. A
@@ -62,8 +65,14 @@ import org.grails.taglib.encoder.OutputContext
 @CompileStatic
 final class PackPages {
 
-    /** What every template of a pack starts with, whether its source says so or not */
-    public static final String DIRECTIVES = '<%@ page trimLogicLines="true" expressionCodec="none" %>'
+    /**
+     * What every template of a pack starts with, whether its source says so or not. A page is by default
+     * one of a web application: its {@code head}, {@code title}, {@code meta} and {@code body} are
+     * rewritten for the layout it is shown in, which a file that is generated must not be, and it is
+     * compiled statically where a system property asks for that, which a template with a model that has
+     * no types cannot be.
+     */
+    public static final String DIRECTIVES = '<%@ page trimLogicLines="true" expressionCodec="none" grailsLayoutPreprocess="false" compileStatic="false" %>'
 
     private static final int MAX_MESSAGE = 500
     private static final int MAX_FRAMES = 200
@@ -74,7 +83,7 @@ final class PackPages {
     private static final DefaultOutputContextLookup ENCODING_STATE = new DefaultOutputContextLookup()
 
     private final GroovyPagesTemplateEngine engine
-    private final Map<String, GroovyPageMetaInfo> pages = new ConcurrentHashMap<>()
+    private final Map<String, Compiled> pages = new ConcurrentHashMap<>()
     private int compiled
 
     /**
@@ -119,23 +128,37 @@ final class PackPages {
     @SuppressWarnings('ParameterCount')
     byte[] render(String owner, String source, String name, int templateApi, Map<String, Object> model, int limit) {
         StringWriter out = new Bounded(limit)
-        String text = source.startsWith('﻿') ? source.substring(1) : source
+        String text = source.startsWith('\uFEFF') ? source.substring(1) : source
         GroovyPageMetaInfo page = null
         try {
-            page = compiledPage(owner, text)
+            Compiled compiled = compiledPage(owner, text)
+            if (compiled.refused != null) {
+                throw compiled.refused
+            }
+            page = compiled.page
             new GroovyPageTemplate(page, new Names(model.keySet(), templateApi)).make(model).writeTo(out)
-        } catch (TooMuch ignored) {
-            throw new IllegalArgumentException("The template ${name} writes more than the ${limit} bytes a file of a feature pack can have")
-        } catch (StackOverflowError e) {
-            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page, text)}it calls itself without end", e)
-        } catch (VirtualMachineError e) {
-            // not for this to say anything about
-            throw e
         } catch (Throwable e) {
+            // a page hands on what its expressions and the bodies of its tags throw inside an exception of
+            // its own, so what an error is, is asked of all it was caused by
+            if (causedBy(e, TooMuch) != null) {
+                throw new IllegalArgumentException("The template ${name} writes more than the ${limit} bytes a file of a feature pack can have")
+            }
+            if (causedBy(e, StackOverflowError) != null) {
+                throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page)}it calls itself without end", e)
+            }
+            Throwable ofMachine = causedBy(e, VirtualMachineError)
+            if (ofMachine != null) {
+                // not for this to say anything about
+                throw ofMachine
+            }
+            if (causedBy(e, InterruptedException) != null) {
+                // whoever interrupted the thread still has to find it interrupted
+                Thread.currentThread().interrupt()
+            }
             // an assertion and a missing class are errors of the template like any other. What went wrong
             // is in words of its author and of the compiler: a few of them, on one line, and with the
             // error itself for whoever asks for the whole of it
-            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page, text)}${reason(e)}", e)
+            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page)}${reason(e)}", e)
         }
         byte[] written = out.toString().getBytes(StandardCharsets.UTF_8)
         if (written.length > limit) {
@@ -144,13 +167,24 @@ final class PackPages {
         return written
     }
 
+    private static Throwable causedBy(Throwable e, Class<? extends Throwable> type) {
+        Throwable each = e
+        for (int i = 0; i < MAX_CAUSES && each != null; i++) {
+            if (type.isInstance(each)) {
+                return each
+            }
+            each = each.getCause()
+        }
+        return null
+    }
+
     /**
-     * The compiled page of a template, which is compiled when there is none yet. A page that does not
-     * compile is kept as well, and fails every time it is rendered.
+     * The compiled page of a template, which is compiled when there is none yet. A page the parser
+     * refuses and one that does not compile are kept as well, and fail every time they are rendered.
      */
-    private GroovyPageMetaInfo compiledPage(String owner, String text) {
+    private Compiled compiledPage(String owner, String text) {
         String key = key(owner, text)
-        GroovyPageMetaInfo page = pages.get(key)
+        Compiled page = pages.get(key)
         if (page == null) {
             // one at a time: an engine is not said to compile two pages at once, and a page is compiled once
             synchronized (pages) {
@@ -160,7 +194,13 @@ final class PackPages {
                     // of the template; a name of its own for the page, since the name of a file is not always
                     // one a page can have
                     String name = "template${++compiled}.gsp"
-                    page = ((GroovyPageTemplate) engine.createTemplate(DIRECTIVES + text, name, false)).metaInfo
+                    try {
+                        String source = DIRECTIVES + PackTemplateSource.toPage(text)
+                        page = new Compiled(((GroovyPageTemplate) engine.createTemplate(source, name, false)).metaInfo, null)
+                    } catch (GrailsTagException e) {
+                        // what the parser refuses, it refuses each time
+                        page = new Compiled(null, e)
+                    }
                     pages.put(key, page)
                 }
             }
@@ -168,12 +208,14 @@ final class PackPages {
         return page
     }
 
+    // each part with its length in front of it: no two owners and sources are the same bytes
     private static String key(String owner, String text) {
         MessageDigest digest = MessageDigest.getInstance('SHA-256')
-        digest.update(owner.getBytes(StandardCharsets.UTF_8))
-        digest.update((byte) 0)
-        digest.update(DIRECTIVES.getBytes(StandardCharsets.UTF_8))
-        digest.update(text.getBytes(StandardCharsets.UTF_8))
+        for (String part : [owner, DIRECTIVES, text]) {
+            byte[] bytes = part.getBytes(StandardCharsets.UTF_8)
+            digest.update(ByteBuffer.allocate(Integer.BYTES).putInt(bytes.length).array())
+            digest.update(bytes)
+        }
         return HexFormat.of().formatHex(digest.digest())
     }
 
@@ -182,10 +224,10 @@ final class PackPages {
      * the error does not say or says so itself. The compiler and the virtual machine name a line of the
      * class a page is compiled to, and the page has the line of the template each of those was written for.
      */
-    private static String where(Throwable e, GroovyPageMetaInfo page, String text) {
+    private static String where(Throwable e, GroovyPageMetaInfo page) {
         int line = 0
         if (e instanceof GrailsTagException) {
-            // of a tag that is written out, it names the line the tag ends on: what failed in its body knows better
+            // thrown for what failed inside a tag, it names the line the tag ends on: what failed knows better
             line = ((GrailsTagException) e).getLineNumber()
             Throwable inBody = e.getCause()
             for (int i = 0; i < MAX_CAUSES && inBody != null && page?.getPageClass() != null; i++) {
@@ -201,12 +243,8 @@ final class PackPages {
         } else if (page?.getPageClass() != null) {
             line = lineOfTemplate(page, lineOfPage(e, page.getPageClass().getName()))
         }
-        if (line < 1) {
-            return ''
-        }
-        int lines = text.count('\n') + (text.endsWith('\n') ? 0 : 1)
-        // what is found missing only where the template ends
-        return line > lines ? 'at its end: ' : "line ${line}: "
+        // what is found missing only where the template ends is on its last line
+        return line < 1 ? '' : "line ${line}: "
     }
 
     private static int lineOfTemplate(GroovyPageMetaInfo page, int lineOfPage) {
@@ -325,6 +363,21 @@ final class PackPages {
             }
             throw new MissingPropertyException("There is no '${name}' for a template: template API ${templateApi} has " +
                     "${known}")
+        }
+    }
+
+    /**
+     * What compiling a template came to: its page, which can itself hold that it does not compile, or
+     * what the parser refused it with.
+     */
+    private static final class Compiled {
+
+        final GroovyPageMetaInfo page
+        final GrailsTagException refused
+
+        Compiled(GroovyPageMetaInfo page, GrailsTagException refused) {
+            this.page = page
+            this.refused = refused
         }
     }
 

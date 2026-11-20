@@ -166,3 +166,23 @@ tasks.named('test', Test).configure { Test test ->
          "-Dforge.packCheck.checkedLineOfGradlePlugin=${readByGradlePlugin}".toString()]
     } as CommandLineArgumentProvider)
 }
+// The specs of the templates of packs hold the guide and the class with the template API to each other,
+// run the examples of the guide, and write the views of the example applications back. Those files are
+// beside Forge in the sources of Grails and are not on the class path of the tests, so they are named
+// here: a change to one of them runs the tests again. Where Forge is built without them, the specs
+// that read them are skipped.
+tasks.named('test', Test).configure { Test test ->
+    Directory sources = rootProject.layout.projectDirectory.dir('..')
+    test.inputs.files(sources.file('grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc'))
+            .withPropertyName('forgeFeaturePacksGuide')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    test.inputs.files(layout.projectDirectory.file('src/main/groovy/org/apache/grails/forge/core/pack/PackModel.groovy'))
+            .withPropertyName('templateApiJavadoc')
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+    test.inputs.files(['grails-test-examples', 'grails-spring-security'].collect { String examples ->
+        fileTree(sources.dir(examples)) { ConfigurableFileTree views ->
+            views.include('**/grails-app/views/**/*.gsp')
+            views.exclude('**/build/**')
+        }
+    }).withPropertyName('exampleViews').withPathSensitivity(PathSensitivity.RELATIVE)
+}

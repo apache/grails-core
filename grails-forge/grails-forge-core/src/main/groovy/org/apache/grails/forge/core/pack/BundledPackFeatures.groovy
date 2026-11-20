@@ -51,17 +51,30 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
 
     private static final String BEAN_PREFIX = 'forgeFeaturePack.'
 
+    private final ClassLoader resources
     private ListableBeanFactory beanFactory
     private PackPages shared
 
+    BundledPackFeatures() {
+        this(BundledPackFeatures.classLoader)
+    }
+
+    /**
+     * @param resources the class loader that has the index of the packs and the packs it names
+     */
+    BundledPackFeatures(ClassLoader resources) {
+        this.resources = resources
+    }
+
     @Override
     void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) {
+        // the pages are compiled against Forge, wherever its packs are read from
         ClassLoader loader = BundledPackFeatures.classLoader
         PackLoader packs = new PackLoader()
         Function<String, Optional<Feature>> lookup = { String name -> find(name) } as Function<String, Optional<Feature>>
         Supplier<PackPages> pages = { -> shared(loader) } as Supplier<PackPages>
-        for (String name : names(loader)) {
-            Pack pack = packs.fromClasspath(loader, name)
+        for (String name : names(resources)) {
+            Pack pack = packs.fromClasspath(resources, name)
             PackFeatures.checkCompatibility(pack, 'Grails', pack.descriptor.grailsCompatibility, VersionInfo.getGrailsVersion())
             PackFeatures.checkCompatibility(pack, 'Forge', pack.descriptor.forgeCompatibility, VersionInfo.getVersion())
             RootBeanDefinition definition = new RootBeanDefinition(PackFeature, { -> PackFeature.of(pack, lookup, pages) } as Supplier<PackFeature>)
@@ -76,7 +89,8 @@ class BundledPackFeatures implements BeanDefinitionRegistryPostProcessor {
 
     /**
      * @return the number of templates of the packs of Forge that have been compiled since Forge started,
-     * which is at most the number of templates those packs have
+     * which is at most the number of templates those packs have: one that cannot be compiled is counted
+     * once too
      */
     synchronized int getCompiledTemplates() {
         return shared == null ? 0 : shared.getCompiled()

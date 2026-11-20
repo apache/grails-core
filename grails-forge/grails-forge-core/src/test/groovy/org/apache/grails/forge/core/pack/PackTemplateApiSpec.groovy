@@ -30,6 +30,7 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
+import spock.lang.IgnoreIf
 import spock.lang.TempDir
 import spock.lang.Unroll
 
@@ -87,6 +88,7 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
         e.message.contains("There is no 'options.nope' for a template: template API 1 has [options.data, options.jdk, options.reloading, options.servlet]")
     }
 
+    @IgnoreIf(value = { RepositoryFiles.guide() == null }, reason = 'the guide is not beside Forge in these sources')
     void "the names of template API 1 are those the class and the guide say it has"() {
         given: 'the names a template is given'
         String nested = generate(['acme-audit'], pack(['t.txt.gsp':
@@ -101,14 +103,9 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
         }
 
         and: 'the table of the class, and the table of the guide'
-        File root = new File('').absoluteFile
-        while (root != null && !new File(root, 'grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc').file) {
-            root = root.parentFile
-        }
-        assert root != null: 'the guide is beside Forge in the sources of Grails'
-        String javadoc = new File(root, 'grails-forge/grails-forge-core/src/main/groovy/org/apache/grails/forge/core/pack/PackModel.groovy').getText('UTF-8')
+        String javadoc = RepositoryFiles.packModel().getText('UTF-8')
         Set<String> ofClass = (javadoc =~ /<tr><td>\{@code ([\w.]+)\}<\/td>/).collect { List<String> match -> match[1] } as Set<String>
-        String guide = new File(root, 'grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc').getText('UTF-8')
+        String guide = RepositoryFiles.guide().getText('UTF-8')
         String table = guide.substring(guide.indexOf('|Name |Value'))
         table = table.substring(0, table.indexOf('|==='))
         // a row is the names, then what they are, with an empty line before it
