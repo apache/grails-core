@@ -179,6 +179,19 @@ any expression, such as `random()` or a SQL formula, in its place among the quer
 are registered in code, or by a plugin through `META-INF/services` providers that are loaded when the first query
 runs. See the section on extending the criteria builder in the GORM for Hibernate 7 guide.
 
+==== One Command Line: Application Types, Features and Feature Packs
+
+Grails 9 has one command line, `grails`. The Grails shell and its profiles are gone, and with them the `grails-shell-cli` and `grails-forge-cli` commands, the `-t`/`--type` option and the `GRAILS_PREFERRED_SHELL` environment variable. The one command line creates projects, creates the classes of a project and runs its build (`run-app`, `test-app`, `assemble`, `console` and the others), in a project and in its interactive mode. See xref:commandLine[The Command Line].
+
+* *Application types and features take the place of profiles.* `create-app`, `create-restapi`, `create-plugin` and `create-web-plugin` each create one type of application, with the features that are selected for it; `--exclude-features` leaves a default feature out. See link:applicationTypes.html[Application Types, Features and Feature Packs], and link:applicationTypes.html#profilesReplaced[What Became of Profiles] for a profile of your own and for the profile commands that are removed.
+* *Feature packs.* A plugin can bring a feature of its own to application creation: a descriptor and templates in `src/main/forge`, published in the jar of the plugin and selected with `--features` by the coordinates of the plugin. See xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+* *The `.grails` project record.* A generated project records how it was generated: the type, the options, the features, and a copy of every generated file as it was generated. It is committed with the project, and takes the place of `grails-forge-cli.yml`.
+* *`feature add`.* Adds a feature of Grails to an existing project: the files become what the `create-` command would have written with the feature, your own changes are kept, and when the two cannot be had together nothing is written and the conflicts are named.
+* *`project show` and `project regenerate`.* `project show` says how a project was generated and prints the command that creates it again; `project regenerate` writes the project as it was generated to another directory, or with `--diff` names the files that are no longer as generated.
+* *Multi-project builds.* `create-app --subproject` creates an application as a project of an existing Gradle build, with the files of the application only, and prints the `include` line for the settings of the build. In such a build the commands run the Gradle wrapper of the root and name their tasks by the path of the project.
+
+The `.grails` record, `feature add`, `project show`, `project regenerate` and `--subproject` are described in xref:commandLine#creatingProject[Creating a Grails Project]. What an existing application has to change, the Grails wrapper among it, is in xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 33 to 38.
+
 ==== Hibernate 7 Application Generation
 
 Grails Forge can now generate applications configured for Grails Data with Hibernate 7.
@@ -186,7 +199,7 @@ The `create-*` commands also accept a new `-d, --data` option (the previous `-g`
 
 [source,console]
 ----
-grails -t forge create-app --data=hibernate7 com.example.demo
+grails create-app --data=hibernate7 com.example.demo
 ----
 
 Applications generated for Hibernate 7 consume `grails-hibernate7-bom` consistently across the application dependencies, the buildscript classpath, and `buildSrc`.
@@ -206,7 +219,7 @@ Grails Forge offers a new `gorm-async` feature that adds the asynchronous progra
 
 [source,console]
 ----
-grails -t forge create-app --features=gorm-async com.example.demo
+grails create-app --features=gorm-async com.example.demo
 ----
 
 The feature layers on top of whichever GORM implementation is selected, defaulting to Hibernate when none is chosen.
@@ -314,7 +327,7 @@ The command contract itself moved from `grails.dev.commands.*` to `org.apache.gr
 in the new `grails-core-cli` artifact.
 Applications consume cli artifacts through the new `grailsCli` Gradle configuration, which is
 compile-visible for `grails-app/commands` sources and on the command-runner classpath, but never on
-`runtimeClasspath` — commands and their CLI-only dependencies (such as `grails-shell-cli`) are
+`runtimeClasspath` — commands and their CLI-only dependencies are
 excluded from `bootRun`, `bootJar`, and `bootWar` entirely.
 The Grails Gradle plugin provisions `grailsCli` automatically: it adds `grails-core-cli` and
 `grails-console`, and discovers every companion cli artifact advertised by the application's
@@ -442,7 +455,7 @@ Grails Forge has a new `grails-compile-static` feature that generates the `compi
 
 [source,console]
 ----
-grails -t forge create-app --features=grails-compile-static com.example.demo
+grails create-app --features=grails-compile-static com.example.demo
 ----
 
 See <<gspStaticCompilation,Static Compilation>> for what static compilation asks of a GSP page.
@@ -848,7 +861,7 @@ It covers every store GORM runs statements on: SQL through Hibernate 5 and 7, Cy
 through MongoDB. With the GORM GraphQL plugin, each GraphQL operation is a page of its own, such as
 `graphql/index (query BookList)`.
 Start the application with `grails run-app --query-tail` (or `./gradlew bootRun -Pgrails.gorm.queryTail.enabled`), then
-`grails query-tail` in a second terminal follows the capture and refreshes as requests are served. `--statements`
+`grails gradle runScriptCommand --arg=query-tail` in a second terminal follows the capture and writes the summary again as requests are served; each option is a further `--arg`. `--statements`
 ranks the statements, `--page=book/show` shows one page's, `--stream` prints each statement as it runs, and
 `--all --once` reports a whole run, including an integration test run. The command reads a capture file and does
 not boot the application. Capture is off unless the application is started with it, and an application started

@@ -17,64 +17,58 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-Grails 3.0's command line system differs greatly from previous versions of Grails and features APIs for invoking Gradle for build related tasks, as well as performing code generation.
+Grails has one command line, the `grails` command. It creates projects, creates the classes of a project, adds features to a project and runs the build of a project, which is a https://gradle.org[Gradle] build. A generated project also has the Grails wrapper, `grailsw`, which downloads the command line of the version of Grails the project is on and takes the same commands.
 
 When you type:
 
-[source,groovy]
+[source,console]
 ----
-grails <<command name>>
-----
-
-Grails searches the https://central.sonatype.com/[profile repository] based on the profile of the current application. If the profile is for a web application then commands are read from the web profile and the base profile which it inherits from.
-
-Since command behavior is profile specific the web profile may provide different behavior for the `run-app` command then say a profile for running batch applications.
-
-When you type the following command:
-
-[source,groovy]
-----
-grails run-app
+$ grails <<command name>>
 ----
 
-It will first search the application, and then the profile for commands:
+the command is looked for among the commands of the command line itself, then among the commands the application and its plugins bring, and then among the scripts in `src/main/scripts` of the project (see "Commands of the Application and its Plugins" below). Which commands there are depends on the directory: outside a project there are the commands that create one, and in a project there are also the commands that work on it.
 
-* `PROJECT_HOME/src/main/scripts/run-app.groovy`
-* `&lt;profile&gt;/commands/run-app.groovy`
-* `&lt;profile&gt;/commands/run-app.yml`
+To get a list of the commands of the current directory, type:
 
-To get a list of all commands and some help about the available commands type:
-
-[source,bash]
+[source,console]
 ----
-grails help
+$ grails help
 ----
 
-which outputs usage instructions and the list of commands Grails is aware of:
+which shows how the command line is used and lists the commands with one line each:
 
-[source,bash]
+[source,console]
 ----
-grails <<environment>>* <<target>> <<arguments>>*'
-
-| Examples:
-$ grails dev run-app
-$ grails create-app books
-
-| Available Commands (type grails help 'command-name' for more info):
-| Command Name                          Command Description
-----------------------------------------------------------------------------------------------------
-clean                                   Cleans a Grails application's compiled sources
-compile                                 Compiles a Grails application
+Usage: grails [-hvVx] [--non-interactive] [--plain-output] [COMMAND]
+...
+Commands:
+  create-app              Creates an application
+  create-webapp           Creates an application; another name of create-app
+  create-plugin           Creates a Grails plugin
+  create-web-plugin       Creates a Grails plugin with a web layer
+  create-restapi          Creates a REST API application
 ...
 ----
 
+`grails help NAME` and `grails NAME --help` show how the command `NAME` is used. Without a command, `grails` starts xref:commandLine#interactiveMode[interactive mode] in a project and shows the help elsewhere.
+
 NOTE: Refer to the Command Line reference in the Quick Reference menu of the reference guide for more information about individual commands
 
-=== Arguments
+Before Grails 9 there were two command lines, the Grails shell with its profiles and the Grails Forge CLI, and the `grails` command started one of them. The command line of Grails 9 is the one that was the Grails Forge CLI, and this guide calls it by that name where it says how it differs from the shell. See "Commands of Earlier Versions" below for the commands of the shell, and link:applicationTypes.html#profilesReplaced[What Became of Profiles].
 
-The `grails` command is a front to a `gradle` invocation, because of this there can be unexpected side-effects.
-For example, when executing `grails -Dapp.foo=bar run-app` the `app.foo` system property won't be available to your application. This is because `bootRun` in your `build.gradle` configures the system properties.
-To make this work you can simply append all `System.properties` to `bootRun` in `build.gradle` like:
+=== The Environment and System Properties
+
+The commands that run the build of a project take the environment and system properties after their name, as `-Dname=value`:
+
+[source,console]
+----
+$ grails run-app -Dgrails.env=test
+$ grails assemble -Dgrails.env=staging
+----
+
+An environment in front of the command, as in `grails test run-app` or `grails prod war` of earlier versions, is refused: what follows `grails` is the name of a command, and `test` and `prod` are none. An option of a command in front of its name is a mistake in the command line as well.
+
+A `-D` option is a system property of the build. `bootRun` in your `build.gradle` configures the system properties of the application, so for the application to see such a property, append all `System.properties` to `bootRun` in `build.gradle` like:
 
 [source,groovy]
 ----
@@ -108,48 +102,11 @@ bootRun{
 }
 ----
 
-
-=== Non-interactive mode
-
-
-When you run a script manually, and it prompts you for information, you can answer the questions and continue running the script. But when you run a script as part of an automated process, for example a continuous integration build server, there's no way to "answer" the questions. So you can pass the `--non-interactive` switch to the script command to tell Grails to accept the default answer for any questions, for example whether to install a missing plugin.
-
-For example:
-
-[source,groovy]
-----
-grails war --non-interactive
-----
-
-
-
-The Grails Forge New Command-Line Interface (CLI) has undergone significant changes compared to its previous versions, primarily focusing on code generation. One notable alteration is the removal of APIs for invoking Gradle for tasks related to building using Gradle Tooling APIs. This shift in responsibility aligns with the framework's evolution and its integration with the Gradle build system.
-
-=== Accessing the Grails CLI
-
-The Grails CLI (Command Line Interface) can be swiftly and effortlessly accessed by simply typing the following command into your terminal or command prompt:
-
-[source,shell]
-----
-grails
-----
-
-This command allows developers to quickly initiate the Grails CLI and begin working with the framework, making it an easy entry point for those looking to start their Grails projects.
-
-The New Grails CLI! is the preferred method for initiating new Grails projects. This command-line interface offers various options for creating projects, enabling you to select your preferred build tools, test frameworks, GORM implementation, and more. Additionally, the CLI provides commands for generating essential components like controllers and domain classes.
-
 === The Grails Forge Website
 
-You can also begin your Grails application without the need to install the Grails CLI by visiting https://start.grails.org/[the Grails Forge website]. This web-based platform allows you to initiate Grails projects conveniently, bypassing the installation of the CLI.
+You can also begin your Grails application without the need to install the `grails` command by visiting https://start.grails.org/[the Grails Forge website]. It creates projects from the same application types and features as the `create-` commands.
 
-=== Understanding the New Grails Command-line Interface (CLI)
-
-Once the Grails CLI has been successfully installed, you can activate it using the "grails" command. For example:
-
-[source,shell]
-----
-grails create-app myapp
-----
+=== The Record of a Project
 
 A project generated by Grails 9 is recognizable by its `.grails` directory, which records how it was generated (see xref:commandLine#creatingProject[Creating a Grails Project]). The code generation commands read the application type, the default package and the features from there.
 
@@ -237,7 +194,7 @@ To create an application in an existing build, see the `--subproject` option of 
 
 === Short forms of commands
 
-With the Grails Forge CLI the name of a command can be shortened to the first letters of its words, with the first letter of every word after the first in upper case:
+The name of a command can be shortened to the first letters of its words, with the first letter of every word after the first in upper case:
 
 [source,console]
 ----
@@ -249,10 +206,10 @@ $ grails f a grails-quartz       <3>
 <2> `create-domain-class`
 <3> `feature add`: the command of a command has a short form too
 
-This is the rule the Grails shell goes by. There have to be as many parts as the name has words, and each part is the start of its word: `cA`, `creA`, `creat-app` and `CA` are all `create-app`; `ca` and `c` are not, because they are one part for a name of two words. Parts are told apart by upper case letters and hyphens only, so a short form has nothing but letters and hyphens in it.
+This is the rule the Grails shell went by. There have to be as many parts as the name has words, and each part is the start of its word: `cA`, `creA`, `creat-app` and `CA` are all `create-app`; `ca` and `c` are not, because they are one part for a name of two words. Parts are told apart by upper case letters and hyphens only, so a short form has nothing but letters and hyphens in it.
 
 * The name of a command always is that command, also when it happens to be the short form of another one.
-* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits and ends with exit code 2; type more of the name. Where the Grails shell runs the first command that fits, the Grails Forge CLI asks. In a project this happens with two short forms that come to mind first: `cC` fits `create-controller` and `create-command`, and `cS` fits `create-service` and `create-script`. `cCont` and `cSe` are the controller and the service, `cCom` and `cSc` the command and the script.
+* When a short form fits more than one command of the directory, none of them is run. The command line names the commands it fits and ends with exit code 2; type more of the name. Where the Grails shell ran the first command that fits, the Grails Forge CLI asks. In a project this happens with two short forms that come to mind first: `cC` fits `create-controller` and `create-command`, and `cS` fits `create-service` and `create-script`. `cCont` and `cSe` are the controller and the service, `cCom` and `cSc` the command and the script.
 * Only the name of a command is ever looked at, never what follows it: in `create-app cA` the application is called `cA`, and everything after `gradle` reaches Gradle as it was typed.
 * What stands where a command is expected and is neither a command nor the short form of one is refused with exit code 2, together with the commands that are most like it, one line that shows how the command line is used, and `Run 'grails help' for the commands`. The same holds for every mistake in the use of a command: what is wrong, the one line of the usage of that command, and where its help is. The help itself is shown by `help` and `--help`. After `--help` or `--version` (`-h`, `-V`) it is not looked at: `grails --help anything` shows the help.
 

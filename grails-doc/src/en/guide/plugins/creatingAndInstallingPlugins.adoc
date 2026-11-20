@@ -20,39 +20,25 @@ under the License.
 
 === Creating Plugins
 
-Creating a Grails plugin is a simple matter of running one of the supported plugin generators:
+Creating a Grails plugin is a simple matter of running the link:{commandLineRef}create-plugin.html[create-plugin] command:
 
-Grails Shell CLI
-[source,groovy]
+[source,console]
 ----
-grails create-plugin <<PLUGIN NAME>>
-----
-
-Grails Forge CLI
-[source,groovy]
-----
-grails -t forge create-plugin <<PLUGIN NAME>>
+$ grails create-plugin <<PLUGIN NAME>>
 ----
 
 This will create a plugin project for the name you specify. For example running `grails create-plugin example` would create a new plugin project called `example`.
 
-You should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin requires a web environment then use the "web-plugin" profile instead of the default "plugin" profile:
+You should consider whether the plugin you create requires a web environment or whether it can be used in every kind of application. If your plugin requires a web environment then create it with link:{commandLineRef}create-web-plugin.html[create-web-plugin], which gives it a web layer and a servlet container, in place of `create-plugin`:
 
-Grails Shell CLI
-[source,groovy]
+[source,console]
 ----
-grails create-web-plugin <<PLUGIN NAME>>
-----
-
-Grails Forge CLI
-[source,groovy]
-----
-grails -t forge create-web-plugin <<PLUGIN NAME>>
+$ grails create-web-plugin <<PLUGIN NAME>>
 ----
 
 Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
 
-Being a regular Grails project has a number of benefits in that you can immediately test your plugin by running (if the plugin targets the "web" profile):
+Being a regular Grails project has a number of benefits in that you can immediately test your plugin by running it (if it is a web plugin):
 
 [source,groovy]
 ----
@@ -279,12 +265,12 @@ NOTE: This plugin ensures that development commands such as `bootRun` use the ex
 
 *Step 5: Run the application*
 
-Now run the application using the `grails run-app` command from the root of the application directory, you can use the `verbose` flag to see the Gradle output:
+Now run the application using the `grails run-app` command from the root of the application directory:
 
 [source,groovy]
 ----
 $ cd myapp
-$ grails run-app -verbose
+$ grails run-app
 ----
 
 You will notice from the Gradle output that plugins sources are built and placed on the classpath of your application:
@@ -385,94 +371,6 @@ grails {
 NOTE: You can also declare the dependency within the `dependencies` block, however your subproject will not reload correctly.
 
 Using this technique you have achieved the equivalent of inline plugins from Grails 2.x.
-
-==== Grails Forge Creating Plugins
-
-
-Creating a Grails plugin is a simple matter of running the command:
-
-[source,groovy]
-----
-grails create-plugin <<PLUGIN NAME>>
-----
-
-This will create a web-plugin project for the name you specify. For example running `grails create-plugin example` would create a new web-plugin project called `example`.
-
-In Grails you should consider whether the plugin you create requires a web environment or whether the plugin can be used with other profiles. If your plugin does not require a web environment then use the "plugin" profile instead of the default "web-plugin" profile:
-
-[source,groovy]
-----
-grails create-plugin <<PLUGIN NAME>> --profile=plugin
-----
-
-Make sure the plugin name does not contain more than one capital letter in a row, or it won't work. Camel case is fine, though.
-
-Being a regular Grails project has a number of benefits in that you can immediately test your plugin by running (if the plugin targets the "web" profile):
-
-[source,shell]
-----
-./gradlew bootRun
-----
-
-NOTE: Plugin projects don't provide an index.gsp by default since most plugins don't need it. So, if you try to view the plugin running in a browser right after creating it, you will receive a page not found error. You can easily create a `grails-app/views/index.gsp` for your plugin if you'd like.
-
-The structure of a Grails plugin is very nearly the same as a Grails application project's except that in the `src/main/groovy` directory under the plugin package structure you will find a plugin descriptor class (a class that ends in "GrailsPlugin"). For example:
-
-[source,groovy]
-----
-import grails.plugins.*
-
-class ExampleGrailsPlugin extends Plugin {
-   ...
-}
-----
-
-All plugins must have this class under the `src/main/groovy` directory, otherwise they are not regarded as a plugin. The plugin class defines metadata about the plugin, and optionally various hooks into plugin extension points (covered shortly).
-
-You can also provide additional information about your plugin using several special properties:
-
-* `title` - short one-sentence description of your plugin
-* `grailsVersion` - The version range of Grails that the plugin supports. eg. "1.2 > *" (indicating 1.2 or higher)
-* `author` - plugin author's name
-* `authorEmail` - plugin author's contact e-mail
-* `developers` - Any additional developers beyond the author specified above.
-* `description` - full multi-line description of plugin's features
-* `documentation` - URL of the plugin's documentation
-* `license` - License of the plugin
-* `issueManagement` - Issue Tracker of the plugin
-* `scm` - Source code management location of the plugin
-
-Here is a slimmed down example from the https://github.com/apache/grails-quartz[Quartz Grails plugin]:
-
-[source,groovy]
-----
-package quartz
-
-@Slf4j
-class QuartzGrailsPlugin extends Plugin {
-    // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "3.0.0.BUILD-SNAPSHOT > *"
-    // resources that are excluded from plugin packaging
-    def pluginExcludes = [
-            "grails-app/views/error.gsp"
-    ]
-    def title = "Quartz" // Headline display name of the plugin
-    def author = 'Apache Grails Team'
-    def authorEmail = "zzz@yyy.com"
-    def description = '''\
-Adds Quartz job scheduling features
-'''
-    List loadAfter = ['hibernate3', 'hibernate4', 'hibernate5', 'services']
-    def documentation = "https://apache.github.io/grails-quartz/latest/"
-    def license = "APACHE"
-    def issueManagement = [ system: "Github Issues", url: "https://github.com/apache/grails-quartzissues" ]
-    def developers = [
-            [ name: "Joe Dev", email: "joedev@example.com" ]
-    ]
-    def scm = [ url: "https://github.com/apache/grails-quartz" ]
-
-    BeanRegistrar beanRegistrar()......
-----
 
 === Plugin Configuration
 

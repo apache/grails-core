@@ -49,12 +49,7 @@ NOTE: You can force a clean before running tests by passing `-clean` to the `tes
 
 Grails writes HTML test reports to the `build/reports/tests` directory and JUnit XML test reports to the `build/test-results` directory. The HTML reports are generally the best ones to look at.
 
-Using Grails' link:commandLine.html#interactiveMode[interactive mode] confers some distinct advantages when executing tests. First, the tests will execute significantly faster on the second and subsequent runs. Second, a shortcut is available to open the HTML reports in your browser:
-
-[source,groovy]
-----
-open test-report
-----
+In Grails' link:commandLine.html#interactiveMode[interactive mode] the tests are run with the same command, `test-app`, at the prompt.
 
 You can also run your unit tests from within most IDEs.
 
@@ -62,21 +57,14 @@ You can also run your unit tests from within most IDEs.
 ==== Running Tests Continuously
 
 
-For a local edit-and-test loop in the Grails interactive CLI, start continuous testing:
+For a local edit-and-test loop, start continuous testing:
 
-
-[source,groovy]
+[source,console]
 ----
-grails
-grails> test-app -continuous
+$ grails test-app --continuous
 ----
 
-
-Grails starts its `DirectoryWatcher` and reruns the selected tests after a `.groovy` or `.java` file is created or changed in `grails-app`, `src/main/groovy`, `src/test/groovy`, or `src/integration-test/groovy`. It does not run tests immediately. Combine `-continuous` with test name patterns or `-unit` and `-integration` to keep the same test selection for each rerun.
-
-
-The watcher is part of Grails, not Gradle `--continuous`, and Grails doesn't pass Gradle's continuous option to the build. It doesn't watch files outside those directories, including `src/main/java`, and `--watch` isn't an alias. Keep the interactive CLI open while using this mode, then exit the CLI or press Ctrl+C to stop it. A one-off `grails test-app -continuous` invocation exits immediately because `DirectoryWatcher` runs on a daemon thread.
-
+`--continuous` is the continuous build of Gradle: the tests are run when the command starts, and again whenever a file they depend on changes, until the command is cancelled. Combine it with test name patterns or `--unit` and `--integration` to keep the run small.
 
 ==== Targeting Tests
 
@@ -137,11 +125,11 @@ NOTE: In Grails 3.x, you might need to specify the package name before the class
 ==== Debugging
 
 
-In order to debug your tests via a remote debugger, you can add `--debug-jvm` after `grails` in any commands, like so:
+In order to debug your tests via a remote debugger, you can add `--debug-jvm` after `test-app`, like so:
 
 [source,groovy]
 ----
-grails --debug-jvm test-app
+grails test-app --debug-jvm
 ----
 
 This will open the default Java remote debugging port, 5005, for you to attach a remote debugger from your editor / IDE of choice.

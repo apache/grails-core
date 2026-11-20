@@ -37,10 +37,10 @@ capture and use the application:
 
 [source,shell]
 ----
-grails query-tail
+grails gradle runScriptCommand --arg=query-tail
 ----
 
-The summary refreshes as requests are served:
+`query-tail` is a script command of Grails Data, which the build of the project runs: the Gradle task `runScriptCommand` takes its name and each of its options as an `--arg`, and `./gradlew runScriptCommand --arg=query-tail` is the same without the `grails` command. The summary is written again as requests are served:
 
 ----
 query-tail build/query-tail/capture.log  312 statements in 14 requests  (refreshes as statements run; Ctrl-C to stop)
@@ -63,7 +63,7 @@ so far and exits, which is also how to look at what an integration test run exec
 [source,shell]
 ----
 ./gradlew integrationTest -Pgrails.gorm.queryTail.enabled
-grails query-tail --all --once
+./gradlew runScriptCommand --arg=query-tail --arg=--all --arg=--once
 ----
 
 The Grails Gradle plugin names one run for each build and hands it to every test JVM the build

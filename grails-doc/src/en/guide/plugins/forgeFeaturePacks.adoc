@@ -560,7 +560,7 @@ The `create-` commands take a pack from a directory with `--feature-pack-dir`, a
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop \
+$ grails create-app com.example.shop \
     --features=acme-audit \
     --feature-pack-dir=/path/to/acme-audit/src/main/forge
 ----
@@ -577,7 +577,7 @@ Once the plugin is published, its feature is selected by giving the coordinates 
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop \
+$ grails create-app com.example.shop \
     --features=h2,com.acme:acme-audit-grails:2.3.0
 ----
 
@@ -589,7 +589,7 @@ The jar is looked for in the repositories of the `GRAILS_REPO_URL` environment v
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop \
+$ grails create-app com.example.shop \
     --features=com.acme:acme-audit-grails:2.3.0 \
     --feature-pack-repository=https://repo.acme.example/maven
 ----
@@ -613,7 +613,7 @@ When the repository publishes a `.sha256` or `.sha1` file for the jar, the jar i
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop \
+$ grails create-app com.example.shop \
     --features=com.acme:acme-audit-grails:2.3.0 \
     --feature-pack-sha256=com.acme:acme-audit-grails:2.3.0=5f2c...
 ----
@@ -639,7 +639,7 @@ A feature of a published plugin can also be selected by the name of the feature,
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop --features=h2,acme-audit \
+$ grails create-app com.example.shop --features=h2,acme-audit \
     --feature-catalog=https://catalog.acme.example/index.json
 ----
 
@@ -675,7 +675,7 @@ A pack cannot name an artifact of its own. A jar with another SHA-256 than the c
 
 [source,console]
 ----
-$ grails -t forge create-app com.example.shop \
+$ grails create-app com.example.shop \
     --features='com.acme:acme-audit-grails#acme-audit'
 ----
 

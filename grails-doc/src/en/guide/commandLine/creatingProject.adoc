@@ -17,26 +17,14 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-[NOTE]
-====
-The `create-app` and related commands are commands of the `grails` command. Since Grails 9 it is the only command line: the `-t`/`--type` option, the `GRAILS_PREFERRED_SHELL` environment variable and the `grails-shell-cli` and `grails-forge-cli` commands are gone.
-
-`$ grails create-app myapp`
-
-====
-
-The primary command for creating a new project is `create-app`, which creates a standard Grails web application that communicates over HTTP. For other types of applications, see the documentation below.
-
-Creating a project is the primary usage of the Grails Forge CLI.  You can also generate an application with grails-shell, which uses profiles for generation.
-
-The `create-app` and other commands support extended options in Forge, which must be run using the following format:
+The primary command for creating a new project is `create-app`, which creates a standard Grails web application that communicates over HTTP. There is one command for each type of application, shown below, and each takes options that choose the features of the project; see link:applicationTypes.html[Application Types, Features and Feature Packs] for what types and features are.
 
 [source,console]
 ----
-$ ./grails create-app myapp
+$ grails create-app myapp
 ----
 
-After generating a project with Forge, switch to the created directory and use the default Grails shell CLI (`./grails`) to manage, run, test, and deploy your application.
+After generating a project, switch to the created directory and use `grails`, or the Grails wrapper `./grailsw` the project has, to manage, run, test, and deploy your application.
 
 [cols="1,3,4a,8a"]
 |===
@@ -46,20 +34,20 @@ After generating a project with Forge, switch to the created directory and use t
 | Creates a Grails web application
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails create-app \
+grails create-app \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
@@ -68,64 +56,64 @@ After generating a project with Forge, switch to the created directory and use t
 | Creates a Grails REST API application
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails create-restapi \
+grails create-restapi \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
 
 | create-plugin
-| Creates a Grails Plugin application
+| Creates a Grails plugin
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails create-plugin \
+grails create-plugin \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
 
 | create-web-plugin
-| Creates a Grails Web Plugin application
+| Creates a Grails plugin with a web layer
 |
 [none]
-* -jdk, --java-version
+* --jdk, --java-version
 * -s, --servlet
 * -d, --data (-g, --gorm are legacy aliases)
-* -t, --test
+* -r, --reloading
 * -f, --features
+* --exclude-features
 * -i, --inplace
 |
 [source,console]
 ----
-./grails create-web-plugin \
+grails create-web-plugin \
     --servlet=tomcat \
-    --jdk=11 \
+    --jdk=21 \
     --data=hibernate5 \
-    --test=spock \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
@@ -133,14 +121,14 @@ After generating a project with Forge, switch to the created directory and use t
 
 === The `create-` command flags
 
-The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize Grails Data settings, an embedded servlet, the test framework, and the Java version.
+The "create-*" commands are used to produce a fundamental Grails project, allowing for the inclusion of optional flags to select additional features, to customize Grails Data settings, an embedded servlet, the reloading, and the Java version.
 
 [cols="4,8,6a"]
 |===
 | Flag | Description | Example
 
-| -jdk, --java-version
-| The JDK version the project should target
+| --jdk, --java-version
+| The JDK version the project should target. Possible values: 21, 25, 26.
 |
 [source,shell]
 ----
@@ -148,7 +136,7 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -s, --servlet
-| Which Servlet Implementation to configure. Possible values: none, tomcat, jetty, undertow.
+| Which Servlet Implementation to configure. Possible values: tomcat, jetty, undertow, none.
 |
 [source,shell]
 ----
@@ -156,23 +144,23 @@ The "create-*" commands are used to produce a fundamental Grails project, allowi
 ----
 
 | -d, --data (-g, --gorm are legacy aliases)
-| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb. The value hibernate is accepted as a legacy alias for hibernate5.
+| Which Grails Data implementation to configure. Possible values: hibernate5, hibernate7, mongodb, neo4j. The value hibernate is accepted as a legacy alias for hibernate5.
 |
 [source,shell]
 ----
 --data hibernate5
 ----
 
-| -t, --test
-| Which test framework to use. Possible values: junit, spock.
+| -r, --reloading
+| Which development reloading option to use. Possible values: devtools, jrebel, none.
 |
 [source,shell]
 ----
---test spock
+--reloading devtools
 ----
 
 | -f, --features
-| The features to use. Possible values: h2, gorm-hibernate5, gorm-hibernate7, spring-boot-starter-jetty, micronaut-http-client, cache-ehcache, hibernate-validator, postgres, mysql, cache, database-migration, grails-gsp, hamcrest, gorm-mongodb, gorm-graphql, assertj, mockito, grails-undertow, github-workflow-java-ci, jrebel, testcontainers, sqlserver, grails-console, views-markup, views-json, gorm-neo4j, asciidoctor, grails-web-console, logbackGroovy, mongo-sync, shade, properties, grails-spring-ai, spring-ai-openai, spring-ai-anthropic, spring-ai-ollama. The feature of a published plugin is selected with the coordinates of the plugin, `group:artifact:version`; see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
+| The features to use, in addition to the default ones. `--list-features` lists the features of the type of application and marks the default ones; `--help` names them too. The feature of a published plugin is selected with the coordinates of the plugin, `group:artifact:version`; see xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation].
 |
 [source,shell]
 ----

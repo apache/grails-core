@@ -39,5 +39,5 @@ A new application gets all of this from the `grails-spring-ai` feature, or from 
 
 [source,console]
 ----
-$ grails -t forge create-app my-app --features spring-ai-openai
+$ grails create-app my-app --features spring-ai-openai
 ----
