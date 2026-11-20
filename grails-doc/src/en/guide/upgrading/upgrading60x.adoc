@@ -1228,3 +1228,5 @@ These tags now HTML-encode the values they write into attributes, as `<g:link>` 
 The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.
 
 A value encoded with `encodeAsHTML()` before it reaches the tag is written once, not encoded again. There are two exceptions. The tag builds the URL of `<g:form>` and `<g:formActionSubmit>` from its attributes, and joins the class of `<g:paginate>` with `currentStep`, and only then encodes the result, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A character reference written in the page, as in `+name="a&amp;b"+`, is encoded as well: write the character itself.
+
+`<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.

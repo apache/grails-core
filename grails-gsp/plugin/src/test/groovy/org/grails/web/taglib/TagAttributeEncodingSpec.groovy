@@ -102,6 +102,20 @@ class TagAttributeEncodingSpec extends Specification implements TagLibUnitTest<F
         'g:external'           | '<g:external uri="${value.encodeAsHTML()}" type="js"/>'                                 || '<script src="' + ENCODED + '" '
     }
 
+    void 'g:radio encodes #description value once'() {
+        when:
+        def output = applyTemplate(template, [value: VALUE])
+
+        then:
+        output.contains('<input type="radio" name="r" value="' + ENCODED + '" id="r" ')
+        !output.contains('&amp;quot;')
+
+        where:
+        description          | template
+        'a plain'            | '<g:radio name="r" value="${value}"/>'
+        'an already encoded' | '<g:radio name="r" value="${value.encodeAsHTML()}"/>'
+    }
+
     void 'g:form encodes the hidden fields of the request data value processor'() {
         given:
         tagLib.requestDataValueProcessor = new HiddenFieldsProcessor(fields: [(VALUE): VALUE])

@@ -1282,8 +1282,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         booleanToAttribute(attrs, 'readonly')
 
         def checked = attrs.remove('checked') ? true : false
-        value = processFormFieldValueIfNecessary(name, "${value?.toString()?.encodeAsHTML()}", 'radio')
-        out << "<input type=\"radio\" name=\"${encodeAttributeValue(name)}\"${ checked ? ' checked="checked" ' : ' '}value=\"${value?.toString()?.encodeAsHTML()}\" "
+        // Hand the encoded string itself on, so that the encoder recognizes it and does not encode it again
+        value = processFormFieldValueIfNecessary(name, value?.toString()?.encodeAsHTML(), 'radio')
+        out << "<input type=\"radio\" name=\"${encodeAttributeValue(name)}\"${ checked ? ' checked="checked" ' : ' '}value=\"${encodeAttributeValue(value)}\" "
         if (!attrs.containsKey('id')) {
             out << """id="${encodeAttributeValue(name)}" """
         }
