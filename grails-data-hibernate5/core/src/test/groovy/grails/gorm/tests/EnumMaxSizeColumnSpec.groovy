@@ -23,12 +23,13 @@ import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
 import spock.lang.Issue
+import spock.lang.Unroll
 
 @Issue('https://github.com/apache/grails-core/issues/14505')
 class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing, EnumCollectionThing])
+        manager.domainClasses.addAll([EnumSizedThing, EnumListedThing, EnumCollectionThing, EnumMatrixThing, EnumMatrixCollectionThing])
     }
 
     void "maxSize constrains the column of an enum property like it does a string property"() {
@@ -84,6 +85,62 @@ class EnumMaxSizeColumnSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckMan
         expect:
         !new EnumListedThing(kind: EnumSizedKind.TWO).validate()
     }
+    private Map<String, Integer> lengthsOf(String table) {
+        Map<String, Integer> lengths = [:]
+        manager.sessionFactory.currentSession.doWork { conn ->
+            def rs = conn.createStatement().executeQuery(
+                    "select column_name, character_maximum_length from information_schema.columns " +
+                    "where lower(table_name) = '${table}'")
+            while (rs.next()) {
+                lengths[rs.getString(1).toLowerCase()] = rs.getObject(2) as Integer
+            }
+        }
+        lengths
+    }
+
+    @Unroll
+    void "an enum property with #constraint has the column length that a string property with it has"() {
+        when:
+        Map<String, Integer> lengths = lengthsOf('enum_matrix_thing')
+
+        then: 'the enum column and the string column are the same length'
+        lengths["${prefix}_string"] == expected
+        lengths["${prefix}_enum"] == expected
+
+        where:
+        constraint                                       | prefix  | expected
+        'maxSize 40'                                     | 'max'   | 40
+        'size 3..20'                                     | 'range' | 20
+        'inList of ONE and THREE'                        | 'listed' | 5
+        'inList of ONE and THREE and maxSize 40'         | 'both'  | 40
+        'no constraint'                                  | 'plain' | 255
+    }
+
+    void "an enum property stored as its ordinal has no character column to size"() {
+        expect:
+        lengthsOf('enum_matrix_thing')['ordinal_enum'] == null
+    }
+
+    @Unroll
+    void "a collection of enums with #constraint keeps a column for the name of the constants"() {
+        given:
+        new EnumMatrixCollectionThing(kinds: [EnumMatrixKind.ONE], sizedKinds: [EnumMatrixKind.ONE], listedKinds: [EnumMatrixKind.ONE]).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        Map<String, Integer> lengths = lengthsOf(table)
+
+        then:
+        lengths.values().any { it != null }
+        lengths.values().findAll { it != null }.every { it > 1 }
+        EnumMatrixCollectionThing.list().first()."$property" == [EnumMatrixKind.ONE] as Set
+
+        where:
+        constraint                | table                                  | property
+        'maxSize 1'               | 'enum_matrix_collection_thing_kinds'   | 'kinds'
+        'size 1..2'               | 'enum_matrix_collection_thing_sized_kinds' | 'sizedKinds'
+        'inList of one value'     | 'enum_matrix_collection_thing_listed_kinds' | 'listedKinds'
+    }
 }
 
 enum EnumSizedKind { ONE, TWO }
@@ -116,5 +173,55 @@ class EnumCollectionThing {
 
     static constraints = {
         kinds maxSize: 1
+    }
+}
+
+enum EnumMatrixKind { ONE, TWO, THREE }
+
+@Entity
+class EnumMatrixThing {
+    String maxString
+    EnumMatrixKind maxEnum
+    String rangeString
+    EnumMatrixKind rangeEnum
+    String listedString
+    EnumMatrixKind listedEnum
+    String bothString
+    EnumMatrixKind bothEnum
+    String plainString
+    EnumMatrixKind plainEnum
+    EnumMatrixKind ordinalEnum
+
+    static constraints = {
+        maxString nullable: true, maxSize: 40
+        maxEnum nullable: true, maxSize: 40
+        rangeString nullable: true, size: 3..20
+        rangeEnum nullable: true, size: 3..20
+        listedString nullable: true, inList: ['ONE', 'THREE']
+        listedEnum nullable: true, inList: [EnumMatrixKind.ONE, EnumMatrixKind.THREE]
+        bothString nullable: true, inList: ['ONE', 'THREE'], maxSize: 40
+        bothEnum nullable: true, inList: [EnumMatrixKind.ONE, EnumMatrixKind.THREE], maxSize: 40
+        plainString nullable: true
+        plainEnum nullable: true
+        ordinalEnum nullable: true, maxSize: 40
+    }
+
+    static mapping = {
+        ordinalEnum enumType: 'ordinal'
+    }
+}
+
+@Entity
+class EnumMatrixCollectionThing {
+    Set<EnumMatrixKind> kinds
+    Set<EnumMatrixKind> sizedKinds
+    Set<EnumMatrixKind> listedKinds
+
+    static hasMany = [kinds: EnumMatrixKind, sizedKinds: EnumMatrixKind, listedKinds: EnumMatrixKind]
+
+    static constraints = {
+        kinds maxSize: 1
+        sizedKinds size: 1..2
+        listedKinds inList: [[EnumMatrixKind.ONE] as Set]
     }
 }
