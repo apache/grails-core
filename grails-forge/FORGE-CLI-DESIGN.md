@@ -28,7 +28,7 @@ limitations under the License.
 
 # One generator: Forge, feature packs, and a profile-free console
 
-**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 13, 2026-11-21
+**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 13, 2026-11-20
 
 Contents
 
@@ -746,7 +746,7 @@ The release decision is settled: **all steps after the completed Grails-applicat
 <a id="status"></a>
 ### Implementation status
 
-As of 2026-11-21. This table is brought up to date with every change that moves a row; the "Implemented" and "Not done" paragraphs of the sections named hold the detail.
+As of 2026-11-20. This table is brought up to date with every change that moves a row; the "Implemented" and "Not done" paragraphs of the sections named hold the detail.
 
 | Step | State | Where | Not done |
 | --- | --- | --- | --- |
@@ -929,7 +929,7 @@ Earlier entries describe earlier proposals, including release assignments supers
 
 | Revision | Date | Change |
 | --- | --- | --- |
-| 13 | 2026-11-21 | "Implementation status" added to section 5 and kept current from here on; the header no longer says nothing is implemented. Since revision 12 the sections gained "Implemented" and "Not done" paragraphs for packs inside Forge, selection, project state, coordinates and the catalog, the Gradle pack tasks, `feature add`, and slices 1, 2, 3, 5a and 6 of step 4, which was cut into nine slices. |
+| 13 | 2026-11-20 | "Implementation status" added to section 5 and kept current from here on; the header no longer says nothing is implemented. Since revision 12 the sections gained "Implemented" and "Not done" paragraphs for packs inside Forge, selection, project state, coordinates and the catalog, the Gradle pack tasks, `feature add`, and slices 1, 2, 3, 5a and 6 of step 4, which was cut into nine slices. |
 | 12 | 2026-11-19 | Rebased onto 9.0.x. First step 1 changes: features are applied and listed by order and then name; dependencies can declare exclusions; the unrendered `Dependency.extension` hook is removed, since the migrations `sourceSets` block it carried is no longer needed. | Later the same day: string group IDs for the exclusive feature groups, used by the validator, the registry and the web API; `BuildFileContributions` with named extensions and anchored blocks, and five feature-name branches moved out of `buildGradle.gsp`. Also the feature pack descriptor parser (`PackDescriptorParser`), not yet used by generation.
 | 11 | 2026-10-26 | Assign all unification work to 9.0; record the completed 8.1 Grails-app conversion and retention of profiles. Replace the transitional 8.1 phase with gated 9.0 delivery. Define identifier-based feature selection, versioned pack APIs, main-JAR identity, CLI-only catalog use, preset limits, committed lock/baseline state, replay and journaled three-way application, explicit migration/adoption limits and runtime-profile guidance. Replace ambiguous command flags with execution targets and metadata discovery; specify launcher/IDE contracts, lifecycle-state coordination and omitted command coverage. Reconcile GSP trust/dry-run statements, authoring isolation, hosted metadata handling, deferred scaffolding, tests and contents anchors. |
 | 10 | 2026-10-13 | Command execution model in 2.5 reworked around two real examples: the `dbm-*` commands keep the context-bound default (`DbmGormDiffCommand`), and `sql-tail` defines the console-side mode, which gets a console services API (configuration, build directory, terminal, cancellation, `GradleRunner`, `ServerInteraction`, `RunningApplication`). Server-bound work goes through those services with `requiresConsole`; part-way context needs delegate to `runCommand`; the built-in `run-app` accepts declared options so a plugin can add a flag such as `--sql-tail`. Appendix B updated. |
