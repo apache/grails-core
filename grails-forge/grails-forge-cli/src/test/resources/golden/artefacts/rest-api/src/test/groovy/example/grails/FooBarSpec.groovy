@@ -5,14 +5,12 @@ import spock.lang.Specification
 
 class FooBarSpec extends Specification implements DomainUnitTest<FooBar> {
 
-    def setup() {
-    }
+     void "test domain constraints"() {
+        when:
+        FooBar domain = new FooBar()
+        //TODO: Set domain props here
 
-    def cleanup() {
-    }
-
-    void "test something"() {
-        expect: "fix me"
-        true == false
-    }
+        then:
+        domain.validate()
+     }
 }

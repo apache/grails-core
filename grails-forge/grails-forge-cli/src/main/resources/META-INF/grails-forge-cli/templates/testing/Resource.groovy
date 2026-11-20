@@ -4,14 +4,12 @@ import spock.lang.Specification
 
 class @artifact.name@Spec extends Specification implements DomainUnitTest<@artifact.name@> {
 
-    def setup() {
-    }
+     void "test domain constraints"() {
+        when:
+        @artifact.name@ domain = new @artifact.name@()
+        //TODO: Set domain props here
 
-    def cleanup() {
-    }
-
-    void "test something"() {
-        expect: "fix me"
-        true == false
-    }
+        then:
+        domain.validate()
+     }
 }

@@ -5,14 +5,12 @@ import spock.lang.Specification
 
 class BazSpec extends Specification implements DomainUnitTest<Baz> {
 
-    def setup() {
-    }
+     void "test domain constraints"() {
+        when:
+        Baz domain = new Baz()
+        //TODO: Set domain props here
 
-    def cleanup() {
-    }
-
-    void "test something"() {
-        expect: "fix me"
-        true == false
-    }
+        then:
+        domain.validate()
+     }
 }
