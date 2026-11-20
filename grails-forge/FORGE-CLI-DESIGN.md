@@ -14,7 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-> Working design for review, not an implemented specification.
+> Working design, partly implemented on the branch that carries this file: see [Implementation status](#status) in section 5 for what exists.
+> Each section says under "Implemented" and "Not done" what the code does; where those and the design text differ, the code is what they describe.
 > Imported on 2026-10-26 from [issue #16348, comment 6150508865](https://github.com/apache/grails-core/issues/16348#issuecomment-6150508865),
 > revision 10 (last updated 2026-10-13T17:07:30Z).
 > The verbatim import is preserved in the first commit of this branch ("Document the Forge and CLI unification proposal"); this is revision 12.
@@ -27,7 +28,7 @@ limitations under the License.
 
 # One generator: Forge, feature packs, and a profile-free console
 
-**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 12, 2026-11-19
+**Issue:** apache/grails-core #16348 · **Target:** 9.0.x · **Revision:** 13, 2026-11-21
 
 Contents
 
@@ -43,6 +44,7 @@ Contents
 3. [3. What profiles offered](#gaps)
 4. [4. Removal inventory](#removal)
 5. [5. Delivery](#phases)
+   1. [Implementation status](#status)
 6. [6. Decisions and implementation gates](#decisions)
 7. [7. Testing and docs](#testing)
 8. [A. Command tree](#appendix-a)
@@ -702,6 +704,24 @@ All removals are on 9.0.x after their replacement gates. This is the October 13 
 
 The release decision is settled: **all steps after the completed Grails-application conversion target 9.0.x**. Intermediate development commits may coexist with old code on that branch, but the release has one generator and one command tree. Do not backport these new contracts or removals to 8.1. Implementation may proceed incrementally; profile removal is gated by migration, command coverage and distribution/IDE readiness, not by a calendar estimate.
 
+<a id="status"></a>
+### Implementation status
+
+As of 2026-11-21. This table is brought up to date with every change that moves a row; the "Implemented" and "Not done" paragraphs of the sections named hold the detail.
+
+| Step | State | Where | Not done |
+| --- | --- | --- | --- |
+| 1. Selection, contributions, templates | Implemented | 2.2 | Thirteen features are packs inside Forge. Database drivers, servlet containers, devtools and neo4j are compiled features still. The build channels `properties`, `imports`, `settings`, `repositories` and `buildscript`. |
+| 2. Distribution and authoring | Implemented in part | 2.3 | The index of `apache/grails-plugins-metadata` has no packs, and the format read here is to be confirmed with it. No catalog is read unless one is named. The version rule covers the seven artifacts Forge has versions for, not the Grails BOM. Presets, credentials and private mappings, the artifact cache, fixtures offline from locked inputs. |
+| 3. Project state and `feature add` | Implemented for features inside Forge | 2.4, 2.6 | Adding the feature of an external pack, or anything to an application that has one. A feature that takes the place of a default is shown and refused. `project init`, `project migrate`, removal of a feature, change of an option, upgrade of the generator. |
+| 4. Commands and launcher | Slices 1, 2, 3, 5a and 6 of nine | 2.5, "Slices" under step 4 | Slice 4 (application lifecycle), 5b (commands of plugins in the CLI), 7 (scripts), 8 (launcher, help without the application context), 9 (old-command table, end-to-end runs). |
+| 5. Cutover and removals | Not started | 4 | All of it. |
+| 6. Documentation | With each step | the guide in `grails-doc` | The website and the hosted rollout. |
+
+Known across the steps: nothing was run on Windows, where the paths for it are written and tested only by setting `os.name`; the six specs that build an application for a `create-*` command were not run where this was developed; a plain `create-plugin` or `create-web-plugin` application fails `:generateI18nDescriptor` against the published snapshot, and a REST API application has no `grails-testing-support-web` for the test `create-controller` writes — both outside this work, both in its way.
+
+Decided while implementing, each recorded where it applies and open to reversal: no catalog is read that was not named (2.3); a template of a project is never run (2.5, slice 6); a repository with a password is not copied into the fixtures of `forgePackTest` unless it is listed (2.3); the Gradle wrapper is run as a process and the Tooling API is not used (2.5, slices 1, 3 and 4); a project above the current directory is used only when it is the user's own (2.5).
+
 ### Step 0 — completed conversion and implementation baseline
 
 PR #16551 merged on 2026-10-14 into 8.1.x, and the reviewed 9.0 branch contains the conversion. This is historical prerequisite work, not an outstanding merge. Before implementation, record the selected 9.0 commit, run the Forge build/tests there and refresh the inventory of old commands and profile consumers.
@@ -870,6 +890,7 @@ Earlier entries describe earlier proposals, including release assignments supers
 
 | Revision | Date | Change |
 | --- | --- | --- |
+| 13 | 2026-11-21 | "Implementation status" added to section 5 and kept current from here on; the header no longer says nothing is implemented. Since revision 12 the sections gained "Implemented" and "Not done" paragraphs for packs inside Forge, selection, project state, coordinates and the catalog, the Gradle pack tasks, `feature add`, and slices 1, 2, 3, 5a and 6 of step 4, which was cut into nine slices. |
 | 12 | 2026-11-19 | Rebased onto 9.0.x. First step 1 changes: features are applied and listed by order and then name; dependencies can declare exclusions; the unrendered `Dependency.extension` hook is removed, since the migrations `sourceSets` block it carried is no longer needed. | Later the same day: string group IDs for the exclusive feature groups, used by the validator, the registry and the web API; `BuildFileContributions` with named extensions and anchored blocks, and five feature-name branches moved out of `buildGradle.gsp`. Also the feature pack descriptor parser (`PackDescriptorParser`), not yet used by generation.
 | 11 | 2026-10-26 | Assign all unification work to 9.0; record the completed 8.1 Grails-app conversion and retention of profiles. Replace the transitional 8.1 phase with gated 9.0 delivery. Define identifier-based feature selection, versioned pack APIs, main-JAR identity, CLI-only catalog use, preset limits, committed lock/baseline state, replay and journaled three-way application, explicit migration/adoption limits and runtime-profile guidance. Replace ambiguous command flags with execution targets and metadata discovery; specify launcher/IDE contracts, lifecycle-state coordination and omitted command coverage. Reconcile GSP trust/dry-run statements, authoring isolation, hosted metadata handling, deferred scaffolding, tests and contents anchors. |
 | 10 | 2026-10-13 | Command execution model in 2.5 reworked around two real examples: the `dbm-*` commands keep the context-bound default (`DbmGormDiffCommand`), and `sql-tail` defines the console-side mode, which gets a console services API (configuration, build directory, terminal, cancellation, `GradleRunner`, `ServerInteraction`, `RunningApplication`). Server-bound work goes through those services with `requiresConsole`; part-way context needs delegate to `runCommand`; the built-in `run-app` accepts declared options so a plugin can add a flag such as `--sql-tail`. Appendix B updated. |
