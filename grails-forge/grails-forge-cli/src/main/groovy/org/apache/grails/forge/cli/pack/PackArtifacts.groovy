@@ -24,13 +24,14 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpTimeoutException
 import java.nio.charset.StandardCharsets
-import java.nio.file.DirectoryStream
-import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
-import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.time.format.ResolverStyle
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
@@ -40,26 +41,22 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLException
-import javax.xml.XMLConstants
-import javax.xml.parsers.DocumentBuilder
-import javax.xml.parsers.DocumentBuilderFactory
-import javax.xml.parsers.ParserConfigurationException
+import javax.xml.stream.XMLInputFactory
+import javax.xml.stream.XMLStreamConstants
+import javax.xml.stream.XMLStreamException
+import javax.xml.stream.XMLStreamReader
 import org.apache.grails.forge.core.pack.Pack
 import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptorException
 import org.apache.grails.forge.core.pack.PackLoader
 import org.grails.forge.build.gradle.GradleRepository
 import org.grails.forge.feature.FeatureSelectionException
-import org.w3c.dom.Element
-import org.w3c.dom.Node
-import org.xml.sax.ErrorHandler
-import org.xml.sax.SAXException
-import org.xml.sax.SAXParseException
 
 /**
  * Takes the feature pack of a plugin from a Maven repository by the coordinates of the plugin: the main
  * jar of that one version and nothing else of it. No dependency of the plugin is resolved, nothing of
- * the jar is loaded as code, and the jar is a temporary file that is deleted once the pack is read.
+ * the jar is loaded as code, and the jar is held in memory, where the bytes that are hashed are the
+ * bytes the pack is read from; it is written to no file.
  *
  * <p>This is in the command line and not in the generator, so that the hosted Forge, which is built on
  * the generator alone, has no way to fetch a pack.</p>
@@ -70,7 +67,7 @@ import org.xml.sax.SAXParseException
 class PackArtifacts {
 
     /** The most bytes the jar of a plugin can have */
-    public static final long MAX_JAR_BYTES = 64L * 1024 * 1024
+    public static final int MAX_JAR_BYTES = 64 * 1024 * 1024
 
     /** The most bytes the {@code maven-metadata.xml} of a snapshot can have */
     public static final int MAX_METADATA_BYTES = 256 * 1024
@@ -93,36 +90,46 @@ class PackArtifacts {
     /** The option that names the repositories to ask */
     public static final String REPOSITORY_OPTION = '--feature-pack-repository'
 
+    /** The most lines that say which entries of {@code GRAILS_REPO_URL} are not asked */
+    public static final int MAX_WARNINGS = 5
+
     // the parts of coordinates as the descriptor of a pack has them, and a version without the '+'
     // a descriptor allows: here it would be a version that is chosen, not the one that was asked for
     private static final Pattern PART = Pattern.compile(/[A-Za-z0-9][A-Za-z0-9_.\-]*/)
     private static final Pattern SHA256 = Pattern.compile(/[0-9a-fA-F]{64}/)
     private static final Pattern HEXADECIMAL = Pattern.compile(/[0-9a-fA-F]+/)
     private static final Pattern NOT_IN_AN_ADDRESS = Pattern.compile(/[\p{Cc}\p{Cf}\p{Z}]/)
+    private static final Pattern NOT_ASCII = Pattern.compile(/[^\x00-\x7F]/)
     private static final Pattern UNREADABLE = Pattern.compile(/[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Zl}\p{Zp}]/)
-    private static final Pattern USER_IN_ADDRESS = Pattern.compile('(?<=//)[^/?#]*@')
-    private static final Pattern AFTER_THE_PATH = Pattern.compile('[?#].*$')
     private static final Pattern HOST_NAME = Pattern.compile(/[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)*/)
-    private static final Pattern IPV4 = Pattern.compile(/\d{1,3}(\.\d{1,3}){3}/)
+    private static final Pattern NUMBER = Pattern.compile(/(?i)0x[0-9a-f]*|[0-9]+/)
+    private static final Pattern PART_OF_IPV4 = Pattern.compile(/0|[1-9][0-9]{0,2}/)
+    private static final Pattern IPV6 = Pattern.compile(/\[[0-9A-Fa-f:.]+\]/)
+    private static final Set<String> NAMES_OF_THIS_COMPUTER = ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'] as Set<String>
     private static final String BUILD = /-(\d{8}\.\d{6})-(\d{1,9})/
-    private static final Pattern BUILD_TIME = Pattern.compile(/\d{8}\.\d{6}/)
     private static final Pattern BUILD_NUMBER = Pattern.compile(/\d{1,9}/)
+    private static final DateTimeFormatter BUILD_TIME = DateTimeFormatter.ofPattern('uuuuMMdd.HHmmss').withResolverStyle(ResolverStyle.STRICT)
     private static final String SNAPSHOT = '-SNAPSHOT'
     private static final String METADATA = 'maven-metadata.xml'
-    private static final String TEMPORARY_PREFIX = 'grails-forge-pack-'
-    private static final String TEMPORARY_SUFFIX = '.jar'
+    private static final String METADATA_ROOT = 'metadata'
+    private static final String BUILD_OF_A_FILE = 'metadata/versioning/snapshotVersions/snapshotVersion'
+    private static final String LATEST_BUILD = 'metadata/versioning/snapshot'
+    private static final Set<String> READ_OF_METADATA = ['metadata/groupId', 'metadata/artifactId', 'metadata/version',
+                                                         LATEST_BUILD + '/timestamp', LATEST_BUILD + '/buildNumber', LATEST_BUILD + '/localCopy',
+                                                         BUILD_OF_A_FILE + '/extension', BUILD_OF_A_FILE + '/classifier', BUILD_OF_A_FILE + '/value'] as Set<String>
+    private static final int MAX_METADATA_DEPTH = 8
+    private static final int MAX_METADATA_ELEMENTS = 20000
     private static final int MAX_PART = 200
     private static final int MAX_ADDRESS = 2000
     private static final int MAX_HOST = 253
     private static final int MAX_PORT = 65535
     private static final int MAX_REPOSITORY_ECHO = 200
+    private static final int MAX_ENTRIES_NAMED = 3
     private static final String HTTPS = 'https'
     private static final String FILE = 'file'
-    private static final String LOCALHOST = 'localhost'
     private static final String TIMEOUT = 'timeout'
     private static final String BOM = String.valueOf((char) 0xFEFF)
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15)
-    private static final Duration LEFTOVER_AGE = Duration.ofDays(1)
     private static final long MAX_WATCH_MILLIS = 250
     private static final Set<Integer> REDIRECTS = [301, 302, 303, 307, 308] as Set<Integer>
     private static final Set<Integer> NOT_THERE = [404, 410] as Set<Integer>
@@ -134,7 +141,6 @@ class PackArtifacts {
     private final Duration answerTimeout
     private final Duration fileTimeout
     private final PackLoader loader = new PackLoader()
-    private boolean swept
 
     PackArtifacts() {
         this(new HttpTransport(null, ANSWER_TIMEOUT))
@@ -226,12 +232,18 @@ class PackArtifacts {
      *
      * <p>The variable is written for the build of the generated application, not for this: an entry of
      * it that a pack cannot be taken from is left out with a warning, and is no mistake of the command.
-     * It is read as the generator reads it. An entry with a user or password is left out too: credentials
-     * are not sent, and are not repeated in the warning.</p>
+     * Of what the generator reads in it, this takes {@code mavenLocal()}, {@code mavenCentral()}, an
+     * https address and a directory by its absolute path or {@code file:} address. A path that is not
+     * absolute is one of the generated application for the generator and Gradle; here it would be one
+     * of wherever the command runs, where anybody's directory of that name would give the pack, so it is
+     * left out. An entry with a user or password is left out too: credentials are not sent, and no
+     * warning repeats an address as it was given.</p>
      *
      * @param given the addresses that were given for this command
      * @param grailsRepoUrl the value of {@code GRAILS_REPO_URL}, or {@code null}
-     * @param warnings takes a line for each entry of the variable that is left out
+     * @param warnings takes the lines that say which entries of the variable are left out: at most
+     * {@link #MAX_WARNINGS} and one that counts the rest, with the entries that are left out for one
+     * reason on one line
      * @return the addresses, each of a directory
      * @throws IllegalArgumentException when an address that was given is not one a pack can be taken from
      */
@@ -243,6 +255,7 @@ class PackArtifacts {
             }
             return repositories.toList()
         }
+        Map<String, List<Integer>> leftOut = new LinkedHashMap<>()
         int number = 0
         for (String entry : (grailsRepoUrl ?: '').split(';')) {
             String address = entry.trim()
@@ -254,18 +267,42 @@ class PackArtifacts {
                 if (address == 'mavenCentral()') {
                     repositories << URI.create(MAVEN_CENTRAL)
                 } else if (address == 'mavenLocal()') {
-                    repositories << directory(System.getProperty('maven.repo.local') ?: "${System.getProperty('user.home')}/.m2/repository".toString(), address)
+                    repositories << directory(Path.of(System.getProperty('maven.repo.local') ?: "${System.getProperty('user.home')}/.m2/repository".toString()))
                 } else if (!isLocal(address)) {
                     repositories << repository(address)
                 } else if (address.regionMatches(true, 0, 'file:', 0, 5)) {
-                    repositories << directory(Path.of(new URI(address)).toString(), address)
+                    repositories << directory(Path.of(new URI(address)))
                 } else {
-                    repositories << directory(address, address)
+                    Path path = Path.of(address)
+                    if (!path.isAbsolute()) {
+                        throw new Unusable("${described(address)} is a path that is not absolute: it is one of the generated application, and is " +
+                                'not read from where the command runs')
+                    }
+                    repositories << directory(path)
                 }
-            } catch (Exception e) {
-                warnings << "Entry ${number} of GRAILS_REPO_URL is not asked for the feature pack. ".toString() +
-                        (e instanceof IllegalArgumentException && e.message?.startsWith("'") ? e.message : "'${redacted(address)}' is not the address of a repository or of a directory")
+            } catch (Unusable e) {
+                leftOut.computeIfAbsent(e.message) { String reason -> new ArrayList<Integer>() } << number
+            } catch (Exception ignored) {
+                // what a path or an address is refused with can repeat it
+                leftOut.computeIfAbsent("${described(address)} is not the address of a repository or of a directory".toString()) { String reason ->
+                    new ArrayList<Integer>()
+                } << number
             }
+        }
+        int lines = 0
+        int more = 0
+        for (Map.Entry<String, List<Integer>> each : leftOut.entrySet()) {
+            List<Integer> entries = each.value
+            if (lines == MAX_WARNINGS) {
+                more += entries.size()
+                continue
+            }
+            lines++
+            String named = entries.take(MAX_ENTRIES_NAMED).join(', ') + (entries.size() > MAX_ENTRIES_NAMED ? " and ${entries.size() - MAX_ENTRIES_NAMED} more" : '')
+            warnings << "${entries.size() == 1 ? 'Entry' : 'Entries'} ${named} of GRAILS_REPO_URL ${entries.size() == 1 ? 'is' : 'are'} not asked for the feature pack. ${each.key}".toString()
+        }
+        if (more > 0) {
+            warnings << "${more} more ${more == 1 ? 'entry' : 'entries'} of GRAILS_REPO_URL ${more == 1 ? 'is' : 'are'} not asked for the feature pack".toString()
         }
         repositories << URI.create(MAVEN_CENTRAL)
         return repositories.toList()
@@ -285,79 +322,152 @@ class PackArtifacts {
      * @param address the address of a repository: {@code https}, or {@code file:} for a directory
      * @return the address, as that of a directory
      * @throws IllegalArgumentException when it is neither, names a user, a query or a fragment, or has a
-     * host or port no request can be made to. The message does not repeat a user or a query.
+     * host or port no request can be made to. The message does not repeat the address as it was given:
+     * see {@link GradleRepository#shownAddress(String)}.
      */
     static URI repository(String address) {
         if (address == null || address.isEmpty() || address.length() > MAX_ADDRESS || NOT_IN_AN_ADDRESS.matcher(address).find()) {
-            throw new IllegalArgumentException("'${redacted(address ?: '')}' is not the address of a repository")
+            throw new Unusable("${described(address)} is not the address of a repository")
+        }
+        if (NOT_ASCII.matcher(address).find()) {
+            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: an address is written in ASCII, and a " +
+                    'host name with other characters in its ASCII form, which begins with xn--')
         }
         URI uri
         try {
             uri = new URI(address)
         } catch (URISyntaxException ignored) {
-            throw new IllegalArgumentException("'${redacted(address)}' is not the address of a repository")
+            throw new Unusable("${described(address)} is not the address of a repository")
         }
         if (FILE.equalsIgnoreCase(uri.scheme)) {
-            Path path
             try {
-                path = Path.of(uri)
-            } catch (IllegalArgumentException | FileSystemNotFoundException ignored) {
-                throw new IllegalArgumentException("'${redacted(address)}' is not the address of a directory")
+                return directory(Path.of(uri))
+            } catch (Exception ignored) {
+                throw new Unusable("${described(address)} is not the address of a directory")
             }
-            return directory(path.toString(), address)
         }
-        if (!HTTPS.equalsIgnoreCase(uri.scheme) || !uri.host) {
-            throw new IllegalArgumentException("'${redacted(address)}' is not a repository a feature pack is taken from: the address has to be https, or file: for a directory")
+        if (!HTTPS.equalsIgnoreCase(uri.scheme)) {
+            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address has to be https, or file: for a directory")
         }
-        if (uri.rawUserInfo != null) {
-            throw new IllegalArgumentException("'${redacted(address)}' is not a repository a feature pack is taken from: the address has a user or password, and credentials are not sent")
+        // an at sign is where a user and a password end, also where they are not read as such
+        if (uri.rawUserInfo != null || address.contains('@')) {
+            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address has a user or password, and credentials are not sent")
         }
         if (uri.rawQuery != null || uri.rawFragment != null) {
-            throw new IllegalArgumentException("'${redacted(address)}' is not a repository a feature pack is taken from: the address cannot have a query or a fragment")
+            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: the address cannot have a query or a fragment")
         }
         if (!canBeAsked(uri)) {
-            throw new IllegalArgumentException("'${redacted(address)}' is not a repository a feature pack is taken from: its host or port is not one a request can be made to")
+            throw new Unusable("${described(address)} is not a repository a feature pack is taken from: its host or port is not one a request can be made to. " +
+                    'A host is a name, or an address written as four numbers from 0 to 255 with dots, or in brackets')
         }
         return uri.rawPath?.endsWith('/') ? uri : URI.create("${uri}/")
     }
 
-    private static URI directory(String path, String given) {
-        try {
-            String address = Path.of(path).toAbsolutePath().normalize().toUri().toString()
-            return URI.create(address.endsWith('/') ? address : address + '/')
-        } catch (InvalidPathException ignored) {
-            throw new IllegalArgumentException("'${redacted(given)}' is not the address of a directory")
-        }
+    private static URI directory(Path path) {
+        String address = path.toAbsolutePath().normalize().toUri().toString()
+        return URI.create(address.endsWith('/') ? address : address + '/')
     }
 
-    // what the client of the JDK would refuse with an exception of its own: a port that is none, and a
-    // host that is neither a name nor an address
+    /**
+     * Whether a request can be made to the host and port of an address. A host is a name or an address,
+     * and which of them is not left to whoever resolves it: an address is four numbers from 0 to 255
+     * with dots, or one in brackets, and what a resolver would also read as an address (one number,
+     * fewer or more than four, numbers that begin with 0 or 0x) is neither.
+     */
     private static boolean canBeAsked(URI address) {
         String host = address.host
         if (host == null || host.length() > MAX_HOST || address.port == 0 || address.port > MAX_PORT) {
             return false
         }
-        return host.startsWith('[') || HOST_NAME.matcher(host).matches()
+        if (host.startsWith('[')) {
+            return inBrackets(host) != null
+        }
+        if (dotted(host) != null) {
+            return true
+        }
+        return HOST_NAME.matcher(host).matches() && !NUMBER.matcher(host.substring(host.lastIndexOf('.') + 1)).matches()
     }
 
-    // a host of this computer or of the network it is in, when the address says so itself: no name is looked up
-    private static boolean isNearby(String host) {
-        String name = host.toLowerCase(Locale.ROOT)
-        if (name == LOCALHOST || name.endsWith('.' + LOCALHOST)) {
-            return true
+    /**
+     * @return the four numbers of an address that is written as such, or {@code null} for anything else
+     */
+    private static int[] dotted(String host) {
+        List<String> parts = host.split(/\./, -1).toList()
+        if (parts.size() != 4 || parts.any { String part -> !PART_OF_IPV4.matcher(part).matches() || Integer.parseInt(part) > 255 }) {
+            return null
         }
-        boolean literal = name.startsWith('[') || IPV4.matcher(name).matches()
-        if (!literal) {
-            return false
+        return parts.collect { String part -> Integer.parseInt(part) } as int[]
+    }
+
+    /**
+     * @return the address that is written in brackets, which is made of what is written and is not
+     * looked up, or {@code null} when it is not one
+     */
+    private static InetAddress inBrackets(String host) {
+        if (!IPV6.matcher(host).matches()) {
+            return null
         }
         try {
-            InetAddress address = InetAddress.getByName(name.startsWith('[') ? name.substring(1, name.length() - 1) : name)
-            return address.loopbackAddress || address.linkLocalAddress || address.siteLocalAddress || address.anyLocalAddress ||
-                    (address instanceof Inet6Address && (address.address[0] & 0xfe) == 0xfc)
+            return InetAddress.getByName(host)
         } catch (IOException | RuntimeException ignored) {
-            // not an address a request is made to
+            return null
+        }
+    }
+
+    /**
+     * Whether a host is this computer or in a network that is not the internet, when the address says so
+     * itself: no name is looked up, so a name that resolves to such an address is not seen here.
+     */
+    private static boolean isNearby(String host) {
+        String name = host.toLowerCase(Locale.ROOT)
+        if (NAMES_OF_THIS_COMPUTER.contains(name) || name.endsWith('.localhost')) {
             return true
         }
+        int[] quad = dotted(name)
+        if (quad != null) {
+            return isNearby(quad)
+        }
+        if (!name.startsWith('[')) {
+            return false
+        }
+        InetAddress address = inBrackets(name)
+        if (address == null) {
+            return true
+        }
+        byte[] bytes = address.address
+        if (bytes.length == 4) {
+            // an address of the older kind that was written as one of the newer
+            return isNearby(numbers(bytes, 0))
+        }
+        if (address.loopbackAddress || address.linkLocalAddress || address.siteLocalAddress || address.anyLocalAddress ||
+                address.multicastAddress || (bytes[0] & 0xfe) == 0xfc) {
+            return true
+        }
+        // the ways an address of the older kind is carried in one of the newer: after zeros, after
+        // 64:ff9b::, and after 2002:
+        boolean afterZeros = (0..<10).every { int index -> bytes[index] == (byte) 0 } &&
+                ((bytes[10] == (byte) 0 && bytes[11] == (byte) 0) || (bytes[10] == (byte) 0xff && bytes[11] == (byte) 0xff))
+        boolean translated = bytes[0] == (byte) 0 && bytes[1] == (byte) 0x64 && bytes[2] == (byte) 0xff && bytes[3] == (byte) 0x9b &&
+                (4..<12).every { int index -> bytes[index] == (byte) 0 }
+        if (afterZeros || translated) {
+            return isNearby(numbers(bytes, 12))
+        }
+        return bytes[0] == (byte) 0x20 && bytes[1] == (byte) 0x02 && isNearby(numbers(bytes, 2))
+    }
+
+    private static int[] numbers(byte[] bytes, int from) {
+        return [bytes[from] & 0xff, bytes[from + 1] & 0xff, bytes[from + 2] & 0xff, bytes[from + 3] & 0xff] as int[]
+    }
+
+    // this network, loopback, private, link-local, shared between a provider and its customers, for
+    // protocols and for measuring, multicast and what is kept back
+    private static boolean isNearby(int[] address) {
+        int first = address[0]
+        int second = address[1]
+        return first == 0 || first == 127 || first == 10 || first >= 224 ||
+                (first == 169 && second == 254) || (first == 172 && second >= 16 && second <= 31) || (first == 192 && second == 168) ||
+                (first == 100 && second >= 64 && second <= 127) || (first == 198 && (second == 18 || second == 19)) ||
+                (first == 192 && second == 0 && address[2] == 0)
     }
 
     /**
@@ -370,7 +480,10 @@ class PackArtifacts {
      * @param sha256 the digest the jar has to have, or {@code null} when none was asked for
      * @return the pack, with the jar it was read from
      * @throws PackArtifactException when no repository gave the jar, the jar is not the one expected, or
-     * it holds no pack that can be used. Nothing a repository answers leaves this method as another exception.
+     * it holds no pack that can be used. Nothing a repository answers leaves this method in another
+     * way: not an exception of whatever read the answer, and not the error of a stack that an answer
+     * was made to overflow. Only an error of the virtual machine itself, such as memory that ran out
+     * elsewhere, is let through.
      * @throws IllegalArgumentException when the digest that is asked for is not a SHA-256
      */
     Pack resolve(Coordinates coordinates, List<URI> repositories, String sha256) {
@@ -384,13 +497,13 @@ class PackArtifacts {
             String where = shown(repository)
             String why
             try {
-                return from(repository, coordinates, pinned)
+                return from(repository, where, coordinates, pinned)
             } catch (Missing ignored) {
                 tried << "${where}: not found".toString()
                 continue
             } catch (Local e) {
                 throw new PackArtifactException("The feature pack of ${coordinates} was not taken from ${where}: ${e.message}. " +
-                        'This is about the disk of this computer, not about the repository')
+                        'This is about this computer, not about the repository')
             } catch (PackDescriptorException e) {
                 // the jar is what the repository has, and it is the jar that is wrong: every problem of it is said
                 throw new PackArtifactException("The feature pack of ${coordinates} from ${where} cannot be used:\n" +
@@ -404,8 +517,12 @@ class PackArtifacts {
                 why = e.message
             } catch (IOException e) {
                 why = reason(e)
-            } catch (Exception e) {
-                // an address or an answer the client itself refuses: what it says can be text of the other side
+            } catch (Throwable e) {
+                if (isOfTheMachine(e)) {
+                    throw e
+                }
+                // an address or an answer the client itself refuses, or one that was made to break what
+                // reads it: what the exception says can be text of the other side
                 why = "cannot be asked (${e.class.simpleName})"
             }
             int left = repositories.size() - index - 1
@@ -416,89 +533,35 @@ class PackArtifacts {
         throw new PackArtifactException("The feature pack of ${coordinates} was not taken from a repository. ${tried.join('; ')}")
     }
 
-    private Pack from(URI repository, Coordinates coordinates, String pinned) {
+    // an answer can be made to overflow the stack of what reads it, which is a failure of the answer;
+    // any other error of the virtual machine is not one a repository is told of
+    private static boolean isOfTheMachine(Throwable e) {
+        return e instanceof VirtualMachineError && !(e instanceof StackOverflowError)
+    }
+
+    private Pack from(URI repository, String where, Coordinates coordinates, String pinned) {
         URI directory = repository.resolve("${coordinates.group.replace('.', '/')}/${coordinates.artifact}/${coordinates.version}/")
-        String file = fileName(directory, coordinates)
+        String file = fileName(directory, repository, coordinates)
         URI jar = directory.resolve(file)
-        Path local = temporary()
+        MessageDigest sha256 = MessageDigest.getInstance('SHA-256')
+        MessageDigest sha1 = MessageDigest.getInstance('SHA-1')
+        // the jar is kept in memory and nowhere else: what is hashed, checked and read is one array
+        Held held = new Held()
         try {
-            MessageDigest sha256 = MessageDigest.getInstance('SHA-256')
-            MessageDigest sha1 = MessageDigest.getInstance('SHA-1')
-            OutputStream sink
-            try {
-                sink = Files.newOutputStream(local)
-            } catch (IOException e) {
-                throw new Local("the copy of the jar could not be written (${e.class.simpleName})")
-            }
-            try (OutputStream kept = new Kept(sink)) {
-                copy(jar, repository, MAX_JAR_BYTES, file, kept, [sha256, sha1])
-            }
-            String digest = HexFormat.of().formatHex(sha256.digest())
-            // before the jar is opened
-            if (pinned != null && pinned != digest) {
-                throw new Refused("checksum mismatch: the sha256 of ${file} is ${digest}, and ${pinned} was asked for")
-            }
-            String checkedAgainst = checkedAgainst(jar, repository, file, [sha256: digest, sha1: HexFormat.of().formatHex(sha1.digest())])
-            Pack pack = loader.fromJar(local, "${coordinates} (${repository})")
-            // the digest is of what was copied, and the pack of what was then read from the copy: they are
-            // one thing only when the copy is still what was written
-            if (digestOf(local) != digest) {
-                throw new Local('the copy of the jar was changed while it was read')
-            }
-            return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates.toString(), repository.toString(), file,
-                    digest, checkedAgainst, pinned != null))
-        } finally {
-            try {
-                Files.deleteIfExists(local)
-            } catch (IOException ignored) {
-                // it is deleted when the command ends, or by a later one
-            }
+            copy(jar, repository, MAX_JAR_BYTES, file, held, [sha256, sha1])
+        } catch (OutOfMemoryError ignored) {
+            held = null
+            throw new Local("the jar, which can have ${MAX_JAR_BYTES} bytes, does not fit into the memory this command has")
         }
-    }
-
-    private static String digestOf(Path file) {
-        MessageDigest digest = MessageDigest.getInstance('SHA-256')
-        try (InputStream input = Files.newInputStream(file)) {
-            byte[] buffer = new byte[16 * 1024]
-            int read
-            while ((read = input.read(buffer)) != -1) {
-                digest.update(buffer, 0, read)
-            }
-        } catch (IOException e) {
-            throw new Local("the copy of the jar could not be read again (${e.class.simpleName})")
+        String digest = HexFormat.of().formatHex(sha256.digest())
+        // before the jar is opened
+        if (pinned != null && pinned != digest) {
+            throw new Refused("checksum mismatch: the sha256 of ${file} is ${digest}, and ${pinned} was asked for")
         }
-        return HexFormat.of().formatHex(digest.digest())
-    }
-
-    /**
-     * The file the jar is copied to. It is deleted when the pack is read, and when the command ends;
-     * what a command that was killed left behind is deleted here a day later.
-     */
-    private Path temporary() {
-        try {
-            Path file = Files.createTempFile(TEMPORARY_PREFIX, TEMPORARY_SUFFIX)
-            file.toFile().deleteOnExit()
-            if (!swept) {
-                swept = true
-                sweep(file.parent)
-            }
-            return file
-        } catch (IOException e) {
-            throw new Local("no temporary file could be made for the jar (${e.class.simpleName})")
-        }
-    }
-
-    private static void sweep(Path directory) {
-        long before = System.currentTimeMillis() - LEFTOVER_AGE.toMillis()
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(directory, TEMPORARY_PREFIX + '*' + TEMPORARY_SUFFIX)) {
-            for (Path file : files) {
-                if (Files.isRegularFile(file) && Files.getLastModifiedTime(file).toMillis() < before) {
-                    Files.deleteIfExists(file)
-                }
-            }
-        } catch (IOException | RuntimeException ignored) {
-            // what is left stays for the next time
-        }
+        String checkedAgainst = checkedAgainst(jar, repository, file, [sha256: digest, sha1: HexFormat.of().formatHex(sha1.digest())])
+        Pack pack = loader.fromJarBytes(held.bytes(), held.size(), "${coordinates} (${where})")
+        return pack.withArtifact(new PackArtifact(pack.descriptor.name, coordinates.toString(), repository.toString(), file,
+                digest, checkedAgainst, pinned != null))
     }
 
     /**
@@ -515,12 +578,8 @@ class PackArtifacts {
                 copy(URI.create("${jar}.${digest.key}"), repository, MAX_CHECKSUM_BYTES, name, sink, [])
             } catch (Missing | NotGiven ignored) {
                 continue
-            } catch (Refused e) {
-                throw new Refused(e.message.startsWith(name) ? e.message : "${name}: ${e.message}")
-            } catch (IOException e) {
-                throw new Refused("${name}: ${reason(e)}")
-            } catch (Exception e) {
-                throw new Refused("${name}: cannot be asked (${e.class.simpleName})")
+            } catch (Throwable e) {
+                throw failureOf(name, e)
             }
             String text = new String(sink.toByteArray(), StandardCharsets.UTF_8)
             // some repositories write the name of the file after the checksum, and some tools a mark before it
@@ -537,25 +596,40 @@ class PackArtifacts {
     }
 
     /**
+     * The failure of a request for a file that is asked for besides the jar, which names that file,
+     * whatever the failure is.
+     */
+    private static RuntimeException failureOf(String name, Throwable e) {
+        if (isOfTheMachine(e)) {
+            throw e
+        }
+        if (e instanceof Refused) {
+            return e.message.startsWith(name) ? (Refused) e : new Refused("${name}: ${e.message}")
+        }
+        return new Refused(e instanceof IOException ? "${name}: ${reason((IOException) e)}" : "${name}: cannot be asked (${e.class.simpleName})")
+    }
+
+    /**
      * The name of the jar. That of a snapshot is the name of its latest build, which the
      * {@code maven-metadata.xml} of the version gives; a repository without one, such as the local
      * repository of Maven, keeps the jar under the name of the version.
      */
-    private String fileName(URI directory, Coordinates coordinates) {
+    private String fileName(URI directory, URI repository, Coordinates coordinates) {
         String plain = "${coordinates.artifact}-${coordinates.version}.jar"
         if (!coordinates.snapshot) {
             return plain
         }
         ByteArrayOutputStream metadata = new ByteArrayOutputStream()
+        String latest
         try {
-            copy(directory.resolve(METADATA), directory, MAX_METADATA_BYTES, METADATA, metadata, [])
+            copy(directory.resolve(METADATA), repository, MAX_METADATA_BYTES, METADATA, metadata, [])
+            latest = build(metadata.toByteArray(), coordinates)
         } catch (Missing | NotGiven ignored) {
             return plain
-        } catch (IOException e) {
-            throw new Refused("${METADATA}: ${reason(e)}")
+        } catch (Throwable e) {
+            throw failureOf(METADATA, e)
         }
-        String build = build(metadata.toByteArray(), coordinates)
-        return build == null ? plain : "${coordinates.artifact}-${build}.jar"
+        return latest == null ? plain : "${coordinates.artifact}-${latest}.jar"
     }
 
     /**
@@ -563,34 +637,84 @@ class PackArtifacts {
      * that was asked for with the time and the number of a build in the place of {@code SNAPSHOT}, and
      * nothing else. The metadata has to be that of what was asked for where it says what it is of.
      *
+     * <p>The file is read as it comes, element after element, and no tree is made of it: how deep it is
+     * nested and how many elements it has are counted and bounded, and of the few elements that are
+     * read only the text that is directly in them is taken. Nothing here goes deeper for a deeper file.</p>
+     *
      * @return the version of the build, or {@code null} when the repository keeps the snapshot under the
      * name of the version
      */
     private static String build(byte[] metadata, Coordinates coordinates) {
-        Element root
+        Map<String, String> said = new HashMap<>()
+        List<Map<String, String>> builds = []
         try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance()
+            XMLInputFactory factory = XMLInputFactory.newFactory()
             // neither a document type nor anything from outside the document is read
-            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
-            factory.setFeature('http://apache.org/xml/features/disallow-doctype-decl', true)
-            factory.setXIncludeAware(false)
-            factory.setExpandEntityReferences(false)
-            DocumentBuilder builder = factory.newDocumentBuilder()
-            builder.setErrorHandler(new Strict())
-            root = builder.parse(new ByteArrayInputStream(metadata)).documentElement
-        } catch (SAXException | ParserConfigurationException | IOException ignored) {
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+            factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
+            factory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false)
+            XMLStreamReader reader = factory.createXMLStreamReader(new ByteArrayInputStream(metadata))
+            try {
+                List<String> path = []
+                int elements = 0
+                // the element whose text is being read, as the depth it is at, and none at 0
+                int reading = 0
+                StringBuilder text = new StringBuilder()
+                Map<String, String> ofOneFile = null
+                while (reader.hasNext()) {
+                    int event = reader.next()
+                    if (event == XMLStreamConstants.DTD || event == XMLStreamConstants.ENTITY_REFERENCE) {
+                        throw new Refused("${METADATA} cannot be read")
+                    }
+                    if (event == XMLStreamConstants.START_ELEMENT) {
+                        if (path.size() == MAX_METADATA_DEPTH || ++elements > MAX_METADATA_ELEMENTS ||
+                                (path.isEmpty() && reader.localName != METADATA_ROOT)) {
+                            throw new Refused("${METADATA} is not the metadata of a Maven repository")
+                        }
+                        path << reader.localName
+                        String at = path.join('/')
+                        if (at == BUILD_OF_A_FILE) {
+                            ofOneFile = new HashMap<>()
+                        }
+                        if (reading == 0 && READ_OF_METADATA.contains(at)) {
+                            reading = path.size()
+                            text.setLength(0)
+                        }
+                    } else if (event == XMLStreamConstants.END_ELEMENT) {
+                        String at = path.join('/')
+                        if (reading == path.size()) {
+                            reading = 0
+                            String name = path.last()
+                            if (at.startsWith(BUILD_OF_A_FILE + '/')) {
+                                ofOneFile.putIfAbsent(name, text.toString().trim())
+                            } else {
+                                said.putIfAbsent(at, text.toString().trim())
+                            }
+                        }
+                        if (at == BUILD_OF_A_FILE) {
+                            builds << ofOneFile
+                            ofOneFile = null
+                        }
+                        path.removeLast()
+                    } else if (reading == path.size() && reading > 0 && (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA)) {
+                        text.append(reader.text)
+                        if (text.length() > MAX_PART * 2) {
+                            throw new Refused("${METADATA} is not the metadata of a Maven repository")
+                        }
+                    }
+                }
+            } finally {
+                reader.close()
+            }
+        } catch (XMLStreamException ignored) {
             throw new Refused("${METADATA} cannot be read")
         }
         Map<String, String> asked = [groupId: coordinates.group, artifactId: coordinates.artifact, version: coordinates.version]
         for (Map.Entry<String, String> each : asked.entrySet()) {
-            String said = text(root, each.key)
-            if (said && said != each.value) {
+            String value = said.get(METADATA_ROOT + '/' + each.key)
+            if (value && value != each.value) {
                 throw new Refused("${METADATA} is that of another ${each.key} than the one asked for")
             }
-        }
-        Element versioning = child(root, 'versioning')
-        if (versioning == null) {
-            return null
         }
         String release = coordinates.version.substring(0, coordinates.version.length() - SNAPSHOT.length())
         Pattern buildOfIt = Pattern.compile(Pattern.quote(release) + BUILD)
@@ -598,19 +722,17 @@ class PackArtifacts {
         String latestTime = null
         long latestNumber = -1
         boolean underTheVersion = false
-        Element builds = child(versioning, 'snapshotVersions')
-        for (Node node = builds?.firstChild; node != null; node = node.nextSibling) {
-            if (!(node instanceof Element) || node.nodeName != 'snapshotVersion' ||
-                    text((Element) node, 'extension') != 'jar' || text((Element) node, 'classifier')) {
+        for (Map<String, String> each : builds) {
+            if (each.get('extension') != 'jar' || each.get('classifier')) {
                 continue
             }
-            String value = text((Element) node, 'value') ?: ''
+            String value = each.get('value') ?: ''
             if (value == coordinates.version) {
                 underTheVersion = true
                 continue
             }
             Matcher matcher = buildOfIt.matcher(value)
-            if (!matcher.matches()) {
+            if (!matcher.matches() || !isTime(matcher.group(1))) {
                 throw new Refused("${METADATA} names a build that is not one of this snapshot")
             }
             long number = Long.parseLong(matcher.group(2))
@@ -624,38 +746,36 @@ class PackArtifacts {
         if (latest != null || underTheVersion) {
             return latest
         }
-        Element snapshot = child(versioning, 'snapshot')
-        String time = snapshot == null ? null : text(snapshot, 'timestamp')
-        String number = snapshot == null ? null : text(snapshot, 'buildNumber')
-        if (snapshot == null || text(snapshot, 'localCopy') == 'true' || (!time && !number)) {
+        String time = said.get(LATEST_BUILD + '/timestamp')
+        String number = said.get(LATEST_BUILD + '/buildNumber')
+        if (said.get(LATEST_BUILD + '/localCopy') == 'true' || (!time && !number)) {
             return null
         }
-        if (!BUILD_TIME.matcher(time ?: '').matches() || !BUILD_NUMBER.matcher(number ?: '').matches()) {
+        if (!isTime(time ?: '') || !BUILD_NUMBER.matcher(number ?: '').matches()) {
             throw new Refused("${METADATA} names a build that is not one of this snapshot")
         }
         return "${release}-${time}-${number}"
     }
 
-    private static Element child(Element parent, String name) {
-        for (Node node = parent.firstChild; node != null; node = node.nextSibling) {
-            if (node instanceof Element && node.nodeName == name) {
-                return (Element) node
-            }
+    // the time of a build as Maven writes it, which is a day and a time of day there are
+    private static boolean isTime(String text) {
+        try {
+            LocalDateTime.parse(text, BUILD_TIME)
+            return true
+        } catch (DateTimeParseException ignored) {
+            return false
         }
-        return null
-    }
-
-    private static String text(Element parent, String name) {
-        return child(parent, name)?.textContent?.trim()
     }
 
     /**
      * Copies a file of a repository, and no more of it than the limit. A repository that stops answering
      * is not waited for: the request and each read of the answer have the time of an answer, and the
-     * file has its own.
+     * file has its own. Whatever ends the copy, what watches the time is ended with it.
      */
     private void copy(URI address, URI repository, long limit, String name, OutputStream sink, List<MessageDigest> digests) {
         Watch watch = new Watch(answerTimeout, fileTimeout)
+        Throwable failure = null
+        boolean expired = false
         try {
             InputStream input = open(address, repository, watch)
             try {
@@ -681,16 +801,21 @@ class PackArtifacts {
                     // what was read is what counts
                 }
             }
-        } catch (Exception e) {
-            // closing the answer under a read, or interrupting a write of the copy, ends it in whatever way the stream has
-            if (watch.end()) {
-                throw new Refused(TIMEOUT)
-            }
-            throw e
+        } catch (Throwable e) {
+            failure = e
+        } finally {
+            expired = watch.end()
         }
-        // a read that was cut can also look like the end of the answer
-        if (watch.end()) {
+        if (failure != null && (isOfTheMachine(failure) || failure instanceof OutOfMemoryError)) {
+            throw failure
+        }
+        // closing the answer under a read ends the read in whatever way the stream has, which can also
+        // look like the end of the answer
+        if (expired) {
             throw new Refused(TIMEOUT)
+        }
+        if (failure != null) {
+            throw failure
         }
     }
 
@@ -705,7 +830,7 @@ class PackArtifacts {
         URI current = address
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             // every address that is asked, the first and each one a repository sends on to
-            if (!HTTPS.equalsIgnoreCase(current.scheme) || !current.host || current.rawUserInfo != null) {
+            if (!HTTPS.equalsIgnoreCase(current.scheme) || current.rawUserInfo != null || (current.rawAuthority ?: '').contains('@')) {
                 throw new Refused(redirects == 0 ? 'the address is not https' : 'redirect to an address that is not https')
             }
             if (!canBeAsked(current)) {
@@ -761,24 +886,29 @@ class PackArtifacts {
         return "cannot be read (${e.class.simpleName})"
     }
 
-    // text that was given, for a message: without a user, a password or a query of an address, readable and short
     // one rule for what was typed in a message, that of the features: FeatureSelectionException.shown
     private static String echo(String text) {
         return FeatureSelectionException.shown(text)
     }
 
-    // an address that was given, for a message: without its user, password and query, which can be secrets
-    private static String redacted(String text) {
-        return FeatureSelectionException.shown(AFTER_THE_PATH.matcher(USER_IN_ADDRESS.matcher(text).replaceAll('')).replaceAll(''))
+    // an address that was given, at the start of a message. It is not repeated as it was given, since
+    // a password can be anywhere in what does not parse as it was meant: see GradleRepository.shownAddress
+    private static String described(String address) {
+        return GradleRepository.shownAddress(address).capitalize()
     }
 
+    /**
+     * A repository in a line that says what came of asking it. The addresses this class makes have
+     * neither a user nor a query; one that was made elsewhere and has is not repeated.
+     */
     private static String shown(URI repository) {
-        return cut(repository.toString(), MAX_REPOSITORY_ECHO)
-    }
-
-    private static String cut(String text, int length) {
-        String shown = UNREADABLE.matcher(text).replaceAll('?').replace('@|', '@ |')
-        return shown.length() > length ? shown.substring(0, length) + '...' : shown
+        boolean directory = FILE.equalsIgnoreCase(repository.scheme) && repository.rawAuthority == null
+        boolean plain = repository.host != null && repository.rawUserInfo == null && repository.rawQuery == null && repository.rawFragment == null
+        if (!directory && !plain) {
+            return GradleRepository.shownAddress(repository.toString())
+        }
+        String text = UNREADABLE.matcher(repository.toString()).replaceAll('?').replace('@|', '@ |')
+        return text.length() > MAX_REPOSITORY_ECHO ? text.substring(0, MAX_REPOSITORY_ECHO) + '...' : text
     }
 
     private static synchronized ScheduledExecutorService watchdog() {
@@ -861,7 +991,7 @@ class PackArtifacts {
     /**
      * Ends a file that takes too long. A read of an answer that does not come cannot be given a time of
      * its own, so the answer is closed under it, and the thread that waits is interrupted, which also
-     * ends a request that has no answer yet.
+     * ends a request that has no answer yet. Once it is ended it interrupts nothing.
      */
     private static final class Watch {
 
@@ -873,6 +1003,7 @@ class PackArtifacts {
         private Closeable answer
         private boolean done
         private boolean expired
+        private boolean cleared
 
         Watch(Duration answerTimeout, Duration fileTimeout) {
             answerNanos = answerTimeout.toNanos()
@@ -911,37 +1042,20 @@ class PackArtifacts {
         synchronized boolean end() {
             done = true
             task.cancel(false)
-            if (expired) {
+            if (expired && !cleared) {
                 // the interrupt was for the read, not for what the thread does next
+                cleared = true
                 Thread.interrupted()
             }
             return expired
         }
     }
 
-    // the stream of the copy on this computer: what fails here is not the repository
-    private static final class Kept extends FilterOutputStream {
+    // the bytes of the jar, without a copy of them being made to hand them on
+    private static final class Held extends ByteArrayOutputStream {
 
-        Kept(OutputStream sink) {
-            super(sink)
-        }
-
-        @Override
-        void write(byte[] bytes, int offset, int length) {
-            try {
-                out.write(bytes, offset, length)
-            } catch (IOException e) {
-                throw new Local("the copy of the jar could not be written (${e.class.simpleName})")
-            }
-        }
-
-        @Override
-        void close() {
-            try {
-                out.close()
-            } catch (IOException e) {
-                throw new Local("the copy of the jar could not be written (${e.class.simpleName})")
-            }
+        byte[] bytes() {
+            return buf
         }
     }
 
@@ -998,6 +1112,7 @@ class PackArtifacts {
         }
     }
 
+    // what this computer could not do, which is not for the repository to answer for
     private static final class Local extends RuntimeException {
 
         Local(String reason) {
@@ -1005,20 +1120,11 @@ class PackArtifacts {
         }
     }
 
-    private static final class Strict implements ErrorHandler {
+    // an address a pack cannot be taken from, with a message that is made here and repeats no secret
+    private static final class Unusable extends IllegalArgumentException {
 
-        @Override
-        void warning(SAXParseException exception) {
-        }
-
-        @Override
-        void error(SAXParseException exception) throws SAXException {
-            throw exception
-        }
-
-        @Override
-        void fatalError(SAXParseException exception) throws SAXException {
-            throw exception
+        Unusable(String message) {
+            super(message)
         }
     }
 }

@@ -122,6 +122,56 @@ class PackArtifactsSpec extends Specification {
         'https://[fe80::1]/x.jar'             || 'redirect to an address of this computer or of its network'
         'https://[fd00::1]/x.jar'             || 'redirect to an address of this computer or of its network'
         'https://0.0.0.0/x.jar'               || 'redirect to an address of this computer or of its network'
+        'https://2130706433/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://2130706433:8443/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://0/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://167772165/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://0x7f000001/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://0x7f.1/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://0177.0.0.1/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://127.1/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://127.0.0.01/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://1.2.3.4.5/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://256.1.1.1/x.jar' || 'redirect to an address with a host or port no request can be made to'
+        'https://[64:ff9b::7f00:1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[::127.0.0.1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[::ffff:10.0.0.1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[::ffff:7f00:1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[2002:7f00:1::]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[2002:c0a8:101::1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://100.64.0.1/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://100.127.255.254/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://198.18.0.1/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://198.19.255.1/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://192.0.0.8/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://224.0.0.1/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://239.255.255.250/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://255.255.255.255/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://0.1.2.3/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://172.16.0.1/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://172.31.255.255/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[ff02::1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[fc00::1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[fec0::1]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://[::]/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://localhost.localdomain/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://ip6-localhost/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://ip6-loopback/x.jar' || 'redirect to an address of this computer or of its network'
+        'https://LOCALHOST/x.jar' || 'redirect to an address of this computer or of its network'
+    }
+
+    @Unroll
+    void "a redirect to #host, an address out there, is followed"() {
+        given:
+        byte[] jar = jar()
+        answers[JAR] = { new Reply(302, "https://${host}/x.jar", null) }
+        answers["https://${host}/x.jar".toString()] = { new Reply(200, null, new ByteArrayInputStream(jar)) }
+
+        expect:
+        artifacts.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null).artifact.sha256 == digest(jar, 'SHA-256')
+
+        where:
+        host << ['93.184.216.34', '172.32.0.1', '100.128.0.1', '198.20.0.1', '192.0.1.1', '[2606:2800:220:1::1]', '[64:ff9b::5db8:d822]', '[2002:5db8:d822::1]', 'localhost.example']
     }
 
     void "a repository of this computer can send on to this computer"() {
@@ -271,6 +321,92 @@ class PackArtifactsSpec extends Specification {
         e.message.contains('is not a SHA-256')
     }
 
+    void "what watches the time of a file is ended when an error ends the file, and interrupts nothing later"() {
+        given:
+        answers[JAR] = { new Reply(200, null, new Asserting()) }
+        PackArtifacts impatient = new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
+
+        when:
+        impatient.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
+
+        then:
+        PackArtifactException e = thrown()
+        e.message == NOT_TAKEN + 'https://repository.invalid/maven/: cannot be asked (AssertionError)' + HINT
+
+        when: 'the thread goes on for longer than an answer has'
+        Thread.sleep(1500)
+
+        then:
+        noExceptionThrown()
+        !Thread.currentThread().isInterrupted()
+    }
+
+    void "an answer that overflows the stack of what reads it is a failure of the answer, and an error of the machine is not"() {
+        given:
+        answers[JAR] = { throw new StackOverflowError() }
+
+        when:
+        artifacts.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
+
+        then:
+        PackArtifactException e = thrown()
+        e.message == NOT_TAKEN + 'https://repository.invalid/maven/: cannot be asked (StackOverflowError)' + HINT
+
+        when:
+        answers[JAR] = { throw new InternalError('of the machine') }
+        artifacts.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0'), REPOSITORY, null)
+
+        then:
+        thrown(InternalError)
+    }
+
+    @Unroll
+    void "the metadata of a snapshot that #what is a failure that names the file"() {
+        given:
+        String directory = 'https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0-SNAPSHOT/'
+        answers[directory + 'maven-metadata.xml'] = answer
+
+        when:
+        new PackArtifacts(transport, Duration.ofMillis(300), Duration.ofSeconds(60))
+                .resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0-SNAPSHOT'), REPOSITORY, null)
+
+        then:
+        PackArtifactException e = thrown()
+        e.message == 'The feature pack of com.acme:acme-audit-grails:2.3.0-SNAPSHOT was not taken from a repository. ' +
+                "https://repository.invalid/maven/: maven-metadata.xml${reason}" + HINT
+        asked*.toString() == [directory + 'maven-metadata.xml']
+
+        where:
+        what                           | answer                                                                                    || reason
+        'stops coming'                 | ({ new Reply(200, null, new PipedInputStream(new PipedOutputStream())) })                 || ': timeout'
+        'is an error of the server'    | ({ new Reply(500, null, null) })                                                          || ': HTTP status 500'
+        'cannot be asked for'          | ({ throw new IllegalStateException('x') })                                                || ': cannot be asked (IllegalStateException)'
+        'breaks what reads it'         | ({ new Reply(200, null, new Asserting()) })                                               || ': cannot be asked (AssertionError)'
+        'is nested without end'        | ({ new Reply(200, null, text("<metadata><groupId>${'<a>' * 36000}${'</a>' * 36000}</groupId></metadata>")) }) || ' is not the metadata of a Maven repository'
+        'is nested under a value'      | ({ new Reply(200, null, text('<metadata><versioning><snapshotVersions><snapshotVersion><extension>jar</extension><value>' +
+                                              "${'<a>' * 36000}${'</a>' * 36000}</value></snapshotVersion></snapshotVersions></versioning></metadata>")) }) || ' is not the metadata of a Maven repository'
+        'has elements without end'     | ({ new Reply(200, null, text("<metadata>${'<a/>' * 30000}</metadata>")) })                || ' is not the metadata of a Maven repository'
+        'is a page of something else'  | ({ new Reply(200, null, text('<html><head><title>Sign in</title></head><body><form/></body></html>')) }) || ' is not the metadata of a Maven repository'
+        'has a text without end'       | ({ new Reply(200, null, text("<metadata><groupId>${'g' * 5000}</groupId></metadata>")) }) || ' is not the metadata of a Maven repository'
+        'has a document type'          | ({ new Reply(200, null, text('<!DOCTYPE metadata [<!ENTITY x "y">]><metadata><groupId>&x;</groupId></metadata>')) }) || ' cannot be read'
+        'is not XML'                   | ({ new Reply(200, null, text('not xml')) })                                               || ' cannot be read'
+    }
+
+    void "of the metadata of a snapshot only the text that is directly in an element is read"() {
+        given:
+        byte[] jar = jar()
+        String directory = 'https://repository.invalid/maven/com/acme/acme-audit-grails/2.3.0-SNAPSHOT/'
+        answers[directory + 'maven-metadata.xml'] = { new Reply(200, null, text('<?xml version="1.0" encoding="UTF-8"?>\n<metadata modelVersion="1.1.0">' +
+                '<groupId>com.<x>other</x>acme</groupId><artifactId><![CDATA[acme-audit-grails]]></artifactId><version> 2.3.0-SNAPSHOT </version>' +
+                '<versioning><snapshot><timestamp>20261119.101112</timestamp><buildNumber>7</buildNumber></snapshot><lastUpdated>20261119101112</lastUpdated>' +
+                '</versioning></metadata>')) }
+        answers[directory + 'acme-audit-grails-2.3.0-20261119.101112-7.jar'] = { new Reply(200, null, new ByteArrayInputStream(jar)) }
+
+        expect:
+        artifacts.resolve(PackArtifacts.coordinates('com.acme:acme-audit-grails:2.3.0-SNAPSHOT'), REPOSITORY, null)
+                .artifact.file == 'acme-audit-grails-2.3.0-20261119.101112-7.jar'
+    }
+
     void "an answer that stops coming is not waited for"() {
         given: 'a repository that begins a jar and then says nothing more'
         PipedOutputStream held = new PipedOutputStream()
@@ -360,11 +496,26 @@ class PackArtifactsSpec extends Specification {
         and: 'what can be a secret is not repeated'
         !warnings[0].contains('secret')
         !warnings[0].contains('user:')
+        ['alice', 'Xq7', 'Zk9', 'sec'].every { String part -> !warnings[0].contains(part) }
 
         where:
         entry                                          || reason
         'https://user:secret@nexus.invalid/private'    || "'https://nexus.invalid/private' is not a repository a feature pack is taken from: the address has a user or password, and credentials are not sent"
-        'https://user:sec ret@nexus.invalid/private'   || "'https://nexus.invalid/private' is not the address of a repository"
+        'https://user:sec ret@nexus.invalid/private'   || 'An address that is not shown (https, 42 characters) is not the address of a repository'
+        'https://alice:Xq7/Zk9@host.invalid/x'         || 'An address that is not shown (https, 36 characters) is not a repository a feature pack is taken from'
+        'https://alice:Xq7#Zk9@host.invalid/x'         || 'An address that is not shown (https, 36 characters) is not a repository a feature pack is taken from'
+        'https://alice:Xq7?Zk9@host.invalid/x'         || 'An address that is not shown (https, 36 characters) is not a repository a feature pack is taken from'
+        'https://alice:8080/Xq7Zk9@host.invalid/x'     || 'the address has a user or password, and credentials are not sent'
+        'https://alice:Xq7Zk9%40host.invalid/x'        || 'An address that is not shown (https, 37 characters) is not a repository a feature pack is taken from'
+        'https:/alice:Xq7Zk9@host.invalid/x'           || 'An address that is not shown (https, 34 characters) is not a repository a feature pack is taken from'
+        'https:alice:Xq7Zk9@host.invalid/x'            || 'An address that is not shown (https, 33 characters) is not a repository a feature pack is taken from'
+        'alice:Xq7Zk9@host.invalid/x'                  || 'An address that is not shown (27 characters) is not a repository a feature pack is taken from'
+        'mavenLocal'                                   || 'An address that is not shown (10 characters) is a path that is not absolute'
+        'mavenlocal()'                                 || 'An address that is not shown (12 characters) is a path that is not absolute'
+        'mavenCentral'                                 || 'An address that is not shown (12 characters) is a path that is not absolute'
+        'relative/dir'                                 || 'An address that is not shown (12 characters) is a path that is not absolute'
+        '../maven'                                     || 'An address that is not shown (8 characters) is a path that is not absolute'
+        'https://2130706433/releases'                  || 'its host or port is not one a request can be made to'
         'https://nexus.invalid/private?token=secret'   || "'https://nexus.invalid/private' is not a repository a feature pack is taken from: the address cannot have a query or a fragment"
         'http://nexus.invalid/releases'                || 'the address has to be https, or file: for a directory'
         'mailto:x'                                     || 'the address has to be https, or file: for a directory'
@@ -372,6 +523,20 @@ class PackArtifactsSpec extends Specification {
         'file://server/share'                          || 'is not the address of a repository or of a directory'
         'file:///srv/maven?secret=1'                   || 'is not the address of a repository or of a directory'
         'https://nexus.invalid:99999/releases'         || 'its host or port is not one a request can be made to'
+    }
+
+    void "the entries of GRAILS_REPO_URL that are left out are told of in a few lines, however many they are"() {
+        given:
+        List<String> warnings = []
+
+        when: 'fifty entries that cannot be asked: one path forty times, and ten others'
+        PackArtifacts.repositories([], ((['relative/dir'] * 40) + (1..10).collect { int each -> 'r' * each }).join(';'), warnings)
+
+        then:
+        warnings.size() == PackArtifacts.MAX_WARNINGS + 1
+        warnings[0].startsWith('Entries 1, 2, 3 and 37 more of GRAILS_REPO_URL are not asked for the feature pack. ')
+        warnings[1].startsWith('Entry 41 of GRAILS_REPO_URL is not asked for the feature pack. ')
+        warnings.last() == '6 more entries of GRAILS_REPO_URL are not asked for the feature pack'
     }
 
     @Unroll
@@ -392,6 +557,11 @@ class PackArtifactsSpec extends Specification {
         'https://user:secret@nexus.invalid/m'  || "'https://nexus.invalid/m' is not a repository a feature pack is taken from: the address has a user or password"
         'https://nexus.invalid/m?key=secret'   || "'https://nexus.invalid/m' is not a repository a feature pack is taken from: the address cannot have a query"
         'https://nexus.invalid/' + 'm' * 3000  || 'is not the address of a repository'
+        'https://2130706433/m'                 || 'A host is a name, or an address written as four numbers from 0 to 255 with dots, or in brackets'
+        'https://0x7f.1/m'                     || 'its host or port is not one a request can be made to'
+        'https://010.0.0.1/m'                  || 'its host or port is not one a request can be made to'
+        'https://alice:8080/secret@host/m'     || 'the address has a user or password, and credentials are not sent'
+        "https://b${(char) 0xFC}cher.invalid/m" || 'a host name with other characters in its ASCII form, which begins with xn--'
     }
 
     void "the address of a directory is not one to write into a project"() {
@@ -428,6 +598,18 @@ class PackArtifactsSpec extends Specification {
         @Override
         int read() {
             throw new UnsupportedOperationException('what the other side says')
+        }
+    }
+
+    private static InputStream text(String text) {
+        return new ByteArrayInputStream(text.getBytes('UTF-8'))
+    }
+
+    static class Asserting extends InputStream {
+
+        @Override
+        int read() {
+            throw new AssertionError('what the other side says')
         }
     }
 

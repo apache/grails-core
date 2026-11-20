@@ -47,8 +47,8 @@ final class PackFeatures implements AvailableFeatures {
      * @param everyFrameworkFeature the features of the framework for every type of application
      * @param packs the packs to add; one that does not support the type of application is left out
      * @param applicationType the type of application
-     * @throws IllegalArgumentException when a pack has the name of a feature of the framework or of
-     * another pack, or names an exclusive group of the framework
+     * @throws PackRefusedException when a pack has the name of a feature of the framework or of
+     * another pack, names an exclusive group of the framework, or is for another Grails or Forge
      */
     PackFeatures(AvailableFeatures framework, Collection<Feature> everyFrameworkFeature, Collection<Pack> packs, ApplicationType applicationType) {
         this.framework = framework
@@ -73,15 +73,15 @@ final class PackFeatures implements AvailableFeatures {
             PackFeature feature = PackFeature.of(pack, lookup, pages)
             String name = feature.getName()
             if (frameworkNames.contains(name)) {
-                throw new IllegalArgumentException("The feature pack ${pack.origin} has the name of a feature of the framework, ${name}")
+                throw new PackRefusedException("The feature pack ${pack.origin} has the name of a feature of the framework, ${name}", [pack], true)
             }
             if (feature instanceof OneOfFeature && frameworkGroups.contains(((OneOfFeature) feature).getGroup())) {
-                throw new IllegalArgumentException("The feature pack ${pack.origin} names the exclusive group " +
-                        "${((OneOfFeature) feature).getGroup()} of the framework, which a pack cannot join yet")
+                throw new PackRefusedException("The feature pack ${pack.origin} names the exclusive group " +
+                        "${((OneOfFeature) feature).getGroup()} of the framework, which a pack cannot join yet", [pack], true)
             }
             Pack other = named.put(name, pack)
             if (other != null) {
-                throw new IllegalArgumentException("The feature packs ${other.origin} and ${pack.origin} both have the name ${name}")
+                throw new PackRefusedException("The feature packs ${other.origin} and ${pack.origin} both have the name ${name}", [other, pack], false)
             }
             if (feature.supports(applicationType)) {
                 this.packs.put(name, feature)
@@ -119,8 +119,8 @@ final class PackFeatures implements AvailableFeatures {
     static void checkCompatibility(Pack pack, String of, String range, String version) {
         PackVersionRange versions = PackVersionRange.parse(range)
         if (!versions.contains(version)) {
-            throw new IllegalArgumentException("The feature pack ${pack.descriptor.name} from ${pack.origin} is for ${of} ${versions}, " +
-                    "and this is ${of} ${version}")
+            throw new PackRefusedException("The feature pack ${pack.descriptor.name} from ${pack.origin} is for ${of} ${versions}, " +
+                    "and this is ${of} ${version}", [pack], true)
         }
     }
 }

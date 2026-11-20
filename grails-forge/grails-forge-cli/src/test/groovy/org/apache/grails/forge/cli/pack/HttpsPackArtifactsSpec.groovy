@@ -163,6 +163,43 @@ class HttpsPackArtifactsSpec extends Specification {
         System.currentTimeMillis() - started < 30000
     }
 
+    void "a request that is never answered is ended by the client itself when its time is the shorter"() {
+        given:
+        handlers[PATH] = { HttpExchange exchange -> released.await(120, TimeUnit.SECONDS) }
+
+        when:
+        long started = System.currentTimeMillis()
+        new PackArtifacts(PackArtifacts.https(context, Duration.ofSeconds(1)), Duration.ofSeconds(120), Duration.ofSeconds(120))
+                .resolve(coordinates(), [repository()], null)
+
+        then:
+        PackArtifactException e = thrown()
+        e.message.contains("${repository()}: timeout")
+        System.currentTimeMillis() - started < 30000
+    }
+
+    void "a redirect to this computer written as one number is not followed"() {
+        given:
+        byte[] jar = jar()
+        List<String> reached = [].asSynchronized()
+        handlers[PATH] = { HttpExchange exchange ->
+            exchange.responseHeaders.add('Location', "https://2130706433:${server.address.port}/reached.jar")
+            exchange.sendResponseHeaders(302, -1)
+        }
+        handlers['/reached.jar'] = { HttpExchange exchange ->
+            reached << exchange.requestURI.path
+            send(exchange, 200, jar)
+        }
+
+        when:
+        artifacts(Duration.ofSeconds(30), Duration.ofSeconds(60)).resolve(coordinates(), [repository()], null)
+
+        then:
+        PackArtifactException e = thrown()
+        e.message.contains("${repository()}: redirect to an address with a host or port no request can be made to")
+        reached.isEmpty()
+    }
+
     void "a checksum that is never answered is ended too, and is named"() {
         given:
         byte[] jar = jar()
@@ -246,7 +283,8 @@ class HttpsPackArtifactsSpec extends Specification {
     }
 
     private PackArtifacts artifacts(Duration answer, Duration file) {
-        return new PackArtifacts(PackArtifacts.https(context, answer), answer, file)
+        // the client has far longer for an answer than what watches it: what ends a stall here is the watch
+        return new PackArtifacts(PackArtifacts.https(context, Duration.ofSeconds(120)), answer, file)
     }
 
     private static PackArtifacts.Coordinates coordinates() {

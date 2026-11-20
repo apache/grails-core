@@ -27,6 +27,7 @@ import org.apache.grails.forge.core.pack.PackArtifact
 import org.apache.grails.forge.core.pack.PackDescriptor.PackDependency
 import org.apache.grails.forge.core.pack.PackDescriptorException
 import org.apache.grails.forge.core.pack.PackLoader
+import org.apache.grails.forge.core.pack.PackRefusedException
 import org.grails.forge.application.ApplicationType
 import org.grails.forge.application.ContextFactory
 import org.grails.forge.application.Project
@@ -140,13 +141,14 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
             throw mistake(e)
         } catch (IllegalArgumentException e) {
             // anything else an application cannot be made with, which a pack of a repository can cause
-            // as well as the command line: said in its own words, not as a failure of this program
-            return failed(e)
+            // as well as the command line: said in its own words, not as a failure of this program, and
+            // with the coordinates of the packs it can be about
+            return failed(e, ofRepositories(e.getMessage() ?: ''))
         }
     }
 
-    private Integer failed(RuntimeException e) {
-        List<String> lines = (e.getMessage() ?: e.getClass().getSimpleName()).readLines()
+    private Integer failed(RuntimeException e, String after = '') {
+        List<String> lines = ((e.getMessage() ?: e.getClass().getSimpleName()) + after).readLines()
                 .collect { String line -> line.replaceAll(/\p{Cntrl}/, '?').replace('@|', '@ |') }
         err(lines ? lines.first() : e.getClass().getSimpleName())
         for (String line : lines.drop(1)) {
@@ -215,6 +217,7 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
         } catch (FeatureSelectionException e) {
             throw mistake(e)
         }
+        List<String> warnings = []
         // a pack is not part of the framework: say which ones this application is made with, which are
         // the selected ones and those they require. What a descriptor says is not markup of this command
         for (Pack pack : packs) {
@@ -226,12 +229,31 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
                 if (pack.artifact != null) {
                     String unlike = unlikeItsPlugin(pack)
                     if (unlike != null) {
-                        warning(unlike)
+                        warnings << unlike
                     }
                 }
             }
         }
         projectGenerator.generate(applicationType, project, outputHandler, context)
+        // of the application that was made: one that is refused is not warned of as if it had been
+        for (String each : warnings) {
+            warning(each)
+        }
+    }
+
+    /**
+     * What is said after a refusal that names no pack, when packs of repositories are among what the
+     * application was to be made with: a pack can be what is refused, and the command line names it by
+     * coordinates only.
+     */
+    private String ofRepositories(String message) {
+        String named = taken(message)
+        if (!named.isEmpty() || selection == null) {
+            return named
+        }
+        List<String> origins = selection.packs.findAll { Pack pack -> pack.artifact != null }
+                .collect { Pack pack -> "${pack.descriptor.name} of ${pack.origin}".toString() }
+        return origins.isEmpty() ? '' : ". The application was to be made with the feature ${origins.size() == 1 ? 'pack' : 'packs'} ${origins.join(', ')}"
     }
 
     /**
@@ -335,16 +357,17 @@ abstract class CreateCommand extends BaseCommand implements Callable<Integer> {
     private AvailableFeatures withPacks(List<Pack> packs) {
         try {
             return projectGenerator.availableFeatures(applicationType, packs)
-        } catch (IllegalArgumentException e) {
+        } catch (PackRefusedException e) {
             // two packs of one name were both asked for, which is the command line's doing. A pack that
             // cannot be used whatever it is asked for with (the name of a feature of the framework, a
             // group of it, versions it is not for) is, when it was taken from a repository, a fault of
             // what the repository gave: the message names the pack by its coordinates and repository
-            String message = e.getMessage() ?: ''
-            if (!message.startsWith('The feature packs ') && packs.any { Pack pack -> pack.artifact != null && message.contains(pack.origin) }) {
-                throw new PackArtifactException(message)
+            if (e.isOfThePack() && e.getPacks().any { Pack pack -> pack.artifact != null }) {
+                throw new PackArtifactException(e.getMessage())
             }
-            throw new CommandLine.ParameterException(this.spec.commandLine(), message.replace('@|', '@ |'))
+            throw new CommandLine.ParameterException(this.spec.commandLine(), e.getMessage().replace('@|', '@ |'))
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(this.spec.commandLine(), (e.getMessage() ?: '').replace('@|', '@ |'))
         }
     }
 

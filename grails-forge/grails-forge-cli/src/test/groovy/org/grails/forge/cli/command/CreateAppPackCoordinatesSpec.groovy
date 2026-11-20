@@ -623,7 +623,8 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
 
         where:
         build << ['2.4.0-RC1', '2.4.0-', '2.4.0-2.4.0', '2.4.0-x.jar.sha256', '2.4.0-20261119.101112', '2.4.0-20261119.101112-7-x',
-                  '2.4.0-2026.1-7', '2.4.0.1-20261119.101112-7', '2.4.0-20261119.101112-7.1']
+                  '2.4.0-2026.1-7', '2.4.0.1-20261119.101112-7', '2.4.0-20261119.101112-7.1',
+                  '2.4.0-20261319.101112-7', '2.4.0-20261132.101112-7', '2.4.0-20261119.991112-7', '2.4.0-20261119.106012-7', '2.4.0-20250229.101112-7']
     }
 
     @Unroll
@@ -666,6 +667,80 @@ class CreateAppPackCoordinatesSpec extends CommandSpec implements CommandFixture
         then:
         exit == 0
         (new Yaml().load(new File(dir, 'shop/grails-forge-cli.yml').text) as Map).featurePacks[0].artifact == 'acme-audit-grails-2.4.0-20261119.101112-10.jar'
+    }
+
+    @Unroll
+    void "a snapshot whose metadata #what ends the command in a line that names the file"() {
+        given:
+        File jar = publish('com.acme:acme-audit-grails:2.4.0-SNAPSHOT')
+        new File(jar.parentFile, 'maven-metadata.xml').setText(metadata, 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:2.4.0-SNAPSHOT',
+                '--feature-pack-repository', address)
+
+        then:
+        exit == 1
+        err.toString().contains("${address}: maven-metadata.xml is not the metadata of a Maven repository")
+        err.toString().readLines().size() == 1
+        !err.toString().contains('StackOverflowError')
+        !new File(dir, 'shop').exists()
+
+        where:
+        what                                    | metadata
+        'is nested 36000 deep under a group'    | "<metadata><groupId>${'<a>' * 36000}${'</a>' * 36000}</groupId></metadata>"
+        'is the page a server asks to sign in on' | '<html><head><title>Sign in</title></head><body><form action="/login"></form></body></html>'
+    }
+
+    @Unroll
+    void "a pack of a repository that #what is a fault of what was fetched, said with its coordinates"() {
+        given:
+        publish(COORDINATES, pack(descriptor))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', COORDINATES, '--feature-pack-repository', address)
+
+        then:
+        exit == 1
+        err.toString().contains(message.replace('ORIGIN', "${COORDINATES} (${address})"))
+        !err.toString().contains('Usage:')
+        !new File(dir, 'shop').exists()
+
+        where:
+        what                                       | descriptor                                                                              || message
+        'is for another Grails'                    | CreateAppFeaturePackSpec.DESCRIPTOR.replace("grails: '[9.0.0,10.0.0)'", "grails: '[1.0.0,2.0.0)'") || 'The feature pack acme-audit from ORIGIN is for Grails'
+        'names an exclusive group of the framework' | CreateAppFeaturePackSpec.DESCRIPTOR + 'oneOf: database-driver\n'                       || 'The feature pack ORIGIN names the exclusive group database-driver of the framework, which a pack cannot join yet'
+    }
+
+    void "the same pack from a directory is a mistake in the command line, which named the directory"() {
+        given:
+        File pack = new File(repository, 'acme')
+        new File(pack, 'templates').mkdirs()
+        new File(pack, 'feature.yml').setText(CreateAppFeaturePackSpec.DESCRIPTOR + 'oneOf: database-driver\n', 'UTF-8')
+        new File(pack, 'templates/audit.txt').setText('kept as it is', 'UTF-8')
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'acme-audit', '--feature-pack-dir', pack.absolutePath)
+
+        then:
+        exit == 2
+        err.toString().contains('names the exclusive group database-driver of the framework')
+    }
+
+    void "a pack that declares its plugin in two versions is refused with its coordinates, and without a warning of what the application gets"() {
+        given:
+        publish('com.acme:acme-audit-grails:7.7.7', pack(CreateAppFeaturePackSpec.DESCRIPTOR.replace('    version: 2.3.0\n',
+                '    version: 8.8.8\n  - scope: runtimeOnly\n    coordinates: com.acme:acme-audit-grails\n    version: 9.9.9\n')))
+
+        when:
+        int exit = CliRunner.run(CreateAppCommand, beanContext, 'shop', '--features', 'com.acme:acme-audit-grails:7.7.7',
+                '--feature-pack-repository', address)
+
+        then:
+        exit != 0
+        err.toString().contains("com.acme:acme-audit-grails:7.7.7 (${address})")
+        !out.toString().contains('Warning')
+        !err.toString().contains('\tat ')
     }
 
     void "the options for the repository and the SHA-256 are in the help of the command"() {
