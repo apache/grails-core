@@ -185,7 +185,7 @@ jobs:
       - name: "🔍 Setup TestLens"
         uses: testlens-app/setup-testlens@89edf53f781ac41833b4bc74d0e19a5315c79c67 # v1.10.0
       - name: "📥 Fetch the locally built Groovy artifacts"
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@v8.0.2
         with:
           name: local-groovy-maven-repo
           path: ~/.m2/repository/org/apache/groovy
