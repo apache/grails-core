@@ -263,6 +263,96 @@ Note the inclusion of the `format` variable in the path. If you do not wish to u
 
 
 
+[[springFormatNegotiation]]
+==== Resolving Formats with Spring MVC Content Negotiation
+
+Grails resolves `request.format`, `response.format`, `withFormat` and the format `respond` writes in by the rules this
+section describes, while Spring MVC's content negotiation manager decides the type of what Spring MVC writes for an
+action: a `ResponseEntity`, a `ProblemDetail` or another value an action returns (see
+<<springResponses,Returning Spring MVC Responses>>), a problem `respond` writes, and the JSON `respond` writes with
+Spring MVC. The two can answer one request differently. Set `grails.mime.negotiation.spring` to `true` to resolve the
+Grails formats with Spring MVC's manager too:
+
+[source,yaml]
+.grails-app/conf/application.yml
+----
+grails:
+    mime:
+        negotiation:
+            spring: true
+----
+
+Grails {grailsMajorVersion} keeps the Grails rules by default, and Grails 10 makes the setting the default. With the
+setting:
+
+* The `Accept` header is read by Spring MVC's manager, with its strategies, so the `spring.mvc.contentnegotiation.*`
+properties apply to the Grails formats as they do to Spring MVC, and its media types are taken in the order Spring MVC
+takes them: by quality, then a more specific type ahead of a less specific one, then in the order the header lists them,
+except that a type with the `+xml` suffix comes ahead of the XML type of equal quality, as the Grails rules take it.
+`Accept: */*, application/json` is the `json` format, where the Grails rules give `all`, and
+`Accept: application/xml, application/atom+xml` is `atom`, as they give.
+* Each media type is the format `grails.mime.types`, or a `MimeTypeProvider` bean such as a renderer, gives it. A type
+with the `+json` or `+xml` suffix that no configured type names, such as `application/merge-patch+json` or
+`application/problem+xml`, is the `json` or the `xml` format, as Spring MVC's JSON and XML converters write such types.
+* `*/*` is the `all` format, also where `grails.mime.types` does not list it. So is another wildcard, such as `text/*`,
+for which `withFormat` runs its `*` block or else the first block of a format with a type compatible with the wildcard,
+and `respond` answers in the first of the action's formats with such a type, as Spring MVC answers a wildcard with the
+first of its candidates that is compatible with it.
+* A request that accepts no configured type, such as one that sends only `Accept: image/png`, or whose `Accept` header
+Spring cannot read, has no format: `response.format` and `response.mimeType` are `null`, `respond` answers
+`406 Not Acceptable`, and `withFormat` runs its `*` block, or no block. The Grails rules answer such a request as one
+that accepts any type, with the `all` format.
+* The `format` parameter and a URL extension name the format, ahead of the `Accept` header, as before. The first value
+of the parameter counts, as for Spring MVC; a format no type is configured for is not acceptable, where the Grails rules
+answer in the first configured format, but what Spring MVC writes for a format `grails.mime.types` does not list and
+`spring.mvc.contentnegotiation.media-types` maps is in the type that maps it, while `respond` answers it with
+`406 Not Acceptable`; and the `all` format, which is any type whether or not `grails.mime.types` lists
+it, leaves the format to the `Accept` header. Where `spring.mvc.contentnegotiation.favor-parameter` has Spring MVC read
+the `format` parameter too, Grails reads it in its place for a request a URL mapping handles, so `?format=all` is left
+to the `Accept` header there as well, while a Spring MVC endpoint reads it as Spring MVC does.
+* `grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header as before.
+* The `format` parameter, the URL extension and the `Accept` header settings also decide what Spring MVC writes for a
+request a URL mapping handles, so that it is in the format Grails resolves for the request: an action that returns a
+`ResponseEntity` of a map answers `/book/show/1.json` in JSON whatever the `Accept` header asks for, and
+`/book/show/1.html` with `406 Not Acceptable`, since no message converter writes a map as HTML.
+* `request.format` reads the `Content-Type` header as Spring reads it, as one media type, which is the format the
+`Accept` header would make it: a body sent as `application/merge-patch+json` is of the `json` format, and data binding
+reads it as JSON. A type no configured type stands for, or that Spring cannot read, is of no format, and a request
+without a `Content-Type` is of the first configured format, as before.
+
+A Spring MVC endpoint, such as an `@RestController` or an actuator endpoint, and Spring Security, whose filters negotiate
+before a URL mapping has matched the request, negotiate as before: the setting changes no answer Spring MVC gives a request
+no URL mapping handles. Each rule of Grails' negotiation becomes:
+
+[cols="2,3"]
+|===
+|Grails rule |With `grails.mime.negotiation.spring`
+
+|The `format` parameter and URL extensions select the format
+|Kept, ahead of Spring MVC's strategies, and also for what Spring MVC writes for the request, which a format only
+`spring.mvc.contentnegotiation.media-types` maps decides too. A format neither maps is not acceptable, and the `all`
+format leaves the choice to the `Accept` header.
+
+|`grails.mime.use.accept.header` and `grails.mime.disable.accept.header.*` ignore the `Accept` header
+|Kept, also for what Spring MVC writes for the request.
+
+|`text/xml` and `application/xml` are merged into one `xml` type
+|Dropped: both are the `xml` format, which comes in Spring MVC's order.
+
+|A type with the `+xml` suffix comes ahead of `application/xml` of equal quality
+|Kept, also for what Spring MVC writes for the request.
+
+|The problem types of RFC 9457 are the `json` and `xml` formats
+|Extended to any type with the `+json` or `+xml` suffix that no configured type names.
+
+|A request that accepts no configured type is answered as one that accepts any type, and one that names a format no
+type is configured for in the first configured format
+|Dropped: such a request, and one whose `Accept` header Spring cannot read, is not acceptable.
+|===
+
+<<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>, in the guide to
+upgrading from Grails 8 to Grails 9, lists how each answer changes.
+
 ==== Testing Content Negotiation
 
 

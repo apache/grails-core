@@ -24,11 +24,13 @@ import java.util.List;
 import org.hibernate.FlushMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.engine.spi.SharedSessionContractImplementor;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.request.WebRequest;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -45,12 +47,19 @@ import org.grails.orm.hibernate.support.hibernate5.support.OpenSessionInViewInte
  * The default datasource's SessionFactory is managed by the parent class.
  * Additional (non-default) datasource SessionFactories are managed by this
  * subclass, which opens and closes sessions for each one alongside the
- * default session.
+ * default session. As the parent class does for the default session, a request
+ * that finds a session already bound, such as an include within a request that
+ * opened one, uses that session and leaves it to the one that opened it, and a
+ * request that goes asynchronous closes the sessions it opened, so that they do
+ * not stay bound to the thread for the next request that thread serves.
  *
  * @author Graeme Rocher
  * @since 0.5
  */
 public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterceptor {
+
+    /** The value of {@code GrailsApplicationAttributes.ASYNC_STARTED}, which is in a module this plugin does not use. */
+    private static final String GRAILS_ASYNC_STARTED = "org.grails.ASYNC_STARTED";
 
     protected FlushMode hibernateFlushMode = FlushMode.MANUAL;
 
@@ -90,6 +99,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
         for (AdditionalSessionFactoryConfig config : additionalSessionFactories) {
             SessionFactory sf = config.sessionFactory;
             if (TransactionSynchronizationManager.hasResource(sf)) {
+                // a session is already open for this request: use it, and leave it to the one that opened it
+                incrementParticipateCount(request, sf);
                 continue;
             }
             if (logger.isDebugEnabled()) {
@@ -165,28 +176,146 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     @Override
     public void afterCompletion(WebRequest request, Exception ex) throws DataAccessException {
         try {
-            for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
-                AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
-                SessionFactory sf = config.sessionFactory;
-                SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
-                if (sessionHolder != null) {
-                    Session session = sessionHolder.getSession();
-                    TransactionSynchronizationManager.unbindResource(sf);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
-                    }
-                    try {
-                        SessionFactoryUtils.closeSession(session);
-                    }
-                    catch (RuntimeException closeEx) {
-                        logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
-                    }
-                }
-            }
+            closeAdditionalSessions(request, false);
         }
         finally {
             super.afterCompletion(request, ex);
         }
+    }
+
+    /**
+     * Called instead of {@link #postHandle} and {@link #afterCompletion} on the thread that started asynchronous
+     * handling. The sessions this interceptor opened for the other datasources are closed here, so that the thread
+     * goes back to its pool without them. Each is flushed first when {@link #postHandle} would flush it and Hibernate
+     * allows the flush: inside a transaction, or with {@code hibernate.allow_update_outside_transaction}.
+     *
+     * <p>The parent class only unbinds the default session, and leaves closing it to the interceptors it registers for
+     * a {@code Callable} or {@code DeferredResult}. A promise or {@code startAsync()} in a Grails controller starts
+     * asynchronous handling without them, so the default session this interceptor opened is closed here too.
+     */
+    @Override
+    public void afterConcurrentHandlingStarted(WebRequest request) {
+        try {
+            closeAdditionalSessions(request, true);
+        }
+        finally {
+            if (isGrailsAsync(request) && !isParticipating(request) &&
+                    TransactionSynchronizationManager.hasResource(getSessionFactory())) {
+                SessionHolder sessionHolder =
+                        (SessionHolder) TransactionSynchronizationManager.unbindResource(getSessionFactory());
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Closing Hibernate Session in OpenSessionInViewInterceptor as asynchronous handling starts");
+                }
+                SessionFactoryUtils.closeSession(sessionHolder.getSession());
+            }
+            else {
+                super.afterConcurrentHandlingStarted(request);
+            }
+        }
+    }
+
+    /**
+     * @return whether Grails started asynchronous handling, for a promise or {@code startAsync()}: both set
+     * {@code GrailsApplicationAttributes.ASYNC_STARTED}
+     */
+    private static boolean isGrailsAsync(WebRequest request) {
+        return request.getAttribute(GRAILS_ASYNC_STARTED, WebRequest.SCOPE_REQUEST) != null;
+    }
+
+    /**
+     * @return whether the default session was already bound when the request started, so that it belongs to
+     * whoever bound it
+     */
+    private boolean isParticipating(WebRequest request) {
+        return request.getAttribute(getParticipateAttributeName(), WebRequest.SCOPE_REQUEST) != null;
+    }
+
+    private void closeAdditionalSessions(WebRequest request, boolean flushFirst) {
+        Throwable firstFlushFailure = null;
+        for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
+            AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
+            SessionFactory sf = config.sessionFactory;
+            if (decrementParticipateCount(request, sf)) {
+                continue;
+            }
+            SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
+            if (sessionHolder != null) {
+                Session session = sessionHolder.getSession();
+                try {
+                    if (flushFirst && isFlushAllowed(session)) {
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("Flushing additional Hibernate session for datasource '" + config.connectionName + "' as asynchronous handling starts");
+                        }
+                        session.flush();
+                    }
+                }
+                catch (Throwable flushFailure) {
+                    // an Error too, such as a failed assert in a domain's beforeUpdate: every session is released first
+                    if (firstFlushFailure == null) {
+                        firstFlushFailure = flushFailure;
+                    }
+                    else {
+                        firstFlushFailure.addSuppressed(flushFailure);
+                    }
+                }
+                TransactionSynchronizationManager.unbindResource(sf);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Closing additional Hibernate Session for datasource '" + config.connectionName + "' in OpenSessionInViewInterceptor");
+                }
+                try {
+                    SessionFactoryUtils.closeSession(session);
+                }
+                catch (RuntimeException closeEx) {
+                    logger.error("Unexpected exception on closing additional Hibernate Session for datasource '" + config.connectionName + "'", closeEx);
+                }
+            }
+        }
+        if (firstFlushFailure != null) {
+            ReflectionUtils.rethrowRuntimeException(firstFlushFailure);
+        }
+    }
+
+    /**
+     * @return whether {@link #postHandle} would flush the session, and Hibernate would let it: a session it would not
+     * flush (MANUAL or COMMIT) is not flushed here either, and one outside a transaction only when
+     * {@code hibernate.allow_update_outside_transaction} is set, since Hibernate refuses that flush otherwise
+     */
+    private static boolean isFlushAllowed(Session session) {
+        FlushMode flushMode = session.getHibernateFlushMode();
+        if (flushMode == FlushMode.MANUAL || flushMode == FlushMode.COMMIT) {
+            return false;
+        }
+        return ((SharedSessionContractImplementor) session).isTransactionInProgress() ||
+                session.getSessionFactory().getSessionFactoryOptions().isAllowOutOfTransactionUpdateOperations();
+    }
+
+    private static void incrementParticipateCount(WebRequest request, SessionFactory sf) {
+        String participateAttributeName = participateAttributeName(sf);
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        request.setAttribute(participateAttributeName, count != null ? count + 1 : 1, WebRequest.SCOPE_REQUEST);
+    }
+
+    /**
+     * @return {@code true} when this request used a session of the given factory that was already open, which is
+     * then left as it is
+     */
+    private static boolean decrementParticipateCount(WebRequest request, SessionFactory sf) {
+        String participateAttributeName = participateAttributeName(sf);
+        Integer count = (Integer) request.getAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        if (count == null) {
+            return false;
+        }
+        if (count > 1) {
+            request.setAttribute(participateAttributeName, count - 1, WebRequest.SCOPE_REQUEST);
+        }
+        else {
+            request.removeAttribute(participateAttributeName, WebRequest.SCOPE_REQUEST);
+        }
+        return true;
+    }
+
+    private static String participateAttributeName(SessionFactory sf) {
+        return sf.toString() + PARTICIPATE_SUFFIX;
     }
 
     public void setHibernateDatastore(AbstractHibernateDatastore hibernateDatastore) {
