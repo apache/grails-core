@@ -20,6 +20,7 @@ package grails.ui.shell.support
 
 import groovy.transform.CompileStatic
 
+import org.apache.groovy.groovysh.GroovyshOptions
 import org.apache.groovy.groovysh.Main
 import org.springframework.context.support.GenericApplicationContext
 
@@ -39,7 +40,18 @@ class GroovyshApplicationContext extends GenericApplicationContext {
     }
 
     protected void startConsole() {
-        Main.start([
+        Main.start(shellOptions().build())
+    }
+
+    /**
+     * Returns the options the shell starts with: this context as {@code ctx} and the Grails application in
+     * its binding, on the terminal of the JVM. A subclass can add to them, for example a terminal of its own.
+     *
+     * @return the options of the shell
+     * @since 9.0
+     */
+    protected GroovyshOptions.Builder shellOptions() {
+        GroovyshOptions.builder().bindings([
                 ctx: this,
                 (GrailsApplication.APPLICATION_ID): getBean(GrailsApplication)
         ])
