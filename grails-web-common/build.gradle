@@ -50,6 +50,8 @@ dependencies {
     }
 
     api 'org.apache.groovy:groovy'
+    // GroovyJsonFacade only. No public signature exposes groovy.json types.
+    implementation 'org.apache.groovy:groovy-json'
     api 'org.apache.groovy:groovy-templates'
 
     api 'org.springframework:spring-webmvc'

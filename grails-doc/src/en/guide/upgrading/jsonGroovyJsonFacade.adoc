@@ -1,0 +1,7 @@
+=== JSON.org fork replacement seed
+
+Grails 8.1 starts the migration away from the internal `org.grails.web.json` JSON.org fork by adding a `GroovyJsonFacade` parser and renderer backed by `groovy-json`.
+The public `JSONObject`, `JSONArray`, and `JSONElement` facade types remain available, and this first slice converts groovy-json parsed objects back into those facade types.
+
+The internal `JSONTokener` path is deprecated for removal in Grails 9.0.
+Follow-up work should move remaining converter internals to the facade and keep application-facing APIs stable during the Grails 8.x line.
