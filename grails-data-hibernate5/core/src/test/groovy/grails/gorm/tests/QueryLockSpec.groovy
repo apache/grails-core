@@ -172,6 +172,82 @@ class QueryLockSpec extends Specification {
         outcome = second ? 'on' : 'off'
     }
 
+    private List<Club> viaRoute(String route, Object flag) {
+        Map args = [lock: flag]
+        switch (route) {
+            case 'findBy': return [Club.findByName('a', args)]
+            case 'findAllBy': return Club.findAllByName('a', args)
+            case 'paged findAllBy': return Club.findAllByName('a', args + [max: 1])
+            case 'list': return Club.list(args)
+            case 'findAll closure': return Club.findAll(args) { name == 'a' }
+            case 'where.list': return Club.where { name == 'a' }.list(args)
+            case 'where.find': return [Club.where { name == 'a' }.find(args)]
+            case 'criteria list': return Club.createCriteria().list(args) { eq('name', 'a') }
+            default: throw new IllegalArgumentException(route)
+        }
+    }
+
+    @Rollback
+    @Unroll
+    void 'lock: #flag on #route #outcome'() {
+        given:
+        new Club(name: 'a').save(flush: true)
+        Club.withSession { it.clear() }
+
+        when:
+        List<String> sql = selects { viaRoute(route, flag) }
+
+        then: 'only true, or the text true, ends in for update'
+        sql.any { it.toLowerCase().contains('for update') } == locks
+
+        where:
+        [route, flag] << [
+                ['findBy', 'findAllBy', 'paged findAllBy', 'list', 'findAll closure', 'where.list', 'where.find', 'criteria list'],
+                [true, false, null, 'true', 'false']
+        ].combinations()
+        locks = flag == true || flag == 'true'
+        outcome = locks ? 'takes a write lock' : 'takes no lock'
+    }
+
+    @Rollback
+    @Unroll
+    void 'the calls #calls leave the query #lockText and #cacheText'() {
+        given:
+        new Club(name: 'a').save(flush: true)
+        HibernateQuery query = hibernateDatastore.currentSession.createQuery(Club) as HibernateQuery
+        boolean locked = false
+        Boolean asked = null
+
+        when:
+        List<String> sql = selects {
+            calls.each { String call ->
+                switch (call) {
+                    case 'lock(true)': query.lock(true); locked = true; break
+                    case 'lock(false)': query.lock(false); locked = false; break
+                    case 'cache(true)': query.cache(true); asked = true; break
+                    default: query.cache(false); asked = false
+                }
+            }
+            query.list()
+        }
+
+        then: 'the lock is the last one asked for, and a locking query is never cached'
+        sql.any { it.toLowerCase().contains('for update') } == locked
+        ((CriteriaImpl) query.hibernateCriteria).cacheable == (!locked && asked == true)
+
+        where:
+        calls << [
+                ['lock(true)'], ['lock(false)'], ['lock(true)', 'lock(true)'], ['lock(false)', 'lock(true)'], ['lock(true)', 'lock(false)'],
+                ['cache(true)', 'lock(true)'], ['lock(true)', 'cache(true)'], ['cache(true)', 'lock(true)', 'lock(false)'],
+                ['lock(true)', 'cache(true)', 'lock(false)'], ['cache(true)', 'lock(true)', 'cache(false)', 'lock(false)'],
+                ['cache(false)', 'lock(true)', 'cache(true)', 'lock(false)'], ['cache(true)', 'lock(true)', 'lock(false)', 'lock(true)'],
+                ['cache(true)', 'lock(true)', 'lock(false)', 'lock(true)', 'lock(false)'], ['lock(true)', 'lock(false)', 'cache(true)'],
+                ['cache(true)', 'cache(false)', 'lock(true)', 'lock(false)']
+        ]
+        lockText = calls.findAll { it.startsWith('lock') }.with { it ? it.last() : 'not asked' }
+        cacheText = calls.findAll { it.startsWith('cache') }.with { it ? it.last() : 'not asked' }
+    }
+
     static class SqlCapture implements StatementInspector {
         final List<String> statements = Collections.synchronizedList(new ArrayList<String>())
 
