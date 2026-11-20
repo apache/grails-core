@@ -15,6 +15,5 @@
 
 ---
 grails:
-    profile: web
     codegen:
         defaultPackage: quartzapp

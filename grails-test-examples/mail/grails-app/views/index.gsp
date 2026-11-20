@@ -34,7 +34,6 @@
             <li><a class="dropdown-item" href="#">App version:
                 <g:meta name="info.app.version"/></a>
             </li>
-            <li><a class="dropdown-item" href="#">App profile: ${grailsApplication.config.getProperty('grails.profile')}</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="#">Grails version:
                 <g:meta name="info.app.grailsVersion"/></a>

@@ -20,7 +20,6 @@ info:
     grailsVersion: '@info.app.grailsVersion@'
 ---
 grails:
-  profile: web
   codegen:
     defaultPackage: datasources
 ---

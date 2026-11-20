@@ -15,7 +15,6 @@
 
 ---
 grails:
-    profile: web-plugin
     codegen:
         defaultPackage: grails.plugin.springsecurity.acl
     spring:

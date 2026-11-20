@@ -44,7 +44,6 @@ grails:
           - Trident
   codegen:
     defaultPackage: org.demo.contextpath
-  profile: web
 dataSource:
   driverClassName: org.h2.Driver
   username: sa

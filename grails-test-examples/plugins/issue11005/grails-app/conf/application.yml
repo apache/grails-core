@@ -15,7 +15,6 @@
 
 ---
 grails:
-    profile: web-plugin
     codegen:
         defaultPackage: issue11005
 info:

@@ -20,7 +20,6 @@ info:
         version: '@info.app.version@'
         grailsVersion: '@info.app.grailsVersion@'
 grails:
-    profile: web
     codegen:
         defaultPackage: app5
     urlmapping:

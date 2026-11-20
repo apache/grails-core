@@ -14,7 +14,6 @@
 # limitations under the License.
 
 grails:
-    profile: web-plugin
     codegen:
         defaultPackage: databasemigration
 info:

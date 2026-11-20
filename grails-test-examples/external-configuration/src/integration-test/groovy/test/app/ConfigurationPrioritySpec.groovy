@@ -241,9 +241,4 @@ class ConfigurationPrioritySpec extends Specification {
         activeProfiles != null
         // In test, may have 'test' profile or be empty depending on setup
     }
-
-    def "grails profile is set"() {
-        expect: "grails profile is web"
-        grailsApplication.config.getProperty('grails.profile', String) == 'web'
-    }
 }

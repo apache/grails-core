@@ -31,7 +31,7 @@ class GrailsConfigSpec extends Specification{
         config.loadYml(file)
         then:
         config.configMap.a1 == [a2:3, b2:4, c2:[a3:3, b2:4, c3:1], d2: 1, e2: 2]
-        config.configMap.grails.profile == 'web'
+        config.configMap.grails.codegen.defaultPackage == 'simpleapp'
         config.configMap.grails.containsKey('somekey') == true
     }
 

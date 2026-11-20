@@ -37,7 +37,6 @@ json {
     environment Environment.current.name
     appversion grailsApplication.metadata.getApplicationVersion()
     grailsversion GrailsUtil.grailsVersion
-    appprofile grailsApplication.config.getProperty('grails.profile')
     groovyversion GroovySystem.getVersion()
     jvmversion System.getProperty('java.version')
     reloadingagentenabled Environment.reloadingAgentEnabled
