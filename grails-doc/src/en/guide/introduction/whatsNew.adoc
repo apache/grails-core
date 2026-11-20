@@ -173,7 +173,8 @@ With `grails.mime.negotiation.spring: true`, which Grails 10 makes the default, 
 `grails.mime` settings of the `Accept` header decide what Spring MVC writes for an action too, such as a
 `ResponseEntity` it returns. See <<springFormatNegotiation,Resolving Formats with Spring MVC Content Negotiation>>.
 
-See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 4 to 11, 13 to 16 and 26.
+See xref:upgrading#upgrading90x[Upgrading from Grails 8 to Grails 9], sections 6 to 13 and 15 to 18, and
+<<upgradingSpringFormatNegotiation,Opt Into Spring MVC Content Negotiation for Grails Formats>>.
 
 ==== Hibernate 7 Criteria Queries Can Be Extended
 
