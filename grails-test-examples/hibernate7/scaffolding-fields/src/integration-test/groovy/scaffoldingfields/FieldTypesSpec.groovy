@@ -63,7 +63,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         expect: 'age is rendered as number input'
         def field = $('input[name="age"]')
         if (field.displayed) {
-            field.attr('type') in ['number', 'text', null]
+            assert field.attr('type') in ['number', 'text', null]
         }
     }
 
@@ -71,7 +71,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         expect: 'salary is rendered as number input'
         def field = $('input[name="salary"]')
         if (field.displayed) {
-            field.attr('type') in ['number', 'text', null]
+            assert field.attr('type') in ['number', 'text', null]
         }
     }
 
@@ -82,7 +82,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         def field = $('input[name="hireDate"]')
         if (field.displayed) {
             // Could be date, datetime-local, or text depending on browser/config
-            field.attr('type') in ['date', 'datetime-local', 'text', null]
+            assert field.attr('type') in ['date', 'datetime-local', 'text', null]
         }
     }
 
@@ -103,7 +103,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         if (field.displayed) {
             // Should have options for each enum value
             def options = field.find('option')
-            options.size() > 0
+            assert options.size() > 0
         }
     }
 
@@ -139,7 +139,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         expect: 'website is rendered appropriately'
         def field = $('input[name="website"]')
         if (field.displayed) {
-            field.attr('type') in ['url', 'text', null]
+            assert field.attr('type') in ['url', 'text', null]
         }
     }
 
@@ -156,7 +156,7 @@ class FieldTypesSpec extends ContainerGebSpec {
         def field = $('select[name="department"], select[name="department.id"]')
         if (field.displayed) {
             def options = field.find('option')
-            options.size() > 1 // At least empty option + departments
+            assert options.size() > 1 // At least empty option + departments
         }
     }
 

@@ -35,6 +35,7 @@ import org.grails.plugins.codecs.HTMLCodec
 import org.springframework.web.context.request.RequestContextHolder
 
 import spock.lang.Issue
+import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -380,8 +381,8 @@ class StreamCharBufferSpec extends Specification {
         then:
             if(callSize) {
                 // size and clone have side-effects in SCB, so we want to test both paths
-                scb2.size() == 27
-                scb2.clone().toString() == '\\u003c1\\u003e - Hello\\u003b'
+                assert scb2.size() == 27
+                assert scb2.clone().toString() == '\\u003c1\\u003e - Hello\\u003b'
             }
         when:
             scb.writer.write '(1)'
@@ -390,15 +391,33 @@ class StreamCharBufferSpec extends Specification {
             }
         then:
             if(callFlush) {
-                scb2.toString() == '\\u003c1\\u003e - Hello\\u003b\\u00281\\u0029'
-                scb2.size() == 40
-            } else {
-                scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
-                scb2.size() == 27
+                assert scb2.toString() == '\\u003c1\\u003e - Hello\\u003b\\u00281\\u0029'
+                assert scb2.size() == 40
+            } else if(callSize) {
+                // callSize=false, callFlush=false is covered by the pending feature below
+                assert scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
+                assert scb2.size() == 27
             }
             scb.toString() == '<1> - Hello;(1)'
         where:
             [callSize, callFlush] << [[true, false], [true, false]].combinations()*.flatten()
+    }
+
+    @Issue("GRAILS-11505")
+    @PendingFeature(reason = 'Without a prior size() call, which has side effects, the unflushed (1) write already shows up in the encoded sub-buffer, see #17020')
+    def "should not show an unflushed write in an encoded subbuffer without a prior size() call"() {
+        given:
+            def scb = createSubBuffer { out ->
+                out << "<1> - Hello;"
+            }
+            scb.preferSubChunkWhenWritingToOtherBuffer = true
+            scb.toString()
+            def scb2 = jsCodecClass.encoder.encode(scb)
+        when:
+            scb.writer.write '(1)'
+        then:
+            scb2.toString() == '\\u003c1\\u003e - Hello\\u003b'
+            scb2.size() == 27
     }
 
 }

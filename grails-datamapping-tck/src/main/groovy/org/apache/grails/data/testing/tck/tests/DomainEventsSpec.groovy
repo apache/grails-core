@@ -20,6 +20,7 @@ package org.apache.grails.data.testing.tck.tests
 
 import spock.lang.Issue
 import spock.lang.PendingFeature
+import spock.lang.PendingFeatureIf
 
 import grails.gorm.DetachedCriteria
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
@@ -252,43 +253,56 @@ class DomainEventsSpec extends GrailsDataTckSpec {
 
     void 'Test load events'() {
         given:
-        def p = new PersonEvent()
-
-        p.name = 'Fred'
-        p.save(flush: true)
-        manager.session.clear()
+        def id = saveFred()
 
         when:
-        p = PersonEvent.get(p.id)
+        def p = PersonEvent.get(id)
 
         then:
         'Fred' == p.name
-        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
-            // JPA doesn't seem to support a pre-load event
-            1 == PersonEvent.STORE.beforeLoad
-        }
         1 == PersonEvent.STORE.afterLoad
+    }
+
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'beforeLoad is 0 instead of 1 for get() after clear() on Neo4j, see #17020'
+    )
+    void 'Test load fires beforeLoad once'() {
+        given:
+        def id = saveFred()
+
+        when:
+        PersonEvent.get(id)
+
+        then:
+        1 == PersonEvent.STORE.beforeLoad
     }
 
     void 'Test multi-load events'() {
         given:
-        def freds = (1..3).collect {
-            new PersonEvent(name: "Fred$it").save(flush: true)
-        }
-        manager.session.clear()
+        def ids = saveFreds()
 
         when:
-        freds = PersonEvent.findAllByIdInList(freds*.id)
-        for (f in freds) {
-        } // just to trigger load
+        def freds = loadFreds(ids)
 
         then:
         3 == freds.size()
-        if (!'JpaSession'.equals(manager.session.getClass().simpleName)) {
-            // JPA doesn't seem to support a pre-load event
-            3 == PersonEvent.STORE.beforeLoad
-        }
         3 == PersonEvent.STORE.afterLoad
+    }
+
+    @PendingFeatureIf(
+            value = { Boolean.getBoolean('mongodb.gorm.suite') || Boolean.getBoolean('neo4j.gorm.suite') },
+            reason = 'beforeLoad is 0 instead of 3 for findAllByIdInList on MongoDB and Neo4j, see #17020'
+    )
+    void 'Test multi-load fires beforeLoad for each entity'() {
+        given:
+        def ids = saveFreds()
+
+        when:
+        loadFreds(ids)
+
+        then:
+        3 == PersonEvent.STORE.beforeLoad
     }
 
     @PendingFeature(reason = 'Was previously @Ignore')
@@ -317,5 +331,26 @@ class DomainEventsSpec extends GrailsDataTckSpec {
 
     def cleanup() {
         manager.session.datastore.applicationContext?.beanFactory?.destroySingleton('personService')
+    }
+
+    private Long saveFred() {
+        def p = new PersonEvent(name: 'Fred').save(flush: true)
+        manager.session.clear()
+        p.id
+    }
+
+    private List<Long> saveFreds() {
+        def freds = (1..3).collect {
+            new PersonEvent(name: "Fred$it").save(flush: true)
+        }
+        manager.session.clear()
+        freds*.id
+    }
+
+    private List<PersonEvent> loadFreds(List<Long> ids) {
+        def freds = PersonEvent.findAllByIdInList(ids)
+        for (f in freds) {
+        } // just to trigger load
+        freds
     }
 }
