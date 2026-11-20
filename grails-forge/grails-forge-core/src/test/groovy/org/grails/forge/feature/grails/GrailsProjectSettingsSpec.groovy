@@ -43,13 +43,17 @@ class GrailsProjectSettingsSpec extends ApplicationContextSpec implements Comman
     }
 
     @Unroll
-    void "the configuration of a #applicationType application has its default package and the name of its type"() {
+    void "the configuration of a #applicationType application has its default package and no profile"() {
         when:
         def output = generate(applicationType, new Options(DevelopmentReloading.DEVTOOLS))
 
         then:
         String configuration = output.get('grails-app/conf/application.yml')
-        configuration.contains("\n  codegen:\n    defaultPackage: example.grails\n  profile: ${applicationType.name.replace('_', '-')}\n")
+        // the writer puts a key that is alone on its path on one line, which is what it is in a plugin
+        configuration.contains('\n  codegen:\n    defaultPackage: example.grails\n') ||
+                configuration.contains('grails.codegen.defaultPackage: example.grails\n')
+        !(configuration =~ /(?m)^\s*profile:/).find()
+        !configuration.contains('grails.profile')
 
         where:
         applicationType << ApplicationType.values().toList()

@@ -43,9 +43,6 @@ class ${project.getClassName()}GrailsPlugin extends Plugin {
        def description = '''\
    Brief summary/description of the plugin.
    '''
-       <% if (applicationType == ApplicationType.WEB_PLUGIN) { %>
-       def profiles = ['web']
-       <% } %>
    // URL to the plugin's documentation
        def documentation = "https://grails-plugins.github.io/${project.getClassName()}/"
 

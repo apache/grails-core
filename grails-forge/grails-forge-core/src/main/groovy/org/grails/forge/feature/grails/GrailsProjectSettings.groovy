@@ -28,14 +28,11 @@ import org.grails.forge.feature.Feature
 import org.grails.forge.options.Options
 
 /**
- * The settings of the configuration of every application that say what the application is: the
- * package its classes are created in when none is given, which the framework reads when it runs,
- * and the name of its type.
+ * The setting of the configuration of every application that the framework reads when it runs: the
+ * package its classes are created in when none is given.
  *
- * <p>The name of the type is still written as {@code grails.profile}, although no profile is part of
- * the build of the application any more: the framework makes it an active Spring profile, {@code web}
- * when there is none, so an application without it would run with another Spring profile than it
- * does now. The setting goes when the framework stops reading it.</p>
+ * <p>The type of the application is not written to its configuration: the framework has no reader
+ * for it, and the state under {@code .grails} is where the command line finds it.</p>
  */
 @Component
 @CompileStatic
@@ -67,7 +64,6 @@ class GrailsProjectSettings implements DefaultFeature {
     void apply(GeneratorContext generatorContext) {
         final Map<String, Object> config = generatorContext.getConfiguration()
         config.put('grails.codegen.defaultPackage', generatorContext.getProject().getPackageName())
-        config.put('grails.profile', generatorContext.getApplicationType().getName().replace('_', '-'))
     }
 
     @Override

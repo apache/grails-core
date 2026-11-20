@@ -138,12 +138,6 @@
                                 </span>
                             </li>
                             <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                                <span class="text-body-secondary"><g:message code="welcome.app.profile"/></span>
-                                <span class="fw-medium text-truncate ms-3" title="${grailsApplication.config.getProperty('grails.profile')}">
-                                    ${grailsApplication.config.getProperty('grails.profile')}
-                                </span>
-                            </li>
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                                 <span class="text-body-secondary"><g:message code="welcome.app.environment"/></span>
                                 <span class="fw-medium">${Environment.current.name}</span>
                             </li>
