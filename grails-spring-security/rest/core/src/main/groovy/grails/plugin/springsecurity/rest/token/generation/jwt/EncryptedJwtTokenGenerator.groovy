@@ -19,20 +19,24 @@
 package grails.plugin.springsecurity.rest.token.generation.jwt
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 import com.nimbusds.jose.EncryptionMethod
 import com.nimbusds.jose.JWEAlgorithm
 import com.nimbusds.jose.JWEHeader
+import com.nimbusds.jose.JWEObject
+import com.nimbusds.jose.JWSAlgorithm
+import com.nimbusds.jose.JWSHeader
+import com.nimbusds.jose.Payload
 import com.nimbusds.jose.crypto.RSAEncrypter
-import com.nimbusds.jwt.EncryptedJWT
+import com.nimbusds.jose.crypto.RSASSASigner
 import com.nimbusds.jwt.JWT
 import com.nimbusds.jwt.JWTClaimsSet
+import com.nimbusds.jwt.SignedJWT
 
 /**
- * Generates RSA-encrypted JWT's
+ * Generates RSA-encrypted JWT's. The claims are signed with the private key of the {@link #keyProvider}, using RS256,
+ * and the signed JWT is encrypted with its public key, which gives a {@link NestedJwt}.
  */
-@Slf4j
 @CompileStatic
 class EncryptedJwtTokenGenerator extends AbstractJwtTokenGenerator {
 
@@ -44,18 +48,18 @@ class EncryptedJwtTokenGenerator extends AbstractJwtTokenGenerator {
 
     @Override
     protected JWT generateAccessToken(JWTClaimsSet claimsSet) {
-        JWEHeader header = new JWEHeader(jweAlgorithm, encryptionMethod)
+        // Sign the claims with the private RSA key
+        final signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), claimsSet).tap {
+            sign(new RSASSASigner(keyProvider.privateKey))
+        }
 
-        // Create the encrypted JWT object
-        EncryptedJWT jwt = new EncryptedJWT(header, claimsSet)
+        // Encrypt the signed JWT with the public RSA key. The content type tells that the payload is a JWT.
+        final header = new JWEHeader.Builder(jweAlgorithm, encryptionMethod).contentType('JWT').build()
+        final encryptedJwt = new JWEObject(header, new Payload(signedJwt)).tap {
+            encrypt(new RSAEncrypter(keyProvider.publicKey))
+        }
 
-        // Create an encrypter with the specified public RSA key
-        RSAEncrypter encrypter = new RSAEncrypter(keyProvider.publicKey)
-
-        // Do the actual encryption
-        jwt.encrypt(encrypter)
-
-        return jwt
+        new NestedJwt(encryptedJwt, signedJwt)
     }
 
 }
