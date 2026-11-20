@@ -33,6 +33,7 @@ import org.springframework.orm.hibernate5.SessionHolder;
 import org.springframework.orm.hibernate5.support.OpenSessionInViewInterceptor;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.ui.ModelMap;
+import org.springframework.util.ReflectionUtils;
 import org.springframework.web.context.request.WebRequest;
 
 import org.grails.datastore.mapping.core.connections.ConnectionSource;
@@ -230,7 +231,7 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
     }
 
     private void closeAdditionalSessions(WebRequest request, boolean flushFirst) {
-        RuntimeException firstFlushException = null;
+        Throwable firstFlushFailure = null;
         for (int i = additionalSessionFactories.size() - 1; i >= 0; i--) {
             AdditionalSessionFactoryConfig config = additionalSessionFactories.get(i);
             SessionFactory sf = config.sessionFactory;
@@ -240,20 +241,21 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
             SessionHolder sessionHolder = (SessionHolder) TransactionSynchronizationManager.getResource(sf);
             if (sessionHolder != null) {
                 Session session = sessionHolder.getSession();
-                if (flushFirst && isFlushAllowed(session)) {
-                    try {
+                try {
+                    if (flushFirst && isFlushAllowed(session)) {
                         if (logger.isDebugEnabled()) {
                             logger.debug("Flushing additional Hibernate session for datasource '" + config.connectionName + "' as asynchronous handling starts");
                         }
                         session.flush();
                     }
-                    catch (RuntimeException flushEx) {
-                        if (firstFlushException == null) {
-                            firstFlushException = flushEx;
-                        }
-                        else {
-                            firstFlushException.addSuppressed(flushEx);
-                        }
+                }
+                catch (Throwable flushFailure) {
+                    // an Error too, such as a failed assert in a domain's beforeUpdate: every session is released first
+                    if (firstFlushFailure == null) {
+                        firstFlushFailure = flushFailure;
+                    }
+                    else {
+                        firstFlushFailure.addSuppressed(flushFailure);
                     }
                 }
                 TransactionSynchronizationManager.unbindResource(sf);
@@ -268,8 +270,8 @@ public class GrailsOpenSessionInViewInterceptor extends OpenSessionInViewInterce
                 }
             }
         }
-        if (firstFlushException != null) {
-            throw firstFlushException;
+        if (firstFlushFailure != null) {
+            ReflectionUtils.rethrowRuntimeException(firstFlushFailure);
         }
     }
 

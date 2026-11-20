@@ -275,6 +275,50 @@ class MultiDataSourceSessionSpec extends Specification {
         autoFlush?.close()
     }
 
+    def "a request that goes asynchronous releases every session it opened when a flush there throws an Error"() {
+        given: "a datastore that flushes in AUTO mode and allows updates outside a transaction, with a book on each of two other datasources"
+        HibernateDatastore autoFlush = new HibernateDatastore(DatastoreUtils.createPropertyResolver(config + [
+                'hibernate.flush.mode': 'AUTO',
+                'hibernate.allow_update_outside_transaction': 'true',
+                'dataSource.url': 'jdbc:h2:mem:refusedDefaultDb;LOCK_TIMEOUT=10000',
+                'dataSources.secondary': [url: 'jdbc:h2:mem:refusedSecondaryDb;LOCK_TIMEOUT=10000'],
+                'dataSources.third': [url: 'jdbc:h2:mem:refusedThirdDb;LOCK_TIMEOUT=10000'],
+        ]), RefusedSecondaryBook, RefusedThirdBook)
+        SessionFactory secondarySf = autoFlush.getDatastoreForConnection('secondary').sessionFactory
+        SessionFactory thirdSf = autoFlush.getDatastoreForConnection('third').sessionFactory
+        Serializable secondaryId = RefusedSecondaryBook.withNewTransaction { new RefusedSecondaryBook(title: 'Before').save(flush: true).id }
+        Serializable thirdId = RefusedThirdBook.withNewTransaction { new RefusedThirdBook(title: 'Before').save(flush: true).id }
+
+        and: "a request, made asynchronous by Grails, that changes both so that each one's beforeUpdate fails its assert"
+        def interceptor = new GrailsOpenSessionInViewInterceptor()
+        interceptor.setHibernateDatastore(autoFlush)
+        WebRequest webRequest = webRequest()
+        interceptor.preHandle(webRequest)
+        Session defaultSession = boundSession(autoFlush.sessionFactory)
+        Session secondarySession = boundSession(secondarySf)
+        Session thirdSession = boundSession(thirdSf)
+        secondarySession.get(RefusedSecondaryBook, secondaryId).title = 'Refused'
+        thirdSession.get(RefusedThirdBook, thirdId).title = 'Refused'
+        webRequest.setAttribute('org.grails.ASYNC_STARTED', true, WebRequest.SCOPE_REQUEST)
+
+        when: "the request goes asynchronous"
+        interceptor.afterConcurrentHandlingStarted(webRequest)
+
+        then: "every session the request opened is unbound and closed"
+        AssertionError failure = thrown()
+        [autoFlush.sessionFactory, secondarySf, thirdSf].every { !TransactionSynchronizationManager.hasResource(it) }
+        !defaultSession.open
+        !secondarySession.open
+        !thirdSession.open
+
+        and: "the first failure is thrown, with the second attached"
+        failure.suppressed.length == 1
+        failure.suppressed[0] instanceof AssertionError
+
+        cleanup:
+        autoFlush?.close()
+    }
+
     def "a request that Grails makes asynchronous closes its default session too"() {
         given: "the request has opened its sessions"
         def interceptor = new GrailsOpenSessionInViewInterceptor()
@@ -463,5 +507,31 @@ class InsideTransactionBook {
 
     static mapping = {
         datasource 'secondary'
+    }
+}
+
+@Entity
+class RefusedSecondaryBook {
+    String title
+
+    def beforeUpdate() {
+        assert title != 'Refused'
+    }
+
+    static mapping = {
+        datasource 'secondary'
+    }
+}
+
+@Entity
+class RefusedThirdBook {
+    String title
+
+    def beforeUpdate() {
+        assert title != 'Refused'
+    }
+
+    static mapping = {
+        datasource 'third'
     }
 }
