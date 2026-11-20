@@ -118,8 +118,40 @@ class GrailsRememberMeAuthenticationFilter extends RememberMeAuthenticationFilte
         'GET' == request.method && !SpringSecurityUtils.isAjax(request) && !isLoginForm(request)
     }
 
+    /**
+     * The login form url is a path of the application, or an absolute url, which Spring Security's login entry point accepts as
+     * well. The request has reached this application, so its path is enough to tell whether it is the login form: only the
+     * path of the url is compared, without its query or fragment, and a scheme, host or port that the request reports
+     * are not, as behind a proxy that does not forward them they differ from the public url. The path of an absolute url
+     * includes the context path.
+     */
     protected boolean isLoginForm(HttpServletRequest request) {
-        loginFormUrl && request.requestURI == request.contextPath + loginFormUrl
+        if (!loginFormUrl) {
+            return false
+        }
+        String lower = loginFormUrl.toLowerCase(Locale.ROOT)
+        if (lower.startsWith('http://') || lower.startsWith('https://')) {
+            URI form
+            try {
+                form = new URI(loginFormUrl)
+            }
+            catch (URISyntaxException ignored) {
+                return false
+            }
+            return request.requestURI == (form.rawPath ?: '/')
+        }
+        request.requestURI == request.contextPath + withoutQueryAndFragment(loginFormUrl)
+    }
+
+    private static String withoutQueryAndFragment(String url) {
+        int end = url.length()
+        ['?', '#'].each { String mark ->
+            int at = url.indexOf(mark)
+            if (at >= 0 && at < end) {
+                end = at
+            }
+        }
+        url.substring(0, end)
     }
 
     @Override
