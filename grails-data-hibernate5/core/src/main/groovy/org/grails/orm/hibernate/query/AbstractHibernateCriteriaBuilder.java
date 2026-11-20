@@ -665,7 +665,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 associationPath.substring(THIS_PREFIX.length()) : associationPath;
     }
 
-    private boolean pathsFromRoot;
+    protected boolean pathsFromRoot;
+    /** How many createAlias calls are running: the joins that one call makes for the path it is given are not declarations. */
+    protected int createAliasDepth;
 
     /**
      * Creates the alias of a path that is written from the root of the query, as the builder does for the blocks and
