@@ -88,6 +88,18 @@ class SingleTenantSpec extends Specification {
             }
         }
 
+        and: 'load and proxy stay lazy for missing identifiers in DATABASE mode'
+        SingleTenantAuthor.withNewSession {
+            def handler = datastore.mappingContext.proxyHandler
+            def loaded = SingleTenantAuthor.load(Long.MAX_VALUE)
+            def proxied = SingleTenantAuthor.proxy(Long.MAX_VALUE - 1)
+            assert handler.isProxy(loaded)
+            assert !handler.isInitialized(loaded)
+            assert handler.isProxy(proxied)
+            assert !handler.isInitialized(proxied)
+            true
+        }
+
         when:"An object is saved"
         SingleTenantAuthor.withTransaction {
             SingleTenantAuthor.withSession { Session s ->
@@ -99,6 +111,15 @@ class SingleTenantSpec extends Specification {
 
         then:"The results are correct"
         SingleTenantAuthor.withTransaction { SingleTenantAuthor.count() == 1 }
+
+        and: "load of the saved id reads the name from the current tenant database"
+        def kingId = SingleTenantAuthor.withTransaction {
+            SingleTenantAuthor.findByName("Stephen King").id
+        }
+        SingleTenantAuthor.withNewSession {
+            assert SingleTenantAuthor.load(kingId).name == "Stephen King"
+            true
+        }
 
         when:"An a transaction is used"
         SingleTenantAuthor.withTransaction{

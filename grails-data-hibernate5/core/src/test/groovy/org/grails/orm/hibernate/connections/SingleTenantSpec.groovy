@@ -93,6 +93,18 @@ class SingleTenantSpec extends Specification {
             }
         }
 
+        and: 'load and proxy stay lazy for missing identifiers in DATABASE mode'
+        SingleTenantAuthor.withNewSession {
+            def handler = datastore.mappingContext.proxyHandler
+            def loaded = SingleTenantAuthor.load(Long.MAX_VALUE)
+            def proxied = SingleTenantAuthor.proxy(Long.MAX_VALUE - 1)
+            assert handler.isProxy(loaded)
+            assert !handler.isInitialized(loaded)
+            assert handler.isProxy(proxied)
+            assert !handler.isInitialized(proxied)
+            true
+        }
+
         when:"An object is saved"
         SingleTenantAuthor.withTransaction {
             SingleTenantAuthor.withSession { Session s ->

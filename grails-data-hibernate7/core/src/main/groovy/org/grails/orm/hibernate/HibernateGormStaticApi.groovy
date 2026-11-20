@@ -62,6 +62,7 @@ import org.grails.datastore.gorm.GormStaticApi
 import org.grails.datastore.gorm.finders.FinderMethod
 import org.grails.datastore.gorm.internal.RefreshLockArguments
 import org.grails.datastore.mapping.core.connections.ConnectionSource
+import org.grails.datastore.mapping.multitenancy.MultiTenancySettings.MultiTenancyMode
 import org.grails.datastore.mapping.proxy.ProxyHandler
 import org.grails.datastore.mapping.model.PersistentProperty
 import org.grails.datastore.mapping.query.api.BuildableCriteria as GrailsCriteria
@@ -311,9 +312,9 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D load(Serializable id) {
-        if (persistentEntity.isMultiTenant()) {
-            // Hibernate's tenant filter does not apply to a load by identifier, so a multi-tenant entity is loaded
-            // through a query, as get(id) does, rather than handed to whichever tenant asks for the id
+        if (persistentEntity.isMultiTenant() && multiTenancyMode == MultiTenancyMode.DISCRIMINATOR) {
+            // Hibernate's discriminator tenant filter does not apply to a load by identifier, so use a query,
+            // as get(id) does, rather than handing out another tenant's row.
             return get(id)
         }
         id = convertIdentifier(id)
@@ -326,7 +327,7 @@ class HibernateGormStaticApi<D> extends GormStaticApi<D> {
 
     @Override
     D proxy(Serializable id) {
-        if (persistentEntity.isMultiTenant()) {
+        if (persistentEntity.isMultiTenant() && multiTenancyMode == MultiTenancyMode.DISCRIMINATOR) {
             return get(id)
         }
         id = convertIdentifier(id)
