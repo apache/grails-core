@@ -59,7 +59,7 @@ class CreateInterceptorCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        return generate('interceptor class', getProject(interceptorName), [
+        return generate('interceptor class', getProject(interceptorName, 'Interceptor'), [
                 'grails-app/controllers/{packagePath}/{className}Interceptor.groovy': ArtefactTemplate.INTERCEPTOR,
                 'src/test/groovy/{packagePath}/{className}InterceptorSpec.groovy': ArtefactTemplate.INTERCEPTOR_TEST
         ])

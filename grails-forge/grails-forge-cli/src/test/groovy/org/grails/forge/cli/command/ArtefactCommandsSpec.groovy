@@ -18,13 +18,17 @@
  */
 package org.grails.forge.cli.command
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.PosixFilePermissions
+import java.util.function.Function
 import org.apache.grails.forge.cli.artefact.ArtefactTemplate
 import org.apache.grails.forge.cli.artefact.ArtefactTemplateException
 import org.apache.grails.forge.cli.artefact.ArtefactTemplates
+import org.apache.grails.forge.cli.artefact.ProjectFiles
 import org.apache.grails.forge.cli.artefact.ProjectOutputHandler
+import org.apache.grails.forge.cli.artefact.ProjectPlace
 import org.codehaus.groovy.control.CompilationUnit
 import org.codehaus.groovy.control.Phases
 import org.grails.forge.application.ApplicationType
@@ -41,6 +45,7 @@ import org.grails.forge.options.Options
 import org.grails.forge.template.Template
 import org.grails.forge.util.NameUtils
 import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Shared
 import spock.lang.Unroll
 
@@ -380,7 +385,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         'create-unit-test'        | 'B' * 201                     | 'it has more than 200 characters'
         'create-unit-test'        | 'Book@|red x|@'               | 'is not a name for a class'
         'create-unit-test'        | 'Book.groovy'                 | 'it is the name of a file. The name of the class is given, without .groovy'
-        'create-unit-test'        | 'a.Book.JAVA'                 | 'it is the name of a file'
+        'create-unit-test'        | 'a.Book.java'                 | 'it is the name of a file'
         'create-unit-test'        | (((char) 0xDF) as String) + 'ook' | 'starts with a letter that has no capital'
         'create-unit-test'        | 'book--store'                 | 'a hyphen stands between two words of a name'
         'create-unit-test'        | 'Book-'                       | 'a hyphen stands between two words of a name'
@@ -1059,7 +1064,7 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
                 ['../Escape', 'it is a path'],
                 ['C:x', 'it is a path'],
                 ['my class', 'is not an identifier of Java'],
-                ['con', 'Con is the name of a device on Windows'],
+                ['a.con.Book', 'con is the name of a device on Windows'],
                 ['a.B.groovy', 'it is the name of a file'],
                 ['my-pkg.Book', 'my-pkg is not a package of Java'],
                 ['Book-', 'a hyphen stands between two words of a name'],
@@ -1262,6 +1267,155 @@ class ArtefactCommandsSpec extends CommandSpec implements CommandFixture {
         } finally {
             probe.delete()
         }
+    }
+
+    @Unroll
+    void "#command #given is refused or written by the names of the files it would write: #result"() {
+        given:
+        project(ApplicationType.REST_API, 'grails-quartz')
+
+        when:
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, command, given)
+        }
+
+        then:
+        exit == (result.contains('/') ? 0 : 2)
+        result.contains('/') ? result in written.keySet() : written == [:] && out.toString().readLines().first().contains(result)
+
+        where:
+        command                  | given         | result
+        'create-controller'      | 'con'         | 'grails-app/controllers/example/grails/ConController.groovy'
+        'create-controller'      | 'Con'         | 'grails-app/controllers/example/grails/ConController.groovy'
+        'create-controller'      | 'nul'         | 'grails-app/controllers/example/grails/NulController.groovy'
+        'create-service'         | 'aux'         | 'grails-app/services/example/grails/AuxService.groovy'
+        'create-taglib'          | 'prn'         | 'grails-app/taglib/example/grails/PrnTagLib.groovy'
+        'create-interceptor'     | 'com1'        | 'grails-app/controllers/example/grails/Com1Interceptor.groovy'
+        'create-job'             | 'lpt1'        | 'grails-app/jobs/example/grails/Lpt1Job.groovy'
+        'create-unit-test'       | 'con'         | 'src/test/groovy/example/grails/ConSpec.groovy'
+        'create-command'         | 'nul'         | 'grails-app/commands/example/grails/NulCommand.groovy'
+        'create-domain-class'    | 'con'         | 'Con is the name of a device on Windows'
+        'create-domain-resource' | 'nul'         | 'Nul is the name of a device on Windows'
+        'create-script'          | 'aux'         | 'Aux is the name of a device on Windows'
+        'create-controller'      | 'aux.Book'    | 'aux is the name of a device on Windows'
+        'create-controller'      | 'a.con.Book'  | 'con is the name of a device on Windows'
+        'create-controller'      | 'my.groovy'   | 'it is the name of a file. The name of the class is given, without .groovy'
+        'create-controller'      | 'app.java'    | 'it is the name of a file. The name of the class is given, without .java'
+        'create-unit-test'       | 'a.B.groovy'  | 'it is the name of a file'
+        'create-controller'      | 'foo.Groovy'  | 'grails-app/controllers/foo/GroovyController.groovy'
+        'create-controller'      | 'book.Java'   | 'grails-app/controllers/book/JavaController.groovy'
+        'create-unit-test'       | 'foo.Groovy'  | 'src/test/groovy/foo/GroovySpec.groovy'
+        'create-unit-test'       | 'a.b.JAVA'    | 'src/test/groovy/a/b/JAVASpec.groovy'
+        'create-domain-class'    | 'foo.Java'    | 'grails-app/domain/foo/Java.groovy'
+    }
+
+    @Requires({ os.macOs })
+    void "a file that cannot be moved aside is not touched, and the command does not say it wrote it"() {
+        given: 'a controller the file system lets nobody rename, remove or write'
+        project(ApplicationType.WEB)
+        File controller = new File(dir, 'grails-app/controllers/example/grails/BookController.groovy')
+        controller.parentFile.mkdirs()
+        controller.text = 'mine'
+        assert ['chflags', 'uchg', controller.absolutePath].execute().waitFor() == 0
+        Map<String, List> before = tree()
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'create-controller', 'Book', '-f')
+
+        then:
+        exit == 1
+        controller.text == 'mine'
+        tree() == before
+        out.toString().readLines().size() == 1
+        out.toString().readLines()[0].startsWith('| Error Cannot write grails-app/controllers/example/grails/BookController.groovy: ')
+        out.toString().readLines()[0].endsWith('. The project is as it was before the command')
+        !out.toString().contains('what the command wrote')
+
+        cleanup:
+        ['chflags', 'nouchg', new File(dir, 'grails-app/controllers/example/grails/BookController.groovy').absolutePath].execute().waitFor()
+    }
+
+    void "when what is there cannot be given another name, it is not removed in its place"() {
+        given: 'two files that are there, and a file system that renames the first and not the second'
+        project(ApplicationType.WEB)
+        ['grails-app/a/One.groovy', 'grails-app/b/Two.groovy'].each { String path ->
+            File file = new File(dir, path)
+            file.parentFile.mkdirs()
+            file.text = 'mine ' + path
+        }
+        Map<String, List> before = tree()
+        OutputHandler output = new ProjectOutputHandler(dir, ConsoleOutput.NOOP)
+        Function<String, ProjectPlace> opener = { String path ->
+            new ProjectPlace(path) {
+
+                @Override
+                protected void move(String from, String to) throws IOException {
+                    if (from == 'Two.groovy') {
+                        throw new AccessDeniedException(new File(dir, path).absolutePath)
+                    }
+                    super.move(from, to)
+                }
+            }.opened(dir)
+        } as Function<String, ProjectPlace>
+
+        when:
+        ProjectFiles.write(dir, output, ['grails-app/a/One.groovy': 'new one', 'grails-app/b/Two.groovy': 'new two'], opener)
+
+        then: 'the first has its name and its content again, and the second was never anything else'
+        ProjectFiles.Failed e = thrown()
+        e.message == 'Cannot write grails-app/b/Two.groovy: it, or the directory it is in, cannot be written to. The project is as it was before the command'
+        tree() == before
+    }
+
+    void "what a command that did not end left of a file is said, and nothing is written until it is dealt with"() {
+        given: 'a controller that was moved aside by a command that was killed, and the file it had begun to write'
+        project(ApplicationType.WEB)
+        File directory = new File(dir, 'grails-app/controllers/example/grails')
+        directory.mkdirs()
+        File aside = new File(directory, '.BookController.groovy.grails-aside-1f2e3d4c5b6a7988')
+        aside.text = 'what it was'
+        File begun = new File(directory, '.BookController.groovy.grails-new-0011223344556677')
+        begun.text = 'half'
+        File ofAnother = new File(directory, '.OtherController.groovy.grails-new-0011223344556677')
+        ofAnother.text = 'not of this file'
+
+        when:
+        int exit = 0
+        Map<String, String> written = writtenBy {
+            exit = ForgeCli.execute(beanContext, (['create-controller', 'Book'] + options) as String[])
+        }
+
+        then: 'whether the file is there or not, and forced or not'
+        exit == 1
+        written == [:]
+        aside.text == 'what it was'
+        out.toString().readLines() == ['| Error Cannot write grails-app/controllers/example/grails/BookController.groovy: a command that did not end left what the file was before ' +
+                'in the same directory, under the name .BookController.groovy.grails-aside-1f2e3d4c5b6a7988. Give that file its name back, or remove it, and run the command again']
+
+        when: 'it has its name back'
+        out.reset()
+        assert aside.renameTo(new File(directory, 'BookController.groovy'))
+        exit = ForgeCli.execute(beanContext, 'create-controller', 'Book', '-f')
+
+        then: 'the command writes, removes what was begun for this file, and leaves nothing of its own beside it'
+        exit == 0
+        new File(directory, 'BookController.groovy').text.contains('class BookController')
+        directory.list().sort() == ['.OtherController.groovy.grails-new-0011223344556677', 'BookController.groovy'] as String[]
+        new File(dir, 'src/test/groovy/example/grails').list() == ['BookControllerSpec.groovy'] as String[]
+
+        where:
+        options << [[], ['-f']]
+    }
+
+    void "the name a file is moved aside under has the name of the file in it, and is a name a file system takes"() {
+        expect:
+        ProjectPlace.besideName('Book.groovy', 'aside') == '.Book.groovy.grails-aside-'
+        (ProjectPlace.besideName(name, 'aside') + 'f' * 16).getBytes('UTF-8').length <= 255
+        ProjectPlace.besideName(name, 'aside').startsWith('.' + name.substring(0, 60))
+
+        where:
+        name << ['B' * 248 + '.groovy', ((((char) 0x4E66) as String) * 82) + '.groovy']
     }
 
     private void project(ApplicationType type, String... features) {

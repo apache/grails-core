@@ -21,6 +21,7 @@ package org.apache.grails.forge.cli.artefact
 import groovy.transform.CompileStatic
 import java.nio.ByteBuffer
 import java.nio.channels.SeekableByteChannel
+import java.nio.charset.StandardCharsets
 import java.nio.file.DirectoryStream
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
@@ -57,20 +58,52 @@ import org.grails.forge.feature.FeatureSelectionException
  * @since 9.0
  */
 @CompileStatic
-final class ProjectPlace implements Closeable {
+class ProjectPlace implements Closeable {
 
     private static final SecureRandom RANDOM = new SecureRandom()
+    private static final String ASIDE = 'aside'
+    private static final String NEW = 'new'
     private static final Set<? extends OpenOption> NEW_FILE = [StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, LinkOption.NOFOLLOW_LINKS] as Set
 
     /** The path of the file in the project */
     final String path
     private final String name
     private final List<Level> levels = []
+    // whether there was something under the name of the file when the place was opened, and whether it is aside now
+    private boolean original
+    private boolean moved
     private String aside
 
-    private ProjectPlace(String path) {
+    protected ProjectPlace(String path) {
         this.path = path
         this.name = path.substring(path.lastIndexOf('/') + 1)
+    }
+
+    /**
+     * What the name of a file moved aside starts with, and with {@code new} the name a file is first
+     * written under: the name of the file itself is in it, so that what a command left that did not
+     * end is known for what it is. A long name is cut, so that the whole is a name a file system takes.
+     *
+     * @param name the name of a file
+     * @param kind {@code aside} or {@code new}
+     */
+    static String besideName(String name, String kind) {
+        String kept = name
+        while (kept.getBytes(StandardCharsets.UTF_8).length > ProjectOutputHandler.MAX_NAME_BYTES - 40) {
+            kept = kept.substring(0, kept.offsetByCodePoints(0, kept.codePointCount(0, kept.length()) - 1))
+        }
+        return ".${kept}.grails-${kind}-"
+    }
+
+    /**
+     * @param directory a directory
+     * @param name the name of a file in it
+     * @return the names of what a command that did not end left there of what the file was before, moved aside
+     */
+    static List<String> leftAside(Path directory, String name) {
+        String[] names = directory.toFile().list()
+        String start = besideName(name, ASIDE)
+        return names == null ? [] as List<String> : names.findAll { String each -> each.startsWith(start) }.toList()
     }
 
     // a directory on the way, which is open, and whether it was made for this place
@@ -111,11 +144,26 @@ final class ProjectPlace implements Closeable {
      * @throws ProjectOutputHandler.Refused when the file cannot be written there, see {@link ProjectOutputHandler#refusal}
      */
     static ProjectPlace open(File project, String path) throws IOException {
-        String refusal = ProjectOutputHandler.refusal(project, path)
+        return new ProjectPlace(path).opened(project)
+    }
+
+    /**
+     * Opens this place, see {@link #open(File, String)}.
+     */
+    protected ProjectPlace opened(File project) throws IOException {
+        return opened(project, true)
+    }
+
+    /**
+     * @param leftAside whether a file that a command which did not end moved aside keeps this place
+     * from being opened, see {@link ProjectOutputHandler#refusal(File, String, boolean)}
+     */
+    protected ProjectPlace opened(File project, boolean leftAside) throws IOException {
+        String refusal = ProjectOutputHandler.refusal(project, path, leftAside)
         if (refusal != null) {
             throw new ProjectOutputHandler.Refused(refusal)
         }
-        ProjectPlace place = new ProjectPlace(path)
+        ProjectPlace place = this
         try {
             Path directory = project.toPath().toRealPath()
             place.levels.add(new Level(directory, Files.newDirectoryStream(directory), false))
@@ -155,6 +203,18 @@ final class ProjectPlace implements Closeable {
                     throw new ProjectOutputHandler.Refused("${said} is not the directory it was when the command looked")
                 }
             }
+            original = exists(name)
+            String[] names = levels.last().directory.toFile().list()
+            String unfinished = besideName(name, NEW)
+            for (String each : (names == null ? [] as List<String> : names.toList())) {
+                if (each.startsWith(unfinished)) {
+                    try {
+                        delete(each)
+                    } catch (IOException ignored) {
+                        // it is in nobody's way
+                    }
+                }
+            }
             return place
         } catch (IOException | RuntimeException e) {
             place.removeMade()
@@ -175,10 +235,11 @@ final class ProjectPlace implements Closeable {
      * directory: it stays what it is, with its content, its mode and its other names.
      */
     void moveAside() throws IOException {
-        if (exists(name)) {
-            String other = ".grails-aside-${Long.toHexString(RANDOM.nextLong())}"
+        if (original && !moved) {
+            String other = besideName(name, ASIDE) + Long.toHexString(RANDOM.nextLong())
             move(name, other)
             aside = other
+            moved = true
         }
     }
 
@@ -189,7 +250,7 @@ final class ProjectPlace implements Closeable {
      * @param modified when the file is to have been modified, or null for now
      */
     void put(byte[] content, Instant modified) throws IOException {
-        String fresh = ".grails-new-${Long.toHexString(RANDOM.nextLong())}"
+        String fresh = besideName(name, NEW) + Long.toHexString(RANDOM.nextLong())
         Level leaf = levels.last()
         try {
             SeekableByteChannel channel = leaf.secure != null ? leaf.secure.newByteChannel(Path.of(fresh), NEW_FILE) :
@@ -223,30 +284,32 @@ final class ProjectPlace implements Closeable {
      * Forgets what was moved aside: the file that was written stays.
      */
     void keep() {
-        if (aside != null) {
+        if (moved) {
             try {
                 delete(aside)
             } catch (IOException ignored) {
                 // a file of another name is left, which is not the file of the command
             }
-            aside = null
+            moved = false
+            original = false
         }
     }
 
     /**
-     * Takes back what was done at this place: what was written is removed, what was moved aside has
-     * its name again, and the directories that were made for it are removed.
+     * Takes back what was done at this place: what was moved aside has its name again, a file that
+     * was written where there was none is removed, and the directories that were made are removed.
+     * What was there and was not moved aside is not touched: nothing was written in its place.
      *
      * @return nothing when the place is what it was, and otherwise what it is now, in a sentence
      */
     String restore() {
         String left = null
         try {
-            if (aside != null) {
+            if (moved) {
                 // takes the name in one step, whatever was written under it
                 move(aside, name)
-                aside = null
-            } else {
+                moved = false
+            } else if (!original) {
                 try {
                     delete(name)
                 } catch (NoSuchFileException ignored) {
@@ -255,11 +318,11 @@ final class ProjectPlace implements Closeable {
             }
         } catch (ProjectOutputHandler.Refused ignored) {
             left = "${FeatureSelectionException.shown(path)} was not looked at again, because a directory it is in is not the directory it was" +
-                    (aside == null ? '' : ": what it was is there under the name ${aside}")
+                    (moved ? ": what it was is there under the name ${FeatureSelectionException.shown(aside)}" : '')
         } catch (IOException e) {
             String shown = FeatureSelectionException.shown(path)
-            left = aside == null ? "${shown} could not be removed and is what the command wrote of it" :
-                    "${shown} is not what it was: what it was is beside it under the name ${aside}"
+            left = moved ? "${shown} is not what it was: what it was is beside it under the name ${FeatureSelectionException.shown(aside)}" :
+                    "${shown} could not be removed and is what the command wrote of it"
         }
         if (left == null) {
             removeMade()
@@ -308,7 +371,10 @@ final class ProjectPlace implements Closeable {
         }
     }
 
-    private void move(String from, String to) throws IOException {
+    /**
+     * Gives an entry of the directory of the file another name there, in one step.
+     */
+    protected void move(String from, String to) throws IOException {
         Level leaf = levels.last()
         if (leaf.secure != null) {
             leaf.secure.move(Path.of(from), leaf.secure, Path.of(to))

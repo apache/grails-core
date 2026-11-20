@@ -59,7 +59,7 @@ class CreateControllerCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        return generate('controller', getProject(controllerName), [
+        return generate('controller', getProject(controllerName, 'Controller'), [
                 'grails-app/controllers/{packagePath}/{className}Controller.groovy': ArtefactTemplate.CONTROLLER,
                 'src/test/groovy/{packagePath}/{className}ControllerSpec.groovy': ArtefactTemplate.CONTROLLER_TEST
         ])

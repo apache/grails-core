@@ -80,7 +80,19 @@ abstract class CodeGenCommand extends BaseCommand implements Callable<Integer>, 
      * @see #newArtefact(String, String)
      */
     protected Project getProject(String name) {
-        return newArtefact(name, null)
+        return getProject(name, '')
+    }
+
+    /**
+     * @param added what the names of the files of the class have after the name of the class
+     * @see #getProject(String)
+     */
+    protected Project getProject(String name, String added) {
+        try {
+            return ArtefactName.parse(name, config?.getDefaultPackage(), null, added)
+        } catch (IllegalArgumentException e) {
+            throw new CommandLine.ParameterException(spec.commandLine(), e.getMessage())
+        }
     }
 
     protected TemplateRenderer getTemplateRenderer(Project project) throws IOException {

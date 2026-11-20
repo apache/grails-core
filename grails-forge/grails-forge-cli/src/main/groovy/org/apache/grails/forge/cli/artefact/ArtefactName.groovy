@@ -55,6 +55,16 @@ final class ArtefactName {
      * @throws IllegalArgumentException when the name cannot be the name of a class, with a message of one line
      */
     static Project parse(String given, String defaultPackage, String convention) {
+        return parse(given, defaultPackage, convention, convention ?: '')
+    }
+
+    /**
+     * @param added what the names of the files of the class have after the name of the class, for a
+     * command that adds it whatever the name ends with: {@code Controller} for a class that is
+     * written to {@code BookController.groovy} and {@code BookControllerSpec.groovy}
+     * @see #parse(String, String, String)
+     */
+    static Project parse(String given, String defaultPackage, String convention, String added) {
         if (given == null || given.isEmpty()) {
             throw new IllegalArgumentException('A name is needed')
         }
@@ -80,7 +90,8 @@ final class ArtefactName {
         if (dot == 0 || simple.isEmpty()) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it starts or ends with a dot")
         }
-        if (dot > 0 && simple.toLowerCase(Locale.ENGLISH) in FILE_ENDINGS) {
+        // in lower case it is the ending of a file that was typed with the name; Groovy and Java are names of classes
+        if (dot > 0 && simple in FILE_ENDINGS) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: it is the name of a file. The name of the class is given, without .${simple}")
         }
         // each word that a hyphen sets apart starts with a capital: book-store is BookStore
@@ -107,8 +118,10 @@ final class ArtefactName {
         if (packageName && !SourceVersion.isName(packageName)) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${FeatureSelectionException.shown(packageName)} is not a package of Java")
         }
-        // the package is directories and the name is a file: neither is one Windows could not have
-        List<String> steps = (packageName ? packageName.split('\\.').toList() : []) + [className + (convention ?: '')]
+        // the package is directories and the name is a file: neither is one Windows could not have. It is
+        // the names that are written that count: Con is no name for a class of its own file, and is one
+        // for a controller, whose file is ConController.groovy
+        List<String> steps = (packageName ? packageName.split('\\.').toList() : []) + [className + added]
         String device = steps.find { String step -> PackDescriptorParser.isDeviceName(step) }
         if (device != null) {
             throw new IllegalArgumentException("\"${shown}\" is not a name for a class: ${device} is the name of a device on Windows, " +

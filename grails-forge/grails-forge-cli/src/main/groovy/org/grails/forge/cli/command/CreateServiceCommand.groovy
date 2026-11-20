@@ -59,7 +59,7 @@ class CreateServiceCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        return generate('service class', getProject(serviceName), [
+        return generate('service class', getProject(serviceName, 'Service'), [
                 'grails-app/services/{packagePath}/{className}Service.groovy': ArtefactTemplate.SERVICE,
                 'src/test/groovy/{packagePath}/{className}ServiceSpec.groovy': ArtefactTemplate.SERVICE_TEST
         ])

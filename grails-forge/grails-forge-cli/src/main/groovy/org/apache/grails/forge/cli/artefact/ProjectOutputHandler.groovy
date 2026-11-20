@@ -25,6 +25,7 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.text.Normalizer
 import java.time.Instant
+import org.apache.grails.forge.core.pack.PackDescriptorParser
 import org.grails.forge.feature.FeatureSelectionException
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.FileSystemOutputHandler
@@ -61,7 +62,7 @@ class ProjectOutputHandler extends FileSystemOutputHandler {
     File write(String path, Writable contents) throws IOException {
         ByteArrayOutputStream content = new ByteArrayOutputStream()
         contents.write(content)
-        ProjectPlace place = ProjectPlace.open(applicationDirectory, path)
+        ProjectPlace place = new ProjectPlace(path).opened(applicationDirectory, false)
         try {
             place.put(content.toByteArray(), modified)
         } finally {
@@ -91,6 +92,16 @@ class ProjectOutputHandler extends FileSystemOutputHandler {
      * written through
      */
     static String refusal(File project, String path) {
+        return refusal(project, path, true)
+    }
+
+    /**
+     * @param leftAside whether what a command that did not end left of the file, moved aside, is a
+     * reason: it is for a command that is about to write, and is not for the write itself, which
+     * comes after the command has moved aside what is there
+     * @see #refusal(File, String)
+     */
+    static String refusal(File project, String path, boolean leftAside) {
         List<String> steps = path.split('/', -1).toList()
         for (String step : steps) {
             if (step.isEmpty() || step == '.' || step == '..' || step.contains('\\')) {
@@ -118,6 +129,15 @@ class ProjectOutputHandler extends FileSystemOutputHandler {
                 return "the project has ${said} under a name that is written differently, as in the case of its letters"
             }
             directory = next
+        }
+        // what a command that did not end moved aside is what the file was, and may be all there is of it:
+        // nothing is written over it or beside it before whoever knows which of the two is wanted has chosen
+        List<String> aside = leftAside ? ProjectPlace.leftAside(directory, steps.last()) : [] as List<String>
+        if (aside) {
+            // the whole of the name, which is needed to find the file, without what a terminal acts on
+            String beside = PackDescriptorParser.shown(aside.first(), MAX_NAME_BYTES).replace('@|', '@ |')
+            return "a command that did not end left what the file was before in the same directory, under the name ${beside}. " +
+                    'Give that file its name back, or remove it, and run the command again'
         }
         Path file = directory.resolve(steps.last())
         if (Files.exists(file, LinkOption.NOFOLLOW_LINKS)) {

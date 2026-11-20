@@ -59,7 +59,7 @@ class CreateTagLibCommand extends CodeGenCommand {
 
     @Override
     Integer call() throws Exception {
-        return generate('taglib', getProject(tagLibName), [
+        return generate('taglib', getProject(tagLibName, 'TagLib'), [
                 'grails-app/taglib/{packagePath}/{className}TagLib.groovy': ArtefactTemplate.TAG_LIB,
                 'src/test/groovy/{packagePath}/{className}TagLibSpec.groovy': ArtefactTemplate.TAG_LIB_TEST
         ])

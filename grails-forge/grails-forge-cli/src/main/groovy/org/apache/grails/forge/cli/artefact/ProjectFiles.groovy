@@ -19,6 +19,7 @@
 package org.apache.grails.forge.cli.artefact
 
 import groovy.transform.CompileStatic
+import java.util.function.Function
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import org.grails.forge.feature.FeatureSelectionException
@@ -86,6 +87,14 @@ final class ProjectFiles {
      * message says what of it could not be
      */
     static void write(File project, OutputHandler output, Map<String, String> texts) {
+        write(project, output, texts, { String path -> ProjectPlace.open(project, path) } as Function<String, ProjectPlace>)
+    }
+
+    /**
+     * @param places what opens the place of a file by its path in the project, see {@link ProjectPlace#open}
+     * @see #write(File, OutputHandler, Map)
+     */
+    static void write(File project, OutputHandler output, Map<String, String> texts, Function<String, ProjectPlace> opener) {
         Map<String, String> refused = refusals(project, texts.keySet())
         if (refused) {
             throw new Failed(refused.values().first(), null)
@@ -94,7 +103,7 @@ final class ProjectFiles {
         try {
             for (Map.Entry<String, String> each : texts.entrySet()) {
                 try {
-                    ProjectPlace place = ProjectPlace.open(project, each.key)
+                    ProjectPlace place = opener.apply(each.key)
                     places.add(place)
                     place.moveAside()
                     output.write(each.key, new StringTemplate(each.key, each.value))
