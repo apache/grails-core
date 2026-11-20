@@ -30,31 +30,83 @@ import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.io.MapOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
-import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.TempDir
+import spock.lang.Unroll
 
 /**
- * That a pack can write the views applications really have: every view of the example applications in
- * the sources of Grails, made a template the way the guide says a view is made one, is written back
- * byte for byte.
+ * That a pack can write the views applications really have: a view of the sources of Grails, made a
+ * template the way the guide says a view is made one, is written back byte for byte.
+ *
+ * <p>The views are copies, under {@code pack-template-views} of the resources of the tests, each
+ * chosen for what a page reads in it; {@code views.txt} there says where each is from. Every
+ * {@code .gsp} file of the sources of Grails is tried instead of the copies when the tests are run with
+ * {@code -PallRepositoryViews}:
+ * {@code ./gradlew :grails-forge-core:test --tests '*PackTemplateViewsSpec' -PallRepositoryViews}.</p>
  */
 class PackTemplateViewsSpec extends ApplicationContextSpec {
+
+    static final String ALL = 'forge.packTemplateViews.all'
 
     @TempDir
     Path directory
 
     /**
      * What the guide tells the author of a pack to do with a view: a backslash in front of every
-     * expression, scriptlet, directive and comment of the view, and in front of its instruction tags.
-     * The other tags of the view need nothing.
+     * <code>${</code>, {@code <%} and <code>%{</code> of the view and in front of its instruction tags,
+     * and the backslashes the view already has in front of one of those or of any tag doubled.
      */
     static String asTemplate(String view) {
-        return view.replace('${', '\\${').replace('<%', '\\<%').replace('%{', '\\%{')
-                .replaceAll('<(/?)g:(' + PackTemplateSource.INSTRUCTIONS.toSorted { -it.length() }.join('|') + ')(?=[\\s>/])', '\\\\<$1g:$2')
+        return view.replaceAll('(\\\\*)(\\$\\{|<%|%\\{|</?([A-Za-z]\\w*):(\\w*))') { String all, String backslashes, String read, String namespace, String name ->
+            boolean escaped = namespace == null || (namespace == PackTemplateSource.NAMESPACE && name in PackTemplateSource.INSTRUCTIONS)
+            return backslashes * 2 + (escaped ? '\\' : '') + read
+        }
     }
 
-    @IgnoreIf(value = { RepositoryFiles.views().isEmpty() }, reason = 'the example applications are not beside Forge in these sources')
-    void "every view of the example applications is written back as it is by a template made of it"() {
+    /**
+     * The same with a backslash in front of every tag of the view: an author need not know which tags
+     * are instructions.
+     */
+    static String asTemplateWithEveryTagEscaped(String view) {
+        return view.replaceAll('(\\\\*)(\\$\\{|<%|%\\{|</?[A-Za-z]\\w*:)', '$1$1\\\\$2')
+    }
+
+    static Map<String, String> copies() {
+        Map<String, String> views = new TreeMap<>()
+        PackTemplateViewsSpec.getResourceAsStream('/pack-template-views/views.txt').getText('UTF-8').readLines()
+                .findAll { String line -> line && !line.startsWith('#') }
+                .each { String line ->
+                    String name = line.split(/ \\| /)[0]
+                    views.put(name, PackTemplateViewsSpec.getResourceAsStream("/pack-template-views/${name}").getText('UTF-8'))
+                }
+        return views
+    }
+
+    void "the copies of views are of every kind of thing a page reads"() {
+        given:
+        Collection<String> views = copies().values()
+
+        expect:
+        views.size() > 25
+        ['@{', '<%--', '%{--', '<%@', '<% ', '<%=', '<head>', '<body', '<meta', '<title>', '<g:layoutBody', '<sec:', '<asset:', '<f:', '<s2ui:',
+         '<g:if', '<g:else>', '<g:elseif', '<g:each', '<g:while', '<g:collect', '<g:findAll', '<g:set', '<g:render', '<g:form', '<g:link',
+         '<g:message', '<g:hasErrors', '<g:eachError', '<g:applyLayout', '<g:include', '<g:formatDate', '<g:select', '<g:paginate', '<script',
+         '<style', '\\${', '?.', '&hellip;', '<!--', ' />', '="[', "='"].every { String kind -> views.count { it.contains(kind) } >= 1 }
+    }
+
+    @Unroll
+    void "the view #name is written back as it is by a template made of it"() {
+        expect:
+        write(asTemplate(view)) == view
+        write(asTemplateWithEveryTagEscaped(view)) == view
+
+        where:
+        name << copies().keySet()
+        view = copies()[name]
+    }
+
+    @Requires(value = { System.getProperty(ALL) == 'true' }, reason = 'takes every view of the sources of Grails and is asked for with -PallRepositoryViews')
+    void "every view of the sources of Grails is written back as it is by a template made of it"() {
         given:
         Map<String, File> views = RepositoryFiles.views()
         Map<String, String> wrong = new TreeMap<>()
@@ -62,28 +114,23 @@ class PackTemplateViewsSpec extends ApplicationContextSpec {
         when:
         views.each { String path, File file ->
             String view = file.getText('UTF-8')
-            String written = write(asTemplate(view))
-            if (written != view) {
-                wrong.put(path, written)
+            if (write(asTemplate(view)) != view) {
+                wrong.put(path, 'with its instructions escaped')
+            } else if (write(asTemplateWithEveryTagEscaped(view)) != view) {
+                wrong.put(path, 'with every tag escaped')
             }
         }
+        println "PackTemplateViewsSpec: ${views.size()} views of the sources of Grails, ${views.size() - wrong.size()} written back as they are, ${wrong.size()} not"
 
-        then: 'the views are of every kind: with layouts, scriptlets, directives, comments, tags of plugins and maps in attributes'
+        then:
         views.size() > 500
-        views.values().count { it.getText('UTF-8').contains('<head>') } > 50
-        views.values().count { it.getText('UTF-8').contains('<%--') } > 50
-        views.values().count { it.getText('UTF-8').contains('<%@ page') } > 50
-        views.values().count { it.getText('UTF-8') =~ /="\[[^"]*:[^"]*\]"/ } > 10
-        views.values().count { it.getText('UTF-8').contains('<g:if') } > 50
-        views.values().count { it.getText('UTF-8').contains('<asset:') } > 50
-
-        and:
-        wrong.keySet().toList() == []
+        wrong == [:]
     }
 
     void "a view with a directive, a licence in a comment, a scriptlet and tags of every kind is written back as it is"() {
         given:
         String view = '''\
+@{ model="com.example.Book book; List<com.example.Author> authors" }
 %{--
   - Licensed to Example under one or more agreements, see ${notice}.
   --}%
@@ -114,6 +161,7 @@ class PackTemplateViewsSpec extends ApplicationContextSpec {
 <g:else><p>None</p></g:else>
 <% def total = book.pages ?: 0 %>
 <p><%= total %> pages, $5 or more, 100%</p>
+<p title="\\${escaped} and \\\\${twice}">!{ x }! ^p c:\\dir\\file \\<% \\%{ \\<g:if> \\<g:link> \\<p></p>
 <g:form resource="${this.book}" method="DELETE">
     <fieldset class="buttons">
         <g:link class="edit" action="edit" resource="${this.book}"><g:message code="default.button.edit.label" default="Edit" /></g:link>

@@ -138,13 +138,35 @@ A pack only adds. It cannot change what another selected feature gives the appli
 ==== Templates
 
 
-A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. A template is GSP, and the generator reads three things in it:
+A file whose name ends with `.gsp` is a template. It is rendered when the application is generated; every other file is written as it is. A template is GSP, and this is all the generator reads in it:
 
-* `${...}` is an expression: its value is written, unescaped.
-* `<% ... %>` is a scriptlet, `<%-- ... --%>` and `%{-- ... --}%` are comments, and `<%@ page import="..." %>` is a directive.
-* Ten tags are <<forgeFeaturePackTags,instructions>>: `<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>` and `<g:def>`.
+[cols="1,3"]
+|===
+|In the template |Is
 
-Everything else is text and is written as it is, character for character. A line that holds nothing but scriptlets, directives and comments writes nothing, not even its line break.
+|`${...}`
+|An expression: its value is written, unescaped.
+
+|`<% ... %>`, `<%= ... %>`
+|A scriptlet, and a scriptlet whose value is written.
+
+|`%{ ... }%`
+|A scriptlet, in its other form.
+
+|`<%-- ... --%>`, `%{-- ... --}%`
+|A comment, which is left out.
+
+|`<%@ page import="..." %>`
+|A directive of the page.
+
+|`<g:if>`, `<g:elseif>`, `<g:else>`, `<g:unless>`, `<g:each>`, `<g:while>`, `<g:collect>`, `<g:findAll>`, `<g:grep>`, `<g:def>`
+|The ten <<forgeFeaturePackTags,instruction tags>>.
+
+|A backslash directly in front of one of the above, or of any tag
+|An <<forgeFeaturePackEscapes,escape>>.
+|===
+
+Everything else is text and is written as it is, character for character: every other tag, and also what a GSP of a web application would read and a template has no use for, `@{ ... }` and `!{ ... }!`. A line that holds nothing but scriptlets, directives and comments writes nothing, not even its line break.
 
 // example::template[]
 [source,gsp]
@@ -213,12 +235,18 @@ A template has to be text in UTF-8, and a file of a pack can have at most 1 MiB,
 
 A template that cannot be compiled, or that fails while it is rendered, stops the generation before any file is written. The message names the template and the line of it the error is on, for example `The template AuditConfig.groovy.gsp of the feature acme-audit cannot be rendered: line 4: ...`. For an error in a scriptlet or an expression of several lines, the line is the one it starts on; a block or an instruction tag that is never closed is reported on the last line of the template.
 
+A template is compiled into one method of a class, and a method has a size it cannot be over. A template with too much in it is refused with `it has more expressions, scriptlets and instructions than the page of one template can hold: divide it into several files`, long before its text is 1 MiB: a template holds about 1,500 expressions, or 2,000 instruction tags, or 3,800 tags that are text, a start tag and an end tag counting as one each, and fewer when it has several of these kinds. A view of an application is far below that.
+
 
 [[forgeFeaturePackTags]]
 ==== Tags in a Template
 
 
-The ten instruction tags are run when the application is generated, and are not written to the file. They take the attributes they take in a view.
+The ten instruction tags are run when the application is generated, and are not written to the file. They take the attributes they take in a view, with these differences:
+
+* The `test` of `<g:if>`, `<g:elseif>`, `<g:unless>` and `<g:while>` has to be one expression, `test="${...}"`. In a view `test="false"` and `test="1 == 2"` are text, and text is always true; in a template they are refused.
+* `env` is refused. It would ask for the environment the generator runs in; the environment of the application is not known when it is generated.
+* A `>` ends a tag, also inside the quotes of an attribute, unless it is inside an expression: write `expr="${it > 1}"`, not `expr="it > 1"`.
 
 // example::instructions[]
 [source,gsp]
@@ -278,8 +306,9 @@ files:
     to: grails-app/views/book/show.gsp
 ----
 
-In a template, the tags of the view need nothing, since they are text. What the generator would read is written with a backslash in front of it, and the backslash is not written:
+In a template, the tags of the view need nothing, since they are text; neither does `@{ model="..." }`, the first line of a view that scaffolding generates. What the generator would read is written with a backslash in front of it, and the backslash is not written.
 
+[[forgeFeaturePackEscapes]]
 [cols="1,3"]
 |===
 |In the template |Writes
@@ -291,13 +320,51 @@ In a template, the tags of the view need nothing, since they are text. What the 
 |`<%`, which starts a scriptlet, a `<%@ page %>` directive or a `<%-- --%>` comment of the view
 
 |`\%{`
-|`%{`, which starts a `%{-- --}%` comment of the view
+|`%{`, which starts a scriptlet or a `%{-- --}%` comment of the view, or is text such as the `%{http_code}` of a `curl` command
 
 |`\<g:if`, `\</g:if` and the other nine
 |The instruction tag, for the view to run
+
+|`\<g:link`, `\</g:link`, `\<sec:ifLoggedIn` and any other tag
+|The tag, as without the backslash. So it is safe to put a backslash in front of every tag of a view, without knowing which ones are instructions.
+
+|`\\${...}`, `\\<% ... %>`, `\\<g:if ...>`
+|One backslash, and then the expression, scriptlet or instruction is run. Backslashes directly in front of one of these count in twos: each two write one, and one left over is the escape. `C:\Users\\${project.name}` writes `C:\Users\shop`.
+
+|`\\\${`
+|`\${`: one backslash, and the expression is written and not evaluated
+
+|`\` anywhere else: `\n`, `\$5`, `c:\dir`, `\<p>`, `\@{`
+|Itself. Only backslashes directly in front of `${`, `<%`, `%{` or a tag are an escape.
 |===
 
-Nothing is needed where these end: `}`, `%>`, `--%>` and `--}%` are text. To turn a view into a template, put a backslash in front of every `${`, `<%` and `%{` in it and in front of the start and end tags of the ten instructions, then remove the backslash where the generator is to fill something in.
+Nothing is needed where these end: `}`, `%>`, `--%>` and `--}%` are text.
+
+// example::escapes[]
+[source,gsp]
+----
+\${book.title} costs $5; \\${project.name} and \\\${book.id}
+\<g:each in="\${books}">\<g:link action="show">x\</g:link>\</g:each>
+C:\Users\\${project.name}\file @{ model="Book book" } !{ x }! \n
+token: \${{ secrets.TOKEN }}; curl -w "\%{http_code}"
+----
+
+writes, for an application named `shop`:
+
+// example::escapes-written[]
+[source,gsp]
+----
+${book.title} costs $5; \shop and \${book.id}
+<g:each in="${books}"><g:link action="show">x</g:link></g:each>
+C:\Users\shop\file @{ model="Book book" } !{ x }! \n
+token: ${{ secrets.TOKEN }}; curl -w "%{http_code}"
+----
+
+To turn a view into a template:
+
+. Where the view already has backslashes directly in front of a `${`, a `<%`, a `%{` or a tag, double them.
+. Put a backslash in front of every `${`, `<%` and `%{`, and in front of the start and end tags of the ten instructions, or of every tag.
+. Remove the backslash where the generator is to fill something in.
 
 // example::view[]
 [source,gsp]
@@ -332,7 +399,7 @@ writes, for an application `com.example.shop`:
 <g:render template="row" model="[book: book]"/>
 ----
 
-A backslash in front of anything else is a backslash. Two backslashes in front of `${`, `<%`, `%{` or an instruction tag write one backslash and then what they are in front of.
+What is inside an expression, a scriptlet or a comment of the template is theirs: nothing in it is escaped or made text.
 
 
 ==== Checking a Pack

@@ -88,7 +88,7 @@ class PackTemplateApiSpec extends ApplicationContextSpec {
         e.message.contains("There is no 'options.nope' for a template: template API 1 has [options.data, options.jdk, options.reloading, options.servlet]")
     }
 
-    @IgnoreIf(value = { RepositoryFiles.guide() == null }, reason = 'the guide is not beside Forge in these sources')
+    @IgnoreIf(value = { !RepositoryFiles.hasGuide() }, reason = 'these sources are no checkout of Grails, and the guide is not beside Forge in them')
     void "the names of template API 1 are those the class and the guide say it has"() {
         given: 'the names a template is given'
         String nested = generate(['acme-audit'], pack(['t.txt.gsp':

@@ -23,6 +23,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.MultipleCompilationErrorsException
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -77,6 +79,12 @@ final class PackPages {
     private static final int MAX_MESSAGE = 500
     private static final int MAX_FRAMES = 200
     private static final int MAX_CAUSES = 10
+    private static final int MAX_NAME = 60
+    private static final String TOO_DEEP = 'it is nested too deeply to be compiled: an expression has too many parts, or instructions are ' +
+            'inside each other too many times'
+    private static final String TOO_LARGE = 'it has more expressions, scriptlets and instructions than the page of one template can hold: ' +
+            'divide it into several files'
+    private static final Pattern MISSING_NAME = Pattern.compile(/There is no '(\w+)' for a template/)
 
     // what the encoders of GSP look their state up with is one for the program: this one has a state
     // for each thread and none of a generation
@@ -144,7 +152,10 @@ final class PackPages {
                 throw new IllegalArgumentException("The template ${name} writes more than the ${limit} bytes a file of a feature pack can have")
             }
             if (causedBy(e, StackOverflowError) != null) {
-                throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page)}it calls itself without end", e)
+                // of the compiler, which goes as deep as what it compiles, or of the template when it runs
+                boolean compiling = e instanceof GroovyPagesException && e.getCause() instanceof CompilationFailedException
+                throw new IllegalArgumentException("The template ${name} cannot be rendered: " +
+                        (compiling ? TOO_DEEP : "${where(e, page)}it calls itself without end"), e)
             }
             Throwable ofMachine = causedBy(e, VirtualMachineError)
             if (ofMachine != null) {
@@ -158,7 +169,7 @@ final class PackPages {
             // an assertion and a missing class are errors of the template like any other. What went wrong
             // is in words of its author and of the compiler: a few of them, on one line, and with the
             // error itself for whoever asks for the whole of it
-            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page)}${reason(e)}", e)
+            throw new IllegalArgumentException("The template ${name} cannot be rendered: ${where(e, page)}${reason(e)}${hint(e, text)}", e)
         }
         byte[] written = out.toString().getBytes(StandardCharsets.UTF_8)
         if (written.length > limit) {
@@ -197,9 +208,13 @@ final class PackPages {
                     try {
                         String source = DIRECTIVES + PackTemplateSource.toPage(text)
                         page = new Compiled(((GroovyPageTemplate) engine.createTemplate(source, name, false)).metaInfo, null)
-                    } catch (GrailsTagException e) {
+                    } catch (GrailsTagException | PackTemplateSource.Refused e) {
                         // what the parser refuses, it refuses each time
                         page = new Compiled(null, e)
+                    } catch (StackOverflowError ignored) {
+                        // of the compiler, which goes as deep as what it compiles does; without the error,
+                        // which is no error of what the template does when it is run
+                        page = new Compiled(null, new PackTemplateSource.Refused(0, TOO_DEEP))
                     }
                     pages.put(key, page)
                 }
@@ -226,7 +241,9 @@ final class PackPages {
      */
     private static String where(Throwable e, GroovyPageMetaInfo page) {
         int line = 0
-        if (e instanceof GrailsTagException) {
+        if (e instanceof PackTemplateSource.Refused) {
+            line = ((PackTemplateSource.Refused) e).line
+        } else if (e instanceof GrailsTagException) {
             // thrown for what failed inside a tag, it names the line the tag ends on: what failed knows better
             line = ((GrailsTagException) e).getLineNumber()
             Throwable inBody = e.getCause()
@@ -288,6 +305,28 @@ final class PackPages {
     }
 
     /**
+     * What to add for a name a template has not, when the template has a {@code g:set} that would have
+     * set it in a view: there it is a tag of a tag library, and here it is text.
+     */
+    private static String hint(Throwable e, String text) {
+        for (Throwable each = e; each != null && each != each.getCause(); each = each.getCause()) {
+            String message
+            try {
+                message = each.getMessage()
+            } catch (Throwable ignored) {
+                continue
+            }
+            Matcher missing = message == null ? null : MISSING_NAME.matcher(message)
+            if (missing != null && missing.find()) {
+                String name = missing.group(1)
+                boolean set = name.length() <= MAX_NAME && text =~ ('<g:set\\b[^>]*\\bvar\\s*=\\s*["' + "'" + ']' + Pattern.quote(name) + '["' + "'" + ']')
+                return set ? ". The <g:set var=\"${name}\"> of the template is text, which is written and sets nothing: use <g:def>" : ''
+            }
+        }
+        return ''
+    }
+
+    /**
      * What an error says, without the name and the lines of the class of the page, which mean nothing to
      * the author of a template.
      */
@@ -296,6 +335,10 @@ final class PackPages {
             List<?> errors = ((MultipleCompilationErrorsException) e.getCause()).getErrorCollector().getErrors()
             if (errors && errors[0] instanceof SyntaxErrorMessage) {
                 return 'it does not compile: ' + ((SyntaxErrorMessage) errors[0]).getCause().getOriginalMessage()
+            }
+            if (e.getMessage()?.contains('Method too large')) {
+                // the method of a class has a size it cannot be over, and a page is one method
+                return TOO_LARGE
             }
         }
         String message = e.getMessage()
@@ -373,9 +416,9 @@ final class PackPages {
     private static final class Compiled {
 
         final GroovyPageMetaInfo page
-        final GrailsTagException refused
+        final RuntimeException refused
 
-        Compiled(GroovyPageMetaInfo page, GrailsTagException refused) {
+        Compiled(GroovyPageMetaInfo page, RuntimeException refused) {
             this.page = page
             this.refused = refused
         }

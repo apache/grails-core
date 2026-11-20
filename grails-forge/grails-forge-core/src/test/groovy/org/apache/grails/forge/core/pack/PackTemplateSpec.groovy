@@ -284,22 +284,108 @@ class PackTemplateSpec extends ApplicationContextSpec {
         'a scriptlet of the other form'       | '\\%{ int a = 1 }%'                                                             || '%{ int a = 1 }%'
         'an instruction tag'                  | '\\<g:each in="\\${books}" var="b">\\${b} ${project.name}\\</g:each>'           || '<g:each in="${books}" var="b">${b} foo</g:each>'
         'an instruction tag that is empty'    | '\\<g:def var="a" value="\\${1}"/>'                                             || '<g:def var="a" value="${1}"/>'
+        'a tag that is text anyway'           | '\\<g:link action="a">x\\</g:link> \\<g:set var="a" value="1"/> \\<my:if a="b">\\</my:if>' || '<g:link action="a">x</g:link> <g:set var="a" value="1"/> <my:if a="b"></my:if>'
         'a line of them only is still a line' | 'a\n\\<% if (x) { %>\nb\n\\<% } %>\n\\<%-- c --%>\nd\n'                          || 'a\n<% if (x) { %>\nb\n<% } %>\n<%-- c --%>\nd\n'
     }
 
     void "a backslash in front of anything else is a backslash"() {
         expect:
-        render('a\\b \\<g:link>x\\</g:link> \\<p> \\$5 \\% \\{ c:\\dir\\ \\') == 'a\\b \\<g:link>x\\</g:link> \\<p> \\$5 \\% \\{ c:\\dir\\ \\'
+        render('a\\b \\<p>x\\</p> \\$5 \\% \\{ \\} \\@{x} \\!{y}! \\n \\d+ c:\\dir\\ \\') == 'a\\b \\<p>x\\</p> \\$5 \\% \\{ \\} \\@{x} \\!{y}! \\n \\d+ c:\\dir\\ \\'
+        render('\\begin{document} \\section{${project.name}} $x^2$ 50\\% \\textbf{a}') == '\\begin{document} \\section{foo} $x^2$ 50\\% \\textbf{a}'
     }
 
-    void "two backslashes in front of what the generator would read write one, and what they are in front of"() {
+    @Unroll
+    void "backslashes in front of what the generator reads, and of a tag, are an escape two by two: #source"() {
         expect:
-        render('\\\\${book} \\\\<% a %> \\\\%{-- c --}% \\\\<g:if test="x">') == '\\${book} \\<% a %> \\%{-- c --}% \\<g:if test="x">'
+        render(source.replace('|', '\\')) == written.replace('|', '\\')
+
+        where: 'a backslash is written as a bar here'
+        source                                    || written
+        '|${book}'                                || '${book}'
+        '||${project.name}'                       || '|foo'
+        '|||${book}'                              || '|${book}'
+        '||||${project.name}'                     || '||foo'
+        '|||||${book}'                            || '||${book}'
+        'C:|Users||${project.name}|file'          || 'C:|Users|foo|file'
+        'C:|Users|${project.name}|file'           || 'C:|Users${project.name}|file'
+        '|<% a %>'                                || '<% a %>'
+        '||<% out << 1 %>.'                       || '|1.'
+        '|||<% a %>'                              || '|<% a %>'
+        '||||<%= 2 %>'                            || '||2'
+        '|%{-- c --}%'                            || '%{-- c --}%'
+        '||%{-- c --}%.'                          || '|.'
+        '|||%{ a }%'                              || '|%{ a }%'
+        '|<g:if test="x">'                        || '<g:if test="x">'
+        '||<g:if test="${true}">y||</g:if>'       || '|y|'
+        '|||<g:if test="x">'                      || '|<g:if test="x">'
+        '|<g:link a="b">'                         || '<g:link a="b">'
+        '||<g:link a="b">'                        || '|<g:link a="b">'
+        '|||<g:link a="b">|||</g:link>'           || '|<g:link a="b">|</g:link>'
+        '|<my:tag/>||<my:tag/>'                   || '<my:tag/>|<my:tag/>'
+        '${project.name}|${project.name}'         || 'foo${project.name}'
+        '${project.name}||${project.name}'        || 'foo|foo'
+        '<% out << 1 %>|<% a %>'                  || '1<% a %>'
+        '<g:x a="|${b}" c="||${project.name}"/>'  || '<g:x a="${b}" c="|foo"/>'
+        'a|'                                      || 'a|'
+        'a||'                                     || 'a||'
+        'a|<'                                     || 'a|<'
+        'a|$'                                     || 'a|$'
+        'a|$ {b}'                                 || 'a|$ {b}'
     }
 
     void "a dollar that starts no expression is a dollar"() {
         expect:
         render('cost $5 and $name and $ {x} and 100%') == 'cost $5 and $name and $ {x} and 100%'
+    }
+
+    @Unroll
+    void "what a page would read and a template has no use for is text: #what"() {
+        expect:
+        render(source) == (written ?: source)
+
+        where:
+        what                                             | source                                                                       || written
+        'the first line of a scaffolded view'            | '@{ model="List<demo.Book> bookList; Number bookCount" }\n<!DOCTYPE html>\n<html/>\n' || null
+        'a short directive of a page'                    | 'a @{ page import="java.util.List" } b @{page contentType="text/plain"}\n'  || null
+        'a link of Thymeleaf and a mixin of LESS'        | '<a th:href="@{/css/main.css}">x</a> .mixin(@{name}) { color: @{base}; } @media{x}\n' || null
+        'a declaration of a page'                        | 'a !{ int n = 0 }! b !{ c }% d\n'                                           || null
+        'JavaScript with a negated object'               | 'if (!{}.a) { b() } x!{y}!z\n'                                              || null
+        'a circumflex in front of letters'               | '<td>^td</td> x^2 + y^n = ^z a^b% ^p%\n'                                    || null
+        'the form that takes a tag out, escaped'         | '<p>^p\\%{ x }%</p>\n'                                                    || '<p>^p%{ x }%</p>\n'
+        'the keys of a workflow, escaped'                | 'token: \\${{ secrets.TOKEN }}\n'                                         || 'token: ${{ secrets.TOKEN }}\n'
+        'a format of curl, escaped'                      | 'curl -w "\\%{http_code}" -o /dev/null https://example.org/\n'            || 'curl -w "%{http_code}" -o /dev/null https://example.org/\n'
+    }
+
+    void "the form that takes a tag out of a page does not take it out of a template"() {
+        expect: 'the scriptlet in it runs, as one anywhere does'
+        render('<p>^p%{ out << project.name }%</p>') == '<p>^pfoo</p>'
+        render('<td>a</td><td>^td%{-- gone --}%</td><td>b</td>') == '<td>a</td><td>^td</td><td>b</td>'
+    }
+
+    @Unroll
+    void "an instruction that #problem is refused, and it is said why"() {
+        when:
+        render(source)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The template t.txt.gsp of the feature acme-audit cannot be rendered: ${says}"
+
+        where:
+        problem                                  | source                                              || says
+        'asks for the environment'               | 'one\n<g:if env="production">x</g:if>\n'           || 'line 2: the instruction g:if has the attribute env, which a template cannot have: it would ask for the environment the generator runs in, and that of the application is not known when it is generated'
+        'asks for the environment and a test'    | 'one\ntwo\n<g:unless test="${true}"\n env="test">x</g:unless>' || 'line 3: the instruction g:unless has the attribute env, which a template cannot have: it would ask for the environment the generator runs in, and that of the application is not known when it is generated'
+        'has a test that is a word'              | '<g:if test="false">x</g:if>'                       || 'line 1: the test of the instruction g:if has to be one expression, test="${...}": anything else is text, which is always true'
+        'has a test that is not in an expression' | 'one\n<g:if test="${true}">a</g:if><g:elseif test="1 == 2">x</g:elseif>' || 'line 2: the test of the instruction g:elseif has to be one expression, test="${...}": anything else is text, which is always true'
+        'has a test with text beside the expression' | "<g:while test='\${false} '>x</g:while>"        || 'line 1: the test of the instruction g:while has to be one expression, test="${...}": anything else is text, which is always true'
+        'has a test of two expressions'          | '<g:unless test="${true}${false}">x</g:unless>'      || 'line 1: the test of the instruction g:unless has to be one expression, test="${...}": anything else is text, which is always true'
+    }
+
+    void "an instruction whose test is one expression is taken, whatever is in the expression"() {
+        expect:
+        render('<g:if test="${features.contains("acme-audit") && [a: \'>\'].a == \'>\' && "}".size() == 1}">a</g:if>' +
+                "<g:unless test='\${ { -> false }() }'>b</g:unless><g:if  test = \"\${ true }\"  >c</g:if>" +
+                '<g:each in="${[1]}" var="env">${env}</g:each><g:x env="production" test="false"/>') == 'abc1<g:x env="production" test="false"/>'
     }
 
     void "what is in a scriptlet, an expression or a comment is theirs, also when it looks like a tag"() {
@@ -314,7 +400,7 @@ class PackTemplateSpec extends ApplicationContextSpec {
         render('<!-- <g:if test="${true}">x</g:if> <g:link/> -->') == '<!-- x <g:link/> -->'
     }
 
-    @IgnoreIf(value = { RepositoryFiles.guide() == null }, reason = 'the guide is not beside Forge in these sources')
+    @IgnoreIf(value = { !RepositoryFiles.hasGuide() }, reason = 'these sources are no checkout of Grails, and the guide is not beside Forge in them')
     @Unroll
     void "the example #example of the guide writes what the guide says it writes"() {
         given:
@@ -325,7 +411,7 @@ class PackTemplateSpec extends ApplicationContextSpec {
                 RepositoryFiles.example("${example}-written")
 
         where:
-        example << ['template', 'instructions', 'text-tags', 'view']
+        example << ['template', 'instructions', 'text-tags', 'view', 'escapes']
     }
 
     void "a view that has nothing to fill in is a file of another name in the pack, and is written as it is"() {
@@ -393,7 +479,49 @@ class PackTemplateSpec extends ApplicationContextSpec {
         'leaves a block open'                             | 'one\n<% if (true) { %>\nthree\n'                                               || "line 3: it does not compile: Missing '}'"
         'leaves an instruction open'                      | 'one\n<g:if test="${true}">\nthree\n'                                           || 'line 3: Grails tags were not closed! [[<g:if>]]'
         'has an instruction without what it needs'        | 'one\n<g:if>x</g:if>\nthree\n'                                                  || 'line 2: Tag [if] must have one or both of the attributes [test] or [env]'
+        'has an expression with a bracket nothing opened' | 'one\n${a]}b\n'                                                               || 'line 2: it does not compile: '
+        'has an expression that is not closed'            | 'one\ntwo\nthree ${project.name\nfour\n'                                      || 'line 3: Unclosed GSP expression'
         'has a declaration, which a page cannot have'     | 'one\n<%! int n = 0 %>\nthree\n'                                                || 'line 2: JSP-style declaration blocks'
+    }
+
+    @Unroll
+    void "a template that is #problem is said to be, in words"() {
+        when:
+        render(source)
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message == "The template t.txt.gsp of the feature acme-audit cannot be rendered: ${says}"
+
+        where:
+        problem                                         | source                                                          || says
+        'more than the page of a template can hold'     | '${project.name} <g:if test="${true}">a</g:if>\n' * 6000        || 'it has more expressions, scriptlets and instructions than the page of one template can hold: divide it into several files'
+        'an expression too long for the compiler'       | '${1' + ' + 1' * 6000 + '}'                                     || 'it is nested too deeply to be compiled: an expression has too many parts, or instructions are inside each other too many times'
+        'instructions too deep for the compiler'        | '<g:if test="${true}">' * 3000 + 'x' + '</g:if>' * 3000         || 'it is nested too deeply to be compiled: an expression has too many parts, or instructions are inside each other too many times'
+    }
+
+    void "a name that is missing because a g:set of the template is text is said to be"() {
+        when:
+        render('one\n<g:set var="y" value="${project.name}"/>\n${y}\n')
+
+        then:
+        IllegalArgumentException e = thrown()
+        e.message.startsWith("The template t.txt.gsp of the feature acme-audit cannot be rendered: Error evaluating expression [y] on line [3]: There is no 'y' for a template: template API 1 has ")
+        e.message.endsWith('. The <g:set var="y"> of the template is text, which is written and sets nothing: use <g:def>')
+
+        when: 'in a scriptlet, and another name'
+        render('<g:set var="y" value="1"/><% out << y %>')
+
+        then:
+        e = thrown()
+        e.message.endsWith('. The <g:set var="y"> of the template is text, which is written and sets nothing: use <g:def>')
+
+        when:
+        render('<g:set var="y" value="1"/>${z}')
+
+        then:
+        e = thrown()
+        e.message.endsWith('project]')
     }
 
     void "a template whose page has more than a thousand lines says on which of its own it fails"() {

@@ -20,15 +20,13 @@ package org.apache.grails.forge.core.pack
 
 /**
  * The files of the sources of Grails, beside Forge, that the specs of the templates of packs read: the
- * chapter of the guide, the class with the table of the template API, and the views of the example
- * applications. The build declares each as an input of the tests. Where Forge is built from sources
- * that do not have them, they are not there, and the specs that read them are skipped.
+ * chapter of the guide and the class with the table of the template API, which the build declares as
+ * inputs of the tests, and, when it is asked for, every view there is.
  */
 final class RepositoryFiles {
 
     static final String GUIDE = 'grails-doc/src/en/guide/plugins/forgeFeaturePacks.adoc'
     static final String PACK_MODEL = 'grails-forge/grails-forge-core/src/main/groovy/org/apache/grails/forge/core/pack/PackModel.groovy'
-    static final List<String> VIEWS = ['grails-test-examples', 'grails-spring-security']
 
     private RepositoryFiles() {
     }
@@ -56,22 +54,31 @@ final class RepositoryFiles {
     }
 
     /**
-     * @return the views of the example applications, by their path in the sources, in order of path
+     * @return whether the guide is there to be read. It is in a checkout of Grails, where its absence is
+     * an error and not a reason to skip what reads it: only sources without a repository can be without it
+     */
+    static boolean hasGuide() {
+        if (guide() != null) {
+            return true
+        }
+        File root = root()
+        if (root != null && new File(root, '.git').exists()) {
+            throw new IllegalStateException("The guide of feature packs is not at ${GUIDE} of this checkout of Grails: the specs that hold the " +
+                    'generator to it have to be told where it went')
+        }
+        return false
+    }
+
+    /**
+     * @return every GSP file of the sources of Grails, by its path in them, in order of path
      */
     static Map<String, File> views() {
         File root = root()
         Map<String, File> views = new TreeMap<>()
         if (root != null) {
-            for (String below : VIEWS) {
-                File directory = new File(root, below)
-                if (directory.directory) {
-                    directory.eachFileRecurse { File file ->
-                        String path = root.toPath().relativize(file.toPath()).toString().replace(File.separator, '/')
-                        if (file.file && path.endsWith('.gsp') && path.contains('/grails-app/views/') && !path.contains('/build/')) {
-                            views.put(path, file)
-                        }
-                    }
-                }
+            root.traverse(type: groovy.io.FileType.FILES, nameFilter: ~/.*\.gsp/,
+                    preDir: { File directory -> directory.name in ['build', '.gradle', '.git', 'node_modules'] ? groovy.io.FileVisitResult.SKIP_SUBTREE : groovy.io.FileVisitResult.CONTINUE }) { File file ->
+                views.put(root.toPath().relativize(file.toPath()).toString().replace(File.separator, '/'), file)
             }
         }
         return views

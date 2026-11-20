@@ -18,6 +18,7 @@
  */
 package org.apache.grails.forge.core.pack
 
+import grails.util.Environment
 import groovy.transform.CompileStatic
 import java.nio.charset.StandardCharsets
 import java.nio.file.InvalidPathException
@@ -180,6 +181,11 @@ final class PackCheck {
      * so that what the check says is all there is to read.
      */
     static void main(String[] args) {
+        if (!Environment.isSystemSet()) {
+            // as the command line that generates applications runs: a template is compiled a little
+            // differently for each environment, and what is checked is what will be generated
+            System.setProperty(Environment.KEY, Environment.PRODUCTION.getName())
+        }
         PrintStream out = System.out
         System.setOut(System.err)
         int result = run(args, out, System.err)
