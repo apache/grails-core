@@ -63,12 +63,56 @@ class NamedConnectionsSpec extends Specification {
                 (Settings.SETTING_NEO4J_URL)          : "bolt://localhost:${defaultPort}".toString(),
                 (Settings.SETTING_NEO4J_BUILD_INDEX)  : false,
                 (Settings.SETTING_CONNECTIONS)        : [other: [url: "bolt://localhost:${otherPort}".toString()]]
-        ], RoutedCompany)
+        ], RoutedCompany, TimestampedCompany)
     }
 
     void cleanup() {
         RoutedCompany.withTransaction { RoutedCompany.list()*.delete(flush: true) }
         RoutedCompany.other.withTransaction { RoutedCompany.other.list().each { RoutedCompany.other.delete(it, [flush: true]) } }
+        TimestampedCompany.other.withTransaction { TimestampedCompany.other.list().each { TimestampedCompany.other.delete(it, [flush: true]) } }
+    }
+
+    void "test a save through a named connection runs the events and sets the timestamps"() {
+        given:
+        def company = new TimestampedCompany(name: 'draft')
+
+        when:
+        TimestampedCompany.other.withTransaction {
+            TimestampedCompany.other.save(company, [flush: true])
+        }
+
+        then:
+        TimestampedCompany.other.count() == 1
+        company.name == 'DRAFT'
+        company.dateCreated != null
+        company.lastUpdated != null
+    }
+
+    void "test the listener of a named connection turns off the timestamps of the saves through it"() {
+        given:
+        Date past = new Date(110_000_000_000L)
+        def kept = new TimestampedCompany(name: 'kept', dateCreated: past, lastUpdated: past)
+        def stamped = new TimestampedCompany(name: 'stamped', dateCreated: past, lastUpdated: past)
+        def defaultListener = TimestampedCompany.autoTimestampEventListener
+        def otherListener = TimestampedCompany.other.autoTimestampEventListener
+
+        when:
+        TimestampedCompany.other.withTransaction {
+            otherListener.withoutTimestamps {
+                TimestampedCompany.other.save(kept, [flush: true])
+            }
+            defaultListener.withoutTimestamps {
+                TimestampedCompany.other.save(stamped, [flush: true])
+            }
+        }
+
+        then:
+        !otherListener.is(defaultListener)
+        otherListener.is(datastore.getDatastoreForConnection('other').autoTimestampEventListener)
+        kept.dateCreated == past
+        kept.lastUpdated == past
+        stamped.dateCreated != past
+        stamped.lastUpdated != past
     }
 
     void "test an entity is saved through a named connection to that connection's server"() {
@@ -136,6 +180,23 @@ class RoutedCompanyService {
 
     Number countCompanies() {
         RoutedCompany.count()
+    }
+}
+
+@Entity
+class TimestampedCompany implements Neo4jEntity<TimestampedCompany> {
+
+    Long id
+    String name
+    Date dateCreated
+    Date lastUpdated
+
+    def beforeInsert() {
+        name = name.toUpperCase()
+    }
+
+    static mapping = {
+        datasource 'ALL'
     }
 }
 

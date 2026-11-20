@@ -593,6 +593,23 @@ GORM for Hibernate 7 now starts tracking changes to an entity when it is persist
 
 As part of this change, persistence event listeners on Hibernate 7 receive a `PersistEvent` (`eventType` `Persist`) for every explicit or flush-time cascaded persist and a `MergeEvent` (`eventType` `Merge`) for every merge. Neither event can be cancelled. Hibernate 5 continues to publish `SaveOrUpdateEvent` when an entity is saved, and publishes no event for a merge. A listener that switches over `event.eventType` with a default branch that throws should handle the new values. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
 
+==== A Domain Class Answers with Its Auto-Timestamp Listener
+
+Every datastore has an `AutoTimestampEventListener` of its own, and so does every data source of an application with several and every tenant with a database or schema of its own. A listener only handles the saves made through its own datastore, so the `autoTimestampEventListener` bean, which belongs to the default data source, cannot turn off the timestamps of a domain class saved to another one. A domain class now answers with the listener that handles its saves:
+
+[source,groovy]
+----
+// Car is mapped to the default data source and Person to the 'people' data source
+Car.autoTimestampEventListener.withoutTimestamps {
+    car.save(flush: true)
+}
+Person.autoTimestampEventListener.withoutTimestamps {
+    person.save(flush: true)
+}
+----
+
+The lookup follows the data source a save made from the same place goes to. For a `Book` mapped to several data sources, inside a `Book.secondary.withTransaction { }` block, or a method annotated `@Transactional(connection = 'secondary')`, it is the `secondary` data source's listener, and `Book.secondary.autoTimestampEventListener` names that data source anywhere. For a multi-tenant class it is the current tenant's. This works with GORM for Hibernate 7, Hibernate 5, MongoDB and Neo4j, and in unit tests. See the Events and Auto Timestamping section of the GORM for link:{hibernate7Guide}index.html#eventsAutoTimestamping[Hibernate 7] guide.
+
 ==== Default Security Response Headers
 
 Servlet web applications now send a baseline set of browser hardening headers on every response:
