@@ -138,6 +138,10 @@ class GrailsRememberMeAuthenticationFilterSpec extends AbstractUnitSpec {
         '/login/auth?lang=en'                     | '/app/login/auth'   | '/app'      | 'http'  | 'localhost'    | 8080 || true
         '/login/auth#top'                         | '/login/auth'       | ''          | 'http'  | 'localhost'    | 8080 || true
         '/login/auth?lang=en'                     | '/login/other'      | ''          | 'http'  | 'localhost'    | 8080 || false
+        'https://example.test/app/../login/auth'  | '/login/auth'       | ''          | 'https' | 'example.test' | 443  || true
+        'https://example.test/login/./auth'       | '/login/auth'       | ''          | 'https' | 'example.test' | 443  || true
+        '/app/../login/auth'                      | '/login/auth'       | ''          | 'http'  | 'localhost'    | 8080 || true
+        '/login/../other'                         | '/login/auth'       | ''          | 'http'  | 'localhost'    | 8080 || false
         'https://example.test/login/auth'         | '/other'            | ''          | 'https' | 'example.test' | 443  || false
         'https://example.test/login/auth'         | '/app/login/auth'   | '/app'      | 'https' | 'example.test' | 443  || false
         outcome = isForm ? 'the login form, passed down the chain' : 'another page, redirected to'
