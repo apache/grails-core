@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-As mentioned in the previous section the REST profile by default uses JSON views to render JSON responses. These play a similar role to GSP, but instead are optimized for outputing JSON responses instead of HTML.
+As mentioned in the previous section a REST API application by default uses JSON views to render JSON responses. These play a similar role to GSP, but instead are optimized for outputing JSON responses instead of HTML.
 
 You can continue to separate your application in terms of MVC, with the logic of your application residing in controllers and services, whilst view related matters are handled by JSON views.
 

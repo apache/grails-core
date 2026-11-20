@@ -1,0 +1,57 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Until Grails 8 a project was created from a _profile_: an artifact with a skeleton of the project, the features that could be selected for it and the commands the Grails shell then had in the project. Grails 9 has no profiles, and its `grails` command does not start the Grails shell. There is one command line, `grails`, and it creates projects from application types and features.
+
+[cols="2,3"]
+|===
+|With profiles |In Grails 9
+
+|`create-app myapp --profile rest-api`
+|One command for each type of application: `create-restapi myapp`. No command has a `--profile` option.
+
+|The `web`, `rest-api`, `plugin` and `web-plugin` profiles
+|The application types of `create-app`, `create-restapi`, `create-plugin` and `create-web-plugin`.
+
+|The `rest-api-plugin` profile
+|No application type. Create the plugin with `create-web-plugin` or `create-plugin` and select the features it needs, such as `views-json`.
+
+|The features of a profile, selected with `--features`
+|The features of the type of application, which `--list-features` lists. `--features` adds to the default features, where it took their place with a profile, and a name that is no feature is refused. `--exclude-features` leaves a default feature out.
+
+|A profile of your own: `create-profile`, the `profile` profile, a profile that is published to a repository and named by its coordinates
+|A plugin with a feature pack, selected by the coordinates of the plugin: see xref:applicationTypes#customizingGeneration[Customizing What a New Application Gets]. A feature pack adds to an application of one of the types. It has no skeleton that takes the place of the generated project, and it does not extend another pack.
+
+|The commands of a profile (`commands/*.groovy`, `commands/*.yml`)
+|The commands of the `grails` command line, the commands an application or a plugin brings as classes (xref:commandLine#creatingCustomCommands[Creating Custom Commands]) and the scripts of a project (xref:commandLine#creatingCustomScripts[Creating Custom Scripts]). A feature pack brings no commands.
+
+|`create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`
+|Removed. No command creates a feature pack: its descriptor and its templates are written by hand, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes.
+
+|`list-profiles`, `profile-info`
+|Removed. `grails help` lists the `create-` commands, and each of them lists its features with `--list-features`.
+
+|The `profile "org.apache.grails.profiles:web"` dependency in `build.gradle`
+|Not written by the `create-` commands. Nothing of the build or of the running application used it.
+
+|`grails.profile` in `application.yml`
+|Not written and not read: no Spring profile is active because of the type of an application.
+|===
+
+"Commands of Earlier Versions" in xref:commandLine[The Command Line] has every command of the shell and of the profiles that is not a command under its name any more, with what there is in its place. link:upgrading.html#upgrading90x[Upgrading from Grails 8 to Grails 9] says what an existing application has to change, in the notes "A Generated Application Has No Profile Dependency and No `grails-forge-cli.yml`", "An Application Has No Profile at Run Time: `grails.profile` Is Not Read" and "The `grails` Command Is One Command Line, and the Grails Wrapper Is Replaced".

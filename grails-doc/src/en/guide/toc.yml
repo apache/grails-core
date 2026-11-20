@@ -91,22 +91,11 @@ commandLine:
     gradleTasks: Working with Gradle Tasks
     gradlePlugins: Grails plugins for Gradle
     gradleConfigurationCache: Using the Gradle Configuration Cache
-profiles:
-  title: Application Profiles
-  standardProfiles:
-    title: Standard Profiles
-    webProfile: Web Profile
-    restAPIProfile: REST API Profile
-    pluginProfile: Plugin Profile
-    webPluginProfile: Web Plugin Profile
-    restAPIPluginProfile: REST API Plugin Profile
-    profileProfile: Profile Profile
-  creatingProfiles: Creating Profiles
-  profileInheritance: Profile Inheritance
-  publishingProfiles: Publishing Profiles
-  profileStructure: Understanding Profiles
-  profileCommands: Creating Profile Commands
-  profileFeatures: Creating Profile Features
+applicationTypes:
+  title: Application Types, Features and Feature Packs
+  applicationFeatures: The Features of an Application
+  customizingGeneration: Customizing What a New Application Gets
+  profilesReplaced: What Became of Profiles
 GORM:
   title: Object Relational Mapping (GORM)
   quickStartGuide:
@@ -240,7 +229,7 @@ REST:
     restControllersStepByStep: Implementing REST Controllers Step by Step
     generatingRestControllers: Generating a REST controller using scaffolding
   callingRestServices: Calling REST Services with HttpClient
-  restProfile: The REST Profile
+  restApiApplication: The REST API Application Type
   openApi: OpenAPI Descriptions
   jsonViews:
     title: JSON Views

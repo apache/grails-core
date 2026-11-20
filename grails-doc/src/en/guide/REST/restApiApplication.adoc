@@ -1,0 +1,63 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+////
+
+Grails has a type of application for a REST API, with a more focused set of dependencies and commands than a web application. It is created with the link:{commandLineRef}create-restapi.html[create-restapi] command:
+
+[source,console]
+----
+$ grails create-restapi my-api
+----
+
+The application this creates differs from the one `create-app` creates:
+
+* It renders its responses with JSON views (see the next section): `views-json` is one of its default features.
+* It has nothing that is for HTML: no GSP, no asset pipeline, no scaffolding and no Geb tests. `gsp` can be selected as a feature; `scaffolding` and `asset-pipeline-grails` are not features of this type of application.
+* It has commands for REST endpoints that other applications do not have.
+
+`create-restapi --list-features` lists the features that can be selected for a REST API application and marks the default ones. The options of the command are those of the other `create-` commands, described in xref:commandLine#creatingProject[Creating a Grails Project].
+
+In the `grails-app/views` directory there are `*.gson` files in place of GSP pages: `application/index.gson` renders the index page, which `ApplicationController` serves, and `error.gson` and `notFound.gson` render the 500 and 404 responses.
+
+The commands that only a REST API application has are:
+
+[cols="2,3"]
+|===
+|Command |Creates
+
+|`create-domain-resource <name>`
+|A domain class that is annotated with `@Resource`, and so is a REST resource without a controller of its own, and its unit test.
+
+|`create-restful-controller <domain class>`
+|A controller for the domain class that extends `RestfulController` and responds with JSON.
+
+|`create-functional-test <name>`
+|A test under `src/integration-test/groovy` that calls the running application over HTTP.
+|===
+
+[source,console]
+----
+$ cd my-api
+$ grails create-domain-resource my.api.Book
+$ grails create-domain-class my.api.Author
+$ grails create-restful-controller my.api.Author
+----
+
+The `UrlMappings` of a REST API application map the HTTP methods to the actions of a controller by its name (`get "/$controller/$id"` to `show`, `post "/$controller"` to `save`, and so on), so the controller the `@Resource` annotation gives `Book` answers at `/book` and `AuthorController` at `/author`. See link:REST.html#domainResources[Domain classes as REST resources] and link:REST.html#restfulControllers[Implementing REST controllers].
+
+NOTE: Before Grails 9 the commands `generate-all`, `generate-controller` and `generate-views` generated a controller, JSON views and tests for a domain class in a REST API application. Grails 9 has no command that generates JSON views. The commands of these names are those of the scaffolding plugin, which generate GSP views and are not there in a REST API application by default.

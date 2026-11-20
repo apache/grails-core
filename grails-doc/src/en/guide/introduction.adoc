@@ -27,7 +27,7 @@ Grails is a full stack framework and attempts to solve as many pieces of the web
 * View technologies for link:theWebLayer.html#gsp[rendering HTML] as well as link:theWebLayer.html#gson[JSON]
 * A controller layer built on https://spring.io/projects/spring-boot[Spring Boot]
 * A plugin system featuring https://grails.apache.org/plugins.html[hundreds of plugins].
-* Flexible profiles to link:commandLine.html#creatingProject[create Web applications, Rest applications, plugins and more].
+* Application types and features to link:commandLine.html#creatingProject[create web applications, REST applications, plugins and more], which plugins can extend with link:applicationTypes.html[feature packs].
 * An interactive command line environment and build system based on https://gradle.org[Gradle]
 * An embedded https://tomcat.apache.org/[Tomcat] container which is configured for on the fly reloading
 

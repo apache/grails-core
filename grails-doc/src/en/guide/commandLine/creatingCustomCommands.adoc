@@ -69,7 +69,7 @@ Commands can also be executed using the *runCommand* gradle task. Note that the 
 gradle runCommand -Pargs="my-example"
 ----
 
-If the grails server is a subproject (e.g., in a project created with the *angular* profile), the subproject command can still be invoked from the gradle wrapper in the parent project:
+If the Grails application is a subproject of a larger Gradle build (here one named `server`), the subproject command can still be invoked from the gradle wrapper in the parent project:
 
 [source]
 ----
