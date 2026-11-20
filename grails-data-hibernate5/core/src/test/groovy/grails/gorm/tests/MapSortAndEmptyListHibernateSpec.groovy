@@ -140,6 +140,76 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         ].combinations().collect { List row -> [row[0], row[1][0], row[1][1]] }
     }
 
+    private static boolean inOrder(List<MsBook> books, Map<String, String> sort) {
+        (0..<(books.size() - 1)).every { int i ->
+            int result = 0
+            sort.each { String property, String direction ->
+                if (result == 0) {
+                    result = valueAt(books[i], property) <=> valueAt(books[i + 1], property)
+                    if (direction == 'desc') {
+                        result = -result
+                    }
+                }
+            }
+            result <= 0
+        }
+    }
+
+    @Unroll
+    void "the nested map sort lists the #size books that #context in order"() {
+        given:
+        Map<String, String> sortMap = ['author.name': 'asc', 'author.publisher.name': 'desc']
+
+        when:
+        List<MsBook> found = query.call(sortMap)
+
+        then: 'the books that the query keeps, sorted by the author and then by the publisher of the author'
+        found.size() == size
+        inOrder(found, sortMap)
+
+        where:
+        [context, size, query] << [
+                ['have an author with an active flag', 3, { Map arg -> MsBook.createCriteria().list(sort: arg) { author { eq('active', true) } } }],
+                ['have an author, in an empty block', 4, { Map arg -> MsBook.createCriteria().list(sort: arg) { author { } } }],
+                ['have an author, in an or over two blocks', 4, { Map arg -> MsBook.createCriteria().list(sort: arg) { or { author { eq('active', true) }; author { eq('active', false) } } } }],
+                ['are by a publisher in the us', 1, { Map arg -> MsBook.createCriteria().list(sort: arg) { author { publisher { eq('country', 'us') } } } }],
+                ['have an active author, through an alias of the closure', 3, { Map arg -> MsBook.createCriteria().list(sort: arg) { createAlias('author', 'a'); eq('a.active', true) } }],
+                ['have an author, through an inner join', 4, { Map arg -> MsBook.createCriteria().list(sort: arg) { author(org.hibernate.sql.JoinType.INNER_JOIN.joinTypeValue) { isNotNull('name') } } }],
+                ['have an author, through a left join', 4, { Map arg -> MsBook.createCriteria().list(sort: arg) { createAlias('author', 'a', org.hibernate.sql.JoinType.LEFT_OUTER_JOIN.joinTypeValue) } }],
+                ['have an author, fetched', 4, { Map arg -> MsBook.createCriteria().list(sort: arg, fetch: [author: 'join']) { gt('id', 0L) } }],
+                ['have an author, paged', 4, { Map arg -> MsBook.createCriteria().list(sort: arg, max: 10) { author { isNotNull('name') } } }],
+                ['are listed with ignoreCase off', 4, { Map arg -> MsBook.createCriteria().list(sort: arg, ignoreCase: false) { gt('id', 0L) } }],
+                ['are listed with an order as well', 4, { Map arg -> MsBook.createCriteria().list(sort: arg, order: 'desc') { gt('id', 0L) } }],
+                ['have an active author, in a where query', 3, { Map arg -> MsBook.where { author.active == true }.list(sort: arg) }],
+                ['are by a publisher in the us, in a where query', 1, { Map arg -> MsBook.where { author.publisher.country == 'us' }.list(sort: arg) }],
+                ['have a publisher, in a where query with nested blocks', 4, { Map arg -> MsBook.where { author { publisher { name != null } } }.list(sort: arg) }],
+                ['have an active author, in findAll', 3, { Map arg -> MsBook.findAll(sort: arg) { author.active == true } }],
+                ['have an author, in a dynamic finder', 4, { Map arg -> MsBook.findAllByAuthorIsNotNull(sort: arg) }],
+                ['are on the second page of two', 2, { Map arg -> MsBook.createCriteria().list(sort: arg, max: 2, offset: 1) { gt('id', 0L) } }]
+        ].collect { List row -> [row[0], row[1], row[2]] }
+    }
+
+    @Unroll
+    void "a sort by #sort of a query whose condition already joined the author lists its #size books in order"() {
+        when:
+        List<MsBook> found = query.call(sort)
+
+        then:
+        found.size() == size
+        inOrder(found, [(sort): direction])
+
+        where:
+        [sort, direction, size, query] << [
+                ['author.name', 'asc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg) }],
+                ['author.name', 'desc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg, order: 'desc') }],
+                ['author.name', 'asc', 3, { String arg -> MsBook.findAll(sort: arg) { author.active == true } }],
+                ['author.publisher.name', 'asc', 1, { String arg -> MsBook.where { author.publisher.country == 'us' }.list(sort: arg) }],
+                ['author.name', 'asc', 1, { String arg -> MsBook.where { author.publisher.country == 'us' }.list(sort: arg) }],
+                ['author.publisher.name', 'asc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg) }],
+                ['author.name', 'asc', 3, { String arg -> MsBook.where { author.active == true }.list(sort: arg, max: 10) }]
+        ].collect { List row -> [row[0], row[1], row[2], row[3]] }
+    }
+
     void "a negated empty list on a collection of strings matches the books without elements"() {
         expect:
         MsBook.createCriteria().list { not { inList('tags', []) }; order('title') }*.title == ['alpha', 'beta', 'omega', 'zeta']
