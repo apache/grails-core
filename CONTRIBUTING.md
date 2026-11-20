@@ -313,13 +313,17 @@ next major branch.
 
 #### Fixes That Change a Result
 
-A fix that makes a failing GORM call work, or makes a call do what it asks for without changing the data it returns,
-counts, stores or deletes, such as a requested sort order that was ignored, is a bug fix like any other.
+The result of a call is what an application gets from it: the data a GORM call returns, counts, stores or deletes,
+with any datastore, the output a view or a renderer produces, the values data binding sets, the action a URL maps to,
+and the like.
 
-Other fixes change the data that a GORM call that works today returns, counts, stores or deletes, with any datastore,
-such as the rows a query returns or the rows an `updateAll` changes, or make such a call throw. Applications may have
-been built on the old result, and a patch release is often taken without reading its notes, so these fixes follow
-their own rules:
+A fix that makes a failing call work, or makes a call do what it asks for without changing its result, is a bug fix
+like any other. So is a requested sort order that was ignored, unless `max` or `offset` limits the query: then the
+sort decides which rows come back, and the fix changes a result.
+
+Other fixes change the result of a call that works today, such as the rows a query returns, the rows an `updateAll`
+changes or the JSON a domain class renders to, or make such a call throw. Applications may have been built on the
+old result, and a patch release is often taken without reading its notes, so these fixes follow their own rules:
 
 * **A regression.** A fix that restores the result of an earlier release goes to the oldest release branch that has
   the regression, and is merged up. That includes a Hibernate 7 result that differs from what Hibernate 5 returns for
@@ -327,13 +331,17 @@ their own rules:
 * **A wrong result.** A fix that changes a long-standing result goes to the oldest release branch that has the bug
   when the old result contradicts what the call asks for, or what the same request returns through another API of the
   framework, and the documentation does not ask for it.
-* **A wrong result that many applications get.** If such a fix changes the result of a kind of query that many
+* **A wrong result that many applications get.** If such a fix changes the result of a kind of call that many
   applications run, and no other API of the framework returns the new result yet, it goes to the oldest release
   branch that has the bug behind a setting. The setting keeps the old result by default on the maintenance branches,
   is on by default from the next minor release, and is removed in the next major release. For example, a setting added
   while `8.1.x` is the next minor branch is off by default on `7.0.x`, `7.1.x`, `7.2.x` and `8.0.x`, and on by default
-  from 8.1.0. While an application keeps the old result through the setting, it logs a warning at startup that names
-  the major release that removes the setting.
+  from 8.1.0. When no minor release comes before the next major release, the next major release turns the setting on
+  and the major release after it removes it. Each fix has a setting of its own, not a switch it shares with other
+  fixes, so that an application that turns it on for one fix gets no other result changed in a later patch release. A
+  fix that exists in more than one module, such as the same query in Hibernate 5 and Hibernate 7, reads the same key
+  in each. While an application keeps the old result through the setting, it logs a warning at startup that names the
+  major release that removes the setting.
 * **A result that can be defended.** When the old result can be defended, or it is unclear whether it can, the fix
   goes to the next major release, or behind a setting as above.
 * **A security fix** follows the [ASF security process](https://www.apache.org/security/) and goes to the earliest
@@ -344,17 +352,19 @@ A fix that changes a result:
 * has two reviewers (see [Change Review Process](#change-review-process)),
 * says in its pull request description which results change, how an application gets the old ones, and whether the
   fix needs a setting, and why,
-* adds a note to the upgrade guide section of the release that carries it, patch releases included, and the same
-  entry to the upgrade skill under `.agents/skills` where there is one,
-* and, when it adds a setting, lists the setting in the guide with the release that turns it on by default and the
-  release that removes it.
+* adds a note to the release notes and to the upgrade guide section of the release that carries it, patch releases
+  included, and the same entry to the upgrade skill, `grails-skills/upgrade/skills/grails-upgrade/SKILL.md`, as
+  [its README](grails-skills/upgrade/README.md#keeping-it-current) describes,
+* and, when it adds a setting, adds the setting to the one page of the guide that lists them all, Compatibility
+  Settings (`grails-doc/src/en/guide/upgrading/compatibilitySettings.adoc`): what it changes, the release that added
+  it, its default on each release line, the release that turns it on and the release that removes it. The upgrade
+  notes link to that page.
 
 When the reviewers disagree about where a fix belongs, it goes to the dev@grails.apache.org mailing list, and to a
 vote if that does not settle it.
 
-These rules cover the data of GORM calls. A fix that changes another behaviour of a call that works today, such as
-the output it renders, is not covered by them; raise it on the dev@grails.apache.org mailing list before it goes to a
-maintenance branch.
+When it is unclear whether a behaviour is a result, raise it on the dev@grails.apache.org mailing list before the
+fix goes to a maintenance branch.
 
 ### Change Review Process
 
