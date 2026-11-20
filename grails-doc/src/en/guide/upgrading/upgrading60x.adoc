@@ -1335,3 +1335,7 @@ A value marked with `raw()` is still written as given by the tags that wrote it 
 `<g:radio>` now encodes its `value` once. It encoded it twice, so a value with `&`, `<`, `>`, `"` or `'` was submitted with character references in it, such as `+R&amp;D+` for `R&D`.
 
 A value encoded beforehand is no longer encoded twice in the `value` of `<g:textField>`, `<g:hiddenField>` and the other field tags when a `RequestDataValueProcessor` returns it unchanged, nor in an option of `<g:select>`, with or without a processor. `<g:paginate>` and `<g:sortableColumn>` write a `class` that was encoded beforehand once next to the classes they add, such as `step` and `sortable`; they encoded it twice.
+
+==== A DetachedCriteria alias path can start with an alias declared earlier
+
+As of Grails 7.0.18, a path given to `createAlias` on a `DetachedCriteria` or a `where` query that starts with an alias declared earlier continues the path of that alias: after `createAlias('children', 'c')`, the path `c.related` is `children.related` (issue https://github.com/apache/grails-core/issues/14647[#14647]). Such a call failed before, with a `QueryException` or invalid SQL, so no working code changes. A first segment that is both an alias and a property of the class names the alias.
