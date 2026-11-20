@@ -18,6 +18,7 @@
  */
 package grails.gorm.tests
 
+import org.hibernate.QueryException
 import org.hibernate.SessionFactory
 import org.springframework.transaction.PlatformTransactionManager
 import spock.lang.AutoCleanup
@@ -88,14 +89,30 @@ class AliasEmbeddedAndChainSpec extends Specification {
         }*.name == ['one']
     }
 
-    void 'a second alias of a join is used to join further'() {
-        expect:
+    void 'a second alias that is declared for a path that has one is refused, as Hibernate 5 joins a path once'() {
+        when:
         AcPet.withCriteria {
             createAlias('owner', 'o')
             createAlias('owner', 'o2')
             createAlias('o2.club', 'c')
             eq('c.name', 'K1')
-        }*.name == ['Ann']
+        }
+
+        then:
+        QueryException e = thrown()
+        e.message.contains('duplicate association path')
+    }
+
+    void 'a second alias inside a block is refused the same way'() {
+        when:
+        AcPet.withCriteria {
+            createAlias('owner', 'o')
+            createAlias('owner', 'ownerAgain')
+            eq('ownerAgain.name', 'A')
+        }
+
+        then:
+        thrown(QueryException)
     }
 }
 

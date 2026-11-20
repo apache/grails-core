@@ -149,6 +149,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected Map<String, String> aliasMap = new HashMap<>();
     /** An alias for an association path that another alias already joins, by the alias that has the join. */
     protected Map<String, String> aliasRedirects = new HashMap<>();
+    /** The aliases that a caller declared with createAlias, as opposed to those the builder makes for the blocks of a query. */
+    protected Set<String> declaredAliases = new HashSet<>();
     /** The names a property of the query started with, to tell an alias used before its declaration. */
     protected Set<String> usedPropertyHeads = new HashSet<>();
     protected static final String ALIAS = "_alias";
@@ -832,8 +834,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     /**
-     * A Hibernate criteria joins an association path once, so an alias for a path that another alias already joins
-     * names that join and does not create another.
+     * A Hibernate criteria joins an association path once, so an alias for a path that a block of the query already
+     * joins names that join and does not create another. An alias for a path that another declared alias joins is not
+     * redirected: Hibernate refuses it.
      *
      * @return whether the alias was recorded as a name of the existing join
      */
@@ -847,6 +850,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     protected boolean redirectToExistingJoin(String associationPath, String alias, String written) {
         String existing = aliasMap.get(absoluteAssociationPath(associationPath));
         if (existing != null && !existing.equals(alias)) {
+            if (declaredAliases.contains(existing)) {
+                // two aliases that a caller declared for one path: Hibernate 5 joins a path once, so the second is refused
+                // by Hibernate, as it always was, and not silently made another name of the first join
+                return false;
+            }
             if (usedPropertyHeads.contains(alias)) {
                 throw new IllegalArgumentException("The alias [" + alias + "] for the association [" + written +
                         "] is used before it is declared, and a block of the query already joins that association: " +

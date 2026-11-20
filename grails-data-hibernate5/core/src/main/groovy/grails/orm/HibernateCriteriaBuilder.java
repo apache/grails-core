@@ -162,7 +162,9 @@ public class HibernateCriteriaBuilder extends AbstractHibernateCriteriaBuilder {
             qualified = blockAlias + '.' + qualified;
         }
         aliasMap.put(absolute, alias);
-        return criteria.createAlias(qualified, alias, JoinType.parse(joinType));
+        Criteria created = criteria.createAlias(qualified, alias, JoinType.parse(joinType));
+        declaredAliases.add(alias);
+        return created;
     }
 
     @Override

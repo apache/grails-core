@@ -21,18 +21,20 @@ package grails.gorm.tests
 import grails.gorm.annotation.Entity
 import org.apache.grails.data.hibernate5.core.GrailsDataHibernate5TckManager
 import org.apache.grails.data.testing.tck.base.GrailsDataTckSpec
+import org.hibernate.QueryException
 import spock.lang.Unroll
 
 /**
  * Every spelling of the path that createAlias is given, used three ways: the alias restricts, is projected and
  * orders. A path may start with {@code this}, go through an embedded component to an association inside it, go
- * through another association first, or start at an alias that an earlier createAlias declared, and a path may be
- * given a second alias. Each cell must give the result the same query gives without any alias.
+ * through another association first, or start at an alias that an earlier createAlias declared. Each cell must give
+ * the result the same query gives without any alias. A second alias for a path that already has one is refused, as
+ * Hibernate 5 joins a path once.
  */
 class AliasPathShapeMatrixSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([ShCountry, ShClub, ShOwner, ShPet])
+        manager.registerDomainClasses(ShCountry, ShClub, ShOwner, ShPet)
     }
 
     void setup() {
@@ -56,10 +58,14 @@ class AliasPathShapeMatrixSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tck
             ['this prefix and nested', [['this.owner.club', 'c']], 'c.name', 'K1', 'K2'],
             ['embedded then association', [['address.country', 'c']], 'c.name', 'C1', 'C2'],
             ['this prefix, embedded then association', [['this.address.country', 'c']], 'c.name', 'C1', 'C2'],
-            ['dotted path from an earlier alias', [['owner', 'o'], ['o.club', 'c']], 'c.name', 'K1', 'K2'],
-            ['second alias of one path', [['owner', 'o'], ['owner', 'o2']], 'o2.name', 'A', 'B'],
-            ['this prefix, then a second alias', [['this.owner', 'o'], ['owner', 'o2']], 'o2.name', 'A', 'B'],
-            ['embedded association, then a second alias', [['address.country', 'c'], ['address.country', 'c2']], 'c2.name', 'C1', 'C2']
+            ['dotted path from an earlier alias', [['owner', 'o'], ['o.club', 'c']], 'c.name', 'K1', 'K2']
+    ]
+
+    /** the createAlias calls in order: the second declares an alias for a path that the first already has one for */
+    private static final List<List> TWO_ALIASES_OF_ONE_PATH = [
+            ['second alias of one path', [['owner', 'o'], ['owner', 'o2']]],
+            ['this prefix, then a second alias', [['this.owner', 'o'], ['owner', 'o2']]],
+            ['embedded association, then a second alias', [['address.country', 'c'], ['address.country', 'c2']]]
     ]
 
     private static List<List> cells() {
@@ -107,6 +113,21 @@ class AliasPathShapeMatrixSpec extends GrailsDataTckSpec<GrailsDataHibernate5Tck
         where:
         [shape, use] << cells()
         label = shape[0]
+    }
+
+    @Unroll
+    void "#label is refused, as Hibernate 5 joins a path once"() {
+        when:
+        ShPet.withCriteria {
+            aliases.each { List<String> a -> createAlias(a[0], a[1]) }
+        }
+
+        then:
+        QueryException e = thrown()
+        e.message.contains('duplicate association path')
+
+        where:
+        [label, aliases] << TWO_ALIASES_OF_ONE_PATH
     }
 }
 
