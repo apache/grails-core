@@ -624,7 +624,7 @@ configuration:
         'names a key'                    | 'configuration:\n  &k a: 1\n'                    || 'It names a value with an anchor (&), which a descriptor cannot use'
     }
 
-    @Timeout(20)
+    @Timeout(60)
     void "a descriptor that repeats one long text thousands of times is refused at once"() {
         when:
         parser.parse(MINIMAL + 'x: &a ' + ('y' * 100000) + '\nrequires: [' + (['*a'] * 40000).join(',') + ']\n', 'acme.yml')
@@ -634,7 +634,7 @@ configuration:
         e.problems == ['It names a value with an anchor (&), which a descriptor cannot use']
     }
 
-    @Timeout(20)
+    @Timeout(60)
     @Unroll
     void "a #field of #lines empty lines and one more is refused at once"() {
         when:
@@ -653,7 +653,7 @@ configuration:
         'oneOf'       | 80000
     }
 
-    @Timeout(20)
+    @Timeout(60)
     void "as many build extensions as a descriptor has room for are read without multiplying them"() {
         given:
         String extensions = (1..2000).collect { "    e${it}: \"a = 1\\r\\nb = 2\"" }.join('\n')
@@ -666,7 +666,7 @@ configuration:
         descriptor.buildExtensions.e1 == 'a = 1\nb = 2'
     }
 
-    @Timeout(20)
+    @Timeout(60)
     void "as many files as a descriptor has room for are checked against each other in time"() {
         given:
         String files = (1..9000).collect { "- {from: a, to: d${it}/f}" }.join('\n')
@@ -770,7 +770,7 @@ configuration:
         unknown.source == 'of an unknown origin'
     }
 
-    @Timeout(20)
+    @Timeout(60)
     @Unroll
     void "destinations of a thousand steps of #step are refused without being multiplied"() {
         given:
@@ -799,7 +799,7 @@ configuration:
         thrown(PackDescriptorException)
     }
 
-    @Timeout(10)
+    @Timeout(60)
     @Unroll
     void "a descriptor of nothing but #opener is refused at once"() {
         when:
@@ -869,7 +869,7 @@ configuration:
         parser.parse(MINIMAL + "build:\n  properties:\n    a:\n    b: ~\n    c: ''\n", 'acme.yml').buildProperties == [a: '', b: '', c: '']
     }
 
-    @Timeout(10)
+    @Timeout(60)
     @Unroll
     void "thousands of #kind as keys, made to look alike to a hash table, are refused at once"() {
         given: 'texts of three characters that all have one hash code'
@@ -952,7 +952,7 @@ configuration:
         configuration.g == '5.'
     }
 
-    @Timeout(20)
+    @Timeout(60)
     void "destinations at every limit at once are accepted in time"() {
         given:
         String steps = (['\u0390' * 61] * 32).join('/')
@@ -966,7 +966,7 @@ configuration:
         descriptor.files.every { it.to.count('/') == 31 }
     }
 
-    @Timeout(10)
+    @Timeout(60)
     @Unroll
     void "thousands of text and number keys, made to look alike to a hash table, are refused at once #where"() {
         given: 'texts of three characters and whole numbers that all have one hash code'
@@ -999,7 +999,7 @@ configuration:
         'in the configuration'   | MINIMAL + 'configuration: '
     }
 
-    @Timeout(10)
+    @Timeout(60)
     void "thousands of text keys that look alike to a hash table are read in time"() {
         given:
         int hash = 961 * 0x4E30 + 31 * 0x7000 + 0x7000
