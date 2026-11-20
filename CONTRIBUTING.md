@@ -316,10 +316,10 @@ Concerning when a review is required for a `protected` branch:
 An approval covers the changes that were reviewed. When a later push changes a pull request, the approvals given
 before it are dismissed automatically and the pull request has to be approved again; a rebase, or a merge of the base
 branch, that leaves the changes of the pull request as they were keeps them. A merge of the base branch that had
-conflicts keeps them too, as long as each conflict is resolved by keeping lines of its two sides, in any order, and
-nothing outside the conflicts changes. A line written by hand, such as a renumbered heading or a line merged from both
-sides, dismisses them like any other change; made in a commit of its own after the merge, it is at least easy to
-review again.
+conflicts keeps them too, as long as each conflict is resolved by keeping one side, the other, or both one after the
+other, and nothing outside the conflicts changes. Any other resolution, such as a renumbered heading, lines picked
+from both sides or a line written by hand, dismisses them like any other change; made in a commit of its own after the
+merge, it is at least easy to review again.
 The pull request then gets a comment naming the files whose conflicts were resolved, for the reviewers to look at. A
 dismissed approval does not block the merge button, so check the review state of a pull request before merging it.
 
