@@ -31,6 +31,11 @@ class DataBinderTraitGeneratedSpec extends Specification {
             assert TestDataBinder.class.getMethod(traitMethod.name, traitMethod.parameterTypes).isAnnotationPresent(Generated)
         }
     }
+    void "test that TestDataBinder implements expected DataBinder methods"() {
+        expect: "DataBinder methods count matches implementation"
+        DataBinder.getMethods().length > 0
+        TestDataBinder.class.methods.length >= DataBinder.getMethods().length
+    }
 }
 
 class TestDataBinder implements DataBinder {
