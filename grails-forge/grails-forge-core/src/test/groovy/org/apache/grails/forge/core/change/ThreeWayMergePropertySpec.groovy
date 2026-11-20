@@ -100,6 +100,46 @@ class ThreeWayMergePropertySpec extends Specification {
         wrong == []
     }
 
+    void "every line is in a result as often as the three files account for"() {
+        when: 'counted here, from the four files alone'
+        List<String> wrong = []
+        (0..<CASES).each { int index ->
+            ThreeWayMerge merge = ThreeWayMerge.of(cases[index][0], cases[index][1], cases[index][2])
+            if (merge.merged == null) {
+                return
+            }
+            Map<String, Integer> inBase = counted(cases[index][0])
+            Map<String, Integer> inCurrent = counted(cases[index][1])
+            Map<String, Integer> inProposed = counted(cases[index][2])
+            Map<String, Integer> inResult = counted(merge.merged)
+            for (String line : inBase.keySet() + inCurrent.keySet() + inProposed.keySet() + inResult.keySet()) {
+                int b = inBase.get(line) ?: 0
+                int o = inCurrent.get(line) ?: 0
+                int t = inProposed.get(line) ?: 0
+                int m = inResult.get(line) ?: 0
+                // as often as the base has it, with what each side added and removed of it; where both
+                // made the same change in one place, that change once, which is between the two
+                boolean accounted = merge.changedAlike == 0 ? m == o + t - b : m >= [o, t, o + t - b].min() && m <= [o, t, o + t - b].max()
+                // a line all three have equally often is there as often; a line that is new is there
+                // no more often than the side that has it most often has it
+                if (!accounted || (b == o && o == t && m != b) || (b == 0 && m > Math.max(o, t))) {
+                    wrong << "case ${index}: '${line}' base ${b}, project ${o}, generator ${t}, result ${m}".toString()
+                }
+            }
+        }
+
+        then:
+        wrong == []
+    }
+
+    private static Map<String, Integer> counted(byte[] file) {
+        if (file.length == 0) {
+            return [:]
+        }
+        String text = new String(file, StandardCharsets.ISO_8859_1)
+        return (text.endsWith('\n') ? text.substring(0, text.length() - 1) : text).split('\n', -1).toList().countBy { String line -> line }
+    }
+
     void "the merge is never bolder than the reference"() {
         expect:
         reference.size() == CASES
@@ -147,8 +187,8 @@ class ThreeWayMergePropertySpec extends Specification {
         (CASES - ThreeWayMergeCases.LONG_CASES..<CASES).count { ThreeWayMerge.of(cases[it][0], cases[it][1], cases[it][2]).conflicts == 0 } == LONG_MERGED
     }
 
-    static final int MERGED = 4787
-    static final int MORE_CAREFUL = 374
+    static final int MERGED = 4777
+    static final int MORE_CAREFUL = 384
     static final int SAME_ON_BOTH_SIDES = 0
     static final int LONG_MERGED = 12
 

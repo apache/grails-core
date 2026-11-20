@@ -347,7 +347,7 @@ The command works from the record of the project. It generates the application a
 | The feature changes a file that you did not change. It gets the new content.
 
 | `merge`
-| The feature changes a file that you changed too, in other lines. The changes of the feature are put into your file, and everything you changed stays.
+| The feature changes a file that you changed too, in other lines. The changes of the feature are put into your file, and everything you changed stays. Where you had already made a change of the feature yourself, in the place where the feature makes it, the command says under the file that your change and the feature's are the same there.
 
 | `keep`
 | The file already is what the feature makes of it, or a file the feature adds is already there with the content it would get. It is not written.
@@ -364,13 +364,15 @@ After the command, the baseline under `.grails/baseline` holds the files as the 
 
 There is a conflict when
 
-* the feature changes lines that you changed too, or lines directly next to them, in another way (the same change made by both is no conflict: a line of the feature that you already added by hand is simply there),
+* the feature changes lines that you changed too, or lines directly next to them, in another way (the same change made by both in the same place is no conflict: a line of the feature that you already added by hand where the feature adds it is there once),
+* you and the feature both moved a line, or both added the same new line, each to another place: merged, the file would have the line twice, or lose it, so it is a conflict that names the line,
+* you and the feature each have the same top-level key in one document of a YAML file under `grails-app/conf`, in different places: the file would have the key twice, and only one would count,
 * the feature changes a file that you removed, or that is now a directory or a symbolic link, or that has its name in other letters on a file system that does not tell them apart (`Build.gradle`),
 * the feature changes a binary file that you changed too,
 * the feature adds a file and the project has another file of that name,
-* the file has more than 200,000 lines, or differs from the generated one in more than 2,000 lines: such a file is not merged.
+* the file has more than 200,000 lines, or it differs from the generated one in more than one place and in more than 2,000 lines altogether: such a file is not merged. Lines that were added in one single place, or removed in one single place, are merged whatever their number.
 
-The merge compares lines and knows nothing of what they mean. It never guesses: it takes your change and the change of the feature for two changes only when a generated line that neither of you changed is between them and that line can only be the line it is. Where lines are alike, as empty lines and closing braces are, and one of you added, removed or moved such a line, nothing says which of them a change is next to, and the two changes count as one place. Expect a conflict in two places in particular, because the generator writes there and so do most people. The generator writes dependencies in the order of their configurations and the configuration in the order of the features, so the lines of a new feature are often the last of the `dependencies { }` block of `build.gradle`, or the last of `application.yml`. A dependency of your own that is the last line of that block is in the way of 8 of the 33 features that change `build.gradle` (the database drivers, MongoDB, Neo4j, Testcontainers and Geb among them), and a setting of your own at the very end of `application.yml` is in the way of 7 of the 14 features that change that file. A dependency that is the first line of the block is in the way of none of them, and neither is a setting above the generated ones. It helps to keep your own dependencies at the top of the block, and your own settings above the generated ones or in a file of their own.
+The merge compares lines and knows nothing of what they mean. It takes your change and the change of the feature for two changes only when a generated line that neither of you changed is between them and that line can only be the line it is. Where lines are alike, as empty lines and closing braces are, and one of you added, removed or moved such a line, nothing says which of them a change is next to, and the two changes count as one place. Before a merged file is written, every line of it is counted: it has to be there as often as the generated file, your file and the file of the feature account for. What the merge cannot know is that two different lines mean the same thing. A dependency you declared with a version, with another configuration or with other quotes is, to the merge, another line than the declaration of the feature: both are kept, wherever yours is, and the top of the `dependencies` block is no exception. For `build.gradle` the command looks at the merged file once more and says, under the file, when a `group:artifact` is now declared more than once for one configuration; it changes nothing, and which declaration is to stay is yours to decide. Expect a conflict in two places in particular, because the generator writes there and so do most people. The generator writes dependencies in the order of their configurations and the configuration in the order of the features, so the lines of a new feature are often the last of the `dependencies { }` block of `build.gradle`, or the last of `application.yml`. A dependency of your own that is the last line of that block is in the way of 8 of the 33 features that change `build.gradle` (the database drivers, MongoDB, Neo4j, Testcontainers and Geb among them), and a setting of your own at the very end of `application.yml` is in the way of 7 of the 14 features that change that file. A dependency that is the first line of the block is in the way of none of them, and neither is a setting above the generated ones. It helps to keep your own dependencies at the top of the block, and your own settings above the generated ones or in a file of their own.
 
 With one conflict, nothing is written: no file of the application, and nothing of the record. The command names every file with a conflict, its reason, the lines of both sides and what to do, and ends with exit code 1:
 
@@ -380,11 +382,12 @@ $ ./grailsw -t forge feature add grails-quartz
 | Adding the feature grails-quartz
     update   README.md
     conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them
-             at line 57 the project has:
+             at line 57 the generated file had no lines
+             the project has 1 line there:
                      implementation "com.acme:mine:1.0"
-             and the feature has there:
+             and the feature has 1 line there:
                      implementation "org.apache.grails:grails-quartz"
-             Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong
+             Both changed the same place, so neither is taken for the other. Take the lines of the project out of that place, or move them past a line that neither changed, add the feature again, and then put them where they belong
     update   grails-app/conf/application.yml
 | Error The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed. What is in the way is said with each file; --diff shows what the feature would change. Make room for it and add the feature again
 ----

@@ -220,12 +220,13 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         then:
         exit == 1
         out.toString().contains('    conflict build.gradle: the feature changes lines of this file that were changed in the project too, or lines next to them\n' +
-                "             at line ${where + 1} the project has:\n" +
+                "             at line ${where + 1} the generated file had no lines\n" +
+                '             the project has 1 line there:\n' +
                 '                     implementation "com.acme:mine:1.0"\n' +
-                '             and the feature has there:\n' +
+                '             and the feature has 1 line there:\n' +
                 '                     implementation "org.apache.grails:grails-quartz"\n' +
-                '             Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place ' +
-                'of the file, with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong\n')
+                '             Both changed the same place, so neither is taken for the other. Take the lines of the project out of that place, or move them past a line that ' +
+                'neither changed, add the feature again, and then put them where they belong\n')
         out.toString().contains('    merge    README.md (your changes are kept)')
         out.toString().contains('    update   grails-app/conf/application.yml')
         err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed. ' +

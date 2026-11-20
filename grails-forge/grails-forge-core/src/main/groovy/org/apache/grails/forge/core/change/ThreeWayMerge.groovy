@@ -115,24 +115,36 @@ final class ThreeWayMerge {
     }
 
     /**
-     * A place both changed, each in its way.
+     * A place both changed, each in its way; or a line both have in another place than the base has it.
      */
     @CompileStatic
     static final class Conflict {
 
-        /** The number of the first line of the place in the current file, from 1; for lines that were only removed there, the line after them */
+        /** The number of the first line of the place in the current file, from 1; where the current file has no lines there, the line after the place */
         final int line
 
-        /** The lines the current file has there, without what ends them; none when it removed lines */
+        /** The lines the base has there, without what ends them; none where lines were only added */
+        final List<String> base
+
+        /** The lines the current file has there, without what ends them; none when it has none there */
         final List<String> current
 
-        /** The lines the proposed file has there, without what ends them; none when it removed lines */
+        /** The lines the proposed file has there, without what ends them; none when it has none there */
         final List<String> proposed
 
-        Conflict(int line, List<String> current, List<String> proposed) {
+        /**
+         * Whether this is no place both changed, but a line ({@link #current}, and the same in
+         * {@link #proposed}) that both sides moved or added, each to another place, so that the files
+         * merged would have it more often, or less often, than any of the three has it
+         */
+        final boolean elsewhere
+
+        Conflict(int line, List<String> base, List<String> current, List<String> proposed, boolean elsewhere = false) {
             this.line = line
+            this.base = base
             this.current = current
             this.proposed = proposed
+            this.elsewhere = elsewhere
         }
     }
 
@@ -207,11 +219,12 @@ final class ThreeWayMerge {
         if (lineCount(base) > MAX_LINES || lineCount(current) > MAX_LINES || lineCount(proposed) > MAX_LINES) {
             return new ThreeWayMerge(null, [], true)
         }
+        List<String> baseLines = lines(base)
         List<String> currentLines = lines(current)
         List<String> proposedLines = lines(proposed)
         // a line is a number: the lines of the three files that are the same line have the same one
         Map<String, Integer> numbers = new HashMap<>()
-        int[] baseKeys = keys(lines(base), numbers)
+        int[] baseKeys = keys(baseLines, numbers)
         int[] currentKeys = keys(currentLines, numbers)
         int[] proposedKeys = keys(proposedLines, numbers)
         if (Arrays.equals(currentKeys, proposedKeys)) {
@@ -249,6 +262,9 @@ final class ThreeWayMerge {
         StringBuilder result = new StringBuilder()
         List<Conflict> conflicts = []
         int changedAlike = 0
+        // how often each line is in the result, and by how much the stretches both changed alike change that
+        int[] inResult = new int[numbers.size()]
+        int[] byBoth = new int[numbers.size()]
         int at = 0
         int nextProposed = 0
         int nextCurrent = 0
@@ -259,6 +275,7 @@ final class ThreeWayMerge {
                     nextCurrent < ofCurrent.size() ? ofCurrent[nextCurrent].from : Integer.MAX_VALUE)
             // what neither changed, as the project has it
             append(result, currentLines, at + currentOffset, start + currentOffset, false)
+            count(inResult, currentKeys, at + currentOffset, start + currentOffset, 1)
             int end = start
             int proposedGrowth = 0
             int currentGrowth = 0
@@ -289,36 +306,109 @@ final class ThreeWayMerge {
             int currentTo = end + currentOffset + currentGrowth
             if (!byProposed) {
                 append(result, currentLines, currentFrom, currentTo, false)
+                count(inResult, currentKeys, currentFrom, currentTo, 1)
             } else if (!byCurrent) {
                 append(result, proposedLines, proposedFrom, proposedTo, carriageReturns)
+                count(inResult, proposedKeys, proposedFrom, proposedTo, 1)
             } else if (same(proposedKeys, proposedFrom, proposedTo, currentKeys, currentFrom, currentTo)) {
                 // both made the same change of this stretch: the lines of the project are those of the generator
                 append(result, currentLines, currentFrom, currentTo, false)
+                count(inResult, currentKeys, currentFrom, currentTo, 1)
+                count(byBoth, currentKeys, currentFrom, currentTo, 1)
+                count(byBoth, baseKeys, start, end, -1)
                 changedAlike++
             } else {
-                conflicts << conflict(currentLines, currentKeys, currentFrom, currentTo, proposedLines, proposedKeys, proposedFrom, proposedTo)
+                conflicts << conflict(baseLines, baseKeys, start, end, currentLines, currentKeys, currentFrom, currentTo, proposedLines, proposedKeys, proposedFrom, proposedTo)
             }
             at = end
             proposedOffset += proposedGrowth
             currentOffset += currentGrowth
         }
         append(result, currentLines, at + currentOffset, currentLines.size(), false)
+        count(inResult, currentKeys, at + currentOffset, currentLines.size(), 1)
+        if (conflicts.isEmpty()) {
+            conflicts.addAll(unaccounted(numbers.size(), baseKeys, currentKeys, proposedKeys, inResult, byBoth, baseLines, currentLines, proposedLines))
+        }
         return new ThreeWayMerge(conflicts.isEmpty() ? result.toString().getBytes(StandardCharsets.ISO_8859_1) : null, conflicts, false, changedAlike)
     }
 
-    // the place without the lines the two have alike at its beginning and its end, which are there
-    // because a change counts as touching the lines next to it
-    private static Conflict conflict(List<String> currentLines, int[] currentKeys, int currentFrom, int currentTo,
+    /**
+     * What every result is held to before it is one, whatever lined the files up: every line is in
+     * it as often as the three files account for.
+     *
+     * <ul>
+     * <li>The result has a line as often as the base has it, more or less by what each side added or
+     * removed of it, the changes both made alike in one stretch counted once.</li>
+     * <li>A change both made alike in one stretch is the same change only when neither side does the
+     * opposite elsewhere: lines both removed in one place and each added in another were moved by
+     * both, and would be there twice; lines both added in one place and each removed in another
+     * would be there once less than any file has them.</li>
+     * <li>A line that is new to the file is not in the result more often than the side that has it
+     * most often has it: both added it, each in another place.</li>
+     * </ul>
+     *
+     * @return a conflict for every line that is not accounted for, in the order of the lines of the
+     * current file they are first on
+     */
+    private static List<Conflict> unaccounted(int numbers, int[] base, int[] current, int[] proposed, int[] inResult, int[] byBoth,
+                                              List<String> baseLines, List<String> currentLines, List<String> proposedLines) {
+        int[] inBase = new int[numbers]
+        int[] inCurrent = new int[numbers]
+        int[] inProposed = new int[numbers]
+        count(inBase, base, 0, base.length, 1)
+        count(inCurrent, current, 0, current.length, 1)
+        count(inProposed, proposed, 0, proposed.length, 1)
+        List<Conflict> conflicts = []
+        for (int line = 0; line < numbers; line++) {
+            int ofCurrent = inCurrent[line] - inBase[line]
+            int ofProposed = inProposed[line] - inBase[line]
+            boolean accounted = inResult[line] == inBase[line] + ofCurrent + ofProposed - byBoth[line]
+            boolean moved = byBoth[line] != 0 && (long) (ofCurrent - byBoth[line]) * byBoth[line] < 0 && (long) (ofProposed - byBoth[line]) * byBoth[line] < 0
+            boolean twice = inBase[line] == 0 && inResult[line] > Math.max(inCurrent[line], inProposed[line])
+            if (!accounted || moved || twice) {
+                int inCurrentFile = indexOf(current, line)
+                int inProposedFile = indexOf(proposed, line)
+                List<String> shown = shown([inCurrentFile >= 0 ? currentLines[inCurrentFile] : inProposedFile >= 0 ? proposedLines[inProposedFile] : baseLines[indexOf(base, line)]])
+                conflicts << new Conflict(inCurrentFile + 1, inBase[line] == 0 ? [] as List<String> : shown, inCurrentFile >= 0 ? shown : [] as List<String>,
+                        inProposedFile >= 0 ? shown : [] as List<String>, true)
+            }
+        }
+        return conflicts.sort(false) { Conflict conflict -> conflict.line }
+    }
+
+    private static int indexOf(int[] keys, int key) {
+        for (int index = 0; index < keys.length; index++) {
+            if (keys[index] == key) {
+                return index
+            }
+        }
+        return -1
+    }
+
+    private static void count(int[] counts, int[] keys, int from, int to, int by) {
+        for (int index = from; index < to; index++) {
+            counts[keys[index]] += by
+        }
+    }
+
+    // the place without the lines all three have alike at its beginning and its end, which are there
+    // because a stretch reaches from anchor to anchor
+    private static Conflict conflict(List<String> baseLines, int[] baseKeys, int baseFrom, int baseTo, List<String> currentLines, int[] currentKeys, int currentFrom, int currentTo,
                                      List<String> proposedLines, int[] proposedKeys, int proposedFrom, int proposedTo) {
-        while (currentFrom < currentTo && proposedFrom < proposedTo && currentKeys[currentFrom] == proposedKeys[proposedFrom]) {
+        while (baseFrom < baseTo && currentFrom < currentTo && proposedFrom < proposedTo && currentKeys[currentFrom] == proposedKeys[proposedFrom] &&
+                baseKeys[baseFrom] == currentKeys[currentFrom]) {
+            baseFrom++
             currentFrom++
             proposedFrom++
         }
-        while (currentFrom < currentTo && proposedFrom < proposedTo && currentKeys[currentTo - 1] == proposedKeys[proposedTo - 1]) {
+        while (baseFrom < baseTo && currentFrom < currentTo && proposedFrom < proposedTo && currentKeys[currentTo - 1] == proposedKeys[proposedTo - 1] &&
+                baseKeys[baseTo - 1] == currentKeys[currentTo - 1]) {
+            baseTo--
             currentTo--
             proposedTo--
         }
-        return new Conflict(currentFrom + 1, shown(currentLines.subList(currentFrom, currentTo)), shown(proposedLines.subList(proposedFrom, proposedTo)))
+        return new Conflict(currentFrom + 1, shown(baseLines.subList(baseFrom, baseTo)), shown(currentLines.subList(currentFrom, currentTo)),
+                shown(proposedLines.subList(proposedFrom, proposedTo)))
     }
 
     private static List<String> shown(List<String> lines) {

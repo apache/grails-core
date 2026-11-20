@@ -162,8 +162,42 @@ class ThreeWayMergeSpec extends Specification {
 
         then:
         merge.conflicts == 1
-        merge.conflictingChanges[0].current == ['mine']
-        merge.conflictingChanges[0].proposed == []
+        merge.conflictingChanges[0].line == 2
+        merge.conflictingChanges[0].base == []
+        merge.conflictingChanges[0].current == ['new', 'mine']
+        merge.conflictingChanges[0].proposed == ['new']
+        !merge.conflictingChanges[0].elsewhere
+    }
+
+    @Unroll
+    void "#what is a conflict for that line, and not a file with the line #wrongly"() {
+        when:
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes(base), bytes(current), bytes(proposed))
+
+        then:
+        merge.merged == null
+        merge.conflictingChanges*.elsewhere == [true]
+        merge.conflictingChanges[0].current == [line]
+        merge.conflictingChanges[0].line == at
+
+        where:
+        what                                                    | wrongly      | base                    | current                   | proposed                  || line  | at
+        'a line both moved, each to another place'              | 'twice'      | 'a\nb\nx\nc\nd\n'       | 'x\na\nb\nc\nd\n'         | 'a\nb\nc\nd\nx\n'         || 'x'   | 1
+        'a line both added, each in another place'              | 'twice'      | 'a\nb\nc\n'             | 'new\na\nb\nc\n'           | 'a\nb\nc\nnew\n'           || 'new' | 1
+    }
+
+    void "a line that is there twice, of which each side moved one to the same place, is a conflict and not a file with the line once"() {
+        expect:
+        ThreeWayMerge.of(bytes('x\na\nb\nc\nx\nd\n'), bytes('a\nb\nx\nc\nx\nd\n'), bytes('x\na\nb\nx\nc\nd\n')).merged == null
+    }
+
+    void "a line like many that both added, each in another place, is no conflict: it is there as often as the two account for"() {
+        when: 'a closing brace and an empty line more on each side'
+        ThreeWayMerge merge = ThreeWayMerge.of(bytes('a {\n}\n\nb\nc\nd {\n}\n'), bytes('mine {\n}\n\na {\n}\n\nb\nc\nd {\n}\n'), bytes('a {\n}\n\nb\nc\nd {\n}\n\nnew {\n}\n'))
+
+        then:
+        merge.conflicts == 0
+        new String(merge.merged, StandardCharsets.UTF_8) == 'mine {\n}\n\na {\n}\n\nb\nc\nd {\n}\n\nnew {\n}\n'
     }
 
     @Unroll

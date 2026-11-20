@@ -1277,7 +1277,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         then:
         plan.conflicts*.path == ['build.gradle']
         plan.conflicts[0].reason == 'the feature changes this file, and the file of the project has more lines than are merged (200000) or differs from the generated one ' +
-                'in more of them (2000)'
+                'in more than one place and in more lines than are merged (2000)'
         plan.diff().size() < 100
 
         when: 'fewer lines, all of them others'
@@ -1344,12 +1344,95 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
 
         then:
         plan.conflicts[0].details == [
-                "at line ${where + 1} the project has:".toString(),
+                "at line ${where + 1} the generated file had no lines".toString(),
+                'the project has 1 line there:',
                 '        implementation "com.acme:mine:1.0" // ?',
-                'and the feature has there:',
+                'and the feature has 1 line there:',
                 '        implementation "org.apache.grails:grails-quartz"',
-                'Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, ' +
-                        'with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong']
+                'Both changed the same place, so neither is taken for the other. Take the lines of the project out of that place, or move them past a line that ' +
+                        'neither changed, add the feature again, and then put them where they belong']
+    }
+
+    void "a block the project moved and the feature moves too, each to another place, is a conflict and not there twice"() {
+        given: 'the block grails: of the configuration, which the feature for Ehcache moves and adds to, moved to the top of the file'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path configuration = project.resolve('grails-app/conf/application.yml')
+        List<String> lines = configuration.toFile().readLines()
+        int block = lines.indexOf('grails:')
+        configuration.toFile().text = (lines.drop(block) + lines.take(block)).join('\n') + '\n'
+        Map<String, String> before = tree(project)
+
+        when:
+        ChangePlan plan = planOf(generator, project, ['cache-ehcache'])
+
+        then:
+        plan.conflicts*.path == ['grails-app/conf/application.yml']
+        plan.conflicts[0].reason ==~ /the project and the feature both moved or added \d+ lines of this file, each to another place/
+        plan.conflicts[0].details.first() == 'line 1 of the project is a line the project and the feature both moved or added, each to another place; ' +
+                'merged, the file would have it more often, or less often, than any of them has it:'
+        plan.conflicts[0].details[1] == '    grails:'
+        plan.conflicts[0].details.last() == 'A line both have in another place than the generated file is to be in one place: put it in the file of the project ' +
+                'where the feature has it, or where the generated file had it, and add the feature again'
+        tree(project) == before
+    }
+
+    void "a dependency of the feature that the project has in another place is a conflict, and one it has with another version is said"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        List<String> generated = project.resolve('build.gradle').toFile().readLines()
+        int block = generated.findIndexOf { it.startsWith('dependencies {') }
+
+        when: 'the very line of the feature, as the first line of the block'
+        project.resolve('build.gradle').toFile().text = (generated.take(block + 1) + ['    implementation "org.apache.grails:grails-quartz"'] + generated.drop(block + 1)).join('\n') + '\n'
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.conflicts*.path == ['build.gradle']
+        plan.conflicts[0].reason == 'the project and the feature both moved or added a line of this file, each to another place'
+        plan.conflicts[0].details[1] == '        implementation "org.apache.grails:grails-quartz"'
+
+        when: 'the dependency with a version: another line, which the merge takes for another dependency'
+        project.resolve('build.gradle').toFile().text = (generated.take(block + 1) + ["    implementation 'org.apache.grails:grails-quartz:9.9.9'"] + generated.drop(block + 1)).join('\n') + '\n'
+        plan = planOf(generator, project)
+
+        then:
+        plan.conflicts.isEmpty()
+        plan.files.find { it.path == 'build.gradle' }.action == Action.MERGE
+        plan.files.find { it.path == 'build.gradle' }.details == ['the file now declares org.apache.grails:grails-quartz for implementation more than once: the project and the feature ' +
+                'each have a line for it, and the merge, which compares lines, cannot know that the two are one dependency. Keep one of them']
+
+        when: 'the first of the two changes another feature makes to the file, made by hand where the feature makes it'
+        List<String> withOther = create(generator, 'with', ['asciidoctor']).resolve('build.gradle').toFile().readLines()
+        int first = (0..<generated.size()).find { generated[it] != withOther[it] }
+        project.resolve('build.gradle').toFile().text = (generated.take(first) + [withOther[first]] + generated.drop(first)).join('\n') + '\n'
+        plan = planOf(generator, project, ['asciidoctor'])
+
+        then:
+        plan.files.find { it.path == 'build.gradle' }.action == Action.MERGE
+        plan.files.find { it.path == 'build.gradle' }.details == ["your change and the feature's are the same in one place of this file, and what both have there is there once"]
+    }
+
+    void "a top-level key the project and the feature each have in another place of the configuration is a conflict"() {
+        given:
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        List<String> key = with.resolve('grails-app/conf/application.yml').toFile().readLines() - project.resolve('grails-app/conf/application.yml').toFile().readLines()
+        Path configuration = project.resolve('grails-app/conf/application.yml')
+
+        expect: 'the feature adds one line, a top-level key'
+        key == ['quartz.autoStartup: true']
+
+        when: 'the project has the key with another value, at the top of the same document'
+        configuration.toFile().text = 'quartz.autoStartup: false\n' + configuration.toFile().text
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        plan.conflicts*.path == ['grails-app/conf/application.yml']
+        plan.conflicts[0].reason == 'the project and the feature each have the top-level key quartz.autoStartup in one document of this file, in different places'
+        plan.conflicts[0].details.size() == 1
     }
 
     static boolean ignoresCase() {

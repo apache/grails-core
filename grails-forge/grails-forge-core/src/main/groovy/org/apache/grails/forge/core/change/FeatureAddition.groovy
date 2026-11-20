@@ -48,7 +48,10 @@ import org.grails.forge.util.VersionInfo
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
+import java.nio.charset.StandardCharsets
 import java.text.Normalizer
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import java.util.function.Consumer
 
 /**
@@ -77,6 +80,12 @@ final class FeatureAddition {
 
     private static final int MAX_NAMED = 10
     private static final int MAX_MESSAGE = 1000
+    private static final int MAX_SCANNED = 20000
+    private static final int MAX_SCANNED_LINE = 2000
+    private static final String BUILD_FILE = 'build.gradle'
+    private static final String CONFIGURATION_DIRECTORY = 'grails-app/conf/'
+    private static final Pattern DEPENDENCY = Pattern.compile(/^\s*([A-Za-z][A-Za-z0-9]*)[ (]+["']([^:"'\s]+:[^:"'\s]+)(?::[^"']*)?["']/)
+    private static final Pattern TOP_LEVEL_KEY = Pattern.compile(/([A-Za-z0-9_.-]+):(\s.*)?/)
     private static final int MAX_PLACES = 5
     private static final int MAX_QUOTED = 8
     private static final int MAX_QUOTED_LINE = 160
@@ -392,6 +401,7 @@ final class FeatureAddition {
         }
         byte[] result
         boolean edited
+        List<String> notes = []
         if (Arrays.equals(base, proposed)) {
             result = working.content
             edited = false
@@ -412,16 +422,42 @@ final class FeatureAddition {
             ThreeWayMerge merge = ThreeWayMerge.of(base, working.content, proposed)
             if (merge.isTooLarge()) {
                 return conflict(path, "the feature changes this file, and the file of the project has more lines than are merged (${ThreeWayMerge.MAX_LINES}) or differs " +
-                        "from the generated one in more of them (${ThreeWayMerge.MAX_CHANGED})", binary, working, base, proposed,
+                        "from the generated one in more than one place and in more lines than are merged (${ThreeWayMerge.MAX_CHANGED})", binary, working, base, proposed,
                         [("Put the file aside, put the generated one in its place (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), add the feature, " +
                                  'and bring your changes into the new file').toString()])
             }
             if (merge.getConflicts() > 0) {
-                return conflict(path, "the feature changes ${merge.getConflicts() == 1 ? 'lines' : "${merge.getConflicts()} places"} of this file that were changed " +
+                boolean elsewhere = merge.getConflictingChanges().every { ThreeWayMerge.Conflict place -> place.elsewhere }
+                return conflict(path, elsewhere ? "the project and the feature both moved or added ${merge.getConflicts() == 1 ? 'a line' : "${merge.getConflicts()} lines"} of this file, " +
+                        'each to another place' : "the feature changes ${merge.getConflicts() == 1 ? 'lines' : "${merge.getConflicts()} places"} of this file that were changed " +
                         'in the project too, or lines next to them', binary, working, base, proposed, places(merge))
             }
             result = merge.getMerged()
             edited = !ThreeWayMerge.sameText(working.content, base)
+            if (merge.getChangedAlike() > 0) {
+                notes << ("your change and the feature's are the same in ${merge.getChangedAlike() == 1 ? 'one place' : "${merge.getChangedAlike()} places"} of this file, " +
+                        'and what both have there is there once').toString()
+            }
+            // The merge compares lines. What a line means in the two files that nearly everything of a
+            // feature goes into is looked at once more, in the result: for a word to whoever adds the
+            // feature, never for a change of the file
+            if (edited && path == BUILD_FILE) {
+                List<String> twice = declaredTwice(result) - declaredTwice(working.content) - declaredTwice(proposed)
+                for (String dependency : twice.take(MAX_PLACES)) {
+                    notes << ("the file now declares ${dependency} more than once: the project and the feature each have a line for it, and the merge, which " +
+                            'compares lines, cannot know that the two are one dependency. Keep one of them').toString()
+                }
+            }
+            if (edited && path.startsWith(CONFIGURATION_DIRECTORY) && path.endsWith('.yml')) {
+                List<String> twice = keysTwice(result) - keysTwice(working.content) - keysTwice(proposed)
+                if (!twice.isEmpty()) {
+                    return conflict(path, "the project and the feature each have the top-level ${twice.size() == 1 ? 'key' : 'keys'} ${named(twice)} in one document of this file, " +
+                            'in different places', binary, working, base, proposed,
+                            [("Merged, the file would have ${twice.size() == 1 ? 'that key' : 'those keys'} twice, and only one of the two would count. Put what the project has under " +
+                                     "${twice.size() == 1 ? 'it' : 'them'} where the generated file has ${twice.size() == 1 ? 'the key' : 'the keys'}, or take it out, add the feature " +
+                                     'again, and put it back under the one key').toString()])
+                }
+            }
         }
         // whether a file can be executed is one value: the project has it as it was generated, or as
         // the feature makes it
@@ -429,31 +465,99 @@ final class FeatureAddition {
         if (executable == null && Arrays.equals(result, working.content)) {
             return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
         }
-        return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed, [])
+        return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed, notes)
+    }
+
+    /**
+     * The dependencies a build file declares more than once for one configuration, by a scan of the
+     * lines of its {@code dependencies} blocks for the forms {@code implementation "group:artifact"}
+     * and {@code implementation "group:artifact:version"}, with either kind of quote and with or
+     * without parentheses. It is for a note, and reads no more than {@link #MAX_SCANNED} lines.
+     *
+     * @return each as {@code group:artifact for configuration}, in the order of the file
+     */
+    private static List<String> declaredTwice(byte[] buildFile) {
+        Map<String, Integer> declared = new LinkedHashMap<>()
+        boolean inBlock = false
+        for (String line : new String(buildFile, StandardCharsets.UTF_8).split('\n', MAX_SCANNED + 1).toList().take(MAX_SCANNED)) {
+            if (line.startsWith('dependencies {')) {
+                inBlock = true
+            } else if (line.startsWith('}')) {
+                inBlock = false
+            } else if (inBlock && line.length() <= MAX_SCANNED_LINE) {
+                Matcher dependency = DEPENDENCY.matcher(line)
+                if (dependency.find()) {
+                    declared.merge("${dependency.group(2)} for ${dependency.group(1)}".toString(), 1) { Integer one, Integer other -> one + other }
+                }
+            }
+        }
+        return declared.findAll { String dependency, Integer times -> times > 1 }.keySet().toList()
+    }
+
+    /**
+     * The top-level keys a YAML file has more than once in one of its documents, by a scan of its
+     * lines for a key at the beginning of a line; a line of {@code ---} begins a document. It reads no
+     * more than {@link #MAX_SCANNED} lines.
+     */
+    private static List<String> keysTwice(byte[] yaml) {
+        List<String> twice = []
+        Set<String> ofDocument = new HashSet<>()
+        for (String line : new String(yaml, StandardCharsets.UTF_8).split('\n', MAX_SCANNED + 1).toList().take(MAX_SCANNED)) {
+            String text = line.endsWith('\r') ? line.substring(0, line.length() - 1) : line
+            if (text.startsWith('---')) {
+                ofDocument.clear()
+            } else if (text.length() <= MAX_SCANNED_LINE) {
+                Matcher key = TOP_LEVEL_KEY.matcher(text)
+                if (key.matches() && !ofDocument.add(key.group(1)) && !twice.contains(key.group(1))) {
+                    twice << key.group(1)
+                }
+            }
+        }
+        return twice
     }
 
     private static PlannedFile conflict(String path, String reason, boolean binary, Working working, byte[] base, byte[] proposed, List<String> details) {
         return new PlannedFile(path, Action.CONFLICT, reason, binary, working.content, null, null, base, proposed, details)
     }
 
-    // Each place the two changed, with the lines of both, and what to do about it
+    // Each place the two changed, with the lines the generated file, the project and the feature have
+    // there and nothing that the three do not show, and what to do about it
     private static List<String> places(ThreeWayMerge merge) {
         List<String> lines = []
+        boolean elsewhere = false
+        boolean samePlace = false
         for (ThreeWayMerge.Conflict place : merge.getConflictingChanges().take(MAX_PLACES)) {
-            lines << (place.current.isEmpty() ? "before line ${place.line} the project removed lines, and the feature has there:" :
-                    "at line ${place.line} the project has:").toString()
-            if (!place.current.isEmpty()) {
-                lines.addAll(quoted(place.current))
-                lines << (place.proposed.isEmpty() ? 'and the feature removes lines there' : 'and the feature has there:')
+            if (place.elsewhere) {
+                elsewhere = true
+                lines << ((place.line > 0 ? "line ${place.line} of the project" : 'a line of the feature') + ' is a line the project and the feature both moved or added, ' +
+                        'each to another place; merged, the file would have it more often, or less often, than any of them has it:').toString()
+                lines.addAll(quoted(place.current.isEmpty() ? (place.proposed.isEmpty() ? place.base : place.proposed) : place.current))
+                continue
             }
+            samePlace = true
+            lines << "at line ${place.line} the generated file had ${counted(place.base)}".toString()
+            lines.addAll(quoted(place.base))
+            lines << "the project has ${counted(place.current, ' there')}".toString()
+            lines.addAll(quoted(place.current))
+            lines << "and the feature has ${counted(place.proposed, ' there')}".toString()
             lines.addAll(quoted(place.proposed))
         }
         if (merge.getConflicts() > MAX_PLACES) {
-            lines << "and ${merge.getConflicts() - MAX_PLACES} more places".toString()
+            lines << "and ${merge.getConflicts() - MAX_PLACES} more".toString()
         }
-        lines << 'Both changed the same place, so neither is taken for the other. Move the lines of the project that are shown to another place of the file, ' +
-                'with an unchanged line that is like no other line between (or take them out), add the feature again, and then put them where they belong'
+        if (samePlace) {
+            lines << 'Both changed the same place, so neither is taken for the other. Take the lines of the project out of that place, or move them past a line that ' +
+                    'neither changed, add the feature again, and then put them where they belong'
+        }
+        if (elsewhere) {
+            lines << 'A line both have in another place than the generated file is to be in one place: put it in the file of the project where the feature has it, ' +
+                    'or where the generated file had it, and add the feature again'
+        }
         return lines
+    }
+
+    private static String counted(List<String> lines, String where = '') {
+        return lines.isEmpty() ? "no lines${where}" : "${lines.size() == 1 ? '1 line' : "${lines.size()} lines"}${where}:"
     }
 
     private static List<String> quoted(List<String> lines) {
