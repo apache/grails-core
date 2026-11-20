@@ -31,6 +31,15 @@ class GroupedCriteriaTotalCountSpec extends GrailsDataTckSpec<GrailsDataHibernat
         manager.domainClasses.add(GroupedCountItem)
     }
 
+    static pageOfCities() {
+        GroupedCountItem.createCriteria().list(max: 2) {
+            projections {
+                groupProperty('city')
+            }
+            order('city')
+        }
+    }
+
     void setup() {
         ['a', 'a', 'a', 'b', 'b', 'c'].eachWithIndex { String city, int i ->
             new GroupedCountItem(name: "item$i", city: city).save(failOnError: true)
@@ -68,6 +77,34 @@ class GroupedCriteriaTotalCountSpec extends GrailsDataTckSpec<GrailsDataHibernat
         results.totalCount == 2
     }
 
+    void "the null values of the grouped property are one group of the total"() {
+        given:
+        new GroupedCountItem(name: 'none1', city: null).save(failOnError: true)
+        new GroupedCountItem(name: 'none2', city: null).save(flush: true, failOnError: true)
+        manager.session.clear()
+
+        when:
+        def results = GroupedCriteriaTotalCountSpec.pageOfCities()
+
+        then: 'a, b, c and the group of the nulls'
+        results.totalCount == 4
+    }
+
+    void "totalCount of a criteria grouped by two properties is the number of their combinations"() {
+        when:
+        def results = GroupedCountItem.createCriteria().list(max: 2) {
+            projections {
+                groupProperty('city')
+                groupProperty('name')
+            }
+            order('name')
+        }
+
+        then: 'every item has its own name, so every row is a group'
+        results.size() == 2
+        results.totalCount == 6
+    }
+
     void "totalCount of an ungrouped criteria still counts the rows"() {
         when:
         def results = GroupedCountItem.createCriteria().list(max: 2) {
@@ -84,4 +121,8 @@ class GroupedCriteriaTotalCountSpec extends GrailsDataTckSpec<GrailsDataHibernat
 class GroupedCountItem {
     String name
     String city
+
+    static constraints = {
+        city nullable: true
+    }
 }

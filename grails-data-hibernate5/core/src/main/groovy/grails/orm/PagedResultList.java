@@ -24,7 +24,11 @@ import java.util.Iterator;
 import org.hibernate.Criteria;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
+import org.hibernate.criterion.Projection;
+import org.hibernate.criterion.ProjectionList;
 import org.hibernate.criterion.Projections;
+import org.hibernate.criterion.PropertyProjection;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.internal.CriteriaImpl;
 
 import org.grails.orm.hibernate.GrailsHibernateTemplate;
@@ -70,29 +74,60 @@ public class PagedResultList extends grails.gorm.PagedResultList {
             totalCount = hibernateTemplate.execute(new GrailsHibernateTemplate.HibernateCallback<>() {
                 public Integer doInHibernate(Session session) throws HibernateException, SQLException {
                     CriteriaImpl impl = (CriteriaImpl) criteria;
-                    Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());
-                    hibernateTemplate.applySettings(totalCriteria);
-
-                    Iterator iterator = impl.iterateExpressionEntries();
-                    while (iterator.hasNext()) {
-                        CriteriaImpl.CriterionEntry entry = (CriteriaImpl.CriterionEntry) iterator.next();
-                        totalCriteria.add(entry.getCriterion());
+                    Projection projection = impl.getProjection();
+                    if (projection != null && projection.isGrouped()) {
+                        return countGroups(session, impl, projection);
                     }
-                    Iterator subcriteriaIterator = impl.iterateSubcriteria();
-                    while (subcriteriaIterator.hasNext()) {
-                        CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
-                        totalCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
-                    }
-                    if (impl.getProjection() != null && impl.getProjection().isGrouped()) {
-                        totalCriteria.setProjection(impl.getProjection());
-                        return totalCriteria.list().size();
-                    }
+                    Criteria totalCriteria = totalCriteria(session, impl);
                     totalCriteria.setProjection(Projections.rowCount());
                     return ((Number) totalCriteria.uniqueResult()).intValue();
                 }
             });
         }
         return totalCount;
+    }
+
+    private Criteria totalCriteria(Session session, CriteriaImpl impl) {
+        Criteria totalCriteria = session.createCriteria(impl.getEntityOrClassName());
+        hibernateTemplate.applySettings(totalCriteria);
+
+        Iterator iterator = impl.iterateExpressionEntries();
+        while (iterator.hasNext()) {
+            CriteriaImpl.CriterionEntry entry = (CriteriaImpl.CriterionEntry) iterator.next();
+            totalCriteria.add(entry.getCriterion());
+        }
+        Iterator subcriteriaIterator = impl.iterateSubcriteria();
+        while (subcriteriaIterator.hasNext()) {
+            CriteriaImpl.Subcriteria sub = (CriteriaImpl.Subcriteria) subcriteriaIterator.next();
+            totalCriteria.createAlias(sub.getPath(), sub.getAlias(), sub.getJoinType(), sub.getWithClause());
+        }
+        return totalCriteria;
+    }
+
+    /**
+     * The number of groups of a grouped criteria. A projection that is one grouped property is counted by the database,
+     * as the distinct values of the property plus the group of its null values, which SQL groups but does not count as a
+     * value. Any other grouped projection is counted from its groups.
+     */
+    private int countGroups(Session session, CriteriaImpl impl, Projection projection) {
+        Projection only = projection;
+        if (projection instanceof ProjectionList && ((ProjectionList) projection).getLength() == 1) {
+            only = ((ProjectionList) projection).getProjection(0);
+        }
+        if (only instanceof PropertyProjection && ((PropertyProjection) only).isGrouped()) {
+            String property = ((PropertyProjection) only).getPropertyName();
+            Criteria distinct = totalCriteria(session, impl);
+            distinct.setProjection(Projections.countDistinct(property));
+            int groups = ((Number) distinct.uniqueResult()).intValue();
+
+            Criteria nulls = totalCriteria(session, impl);
+            nulls.add(Restrictions.isNull(property));
+            nulls.setProjection(Projections.rowCount());
+            return ((Number) nulls.uniqueResult()).longValue() > 0 ? groups + 1 : groups;
+        }
+        Criteria grouped = totalCriteria(session, impl);
+        grouped.setProjection(projection);
+        return grouped.list().size();
     }
 
     public void setTotalCount(int totalCount) {
