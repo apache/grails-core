@@ -72,7 +72,7 @@ class FormerCommandsSpec extends CommandSpec {
         out.toString().isEmpty()
         lines[0].startsWith("There is no command ${typed}")
         lines[1] == said
-        lines[2] == 'Usage: grails-forge-cli [-hvVx] [COMMAND]'
+        lines[2] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
 
         where:
         typed                      | said
@@ -155,7 +155,7 @@ class FormerCommandsSpec extends CommandSpec {
         lines[0].contains('create-taglib')
         lines[1] == MISSING
         lines[2] == 'create-tag-lib was another name of create-taglib in the Grails shell. Type: grails-forge-cli create-taglib'
-        lines[3] == 'Usage: grails-forge-cli [-hvVx] [COMMAND]'
+        lines[3] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
         !new File(top, 'web/grails-app/taglib/example/FormatTagLib.groovy').exists()
 
         when: 'a command of another kind of project'
@@ -246,7 +246,7 @@ class FormerCommandsSpec extends CommandSpec {
         !said.contains('Grails shell')
         !said.contains('\u001b')
         !said.contains('\u0007')
-        said.readLines().findAll { it.startsWith('Usage: ') } == ['Usage: grails-forge-cli [-hvVx] [COMMAND]']
+        said.readLines().findAll { it.startsWith('Usage: ') } == ['Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]']
 
         where:
         typed                          | shown
@@ -276,7 +276,7 @@ class FormerCommandsSpec extends CommandSpec {
         exit == 2
         lines[0].startsWith('There is no command ')
         lines[1] == 'An exclamation mark ran a program from the interactive mode of the Grails shell. It has no replacement in grails-forge-cli'
-        lines[2] == 'Usage: grails-forge-cli [-hvVx] [COMMAND]'
+        lines[2] == 'Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]'
         !err.toString().contains('\u001b')
         lines.findAll { it.contains('/etc') }.size() <= 1
 
@@ -311,7 +311,7 @@ class FormerCommandsSpec extends CommandSpec {
         then:
         exit == 0
         err.toString().isEmpty()
-        out.toString().startsWith('Usage: grails-forge-cli [-hvVx] [COMMAND]')
+        out.toString().startsWith('Usage: grails-forge-cli [-hvVx] [--non-interactive] [--plain-output] [COMMAND]')
 
         when: 'a name of the table as the argument of a command'
         out.reset()
