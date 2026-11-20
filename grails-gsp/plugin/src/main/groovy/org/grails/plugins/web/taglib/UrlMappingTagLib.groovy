@@ -220,9 +220,10 @@ class UrlMappingTagLib implements TagLibrary {
             }
 
             // display paginate steps
+            def currentStepClass = codecLookup.lookupEncoder('HTML').encode([attrs.get('class') ?: '', activeClass].join(' ').trim())
             (beginstep..endstep).each { int i ->
                 if (currentstep == i) {
-                    writer << "<span class=\"${[attrs.get('class') ?: '', activeClass].join(' ').trim()}\">${i}</span>"
+                    writer << "<span class=\"${currentStepClass}\">${i}</span>"
                 }
                 else {
                     linkParams.offset = (i - 1) * max

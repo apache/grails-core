@@ -1208,3 +1208,23 @@ As of Grails 7.0.18, the list of bindable properties that Grails generates for a
 * Request data bound into an association that was loaded lazily, as `book.properties = params` binds the nested `author` parameters into the book's author, is bound by the list generated for the association's class. Previously an association that was still a proxy was bound without restriction.
 * A class that gets the list now carries it as a new `public static final` field. A class that implements `Serializable` without declaring a `serialVersionUID`, such as a `Validateable` object kept in a persisted HTTP session or in a distributed cache, therefore gets a new default `serialVersionUID`, and instances serialized before the upgrade do not deserialize after it. Declare a `serialVersionUID` on such a class.
 * A controller compiled against a command object that was compiled without the list, by an earlier version of Grails or without the data binding library, warns that the command object is bound without restriction and should be recompiled.
+
+==== 24. More GSP tags HTML-encode the attribute values they write
+
+These tags now HTML-encode the values they write into attributes, as `<g:link>` and `<g:textField>` already did and as these tags already encoded their other attributes:
+
+* `<g:form>` and `<g:formActionSubmit>`: the URL in `action` and `formaction`, and the hidden fields that a `RequestDataValueProcessor` adds to a form.
+* `<g:checkBox>`: `name`, `value`, `form`, and the `id` taken from the name, on the checkbox and on its hidden field.
+* `<g:actionSubmit>` and `<g:actionSubmitImage>`: `value`, the `action` in the button's name, and `src`.
+* `<g:datePicker>`: `name`, `id` and `selectDateClass`, on the labels, the hidden field and each select.
+* `<g:radio>` and `<g:radioGroup>`: `name`, and on `<g:radio>` the `id` taken from it.
+* `<g:select>`: the key of `noSelection`.
+* `<g:field>`: `type`.
+* `<g:withTag>`: the values of `attrs` that are not closures.
+* `<g:external>`: `uri`.
+* `<g:paginate>`: `class`, on the current step.
+* `<g:renderException>`: `detailsClass`, `stackClass`, `filenameClass`, `snippetClass`, `lineClass`, `lineNumberClass` and `lineErrorClass`.
+
+The browser decodes the attribute, so a value without a character reference reaches it unchanged. The markup changes, though: an `&` in the URL of a form is written as `+&amp;+`, as `<g:link>` writes it in an `href`.
+
+A value encoded with `encodeAsHTML()` before it reaches the tag is written once, not encoded again. There are two exceptions. The tag builds the URL of `<g:form>` and `<g:formActionSubmit>` from its attributes, and joins the class of `<g:paginate>` with `currentStep`, and only then encodes the result, so a value encoded beforehand is encoded twice there, as it already was in the `href` of `<g:link>`. Pass those values unencoded. A character reference written in the page, as in `+name="a&amp;b"+`, is encoded as well: write the character itself.

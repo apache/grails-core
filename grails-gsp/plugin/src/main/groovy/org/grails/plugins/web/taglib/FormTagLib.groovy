@@ -179,7 +179,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         attrs.value = processFormFieldValueIfNecessary(attrs.name, attrs.value, attrs.type)
 
-        out << "<input type=\"${attrs.remove('type')}\" "
+        out << "<input type=\"${encodeAttributeValue(attrs.remove('type'))}\" "
         outputAttributes(attrs, out, true)
         out << '/>'
     }
@@ -237,25 +237,28 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         value = processFormFieldValueIfNecessary(name, value, 'checkbox')
         hiddenValue = processFormFieldValueIfNecessary("_${name}", hiddenValue, 'hidden')
 
+        // The hidden field name is built from the encoded name, so that a name encoded before it reached the tag
+        // is not encoded a second time in one of the two fields. The encoded name holds no other dots than the name.
+        String htmlName = encodeAttributeValue(name).toString()
         def hiddenFieldName
-        if (name.indexOf('.') == -1) {
-            hiddenFieldName = "_${name}"
+        if (htmlName.indexOf('.') == -1) {
+            hiddenFieldName = "_${htmlName}"
         } else {
-            def lastDot = name.lastIndexOf('.')
-            hiddenFieldName = name[0..lastDot] + '_'
-            if (lastDot + 1 != name.length()) {
-                hiddenFieldName += name[(lastDot + 1)..-1]
+            def lastDot = htmlName.lastIndexOf('.')
+            hiddenFieldName = htmlName[0..lastDot] + '_'
+            if (lastDot + 1 != htmlName.length()) {
+                hiddenFieldName += htmlName[(lastDot + 1)..-1]
             }
         }
 
         out << "<input type=\"hidden\" name=\"${hiddenFieldName}\""
         if (hiddenValue != '') {
-            out << " value=\"${hiddenValue}\""
+            out << " value=\"${encodeAttributeValue(hiddenValue)}\""
         }
         if (formName) {
-            out << " form=\"${formName}\""
+            out << " form=\"${encodeAttributeValue(formName)}\""
         }
-        out << " /><input type=\"checkbox\" name=\"${name}\" "
+        out << " /><input type=\"checkbox\" name=\"${htmlName}\" "
         if (checkedAttributeWasSpecified) {
             if (checked) {
                 out << 'checked="checked" '
@@ -267,13 +270,13 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         def outputValue = !(unprocessed instanceof Boolean || unprocessed?.getClass() == boolean)
         if (outputValue) {
-            out << "value=\"${value}\" "
+            out << "value=\"${encodeAttributeValue(value)}\" "
         }
         // process remaining attributes
         outputAttributes(attrs, out)
 
         if (!attrs.containsKey('id')) {
-            out << """id="${name}" """
+            out << """id="${htmlName}" """
         }
 
         // close the tag, with no body
@@ -363,6 +366,15 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
     }
 
     /**
+     * Encodes a value written into a quoted attribute with the same HTML encoder as the other attributes.
+     */
+    @CompileStatic
+    protected Object encodeAttributeValue(Object value) {
+        Encoder htmlEncoder = codecLookup?.lookupEncoder('HTML')
+        htmlEncoder != null ? htmlEncoder.encode(value) : value
+    }
+
+    /**
      * Dump out attributes in HTML compliant fashion.
      */
     @CompileStatic
@@ -432,7 +444,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             link = requestDataValueProcessor.processAction(request, link, request.method)
         }
 
-        writer << link
+        writer << encodeAttributeValue(link)
         writer << '" '
 
         // if URL is not null remove attributes
@@ -505,7 +517,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
      */
     private void writeHiddenFields(hiddenFields) {
         def writer = getOut()
-        hiddenFields.each { key, value -> writer << "<input type=\"hidden\" name=\"${key}\" value=\"${value}\" />\n" }
+        hiddenFields.each { key, value -> writer << "<input type=\"hidden\" name=\"${encodeAttributeValue(key)}\" value=\"${encodeAttributeValue(value)}\" />\n" }
     }
 
     /**
@@ -546,7 +558,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         value = processFormFieldValueIfNecessary("_action_${action}", value, 'submit')
         booleanToAttribute(attrs, 'disabled')
 
-        out << "<input type=\"submit\" name=\"_action_${action}\" value=\"${value}\" "
+        out << "<input type=\"submit\" name=\"_action_${encodeAttributeValue(action)}\" value=\"${encodeAttributeValue(value)}\" "
 
         // process remaining attributes
         outputAttributes(attrs, out)
@@ -606,7 +618,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             link = requestDataValueProcessor.processAction(request, link, request.method)
         }
 
-        out << link
+        out << encodeAttributeValue(link)
         out << '" '
 
         attrs.keySet().removeAll(LinkGenerator.LINK_ATTRIBUTES)
@@ -649,16 +661,16 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         def value = attrs.remove('value')
         def action = attrs.remove('action') ?: value
         //Change this button to use requestDataValueProcessor
-        value = processFormFieldValueIfNecessary("_action_${action}", "${value}", 'image')
+        value = processFormFieldValueIfNecessary("_action_${action}", value, 'image')
         booleanToAttribute(attrs, 'disabled')
 
-        out << "<input type=\"image\" name=\"_action_${action}\" value=\"${value}\" "
+        out << "<input type=\"image\" name=\"_action_${encodeAttributeValue(action)}\" value=\"${encodeAttributeValue(value)}\" "
 
         // add image src
         def src = attrs.remove('src')
         if (src) {
             src = processedUrl(src, request)
-            out << "src=\"${src}\" "
+            out << "src=\"${encodeAttributeValue(src)}\" "
         }
 
         // process remaining attributes
@@ -788,18 +800,20 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         booleanToAttribute(attrs, 'disabled')
         booleanToAttribute(attrs, 'readonly')
-        out.println("<label style=\"display:none;\" for=\"${name}_day\" id=\"label_${name}_day\">Day</label>")
-        out.println("<label style=\"display:none;\" for=\"${name}_month\" id=\"label_${name}_month\">Month</label>")
-        out.println("<label style=\"display:none;\" for=\"${name}_year\" id=\"label_${name}_year\">Year</label>")
-        out.println("<label style=\"display:none;\" for=\"${name}_hour\" id=\"label_${name}_hour\">Hour</label>")
-        out.println("<label style=\"display:none;\" for=\"${name}_minute\" id=\"label_${name}_minute\">Minute</label>")
+        def htmlName = encodeAttributeValue(name)
+        def htmlId = encodeAttributeValue(id)
+        out.println("<label style=\"display:none;\" for=\"${htmlName}_day\" id=\"label_${htmlName}_day\">Day</label>")
+        out.println("<label style=\"display:none;\" for=\"${htmlName}_month\" id=\"label_${htmlName}_month\">Month</label>")
+        out.println("<label style=\"display:none;\" for=\"${htmlName}_year\" id=\"label_${htmlName}_year\">Year</label>")
+        out.println("<label style=\"display:none;\" for=\"${htmlName}_hour\" id=\"label_${htmlName}_hour\">Hour</label>")
+        out.println("<label style=\"display:none;\" for=\"${htmlName}_minute\" id=\"label_${htmlName}_minute\">Minute</label>")
         // Change this hidden to use requestDataValueProcessor
         def dateStructValue = processFormFieldValueIfNecessary("${name}", 'date.struct', 'hidden')
-        out.println("<input type=\"hidden\" name=\"${name}\" value=\"${dateStructValue}\" />")
+        out.println("<input type=\"hidden\" name=\"${htmlName}\" value=\"${encodeAttributeValue(dateStructValue)}\" />")
 
         // create day select
         if (precision >= PRECISION_RANKINGS['day']) {
-            out.println("<select name=\"${name}_day\" id=\"${id}_day\" aria-labelledby=\"${name} ${name}_day\"")
+            out.println("<select name=\"${htmlName}_day\" id=\"${htmlId}_day\" aria-labelledby=\"${htmlName} ${htmlName}_day\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -807,7 +821,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="' + attrs.selectDateClass + '"'
+                out << ' class="' + encodeAttributeValue(attrs.selectDateClass) + '"'
             }
             out << '>'
 
@@ -819,14 +833,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             for (i in 1..31) {
                 // Change this option to use requestDataValueProcessor
                 def dayIndex = processFormFieldValueIfNecessary("${name}_day", "${i}", 'option')
-                out.println("<option value=\"${dayIndex}\"${i == day ? ' selected="selected"' : ''}>${i}</option>")
+                out.println("<option value=\"${encodeAttributeValue(dayIndex)}\"${i == day ? ' selected="selected"' : ''}>${i}</option>")
             }
             out.println('</select>')
         }
 
         // create month select
         if (precision >= PRECISION_RANKINGS['month']) {
-            out.println("<select name=\"${name}_month\" id=\"${id}_month\" aria-labelledby=\"${name} ${name}_month\"")
+            out.println("<select name=\"${htmlName}_month\" id=\"${htmlId}_month\" aria-labelledby=\"${htmlName} ${htmlName}_month\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -834,7 +848,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="' + attrs.selectDateClass + '"'
+                out << ' class="' + encodeAttributeValue(attrs.selectDateClass) + '"'
             }
             out << '>'
 
@@ -847,7 +861,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 if (m) {
                     def monthIndex = i + 1
                     monthIndex = processFormFieldValueIfNecessary("${name}_month", "${monthIndex}", 'option')
-                    out.println("<option value=\"${monthIndex}\"${i == month ? ' selected="selected"' : ''}>$m</option>")
+                    out.println("<option value=\"${encodeAttributeValue(monthIndex)}\"${i == month ? ' selected="selected"' : ''}>$m</option>")
                 }
             }
             out.println('</select>')
@@ -855,7 +869,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         // create year select
         if (precision >= PRECISION_RANKINGS['year']) {
-            out.println("<select name=\"${name}_year\" id=\"${id}_year\" aria-labelledby=\"${name} ${name}_year\"")
+            out.println("<select name=\"${htmlName}_year\" id=\"${htmlId}_year\" aria-labelledby=\"${htmlName} ${htmlName}_year\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -863,7 +877,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="' + attrs.selectDateClass + '"'
+                out << ' class="' + encodeAttributeValue(attrs.selectDateClass) + '"'
             }
             out << '>'
 
@@ -875,14 +889,14 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
             for (i in years) {
                 // Change this year option to use requestDataValueProcessor
                 def yearIndex  = processFormFieldValueIfNecessary("${name}_year", "${i}", 'option')
-                out.println("<option value=\"${yearIndex}\"${i == year ? ' selected="selected"' : ''}>${i}</option>")
+                out.println("<option value=\"${encodeAttributeValue(yearIndex)}\"${i == year ? ' selected="selected"' : ''}>${i}</option>")
             }
             out.println('</select>')
         }
 
         // do hour select
         if (precision >= PRECISION_RANKINGS['hour']) {
-            out.println("<select name=\"${name}_hour\" id=\"${id}_hour\" aria-labelledby=\"${name} ${name}_hour\"")
+            out.println("<select name=\"${htmlName}_hour\" id=\"${htmlId}_hour\" aria-labelledby=\"${htmlName} ${htmlName}_hour\"")
             if (attrs.disabled) {
                 out << ' disabled="disabled"'
             }
@@ -890,7 +904,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << ' readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="' + attrs.selectDateClass + '"'
+                out << ' class="' + encodeAttributeValue(attrs.selectDateClass) + '"'
             }
             out << '>'
 
@@ -904,7 +918,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 if (i < 10) h = '0' + h
                 // This option add hour to requestDataValueProcessor
                 h  = processFormFieldValueIfNecessary("${name}_hour", "${h}", 'option')
-                out.println("<option value=\"${h}\"${i == hour ? ' selected="selected"' : ''}>$h</option>")
+                out.println("<option value=\"${encodeAttributeValue(h)}\"${i == hour ? ' selected="selected"' : ''}>$h</option>")
             }
             out.println('</select> :')
 
@@ -916,7 +930,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         // do minute select
         if (precision >= PRECISION_RANKINGS['minute']) {
-            out.println("<select name=\"${name}_minute\" id=\"${id}_minute\" aria-labelledby=\"${name} ${name}_minute\"")
+            out.println("<select name=\"${htmlName}_minute\" id=\"${htmlId}_minute\" aria-labelledby=\"${htmlName} ${htmlName}_minute\"")
             if (attrs.disabled) {
                 out << 'disabled="disabled"'
             }
@@ -924,7 +938,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 out << 'readonly="readonly"'
             }
             if (attrs.selectDateClass) {
-                out << ' class="' + attrs.selectDateClass + '"'
+                out << ' class="' + encodeAttributeValue(attrs.selectDateClass) + '"'
             }
             out << '>'
 
@@ -937,7 +951,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
                 def m = '' + i
                 if (i < 10) m = '0' + m
                 m  = processFormFieldValueIfNecessary("${name}_minute", "${m}", 'option')
-                out.println("<option value=\"${m}\"${i == minute ? ' selected="selected"' : ''}>$m</option>")
+                out.println("<option value=\"${encodeAttributeValue(m)}\"${i == minute ? ' selected="selected"' : ''}>$m</option>")
             }
             out.println('</select>')
         }
@@ -949,7 +963,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
     def renderNoSelectionOptionImpl(out, noSelectionKey, noSelectionValue, value) {
         // If a label for the '--Please choose--' first item is supplied, write it out
-        out << "<option value=\"${(noSelectionKey == null ? '' : noSelectionKey)}\"${noSelectionKey == value ? ' selected="selected"' : ''}>${noSelectionValue.encodeAsHTML()}</option>"
+        out << "<option value=\"${(noSelectionKey == null ? '' : encodeAttributeValue(noSelectionKey))}\"${noSelectionKey == value ? ' selected="selected"' : ''}>${noSelectionValue.encodeAsHTML()}</option>"
     }
 
     /**
@@ -1269,9 +1283,9 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
 
         def checked = attrs.remove('checked') ? true : false
         value = processFormFieldValueIfNecessary(name, "${value?.toString()?.encodeAsHTML()}", 'radio')
-        out << "<input type=\"radio\" name=\"${name}\"${ checked ? ' checked="checked" ' : ' '}value=\"${value?.toString()?.encodeAsHTML()}\" "
+        out << "<input type=\"radio\" name=\"${encodeAttributeValue(name)}\"${ checked ? ' checked="checked" ' : ' '}value=\"${value?.toString()?.encodeAsHTML()}\" "
         if (!attrs.containsKey('id')) {
-            out << """id="${name}" """
+            out << """id="${encodeAttributeValue(name)}" """
         }
         // process remaining attributes
         outputAttributes(attrs, out)
@@ -1301,7 +1315,7 @@ class FormTagLib implements ApplicationContextAware, InitializingBean, TagLibrar
         values.eachWithIndex { val, idx ->
             def it = new Expando()
             def radioWriter = new FastStringWriter()
-            radioWriter << "<input type=\"radio\" name=\"${name}\" "
+            radioWriter << "<input type=\"radio\" name=\"${encodeAttributeValue(name)}\" "
             if (value?.toString().equals(val.toString())) {
                 radioWriter << 'checked="checked" '
             }
