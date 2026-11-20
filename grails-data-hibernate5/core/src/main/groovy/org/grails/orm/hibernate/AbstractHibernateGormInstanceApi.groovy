@@ -27,6 +27,7 @@ import org.hibernate.LockMode
 import org.hibernate.Session
 import org.hibernate.SessionFactory
 import org.hibernate.engine.internal.ForeignKeys
+import org.hibernate.engine.spi.EntityEntry
 import org.hibernate.engine.spi.SessionImplementor
 
 import org.springframework.beans.BeanWrapperImpl
@@ -277,8 +278,12 @@ abstract class AbstractHibernateGormInstanceApi<D> extends GormInstanceApi<D> {
             // Hibernate's own test for an instance that merge() inserts: the id and version unsaved values, and for
             // an id it cannot judge a look at the row. A new instance is left alone after the insert, whatever id
             // type it has and whatever changes it tracks.
-            boolean inserted = ForeignKeys.isTransient(target.getClass().name, target, null, (SessionImplementor) session)
+            boolean transientBefore = ForeignKeys.isTransient(target.getClass().name, target, null, (SessionImplementor) session)
             Object merged = session.merge(target)
+            // an interceptor that says the instance is not transient sends merge down the detached path, which finds
+            // no row and inserts one: the entry of the merged instance says that it does not exist in the database yet
+            EntityEntry mergedEntry = ((SessionImplementor) session).persistenceContext.getEntry(merged)
+            boolean inserted = transientBefore || (mergedEntry != null && !mergedEntry.existsInDatabase)
             if (!inserted && merged instanceof DirtyCheckable && !merged.is(target)) {
                 if (changedWithoutNames) {
                     ((DirtyCheckable) merged).markDirty()
