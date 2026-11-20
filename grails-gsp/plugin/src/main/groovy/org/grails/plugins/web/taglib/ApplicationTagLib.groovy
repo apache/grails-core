@@ -357,7 +357,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
         // Allow attrs to overwrite any constants
         attrs.each { typeInfo.remove(it.key) }
 
-        out << writer(processedUrl(uri, request), typeInfo, attrs)
+        out << writer(processedUrl(uri, request).encodeAsHTML(), typeInfo, attrs)
         out << '\r\n'
     }
 
@@ -433,7 +433,7 @@ class ApplicationTagLib implements ApplicationContextAware, InitializingBean, Gr
                 writer << '"'
             }
             else {
-                writer << " $k=\"$v\""
+                writer << " $k=\"${v.encodeAsHTML()}\""
             }
         }
         writer << '>'
