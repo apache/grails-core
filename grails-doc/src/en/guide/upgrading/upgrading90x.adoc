@@ -1584,8 +1584,10 @@ where the Grails rules answer as for a client that accepts any type, with the `a
 leniently. Code that reads `response.format` or `response.mimeType` must allow for `null`.
 * *The `format` parameter and URL extensions.* A format no type is configured for is not acceptable, to `respond`, which
 answers `406`, and to what Spring MVC writes, where the Grails rules answer in the first configured format;
-`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that
-`spring.mvc.contentnegotiation.media-types` maps, such as `plain: text/plain`, decides what Spring MVC writes, as
+`withFormat` answers it from the `Accept` header, as for a format it has no block for. A format that Spring MVC's
+content negotiation manager maps, such as one `spring.mvc.contentnegotiation.media-types` adds (`plain: text/plain`) or
+one of the defaults Spring MVC registers for its message converters (`json`, and `xml`, `atom`, `rss`, `smile`, `cbor`
+and `yaml` where their libraries are on the classpath), whatever its case, decides what Spring MVC writes, as
 without the setting where `spring.mvc.contentnegotiation.favor-parameter` is on, while `respond` still answers `406`
 for it. The `all` format leaves the format to the `Accept` header: `?format=all` with `Accept: application/json` is `json`, where it is otherwise `all`. The
 first value of the parameter counts.

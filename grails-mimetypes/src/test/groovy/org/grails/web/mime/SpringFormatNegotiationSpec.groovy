@@ -468,6 +468,20 @@ class SpringFormatNegotiationSpec extends Specification {
         'and with parameter negotiation, still not acceptable' | true           | 'unknown' || 'not acceptable'
     }
 
+    void "a format grails.mime.types does not list is written in the type Spring MVC maps it to by default, as #format"() {
+        given: 'grails.mime.types without json, which Spring MVC maps by default for its JSON message converter'
+        start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', xml: 'application/xml'])
+        def request = request('Accept': 'application/xml')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.APPLICATION_JSON]
+
+        where:
+        format << ['json', 'JSON']
+    }
+
     void "a format Grails configures keeps the types grails.mime.types gives it, whatever type Spring MVC's media types map it to"() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', json: 'application/json', plain: 'text/csv'],

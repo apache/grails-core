@@ -261,9 +261,11 @@ class GrailsContentNegotiationStrategy {
     }
 
     /**
-     * The media type Spring MVC's content negotiation manager maps a format to, as {@code spring.mvc.contentnegotiation.media-types}
-     * maps one, for a format no type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request
-     * that names it is in that type, as without {@code grails.mime.negotiation.spring}.
+     * The media type Spring MVC's content negotiation manager maps a format to, whatever its case, for a format no
+     * type of {@code grails.mime.types} stands for, so that what Spring MVC writes for a request that names it is in
+     * that type, as without {@code grails.mime.negotiation.spring}. The manager maps the formats
+     * {@code spring.mvc.contentnegotiation.media-types} adds and the defaults Spring MVC registers for the message
+     * converters present, such as {@code json}.
      *
      * @param format the format
      * @return the media type, as a list, or {@code null} where the manager maps no type to the format
