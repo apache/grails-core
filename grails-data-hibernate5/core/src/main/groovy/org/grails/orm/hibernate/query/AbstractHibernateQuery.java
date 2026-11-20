@@ -99,6 +99,9 @@ public abstract class AbstractHibernateQuery extends Query {
     protected String alias;
     protected int aliasCount;
     protected Map<String, CriteriaAndAlias> createdAssociationPaths = new HashMap<>();
+
+    /** The joins made to order by a property of an association, by association path, so each association is joined once. */
+    private final Map<String, Criteria> sortJoins = new HashMap<>();
     protected LinkedList<String> aliasStack = new LinkedList<>();
     protected LinkedList<PersistentEntity> entityStack = new LinkedList<>();
     protected LinkedList<Association> associationStack = new LinkedList<>();
@@ -638,8 +641,7 @@ public abstract class AbstractHibernateQuery extends Query {
                     }
                     else {
                         if (criteria != null) {
-                            Criteria subCriteria = criteria.createCriteria(sortHead);
-                            addOrderToCriteria(subCriteria, sortTail, order);
+                            addOrderThroughJoins(criteria, entity, property, order, "");
                         }
                         else if (detachedCriteria != null) {
                             DetachedCriteria subDetachedCriteria = detachedCriteria.createCriteria(sortHead);
@@ -655,6 +657,22 @@ public abstract class AbstractHibernateQuery extends Query {
         }
 
         return this;
+    }
+
+    private void addOrderThroughJoins(Criteria c, PersistentEntity owner, String property, Order order, String path) {
+        int dot = property.indexOf('.');
+        PersistentProperty head = dot < 0 ? null : owner.getPropertyByName(property.substring(0, dot));
+        if (!(head instanceof Association) || head instanceof Embedded) {
+            addOrderToCriteria(c, property, order);
+            return;
+        }
+        String joinedPath = path + head.getName();
+        Criteria joined = sortJoins.get(joinedPath);
+        if (joined == null) {
+            joined = c.createCriteria(head.getName());
+            sortJoins.put(joinedPath, joined);
+        }
+        addOrderThroughJoins(joined, ((Association) head).getAssociatedEntity(), property.substring(dot + 1), order, joinedPath + ".");
     }
 
     private void addSimpleOrder(Order order, String property) {

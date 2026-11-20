@@ -33,13 +33,15 @@ import spock.lang.Unroll
 class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManager> {
 
     void setupSpec() {
-        manager.domainClasses.addAll([MsAuthor, MsBook])
+        manager.domainClasses.addAll([MsPublisher, MsAuthor, MsBook])
     }
 
     void setup() {
-        MsAuthor ann = new MsAuthor(name: 'ann', active: true).save(failOnError: true)
-        MsAuthor bob = new MsAuthor(name: 'bob', active: true).save(failOnError: true)
-        MsAuthor cat = new MsAuthor(name: 'cat', active: false).save(failOnError: true)
+        MsPublisher north = new MsPublisher(name: 'north', country: 'us').save(failOnError: true)
+        MsPublisher south = new MsPublisher(name: 'south', country: 'de').save(failOnError: true)
+        MsAuthor ann = new MsAuthor(name: 'ann', active: true, publisher: south).save(failOnError: true)
+        MsAuthor bob = new MsAuthor(name: 'bob', active: true, publisher: north).save(failOnError: true)
+        MsAuthor cat = new MsAuthor(name: 'cat', active: false, publisher: south).save(failOnError: true)
         new MsBook(title: 'zeta', author: bob, tags: ['x', 'y']).save(failOnError: true)
         new MsBook(title: 'beta', author: ann).save(failOnError: true)
         new MsBook(title: 'alpha', author: ann, tags: ['x']).save(failOnError: true)
@@ -81,6 +83,63 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
         }*.title == ['zeta', 'alpha', 'beta', 'omega']
     }
 
+    private static Object valueAt(Object book, String path) {
+        path.split('\\.').inject(book) { Object current, String name -> current[name] }
+    }
+
+    private static List<String> sortedTitles(Map<String, String> sort) {
+        List<MsBook> books = MsBook.list()
+        books.sort(false) { MsBook a, MsBook b ->
+            int result = 0
+            sort.each { String property, String direction ->
+                if (result == 0) {
+                    result = valueAt(a, property) <=> valueAt(b, property)
+                    if (direction == 'desc') {
+                        result = -result
+                    }
+                }
+            }
+            result
+        }*.title
+    }
+
+    @Unroll
+    void "a map sort #sort of a query with #context lists the books in that order"() {
+        given:
+        Map<String, String> sortMap = new LinkedHashMap<String, String>(sort)
+        List<String> expected = sortedTitles(sortMap)
+
+        when:
+        List<MsBook> found = query.call(sortMap)
+
+        then:
+        found*.title == expected
+
+        where:
+        [sort, context, query] << [
+                [
+                        ['author.name': 'asc', 'author.active': 'desc'],
+                        ['author.name': 'asc', 'author.publisher.name': 'desc'],
+                        ['author.publisher.name': 'desc', 'author.name': 'asc'],
+                        ['author.publisher.name': 'asc', 'author.publisher.country': 'desc', title: 'asc'],
+                        [title: 'desc', 'author.publisher.name': 'asc', 'author.name': 'desc'],
+                        ['author.publisher.country': 'asc', 'author.active': 'asc', title: 'asc']
+                ],
+                [
+                        ['no block of its own', { Map arg -> MsBook.createCriteria().list(sort: arg) { gt('id', 0L) } }],
+                        ['a block on the author', { Map arg -> MsBook.createCriteria().list(sort: arg) { author { isNotNull('name') } } }],
+                        ['a block on the author and its publisher', { Map arg ->
+                            MsBook.createCriteria().list(sort: arg) { author { publisher { isNotNull('name') } } }
+                        }],
+                        ['paged list', { Map arg -> MsBook.list(sort: arg, max: 10) }],
+                        ['where query', { Map arg -> MsBook.where { title != null }.list(sort: arg) }],
+                        ['findAll with a closure', { Map arg -> MsBook.findAll(sort: arg) { title != null } }],
+                        ['dynamic finder', { Map arg -> MsBook.findAllByTitleIsNotNull(sort: arg) }],
+                        ['paged where query', { Map arg -> MsBook.where { title != null }.list(sort: arg, max: 10) }]
+                ]
+        ].combinations().collect { List row -> [row[0], row[1][0], row[1][1]] }
+    }
+
     void "a negated empty list on a collection of strings matches the books without elements"() {
         expect:
         MsBook.createCriteria().list { not { inList('tags', []) }; order('title') }*.title == ['alpha', 'beta', 'omega', 'zeta']
@@ -106,9 +165,16 @@ class MapSortAndEmptyListHibernateSpec extends GrailsDataTckSpec<GrailsDataHiber
 }
 
 @Entity
+class MsPublisher {
+    String name
+    String country
+}
+
+@Entity
 class MsAuthor {
     String name
     Boolean active
+    MsPublisher publisher
 }
 
 @Entity

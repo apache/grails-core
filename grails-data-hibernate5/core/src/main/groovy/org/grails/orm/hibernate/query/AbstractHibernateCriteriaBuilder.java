@@ -2091,16 +2091,18 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
     }
 
     /**
-     * Joins once an association that two or more of the sort properties go through, so that each of them orders by that
+     * Joins once an association that two or more of the sort properties go through, on the way to the property or as its owner, so that each of them orders by that
      * join: sorting a property of an association joins it, and a second property of the same association would join it again.
      */
     private void joinAssociationsSortedTwice(PersistentEntity entity, Map<?, ?> sortMap) {
         Map<String, Integer> uses = new LinkedHashMap<>();
         for (Object key : sortMap.keySet()) {
             String property = (String) key;
-            int lastDot = property.lastIndexOf('.');
-            if (lastDot > 0) {
-                uses.merge(property.substring(0, lastDot), 1, Integer::sum);
+            // every association on the way to the property is used: author.publisher.name goes through author as well
+            int dot = property.indexOf('.');
+            while (dot > 0) {
+                uses.merge(property.substring(0, dot), 1, Integer::sum);
+                dot = property.indexOf('.', dot + 1);
             }
         }
         for (Map.Entry<String, Integer> use : uses.entrySet()) {
