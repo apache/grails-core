@@ -20,6 +20,9 @@
 package org.grails.forge.cli
 
 import org.grails.forge.application.ApplicationType
+import spock.lang.Requires
+import spock.util.concurrent.PollingConditions
+import spock.util.environment.OperatingSystem
 
 /**
  * Gradle writes a build's failure report to stderr, so a failed generated build is reported
@@ -49,5 +52,50 @@ class CommandSpecBuildFailureSpec extends CommandSpec implements CommandFixture 
         e.message.contains('exited with code 1')
         e.message.contains('configuration failure')
         e.message.contains('BUILD FAILED')
+    }
+
+    @Requires({ !OperatingSystem.current.windows })
+    void 'a build that has ended without the expected output is reported although its process is still there'() {
+        when: 'a process that writes the last line of a build and stays'
+        executeCommand(['sh', '-c', 'echo "TestServiceSpec > test something PASSED"; echo "BUILD SUCCESSFUL in 1s"; sleep 300'])
+        long started = System.currentTimeMillis()
+        testOutputContains('TestServiceSpec > test something FAILED')
+
+        then:
+        AssertionError e = thrown()
+        e.message.contains('ended without producing the expected output')
+        e.message.contains('test something PASSED')
+        System.currentTimeMillis() - started < 60000
+    }
+
+    @Requires({ !OperatingSystem.current.windows })
+    void 'the output a spec waits for is that of the build it started last'() {
+        given:
+        executeCommand(['sh', '-c', 'echo "BUILD FAILED in 1s"'])
+        testOutputContains('BUILD FAILED')
+
+        when:
+        executeCommand(['sh', '-c', 'sleep 5; echo "BUILD SUCCESSFUL in 1s"'])
+        testOutputContains('BUILD SUCCESSFUL')
+
+        then:
+        !output.toString().contains('BUILD FAILED')
+    }
+
+    @Requires({ !OperatingSystem.current.windows })
+    void 'ending a build ends the processes it started'() {
+        given: 'a process with a child that would outlive it'
+        executeCommand(['sh', '-c', 'sleep 300 & echo started; wait'])
+        testOutputContains('started')
+        List<ProcessHandle> children = process.descendants().toList()
+
+        when:
+        killProcess()
+
+        then:
+        !children.empty
+        new PollingConditions(timeout: 10).eventually {
+            assert children.every { !it.alive }
+        }
     }
 }

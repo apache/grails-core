@@ -49,8 +49,9 @@ class CommandSpec extends Specification {
 
     void cleanup() {
         System.setProperty('user.dir', previousUsrDir)
-        dir.deleteDir()
+        // the build first: a build that still runs writes into the directory while it is deleted
         killProcess()
+        dir.deleteDir()
     }
 
     Process executeGradleCommand(String command) {
@@ -77,6 +78,8 @@ class CommandSpec extends Specification {
     // consumer threads started by consumeProcessOutput a moment to drain before deciding the
     // value is absent.
     private static final int OUTPUT_DRAIN_MILLIS = 2000
+    // The line Gradle ends every build with. Nothing a spec waits for is written after it.
+    private static final List<String> BUILD_END_MARKERS = ['BUILD SUCCESSFUL', 'BUILD FAILED']
 
     PollingConditions getDefaultPollingConditions() {
         new PollingConditions(timeout: POLL_TIMEOUT_SECONDS, initialDelay: 3, delay: 1, factor: 1)
@@ -89,9 +92,12 @@ class CommandSpec extends Specification {
      * <p>Deliberately not {@link PollingConditions}: that retries on any {@code Throwable}, so a
      * build which has already finished cannot short-circuit the wait. Waiting out the full budget
      * after the process is gone is how a generated build that simply failed came to look like a
-     * hang, reported only as a bare unsatisfied condition with no cause. Keying the early exit on
-     * process liveness rather than on a {@code BUILD FAILED} marker matters, because several specs
-     * legitimately wait for text from a build that is expected to fail.</p>
+     * hang, reported only as a bare unsatisfied condition with no cause. A {@code BUILD FAILED}
+     * line alone is no reason to give up, because several specs legitimately wait for text from a
+     * build that is expected to fail; that text comes before the line, though, so the wait also ends
+     * when Gradle has written the last line of the build and the text is not there, whether or not
+     * the process has exited by then. A Gradle client can outlive its build, and each such wait
+     * used to cost the whole budget.</p>
      *
      * <p>The output holds both streams of the build, so the failure report Gradle writes to stderr
      * is part of the message when the build exits without the expected text.</p>
@@ -112,6 +118,15 @@ class CommandSpec extends Specification {
                 throw new AssertionError("The generated build exited with code ${process.exitValue()} " +
                         "without producing the expected output [${value}].\nBuild output:\n${finalOutput}" as Object)
             }
+            if (BUILD_END_MARKERS.any { output.toString().contains(it) }) {
+                sleep(OUTPUT_DRAIN_MILLIS)
+                String finalOutput = output.toString()
+                if (finalOutput.contains(value)) {
+                    return
+                }
+                throw new AssertionError("The generated build ended without producing the expected output " +
+                        "[${value}].\nBuild output:\n${finalOutput}" as Object)
+            }
             if (System.currentTimeMillis() >= deadline) {
                 throw new AssertionError("Timed out after ${POLL_TIMEOUT_SECONDS}s waiting for the generated " +
                         "build to produce [${value}]; the build was still running.\nBuild output:\n" +
@@ -121,7 +136,11 @@ class CommandSpec extends Specification {
         }
     }
 
-    private Process executeCommand(List<String> args) {
+    protected Process executeCommand(List<String> args) {
+        // one build at a time: the one before is over for the spec, whatever its process still does
+        killProcess()
+        // a new one, not an emptied one: what still reads the build before may write a last line
+        output = new StringBuilder()
         ProcessBuilder pb = new ProcessBuilder(args)
         // Gradle writes its failure report to stderr. Merge it into the stream the consumer thread
         // drains, so that the report reaches the assertion message and a failed build cannot sit
@@ -137,12 +156,17 @@ class CommandSpec extends Specification {
 
     void killProcess() {
         if (process) {
+            // The Gradle client starts the build in a process of its own when the project asks for
+            // other JVM settings than the client has, and that one starts the test workers. Ending
+            // the client alone leaves them running, holding the locks of the next build.
+            List<ProcessHandle> descendants = process.descendants().toList()
             process.destroy()
             try {
                 process.waitForOrKill(1000)
-            } catch(ignored) {
+            } catch (ignored) {
                 process.destroyForcibly()
             }
+            descendants.each { it.destroyForcibly() }
         }
     }
 }
