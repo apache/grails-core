@@ -19,6 +19,7 @@
 package org.apache.grails.core.cli.script
 
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
@@ -466,6 +467,187 @@ class ScriptCommandRunnerSpec extends Specification {
         cases.each { List<String> each ->
             assert ScriptCommandRunner.commandName(each[0]) == (each[1] == '-' ? null : each[1])
         }
+    }
+
+    def 'a warning and an error of a script go to the errors, what it appends to the output, and neither fails it'() {
+        given:
+        script('talk', """
+            console.warn 'a warning'
+            warn 'another'
+            console.append 'appended'
+            console.verbose 'a detail'
+            verbose 'another detail'
+            console.error 'it went wrong'
+            file('ended.txt').text = 'the script went on'
+        """)
+
+        when:
+        int exit = run('talk')
+
+        then: 'an error that is said is not a failure: the script goes on, and succeeds unless it returns false'
+        exit == 0
+        out.toString().readLines() == ['appended']
+        err.toString().readLines() == ['| Warning a warning', '| Warning another', '| Error it went wrong']
+        new File(project, 'ended.txt').text == 'the script went on'
+
+        when: 'the build was started for the details'
+        out.reset()
+        System.setProperty('grails.verbose', 'true')
+        exit = run('talk')
+
+        then:
+        exit == 0
+        out.toString().readLines() == ['appended', 'a detail', 'another detail']
+
+        cleanup:
+        System.clearProperty('grails.verbose')
+    }
+
+    @Unroll
+    def 'an error a script says with what was thrown is one line, and the stack trace follows it with #property'() {
+        given:
+        script('talk', """
+            console.error 'with a cause', new IllegalStateException('the cause')
+            console.error new IllegalArgumentException('alone')
+            return false
+        """)
+
+        when:
+        int exit = run('talk')
+
+        then:
+        exit == 1
+        out.toString() == ''
+        err.toString().readLines() == ['| Error with a cause', '| Error alone',
+                                       'The script talk returned false, which is how a script says that it did not succeed.']
+
+        when:
+        err.reset()
+        System.setProperty(property, 'true')
+        exit = run('talk')
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 1
+        lines.indexOf('java.lang.IllegalStateException: the cause') == lines.indexOf('| Error with a cause') + 1
+        lines.indexOf('java.lang.IllegalArgumentException: alone') == lines.indexOf('| Error alone') + 1
+        lines.count { String line -> line.startsWith('\tat ') } > 2
+        lines.last() == 'The script talk returned false, which is how a script says that it did not succeed.'
+
+        cleanup:
+        System.clearProperty(property)
+
+        where:
+        property << ['grails.full.stacktrace', 'grails.show.stacktrace']
+    }
+
+    @Unroll
+    def 'a script that #what fails with the type of what was thrown and its message'() {
+        given:
+        script('broken', source)
+
+        when:
+        int exit = run('broken')
+
+        then:
+        exit == 1
+        out.toString() == ''
+        said().readLines()[0].startsWith(message)
+        !said().contains('\tat ')
+
+        where:
+        what                                   | source                                    | message
+        'throws an error'                      | 'throw new AssertionError((Object) "no")' | 'The script failed: java.lang.AssertionError: no'
+        'throws without a message'             | 'throw new IllegalStateException()'       | 'The script failed: java.lang.IllegalStateException: null'
+        'calls a method a value of it has not' | '"text".noSuchMethod()'                   | 'The script failed: groovy.lang.MissingMethodException: No signature of method: noSuchMethod for class: java.lang.String'
+        'uses a property there is none of'     | 'println noSuchThing'                     | 'The script failed: groovy.lang.MissingPropertyException: No such property: noSuchThing for class: broken'
+        'uses the Spring context of the shell' | 'spring.getBean("x")'                     | 'The script broken uses spring, which a script has only in the Grails shell.'
+        'is a class and has no statements'     | 'class Thing { }'                         | 'broken is not a script: its file declares a class and has no statements of its own.'
+    }
+
+    def 'whether there is a script of a name is told without running it'() {
+        given:
+        script('there', 'file("ran.txt").text = "ran"')
+        new File(plugin, 'META-INF/commands').mkdirs()
+        new File(plugin, 'META-INF/commands/OfPlugin.groovy').text = 'file("ran.txt").text = "ran"'
+
+        expect:
+        runner().has('there')
+        runner().has('of-plugin')
+        !runner().has('absent')
+        !runner().has('../there')
+        !runner().has(null)
+        !new File(project, 'ran.txt').exists()
+    }
+
+    @Unroll
+    def 'a script in a jar without entries for its directories is found by the name #name: #found'() {
+        given: 'a jar that has the files and no entry for META-INF/commands'
+        File jar = new File(plugin, 'plugin-cli.jar')
+        jar.withOutputStream { OutputStream output ->
+            JarOutputStream written = new JarOutputStream(output)
+            ['CreateThing', 'plain-name'].each { String each ->
+                written.putNextEntry(new JarEntry("META-INF/commands/${each}.groovy"))
+                written.write("new File(baseDir, 'ran.txt').text = '${each}'".getBytes('UTF-8'))
+                written.closeEntry()
+            }
+            written.close()
+        }
+        URLClassLoader loader = new URLClassLoader([jar.toURI().toURL()] as URL[], getClass().classLoader)
+
+        expect:
+        new ScriptCommandRunner(project, loader, new PrintStream(err, true)).start('--', name) == (found ? 0 : 1)
+        (new File(project, 'ran.txt').isFile() ? new File(project, 'ran.txt').text : null) == found
+
+        cleanup:
+        loader?.close()
+
+        where:
+        name           | found
+        'create-thing' | 'CreateThing'
+        'plain-name'   | 'plain-name'
+        'absent'       | null
+    }
+
+    @Unroll
+    def 'the JVM the build starts for a script ends with #status when the script #what, and writes where the JVM writes'() {
+        given:
+        script('talk', """
+            console.addStatus 'a status'
+            println 'printed'
+            console.error 'an error'
+            file('given.txt').text = args.inspect()
+            ${statement}
+        """)
+        File stdout = new File(plugin, 'stdout.txt')
+        File stderr = new File(plugin, 'stderr.txt')
+        File options = new File(plugin, 'java.options')
+        options.setText("-cp\n\"${System.getProperty('java.class.path').replace('\\', '\\\\')}\"\n", 'UTF-8')
+
+        when:
+        Process process = new ProcessBuilder(new File(System.getProperty('java.home'), 'bin/java').path, "@${options.path}".toString(),
+                "-Dbase.dir=${project.path}".toString(), ScriptCommandRunner.name, '--', 'talk', 'two words', 'three')
+                .directory(plugin)
+                .redirectOutput(stdout)
+                .redirectError(stderr)
+                .start()
+        boolean ended = process.waitFor(5, TimeUnit.MINUTES)
+
+        then:
+        ended
+        process.exitValue() == status
+        new File(project, 'given.txt').text == "['two words', 'three']"
+        stdout.readLines().findAll { String line -> line } == ['| a status', 'printed']
+        stderr.readLines().findAll { String line -> !line.startsWith('OpenJDK') && !line.startsWith('WARNING') } == ['| Error an error'] + said
+
+        cleanup:
+        process?.destroyForcibly()?.waitFor()
+
+        where:
+        what            | statement                          | status | said
+        'succeeds'      | ''                                 | 0      | []
+        'returns false' | 'return false'                     | 1      | ['The script talk returned false, which is how a script says that it did not succeed.']
+        'throws'        | 'throw new RuntimeException("no")' | 1      | ['The script failed: java.lang.RuntimeException: no']
     }
 
     // A project and what is outside it, as a line of the table of cases says: see script-command-files.tsv.
