@@ -821,13 +821,19 @@ class SimpleMapQuery extends Query {
                 propertyEmpty = indexer.query(id).isEmpty()
             }
             else {
-                propertyEmpty = data instanceof Map && isEmptyValue(data.get(property.name))
+                propertyEmpty = data instanceof Map && isEmptyValue(data.get(storedKey(property)))
             }
             if (propertyEmpty == empty) {
                 found << id
             }
         }
         found
+    }
+
+    /** The key a property is stored under: the key of its mapping, or its name when the mapping gives none. */
+    private static String storedKey(PersistentProperty property) {
+        KeyValue mapped = (KeyValue) property.getMapping()?.getMappedForm()
+        mapped?.getKey() != null ? mapped.getKey() : property.name
     }
 
     protected static boolean isEmptyValue(Object value) {
