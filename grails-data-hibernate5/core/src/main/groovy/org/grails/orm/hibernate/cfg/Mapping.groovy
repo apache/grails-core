@@ -195,9 +195,46 @@ class Mapping extends Entity<PropertyConfig> {
     @Override
     Mapping id(Map identityConfig) {
         if (identity instanceof Identity) {
-            Identity.configureExisting((Identity) identity, identityConfig)
+            Map config = new LinkedHashMap(identityConfig)
+            Object length = config.remove('length')
+            Identity.configureExisting((Identity) identity, config)
+            if (length instanceof Number) {
+                bindIdentityColumnLength((Identity) identity, ((Number) length).intValue())
+            }
         }
         return this
+    }
+
+    private void bindIdentityColumnLength(Identity id, int length) {
+        String name = id.name ?: 'id'
+        PropertyConfig pc = columns[name]
+        if (pc == null) {
+            // start from the wildcard defaults, as every other property does, so the id keeps the SQL type they give
+            pc = getOrInitializePropertyConfig(name)
+            columns[name] = pc
+            pc.column(length: length)
+            keepColumnOpenToTheNextDeclaration(pc)
+            return
+        }
+        boolean ours = pc.columns.isEmpty() || pc.firstColumnIsColumnCopy
+        if (pc.columns.isEmpty()) {
+            pc.columns << new ColumnConfig()
+        }
+        pc.columns[0].length = length
+        if (ours) {
+            keepColumnOpenToTheNextDeclaration(pc)
+        }
+    }
+
+    /**
+     * The column that a length created, or took over from the wildcard defaults, is not one the application declared: the
+     * column a later declaration of the identifier makes fills it in, as it fills in a copy of the defaults, so the identifier
+     * keeps one column.
+     */
+    private static void keepColumnOpenToTheNextDeclaration(PropertyConfig pc) {
+        if (pc.columns.size() == 1) {
+            pc.firstColumnIsColumnCopy = true
+        }
     }
     /**
      * Define the identity config
