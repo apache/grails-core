@@ -59,12 +59,22 @@ class DynamicFinderTextAfterOperatorSpec extends GrailsDataTckSpec {
         TestEntity.findAllByAgeInList([30], [sort: 'name', order: 'desc'])*.name == ['cat', 'bob', 'ann']
     }
 
-    void "text after Equal is part of the property name, so an unknown property fails and names it"() {
-        when:
-        TestEntity.findByNameEqualIgnoreCasex('Ada')
+    void "text after Equal is part of the property name, so it never finds the row of the property before it"() {
+        given:
+        new TestEntity(name: 'Ada').save(flush: true, failOnError: true)
 
-        then: 'Equal is the operator a finder has without writing it, so the text is read as the name of a property'
-        Exception e = thrown()
-        e.message.contains('nameEqualIgnoreCasex')
+        when:
+        Object found = null
+        Exception refused = null
+        try {
+            found = TestEntity.findByNameEqualIgnoreCasex('Ada')
+        }
+        catch (Exception e) {
+            refused = e
+        }
+
+        then: 'Equal is the operator a finder has without writing it, so the text is read as the name of a property: a datastore that refuses an unknown field names it, one that allows it finds nothing'
+        found == null
+        refused == null || refused.message.contains('nameEqualIgnoreCasex')
     }
 }
