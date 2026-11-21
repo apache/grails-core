@@ -93,8 +93,8 @@ class FeatureAdditionPlacesSpec extends ApplicationContextSpec {
         changing('grails-app/conf/application.yml').size() > 8
         top == []
 
-        and: 'the guide says about half'
-        end.size() <= changing('grails-app/conf/application.yml').size() * 2 / 3
+        and: 'the guide says 3 of 14: the features that have a top-level key of their own, which is written after the sections every application has'
+        end.size() * 4 <= changing('grails-app/conf/application.yml').size()
     }
 
     @Unroll
@@ -128,7 +128,7 @@ class FeatureAdditionPlacesSpec extends ApplicationContextSpec {
         where:
         file                              || mostInserted | mostRemoved | mostChanged | mostEmptyLines
         'build.gradle'                    || 123          | 176         | 180         | 125
-        'grails-app/conf/application.yml' || 61           | 83          | 83          | 54
+        'grails-app/conf/application.yml' || 43           | 69          | 69          | 40
         'README.md'                       || 70           | 101         | 101         | 71
     }
 

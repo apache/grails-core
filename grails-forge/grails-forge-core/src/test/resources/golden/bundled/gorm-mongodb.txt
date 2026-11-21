@@ -26,8 +26,6 @@ in an application without being named: gorm mongodb
 +     implementation "org.apache.grails:grails-data-mongodb-embedded"
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 == grails-app/conf/application.yml
-+   mongodb:
-+     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 + environments:
 +   development:
 +     grails:
@@ -37,6 +35,8 @@ in an application without being named: gorm mongodb
 +     grails:
 +       mongodb:
 +         url: mongodb://embedded/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 
 # rest_api
 title: Grails Data for MongoDB
@@ -58,11 +58,6 @@ in an application without being named: gorm mongodb
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
-+ grails:
-+   mongodb:
-+     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
-+   codegen:
-+     defaultPackage: example.grails
 + environments:
 +   development:
 +     grails:
@@ -72,6 +67,11 @@ in an application without being named: gorm mongodb
 +     grails:
 +       mongodb:
 +         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 
 # web_plugin
 title: Grails Data for MongoDB
@@ -92,8 +92,6 @@ in an application without being named: gorm mongodb
 +     implementation "org.apache.grails:grails-data-mongodb-embedded"
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 == grails-app/conf/application.yml
-+   mongodb:
-+     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 + environments:
 +   development:
 +     grails:
@@ -103,6 +101,8 @@ in an application without being named: gorm mongodb
 +     grails:
 +       mongodb:
 +         url: mongodb://embedded/testDb
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 
 # plugin
 title: Grails Data for MongoDB
@@ -124,11 +124,6 @@ in an application without being named: gorm mongodb
 +     testImplementation "org.testcontainers:testcontainers-mongodb"
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
-+ grails:
-+   mongodb:
-+     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
-+   codegen:
-+     defaultPackage: example.grails
 + environments:
 +   development:
 +     grails:
@@ -138,4 +133,9 @@ in an application without being named: gorm mongodb
 +     grails:
 +       mongodb:
 +         url: mongodb://embedded/testDb
++ grails:
++   codegen:
++     defaultPackage: example.grails
++   mongodb:
++     url: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/prodDb
 

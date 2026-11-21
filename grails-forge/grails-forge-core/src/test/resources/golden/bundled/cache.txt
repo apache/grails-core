@@ -20,10 +20,10 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.apache.grails:grails-cache"
 == grails-app/conf/application.yml
-+     enabled: true
-+     cleanAtStartup: false
-+     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
 +   cache:
++     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++     cleanAtStartup: false
++     enabled: true
 
 # rest_api
 title: Cache
@@ -43,12 +43,12 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+     enabled: true
-+     cleanAtStartup: false
++   cache:
 +     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++     cleanAtStartup: false
++     enabled: true
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 
 # web_plugin
 title: Cache
@@ -66,10 +66,10 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.apache.grails:grails-cache"
 == grails-app/conf/application.yml
-+     enabled: true
-+     cleanAtStartup: false
-+     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
 +   cache:
++     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++     cleanAtStartup: false
++     enabled: true
 
 # plugin
 title: Cache
@@ -89,10 +89,10 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+     enabled: true
-+     cleanAtStartup: false
++   cache:
 +     cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager
++     cleanAtStartup: false
++     enabled: true
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 

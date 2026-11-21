@@ -61,7 +61,7 @@ final class ChangePlan {
         /** The file cannot be written without losing something of the project */
         CONFLICT,
 
-        /** The features would leave the file out. That is not done: the plan is refused, and shows the file */
+        /** The features leave out a file that a feature they replace wrote, and the project has it as it was generated: it is removed. A plan that is refused shows the file so, and removes nothing */
         REMOVE
     }
 
@@ -108,6 +108,10 @@ final class ChangePlan {
         boolean isWritten() {
             return action == Action.ADD || action == Action.UPDATE || action == Action.MERGE
         }
+
+        boolean isRemoved() {
+            return action == Action.REMOVE
+        }
     }
 
     /** The most lines {@link #diff()} shows of one file */
@@ -133,13 +137,24 @@ final class ChangePlan {
 
     /**
      * Why the features are not added, whatever the files are: they would take away something the
-     * application has. {@code null} for features that only add. The files of such a plan show what
-     * would be added and removed, and it cannot be applied.
+     * application was created with by name, an option or a feature that was asked for. {@code null}
+     * otherwise. The files of such a plan show what would be added and removed, and it cannot be
+     * applied.
      */
     final String refusal
 
     /** The features the application would lose, for a plan that is refused */
     final List<String> lostFeatures
+
+    /**
+     * The features the application has by default and has no more once the plan is applied, because a
+     * feature that is added takes their place: the default of an exclusive group for another of the
+     * group, and what only that default brought. Empty for a plan that is refused.
+     */
+    final List<String> replaced
+
+    /** What is said of each of {@link #replaced}, in their order: which feature replaces it, and what it was */
+    final List<String> replacements
 
     /** The options the application would have in the place of those it was created with, as the create commands take them, for a plan that is refused */
     final List<String> changedOptions
@@ -150,7 +165,9 @@ final class ChangePlan {
 
     @PackageScope
     ChangePlan(Path project, Path home, List<String> requested, List<String> alreadyThere, List<String> added, List<PlannedFile> files, List<Write> state,
-               String refusal, List<String> lostFeatures, List<String> changedOptions) {
+               String refusal, List<String> lostFeatures, List<String> changedOptions, List<String> replaced, List<String> replacements) {
+        this.replaced = Collections.unmodifiableList(new ArrayList<String>(replaced))
+        this.replacements = Collections.unmodifiableList(replacements.collect { String line -> safe(line) })
         this.project = project
         this.home = home
         this.refusal = refusal
@@ -188,8 +205,8 @@ final class ChangePlan {
     /**
      * What would change in the files of the project, as a unified diff of each file that is written
      * from what the project has to what it would have. For a file that cannot be written, the change
-     * the features make to it is shown instead, marked as rejected; for a file a refused plan would
-     * leave out, its removal. A line has no control or format character but the tabulator, and the
+     * the features make to it is shown instead, marked as rejected; for a file that is removed, and
+     * for one a refused plan would leave out, its removal. A line has no control or format character but the tabulator, and the
      * carriage return of a line that ends with CR LF is not shown. At most {@link #MAX_DIFF_OF_FILE}
      * lines are shown of a file and {@link #MAX_DIFF} of all of them; a line says how many were
      * left out.
@@ -303,6 +320,8 @@ final class ChangePlan {
         for (PlannedFile file : files) {
             if (file.isWritten()) {
                 writes << new Write(file.path, file.result, file.executable, file.current == null ? null : ProjectTransaction.sha256(file.current))
+            } else if (file.isRemoved()) {
+                writes << new Write(file.path, null, null, ProjectTransaction.sha256(file.current))
             }
         }
         writes.addAll(state)

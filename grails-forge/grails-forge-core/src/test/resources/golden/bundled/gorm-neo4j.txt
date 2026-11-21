@@ -25,8 +25,8 @@ in an application without being named: gorm neo4j
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 +   neo4j:
-+     type: embedded
 +     location: build/data/neo4j
++     type: embedded
 
 # rest_api
 title: GORM for Neo4j
@@ -48,11 +48,11 @@ in an application without being named: gorm neo4j
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+   neo4j:
-+     type: embedded
-+     location: build/data/neo4j
 +   codegen:
 +     defaultPackage: example.grails
++   neo4j:
++     location: build/data/neo4j
++     type: embedded
 
 # web_plugin
 title: GORM for Neo4j
@@ -73,8 +73,8 @@ in an application without being named: gorm neo4j
 +     testRuntimeOnly "org.neo4j.test:neo4j-harness"
 == grails-app/conf/application.yml
 +   neo4j:
-+     type: embedded
 +     location: build/data/neo4j
++     type: embedded
 
 # plugin
 title: GORM for Neo4j
@@ -96,9 +96,9 @@ in an application without being named: gorm neo4j
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
-+   neo4j:
-+     type: embedded
-+     location: build/data/neo4j
 +   codegen:
 +     defaultPackage: example.grails
++   neo4j:
++     location: build/data/neo4j
++     type: embedded
 

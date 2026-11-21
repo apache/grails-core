@@ -29,6 +29,7 @@ Adds features to the application in the current directory: its files and its rec
 ----
 grails feature add grails-quartz
 grails feature add grails-quartz,views-json
+grails feature add postgres
 grails feature add postgres --diff
 grails feature add grails-quartz --dry-run
 ----
@@ -48,9 +49,11 @@ Arguments:
 
 Options:
 
-* `--dry-run` - Say which files would be added and changed, and which conflicts there are, and change nothing.
+* `--dry-run` - Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.
 * `--diff` - Show the changes that would be made to the files, as a diff, and change nothing.
 
-`feature add` is the `add` command of the `feature` command. It works from the record of the project in its `.grails` directory, so it is a command of a project that Grails 9 generated. The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, nothing is written and the files are named. A feature the application already has is left as it is. A feature that would take the place of another, such as a database driver, is refused, and so is the feature of a feature pack that is not part of Grails.
+`feature add` is the `add` command of the `feature` command. It works from the record of the project in its `.grails` directory, so it is a command of a project that Grails 9 generated. The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, nothing is written and the files are named. A feature the application already has is left as it is.
+
+A feature that takes the place of one the application has by default replaces it: `postgres` replaces `h2`, the default database driver, and `grails-layout` replaces `sitemesh3`. The dependency and the configuration of the default are taken out, those of the feature are put in, the record no longer lists the default, and the command says which feature it replaced. Lines of the default that you changed, such as the URL of the H2 database, are a conflict like any other. A feature that was asked for by name when the application was created (`create-app --features h2`) is not replaced: the command refuses, names both features and changes nothing. A feature that would change an option the application was created with (`--servlet`, `--data`, `--reloading`, `--jdk`) is refused too, and so is the feature of a feature pack that is not part of Grails.
 
 See "Adding a feature to a project" in link:{guidePath}commandLine.html#creatingProject[Creating a Grails Project] for what is merged, what is a conflict and what is refused.

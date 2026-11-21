@@ -36,8 +36,8 @@ dependentFeatures: []
 +       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 == src/test/resources/container-license-acceptance.txt
 + mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
 
@@ -71,8 +71,8 @@ dependentFeatures: []
 +       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 == src/test/resources/container-license-acceptance.txt
 + mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
 
@@ -106,8 +106,8 @@ dependentFeatures: []
 +       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 == src/test/resources/container-license-acceptance.txt
 + mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
 
@@ -141,8 +141,8 @@ dependentFeatures: []
 +       url: jdbc:sqlserver://localhost:1433;databaseName=prodDb;socketKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:sqlserver:2019-CU4-ubuntu-16.04://databaseName=tempdb
 == src/test/resources/container-license-acceptance.txt
 + mcr.microsoft.com/mssql/server:2019-CU4-ubuntu-16.04
 

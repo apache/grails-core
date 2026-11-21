@@ -52,6 +52,7 @@ import java.util.function.Consumer
 import java.util.function.Supplier
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import java.util.stream.Stream
 
 /**
  * Writes several files of a project as one change. No file system replaces many files at once, so the
@@ -69,7 +70,8 @@ import java.util.regex.Pattern
  * <li>the record becomes the journal: the name of that directory and every file with the digests of
  * what it was and of what it becomes. Until the journal is there, nothing of the project was
  * touched;</li>
- * <li>each file is compared once more and replaced by a rename;</li>
+ * <li>each file is compared once more and replaced by a rename; a file the change takes away is
+ * removed, and its copy is what puts it back;</li>
  * <li>the journal is removed, which ends the change, and then the directory.</li>
  * </ol>
  *
@@ -102,7 +104,7 @@ final class ProjectTransaction {
     private static final int MAX_NAMED = 10
     private static final Pattern PROJECT = Pattern.compile(/project ([A-Za-z0-9_-]+)/)
     private static final Pattern NAME = Pattern.compile(/id (t[0-9a-f]{24})/)
-    private static final Pattern PUT = Pattern.compile(/put (\d{1,6}) (-|[0-9a-f]{64}) ([0-9a-f]{64}) (.+)/)
+    private static final Pattern PUT = Pattern.compile(/put (\d{1,6}) (-|[0-9a-f]{64}) (-|[0-9a-f]{64}) (.+)/)
     private static final Pattern MADE = Pattern.compile(/dir (.+)/)
     private static final Set<PosixFilePermission> EXECUTE = EnumSet.of(PosixFilePermission.OWNER_EXECUTE, PosixFilePermission.GROUP_EXECUTE, PosixFilePermission.OTHERS_EXECUTE)
     private static final List<String> STATE = [ProjectState.MANIFEST, ProjectState.LOCK, ProjectState.BASELINE_INDEX]
@@ -111,12 +113,13 @@ final class ProjectTransaction {
     }
 
     /**
-     * A file to write.
+     * A file to write, or, without content, a file to remove.
      */
     @CompileStatic
     static final class Write {
 
         final String path
+        // what the file becomes, or null for a file that is removed, which has to be there
         final byte[] content
         // whether the file is to be executable, or null for a file that stays as it is in that
         final Boolean executable
@@ -247,6 +250,8 @@ final class ProjectTransaction {
                     Path target = target(project, write.path)
                     if (digest(target) != write.before) {
                         failure = "${write.path} was changed while the project was being changed"
+                    } else if (write.content == null) {
+                        Files.delete(target)
                     } else {
                         Files.createDirectories(target.getParent())
                         move(directory.resolve('new').resolve(String.valueOf(index)), target)
@@ -278,6 +283,13 @@ final class ProjectTransaction {
                 force(each)
             }
             finish(directory, journal)
+            // the directories that only held what was removed go with it, once the change has ended:
+            // a change that is undone puts its files back into them
+            for (Write write : writes) {
+                if (write.content == null) {
+                    removeEmptied(project, write.path)
+                }
+            }
             return null
         }
     }
@@ -399,6 +411,11 @@ final class ProjectTransaction {
         if (reached < 0 && allAfter) {
             // every file is what the change makes it: all that was missing is the end of its journal
             finish(directory, journal)
+            for (Put put : change.puts) {
+                if (put.after == null) {
+                    removeEmptied(project, put.path)
+                }
+            }
             return new ProjectRecovery(false, true, false, [], [], [])
         }
         if (reached < 0 && allBefore) {
@@ -426,6 +443,8 @@ final class ProjectTransaction {
                 if (put.before == null) {
                     Files.delete(target)
                 } else {
+                    // a file that was removed goes back where it was, also when its directory went since
+                    Files.createDirectories(target.getParent())
                     move(directory.resolve('backup').resolve(String.valueOf(put.index)), target)
                 }
                 putBack << put.path
@@ -436,6 +455,34 @@ final class ProjectTransaction {
             return new ProjectRecovery(true, false, false, putBack.reverse(), kept, [])
         } catch (IOException e) {
             throw new ProjectChangeException("A file of the change that was interrupted could not be put back (${e.getClass().getSimpleName()}); run the command again", e)
+        }
+    }
+
+    // the directories above a file that was removed, the innermost first, as far as they are empty
+    private static void removeEmptied(Path project, String path) {
+        List<String> steps = path.split('/').toList()
+        List<Path> directories = []
+        Path each = project
+        for (String step : steps.subList(0, steps.size() - 1)) {
+            each = each.resolve(step)
+            // only directories of the project: none that is reached by a link
+            if (!Files.isDirectory(each, LinkOption.NOFOLLOW_LINKS)) {
+                return
+            }
+            directories << each
+        }
+        for (Path directory : directories.reverse()) {
+            try {
+                try (Stream<Path> entries = Files.list(directory)) {
+                    if (entries.findAny().isPresent()) {
+                        return
+                    }
+                }
+                Files.delete(directory)
+            } catch (IOException ignored) {
+                // a directory that stays is in the way of nothing
+                return
+            }
         }
     }
 
@@ -536,9 +583,14 @@ final class ProjectTransaction {
                     change.made.add(at)
                 }
             }
+            if (write.content == null && write.before == null) {
+                throw new ProjectChangeException("${write.path} is neither written nor removed by the change")
+            }
             Path file = staged.resolve(String.valueOf(index))
-            store(file, write.content)
-            if (write.path in STATE) {
+            if (write.content != null) {
+                store(file, write.content)
+            }
+            if (write.content != null && write.path in STATE) {
                 store(after.resolve(String.valueOf(index)), write.content)
             }
             Set<PosixFilePermission> permissions = null
@@ -563,7 +615,7 @@ final class ProjectTransaction {
             } else if (Files.exists(target, LinkOption.NOFOLLOW_LINKS)) {
                 throw new ProjectChangeException("${write.path} was created while the change of the project was being prepared; nothing of the project was changed")
             }
-            if (posix) {
+            if (posix && write.content != null) {
                 permissions = permissions ?: new HashSet<>(Files.getPosixFilePermissions(file, LinkOption.NOFOLLOW_LINKS))
                 if (write.executable == Boolean.TRUE) {
                     permissions.add(PosixFilePermission.OWNER_EXECUTE)
@@ -572,7 +624,7 @@ final class ProjectTransaction {
                 }
                 Files.setPosixFilePermissions(file, permissions)
             }
-            change.puts << new Put(index, write.before, sha256(write.content), write.path)
+            change.puts << new Put(index, write.before, write.content == null ? null : sha256(write.content), write.path)
         }
         force(staged)
         force(backups)
@@ -589,7 +641,7 @@ final class ProjectTransaction {
         text.append("id ${change.name}\n")
         if (complete) {
             for (Put put : change.puts) {
-                text.append("put ${put.index} ${put.before ?: '-'} ${put.after} ${put.path}\n")
+                text.append("put ${put.index} ${put.before ?: '-'} ${put.after ?: '-'} ${put.path}\n")
             }
             for (String made : change.made) {
                 text.append("dir ${made}\n")
@@ -635,8 +687,8 @@ final class ProjectTransaction {
         for (String line : lines.subList(3, lines.size() - 2)) {
             Matcher put = PUT.matcher(line)
             Matcher directory = MADE.matcher(line)
-            if (!change.staging && put.matches() && isWritable(put.group(4)) && seen.add(Integer.valueOf(put.group(1)))) {
-                change.puts << new Put(Integer.parseInt(put.group(1)), put.group(2) == '-' ? null : put.group(2), put.group(3), put.group(4))
+            if (!change.staging && put.matches() && isWritable(put.group(4)) && !(put.group(2) == '-' && put.group(3) == '-') && seen.add(Integer.valueOf(put.group(1)))) {
+                change.puts << new Put(Integer.parseInt(put.group(1)), put.group(2) == '-' ? null : put.group(2), put.group(3) == '-' ? null : put.group(3), put.group(4))
             } else if (!change.staging && directory.matches() && isWritable(directory.group(1))) {
                 change.made.add(directory.group(1))
             } else {
@@ -953,7 +1005,9 @@ final class ProjectTransaction {
     private static final class Put {
 
         final int index
+        // the digest of the file as it was, or null for a file the change adds
         final String before
+        // the digest of the file as the change makes it, or null for a file the change removes
         final String after
         final String path
 

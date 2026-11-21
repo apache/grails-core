@@ -38,8 +38,8 @@ dependentFeatures: []
 +       url: jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:mysql:8:///db
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:mysql:8:///db
 
 # rest_api
 title: MySQL
@@ -73,8 +73,8 @@ dependentFeatures: []
 +       url: jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:mysql:8:///db
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:mysql:8:///db
 
 # web_plugin
 title: MySQL
@@ -108,8 +108,8 @@ dependentFeatures: []
 +       url: jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:mysql:8:///db
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:mysql:8:///db
 
 # plugin
 title: MySQL
@@ -143,6 +143,6 @@ dependentFeatures: []
 +       url: jdbc:mysql://localhost:3306/prodDb?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:mysql:8:///db
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:mysql:8:///db
 

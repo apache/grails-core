@@ -46,10 +46,12 @@ import org.grails.forge.io.OutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.template.Template
 import org.grails.forge.util.NameUtils
+import org.yaml.snakeyaml.Yaml
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.TempDir
 import spock.lang.Timeout
+import spock.lang.Unroll
 
 /**
  * What adding a feature does with files the features of Grails do not write: binary files, files
@@ -244,40 +246,85 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         ProjectState.read(project).verifyBaseline(project)
     }
 
-    void "a feature that would leave a generated file out is refused, and what it would do is shown"() {
+    void "a file that is not generated with the feature is removed with its copy and the directories only it was in, when the project has it as it was generated"() {
         given:
-        ProjectGenerator generator = generator { GeneratorContext context ->
-            if (!context.features.contains(FEATURE)) {
-                context.addTemplate('only', new Fixed('only-without.txt', 'x\n'.bytes, false, false))
-            }
-        }
+        ProjectGenerator generator = leavingFilesOut()
         Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+
+        then:
+        !plan.refused
+        plan.conflicts.isEmpty()
+        plan.files.find { it.path == 'only-without.txt' }.action == Action.REMOVE
+        plan.files.find { it.path == 'old/only/gone.bin' }.action == Action.REMOVE
+        plan.files.find { it.path == 'build.gradle' }.action == Action.UPDATE
+
+        and:
+        List<String> diff = plan.diff()
+        diff.containsAll(['--- a/only-without.txt', '+++ /dev/null', '-x'])
+        diff.contains('Binary file old/only/gone.bin is removed')
+        diff.contains('+    implementation "org.apache.grails:grails-quartz"')
+
+        and: 'a plan removes nothing'
+        Files.exists(project.resolve('only-without.txt'))
+
+        when:
+        List<String> written = []
+        plan.apply { String path -> written << path }
+
+        then: 'the project is the one that was created with the feature: without the files, their copies and the directories that are empty now'
+        written.containsAll(['only-without.txt', 'old/only/gone.bin', '.grails/baseline/files/only-without.txt', '.grails/baseline/files/old/only/gone.bin'])
+        !Files.exists(project.resolve('old'))
+        !Files.exists(project.resolve('.grails/baseline/files/old'))
+        Files.exists(project.resolve('kept/stays.txt'))
+        tree(project) == tree(with)
+        ProjectState.read(project).verifyBaseline(project)
+        left(project) == []
+        journals() == []
+    }
+
+    void "a file that is not generated with the feature and was changed in the project is a conflict, and one that was removed from it is in the way of nothing"() {
+        given:
+        ProjectGenerator generator = leavingFilesOut()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        Files.writeString(project.resolve('only-without.txt'), 'x\nmine\n')
+        Files.createDirectory(project.resolve('old/only/mine'))
         Map<String, String> before = tree(project)
 
         when:
         ChangePlan plan = planOf(generator, project)
 
         then:
-        plan.refused
-        plan.refusal == 'Adding grails-quartz would leave out a file the application was generated with (only-without.txt), which adding a feature does not do. ' +
-                'An application has it when it is created with it (--features grails-quartz); to change this application by hand, feature add grails-quartz --diff ' +
-                'shows what would be added to its files and what would be removed, and the record under .grails then does not know of the change. Nothing was changed'
-        plan.files.find { it.path == 'only-without.txt' }.action == Action.REMOVE
-        plan.files.find { it.path == 'build.gradle' }.action == Action.UPDATE
-
-        and:
-        List<String> diff = plan.diff()
-        diff.containsAll(['--- a/only-without.txt', '+++ /dev/null', '-x'])
-        diff.contains('+    implementation "org.apache.grails:grails-quartz"')
+        !plan.refused
+        plan.conflicts*.path == ['only-without.txt']
+        plan.conflicts[0].reason == 'the feature takes this file out of the application, and it was changed in the project'
+        plan.conflicts[0].details == ['Remove the file, or put it back as it was generated (its copy is .grails/baseline/files/only-without.txt), and add the feature again; ' +
+                                              'what you changed in it is for you to keep elsewhere']
+        plan.diff().containsAll(['rejected: only-without.txt (the feature takes this file out of the application, and it was changed in the project)', '-x'])
 
         when:
         plan.apply()
 
         then:
-        ProjectChangeException e = thrown()
-        e.message == plan.refusal
+        thrown(IllegalStateException)
         tree(project) == before
-        !Files.exists(project.resolve('.grails/transactions'))
+
+        when: 'the file is removed by hand'
+        Files.delete(project.resolve('only-without.txt'))
+        ChangePlan again = planOf(generator, project)
+        again.apply()
+
+        then: 'the copy of the file goes all the same, and a directory that has something of the project stays'
+        again.conflicts.isEmpty()
+        again.files.find { it.path == 'only-without.txt' } == null
+        Files.isDirectory(project.resolve('old/only/mine'))
+        !Files.exists(project.resolve('old/only/gone.bin'))
+        tree(project).findAll { !it.key.startsWith('old') } == tree(with)
+        ProjectState.read(project).verifyBaseline(project)
     }
 
     void "an application that is not generated again as it was is refused"() {
@@ -298,9 +345,10 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         tree(project) == before
     }
 
-    void "a change that is interrupted after any of its files is undone, also when undoing it is interrupted, and one that wrote its last file stays"() {
+    @Unroll
+    void "a change that #does is undone when it is interrupted after any of its files, also when undoing it is interrupted, and one that came to its last file stays"() {
         given:
-        ProjectGenerator generator = withNewFiles()
+        ProjectGenerator generator = removing ? leavingFilesOut(withNewFiles()) : withNewFiles()
         Path base = create(generator, 'app', [])
         Path with = create(generator, 'with', [FEATURE])
         Map<String, String> before = tree(base)
@@ -312,6 +360,7 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
         writes.size() > 10
         writes.containsAll(['build.gradle', 'bin/tool.sh', '.grails/baseline/files/bin/tool.sh', '.grails/baseline/index.yml', '.grails/forge.lock.yml'])
         writes.last() == '.grails/project.yml'
+        !removing || writes.containsAll(['only-without.txt', 'old/only/gone.bin', '.grails/baseline/files/old/only/gone.bin'])
 
         when:
         List<String> wrong = []
@@ -372,6 +421,11 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
 
         then:
         wrong == []
+
+        where:
+        removing | does
+        false    | 'writes files'
+        true     | 'writes and removes files'
     }
 
     void "what was undone is said, file by file, and a change that had written everything is said to be complete"() {
@@ -1353,28 +1407,90 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
                         'neither changed, add the feature again, and then put them where they belong']
     }
 
-    void "a block the project moved and the feature moves too, each to another place, is a conflict and not there twice"() {
-        given: 'the block grails: of the configuration, which the feature for Ehcache moves and adds to, moved to the top of the file'
+    void "a block of the configuration that the project moved stays where the project has it, and gets the keys of the feature"() {
+        given: 'the block grails: of the configuration, which the feature for Ehcache adds to, moved to the top of the file'
         ProjectGenerator generator = generator()
         Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', ['cache-ehcache'])
         Path configuration = project.resolve('grails-app/conf/application.yml')
         List<String> lines = configuration.toFile().readLines()
         int block = lines.indexOf('grails:')
-        configuration.toFile().text = (lines.drop(block) + lines.take(block)).join('\n') + '\n'
-        Map<String, String> before = tree(project)
+        List<String> moved = lines.drop(block) + lines.take(block)
+        configuration.toFile().text = moved.join('\n') + '\n'
+
+        expect:
+        block > 0
 
         when:
         ChangePlan plan = planOf(generator, project, ['cache-ehcache'])
+        ChangePlan.PlannedFile planned = plan.files.find { it.path == 'grails-app/conf/application.yml' }
+
+        then: 'the feature does not move the block, so there is nothing of it where the project moved the block from'
+        plan.conflicts.isEmpty()
+        planned.action == Action.UPDATE
+        planned.details == ['the keys of this file are in another order than the generator writes them in; they stay where they are, and what the feature changes is put among them']
+
+        and: 'the difference that is shown is the lines of the feature'
+        List<String> diff = plan.diff()
+        List<String> ofFile = diff.subList(diff.indexOf('+++ b/grails-app/conf/application.yml') + 1, diff.size()).takeWhile { !it.startsWith('--- ') }
+        ofFile.findAll { it.startsWith('-') } == []
+        !ofFile.findAll { it.startsWith('+') }.isEmpty()
+
+        when:
+        plan.apply()
+        List<String> now = configuration.toFile().readLines()
+        List<String> generatedWith = with.resolve('grails-app/conf/application.yml').toFile().readLines()
+        int kept = 0
+        now.each { String line -> kept += kept < moved.size() && line == moved[kept] ? 1 : 0 }
+
+        then: 'the block is the first of the file still, every line of the project is there in its order, and the content is that of the application created with the feature'
+        now.first() == 'grails:'
+        kept == moved.size()
+        now.toSorted() == generatedWith.toSorted()
+        new Yaml().load(now.join('\n')) == new Yaml().load(generatedWith.join('\n'))
+        tree(project).findAll { it.key.startsWith('.grails/') } == tree(with).findAll { it.key.startsWith('.grails/') }
+    }
+
+    void "a project whose baseline has the keys of the configuration in another order is one a feature is added to, and one whose baseline has another configuration is not"() {
+        given: 'the configuration and its copy with the block grails: first, as a generator that wrote the keys in another order would have left them, and the digests of the record'
+        ProjectGenerator generator = generator()
+        Path project = create(generator, 'app', [])
+        Path with = create(generator, 'with', [FEATURE])
+        Path configuration = project.resolve('grails-app/conf/application.yml')
+        List<String> lines = configuration.toFile().readLines()
+        int block = lines.indexOf('grails:')
+        String moved = (lines.drop(block) + lines.take(block)).join('\n') + '\n'
+        rewriteGenerated(project, 'grails-app/conf/application.yml', moved)
+
+        expect:
+        ProjectState.read(project).verifyBaseline(project)
+
+        when: 'generating the application again holds it to the baseline, byte for byte'
+        addition(generator).regenerate(project, OperatingSystem.LINUX)
 
         then:
-        plan.conflicts*.path == ['grails-app/conf/application.yml']
-        plan.conflicts[0].reason ==~ /the project and the feature both moved or added \d+ lines of this file, each to another place/
-        plan.conflicts[0].details.first() == 'line 1 of the project is a line the project and the feature both moved or added, each to another place; ' +
-                'merged, the file would have it more often, or less often, than any of them has it:'
-        plan.conflicts[0].details[1] == '    grails:'
-        plan.conflicts[0].details.last() == 'A line both have in another place than the generated file is to be in one place: put it in the file of the project ' +
-                'where the feature has it, or where the generated file had it, and add the feature again'
-        tree(project) == before
+        ProjectChangeException strict = thrown()
+        strict.message.startsWith('The application cannot be generated again as it was: 1 file is not what the baseline of the project has (grails-app/conf/application.yml).')
+
+        when:
+        ChangePlan plan = planOf(generator, project)
+        plan.apply()
+
+        then: 'the file keeps its order and gets the key of the feature, and the record is the one the generator writes'
+        plan.conflicts.isEmpty()
+        configuration.toFile().readLines().first() == 'grails:'
+        configuration.toFile().readLines() - ['quartz.autoStartup: true'] == moved.readLines()
+        tree(project).findAll { it.key.startsWith('.grails/') } == tree(with).findAll { it.key.startsWith('.grails/') }
+        ProjectState.read(project).verifyBaseline(project)
+
+        when: 'a baseline whose configuration is another, and not only in another order'
+        Path other = create(generator, 'other', [])
+        rewriteGenerated(other, 'grails-app/conf/application.yml', moved.replace('encoding: UTF-8', 'encoding: ISO-8859-1'))
+        planOf(generator, other)
+
+        then:
+        ProjectChangeException e = thrown()
+        e.message.startsWith('The application cannot be generated again as it was: 1 file is not what the baseline of the project has (grails-app/conf/application.yml).')
     }
 
     void "a dependency of the feature that the project has in another place is a conflict, and one it has with another version is said"() {
@@ -1468,6 +1584,32 @@ class FeatureAdditionSpec extends ApplicationContextSpec {
                 context.addTemplate('tool', new Fixed('bin/tool.sh', '#!/bin/sh\necho tool\n'.bytes, false, true))
             }
         }
+    }
+
+    // files that an application has without the feature only: a text file, a binary file in directories of its own, and beside them one it always has
+    private ProjectGenerator leavingFilesOut(ProjectGenerator on = beanContext.getBean(ProjectGenerator)) {
+        return new WithFiles(real: on, extra: { GeneratorContext context ->
+            context.addTemplate('stays', new Fixed('kept/stays.txt', 'stays\n'.bytes, false, false))
+            if (!context.features.contains(FEATURE)) {
+                context.addTemplate('only', new Fixed('only-without.txt', 'x\n'.bytes, false, false))
+                context.addTemplate('gone', new Fixed('old/only/gone.bin', ICON, true, false))
+            }
+        })
+    }
+
+    // makes a file of a project, its copy in the baseline and the digests the record has of it what another generator would have written
+    private static void rewriteGenerated(Path project, String path, String text) {
+        File index = project.resolve('.grails/baseline/index.yml').toFile()
+        File lock = project.resolve('.grails/forge.lock.yml').toFile()
+        String was = sha(project.resolve(path))
+        assert index.text.count(was) == 1
+        project.resolve(path).toFile().text = text
+        project.resolve(".grails/baseline/files/${path}").toFile().text = text
+        String indexWas = sha(index.bytes)
+        index.text = index.text.replace(was, sha(text.bytes))
+        assert lock.text.count(indexWas) == 1
+        String sealed = lock.text.substring(0, lock.text.indexOf('seal:\n')).replace(indexWas, sha(index.bytes))
+        lock.text = sealed + "seal:\n  sha256: ${sha(sealed.bytes)}\n"
     }
 
     private Path create(ProjectGenerator generator, String into, List<String> features) {

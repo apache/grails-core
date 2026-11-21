@@ -40,6 +40,7 @@ import org.grails.forge.io.ZipOutputHandler
 import org.grails.forge.options.Options
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Unroll
 
 class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
@@ -440,8 +441,299 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         where:
         created | added             || lost                                                     | shownInDiff                                                | message
         []      | 'gorm-hibernate7' || '    change   --data hibernate7 in the place of hibernate5' | [/(?m)^-.*hibernate5/, /(?m)^\+.*hibernate7/]                | 'Adding gorm-hibernate7 would change what the application was created with (--data hibernate7 in the place of hibernate5)'
-        []      | 'postgres'        || '    remove   the feature h2'                               | [/(?m)^-.*h2/, /(?m)^\+.*postgresql/]                        | 'Adding postgres would take the feature h2 out of the application: a feature that replaces another cannot be added to an application.'
-        []      | 'grails-layout'   || '    remove   the feature sitemesh3'                        | [/(?m)^-.*sitemesh/, /(?m)^\+.*layout/]                      | 'Adding grails-layout would take the feature sitemesh3 out of the application: a feature that replaces another cannot be added to an application.'
+    }
+
+    @Unroll
+    void "#added takes the place of #replaced, which what #command.simpleName #created made has by default, and the application is the one that was created with it"() {
+        given:
+        create(dir, command, created)
+        create(with, command, created + ['--features', added])
+
+        expect: 'the default is there, and was not asked for'
+        ProjectState.read(dir.toPath()).lock.featureNames.contains(replaced)
+        !ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name.contains(replaced)
+
+        when:
+        int exit = add(added)
+
+        then: 'the command says what it replaced'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains("    ${added} replaces ${replaced}, the default of the group ${group}\n")
+        out.toString().contains("Feature ${added} added, in the place of ${replaced}")
+        out.toString().contains('. Commit the changes together with the directory .grails')
+
+        and: 'every file is the file of the application that was created with the feature, and so is the record: the manifest, the lock and the baseline'
+        tree(dir) == tree(with)
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == [added]
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == ProjectState.read(with.toPath()).manifest.requestedFeatures*.name
+        ProjectState.read(dir.toPath()).lock.featureNames.contains(added)
+        !ProjectState.read(dir.toPath()).lock.featureNames.contains(replaced)
+
+        and: 'nothing is left of the change'
+        new File(dir, '.grails/transactions').list() as List == ['lock']
+        !new File(home, '.grails/forge/transactions').list()
+
+        when: 'the application is generated again from its record and compared with what it is'
+        out.reset()
+        int regenerated = CliRunner.run(ProjectRegenerateCommand, beanContext, '--diff')
+
+        then:
+        regenerated == 0
+        err.toString().isEmpty()
+
+        when: 'again'
+        out.reset()
+        int again = add(added)
+
+        then:
+        again == 0
+        out.toString().contains("The application already has the feature ${added}")
+        tree(dir) == tree(with)
+
+        where:
+        command              | created                          | added                     || replaced                  | group
+        CreateAppCommand     | []                               | 'postgres'                || 'h2'                      | 'database-driver'
+        CreateAppCommand     | []                               | 'mysql'                   || 'h2'                      | 'database-driver'
+        CreateAppCommand     | ['--servlet', 'jetty']           | 'sqlserver'               || 'h2'                      | 'database-driver'
+        CreateAppCommand     | []                               | 'grails-layout'           || 'sitemesh3'               | 'gsp-layout'
+        CreateAppCommand     | []                               | 'geb-with-local-browsers' || 'geb-with-testcontainers' | 'geb'
+        CreateAppCommand     | []                               | 'logback-config'          || 'logback'                 | 'logging'
+        CreateRestApiCommand | []                               | 'postgres'                || 'h2'                      | 'database-driver'
+        CreateRestApiCommand | []                               | 'views-markup'            || 'views-json'              | 'api-views'
+    }
+
+    void "the lines of the default that makes way are taken out of the files, and those of the feature are put in their place"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        File build = new File(dir, 'build.gradle')
+        File config = new File(dir, 'grails-app/conf/application.yml')
+
+        expect:
+        build.text.contains('runtimeOnly "com.h2database:h2"')
+        config.text.contains('driverClassName: org.h2.Driver')
+        config.text.contains('url: jdbc:h2:mem:devDb')
+
+        when:
+        int exit = add('postgres')
+
+        then:
+        exit == 0
+        out.toString().contains('Adding the feature postgres, and with it testcontainers\n' +
+                '    postgres replaces h2, the default of the group database-driver\n' +
+                '    update   README.md\n' +
+                '    update   build.gradle\n' +
+                '    update   grails-app/conf/application.yml\n' +
+                '    add      src/test/resources/application-test.yml\n')
+        out.toString().contains('Feature postgres added, in the place of h2. Commit the changes together with the directory .grails')
+        !build.text.contains('h2')
+        build.text.contains('runtimeOnly "org.postgresql:postgresql"')
+        !config.text.contains('h2')
+        config.text.contains('driverClassName: org.postgresql.Driver')
+        config.text.contains('url: jdbc:postgresql://localhost:5432/devDb')
+    }
+
+    void "what a feature would replace and take out is said with --dry-run and shown with --diff, and nothing is changed"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        Map<String, String> before = tree(dir)
+
+        when:
+        int exit = add('postgres', '--dry-run')
+
+        then:
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains('To add the feature postgres, and with it testcontainers')
+        out.toString().contains('    postgres replaces h2, the default of the group database-driver')
+        out.toString().contains('    update   build.gradle')
+        out.toString().contains('    update   grails-app/conf/application.yml')
+        out.toString().contains('Nothing was changed')
+        !out.toString().contains('+++')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when:
+        out.reset()
+        int shown = add('postgres', '--diff')
+
+        then: 'the lines that go are in the diff like those that come'
+        shown == 0
+        out.toString().contains('    postgres replaces h2, the default of the group database-driver')
+        out.toString().contains('-    runtimeOnly "com.h2database:h2"')
+        out.toString().contains('+    runtimeOnly "org.postgresql:postgresql"')
+        out.toString().contains('-  driverClassName: org.h2.Driver')
+        out.toString().contains('+  driverClassName: org.postgresql.Driver')
+        out.toString().contains('-      url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+    }
+
+    void "lines of the default that were changed in the application are a conflict when a feature replaces the default, and what was changed elsewhere is kept"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        create(with, CreateAppCommand, ['--features', 'postgres'])
+        File config = new File(dir, 'grails-app/conf/application.yml')
+        String generated = config.text
+        config.text = generated.replace('url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:h2:file:./ourDevDb')
+        File build = new File(dir, 'build.gradle')
+        build.text = '// our build\n' + build.text
+        Map<String, String> before = tree(dir)
+
+        expect:
+        config.text != generated
+
+        when:
+        int exit = add('postgres')
+
+        then: 'the conflict is said as any other, and nothing is written'
+        exit == 1
+        out.toString().contains('    postgres replaces h2, the default of the group database-driver')
+        out.toString().contains('    conflict grails-app/conf/application.yml: the feature changes')
+        out.toString().readLines()*.trim().containsAll(['url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE', 'url: jdbc:h2:file:./ourDevDb',
+                                                        'url: jdbc:postgresql://localhost:5432/devDb?tcpKeepAlive=true'])
+        out.toString().contains('    merge    build.gradle (your changes are kept)')
+        err.toString().contains('The feature was not added: 1 file cannot be written without losing what the application has. Nothing was changed.')
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when: 'the line is what it was generated as again'
+        config.text = generated
+        out.reset()
+        err.reset()
+        int again = add('postgres')
+
+        then:
+        again == 0
+        err.toString().isEmpty()
+        config.text == new File(with, 'grails-app/conf/application.yml').text
+        build.text == '// our build\n' + new File(with, 'build.gradle').text
+        tree(dir).findAll { it.key.startsWith('.grails/') } == tree(with).findAll { it.key.startsWith('.grails/') }
+    }
+
+    @Unroll
+    void "#added does not take the place of #asked, which was asked for when the application was created"() {
+        given:
+        create(dir, CreateAppCommand, ['--features=' + asked])
+        Map<String, String> before = tree(dir)
+
+        expect:
+        ProjectState.read(dir.toPath()).manifest.requestedFeatures*.name == [asked]
+
+        when:
+        int exit = add(added)
+
+        then: 'the message names both, and nothing is changed'
+        exit == 2
+        err.toString().contains("The application was created with the feature ${asked}, which was asked for by name, and ${added} would take its place: " +
+                "both are of the group ${group}, of which an application has one. A feature that was asked for is not replaced by adding another; only one the " +
+                "application has by default is. An application has ${added} when it is created with it (--features ${added}). Nothing was changed")
+        tree(dir) == before
+        !new File(dir, '.grails/transactions').exists()
+
+        when:
+        err.reset()
+        int shown = add(added, '--diff')
+
+        then:
+        shown == 2
+        err.toString().contains("The application was created with the feature ${asked}, which was asked for by name")
+        tree(dir) == before
+
+        where:
+        asked                     | added                     || group
+        'h2'                      | 'postgres'                || 'database-driver'
+        'postgres'                | 'mysql'                   || 'database-driver'
+        'geb-with-local-browsers' | 'geb-with-testcontainers' || 'geb'
+    }
+
+    void "a feature puts its keys into the configuration and moves no line of it"() {
+        given:
+        create(dir, CreateAppCommand, [])
+        File config = new File(dir, 'grails-app/conf/application.yml')
+        List<String> generated = config.readLines()
+
+        when:
+        int shown = add('cache', '--diff')
+        String diff = out.toString()
+        List<String> ofConfig = diff.substring(diff.indexOf('+++ b/grails-app/conf/application.yml')).readLines().drop(1).takeWhile { !it.startsWith('--- ') }
+
+        then: 'the diff of the file removes no line'
+        shown == 0
+        ofConfig.findAll { it.startsWith('-') } == []
+        ofConfig.findAll { it.startsWith('+') }*.substring(1) == ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
+
+        when:
+        out.reset()
+        int exit = add('cache')
+        List<String> now = config.readLines()
+
+        then: 'every line that was there is there, in its order, and the only new lines are those of the feature, under the key they belong to'
+        exit == 0
+        without(now, ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']) == generated
+        Collections.indexOfSubList(now, ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager']) == now.indexOf('grails:') + 1
+    }
+
+    @Unroll
+    void "an application whose configuration has its keys in the order an earlier build wrote them in keeps that order when #added is added, and gets the keys of the feature"() {
+        given: 'an application as a build before the order of the keys was fixed generated it: the file, its copy in the baseline and the digests of the record'
+        create(dir, CreateAppCommand, [])
+        create(with, CreateAppCommand, ['--features', added])
+        File config = new File(dir, 'grails-app/conf/application.yml')
+        asAnEarlierBuildWroteIt(dir, EARLIER_ORDER)
+        config.text = edit(EARLIER_ORDER)
+        Map<String, String> before = tree(dir)
+
+        expect: 'the record is one that reads, and the file is not what is generated now'
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+        EARLIER_ORDER != new File(with, '.grails/baseline/files/grails-app/conf/application.yml').text
+
+        when:
+        int shown = add(added, '--diff')
+        String diff = out.toString()
+        List<String> ofConfig = diff.substring(diff.indexOf('+++ b/grails-app/conf/application.yml')).readLines().drop(1).takeWhile { !it.startsWith('--- ') }
+
+        then: 'no wall of moved lines: the diff has the lines of the feature and nothing else'
+        shown == 0
+        err.toString().isEmpty()
+        ofConfig.findAll { it.startsWith('-') } == []
+        ofConfig.findAll { it.startsWith('+') }*.substring(1) == arrive
+        tree(dir) == before
+
+        when:
+        out.reset()
+        int exit = add(added)
+
+        then: 'the file keeps its order, and the change that was made to it'
+        exit == 0
+        err.toString().isEmpty()
+        out.toString().contains("    ${(edit(EARLIER_ORDER) == EARLIER_ORDER ? 'update' : 'merge').padRight(8)} grails-app/conf/application.yml")
+        out.toString().contains('the keys of this file are in another order than the generator writes them in; they stay where they are, and what the feature changes is put among them')
+        without(config.readLines(), arrive) == edit(EARLIER_ORDER).readLines()
+        Collections.indexOfSubList(config.readLines(), arrive) == edit(EARLIER_ORDER).readLines().indexOf(after) + 1
+
+        and: 'the configuration is that of the application that was created with the feature, whatever the order'
+        edit(EARLIER_ORDER) != EARLIER_ORDER || new Yaml().load(config.text) == new Yaml().load(new File(with, 'grails-app/conf/application.yml').text)
+
+        and: 'the record is the one the generator writes now, so the next feature is compared with what is generated now'
+        tree(dir).findAll { it.key.startsWith('.grails/') } == tree(with).findAll { it.key.startsWith('.grails/') }
+        ProjectState.read(dir.toPath()).verifyBaseline(dir.toPath())
+
+        when: 'another feature'
+        out.reset()
+        List<String> had = config.readLines()
+        int next = add('grails-quartz')
+
+        then:
+        next == 0
+        err.toString().isEmpty()
+        config.readLines() - ['quartz.autoStartup: true'] == had
+
+        where:
+        added   | edit                                                                                   || after        | arrive
+        'cache' | { String text -> text }                                                                || 'grails:'    | ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
+        'cache' | { String text -> 'ours: 1\n' + text.replace('pooled: true', 'pooled: false # ours') } || 'grails:'    | ['  cache:', '    cacheManager: grails.plugin.cache.GrailsConcurrentMapCacheManager', '    cleanAtStartup: false', '    enabled: true']
     }
 
     @Unroll
@@ -820,6 +1112,73 @@ class FeatureAddCommandSpec extends CommandSpec implements CommandFixture {
         } finally {
             System.setProperty('user.dir', current)
         }
+    }
+
+    // The configuration of the default application as the builds wrote it that put the keys in the order the features gave them in
+    static final String EARLIER_ORDER = '''\
+info:
+  app:
+    name: '@info.app.name@'
+    version: '@info.app.version@'
+    grailsVersion: '@info.app.grailsVersion@'
+dataSource:
+  driverClassName: org.h2.Driver
+  username: sa
+  password: ''
+  pooled: true
+  jmxExport: true
+environments:
+  development:
+    dataSource:
+      dbCreate: create-drop
+      url: jdbc:h2:mem:devDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+  test:
+    dataSource:
+      dbCreate: update
+      url: jdbc:h2:mem:testDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+  production:
+    dataSource:
+      dbCreate: none
+      url: jdbc:h2:./prodDb;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+hibernate:
+  cache:
+    queries: false
+    use_second_level_cache: false
+    use_query_cache: false
+grails:
+  codegen:
+    defaultPackage: com.example
+  views:
+    gsp:
+      encoding: UTF-8
+      codecs:
+        scriptlet: html
+'''
+
+    /**
+     * Makes the configuration of a project, with its copy in the baseline and the digests the record
+     * has of it (that of the file in the index, that of the index in the lock, and the seal of the
+     * lock), what an earlier build of the generator wrote.
+     */
+    private static void asAnEarlierBuildWroteIt(File project, String text) {
+        File index = new File(project, '.grails/baseline/index.yml')
+        File lock = new File(project, '.grails/forge.lock.yml')
+        String was = sha(new File(project, 'grails-app/conf/application.yml').bytes)
+        assert index.text.count(was) == 1
+        new File(project, 'grails-app/conf/application.yml').text = text
+        new File(project, '.grails/baseline/files/grails-app/conf/application.yml').text = text
+        String indexWas = sha(index.bytes)
+        index.text = index.text.replace(was, sha(text.bytes))
+        assert lock.text.count(indexWas) == 1
+        String sealed = lock.text.substring(0, lock.text.indexOf('seal:\n')).replace(indexWas, sha(index.bytes))
+        lock.text = sealed + "seal:\n  sha256: ${sha(sealed.bytes)}\n"
+    }
+
+    // the lines of a file without a block of lines that follow each other in it
+    private static List<String> without(List<String> lines, List<String> block) {
+        int at = Collections.indexOfSubList(lines, block)
+        assert at >= 0
+        return lines.take(at) + lines.drop(at + block.size())
     }
 
     private int add(String... arguments) {

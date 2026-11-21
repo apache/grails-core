@@ -40,11 +40,18 @@ import org.grails.forge.application.generator.ProjectGenerator
 import org.grails.forge.feature.AvailableFeatures
 import org.grails.forge.feature.Feature
 import org.grails.forge.feature.FeatureSelectionException
+import org.grails.forge.feature.OneOfFeature
 import org.grails.forge.io.ConsoleOutput
 import org.grails.forge.options.OptionName
 import org.grails.forge.options.Options
+import org.grails.forge.template.YamlKeyOrder
+import org.grails.forge.template.YamlTemplate
 import org.grails.forge.util.NameUtils
 import org.grails.forge.util.VersionInfo
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
+import org.yaml.snakeyaml.error.YAMLException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
@@ -70,8 +77,19 @@ import java.util.function.Consumer
  * change is not looked at.</p>
  *
  * <p>Only features of Grails are added, to an application that has no others and that this very
- * version generated. Nothing is taken out: a feature that would replace another, or leave a generated
- * file out, is refused.</p>
+ * version generated. A feature takes the place of one the application has by default, as a database
+ * driver takes that of the default one: what the default wrote is taken out of the files, as a
+ * difference like any other, so that lines of it that were changed in the project are a conflict, and
+ * a file only it wrote is removed when the project has it as it was generated. A feature that was
+ * asked for by name when the application was created is not replaced, and neither is an option the
+ * application was created with: adding a feature that would is refused.</p>
+ *
+ * <p>The keys of the YAML configuration files are written in an order that does not depend on the
+ * features, see {@link YamlKeyOrder}. A project that has the keys of such a file in another order,
+ * because an earlier build of the generator wrote them so or because they were moved, keeps its
+ * order: the two generated versions of the file are put into the order of the project's before they
+ * are compared, so that the keys of the feature arrive among those that are there and nothing
+ * moves.</p>
  *
  * @since 9.0
  */
@@ -173,14 +191,16 @@ final class FeatureAddition {
             }
         }
         if (toAdd.isEmpty()) {
-            return new ChangePlan(projectDirectory, home, [], alreadyThere.unique(), [], [], [], null, [], [])
+            return new ChangePlan(projectDirectory, home, [], alreadyThere.unique(), [], [], [], null, [], [], [], [])
         }
 
         byte[] manifestBytes = bytes(projectDirectory, ProjectState.MANIFEST)
         byte[] lockBytes = bytes(projectDirectory, ProjectState.LOCK)
         byte[] indexBytes = bytes(projectDirectory, ProjectState.BASELINE_INDEX)
         List<String> recorded = manifest.requestedFeatures*.name
-        RenderedProject before = replayed(state, manifestBytes, lockBytes, indexBytes, operatingSystem)
+        notInThePlaceOfOneAskedFor(available, recorded, toAdd)
+        Set<String> inAnotherOrder = new TreeSet<>()
+        RenderedProject before = replayed(projectDirectory, state, manifestBytes, lockBytes, indexBytes, operatingSystem, inAnotherOrder)
 
         RenderedProject after
         try {
@@ -203,7 +223,13 @@ final class FeatureAddition {
         List<String> has = proposed.lock.featureNames
         List<String> lostFeatures = state.lock.featureNames.findAll { String name -> !has.contains(name) }
         List<String> lostFiles = state.baseline.files.findAll { BaselineFile file -> proposed.baseline.find(file.path) == null }*.path
-        String refusal = refusal(toAdd, changedOptions, lostFeatures, lostFiles)
+        // A feature the application has without having been asked for it, by default, makes way for
+        // the feature that is added. What the application was created with by name does not: an
+        // option, and a feature that was asked for, which the selection refuses before this
+        List<String> askedFor = lostFeatures.findAll { String name -> recorded.contains(name) }
+        String refusal = !changedOptions.isEmpty() ? refusal(toAdd, changedOptions, lostFeatures) : askedFor.isEmpty() ? null : refusal(toAdd, [], askedFor)
+        List<String> had = lock.featureNames
+        List<String> gained = proposed.lock.featureNames.findAll { String name -> !had.contains(name) }
 
         boolean posix = projectDirectory.getFileSystem().supportedFileAttributeViews().contains('posix')
         List<PlannedFile> files = []
@@ -235,15 +261,86 @@ final class FeatureAddition {
         // the manifest last, as when the application was generated
         writes << new Write(ProjectState.MANIFEST, after.content(ProjectState.MANIFEST), null, ProjectTransaction.sha256(manifestBytes))
 
-        // what a feature that is refused would take away is shown with what it would add
+        // A file only the feature that makes way wrote goes with it, and its copy in the baseline
+        // does. What a feature that is refused would take away is shown with what it would add
         for (String path : lostFiles) {
             BaselineFile generated = state.baseline.find(path)
             Working working = working(projectDirectory, path)
-            files << new PlannedFile(path, Action.REMOVE, null, generated.binary, working.content, new byte[0], null, before.content(path), new byte[0], [])
+            if (refusal != null) {
+                files << new PlannedFile(path, Action.REMOVE, null, generated.binary, working.content, new byte[0], null, before.content(path), new byte[0], [])
+                continue
+            }
+            PlannedFile removed = removed(path, generated.binary, working, before.content(path))
+            if (removed != null) {
+                files << removed
+            }
+            writes.add(0, new Write("${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}".toString(), null, null, generated.sha256))
         }
-        List<String> had = lock.featureNames
-        return new ChangePlan(projectDirectory, home, toAdd, alreadyThere.unique(), proposed.lock.featureNames.findAll { String name -> !had.contains(name) },
-                files.sort(false) { PlannedFile file -> file.path }, writes, refusal, lostFeatures, changedOptions)
+        List<String> replaced = refusal == null ? lostFeatures : Collections.<String>emptyList()
+        return new ChangePlan(projectDirectory, home, toAdd, alreadyThere.unique(), gained,
+                files.sort(false) { PlannedFile file -> file.path }, writes, refusal, refusal == null ? Collections.<String>emptyList() : lostFeatures, changedOptions,
+                replaced, replaced.collect { String name -> replacement(available, name, gained, toAdd) })
+    }
+
+    /**
+     * A feature that was asked for by name when the application was created is not replaced by one
+     * that is added: of an exclusive group, the application keeps the one it was created with.
+     */
+    private static void notInThePlaceOfOneAskedFor(AvailableFeatures available, List<String> recorded, List<String> toAdd) {
+        for (String name : toAdd) {
+            // a name that is no feature that can be asked for is refused by the selection, in the words it has for it
+            Feature feature = available.findFeature(name).orElse(null)
+            if (!(feature instanceof OneOfFeature)) {
+                continue
+            }
+            String group = ((OneOfFeature) feature).getGroup()
+            String asked = recorded.find { String each ->
+                Feature other = available.findFeature(each, true).orElse(null)
+                other instanceof OneOfFeature && other.getName() != feature.getName() && ((OneOfFeature) other).getGroup() == group
+            }
+            if (asked != null) {
+                throw new FeatureSelectionException("The application was created with the feature ${asked}, which was asked for by name, and ${name} would take its place: " +
+                        "both are of the group ${group}, of which an application has one. A feature that was asked for is not replaced by adding another; only one the " +
+                        "application has by default is. An application has ${name} when it is created with it (--features ${name}). Nothing was changed")
+            }
+        }
+    }
+
+    // what is said of a feature that makes way: which feature takes its place, when one does
+    private static String replacement(AvailableFeatures available, String name, List<String> gained, List<String> toAdd) {
+        Feature feature = available.findFeature(name, true).orElse(null)
+        if (feature instanceof OneOfFeature) {
+            String group = ((OneOfFeature) feature).getGroup()
+            String by = gained.find { String each ->
+                Feature other = available.findFeature(each, true).orElse(null)
+                other instanceof OneOfFeature && ((OneOfFeature) other).getGroup() == group
+            }
+            if (by != null) {
+                return "${by} replaces ${name}, the default of the group ${group}".toString()
+            }
+        }
+        return "${named(toAdd)} ${toAdd.size() == 1 ? 'takes' : 'take'} out ${name}, which the application had by default and does not have with ${toAdd.size() == 1 ? 'it' : 'them'}".toString()
+    }
+
+    /**
+     * What becomes of a file that is not generated with the features: it is removed when the project
+     * has it as it was generated, and nothing is done when the project does not have it any more.
+     *
+     * @return what is to be done, or {@code null} when the project has no such file
+     */
+    private static PlannedFile removed(String path, boolean binary, Working working, byte[] base) {
+        if (working.obstacle != null) {
+            return conflict(path, "the feature takes this file out of the application, and in the project ${working.obstacle}", binary, working, base, new byte[0], working.advice)
+        }
+        if (working.content == null) {
+            return null
+        }
+        if (!(binary ? Arrays.equals(working.content, base) : ThreeWayMerge.sameText(working.content, base))) {
+            return conflict(path, 'the feature takes this file out of the application, and it was changed in the project', binary, working, base, new byte[0],
+                    [("Remove the file, or put it back as it was generated (its copy is ${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}), and add the feature again; " +
+                             'what you changed in it is for you to keep elsewhere').toString()])
+        }
+        return new PlannedFile(path, Action.REMOVE, null, binary, working.content, new byte[0], null, base, new byte[0], [])
     }
 
     /**
@@ -259,8 +356,8 @@ final class FeatureAddition {
      */
     RegeneratedProject regenerate(Path projectDirectory, @Nullable OperatingSystem operatingSystem) {
         ProjectState state = replayable(projectDirectory)
-        RenderedProject rendered = replayed(state, bytes(projectDirectory, ProjectState.MANIFEST), bytes(projectDirectory, ProjectState.LOCK),
-                bytes(projectDirectory, ProjectState.BASELINE_INDEX), operatingSystem)
+        RenderedProject rendered = replayed(projectDirectory, state, bytes(projectDirectory, ProjectState.MANIFEST), bytes(projectDirectory, ProjectState.LOCK),
+                bytes(projectDirectory, ProjectState.BASELINE_INDEX), operatingSystem, null)
         return new RegeneratedProject(rendered, state)
     }
 
@@ -292,8 +389,17 @@ final class FeatureAddition {
         return state
     }
 
-    // the application as its state records it, which has to come to that very state
-    private RenderedProject replayed(ProjectState state, byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes, @Nullable OperatingSystem operatingSystem) {
+    /**
+     * The application as its state records it, which has to come to that very state.
+     *
+     * @param inAnotherOrder {@code null} when every file has to be the file of the baseline, byte for
+     * byte. Otherwise a YAML file whose keys the baseline has in another order than the generator
+     * writes them in, and that is the same file otherwise, is taken for the file of the baseline, and
+     * its path is added to this set: an earlier build of the generator wrote the keys in the order the
+     * features gave them in
+     */
+    private RenderedProject replayed(Path projectDirectory, ProjectState state, byte[] manifestBytes, byte[] lockBytes, byte[] indexBytes, @Nullable OperatingSystem operatingSystem,
+                                     @Nullable Set<String> inAnotherOrder) {
         RenderedProject before
         try {
             before = render(state.manifest, state.manifest.requestedFeatures*.name, operatingSystem, ConsoleOutput.NOOP)
@@ -303,17 +409,41 @@ final class FeatureAddition {
             throw new ProjectChangeException("The application cannot be generated again as it was recorded: ${line(e)}", e)
         }
         List<String> unlike = unlike(state.baseline, stateOf(before).baseline)
+        if (inAnotherOrder != null) {
+            for (String path : unlike) {
+                BaselineFile generated = state.baseline.find(path)
+                byte[] now = before.content(path)
+                if (generated != null && now != null && isYaml(path) &&
+                        sameButForOrder(bytes(projectDirectory, "${ProjectState.BASELINE_FILES}/${BaselineIndex.copyPath(path)}".toString()), now)) {
+                    inAnotherOrder.add(path)
+                }
+            }
+            unlike = unlike.findAll { String path -> !inAnotherOrder.contains(path) }
+        }
         if (!unlike.isEmpty()) {
             throw new ProjectChangeException("The application cannot be generated again as it was: ${unlike.size()} ${unlike.size() == 1 ? 'file is' : 'files are'} " +
                     "not what the baseline of the project has (${named(unlike)}). A feature is added to what the same generator makes of the same choices; " +
                     'the repositories given with GRAILS_REPO_URL are among those choices')
         }
-        if (!Arrays.equals(before.content(ProjectState.MANIFEST), manifestBytes) || !Arrays.equals(before.content(ProjectState.LOCK), lockBytes) ||
-                !Arrays.equals(before.content(ProjectState.BASELINE_INDEX), indexBytes)) {
+        // the index has the digest of every file, and the lock that of the index, so both are others
+        // when a file has its keys in another order; every file of the index was compared above
+        boolean reordered = inAnotherOrder != null && !inAnotherOrder.isEmpty()
+        if (!Arrays.equals(before.content(ProjectState.MANIFEST), manifestBytes) ||
+                !(reordered ? sameLockButForTheIndex(before.content(ProjectState.LOCK), lockBytes) : Arrays.equals(before.content(ProjectState.LOCK), lockBytes)) ||
+                (!reordered && !Arrays.equals(before.content(ProjectState.BASELINE_INDEX), indexBytes))) {
             throw new ProjectChangeException("The record of the application under ${ProjectState.DIRECTORY} is not what this generator writes for the same choices, " +
                     'so a feature cannot be added to it; the repositories given with GRAILS_REPO_URL are among those choices')
         }
         return before
+    }
+
+    // a lock ends with the digest of the index and its seal, which is the digest of what is before it
+    private static boolean sameLockButForTheIndex(byte[] one, byte[] other) {
+        String first = new String(one, StandardCharsets.ISO_8859_1)
+        String second = new String(other, StandardCharsets.ISO_8859_1)
+        int firstEnd = first.lastIndexOf('\nbaselineIndex:\n')
+        int secondEnd = second.lastIndexOf('\nbaselineIndex:\n')
+        return firstEnd >= 0 && secondEnd >= 0 && first.substring(0, firstEnd) == second.substring(0, secondEnd)
     }
 
     private static List<String> changedOptions(GenerationOptions has, GenerationOptions would) {
@@ -333,11 +463,8 @@ final class FeatureAddition {
         return changed
     }
 
-    // Nothing the application has is taken away by adding to it. What would be, and how to have it
-    private static String refusal(List<String> toAdd, List<String> changedOptions, List<String> lostFeatures, List<String> lostFiles) {
-        if (changedOptions.isEmpty() && lostFeatures.isEmpty() && lostFiles.isEmpty()) {
-            return null
-        }
+    // What the application was created with by name is not taken away by adding to it. What would be, and how to have it
+    private static String refusal(List<String> toAdd, List<String> changedOptions, List<String> lostFeatures) {
         String adding = "Adding ${named(toAdd)}"
         String how = " An application has it when it is created with it (--features ${toAdd.join(',')}" +
                 "${changedOptions.isEmpty() ? '' : ', ' + changedOptions.collect { String option -> option.substring(0, option.indexOf(' in the place')) }.join(', ')}); " +
@@ -348,12 +475,8 @@ final class FeatureAddition {
                     "${lostFeatures.isEmpty() ? '' : " and take the ${lostFeatures.size() == 1 ? 'feature' : 'features'} ${named(lostFeatures)} out of it"}: " +
                     "adding a feature does not change the options of an application.${how}"
         }
-        if (!lostFeatures.isEmpty()) {
-            return "${adding} would take the ${lostFeatures.size() == 1 ? 'feature' : 'features'} ${named(lostFeatures)} out of the application: " +
-                    "a feature that replaces another cannot be added to an application.${how}"
-        }
-        return "${adding} would leave out ${lostFiles.size() == 1 ? 'a file' : 'files'} the application was generated with (${named(lostFiles)}), " +
-                "which adding a feature does not do.${how}"
+        return "${adding} would take the ${lostFeatures.size() == 1 ? 'feature' : 'features'} ${named(lostFeatures)} out of the application, which " +
+                "${lostFeatures.size() == 1 ? 'was' : 'were'} asked for when it was created: a feature that was asked for is not replaced by adding another.${how}"
     }
 
     private RenderedProject render(ProjectManifest manifest, List<String> features, OperatingSystem operatingSystem, ConsoleOutput console, boolean optionsAreChoices = true) {
@@ -452,6 +575,16 @@ final class FeatureAddition {
             result = working.content
             edited = false
         } else {
+            // a file of keys that the project has in another order is compared in the order of the project
+            byte[][] inItsOrder = isYaml(path) ? inTheOrderOf(working.content, base, proposed) : null
+            if (inItsOrder != null) {
+                base = inItsOrder[0]
+                proposed = inItsOrder[1]
+                notes << 'the keys of this file are in another order than the generator writes them in; they stay where they are, and what the feature changes is put among them'
+            }
+            if (ThreeWayMerge.sameText(working.content, proposed)) {
+                return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
+            }
             ThreeWayMerge merge = ThreeWayMerge.of(base, working.content, proposed)
             if (merge.isTooLarge()) {
                 return conflict(path, "the feature changes this file, and the file of the project has more lines than are merged (${ThreeWayMerge.MAX_LINES}) or differs " +
@@ -499,6 +632,63 @@ final class FeatureAddition {
             return new PlannedFile(path, Action.ADOPT, null, binary, working.content, working.content, null, base, proposed, [])
         }
         return new PlannedFile(path, edited ? Action.MERGE : Action.UPDATE, null, binary, working.content, result, executable, base, proposed, notes)
+    }
+
+    private static boolean isYaml(String path) {
+        return path.endsWith('.yml') || path.endsWith('.yaml')
+    }
+
+    // one document that is a map, read without making anything but maps, lists and values of it
+    private static Map<?, ?> yamlOf(byte[] content) {
+        try {
+            Object read = new Yaml(new SafeConstructor(new LoaderOptions())).load(new String(content, StandardCharsets.UTF_8))
+            return read instanceof Map ? (Map<?, ?>) read : null
+        } catch (YAMLException | StackOverflowError ignored) {
+            return null
+        }
+    }
+
+    // whether a file is what the generator writes for its content, so that the content can be
+    // written again in another order of its keys and nothing else of it changes
+    private static boolean isWrittenByTheGenerator(byte[] content, Map<?, ?> read) {
+        try {
+            return ThreeWayMerge.sameText(YamlTemplate.dump((Map<String, Object>) read).getBytes(StandardCharsets.UTF_8), content)
+        } catch (YAMLException | ClassCastException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * @return whether two YAML files have the same content with their keys in another order, one of
+     * them, the second, being what the generator writes
+     */
+    private static boolean sameButForOrder(byte[] one, byte[] generated) {
+        Map<?, ?> first = yamlOf(one)
+        Map<?, ?> second = yamlOf(generated)
+        return first != null && second != null && first == second && isWrittenByTheGenerator(generated, second) && isWrittenByTheGenerator(one, first)
+    }
+
+    /**
+     * The two generated versions of a YAML file with their keys in the order the file of the project
+     * has them in, see {@link YamlKeyOrder#following}: a line of the project then has the same lines
+     * around it in all three, and what the features change is the only difference between the two.
+     *
+     * @return the file as it was generated and as it is generated with the features, in that order,
+     * or {@code null} when the project has the keys in the order of the generator, or when one of the
+     * three is not a file of keys that can be written in another order
+     */
+    private static byte[][] inTheOrderOf(byte[] working, byte[] base, byte[] proposed) {
+        Map<?, ?> has = yamlOf(working)
+        Map<?, ?> was = yamlOf(base)
+        Map<?, ?> becomes = yamlOf(proposed)
+        if (has == null || was == null || becomes == null || !isWrittenByTheGenerator(base, was) || !isWrittenByTheGenerator(proposed, becomes)) {
+            return null
+        }
+        byte[] wasInOrder = YamlTemplate.dump(YamlKeyOrder.following(was, has)).getBytes(StandardCharsets.UTF_8)
+        if (Arrays.equals(wasInOrder, base)) {
+            return null
+        }
+        return [wasInOrder, YamlTemplate.dump(YamlKeyOrder.following(becomes, has)).getBytes(StandardCharsets.UTF_8)] as byte[][]
     }
 
     /**

@@ -32,7 +32,7 @@ class YamlTemplate implements Template {
 
     YamlTemplate(String path, Map<String, Object> config) {
         this.path = path
-        this.config = transform(config)
+        this.config = YamlKeyOrder.canonical(transform(config))
     }
 
     @Override
@@ -40,15 +40,24 @@ class YamlTemplate implements Template {
         return path
     }
 
-    @Override
-    void write(OutputStream outputStream) throws IOException {
+    /**
+     * @param config the content of a configuration file, with its keys in the order they are to have
+     * @return the YAML the generator writes for it
+     * @since 9.0
+     */
+    static String dump(Map<String, Object> config) {
         DumperOptions options = new DumperOptions()
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
         options.setPrettyFlow(true)
+        return new Yaml(options).dump(config)
+    }
 
+    @Override
+    void write(OutputStream outputStream) throws IOException {
         if (!config.isEmpty()) {
-            Yaml yaml = new Yaml(options)
-            yaml.dump(config, new OutputStreamWriter(outputStream))
+            Writer writer = new OutputStreamWriter(outputStream)
+            writer.write(dump(config))
+            writer.flush()
         } else {
             outputStream.write('# Place application configuration here'.getBytes())
         }

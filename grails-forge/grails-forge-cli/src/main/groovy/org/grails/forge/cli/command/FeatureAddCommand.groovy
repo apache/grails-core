@@ -49,7 +49,9 @@ import java.util.function.Supplier
 @CommandLine.Command(name = FeatureAddCommand.NAME, description = [
         'Adds features to the application in the current directory: its files and its record become those of an application that was created with them. ' +
                 'A feature the application already has is left as it is.',
-        'The files you changed keep your changes. When a feature changes what you changed too, or a file it writes is there already, ' +
+        'A feature takes the place of one the application has by default, as postgres takes that of h2, and the command says which it replaces; ' +
+                'a feature that was asked for when the application was created is not replaced, and neither is an option it was created with.',
+        'The files you changed keep your changes. When a feature changes or takes out what you changed too, or a file it writes is there already, ' +
                 'nothing is written and the files are named.'])
 @Component
 @Scope('prototype')
@@ -65,7 +67,7 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             description = 'The names of the features to add, as the create commands list them with --list-features.')
     List<String> features = new ArrayList<>()
 
-    @CommandLine.Option(names = ['--dry-run'], description = 'Say which files would be added and changed, and which conflicts there are, and change nothing.')
+    @CommandLine.Option(names = ['--dry-run'], description = 'Say which files would be added, changed and removed, which features would be replaced, and which conflicts there are, and change nothing.')
     boolean dryRun
 
     @CommandLine.Option(names = ['--diff'], description = 'Show the changes that would be made to the files, as a diff, and change nothing.')
@@ -133,6 +135,9 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
         List<String> required = plan.added.findAll { String name -> !plan.requested.contains(name) }
         out("@|blue ||@ ${preview ? 'To add' : 'Adding'} the ${plan.requested.size() == 1 ? 'feature' : 'features'} ${shown(plan.requested.join(', '))}" +
                 (required.isEmpty() ? '' : ", and with ${plan.requested.size() == 1 ? 'it' : 'them'} ${shown(required.join(', '))}"))
+        for (String replacement : plan.replacements) {
+            out("    ${shown(replacement)}")
+        }
         for (PlannedFile file : plan.files) {
             out("    ${ACTIONS.get(file.action).padRight(8)} ${shown(file.path)}" +
                     (file.action == Action.MERGE ? ' (your changes are kept)' : '') +
@@ -170,8 +175,9 @@ class FeatureAddCommand extends BaseCommand implements Callable<Integer>, Projec
             return 0
         }
         plan.apply()
-        out("@|blue ||@ ${plan.requested.size() == 1 ? 'Feature' : 'Features'} ${shown(plan.requested.join(', '))} added. " +
-                "Commit the changes together with the directory ${ProjectState.DIRECTORY}")
+        out("@|blue ||@ ${plan.requested.size() == 1 ? 'Feature' : 'Features'} ${shown(plan.requested.join(', '))} added" +
+                (plan.replaced.isEmpty() ? '' : ", in the place of ${shown(plan.replaced.join(', '))}") +
+                ". Commit the changes together with the directory ${ProjectState.DIRECTORY}")
         return 0
     }
 

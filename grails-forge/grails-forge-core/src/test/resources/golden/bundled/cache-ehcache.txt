@@ -22,10 +22,10 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.grails.plugins:cache-ehcache:VERSION"
 == grails-app/conf/application.yml
++   cache:
 +     ehcache:
 +       ehcacheXmlLocation: classpath:ehcache.xml
 +       lockTimeout: 200
-+   cache:
 
 # rest_api
 title: Ehcache Plugin
@@ -47,12 +47,12 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
++   cache:
 +     ehcache:
 +       ehcacheXmlLocation: classpath:ehcache.xml
 +       lockTimeout: 200
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 
 # web_plugin
 title: Ehcache Plugin
@@ -72,10 +72,10 @@ dependentFeatures: []
 == build.gradle
 +     implementation "org.grails.plugins:cache-ehcache:VERSION"
 == grails-app/conf/application.yml
++   cache:
 +     ehcache:
 +       ehcacheXmlLocation: classpath:ehcache.xml
 +       lockTimeout: 200
-+   cache:
 
 # plugin
 title: Ehcache Plugin
@@ -97,10 +97,10 @@ dependentFeatures: []
 == grails-app/conf/application.yml
 - grails.codegen.defaultPackage: example.grails
 + grails:
++   cache:
 +     ehcache:
 +       ehcacheXmlLocation: classpath:ehcache.xml
 +       lockTimeout: 200
 +   codegen:
 +     defaultPackage: example.grails
-+   cache:
 

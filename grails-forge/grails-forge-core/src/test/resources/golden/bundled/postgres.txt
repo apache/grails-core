@@ -38,8 +38,8 @@ dependentFeatures: []
 +       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:postgresql:12:///postgres
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
 
 # rest_api
 title: PostgresSQL
@@ -73,8 +73,8 @@ dependentFeatures: []
 +       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:postgresql:12:///postgres
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
 
 # web_plugin
 title: PostgresSQL
@@ -108,8 +108,8 @@ dependentFeatures: []
 +       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:postgresql:12:///postgres
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
 
 # plugin
 title: PostgresSQL
@@ -143,6 +143,6 @@ dependentFeatures: []
 +       url: jdbc:postgresql://localhost:5432/postgres?tcpKeepAlive=true
 == src/test/resources/application-test.yml
 + dataSource:
-+   url: jdbc:tc:postgresql:12:///postgres
 +   driverClassName: org.testcontainers.jdbc.ContainerDatabaseDriver
++   url: jdbc:tc:postgresql:12:///postgres
 

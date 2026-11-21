@@ -17,9 +17,9 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + info:
 +   app:
++     grailsVersion: '@info.app.grailsVersion@'
 +     name: '@info.app.name@'
 +     version: '@info.app.version@'
-+     grailsVersion: '@info.app.grailsVersion@'
 
 # rest_api
 title: app-name
@@ -33,9 +33,9 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + info:
 +   app:
++     grailsVersion: '@info.app.grailsVersion@'
 +     name: '@info.app.name@'
 +     version: '@info.app.version@'
-+     grailsVersion: '@info.app.grailsVersion@'
 
 # web_plugin
 title: app-name
@@ -49,9 +49,9 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + info:
 +   app:
++     grailsVersion: '@info.app.grailsVersion@'
 +     name: '@info.app.name@'
 +     version: '@info.app.version@'
-+     grailsVersion: '@info.app.grailsVersion@'
 
 # plugin
 title: app-name
@@ -65,7 +65,7 @@ in an application without being named: the default options
 == grails-app/conf/application.yml
 + info:
 +   app:
++     grailsVersion: '@info.app.grailsVersion@'
 +     name: '@info.app.name@'
 +     version: '@info.app.version@'
-+     grailsVersion: '@info.app.grailsVersion@'
 

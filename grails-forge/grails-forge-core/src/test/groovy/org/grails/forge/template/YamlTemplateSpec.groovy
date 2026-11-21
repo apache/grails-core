@@ -47,9 +47,46 @@ grails:
     spring: true
 datasources:
   default:
-    url: dbURL
     className: h2
+    url: dbURL
 jpa.default.properties.hibernate.hbm2ddl: auto
+"""
+    }
+
+    void "the keys are written in an order that does not depend on the order they were given in"() {
+        given:
+        Map<String, Object> config = [:]
+        config.put("quartz.autoStartup", true)
+        config.put("grails.views.gsp.encoding", "UTF-8")
+        config.put("environments", [production: [dataSource: [url: "p"]], development: [dataSource: [url: "d", dbCreate: "create-drop"]]])
+        config.put("grails.cache.enabled", true)
+        config.put("dataSource", [username: "sa", driverClassName: "org.h2.Driver"])
+        config.put("info.app.name", "foo")
+
+        when:
+        ByteArrayOutputStream baos = new ByteArrayOutputStream()
+        new YamlTemplate("abc", config).write(baos)
+
+        then:
+        baos.toString() == """info.app.name: foo
+dataSource:
+  driverClassName: org.h2.Driver
+  username: sa
+environments:
+  development:
+    dataSource:
+      dbCreate: create-drop
+      url: d
+  production:
+    dataSource:
+      url: p
+grails:
+  cache:
+    enabled: true
+  views:
+    gsp:
+      encoding: UTF-8
+quartz.autoStartup: true
 """
     }
 
