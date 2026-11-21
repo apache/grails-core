@@ -23,7 +23,6 @@ import groovy.util.logging.Slf4j
 import com.github.scribejava.core.model.OAuth2AccessToken
 import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.apache.commons.validator.routines.UrlValidator
 
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.ModelAndView
@@ -61,11 +60,58 @@ class SpringSecurityOAuth2Controller {
         log.debug "authenticate ${providerName}"
         String url = springSecurityOauth2BaseService.getAuthorizationUrl(providerName)
         log.debug "redirect url from s2oauthservice=${url}"
-        if (!UrlValidator.instance.isValid(url)) {
+        if (!isWebAddress(url)) {
             flash.message = "Authorization url for provider '${providerName}' is invalid."
             redirect(controller: 'login', action: 'index')
+            return
         }
         redirect(url: url)
+    }
+
+    /**
+     * Whether the authorization url of a provider is an http or https address with a host. The host name is not checked
+     * against a list of top level domains, so the address of an intranet server, such as {@code dev.somewhere.local} or
+     * {@code keycloak:8080}, is accepted.
+     */
+    private static boolean isWebAddress(String url) {
+        if (!url?.trim()) {
+            return false
+        }
+        try {
+            URI uri = new URI(url)
+            return uri.scheme?.toLowerCase() in ['http', 'https'] && hostOf(uri) != null
+        } catch (URISyntaxException ignored) {
+            return false
+        }
+    }
+
+    /**
+     * The host of the address. {@link URI#getHost()} is null for a name with a non-ASCII letter, such as {@code bücher.de}, which
+     * the authority still holds, so the host is read from it and checked as an internationalized name.
+     *
+     * @return the host, or {@code null} when there is none or it is not a valid name
+     */
+    private static String hostOf(URI uri) {
+        if (uri.host) {
+            return uri.host
+        }
+        String authority = uri.authority
+        if (!authority) {
+            return null
+        }
+        String hostAndPort = authority.substring(authority.lastIndexOf('@') + 1)
+        int colon = hostAndPort.lastIndexOf(':')
+        String host = colon >= 0 ? hostAndPort.substring(0, colon) : hostAndPort
+        String port = colon >= 0 ? hostAndPort.substring(colon + 1) : ''
+        if (!host || host.startsWith('[') || (port && !port.every { String digit -> Character.isDigit(digit.charAt(0)) })) {
+            return null
+        }
+        try {
+            IDN.toASCII(host, IDN.USE_STD3_ASCII_RULES)
+            return host
+        } catch (IllegalArgumentException ignored) {
+            return null
+        }
     }
 
     /**
