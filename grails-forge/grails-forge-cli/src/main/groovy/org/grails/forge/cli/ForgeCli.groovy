@@ -190,14 +190,13 @@ final class ForgeCli {
      * command line is read, see {@link CommandCatalog#expand}.
      */
     static int execute(ForgeContext context, String... args) {
-        boolean noOpConsole = args.length > 0 && args[0].startsWith('update-cli-config')
         // What reading the record of the project has to say is held back until the command is known:
         // a short form is looked up among the commands of the project too, and may then be a command
         // that has nothing to do with the project.
         HeldBack held = new HeldBack()
         boolean reads = readsProject(args)
-        CommandLine commandLine = createCommandLine(context, noOpConsole ? ConsoleOutput.NOOP : held, reads, listsApplication(args))
-        if (reads && !noOpConsole) {
+        CommandLine commandLine = createCommandLine(context, held, reads, listsApplication(args))
+        if (reads) {
             held.advice = { advice(context) } as Supplier<String>
         }
         return execute(commandLine, held, args)

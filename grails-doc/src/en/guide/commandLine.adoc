@@ -624,6 +624,10 @@ Outside a project these commands are not mistakes: `create-controller`, `install
 |the base profile, another name of `test-app`
 |replaced: `test-app`
 
+|`update-cli-config`
+|the Grails Forge CLI of Grails 7, which told to run it in a warning and did not have it
+|replaced: link:{commandLineRef}project-init.html[project init] writes the record of an application whose `grails-forge-cli.yml` or `grails-cli.yml` names a profile. The name never was a command.
+
 |===
 
 Every other command of the shell and of the profiles is a command of `grails` under its name: the commands that create a project, the `create-*` commands of a project, `add-property`, `run-app`, `stop-app`, `test-app`, `compile`, `clean`, `assemble` with `war` and `package`, `console`, `shell`, `run-command`, `run-script`, `dependency-report`, `stats`, `bug-report`, `package-plugin`, `publish-plugin`, `list-plugins`, `plugin-info`, `gradle` and `help`. `sh`, another name of `shell` in the shell, is what is short for `shell` here.

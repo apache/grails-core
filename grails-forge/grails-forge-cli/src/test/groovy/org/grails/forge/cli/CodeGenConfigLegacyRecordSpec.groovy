@@ -169,6 +169,52 @@ class CodeGenConfigLegacyRecordSpec extends CommandSpec {
         config.excludedFeatures == ['mockito']
     }
 
+    void "update-cli-config, which the command line of Grails 7 told to run for such a record, is no command and says which command writes the record"() {
+        given:
+        new File(dir, 'grails-forge-cli.yml').setText('profile: web\ndefaultPackage: com.example\n', 'UTF-8')
+        Map<String, byte[]> before = dir.listFiles().collectEntries { [it.name, it.bytes] }
+
+        when:
+        int exit = ForgeCli.execute(beanContext, 'update-cli-config')
+        List<String> lines = err.toString().readLines()
+
+        then: 'it is refused as any name that is no command, with the line of the table of former commands'
+        exit == 2
+        out.toString().isEmpty()
+        lines.any { it.startsWith('There is no command update-cli-config') }
+        lines.contains('update-cli-config is what the command line of Grails 7 told to run for a grails-cli.yml or grails-forge-cli.yml that names a profile, ' +
+                'and it never was a command. In the project, grails-forge-cli project init writes the record of this version from what the project has')
+
+        and: 'what reading the record has to say is said, as for every other name that is no command'
+        lines.first().startsWith('| Warning grails-forge-cli.yml names a profile')
+
+        and: 'nothing is written'
+        dir.listFiles().collectEntries { [it.name, it.bytes] } == before
+
+        when: 'a name that only begins with it is a name like any other'
+        err.reset()
+        exit = ForgeCli.execute(beanContext, 'update-cli-configuration')
+        lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        lines.first().startsWith('| Warning grails-forge-cli.yml names a profile')
+        lines.any { it.startsWith('There is no command update-cli-configuration') }
+        !lines.any { it.startsWith('update-cli-config is what') }
+    }
+
+    void "outside a project update-cli-config is refused in the same way, and no project is looked for"() {
+        when:
+        int exit = ForgeCli.execute(beanContext, 'update-cli-config')
+        List<String> lines = err.toString().readLines()
+
+        then:
+        exit == 2
+        lines[0].startsWith('There is no command update-cli-config')
+        lines[1].startsWith('update-cli-config is what the command line of Grails 7 told to run')
+        dir.list() as List == []
+    }
+
     // the commands of the project a directory is in, as help --json describes them
     private Set<String> projectCommands(File directory) {
         String current = System.getProperty('user.dir')

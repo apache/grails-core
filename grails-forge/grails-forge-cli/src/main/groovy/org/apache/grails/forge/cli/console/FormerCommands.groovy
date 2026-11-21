@@ -23,8 +23,8 @@ import picocli.CommandLine
 
 /**
  * The commands of the Grails shell and of its profiles that are no command of this command line
- * under the name they had, or not in every directory, each with what there is in its place. The
- * table is fixed: it is read from no profile, no project and no build, and what was typed is only
+ * under the name they had, or not in every directory, each with what there is in its place, and
+ * the one name the Grails Forge CLI of Grails 7 told to type that it did not have. The table is fixed: it is read from no profile, no project and no build, and what was typed is only
  * looked up in it and never repeated from it.
  *
  * @since 9.0
@@ -144,6 +144,10 @@ final class FormerCommands {
         add('profile-info', 'shell', Status.REPLACED,
                 'profile-info described a profile of the Grails shell. Profiles are replaced by application types and features: {cli} create-app --list-features ' +
                 'lists the features of an application, and the other create commands those of their types')
+
+        add('update-cli-config', 'the command line of Grails 7, which named it in a warning and did not have it', Status.REPLACED,
+                'update-cli-config is what the command line of Grails 7 told to run for a grails-cli.yml or grails-forge-cli.yml that names a profile, ' +
+                'and it never was a command. In the project, {cli} project init writes the record of this version from what the project has')
 
         add('generate-all', 'rest-api profile', Status.PLUGIN, 'generate-all ' + SCAFFOLDING)
         add('generate-controller', 'rest-api profile', Status.PLUGIN, 'generate-controller ' + SCAFFOLDING)
