@@ -35,7 +35,7 @@ The table describes available configuration options.
 
 |x509.continueFilterChainOnUnsuccessfulAuthentication
 |`true`
-|Whether to proceed when an authentication attempt fails to allow other authentication mechanisms to process the request
+|Whether to proceed when an authentication attempt fails to allow other authentication mechanisms to process the request. When `true`, a request without a usable certificate that needs authentication is sent to the login form like any other; when `false`, certificates are the only way in and such a request gets a 403 response
 
 |x509.subjectDnRegex
 |"`CN=(.*?)(?:,\|$)`"
