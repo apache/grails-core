@@ -373,6 +373,31 @@ class AssociationSortSpec extends GrailsDataTckSpec<GrailsDataHibernate5TckManag
         sort << ['t.club.name', 'team.club.name']
     }
 
+    void 'a criteria order joins the remaining path after an alias with pagination #paged and Query Order #queryOrder'() {
+        when:
+        final results = Player.createCriteria().list(paged ? [max: 10] : [:]) {
+            createAlias('team', 't')
+            isNotNull('t.club')
+            if (queryOrder) {
+                order(org.grails.datastore.mapping.query.Query.Order.desc('t.club.name'))
+            }
+            else {
+                order('t.club.name', 'desc')
+            }
+        }
+
+        then:
+        results*.name == ['MU Player', 'Chelsea Player', 'Arsenal Player']
+        !paged || results.totalCount == 3
+
+        where:
+        paged | queryOrder
+        false | false
+        false | true
+        true  | false
+        true  | true
+    }
+
     void 'a paged criteria query can be sorted by a map of properties'() {
         given:
         new Team(club: Club.findByName('Arsenal'), name: 'Arsenal Second Team').save(failOnError: true, flush: true)
