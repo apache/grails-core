@@ -49,8 +49,8 @@ class ScriptConsole extends GrailsConsole {
     }
 
     /**
-     * @return where the console writes: a script that writes there itself, as {@code query-tail}
-     * does, writes where its messages go
+     * @return where the console writes: a script that writes there itself writes where its
+     * messages go
      */
     @Override
     PrintStream getOut() {

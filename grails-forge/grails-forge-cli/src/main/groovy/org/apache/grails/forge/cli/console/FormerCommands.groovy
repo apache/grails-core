@@ -154,8 +154,8 @@ final class FormerCommands {
         add('generate-views', 'rest-api profile', Status.PLUGIN, 'generate-views ' + SCAFFOLDING)
 
         add('query-tail', 'script command of Grails Data', Status.PLUGIN,
-                'query-tail is a script command of Grails Data (grails-datamapping-core), which the build of a project runs: ' +
-                '{cli} gradle runScriptCommand --arg=query-tail, with each option of the script as a further --arg')
+                'query-tail is a command of Grails Data (grails-datamapping-core), which the build of a project runs without starting the application: ' +
+                'where the application has GORM, {cli} gradle grailsCommandCatalog makes it a command here, and {cli} run-command query-tail runs it before that')
 
         add('generate-resource-controller', 'rest-api profile, another name of generate-all and generate-controller', Status.NO_REPLACEMENT,
                 'generate-resource-controller was a command of the REST API profile of the Grails shell. It has no replacement in {cli}; ' +
