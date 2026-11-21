@@ -40,7 +40,7 @@ Usage:
 grails create-functional-test [-f] <<name>>
 ----
 
-Creates a functional test, `src/integration-test/groovy/<package>/<Name>Spec.groovy`, from the template `testing/Functional.groovy`: a test that requests the home page of the running application with the HTTP client of the JDK, which needs no further dependency. It does not write a Geb test. It is a command of REST API applications.
+Creates a functional test, `src/integration-test/groovy/<package>/<Name>Spec.groovy`, from the template `testing/Functional.groovy`: a test that requests the home page of the running application with the HTTP client of the JDK, which needs no further dependency. It does not write a Geb test. It is a command of REST API applications and REST API plugins.
 
 The name is needed: the command does not ask for one. It can include a package, such as `org.bookstore` in the last example above; without one, the class goes into the default package of the project. The first letter of the name is made upper case.
 

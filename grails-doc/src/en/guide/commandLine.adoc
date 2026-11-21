@@ -46,6 +46,7 @@ Commands:
   create-webapp           Creates an application; another name of create-app
   create-plugin           Creates a Grails plugin
   create-web-plugin       Creates a Grails plugin with a web layer
+  create-rest-api-plugin  Creates a Grails plugin with a REST API
   create-restapi          Creates a REST API application
 ...
 ----
@@ -621,19 +622,19 @@ In the directory of a project the `grails` command has commands that write a cla
 
 |`create-integration-test <name>`
 |`src/integration-test/groovy/<package>/<Name>Spec.groovy`
-|web applications, REST API applications and web plugins
+|web applications, REST API applications, web plugins and REST API plugins
 
 |`create-functional-test <name>`
 |`src/integration-test/groovy/<package>/<Name>Spec.groovy`, a test that calls the running application over HTTP
-|REST API applications
+|REST API applications and REST API plugins
 
 |`create-restful-controller <domain class>`
 |`grails-app/controllers/<package>/<Name>Controller.groovy`, a controller that extends `RestfulController` for the domain class
-|REST API applications
+|REST API applications and REST API plugins
 
 |`create-domain-resource <name>`
 |`grails-app/domain/<package>/<Name>.groovy`, a domain class with `@Resource`, and `src/test/groovy/<package>/<Name>Spec.groovy`
-|REST API applications
+|REST API applications and REST API plugins
 
 |`create-command <name>`
 |`grails-app/commands/<package>/<Name>Command.groovy`

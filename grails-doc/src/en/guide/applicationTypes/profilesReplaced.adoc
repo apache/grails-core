@@ -26,11 +26,8 @@ Until Grails 8 a project was created from a _profile_: an artifact with a skelet
 |`create-app myapp --profile rest-api`
 |One command for each type of application: `create-restapi myapp`. No command has a `--profile` option.
 
-|The `web`, `rest-api`, `plugin` and `web-plugin` profiles
-|The application types of `create-app`, `create-restapi`, `create-plugin` and `create-web-plugin`.
-
-|The `rest-api-plugin` profile
-|No application type. Create the plugin with `create-web-plugin` or `create-plugin` and select the features it needs, such as `views-json`.
+|The `web`, `rest-api`, `plugin`, `web-plugin` and `rest-api-plugin` profiles
+|The application types of `create-app`, `create-restapi`, `create-plugin`, `create-web-plugin` and `create-rest-api-plugin`.
 
 |The features of a profile, selected with `--features`
 |The features of the type of application, which `--list-features` lists. `--features` adds to the default features, where it took their place with a profile, and a name that is no feature is refused. `--exclude-features` leaves a default feature out.

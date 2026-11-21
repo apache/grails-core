@@ -117,6 +117,28 @@ grails create-web-plugin \
     --features=github-workflow-java-ci \
     com.example.demo
 ----
+
+| create-rest-api-plugin
+| Creates a Grails plugin with a REST API
+|
+[none]
+* --jdk, --java-version
+* -s, --servlet
+* -d, --data (-g, --gorm are legacy aliases)
+* -r, --reloading
+* -f, --features
+* --exclude-features
+* -i, --inplace
+|
+[source,console]
+----
+grails create-rest-api-plugin \
+    --servlet=tomcat \
+    --jdk=21 \
+    --data=hibernate5 \
+    --features=github-workflow-java-ci \
+    com.example.demo
+----
 |===
 
 === The `create-` command flags

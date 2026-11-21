@@ -40,8 +40,12 @@ There is one command for each type of application:
 |`create-web-plugin`
 |`web-plugin`
 |A plugin with a web layer.
+
+|`create-rest-api-plugin`
+|`rest-api-plugin`
+|A plugin with the content of a REST API application: controllers, JSON views and the REST URL mappings, and nothing for HTML.
 |===
 
 All of them take the same options, which xref:commandLine#creatingProject[Creating a Grails Project] describes. https://start.grails.org/[The Grails Forge website] creates projects from the same types and features.
 
-The type of a project decides which features can be selected for it, which of them it has by default, and which commands that create classes it has: `create-restful-controller`, `create-domain-resource` and `create-functional-test` are commands of a REST API application, and `package-plugin` and `publish-plugin` are commands of a plugin. The type is recorded in `.grails/project.yml` of the project, and `project show` prints it. Nothing reads it when the application runs.
+The type of a project decides which features can be selected for it, which of them it has by default, and which commands that create classes it has: `create-restful-controller`, `create-domain-resource` and `create-functional-test` are commands of a REST API application and of a REST API plugin, and `package-plugin` and `publish-plugin` are commands of a plugin. The type is recorded in `.grails/project.yml` of the project, and `project show` prints it. Nothing reads it when the application runs.

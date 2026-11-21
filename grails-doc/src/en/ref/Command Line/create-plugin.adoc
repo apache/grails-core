@@ -32,7 +32,7 @@ $ grails create-plugin [OPTIONS] NAME
 
 The command creates a subdirectory named after the project in the directory where it is executed, or with `--inplace` creates the project in the current directory.
 
-A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications. `create-plugin` creates a plugin without a web layer and without a servlet container; link:create-web-plugin.html[create-web-plugin] creates one with a web layer.
+A Grails plugin project is just like an application project except it contains a plugin descriptor and can be packaged as a plugin and installed into other applications. `create-plugin` creates a plugin without a web layer and without a servlet container; link:create-web-plugin.html[create-web-plugin] creates one with a web layer, and link:create-rest-api-plugin.html[create-rest-api-plugin] one with a REST API.
 
 Plugins are not just useful for plugin developers, but also as a way to modularize large Grails applications. Refer to the section on link:{guidePath}plugins.html[Plugin Development] in the user guide for more information on developing plugins for Grails.
 

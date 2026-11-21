@@ -40,7 +40,7 @@ Usage:
 grails create-integration-test [-f] <<name>>
 ----
 
-Creates an integration test, `src/integration-test/groovy/<package>/<Name>Spec.groovy`, from the template `testing/Integration.groovy`. It is a command of web applications, REST API applications and web plugins.
+Creates an integration test, `src/integration-test/groovy/<package>/<Name>Spec.groovy`, from the template `testing/Integration.groovy`. It is a command of web applications, REST API applications, web plugins and REST API plugins.
 
 An integration test differs from a unit test in that the Grails environment is loaded for each test execution. Refer to the section on link:{guidePath}testing.html[Unit Testing] of the user guide for information on unit vs. integration testing.
 

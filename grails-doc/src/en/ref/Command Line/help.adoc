@@ -74,6 +74,7 @@ Commands:
   create-webapp           Creates an application; another name of create-app
   create-plugin           Creates a Grails plugin
   create-web-plugin       Creates a Grails plugin with a web layer
+  create-rest-api-plugin  Creates a Grails plugin with a REST API
   create-restapi          Creates a REST API application
   feature                 Works with the features of the application in the current directory
 ...

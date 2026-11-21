@@ -98,7 +98,7 @@ readme: The audit trail is configured in `AuditConfig`.
 |A link to the documentation of what the plugin integrates, for the `README.md` of the application.
 
 |`applicationTypes`
-|The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`. All of them when left out.
+|The kinds of application the feature can be selected for: `web`, `rest-api`, `plugin`, `web-plugin`, `rest-api-plugin`. All of them when left out.
 
 |`requires`
 |Features that are selected with this one. They can be features of Grails or of other packs given to the same command. Two packs can require each other: both are selected, whichever of them is named. A required feature cannot be left out with `--exclude-features`.
@@ -216,7 +216,7 @@ A template can refer to these names. Any other name is an error, so a misspelled
 |The names of all features of the application, sorted
 
 |`applicationType`
-|`web`, `rest-api`, `plugin` or `web-plugin`
+|`web`, `rest-api`, `web-plugin`, `plugin` or `rest-api-plugin`
 
 |`options.jdk`
 |The version of Java the application is for, as a number
@@ -426,7 +426,7 @@ $ ./gradlew check
 
 The templates are found through the descriptor, so while the descriptor has a problem only its problems are reported: the templates are checked once it can be read.
 
-No application is generated. A template is compiled once and rendered for a few applications that are made up, and a problem names the one it was found for. All of them are named `com.example.shop` and have the feature of the pack, the features it `requires` and no other feature. With all four `applicationTypes` they are:
+No application is generated. A template is compiled once and rendered for a few applications that are made up, and a problem names the one it was found for. All of them are named `com.example.shop` and have the feature of the pack, the features it `requires` and no other feature. With all five `applicationTypes` they are:
 
 [cols="1,1,1,1,1"]
 |===
@@ -455,6 +455,12 @@ No application is generated. A template is compiled once and rendered for a few 
 |`neo4j`
 |`none`
 |`devtools`
+
+|`rest-api-plugin`
+|`25`
+|`hibernate5`
+|`tomcat`
+|`jrebel`
 |===
 
 A descriptor with fewer `applicationTypes` has those in the first column, in this order and starting over when they run out. So every value of an option is rendered once, and a typing error in what a template does for one value is found. What a template does only for an application that is not in the table is not rendered, and an error there is found only when such an application is created:
@@ -494,9 +500,9 @@ $ ./gradlew forgePackTest
 
 The task runs only when it is asked for. `check`, `build` and the tasks that publish the plugin do not run it, because of what it costs: every application is a Grails build of its own, which downloads its Gradle distribution and its dependencies the first time and takes minutes rather than seconds. The builds use the Gradle user home of the build of the plugin, so what one of them downloads is there for the next, and the Java of the toolchain of the plugin. A plugin without `src/main/forge` skips the task, and the task is up to date when the pack, the generator and what is configured below are as they were when it last passed.
 
-Each application is a _fixture_. Without configuration there is one for each of the `applicationTypes` of the descriptor, named after its type (`web`, `rest-api`, `web-plugin`, `plugin`), with the options every application has by default and no feature but that of the pack and the ones every application of the type has. All of them are named `com.example.shop`. In each the task runs `assemble`, which compiles the application and packages it and runs none of its tests.
+Each application is a _fixture_. Without configuration there is one for each of the `applicationTypes` of the descriptor, named after its type (`web`, `rest-api`, `web-plugin`, `plugin`, `rest-api-plugin`), with the options every application has by default and no feature but that of the pack and the ones every application of the type has. All of them are named `com.example.shop`. In each the task runs `assemble`, which compiles the application and packages it and runs none of its tests.
 
-WARNING: A descriptor without `applicationTypes` is for all four types, so its default fixtures include `web-plugin` and `plugin`. A generated plugin does not pass `assemble` at present, whatever the pack: its task `generateI18nDescriptor` fails for the `messages.properties` every generated plugin has. Until that is put right, name the fixtures of such a pack, as shown below, and leave the two plugin types out; or give the descriptor the `applicationTypes` the pack is meant for.
+WARNING: A descriptor without `applicationTypes` is for all five types, so its default fixtures include `web-plugin`, `plugin` and `rest-api-plugin`. A generated plugin does not pass `assemble` at present, whatever the pack: its task `generateI18nDescriptor` fails for the `messages.properties` every generated plugin has. Until that is put right, name the fixtures of such a pack, as shown below, and leave the two plugin types out; or give the descriptor the `applicationTypes` the pack is meant for.
 
 Fixtures, and how they are built, are configured in the `grails` block of the plugin. Once a fixture is named, the named ones are the only ones, and they are generated and built in the order of their names:
 
@@ -521,7 +527,7 @@ grails {
 }
 ----
 <1> A fixture has a name of lower case letters, digits and single hyphens, which names its directory and its log. Its type of application is `web` unless it says otherwise.
-<2> One of `web`, `rest-api`, `web-plugin` and `plugin`.
+<2> One of `web`, `rest-api`, `web-plugin`, `plugin` and `rest-api-plugin`.
 <3> Any of `data`, `servlet`, `reloading` and `jdk`, with the values the `create-` commands take. An option that is left out has its default.
 <4> Features to select besides that of the pack.
 <5> The tasks to run in each application. The default is `assemble`.

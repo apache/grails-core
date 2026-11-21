@@ -93,6 +93,11 @@ include::ref/Command Line/create-job.adoc[]
 
 include::ref/Command Line/create-plugin.adoc[]
 
+[[ref-command-line-create-rest-api-plugin]]
+==== create-rest-api-plugin
+
+include::ref/Command Line/create-rest-api-plugin.adoc[]
+
 [[ref-command-line-create-rest-api]]
 ==== create-rest-api
 

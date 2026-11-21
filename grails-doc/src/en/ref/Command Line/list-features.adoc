@@ -21,7 +21,7 @@ under the License.
 
 === Purpose
 
-Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, etc.
+Output the available features and their descriptions for a given `create-\<<application-type>>` command. Such as: `create-app`, `create-plugin`, `create-web-plugin`, `create-rest-api-plugin`, etc.
 
 NOTE: The `--list-features` flag is an option of the commands that create a project.
 
