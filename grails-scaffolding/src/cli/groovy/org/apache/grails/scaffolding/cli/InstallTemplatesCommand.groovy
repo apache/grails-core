@@ -38,36 +38,30 @@ class InstallTemplatesCommand implements GrailsApplicationCommand, SkipBootstrap
 
     @Delegate ConsoleLogger consoleLogger = GrailsConsole.getInstance()
 
+    private static final String TEMPLATES_DIRECTORY = 'src/main/templates/scaffolding'
+
     final String description = 'Installs scaffolding templates that use f:all to render properties'
 
     @Override
     boolean handle() {
-
         try {
-            mkdir('src/main/templates/scaffolding')
-            templates('scaffolding/*').each { Resource r ->
-                consoleLogger.verbose("Copying template $r.URL")
-                final String path = r.URL.toString().replaceAll(/^.*?META-INF/, 'src/main')
-                if (path.endsWith('/')) {
-                    mkdir(path)
-                } else {
-                    File to = new File(path)
-                    SpringIOUtils.copy(r, to)
-                    consoleLogger.verbose("Copied ${r.filename} to location ${to.canonicalPath}")
+            mkdir(TEMPLATES_DIRECTORY)
+            final File directory = file(TEMPLATES_DIRECTORY)
+            Set<String> copied = []
+            resources('classpath*:META-INF/templates/scaffolding/*').each { Resource r ->
+                final String name = r.filename
+                if (!name || r.URL.toString().endsWith('/') || !copied.add(name)) {
+                    return
                 }
+                File to = new File(directory, name)
+                SpringIOUtils.copy(r, to)
+                consoleLogger.verbose("Copied ${name} to location ${to.canonicalPath}")
             }
             consoleLogger.verbose('Templates installation complete')
             return SUCCESS
         } catch (e) {
             consoleLogger.error(e.message, e)
+            return FAILURE
         }
-    }
-
-    @Override
-    Iterable<Resource> templates(final String pattern) {
-        Collection<Resource> resourceList = []
-        resourceList.addAll(resources("src/main/templates/$pattern"))
-        resourceList.addAll(resources("classpath*:META-INF/templates/$pattern"))
-        resourceList.unique()
     }
 }

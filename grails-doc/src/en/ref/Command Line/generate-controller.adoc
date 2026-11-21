@@ -46,6 +46,14 @@ Grails supports a feature known as static scaffolding which involves the generat
 
 The `generate-controller` command generates just the controller (and associated unit test) that implements CRUD for the given domain class. The argument is optional, but if you don't include it the command will ask you for the name of the domain class to scaffold. So for a domain class `org.bookstore.Book`, this command will generate the controller `BookController.groovy` in `grails-app/controllers/org/bookstore`.
 
+With the controller the command generates the service the controller uses and a test of each:
+
+* `grails-app/services/org/bookstore/BookService.groovy`
+* `src/test/groovy/org/bookstore/BookControllerSpec.groovy`, a unit test
+* `src/integration-test/groovy/org/bookstore/BookServiceSpec.groovy`, an integration test
+
+A domain class that is not found is named, the other classes are generated, and the command fails.
+
 Usage:
 [source,groovy]
 ----

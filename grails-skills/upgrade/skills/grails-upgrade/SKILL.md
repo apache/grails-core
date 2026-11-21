@@ -704,6 +704,12 @@ With the Redis and the Grails cache token storage of the Spring Security REST pl
 - Search clients and tests for calls of the logout endpoint that expect 200 for a token that is expired, was logged out before or was never issued, and let them accept 404.
 - Wrap calls of `removeToken` on the two services in code of the project's own with a handler for `TokenNotFoundException` where the token may be gone.
 
+## Scaffolding: Generated Service Specs Belong to the Integration Tests
+
+In Grails 9 `generate-controller` and `generate-all` write `<Name>ServiceSpec.groovy`, an `@Integration` spec, to `src/integration-test/groovy`. The application command of earlier versions (`./gradlew runCommand -Pargs="generate-controller ..."`) wrote it to `src/test/groovy`. `create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` also take the full name of a domain class the project has no source of.
+
+- Search `src/test/groovy` for generated `*ServiceSpec.groovy` files annotated with `@Integration` and move each to the same package under `src/integration-test/groovy`.
+
 # After the Upgrade
 
 ## Verification Checklist

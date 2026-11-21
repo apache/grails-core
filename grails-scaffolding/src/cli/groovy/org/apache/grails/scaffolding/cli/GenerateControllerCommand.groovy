@@ -78,7 +78,7 @@ class GenerateControllerCommand implements GrailsApplicationCommand, CommandLine
                         overwrite: overwrite)
 
                 render(template: 'scaffolding/ServiceSpec.groovy',
-                        destination: file("src/test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
+                        destination: file("src/integration-test/groovy/${model.packagePath}/${model.convention('ServiceSpec')}.groovy"),
                         model: model,
                         overwrite: overwrite)
 

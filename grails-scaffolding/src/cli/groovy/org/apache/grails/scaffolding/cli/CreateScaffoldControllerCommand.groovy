@@ -24,7 +24,6 @@ import grails.build.logging.ConsoleLogger
 import grails.build.logging.GrailsConsole
 import grails.codegen.model.Model
 import org.apache.grails.core.cli.GrailsApplicationCommand
-import org.grails.io.support.Resource
 
 /**
  * Creates a scaffolded controller.
@@ -46,13 +45,8 @@ class CreateScaffoldControllerCommand implements GrailsApplicationCommand, Comma
             error('No domain-class specified')
             return FAILURE
         }
-        final Resource sourceClass = source(domainClassName)
-        if (!sourceClass) {
-            error("No domain-class found for name: ${domainClassName}")
-            return FAILURE
-        }
         boolean overwrite = isFlagPresent('force')
-        final Model model = model(sourceClass)
+        final Model model = scaffoldModel(domainClassName)
 
         String namespace = flag('namespace')
         boolean useService = isFlagPresent('service')

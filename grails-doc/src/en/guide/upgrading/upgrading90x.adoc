@@ -1776,3 +1776,16 @@ The memcached token storage also answers for a token that memcached does not acc
 
 * *A client that logs out with Redis or Grails cache token storage* treats 404 from the logout endpoint as "this token is not logged in", not as a failure: a second logout of the same token, or a logout after the token expired, answers 404.
 * *Code of your own that calls `removeToken`* on one of the two services handles `TokenNotFoundException` where the token may be gone.
+
+==== 41. Scaffolding: `generate-controller` Writes the Service Spec to the Integration Tests
+
+The commands of the scaffolding plugin that the Grails 9 command line runs are its application commands. The Grails shell of earlier versions ran scripts of the same names, and the two did not do the same in every case. The commands now do what the scripts did where the scripts were right:
+
+* *`generate-controller` and `generate-all` write `<Name>ServiceSpec.groovy` to `src/integration-test/groovy`.* The spec is an `@Integration` spec. The application command wrote it to `src/test/groovy`, where it ran with the unit tests.
+* *`generate-all` generates the views of every domain class that is found.* When one of several classes was not found, the application command stopped after the controllers and generated no views. The command still fails.
+* *`create-scaffold-controller`, `create-scaffold-service` and `generate-scaffold-all` take a class the project has no source of*, by its full name: a domain class of a plugin or of another project of the build. The application commands refused it. A domain class of the project is still found by its simple name and gives its package.
+* *`install-templates` of the plugin writes to `src/main/templates/scaffolding` of the project*, whatever the directory the command was started in.
+
+===== Required Actions
+
+* *A project that generated a service spec with `./gradlew runCommand -Pargs="generate-controller ..."`* moves `src/test/groovy/<package>/<Name>ServiceSpec.groovy` to `src/integration-test/groovy/<package>/`, or generates it again there and deletes the first one. Nothing changes for a spec that is already in the integration tests.

@@ -45,7 +45,20 @@ class GenerateAllCommand implements GrailsApplicationCommand, CommandLineHelper,
             error('No domain-class specified')
             return FAILURE
         }
-        return new GenerateControllerCommand().handle(executionContext) &&
-        new GenerateViewsCommand().handle(executionContext)
+        boolean controllers = run(new GenerateControllerCommand())
+        boolean views = run(new GenerateViewsCommand())
+        return controllers && views
+    }
+
+    /**
+     * Runs a command of the plugin on the project and with the arguments of this command. Both commands run:
+     * a domain class that is not found fails the command and does not keep the views of the others from being
+     * generated.
+     */
+    private boolean run(GrailsApplicationCommand command) {
+        command.executionContext = executionContext
+        command.templateRenderer = templateRenderer
+        command.fileSystemInteraction = fileSystemInteraction
+        return command.handle()
     }
 }

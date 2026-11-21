@@ -261,6 +261,13 @@ To generate both a scaffolded service and controller together:
 grails generate-scaffold-all Book
 ----
 
+The name is that of a domain class. A domain class of the project is found by its simple name, `Book`, or its full name, `org.bookstore.Book`, and the controller and the service are created in its package. A domain class the project has no source of, such as one of a plugin or of another project of the build, is given by its full name, which is also the package of what is created:
+
+[source,bash]
+----
+grails generate-scaffold-all org.library.Author
+----
+
 ===== Command Options
 
 The `create-scaffold-controller` command supports the following options:

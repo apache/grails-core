@@ -68,7 +68,7 @@ class GenerateViewsCommand implements GrailsApplicationCommand, CommandLineHelpe
                 }
                 addStatus("Views generated for ${projectPath(sourceClass)}")
             } else {
-                error("Domain-class not found for name $domainClassName")
+                error("Domain class not found for name: $domainClassName")
                 failureCount++
             }
         }
