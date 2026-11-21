@@ -1815,7 +1815,7 @@ Most commands of the Grails shell and of its profiles are commands of `grails` u
 * `quit`, `!` and `open` of interactive mode (note 47).
 * `install` in a plugin: it runs nothing, says to run `grails gradle publishToMavenLocal`, and ends with exit code 1.
 * `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command`, `list-profiles` and `profile-info`, which are removed with the profiles (note 37).
-* `generate-unit-test`, `generate-functional-test` and `generate-resource-controller` of the `rest-api` profile. What `generate-all`, `generate-controller` and `generate-views` of that profile did is gone as well: the commands of these names are those of the scaffolding plugin, which generate GSP views (notes 41 and 46), and nothing generates JSON views for a domain class.
+* `generate-unit-test`, `generate-functional-test` and `generate-resource-controller` of the `rest-api` profile. These three were there to test the REST API profiles themselves: they generated the tests and the controller that the test applications of the profiles used, and they were not meant for an application, which is why nothing takes their place. What `generate-all`, `generate-controller` and `generate-views` of that profile did is gone as well: the commands of these names are those of the scaffolding plugin, which generate GSP views (notes 41 and 46), and nothing generates JSON views for a domain class.
 * `grails run <file>.groovy` outside a project (note 38).
 
 Some commands are there in projects of some kinds only, which note 55 says for each: `create-integration-test` is no command in a plain plugin, `create-functional-test` is one in a REST API project and in a web project with a Geb feature (note 54), `create-job` in a project with the `grails-quartz` feature, `create-domain-resource` and `create-restful-controller` in REST API projects, and `package-plugin` and `publish-plugin` in a project that has a plugin class (`*GrailsPlugin.groovy` under `src/main/groovy`). `install-templates` is another command than it was (note 45).
@@ -2306,15 +2306,15 @@ Every command the Grails shell of Grails 8 had, of itself and of the profiles `b
 
 |`generate-functional-test`
 |the `rest-api` profile
-|No replacement. `create-functional-test` writes a test of the home page.
+|No replacement: it was there to test the REST API profiles themselves, not for an application. `create-functional-test` writes a test of the home page.
 
 |`generate-resource-controller`
 |the `rest-api` profile, another name of `generate-all` and `generate-controller`
-|No replacement. `create-restful-controller` writes a controller for a domain class in a REST API project.
+|No replacement: it was there to test the REST API profiles themselves, not for an application. `create-restful-controller` writes a controller for a domain class in a REST API project.
 
 |`generate-unit-test`
 |the `rest-api` profile
-|No replacement. `create-unit-test` writes an empty test.
+|No replacement: it was there to test the REST API profiles themselves, not for an application. `create-unit-test` writes an empty test.
 
 |`generate-views`
 |the `rest-api` profile, where it generated JSON views

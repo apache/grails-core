@@ -771,9 +771,9 @@ Where an unchanged name is a command:
 | `create-profile`, `create-feature`, `create-template`, `create-creator-command`, `create-generator-command`, `create-gradle-command` | removed with the profiles; a feature pack is written by hand |
 | `list-profiles` | removed: `grails help` lists the `create-` commands |
 | `profile-info` | removed: `grails create-app --list-features` (and the other `create-` commands) |
-| `generate-unit-test` (`rest-api` profile) | no replacement: `create-unit-test` writes an empty test |
-| `generate-functional-test` (`rest-api` profile) | no replacement: `create-functional-test` writes a test of the home page |
-| `generate-resource-controller` (`rest-api` profile) | no replacement: `create-restful-controller <domain class>` in a REST API project |
+| `generate-unit-test` (`rest-api` profile) | no replacement (test tooling of the REST API profiles, not meant for applications): `create-unit-test` writes an empty test |
+| `generate-functional-test` (`rest-api` profile) | no replacement (test tooling of the REST API profiles, not meant for applications): `create-functional-test` writes a test of the home page |
+| `generate-resource-controller` (`rest-api` profile) | no replacement (test tooling of the REST API profiles, not meant for applications): `create-restful-controller <domain class>` in a REST API project |
 | `generate-all`, `generate-controller`, `generate-views` of the `rest-api` profile (JSON views) | no replacement for JSON views; the names are the scaffolding plugin's commands, for GSP views |
 | `grails install-templates` (scaffolding templates) | `grails run-command install-templates`; `grails install-templates` now copies the templates of the `create-*` commands |
 | `grails run <file>.groovy` outside a project | removed, no replacement |
