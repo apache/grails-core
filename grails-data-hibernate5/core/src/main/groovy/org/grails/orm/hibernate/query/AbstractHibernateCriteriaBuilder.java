@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,7 +69,9 @@ import org.springframework.core.convert.ConversionService;
 
 import org.grails.datastore.mapping.model.PersistentEntity;
 import org.grails.datastore.mapping.model.PersistentProperty;
+import org.grails.datastore.mapping.model.types.Association;
 import org.grails.datastore.mapping.model.types.Basic;
+import org.grails.datastore.mapping.model.types.Embedded;
 import org.grails.datastore.mapping.multitenancy.MultiTenancySettings;
 import org.grails.datastore.mapping.query.Query;
 import org.grails.datastore.mapping.query.api.BuildableCriteria;
@@ -1299,7 +1302,11 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
         // Handle basic collection types (hasMany to String/Integer/etc.)
         // These are stored in a separate join table and cannot use simple Restrictions.in().
         // Instead, create an alias to the collection table and restrict on 'elements'.
-        if (isBasicCollectionProperty(originalPropertyName)) {
+        if (values == null || values.isEmpty()) {
+            // membership in an empty list is false whatever the property is, so no join is made for it: joining the
+            // collection first would drop the rows that have no elements before a negation could match them
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(propertyName, values));
+        } else if (isBasicCollectionProperty(originalPropertyName)) {
             String alias;
             if (aliasMap.containsKey(propertyName)) {
                 alias = aliasMap.get(propertyName);
@@ -1308,9 +1315,9 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                 createAlias(propertyName, alias);
                 aliasMap.put(propertyName, alias);
             }
-            addToCriteria(Restrictions.in(alias + ".elements", values == null ? Collections.EMPTY_LIST : values));
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(alias + ".elements", values));
         } else {
-            addToCriteria(Restrictions.in(propertyName, values == null ? Collections.EMPTY_LIST : values));
+            addToCriteria(AbstractHibernateCriterionAdapter.inRestriction(propertyName, values));
         }
         return this;
     }
@@ -1350,31 +1357,8 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
      * @return A Criterion instance
      */
     public org.grails.datastore.mapping.query.api.Criteria in(String propertyName, Object[] values) {
-        if (!validateSimpleExpression()) {
-            throwRuntimeException(new IllegalArgumentException("Call to [in] with propertyName [" +
-                    propertyName + "] and values [" + values + "] not allowed here."));
-        }
-
-        // Preserve the original property name before alias prefix is applied,
-        // since isBasicCollectionProperty needs the raw property name for entity lookup.
-        String originalPropertyName = propertyName;
-        propertyName = calculatePropertyName(propertyName);
-
-        // Handle basic collection types (hasMany to String/Integer/etc.)
-        if (isBasicCollectionProperty(originalPropertyName)) {
-            String alias;
-            if (aliasMap.containsKey(propertyName)) {
-                alias = aliasMap.get(propertyName);
-            } else {
-                alias = propertyName + ALIAS;
-                createAlias(propertyName, alias);
-                aliasMap.put(propertyName, alias);
-            }
-            addToCriteria(Restrictions.in(alias + ".elements", values));
-        } else {
-            addToCriteria(Restrictions.in(propertyName, values));
-        }
-        return this;
+        // the same rules as for a collection: an empty array is an explicit false, and a basic collection is joined
+        return in(propertyName, values == null ? java.util.Collections.emptyList() : java.util.Arrays.asList(values));
     }
 
     /**
@@ -1758,7 +1742,14 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                     }
                     // GRAILS-7324 look if we already have association to sort by
                     Map argMap = (Map) args[0];
-                    final String sort = (String) argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    // a map of sort properties is applied with the other arguments, in populateArgumentsForCriteria;
+                    // a builder constructed without a datastore has no mapping to resolve the properties against, so it stays there
+                    final Object sortArgument = argMap.get(HibernateQueryConstants.ARGUMENT_SORT);
+                    if (sortArgument instanceof Map && datastore != null) {
+                        applyMapSort(argMap, (Map<?, ?>) sortArgument);
+                        argMap = withSortApplied(argMap);
+                    }
+                    final String sort = sortArgument instanceof Map ? null : (String) sortArgument;
                     if (sort != null) {
                         boolean ignoreCase = true;
                         Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
@@ -1768,15 +1759,10 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
                         final String orderParam = (String) argMap.get(HibernateQueryConstants.ARGUMENT_ORDER);
                         final String order = HibernateQueryConstants.ORDER_DESC.equalsIgnoreCase(orderParam) ?
                                 HibernateQueryConstants.ORDER_DESC : HibernateQueryConstants.ORDER_ASC;
-                        int lastPropertyPos = sort.lastIndexOf('.');
-                        String associationForOrdering = lastPropertyPos >= 0 ? sort.substring(0, lastPropertyPos) : null;
-                        if (associationForOrdering != null && aliasMap.containsKey(associationForOrdering)) {
-                            addOrder(criteria, aliasMap.get(associationForOrdering) + "." + sort.substring(lastPropertyPos + 1),
-                                    order, ignoreCase);
-                            // remove sort from arguments map to exclude from default processing.
-                            @SuppressWarnings("unchecked") Map argMap2 = new HashMap(argMap);
-                            argMap2.remove(HibernateQueryConstants.ARGUMENT_SORT);
-                            argMap = argMap2;
+                        if (addOrderOnJoinedPath(datastore == null ? null :
+                                datastore.getMappingContext().getPersistentEntity(targetClass.getName()), sort, order, ignoreCase)) {
+                            // the sort is applied: it is not applied again, and the default sort of the mapping stays off
+                            argMap = withSortApplied(argMap);
                         }
                     }
                     result = createPagedResultList(argMap);
@@ -2050,6 +2036,114 @@ public abstract class AbstractHibernateCriteriaBuilder extends GroovyObjectSuppo
             criteria.add(c);
         }
         return c;
+    }
+
+    /**
+     * Applies a map of sort properties in the order it lists them. A property of an association the query's own blocks
+     * already joined is ordered through that join, as for a single sort property, so the association is not joined a
+     * second time; any other property is ordered as the paged list orders it.
+     */
+    /**
+     * The arguments of a query whose sort the builder has applied. A sort that is absent lets the default sort of the
+     * mapping apply, which the sort the call gave replaces, so it is left in as a sort without properties.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static Map withSortApplied(Map argMap) {
+        Map applied = new HashMap(argMap);
+        applied.put(HibernateQueryConstants.ARGUMENT_SORT, new LinkedHashMap<>());
+        return applied;
+    }
+
+    /**
+     * Sorts by a property of an association that the query joined, or of an association below one that it joined,
+     * on the join the query made: the part of the path that is joined is reused, and the rest is joined from it.
+     *
+     * @return whether the property was sorted by, which it is not when the query joined no part of its path
+     */
+    private boolean addOrderOnJoinedPath(PersistentEntity entity, String property, String order, boolean ignoreCase) {
+        int lastPropertyPos = property.lastIndexOf('.');
+        if (lastPropertyPos < 0) {
+            return false;
+        }
+        String association = property.substring(0, lastPropertyPos);
+        if (!aliasMap.containsKey(association)) {
+            String head = association.contains(".") ? association.substring(0, association.indexOf('.')) : association;
+            if (entity == null || !aliasMap.containsKey(head) || !(entity.getPropertyByName(head) instanceof Association)) {
+                return false;
+            }
+        }
+        addOrder(criteria, aliasForSortedAssociation(association) + "." + property.substring(lastPropertyPos + 1), order, ignoreCase);
+        return true;
+    }
+
+    private String aliasForSortedAssociation(String association) {
+        String joined = aliasMap.get(association);
+        if (joined != null) {
+            return joined;
+        }
+        int lastDot = association.lastIndexOf('.');
+        if (lastDot > 0) {
+            aliasForSortedAssociation(association.substring(0, lastDot));
+        }
+        aliasCount++;
+        String alias = association.substring(lastDot + 1) + ALIAS + aliasCount;
+        createAlias(association, alias, org.hibernate.sql.JoinType.INNER_JOIN.getJoinTypeValue());
+        return alias;
+    }
+
+    /**
+     * Joins once an association that two or more of the sort properties go through, on the way to the property or as its owner, so that each of them orders by that
+     * join: sorting a property of an association joins it, and a second property of the same association would join it again.
+     */
+    private void joinAssociationsSortedTwice(PersistentEntity entity, Map<?, ?> sortMap) {
+        Map<String, Integer> uses = new LinkedHashMap<>();
+        for (Object key : sortMap.keySet()) {
+            String property = (String) key;
+            // every association on the way to the property is used: author.publisher.name goes through author as well
+            int dot = property.indexOf('.');
+            while (dot > 0) {
+                uses.merge(property.substring(0, dot), 1, Integer::sum);
+                dot = property.indexOf('.', dot + 1);
+            }
+        }
+        for (Map.Entry<String, Integer> use : uses.entrySet()) {
+            String association = use.getKey();
+            if (use.getValue() > 1 && !aliasMap.containsKey(association) && isJoinableAssociationPath(entity, association)) {
+                aliasForSortedAssociation(association);
+            }
+        }
+    }
+
+    /**
+     * @return whether every name of the path is an association of the entity it starts from, and none is embedded
+     */
+    private static boolean isJoinableAssociationPath(PersistentEntity entity, String path) {
+        PersistentEntity current = entity;
+        for (String name : path.split("\\.")) {
+            PersistentProperty property = current == null ? null : current.getPropertyByName(name);
+            if (!(property instanceof Association) || property instanceof Embedded) {
+                return false;
+            }
+            current = ((Association) property).getAssociatedEntity();
+        }
+        return true;
+    }
+
+    private void applyMapSort(Map<?, ?> argMap, Map<?, ?> sortMap) {
+        boolean ignoreCase = true;
+        Object caseArg = argMap.get(HibernateQueryConstants.ARGUMENT_IGNORE_CASE);
+        if (caseArg instanceof Boolean) {
+            ignoreCase = (Boolean) caseArg;
+        }
+        PersistentEntity entity = datastore.getMappingContext().getPersistentEntity(targetClass.getName());
+        joinAssociationsSortedTwice(entity, sortMap);
+        for (Map.Entry<?, ?> entry : sortMap.entrySet()) {
+            String property = (String) entry.getKey();
+            String order = GrailsHibernateQueryUtils.sortDirection(property, entry.getValue());
+            if (!addOrderOnJoinedPath(entity, property, order, ignoreCase)) {
+                GrailsHibernateQueryUtils.addOrderPossiblyNested(criteria, entity, property, order, ignoreCase);
+            }
+        }
     }
 
     /**

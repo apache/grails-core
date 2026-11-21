@@ -413,6 +413,11 @@ public class GrailsDomainBinder implements MetadataContributor {
             }
             if (referenced != null) {
                 PersistentProperty propertyToSortBy = referenced.getPropertyByName(propConfig.getSort());
+                if (propertyToSortBy == null) {
+                    throw new DatastoreConfigurationException("Default sort [" + propConfig.getSort() + "] of the association [" +
+                            property.getOwner().getName() + "->" + property.getName() + "] is not a property of [" + referenced.getName() +
+                            "]. Name a property of the associated entity; a path through another association is not supported.");
+                }
 
                 String associatedClassName = property.getAssociatedEntity().getName();
 
