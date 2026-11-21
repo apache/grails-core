@@ -663,33 +663,30 @@ spring:
 
 ## The `grails` Command and the Grails Wrapper
 
-Grails 9 has one command line. The `grails` command no longer chooses between the Grails shell and Grails Forge, and nothing starts the Grails shell. The class it starts moved from `org.apache.grails.cli.DelegatingShellApplication`, which is removed, to `org.apache.grails.cli.GrailsCli`.
+Grails 9 has one command line. The `grails` command no longer chooses between the Grails shell and Grails Forge, and nothing starts the Grails shell. The class it starts moved from `org.apache.grails.cli.DelegatingShellApplication` to `org.apache.grails.cli.GrailsCli`.
 
-The Grails wrapper committed with Grails 7 or 8 (`grailsw`, `grailsw.bat`, `grails-wrapper.jar` at the root of the application) has the old class name compiled into `grails-wrapper.jar`. Once `grailsVersion` names a Grails 9 version, every `./grailsw` command downloads the Grails 9 command line and then ends with exit code 1:
+The Grails wrapper committed with Grails 7 or 8 (`grailsw`, `grailsw.bat`, `grails-wrapper.jar` at the root of the application) has the old class name compiled into `grails-wrapper.jar`. Grails 9 keeps a class of that name for this one caller: once `grailsVersion` names a Grails 9 version, the old wrapper downloads the Grails 9 command line, which replaces the three wrapper files with those of Grails 9, prints one line that names them, and then runs the command that was typed. `update-wrapper` is a command of Grails 9 (`./grailsw update-wrapper`, `grails update-wrapper`) and does exactly this replacement.
 
-```
-Unable to execute Grails Wrapper: org.apache.grails.cli.DelegatingShellApplication
-java.lang.ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication
-```
-
-`./grailsw update-wrapper` does not repair this: it only downloads the `grails-cli` jar again into `~/.grails/wrapper` (or `GRAILS_WRAPPER_HOME`) and fails the same way. Nothing replaces the three committed files; replace them by hand.
-
-- Check whether the application has a Grails wrapper: `grailsw`, `grailsw.bat` and `grails-wrapper.jar` at its root. Without them there is nothing to replace.
-- Get the three files of the Grails 9 version: extract `apache-grails-wrapper-VERSION-bin.zip` from the release page (https://github.com/apache/grails-core/releases), or create an application elsewhere with the Grails 9 `grails` command (`grails create-app scratch`) and take them from its root. Do not edit `grails-wrapper.jar` and do not copy it from a Grails 7 or 8 application.
-- Copy all three over the ones in the application, then make the script executable and check it:
+- Check whether the application has a Grails wrapper: `grailsw`, `grailsw.bat` and `grails-wrapper.jar` at its root. Without them there is nothing to update.
+- Set `grailsVersion` in `gradle.properties` to the Grails 9 version first. In a project that still names Grails 7 or 8 nothing is replaced.
+- Run the update in the root of the application, check it, and commit the three files with the version change:
 
 ```bash
-cp apache-grails-wrapper-VERSION-bin/grailsw apache-grails-wrapper-VERSION-bin/grailsw.bat apache-grails-wrapper-VERSION-bin/grails-wrapper.jar .
-chmod +x grailsw
-./grailsw --version   # prints "Grails Version:" with the grailsVersion of gradle.properties
-git add grailsw grailsw.bat grails-wrapper.jar
+./grailsw update-wrapper   # ends with: The Grails wrapper of the project in ... was that of Grails 8.x and is now that of Grails 9.x: grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.
+./grailsw --version        # prints "Grails Version:" with the grailsVersion of gradle.properties, and no line about the wrapper
+git add gradle.properties grailsw grailsw.bat grails-wrapper.jar
 ```
 
-- The replacement can come before or after the change of `grailsVersion`: the Grails 9 wrapper reads the start class from the manifest (`Main-Class`) of the `grails-cli` jar it downloads, so it also starts Grails 7 and 8, and it does not need replacing when the class moves again.
+- `./grailsw update-wrapper` and `./grailsw` without a command end after the replacement (exit code 0) and do not start the interactive console; any other command is run after it. Do not treat the one line about the wrapper as an error.
+- Read the standard error and the exit code. A file that could not be replaced is named there with the reason: a symbolic link (not followed), a read-only file, a directory that cannot be written to. `./grailsw update-wrapper` then exits with 1. Replace such a file by hand: extract `apache-grails-wrapper-VERSION-bin.zip` from the release page (https://github.com/apache/grails-core/releases), or create an application elsewhere with the Grails 9 `grails` command (`grails create-app scratch`), copy `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the ones in the application and run `chmod +x grailsw`. Do not edit `grails-wrapper.jar` and do not copy it from a Grails 7 or 8 application.
+- On Windows `grails-wrapper.jar` and `grailsw.bat` are in use while the wrapper runs. The command writes `grails-wrapper.jar.new` and `grailsw.bat.new` beside them and exits with 1; after it has ended run `move /y grails-wrapper.jar.new grails-wrapper.jar` and `move /y grailsw.bat.new grailsw.bat`, then commit. Do not commit the `.new` files.
+- With an installed Grails 9, `grails update-wrapper` in the application writes the same three files without the download.
+- `update-wrapper` takes no arguments in Grails 9. `./grailsw update-wrapper COMMAND`, which ran the command after the download in Grails 7 and 8, is refused with exit code 2 once the wrapper is that of Grails 9: run the two separately.
+- The Grails 9 wrapper reads the start class from the manifest (`Main-Class`) of the `grails-cli` jar it downloads, so it also starts Grails 7 and 8, and it does not need replacing when the class moves again. Later version changes use the same step: change `grailsVersion`, run `./grailsw update-wrapper`, commit.
 - Remove `-t forge`, `--type forge`, `-t shell` and `--type shell` from scripts, CI jobs and run configurations that call `grails` or `grailsw`. As the first argument the option is refused with exit code 2. A command given with `-t forge` is the same command without it; look a Grails shell command up in `grails help` and in the section "Commands of Earlier Versions" of the command line chapter of the guide.
 - Replace calls of `grails-forge-cli` with `grails`, with the same arguments. `grails-shell-cli` and `grails-forge-cli` are not in the distribution or an SDKMAN installation any more.
 - Remove `GRAILS_PREFERRED_SHELL` from environments; it is not read.
-- A tool that loads `org.apache.grails.cli.DelegatingShellApplication` from a `grails-cli` jar loads `org.apache.grails.cli.GrailsCli` (`main(String[])` exits with the exit code, `execute(String...)` returns it) or the `Main-Class` of the jar's manifest. The artifact `org.apache.grails:grails-cli` no longer brings `grails-shell-cli`.
+- A tool that loads `org.apache.grails.cli.DelegatingShellApplication` from a `grails-cli` jar loads `org.apache.grails.cli.GrailsCli` (`main(String[])` exits with the exit code, `execute(String...)` returns it) or the `Main-Class` of the jar's manifest. In Grails 9 `DelegatingShellApplication` is only the entry of the old wrapper: it replaces the wrapper files of the project before it runs the command line. The artifact `org.apache.grails:grails-cli` no longer brings `grails-shell-cli`.
 
 ## `grails run <file>.groovy` Outside a Project Is Removed
 
@@ -833,7 +830,8 @@ Never run a script of the framework's plugins with `runScriptCommand` in Grails 
 | exit code 0 or 1 | 0 done, 2 mistake in the command line (nothing ran), 1 any other failure |
 | arguments split and joined again | passed on unchanged; `@file` is expanded, `@@` is a literal `@` |
 | `~/.grails/settings.groovy` | not read; proxies in `GRAILS_OPTS`/`JAVA_OPTS`, repositories in `GRAILS_REPO_URL` |
-| `./grailsw CMD` | the same after replacing `grailsw`, `grailsw.bat`, `grails-wrapper.jar` with those of Grails 9 |
+| `./grailsw CMD` | the same; the first run with `grailsVersion` on Grails 9 replaces `grailsw`, `grailsw.bat`, `grails-wrapper.jar` with those of Grails 9 (commit them) |
+| `./grailsw update-wrapper` | downloads the command line again and replaces the three wrapper files; `grails update-wrapper` replaces them without the download; no arguments after it |
 
 - `grails list-plugins [TEXT]` and `grails plugin-info NAME|group:artifact` exist in Grails 9 (they were shell commands). To find the coordinates and the dependency line of a plugin, run `grails plugin-info NAME --json` and read `plugin.dependency`, `plugin.version`, `plugin.managedBy` and `plugin.features` (a feature there is added with `grails feature add FEATURE`). Use `--offline` when there is no network: the plugins of the Grails release are still answered. Set `GRAILS_PLUGIN_INDEX=none` in CI to keep the commands from the network. Do not parse the text output.
 - The `grails` command of Grails 9 runs project commands only in a project whose `gradle.properties` names Grails 9 or later; in an earlier one it runs `project migrate`, `--version` and the `create-` commands for another application, and exits 1 for the rest.
@@ -967,7 +965,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 ## Verification Checklist
 
 - [ ] `gradle.properties` names the Grails 9 version and the wrapper is Gradle 9.7 or later
-- [ ] An application with a Grails wrapper has the `grailsw`, `grailsw.bat` and `grails-wrapper.jar` of Grails 9 committed, and `./grailsw --version` prints the Grails 9 version
+- [ ] An application with a Grails wrapper has the `grailsw`, `grailsw.bat` and `grails-wrapper.jar` of Grails 9 committed (`./grailsw update-wrapper` wrote them and now says that nothing was changed), no `.new` file is left beside them, and `./grailsw --version` prints the Grails 9 version
 - [ ] No script, CI job or run configuration passes `-t` or `--type` to `grails` or `grailsw`, calls `grails-shell-cli` or `grails-forge-cli`, or sets `GRAILS_PREFERRED_SHELL`
 - [ ] No configuration names a property Spring Boot 4.2 renames, such as `server.tomcat.use-relative-redirects` or `management.metrics.observations.ignored-meters`
 - [ ] Behind a reverse proxy that sends `Forwarded` or `X-Forwarded-Prefix`, `spring.mvc.forwarded-headers.header-format` or `use-forwarded-prefix` is set, and an application that declares `@EnableWebMvc` registers a `ForwardedHeaderFilter` itself
@@ -1037,7 +1035,7 @@ Generated YAML configuration has a fixed key order (`info`, `dataSource`, `envir
 - Do not compare a blocking result with `null` to detect an empty result; RxJava 3 throws instead.
 - Do not keep a `Subscription` field for an RxGORM subscription; the handle is the `Disposable` passed to `onSubscribe`.
 - Do not pin Groovy, Spock or RxJava versions in the application build; the Grails BOM manages them.
-- Do not run `./grailsw update-wrapper` to fix a wrapper that fails with `ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication`; it replaces the downloaded command line, not the committed `grails-wrapper.jar`. Replace the three wrapper files.
+- Do not copy the Grails wrapper files by hand where `./grailsw update-wrapper` can write them, and do not run it before `grailsVersion` names Grails 9: with the wrapper of Grails 7 or 8 and an earlier `grailsVersion` it only downloads that earlier command line again. Do not leave the replaced files uncommitted: until `grails-wrapper.jar` of Grails 9 is committed, every checkout replaces them again on its first `./grailsw` command.
 - Do not translate a Grails 8 command by its name alone; run `grails help` in the project and `grails help <command>`. A name that is no command exits with 2 and runs nothing, which a script that ignores exit codes does not notice.
 - Do not put the environment in front of the command (`grails prod war`); it is refused. Use `-Dgrails.env=` after the command.
 - Do not add a `profile` dependency or `grails.profile` to get the `create-*` commands back in an application the Grails shell created, and do not write `grails-forge-cli.yml` or `.grails/project.yml` by hand; run `grails project migrate`. Do not expect `feature add` to work afterwards: the record it writes is `untracked`.

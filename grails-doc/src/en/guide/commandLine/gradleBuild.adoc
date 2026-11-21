@@ -138,10 +138,11 @@ These things differ from the Grails shell:
 * `assemble --clean` runs `clean` first. The shell accepts the option and does nothing for it.
 * In a project, `package-plugin` and `publish-plugin` are commands only where the project has a plugin class (a file whose name ends with `GrailsPlugin.groovy` under `src/main/groovy`). Outside a project they are listed with the others and say what every command of a project says there. `install` runs nothing: it says that a plugin is installed into the local Maven repository with `gradle publishToMavenLocal`, and ends with exit code 1.
 
-Two more commands look at the project without running Gradle:
+Three more commands work on the project without running Gradle:
 
 * `stats` prints the table of source files and lines of code by the kind of class, as the shell does. It reads the source directories under `grails-app` and `src` of the project, does not follow links, and does not read the lines of a file larger than 16 MiB. A source directory that is itself reached through a link, as `src/main/groovy` is when `src` is a link, is not counted, and the command names it in a warning.
 * `bug-report` writes `build/NAME-bug-report-DATE.zip`, with `NAME` the name of the directory of the project and `DATE` the day as `ddMMyyyy`. The ZIP file holds every file under `grails-app` and `src`, and `build.gradle`, and nothing else of the project: not `settings.gradle` or `gradle.properties`, and nothing of the `build`, `.gradle`, `.git` and `.grails` directories.
+* link:{commandLineRef}update-wrapper.html[update-wrapper] replaces the Grails wrapper that is committed in the project, `grailsw`, `grailsw.bat` and `grails-wrapper.jar`, by the one of the version of the command line, and names the files it replaced. `./grailsw update-wrapper` has the wrapper download the command line of the `grailsVersion` of the project again first. The Grails shell has no such command: there the argument is read by the wrapper alone, which downloads the command line again and replaces nothing in the project.
 
 WARNING: The configuration of the application under `grails-app/conf` is in the ZIP file of `bug-report` as it is, with any password it holds. Before it says what it created, the command names each `application*.yml`, `application*.groovy` and `application*.properties` file of `grails-app/conf` that went into the ZIP file. Look through them before you attach it to an issue.
 

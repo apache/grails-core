@@ -1696,43 +1696,49 @@ Until Grails 9 the `grails` command and the Grails wrapper (`grailsw`) started a
 * *The distribution has one command.* The `bin` directory of the binary distribution, and so an installation by SDKMAN, has `grails` and `grails.bat`. `grails-shell-cli` and `grails-forge-cli` are not there.
 * *Nothing starts the Grails shell.* `grails` without a command starts the interactive console in a Grails project and shows the help elsewhere. The commands there are, in a project and outside one, are listed by `grails help`; see xref:commandLine[The Command Line].
 * *Projects are not created from profiles.* `create-app` and the other `create-` commands have no `--profile` option, and `create-profile`, `list-profiles` and `profile-info` are no commands. A project is created from an application type and features, and what a profile of your own gave an application is given by a plugin with a feature pack; see link:applicationTypes.html[Application Types, Features and Feature Packs] and, for each thing a profile had, link:applicationTypes.html#profilesReplaced[What Became of Profiles].
-* *The start class moved.* The class `org.apache.grails.cli.DelegatingShellApplication` is removed. The class that starts the command line is `org.apache.grails.cli.GrailsCli`, which the `Main-Class` attribute of the manifest of the `grails-cli` jars names. The artifact `org.apache.grails:grails-cli` no longer depends on `grails-shell-cli`.
+* *The start class moved.* The class that starts the command line is `org.apache.grails.cli.GrailsCli`, which the `Main-Class` attribute of the manifest of the `grails-cli` jars names. `org.apache.grails.cli.DelegatingShellApplication` no longer chooses a command line and starts no Grails shell. It is kept for one caller, the Grails wrapper of Grails 7 and 8, whose files it replaces before it starts `GrailsCli` (see below). The artifact `org.apache.grails:grails-cli` no longer depends on `grails-shell-cli`.
 * *The Grails wrapper reads the start class from the jar it downloads.* The wrapper of Grails 7 and 8 has the name `DelegatingShellApplication` compiled into `grails-wrapper.jar`, the file that is committed in the application. The wrapper of Grails 9 takes the name from the manifest of the `grails-cli` jar, so it starts the command line of Grails 7, 8 and 9, and will not have to be replaced when the class moves again.
+* *`update-wrapper` is a command, and it replaces the wrapper of the project.* Until Grails 9 `./grailsw update-wrapper` only made the wrapper download the command line again, and nothing replaced `grailsw`, `grailsw.bat` and `grails-wrapper.jar`, the three files that are committed in the application. In Grails 9 the wrapper still downloads the command line again, and the command line then replaces the three files by those of its version: link:{commandLineRef}update-wrapper.html[update-wrapper]. `grails update-wrapper`, typed to an installed command line, does the same without the download. The command takes no arguments: `./grailsw update-wrapper COMMAND`, which ran the command after the download, is refused with exit code 2 by the wrapper of Grails 9.
 
-A wrapper that was committed with Grails 7 or 8 cannot start Grails 9. Once `grailsVersion` in `gradle.properties` names a Grails 9 version, every `./grailsw` command downloads the command line of that version, if it is not there yet, and then ends with exit code 1 and:
+*The wrapper of Grails 7 and 8 replaces itself.* Once `grailsVersion` in `gradle.properties` names a Grails 9 version, the wrapper that is committed in the application downloads the command line of that version and starts `DelegatingShellApplication` in it, as it did before. In Grails 9 that class runs `update-wrapper`, which replaces `grailsw`, `grailsw.bat` and `grails-wrapper.jar` at the root of the application by those of Grails 9 and says so in one line, and then runs the command that was typed:
 
 [source,console]
 ----
-Unable to execute Grails Wrapper: org.apache.grails.cli.DelegatingShellApplication
-java.lang.ClassNotFoundException: org.apache.grails.cli.DelegatingShellApplication
+$ ./grailsw update-wrapper
+Updating Grails wrapper, allowed versions to update to are [RELEASE]...
+Updated wrapper to version: 9.0.0
+The Grails wrapper of the project in /home/me/shop was that of Grails 8.1.2 and is now that of Grails 9.0.0: grailsw, grailsw.bat, grails-wrapper.jar were replaced. Commit them.
 ----
 
-`./grailsw update-wrapper` does not repair this. It downloads the `grails-cli` jar again, into `~/.grails/wrapper` (or `GRAILS_WRAPPER_HOME`), and fails in the same way: neither it nor anything else replaces `grailsw`, `grailsw.bat` and `grails-wrapper.jar` in the application. They are replaced by hand.
+* `./grailsw update-wrapper` ends after that line, with exit code 0, and so does `./grailsw` without a command: the earlier wrapper takes `update-wrapper` from the command line before it starts the class, so the two cannot be told apart, and the run that replaces the wrapper does not start the interactive console. Type `./grailsw` again for the console.
+* Any other command is run after the replacement, and the exit code is that of the command. `./grailsw test-app` in a job of continuous integration replaces the files of its checkout, runs the tests, and does the same on the next run until the three files are committed.
+* A file is written beside the one it replaces and moved over it, and keeps the mode of the file it replaces, so `grailsw` can be executed by whom it could be before.
+* A file that cannot be replaced is named on the standard error, with the reason and what to do by hand, and the other files are replaced: a file that is a symbolic link, which is not followed, a file that is read-only, and every file of a directory that cannot be written to. The command that was typed is run all the same; `./grailsw update-wrapper` ends with exit code 1 then.
+* On Windows two of the files are in use while the wrapper runs and are not replaced: `grails-wrapper.jar`, which the JVM has open, and `grailsw.bat`, which the command interpreter is reading. The new ones are written beside them as `grails-wrapper.jar.new` and `grailsw.bat.new`, and the line on the standard error names the step that is left to do once the command has ended: `move /y grails-wrapper.jar.new grails-wrapper.jar` and `move /y grailsw.bat.new grailsw.bat`.
+* Nothing is replaced outside a Grails project, and nothing in a project whose `gradle.properties` names Grails 7 or 8, where the command line of Grails 9 says that it works with projects of Grails 9 and later.
 
 ===== Required Actions
 
-* *Replace the Grails wrapper of the application.* An application has one when the files `grailsw`, `grailsw.bat` and `grails-wrapper.jar` are at its root. This can be done before or after `grailsVersion` is changed, because the wrapper of Grails 9 starts Grails 7 and 8 as well:
-. Get the three files of Grails 9. Either download `apache-grails-wrapper-VERSION-bin.zip`, with the Grails 9 version in place of `VERSION`, from the https://github.com/apache/grails-core/releases[release page] and extract it, or create an application somewhere else with the `grails` command of Grails 9 (`grails create-app scratch`) and take the files from its root.
-. Copy `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the three files at the root of the application. Replace all three: the scripts changed as well.
-. On Linux and macOS make sure the script can still be executed: `chmod +x grailsw`.
-. Run `./grailsw --version` in the application. It prints `Grails Version:` with the version that `grailsVersion` in `gradle.properties` names, after downloading the command line of that version on the first run.
+* *Update the Grails wrapper of the application.* An application has one when the files `grailsw`, `grailsw.bat` and `grails-wrapper.jar` are at its root.
+. Set `grailsVersion` in `gradle.properties` to the Grails 9 version.
+. Run `./grailsw update-wrapper` in the application, `grailsw update-wrapper` on Windows. It downloads the command line of that version, replaces the three files and names them.
+. On Windows, do the step the command names: move `grails-wrapper.jar.new` over `grails-wrapper.jar` and `grailsw.bat.new` over `grailsw.bat`.
+. Run `./grailsw --version`. It prints `Grails Version:` with the version that `grailsVersion` names, and no line about the wrapper.
 . Commit the three files together with the change of `grailsVersion`.
 +
 [source,console]
 ----
-$ unzip apache-grails-wrapper-VERSION-bin.zip
-$ cp apache-grails-wrapper-VERSION-bin/grailsw apache-grails-wrapper-VERSION-bin/grailsw.bat apache-grails-wrapper-VERSION-bin/grails-wrapper.jar /path/to/application/
-$ cd /path/to/application
-$ chmod +x grailsw
+$ ./grailsw update-wrapper
 $ ./grailsw --version
-$ git add grailsw grailsw.bat grails-wrapper.jar
+$ git add gradle.properties grailsw grailsw.bat grails-wrapper.jar
 ----
+* *Where the command cannot write the files, replace them by hand.* That is the case in a checkout that is read-only and for a file that is a link. Download `apache-grails-wrapper-VERSION-bin.zip`, with the Grails 9 version in place of `VERSION`, from the https://github.com/apache/grails-core/releases[release page] and extract it, or create an application somewhere else with the `grails` command of Grails 9 (`grails create-app scratch`) and take the files from its root. Copy `grailsw`, `grailsw.bat` and `grails-wrapper.jar` over the three files at the root of the application, and on Linux and macOS make sure the script can still be executed (`chmod +x grailsw`). The wrapper of Grails 9 starts Grails 7 and 8 as well, so the copy can be made before `grailsVersion` is changed. An installed `grails` of Grails 9 writes the same three files with `grails update-wrapper` in the application, once `grailsVersion` names Grails 9.
 * *Remove `-t forge`, `--type forge`, `-t shell` and `--type shell`* from scripts, continuous integration jobs, documentation of your own and run configurations that call `grails` or `grailsw`. A command that was given with `-t forge` is the same command without it. A command of the Grails shell that was given with `-t shell`, or with no option, is looked up in `grails help`; <<cliMappingGrails8,note 55>> says what each of them is now, as does the section "Commands of Earlier Versions" of xref:commandLine[The Command Line] for the ones that are gone, and notes 42 to 54 say what differs for the commands that are kept.
 * *Replace `grails-forge-cli` with `grails`*, with the same arguments, wherever the command is called. `grails-shell-cli` has no command that takes its place: its commands are those of `grails` where that section has them.
 * *Remove `GRAILS_PREFERRED_SHELL`* from shell profiles and continuous integration settings. It has no effect.
 * *Replace `create-app NAME --profile PROFILE`* with the command of the type of application: `create-app` for `web`, `create-restapi` for `rest-api`, `create-plugin` for `plugin`, `create-web-plugin` for `web-plugin` and `create-rest-api-plugin` for `rest-api-plugin`. A REST API plugin is generated as the profile generated it, with an empty `UrlMappings` and no controller or views. `--features` now adds to the default features of the type and refuses a name that is no feature; `--exclude-features` leaves a default one out.
 * *A profile of your own.* Nothing reads a profile artifact. Move what it added to a new application (dependencies, build plugins, configuration, files from its skeleton and its features) into the feature pack of a plugin, as xref:plugins#forgeFeaturePacks[Adding a Feature to Application Creation] describes, and select it with `--features group:artifact:version`. A feature pack adds to an application of one of the five types: a skeleton that takes the place of the generated project and the commands of a profile have no counterpart in a pack. Commands become classes of a plugin (xref:commandLine#creatingCustomCommands[Creating Custom Commands]).
-* *A tool of your own that loads the start class from a `grails-cli` jar* loads `org.apache.grails.cli.GrailsCli` in place of `org.apache.grails.cli.DelegatingShellApplication`, or reads the `Main-Class` attribute of the manifest of the jar, which names the class in Grails 7, 8 and 9. `GrailsCli.main(String[])` ends the JVM with the exit code and `GrailsCli.execute(String...)` returns it.
+* *A tool of your own that loads the start class from a `grails-cli` jar* loads `org.apache.grails.cli.GrailsCli` in place of `org.apache.grails.cli.DelegatingShellApplication`, or reads the `Main-Class` attribute of the manifest of the jar, which names the class in Grails 7, 8 and 9. `GrailsCli.main(String[])` ends the JVM with the exit code and `GrailsCli.execute(String...)` returns it. A tool that still starts `DelegatingShellApplication` in a Grails 9 jar gets what the earlier wrapper gets: in a project of Grails 9 that has a Grails wrapper, the three files of the wrapper are replaced before the command line is run.
 * *A build of your own that depends on `org.apache.grails:grails-cli` to get the Grails shell* does not get it any more.
 
 ==== 38. `grails run <file>.groovy` Outside a Project Is Removed, and `GormCompilerAutoConfiguration` With It
@@ -2652,10 +2658,10 @@ The other `dbm-*` commands are `dbm-changelog-sync`, `dbm-changelog-sync-sql`, `
 |Not read. Repositories: `GRAILS_REPO_URL`, `--feature-pack-repository`. Proxies: `-Dhttps.proxyHost=...` in `GRAILS_OPTS` or `JAVA_OPTS`, and in the Gradle properties of the build (48).
 
 |`./grailsw COMMAND` with the wrapper of Grails 7 or 8
-|`./grailsw COMMAND` after `grailsw`, `grailsw.bat` and `grails-wrapper.jar` are replaced by those of Grails 9 (37, 50).
+|`./grailsw COMMAND`. Once `grailsVersion` names Grails 9, the run first replaces `grailsw`, `grailsw.bat` and `grails-wrapper.jar` by those of Grails 9 and says so; commit the three files (37, 50).
 
 |`./grailsw update-wrapper`
-|Still downloads the command line again, and still does not replace the three files of the project (37). `grails update-wrapper` is no command.
+|Downloads the command line again and replaces the three files of the project by those of its version, typed to the wrapper of Grails 7 or 8 as well. `grails update-wrapper` does the same without the download. `./grailsw update-wrapper COMMAND` is refused by the wrapper of Grails 9: the command takes no arguments (37).
 |===
 
 ===== Required Actions

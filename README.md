@@ -81,10 +81,10 @@ For running commands, the Grails Wrapper will always pull the Apache Grails vers
 any environment variables. Type `grailsw help` to see the available commands. For more detailed information
 about it, see the [documentation](https://grails.apache.org/docs/snapshot/index.html).
 
-A wrapper committed in an application that was created with Apache Grails 7 or 8 cannot start the command line of
-Apache Grails 9: replace `grailsw`, `grailsw.bat` and `grails-wrapper.jar` with those of the Apache Grails 9 wrapper
-distribution when upgrading, as the upgrade notes of the documentation describe. The Apache Grails 9 wrapper also
-starts the command lines of Apache Grails 7 and 8.
+A wrapper committed in an application that was created with Apache Grails 7 or 8 replaces itself when the application
+is upgraded to Apache Grails 9: set `grailsVersion` in `gradle.properties` to the Apache Grails 9 version, run
+`grailsw update-wrapper` and commit `grailsw`, `grailsw.bat` and `grails-wrapper.jar`, as the upgrade notes of the
+documentation describe. The Apache Grails 9 wrapper also starts the command lines of Apache Grails 7 and 8.
 
 ### grails
 
