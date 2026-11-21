@@ -509,6 +509,24 @@ class SpringFormatNegotiationSpec extends Specification {
         format << ['json', 'JSON']
     }
 
+    void "a data format Grails registers with Spring MVC is written in its type whatever its case, while Grails resolves no format for #format"() {
+        given: 'the default grails.mime.types, whose data formats Grails registers with Spring MVC as format aliases'
+        start((Settings.MIME_NEGOTIATION_SPRING): true)
+        def request = request('Accept': 'application/xml')
+        request.addParameter('format', format)
+        handledBy(request, urlMapping())
+
+        expect:
+        resolve(request) == [MediaType.parseMediaType(expected)]
+        GrailsWebRequest.lookup().currentResponse.format == null
+
+        where:
+        format || expected
+        'HAL'  || 'application/hal+json'
+        'CSV'  || 'text/csv'
+        'Text' || 'text/plain'
+    }
+
     void "a format Grails configures keeps the types grails.mime.types gives it, whatever type Spring MVC's media types map it to"() {
         given:
         start((Settings.MIME_NEGOTIATION_SPRING): true, 'grails.mime.types': [all: '*/*', json: 'application/json', plain: 'text/csv'],
