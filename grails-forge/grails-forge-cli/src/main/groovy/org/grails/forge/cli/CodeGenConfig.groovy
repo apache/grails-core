@@ -330,7 +330,7 @@ class CodeGenConfig {
 
             consoleOutput.warning("${file} names a profile, as the record of an earlier command line did, and not the features of the application: the commands take " +
                     "the application to have the features an application of the type ${codeGenConfig.getApplicationType().name().toLowerCase(Locale.ROOT).replace('_', '-')} " +
-                    'has by default. project init writes the record of this version, from what the project has')
+                    'has by default. project migrate writes the record of this version, from what the project has')
         }
         // the commands ask what kind of application it is and which features it has
         if (codeGenConfig.getApplicationType() == null || codeGenConfig.getFeatures() == null) {

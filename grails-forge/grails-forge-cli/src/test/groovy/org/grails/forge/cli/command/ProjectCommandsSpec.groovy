@@ -441,7 +441,7 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 1
         err.toString().contains('There is no state of a generated project here: .grails/project.yml is missing. For an application that was not generated ' +
-                'by this version, grails-forge-cli project init writes the record')
+                'by this version, grails-forge-cli project migrate writes the record')
         out.toString().isEmpty()
         !new File(dir, 'again').exists()
 
@@ -743,7 +743,7 @@ class ProjectCommandsSpec extends CommandSpec {
         exit == 0
         out.toString().contains('*  project show')
         out.toString().contains('*  project regenerate --output DIRECTORY')
-        out.toString().contains('*  project init')
+        out.toString().contains('*  project migrate')
         out.toString() =~ /(?m)^  project +Works with the record of how the application in the current directory was\s/
 
         when:
@@ -754,7 +754,7 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 0
         project.project == false
-        project.commands*.name == ['show', 'regenerate', 'init']
+        project.commands*.name == ['show', 'regenerate', 'migrate']
         project.commands.every { it.project == true && it.origin == 'built-in' && it.description }
         project.commands[0].options*.names.contains(['--json'])
         project.commands[1].options*.names.containsAll([['-o', '--output'], ['--diff'], ['-f', '--force']])
@@ -786,15 +786,15 @@ class ProjectCommandsSpec extends CommandSpec {
 
         when:
         out.reset()
-        exit = ForgeCli.execute(beanContext, 'help', 'project', 'init')
+        exit = ForgeCli.execute(beanContext, 'help', 'project', 'migrate')
 
         then:
         exit == 0
-        out.toString().startsWith('Usage: grails-forge-cli project init ')
+        out.toString().startsWith('Usage: grails-forge-cli project migrate ')
 
         and:
-        complete('project i').contains('init')
-        complete('project init --f').containsAll(['--features', '--force'])
+        complete('project m').contains('migrate')
+        complete('project migrate --f').containsAll(['--features', '--force'])
         complete('pro').contains('project')
         complete('project s').contains('show')
         complete('project re').contains('regenerate')
@@ -809,7 +809,7 @@ class ProjectCommandsSpec extends CommandSpec {
         then:
         exit == 2
         err.toString().contains('No command specified: project show says how the application was generated, and project regenerate generates it again; ' +
-                'project init writes the record of an application that has none')
+                'project migrate writes the record of an application that has none')
     }
 
     private static final String DESCRIPTOR = 'format: 1\nkind: feature\ntemplateApi: 1\nname: acme-audit\n' +

@@ -73,7 +73,7 @@ import java.util.function.Supplier
  *
  * @since 9.0
  */
-@CommandLine.Command(name = ProjectInitCommand.NAME, description = [
+@CommandLine.Command(name = ProjectMigrateCommand.NAME, description = [
         'Writes the record of the application in the current directory, for an application that has none: one that was created with the Grails shell or ' +
                 'by an earlier version, or was not generated at all. The commands that create its classes are there once it has the record.',
         'What the application is, is worked out from its files, which are read and not changed: the record an earlier version wrote, the profile ' +
@@ -84,9 +84,9 @@ import java.util.function.Supplier
 @Component
 @Scope('prototype')
 @CompileStatic
-class ProjectInitCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
+class ProjectMigrateCommand extends BaseCommand implements Callable<Integer>, ProjectCommand {
 
-    public static final String NAME = 'init'
+    public static final String NAME = 'migrate'
 
     /** The types of application, as {@code --type} takes them and as the record has them. */
     public static final List<String> TYPES = Collections.unmodifiableList(ApplicationType.values().collect { ApplicationType each -> written(each) })
@@ -144,12 +144,12 @@ class ProjectInitCommand extends BaseCommand implements Callable<Integer>, Proje
     private final Supplier<ProjectGenerator> projectGeneratorSource
 
     @Autowired
-    ProjectInitCommand(ProjectGenerator projectGenerator) {
+    ProjectMigrateCommand(ProjectGenerator projectGenerator) {
         this.projectGeneratorSource = { projectGenerator } as Supplier<ProjectGenerator>
     }
 
     /** On a Forge application that is started when the command first needs it. */
-    ProjectInitCommand(ForgeContext context) {
+    ProjectMigrateCommand(ForgeContext context) {
         this.projectGeneratorSource = { context.get().getBean(ProjectGenerator) } as Supplier<ProjectGenerator>
     }
 
@@ -158,7 +158,7 @@ class ProjectInitCommand extends BaseCommand implements Callable<Integer>, Proje
         Path current = FileSystemOutputHandler.getDefaultBaseDirectory().toPath()
         ConsoleProject.Search search = ConsoleProject.search(current)
         if (search.project == null) {
-            err(search.none('project init'))
+            err(search.none('project migrate'))
             return 1
         }
         Path directory = search.project.directory
@@ -275,7 +275,7 @@ class ProjectInitCommand extends BaseCommand implements Callable<Integer>, Proje
                     'says what it has. Nothing was written'
         }
         if (!overwrite && !dryRun) {
-            return "The application already has a record that ${root} project init wrote (${ProjectState.MANIFEST}). Run again with --force to write it anew, " +
+            return "The application already has a record that ${root} project migrate wrote (${ProjectState.MANIFEST}). Run again with --force to write it anew, " +
                     'or with --dry-run to see what it would be. Nothing was written'
         }
         return null
@@ -527,7 +527,7 @@ class ProjectInitCommand extends BaseCommand implements Callable<Integer>, Proje
         String root = spec.root().name()
         out('@|blue ||@ ' + (assumed.isEmpty() ? 'Nothing was assumed. ' : "Assumed, because nothing in the project says it: ${assumed.join(', ')}. ") +
                 'The files of the project were read as text and nothing of the build was run, so a feature the build does not declare in a line of its own was ' +
-                "not found. To say it otherwise, run ${root} project init --force with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
+                "not found. To say it otherwise, run ${root} project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, " +
                 '--data, --reloading, --features for features that were not found and --exclude-features for features the application does not have')
     }
 

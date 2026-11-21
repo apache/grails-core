@@ -62,7 +62,7 @@ import java.util.concurrent.Callable
         '',
         'An application that has no record of how it was generated, as one of an earlier version, is given one with:',
         '',
-        '*  @|bold project init|@'
+        '*  @|bold project migrate|@'
 ],
         synopsisHeading = '@|bold,underline Usage:|@ ',
         optionListHeading = '%n@|bold,underline Options:|@%n',

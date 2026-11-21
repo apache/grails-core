@@ -31,7 +31,7 @@ import java.util.concurrent.Callable
  * @since 9.0
  */
 @CommandLine.Command(name = ProjectGroupCommand.NAME, description = 'Works with the record of how the application in the current directory was generated',
-        subcommands = [ProjectShowCommand, ProjectRegenerateCommand, ProjectInitCommand])
+        subcommands = [ProjectShowCommand, ProjectRegenerateCommand, ProjectMigrateCommand])
 @Component
 @Scope('prototype')
 @CompileStatic
@@ -42,6 +42,6 @@ class ProjectGroupCommand extends BaseCommand implements Callable<Integer> {
     @Override
     Integer call() throws Exception {
         throw new CommandLine.ParameterException(spec.commandLine(), 'No command specified: project show says how the application was generated, ' +
-                'and project regenerate generates it again; project init writes the record of an application that has none')
+                'and project regenerate generates it again; project migrate writes the record of an application that has none')
     }
 }

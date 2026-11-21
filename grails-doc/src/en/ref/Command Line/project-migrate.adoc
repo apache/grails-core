@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 ////
 
-== project init
+== project migrate
 
 === Purpose
 
@@ -27,10 +27,10 @@ Writes the record of the application in the current directory, for an applicatio
 
 [source,console]
 ----
-grails project init
-grails project init --dry-run
-grails project init com.example.shop --type rest-api --features grails-quartz
-grails project init --force --exclude-features postgres
+grails project migrate
+grails project migrate --dry-run
+grails project migrate com.example.shop --type rest-api --features grails-quartz
+grails project migrate --force --exclude-features postgres
 ----
 
 === Description
@@ -39,7 +39,7 @@ Usage:
 
 [source,console]
 ----
-grails project init [<<name>>] [--type=<<type>>] [--features=<<feature>>[,<<feature>>...]] [--exclude-features=<<feature>>[,<<feature>>...]]
+grails project migrate [<<name>>] [--type=<<type>>] [--features=<<feature>>[,<<feature>>...]] [--exclude-features=<<feature>>[,<<feature>>...]]
                     [--jdk=<<version>>] [--servlet=<<servlet>>] [--data=<<data>>] [--reloading=<<reloading>>] [--dry-run] [--force]
 ----
 
@@ -59,7 +59,7 @@ Options:
 * `--dry-run` - Say what the record would be, and write nothing.
 * `--force` - Write the record again over one this command wrote, worked out anew: the name and the options that were given before are given again. The record of how an application was generated is never replaced.
 
-`project init` is the `init` command of the `project` command. It reads the files of the project as text and runs nothing of the build: the `grails-forge-cli.yml` (or `grails-cli.yml`) of an earlier version, `grails.profile` and `grails.codegen.defaultPackage` in `grails-app/conf/application.yml`, the `profile` dependency, the Grails Gradle plugins, the `group` and the dependencies of `build.gradle`, `rootProject.name` in `settings.gradle`, and the package of the `Application` class. It says what it found, where it found it and what it assumed, and the options and the name say it otherwise.
+`project migrate` is the `migrate` command of the `project` command. It reads the files of the project as text and runs nothing of the build: the `grails-forge-cli.yml` (or `grails-cli.yml`) of an earlier version, `grails.profile` and `grails.codegen.defaultPackage` in `grails-app/conf/application.yml`, the `profile` dependency, the Grails Gradle plugins, the `group` and the dependencies of `build.gradle`, `rootProject.name` in `settings.gradle`, and the package of the `Application` class. It says what it found, where it found it and what it assumed, and the options and the name say it otherwise.
 
 It writes the files of the record in the `.grails` directory (`project.yml`, `forge.lock.yml` and `baseline/index.yml`, and `.gitignore` and `.gitattributes` when they are not there) and no other file of the project. The record has `generationState: untracked` and a baseline without files. link:feature-add.html[feature add] and link:project-regenerate.html[project regenerate] refuse such an application and change nothing; link:project-show.html[project show] shows the record.
 

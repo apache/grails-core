@@ -30,7 +30,7 @@ import java.nio.charset.StandardCharsets
 
 /**
  * The record of an application that was there before it had one: what the application is taken to
- * be, written by {@code project init} and not by the generator. Its manifest says so with
+ * be, written by {@code project migrate} and not by the generator. Its manifest says so with
  * {@code generationState: untracked}, and its baseline has no file, because the generator wrote none
  * of the files of the application as they are: nothing can be merged against it, so no feature is
  * added to such an application and it is not generated again. The commands that create the classes

@@ -34,10 +34,10 @@ import org.grails.forge.util.VersionInfo
 import spock.lang.Unroll
 
 /**
- * {@code project init}: the record of an application that was there before it had one, worked out
+ * {@code project migrate}: the record of an application that was there before it had one, worked out
  * from the files of the project and from the command line, and what the other commands make of it.
  */
-class ProjectInitCommandSpec extends CommandSpec {
+class ProjectMigrateCommandSpec extends CommandSpec {
 
     static final String SHELL_CONFIGURATION = '''\
 ---
@@ -116,7 +116,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
         List<String> said = out.toString().readLines()
         ProjectState state = ProjectState.read(dir.toPath())
 
@@ -134,7 +134,7 @@ dependencies {
         said.contains('    grails-quartz (build.gradle declares org.apache.grails:grails-quartz)')
         said.contains('    postgres (build.gradle declares org.postgresql:postgresql)')
         said.any { it.startsWith('| Assumed, because nothing in the project says it: jdk (--jdk), servlet (--servlet), reloading (--reloading). ') }
-        said.any { it.contains('run grails-forge-cli project init --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, ' +
+        said.any { it.contains('run grails-forge-cli project migrate --force with the name and the package (com.example.shop), --type, --jdk, --servlet, --data, ' +
                 '--reloading, --features for features that were not found and --exclude-features for features the application does not have') }
         said.any { it.startsWith('| The record was written: .grails/.gitignore, .grails/.gitattributes, .grails/baseline/index.yml, .grails/forge.lock.yml, ' +
                 '.grails/project.yml. No other file of the project was changed.') }
@@ -172,17 +172,17 @@ dependencies {
         then: 'the command says which command writes one'
         exit == 1
         err.toString().contains('create-controller is a command of a Grails project whose record is read')
-        err.toString().contains('grails-forge-cli project init writes the record of an application that has none')
+        err.toString().contains('grails-forge-cli project migrate writes the record of an application that has none')
         !new File(dir, 'grails-app/controllers').exists()
 
         when:
         err.reset()
-        int init = ForgeCli.execute(beanContext, 'project', 'init')
+        int migrated = ForgeCli.execute(beanContext, 'project', 'migrate')
         out.reset()
         exit = ForgeCli.execute(beanContext, 'create-controller', 'Book')
 
         then:
-        init == 0
+        migrated == 0
         exit == 0
         err.toString().isEmpty()
         new File(dir, 'grails-app/controllers/com/example/legacy/BookController.groovy').text.contains('package com.example.legacy')
@@ -209,7 +209,7 @@ dependencies {
     void "no feature is added to an application whose record was written for it, and it is not generated again: nothing is changed"() {
         given:
         shellProject()
-        ForgeCli.execute(beanContext, 'project', 'init')
+        ForgeCli.execute(beanContext, 'project', 'migrate')
         Map<String, String> before = tree()
         out.reset()
 
@@ -219,7 +219,7 @@ dependencies {
         then:
         exit == 1
         err.toString().contains('The record of the application was written for an application that was there, and not by the generator ' +
-                '(generationState in .grails/project.yml is untracked, as project init writes it)')
+                '(generationState in .grails/project.yml is untracked, as project migrate writes it)')
         err.toString().contains('no feature is added to such an application by a command, and it is not generated again. Nothing was changed. ' +
                 'Add to the build and the configuration by hand what the feature adds to an application that is created with it')
         tree() == before
@@ -240,7 +240,7 @@ dependencies {
     void "project show says of such a record what it is, in words and in the document"() {
         given:
         shellProject()
-        ForgeCli.execute(beanContext, 'project', 'init', '--features', 'grails-web-console')
+        ForgeCli.execute(beanContext, 'project', 'migrate', '--features', 'grails-web-console')
         out.reset()
 
         when:
@@ -254,7 +254,7 @@ dependencies {
         said.any { it ==~ / +state +untracked/ }
         said.any { it ==~ / +recorded by +grails-forge .*/ }
         said.any { it ==~ / +asked for +grails-web-console/ }
-        said.any { it.startsWith('| The record was written for an application that was there, by project init, and not when the application was generated') }
+        said.any { it.startsWith('| The record was written for an application that was there, by project migrate, and not when the application was generated') }
         said[-2] == '| A new application of this type, with these options and features, is created with:'
         said[-1].startsWith('grails-forge-cli create-app com.example.legacy.legacy ')
 
@@ -280,7 +280,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
         List<String> said = out.toString().readLines()
         ProjectState state = ProjectState.read(dir.toPath())
 
@@ -322,7 +322,7 @@ dependencies {
         new File(dir, 'build.gradle').text = 'plugins {\n' + plugins.collect { "    id \"${it}\"\n" }.join('') + '}\n'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
         List<String> said = out.toString().readLines()
 
         then:
@@ -350,7 +350,7 @@ dependencies {
                 'dependencies {\n    profile "org.apache.grails.profiles:rest-api-plugin"\n}\n'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'audit')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', 'audit')
         List<String> said = out.toString().readLines()
         ProjectState state = ProjectState.read(dir.toPath())
 
@@ -369,7 +369,7 @@ dependencies {
         shellProject()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', 'org.other.store', '--type', 'rest-api', '--jdk', '25', '--servlet', 'undertow',
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', 'org.other.store', '--type', 'rest-api', '--jdk', '25', '--servlet', 'undertow',
                 '--data', 'hibernate7', '--reloading', 'devtools', '--features', 'grails-web-console,cache', '--exclude-features', 'postgres')
         List<String> said = out.toString().readLines()
         ProjectState state = ProjectState.read(dir.toPath())
@@ -407,7 +407,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--dry-run')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--dry-run')
         List<String> said = out.toString().readLines()
 
         then:
@@ -420,23 +420,23 @@ dependencies {
     void "a record this command wrote is written again with --force only, and the record of a generated application never"() {
         given:
         shellProject()
-        ForgeCli.execute(beanContext, 'project', 'init')
+        ForgeCli.execute(beanContext, 'project', 'migrate')
         Map<String, String> before = tree()
         out.reset()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--type', 'rest-api')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--type', 'rest-api')
 
         then:
         exit == 1
-        err.toString().readLines() == ['| Error The application already has a record that grails-forge-cli project init wrote (.grails/project.yml). ' +
+        err.toString().readLines() == ['| Error The application already has a record that grails-forge-cli project migrate wrote (.grails/project.yml). ' +
                                                'Run again with --force to write it anew, or with --dry-run to see what it would be. Nothing was written']
         out.toString().isEmpty()
         tree() == before
 
         when:
         err.reset()
-        exit = ForgeCli.execute(beanContext, 'project', 'init', '--type', 'rest-api', '--force')
+        exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--type', 'rest-api', '--force')
 
         then:
         exit == 0
@@ -446,7 +446,7 @@ dependencies {
     }
 
     @Unroll
-    void "the record of an application this version generated is never replaced: project init #options"() {
+    void "the record of an application this version generated is never replaced: project migrate #options"() {
         given:
         ForgeCli.execute(beanContext, 'create-app', 'com.example.shop')
         File generated = new File(dir, 'shop')
@@ -455,7 +455,7 @@ dependencies {
         out.reset()
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['project', 'init'] + options) as String[])
+        int exit = ForgeCli.execute(beanContext, (['project', 'migrate'] + options) as String[])
 
         then:
         exit == 1
@@ -472,13 +472,13 @@ dependencies {
     void "what is left of a record, and a record that cannot be read, is not written over: #what"() {
         given:
         shellProject()
-        ForgeCli.execute(beanContext, 'project', 'init')
+        ForgeCli.execute(beanContext, 'project', 'migrate')
         change.call(dir)
         Map<String, String> before = tree()
         out.reset()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init', '--force')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate', '--force')
 
         then:
         exit == 1
@@ -504,7 +504,7 @@ dependencies {
         out.reset()
 
         when: 'its record is written from its files alone'
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
         ProjectState state = ProjectState.read(generated.toPath())
 
         then: 'the type, the name, the package and the features that were found are those it was generated with'
@@ -532,7 +532,7 @@ dependencies {
         new File(dir, '.grails/.gitignore').text = '/run/\n'
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
         then:
         exit == 0
@@ -548,7 +548,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
         then:
         exit == 1
@@ -573,7 +573,7 @@ dependencies {
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
         then:
         exit == 1
@@ -583,13 +583,13 @@ dependencies {
     }
 
     @Unroll
-    void "project init #arguments is a mistake in the command line"() {
+    void "project migrate #arguments is a mistake in the command line"() {
         given:
         shellProject()
         Map<String, String> before = tree()
 
         when:
-        int exit = ForgeCli.execute(beanContext, (['project', 'init'] + arguments) as String[])
+        int exit = ForgeCli.execute(beanContext, (['project', 'migrate'] + arguments) as String[])
 
         then:
         exit == 2
@@ -605,16 +605,16 @@ dependencies {
         ['--features', 'cache', '--exclude-features', 'cache']      || 'cache cannot be given to --features and to --exclude-features both'
         ['--jdk', '8']                                              || '--jdk is one of 21, 25, 26'
         ['--servlet', 'websphere']                                  || '--servlet'
-        ['--no-such-option']                                        || 'project init has no option --no-such-option'
+        ['--no-such-option']                                        || 'project migrate has no option --no-such-option'
     }
 
-    void "project init outside a Grails project says that there is none"() {
+    void "project migrate outside a Grails project says that there is none"() {
         when:
-        int exit = ForgeCli.execute(beanContext, 'project', 'init')
+        int exit = ForgeCli.execute(beanContext, 'project', 'migrate')
 
         then:
         exit == 1
-        err.toString().readLines() == ["| Error project init is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
+        err.toString().readLines() == ["| Error project migrate is a command of a Grails project; there is none in ${dir.canonicalPath} or above it".toString()]
         dir.list() as List == []
     }
 
@@ -631,7 +631,7 @@ dependencies {
         out.toString().contains('create-controller')
         err.toString().readLines() == ['| Warning grails-forge-cli.yml names a profile, as the record of an earlier command line did, and not the features of the ' +
                                                'application: the commands take the application to have the features an application of the type web has by default. ' +
-                                               'project init writes the record of this version, from what the project has']
+                                               'project migrate writes the record of this version, from what the project has']
 
         when: 'a profile there is no type of application for'
         out.reset()

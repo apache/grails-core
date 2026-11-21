@@ -110,7 +110,7 @@ class AdoptedProjectRecordSpec extends ApplicationContextSpec {
         then:
         ProjectChangeException refused = thrown()
         refused.message.startsWith('The record of the application was written for an application that was there, and not by the generator ' +
-                '(generationState in .grails/project.yml is untracked, as project init writes it).')
+                '(generationState in .grails/project.yml is untracked, as project migrate writes it).')
         refused.message.contains('no feature is added to such an application by a command, and it is not generated again. Nothing was changed.')
 
         when:

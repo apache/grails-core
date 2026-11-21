@@ -453,7 +453,7 @@ final class FeatureAddition {
         // said before the baseline is looked at: such a record has none, and that is not what is wrong with it
         if (!manifest.isTracked()) {
             throw new ProjectChangeException('The record of the application was written for an application that was there, and not by the generator (generationState in ' +
-                    "${ProjectState.MANIFEST} is ${ProjectManifest.UNTRACKED}, as project init writes it). There is no baseline the generator wrote, and without one what a " +
+                    "${ProjectState.MANIFEST} is ${ProjectManifest.UNTRACKED}, as project migrate writes it). There is no baseline the generator wrote, and without one what a " +
                     'feature changes cannot be told from what the application changed: no feature is added to such an application by a command, and it is not generated ' +
                     'again. Nothing was changed. Add to the build and the configuration by hand what the feature adds to an application that is created with it')
         }
